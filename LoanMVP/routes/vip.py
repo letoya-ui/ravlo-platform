@@ -1,5 +1,7 @@
 # LoanMVP/routes/vip.py
 import json
+import hashlib
+import hmac
 from datetime import datetime, timedelta
 from flask import (
     Blueprint, render_template, request, redirect,
@@ -257,6 +259,163 @@ def _get_vip_market(profile=None):
     return selected if selected in markets else ALL_MARKETS
 
 
+def _clean_listing_sync_value(value):
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned or None
+
+
+def _listing_sync_token(profile):
+    if not profile:
+        return ""
+    secret = (current_app.config.get("SECRET_KEY") or "ravlo-listing-sync").encode("utf-8")
+    msg = f"ravlo-listing-sync:{profile.id}:{profile.user_id}".encode("utf-8")
+    return hmac.new(secret, msg, hashlib.sha256).hexdigest()[:32]
+
+
+def _listing_sync_url(profile):
+    return url_for("vip.realtor_listing_sync_webhook", profile_id=profile.id, _external=True)
+
+
+def _listing_sync_prompt(profile):
+    markets = ", ".join(get_user_markets(profile)) or "your market"
+    return (
+        "Create an automation that sends every new or updated listing to Ravlo as JSON.\n"
+        f"POST to: {_listing_sync_url(profile)}\n"
+        f"Include header X-Ravlo-Listing-Token: {_listing_sync_token(profile)}\n"
+        "Send these fields when available: mls_number, address, city, state, zip_code, market, price, beds, baths, sqft, description, photos_json, status.\n"
+        f"Default market for this dashboard: {markets}.\n"
+        "Only create or update the listing when an MLS number is present."
+    )
+
+
+def _listing_sync_payload_int(value):
+    try:
+        return int(value) if value not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _upsert_listing_flyer_for_sync(listing):
+    flyer = ElenaFlyer.query.filter_by(listing_id=listing.id).first()
+
+    body_parts = []
+    if listing.price:
+        body_parts.append(f"${listing.price:,}")
+    if listing.beds is not None:
+        body_parts.append(f"{listing.beds} bd")
+    if listing.baths is not None:
+        body_parts.append(f"{listing.baths} ba")
+    if listing.sqft:
+        body_parts.append(f"{listing.sqft:,} sqft")
+    if listing.market:
+        body_parts.append(listing.market)
+
+    summary_line = " | ".join(body_parts)
+    if listing.description:
+        body = f"{summary_line}\n\n{listing.description}" if summary_line else listing.description
+    else:
+        body = summary_line
+
+    if not flyer:
+        flyer = ElenaFlyer(
+            flyer_type="listing",
+            property_address=listing.address,
+            property_id=str(listing.id),
+            body=body,
+            listing_id=listing.id,
+        )
+        db.session.add(flyer)
+    else:
+        flyer.flyer_type = flyer.flyer_type or "listing"
+        flyer.property_address = listing.address
+        flyer.property_id = str(listing.id)
+        flyer.body = body or flyer.body
+
+    if hasattr(flyer, "canva_status") and not getattr(flyer, "canva_status", None):
+        flyer.canva_status = "draft"
+
+    return flyer
+
+
+def _sync_listing_from_payload(profile, payload):
+    data = payload.get("listing") if isinstance(payload.get("listing"), dict) else payload
+    if not isinstance(data, dict):
+        return None, ["listing payload must be a JSON object"]
+
+    mls_number = _clean_listing_sync_value(data.get("mls_number"))
+    if not mls_number:
+        return None, ["mls_number is required"]
+
+    listing = ElenaListing.query.filter_by(mls_number=mls_number).first()
+    is_new = listing is None
+    if is_new:
+        listing = ElenaListing(
+            mls_number=mls_number,
+            address="",
+            city="",
+            state="",
+            zip_code="",
+            status="active",
+        )
+        db.session.add(listing)
+
+    listing.mls_number = mls_number
+    listing.address = _clean_listing_sync_value(data.get("address")) or listing.address
+    listing.city = _clean_listing_sync_value(data.get("city")) or listing.city
+    listing.state = _clean_listing_sync_value(data.get("state")) or listing.state
+    listing.zip_code = _clean_listing_sync_value(data.get("zip_code") or data.get("zip")) or listing.zip_code
+    listing.county = _clean_listing_sync_value(data.get("county")) or listing.county
+
+    explicit_market = _clean_listing_sync_value(data.get("market"))
+    available_markets = get_user_markets(profile)
+    if explicit_market:
+        listing.market = explicit_market
+    elif not listing.market and len(available_markets) == 1:
+        listing.market = available_markets[0]
+
+    price = _listing_sync_payload_int(data.get("price"))
+    beds = _listing_sync_payload_int(data.get("beds"))
+    baths = _listing_sync_payload_int(data.get("baths"))
+    sqft = _listing_sync_payload_int(data.get("sqft"))
+    client_id = _listing_sync_payload_int(data.get("client_id"))
+
+    if price is not None:
+        listing.price = price
+    if beds is not None:
+        listing.beds = beds
+    if baths is not None:
+        listing.baths = baths
+    if sqft is not None:
+        listing.sqft = sqft
+    if client_id is not None:
+        listing.client_id = client_id
+
+    listing.description = _clean_listing_sync_value(data.get("description")) or listing.description
+    if data.get("photos_json") is not None:
+        listing.photos_json = data.get("photos_json")
+    listing.status = _clean_listing_sync_value(data.get("status")) or listing.status or "active"
+
+    missing = [
+        field for field, value in [
+            ("address", listing.address),
+            ("city", listing.city),
+            ("state", listing.state),
+            ("zip_code", listing.zip_code),
+        ] if not value
+    ]
+    if missing:
+        if is_new:
+            db.session.rollback()
+        return None, missing
+
+    db.session.flush()
+    _upsert_listing_flyer_for_sync(listing)
+    db.session.commit()
+    return listing, []
+
+
 # Kept as an alias for older call sites. New code should use `_get_vip_market`.
 def _get_frank_market():
     return _get_vip_market()
@@ -389,6 +548,40 @@ def realtor_market_switch():
 
     next_url = request.form.get("next") or url_for("vip.realtor_dashboard")
     return redirect(next_url)
+
+
+@vip_bp.post("/realtor/<int:profile_id>/listings/sync")
+def realtor_listing_sync_webhook(profile_id):
+    profile = VIPProfile.query.get(profile_id)
+    if not profile:
+        return jsonify({"status": "error", "message": "Profile not found."}), 404
+
+    payload = request.get_json(silent=True) or {}
+    submitted_token = (
+        request.headers.get("X-Ravlo-Listing-Token")
+        or request.args.get("token")
+        or payload.get("token")
+    )
+    expected_token = _listing_sync_token(profile)
+
+    if not submitted_token or not hmac.compare_digest(str(submitted_token), expected_token):
+        return jsonify({"status": "error", "message": "Invalid listing sync token."}), 403
+
+    listing, missing = _sync_listing_from_payload(profile, payload)
+    if missing:
+        return jsonify({
+            "status": "error",
+            "message": "Missing required listing fields for import.",
+            "missing": missing,
+        }), 400
+
+    return jsonify({
+        "status": "ok",
+        "listing_id": listing.id,
+        "mls_number": listing.mls_number,
+        "address": listing.address,
+        "market": listing.market,
+    })
 
 
 @vip_bp.get("/realtor")
@@ -591,6 +784,9 @@ def realtor_dashboard():
         flyers_by_market      = flyers_by_market,
         finances_combined     = finances_combined,
         finances_by_market    = finances_by_market,
+        listing_sync_url      = _listing_sync_url(profile),
+        listing_sync_token    = _listing_sync_token(profile),
+        listing_sync_prompt   = _listing_sync_prompt(profile),
         portal                = "vip",
         portal_name           = "VIP",
         portal_home           = url_for("vip.realtor_dashboard"),
@@ -2301,6 +2497,9 @@ def onboarding():
         module_pref = module_pref,
         header_name = get_dashboard_name(profile),
         markets_csv = ", ".join(get_user_markets(profile)),
+        listing_sync_url    = _listing_sync_url(profile),
+        listing_sync_token  = _listing_sync_token(profile),
+        listing_sync_prompt = _listing_sync_prompt(profile),
         portal      = "vip",
         portal_name = "VIP",
         portal_home = url_for("vip.index"),

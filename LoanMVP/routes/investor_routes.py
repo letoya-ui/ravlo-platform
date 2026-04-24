@@ -6864,6 +6864,7 @@ def generate_full_build():
                 "message": "Site plan generated but uploads failed."
             }), 500
 
+        site_plan_primary_b64 = site_plan_images_b64[0]
         site_plan_primary_url = site_plan_urls[0]
         site_plan_meta = site_plan_json.get("meta") or {}
         site_plan_seed = site_plan_json.get("seed")
@@ -6871,8 +6872,13 @@ def generate_full_build():
 
         # --------------------------------------------------
         # 3. GENERATE EXTERIOR
-        # Prefer land image if supplied, otherwise blueprint output
+        # Prefer a direct site image, then the generated site plan, then blueprint output.
         # --------------------------------------------------
+        exterior_reference_b64 = exterior_image_base64 or site_plan_primary_b64 or blueprint_primary_b64
+        exterior_reference_url = "" if exterior_reference_b64 else (
+            reference_image_url or site_plan_primary_url or blueprint_primary_url
+        )
+
         exterior_payload = {
             "mode": "exterior",
             "project_name": project_name,
@@ -6889,8 +6895,8 @@ def generate_full_build():
                 if lot_count and lot_count > 1
                 else notes
             ),
-            "site_image_base64": exterior_image_base64,
-            "site_image_url": reference_image_url or blueprint_primary_url,
+            "site_image_base64": exterior_reference_b64,
+            "site_image_url": exterior_reference_url,
             "width": 640,
             "height": 640,
             "steps": 20,

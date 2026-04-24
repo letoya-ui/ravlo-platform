@@ -110,6 +110,25 @@ Tell Ravlo how you work so your dashboard feels personal from day one.
       </div>
 
       <div>
+        <h3 class="text-lg font-semibold mb-4">Listing Feed Setup</h3>
+        <div class="grid grid-cols-1 gap-4">
+          <div>
+            <label class="block mb-2 font-medium">Webhook URL</label>
+            <input value="{{ listing_sync_url }}" readonly class="border rounded px-3 py-2 w-full bg-white text-black">
+          </div>
+          <div>
+            <label class="block mb-2 font-medium">Sync Token</label>
+            <input value="{{ listing_sync_token }}" readonly class="border rounded px-3 py-2 w-full bg-white text-black">
+          </div>
+          <div>
+            <label class="block mb-2 font-medium">Prompt for Your MLS / Automation Tool</label>
+            <textarea rows="7" readonly class="border rounded px-3 py-2 w-full bg-white text-black">{{ listing_sync_prompt }}</textarea>
+            <p class="mt-1 text-xs text-gray-500">Paste this into Zapier, Make, your CRM, or your MLS export tool if they ask what Ravlo expects.</p>
+          </div>
+        </div>
+      </div>
+
+      <div>
         <h3 class="text-lg font-semibold mb-4">Modules</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 

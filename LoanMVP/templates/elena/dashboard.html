@@ -152,6 +152,50 @@ Clients, listings, flyers, follow-ups, and Copilot in one realtor workspace.
       <section class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
+            <h3>MLS Intake and Auto Upload</h3>
+            <p>Start a listing from an MLS number or wire your MLS / CRM automation to post listings into Ravlo automatically.</p>
+          </div>
+          <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Open Setup</a>
+        </div>
+
+        <div class="listing-sync-grid">
+          <form method="GET" action="{{ url_for('elena.listing_new') }}" class="listing-sync-card">
+            <label>
+              MLS Number
+              <input type="text" name="mls_number" required placeholder="e.g. H6312451">
+            </label>
+            <label>
+              Market
+              <select name="market">
+                <option value="">Use current market</option>
+                {% for market in available_markets %}
+                  <option value="{{ market }}" {% if current_market == market %}selected{% endif %}>{{ market }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <button type="submit" class="ravlo-btn primary">Start Listing from MLS #</button>
+          </form>
+
+          <div class="listing-sync-card">
+            <label>
+              Webhook URL
+              <input type="text" value="{{ listing_sync_url }}" readonly>
+            </label>
+            <label>
+              Sync Token
+              <input type="text" value="{{ listing_sync_token }}" readonly>
+            </label>
+            <label>
+              Setup Prompt
+              <textarea rows="6" readonly>{{ listing_sync_prompt }}</textarea>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
             <h3>Listings</h3>
             <p>
               {% if current_market == "All Markets" %}
@@ -251,6 +295,40 @@ Clients, listings, flyers, follow-ups, and Copilot in one realtor workspace.
     align-items: center;
     gap: 10px;
     margin-bottom: 18px;
+  }
+
+  .listing-sync-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .listing-sync-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+  }
+
+  .listing-sync-card label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #cfe1f4;
+    font-size: 0.9rem;
+  }
+
+  .listing-sync-card input,
+  .listing-sync-card select,
+  .listing-sync-card textarea {
+    background: rgba(255,255,255,0.04);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 10px 12px;
   }
 
   .elena-market-label {

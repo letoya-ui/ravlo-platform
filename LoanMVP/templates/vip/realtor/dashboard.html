@@ -156,6 +156,58 @@
   {% endif %}
 
   {# ── MAIN GRID ────────────────────────────────────────── #}
+  <section class="ravlo-card pad space-y-4">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+      <div>
+        <h3 class="text-lg font-semibold">MLS Intake and Auto Upload</h3>
+        <p class="text-sm text-gray-400">Start a listing from an MLS number now, or wire your MLS and CRM automation to push listings into this dashboard automatically.</p>
+      </div>
+      <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Open Setup</a>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div class="ravlo-card p-4 bg-white/5">
+        <h4 class="text-sm font-semibold mb-2">Manual MLS Entry</h4>
+        <p class="text-xs text-gray-400 mb-3">Enter the MLS number and Ravlo will open the listing workspace with that MLS number prefilled so your team can finish or verify the details.</p>
+        <form method="GET" action="{{ url_for('elena.listing_new') }}" class="space-y-3">
+          <div>
+            <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">MLS Number</label>
+            <input name="mls_number" required placeholder="e.g. H6312451" class="ravlo-input w-full">
+          </div>
+          <div>
+            <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Market</label>
+            <select name="market" class="ravlo-input w-full">
+              <option value="">Use current market</option>
+              {% for market in available_markets %}
+                <option value="{{ market }}" {% if current_market == market %}selected{% endif %}>{{ market }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="ravlo-btn primary sm">Start Listing from MLS #</button>
+        </form>
+      </div>
+
+      <div class="ravlo-card p-4 bg-white/5 space-y-3">
+        <div>
+          <h4 class="text-sm font-semibold">Automatic Listing Upload</h4>
+          <p class="text-xs text-gray-400 mt-1">Use this webhook in Zapier, Make, your MLS export, or an IDX or RESO bridge so new and updated listings hit Ravlo automatically.</p>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Webhook URL</label>
+          <input value="{{ listing_sync_url }}" readonly class="ravlo-input w-full">
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Sync Token</label>
+          <input value="{{ listing_sync_token }}" readonly class="ravlo-input w-full">
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Setup Prompt</label>
+          <textarea readonly rows="7" class="ravlo-input w-full">{{ listing_sync_prompt }}</textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
     {# LEFT COLUMN (2/3) #}

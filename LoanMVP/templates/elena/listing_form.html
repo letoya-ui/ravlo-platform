@@ -18,6 +18,7 @@ Add a new property and assign it to a market.
 {% endblock %}
 
 {% block content %}
+{% set seed = listing_seed if listing_seed is defined and listing_seed else {} %}
 <div class="max-w-4xl mx-auto">
   <section class="ravlo-card partner-section-card">
     <div class="section-head">
@@ -27,13 +28,19 @@ Add a new property and assign it to a market.
       </div>
     </div>
 
+    {% if not listing and seed.get("mls_number") %}
+    <div class="elena-prefill-note">
+      MLS #{{ seed.get("mls_number") }} was started from the dashboard. Finish the listing details below, then save.
+    </div>
+    {% endif %}
+
     <form method="POST" class="elena-form-grid">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="elena-form-row">
         <label>
           MLS Number
-          <input type="text" name="mls_number" value="{{ listing.mls_number if listing else '' }}">
+          <input type="text" name="mls_number" value="{{ listing.mls_number if listing else seed.get('mls_number', '') }}">
         </label>
 
         <label>
@@ -42,7 +49,7 @@ Add a new property and assign it to a market.
             <option value="">Select market</option>
             {% for market in available_markets %}
               <option value="{{ market }}"
-                {% if listing and listing.market == market %}selected{% elif not listing and current_market == market %}selected{% endif %}>
+                {% if listing and listing.market == market %}selected{% elif not listing and seed.get('market') == market %}selected{% elif not listing and current_market == market %}selected{% endif %}>
                 {{ market }}
               </option>
             {% endfor %}
@@ -141,6 +148,16 @@ Add a new property and assign it to a market.
 
 {% block head %}
 <style>
+  .elena-prefill-note {
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(74, 144, 226, 0.12);
+    border: 1px solid rgba(126, 171, 255, 0.28);
+    color: #d9e9ff;
+    font-size: 0.92rem;
+  }
+
   .elena-form-grid {
     display: flex;
     flex-direction: column;

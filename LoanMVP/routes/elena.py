@@ -525,6 +525,10 @@ def dashboard_legacy():
         .all()
     )
 
+    from LoanMVP.routes.vip import _listing_sync_prompt, _listing_sync_token, _listing_sync_url
+
+    profile = get_or_create_realtor_vip_profile()
+
     return render_template(
         "elena/dashboard.html",
         summary=summary,
@@ -538,6 +542,9 @@ def dashboard_legacy():
         template_types=[t.value for t in TemplateType],
         current_market=current_market,
         available_markets=_elena_available_markets(),
+        listing_sync_url=_listing_sync_url(profile),
+        listing_sync_token=_listing_sync_token(profile),
+        listing_sync_prompt=_listing_sync_prompt(profile),
         copilot_suggestions=copilot_suggestions,
         portal="elena",
         portal_name="Elena",
@@ -647,10 +654,16 @@ def listing_new():
         flash(f"Listing at {listing.address} added and flyer created.", "success")
         return redirect(url_for("elena.dashboard"))
 
+    listing_seed = {
+        "mls_number": (request.args.get("mls_number") or "").strip(),
+        "market": (request.args.get("market") or "").strip(),
+    }
+
     clients = ElenaClient.query.order_by(ElenaClient.name.asc()).all()
     return render_template(
         "elena/listing_form.html",
         listing=None,
+        listing_seed=listing_seed,
         listing_statuses=LISTING_STATUSES,
         available_markets=_elena_available_markets(),
         current_market=get_current_market(),
