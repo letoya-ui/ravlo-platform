@@ -418,6 +418,18 @@ function resolveCardImageSrc(r){
   return PLACEHOLDER_IMAGE;
 }
 
+function resolveGalleryImages(r, limit = 4){
+  const photos = normalizePhotoArray(r.listing_photos || r.photos).slice(0, limit);
+  return photos.map((raw) => {
+    if (
+      raw.startsWith("/") ||
+      raw.startsWith("data:") ||
+      raw.includes("/api/property_tool_image?src=")
+    ) return raw;
+    return `${IMAGE_PROXY_URL}?src=${encodeURIComponent(raw)}`;
+  });
+}
+
 function buildPropertyPayload(r, analyzeId, saveId){
   const strategy = currentSearchStrategy();
   const headline = resolveHeadlineValue(r);
@@ -637,6 +649,8 @@ function renderCards(results){
     const bestUse = safeText(r.estimated_best_use || r.best_use || "Review the highest and best use in Deal Workspace.");
     const roughUpside = safeText(r.rough_upside || "Upside depends on deeper review.");
     const classification = classificationLabel(r.property_classification);
+    const galleryPhotos = resolveGalleryImages(r, 4);
+    const photoCount = normalizePhotoArray(r.listing_photos || r.photos).length;
 
     const facts = [
       {label: "Classification", value: classification},
@@ -660,6 +674,15 @@ function renderCards(results){
             <div class="dfv4-score-badge ${scoreClass(score)}">${Number.isFinite(score) ? `${score}/99` : escapeHtml(valueSourceBadge)}</div>
             <div class="dfv4-tier-badge ${tierClass(tier)}">${escapeHtml(tier)}</div>
           </div>
+          ${galleryPhotos.length ? `
+            <div class="dfv4-thumb-strip">
+              ${galleryPhotos.map((photoSrc, photoIdx) => `
+                <div class="dfv4-thumb-mini ${photoIdx === 0 ? "active" : ""}">
+                  <img src="${escapeHtml(photoSrc)}" alt="Property photo ${photoIdx + 1}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
+                </div>
+              `).join("")}
+            </div>
+          ` : ""}
         </div>
 
         <div class="dfv4-body">
@@ -688,6 +711,7 @@ function renderCards(results){
             <span class="dfv4-chip">${escapeHtml(safeText(r.beds))} bd</span>
             <span class="dfv4-chip">${escapeHtml(safeText(r.baths))} ba</span>
             <span class="dfv4-chip">${escapeHtml(sqftText)} sqft</span>
+            ${photoCount ? `<span class="dfv4-chip accent">${escapeHtml(String(photoCount))} Photos</span>` : ""}
             ${numOrNull(r.days_on_market) !== null ? `<span class="dfv4-chip accent">${escapeHtml(String(r.days_on_market))} DOM</span>` : ""}
           </div>
 
@@ -1031,7 +1055,11 @@ async function runSearch(){
   display:block;
   image-rendering:auto
 }
-.dfv4-thumb-top{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem}
+.dfv4-thumb-strip{position:absolute;left:14px;right:14px;bottom:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;z-index:2}
+.dfv4-thumb-mini{height:62px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.16);background:rgba(10,15,30,.7);box-shadow:0 10px 24px rgba(0,0,0,.24)}
+.dfv4-thumb-mini.active{border-color:rgba(255,255,255,.36)}
+.dfv4-thumb-mini img{width:100%;height:100%;object-fit:cover;display:block;filter:none}
+.dfv4-thumb-top{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;z-index:2}
 .dfv4-score-badge,.dfv4-tier-badge{padding:.45rem .7rem;border-radius:999px;font-size:.78rem;font-weight:800;border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px)}
 .dfv4-score-badge.good,.dfv4-tier-badge.good,.dfv4-opportunity-callout.good{background:rgba(44,182,125,.18);color:#d9fff0}
 .dfv4-score-badge.watch,.dfv4-tier-badge.watch,.dfv4-opportunity-callout.watch{background:rgba(209,162,70,.18);color:#fff0c7}

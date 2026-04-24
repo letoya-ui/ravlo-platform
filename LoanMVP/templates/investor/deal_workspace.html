@@ -184,6 +184,7 @@ Review a saved property, compare exit paths, and move the best opportunity into 
     %}
 
     {% set listing_photos = wa.get("listing_photos") or deal_results.get("listing_photos") or [] %}
+    {% set photo_count = listing_photos|length if listing_photos else 0 %}
     {% set primary_photo = wa.get("image_url") or deal_results.get("image_url") or None %}
 
     {% if not primary_photo and listing_photos %}
@@ -354,7 +355,7 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                 </span>
 
                 <span class="ravlo-chip">
-                    Listing Photo: {% if hero_photo %}Loaded{% else %}Pending{% endif %}
+                    Photos: {% if photo_count > 0 %}{{ photo_count }} Ready{% elif hero_photo %}1 Ready{% else %}Pending{% endif %}
                 </span>
 
                 {% if airbnb_display_monthly > 0 %}
@@ -676,8 +677,8 @@ Review a saved property, compare exit paths, and move the best opportunity into 
             <section class="ravlo-card pad">
                 <div class="section-head">
                     <div>
-                        <div class="eyebrow">LISTING PHOTOS</div>
-                        <h3>Reference Photos for Rehab & Build Studio</h3>
+                        <div class="eyebrow">PROPERTY PHOTOS</div>
+                        <h3>All Photos for Deal Review, Rehab, and Build Studio</h3>
                     </div>
                 </div>
 
@@ -685,7 +686,7 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                 <div class="workspace-photo-shell">
                     {% if primary_photo %}
                     <div class="workspace-photo-main workspace-photo-rehab-link">
-                        <img src="{{ primary_photo }}" alt="Primary listing photo" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
+                        <img src="{{ primary_photo }}" alt="Primary property photo" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
                         {% if deal %}
                         {% endif %}
                     </div>
@@ -701,7 +702,7 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                             {% endif %}
                             {% if photo_url %}
                             <div class="workspace-photo-tile">
-                                <img src="{{ photo_url }}" alt="Listing photo {{ loop.index }}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
+                                <img src="{{ photo_url }}" alt="Property photo {{ loop.index }}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
                             </div>
                             {% endif %}
                         {% endfor %}
@@ -710,7 +711,7 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                 </div>
                 {% else %}
                 <div class="empty-state-inline">
-                    No listing photos are attached yet.
+                    No property photos are attached yet.
                 </div>
                 {% endif %}
             </section>
