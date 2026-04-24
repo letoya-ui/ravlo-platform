@@ -6427,9 +6427,9 @@ def generate_build_blueprint():
         }
 
         if blueprint_image_base64:
-            payload["blueprint_image_base64"] = blueprint_image_base64
+            payload["image_base64"] = blueprint_image_base64
         elif stored_blueprint_url:
-            payload["blueprint_image_url"] = stored_blueprint_url
+            payload["image_url"] = stored_blueprint_url
 
         current_app.logger.warning(
             "BUILD BLUEPRINT ENGINE PAYLOAD deal_id=%s payload=%s",
@@ -6783,10 +6783,10 @@ def generate_full_build():
         }
 
         if blueprint_image_base64:
-            blueprint_payload["blueprint_image_base64"] = blueprint_image_base64
-            blueprint_payload["blueprint_image_url"] = ""
+            blueprint_payload["image_base64"] = blueprint_image_base64
+            blueprint_payload["image_url"] = ""
         elif blueprint_url:
-            blueprint_payload["blueprint_image_url"] = blueprint_url
+            blueprint_payload["image_url"] = blueprint_url
 
         current_app.logger.warning(f"FULL BUILD BLUEPRINT PAYLOAD: {blueprint_payload}")
 
@@ -6842,9 +6842,9 @@ def generate_full_build():
             ),
             "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
 
-            # Use uploaded/saved blueprint if present, otherwise generated blueprint.
-            "blueprint_image_base64": blueprint_image_base64 or blueprint_primary_b64,
-            "blueprint_image_url": "" if (blueprint_image_base64 or blueprint_primary_b64) else (blueprint_url or blueprint_primary_url),
+            # Engine expects image_base64 / image_url for the init image.
+            "image_base64": blueprint_image_base64 or blueprint_primary_b64,
+            "image_url": "" if (blueprint_image_base64 or blueprint_primary_b64) else (blueprint_url or blueprint_primary_url),
 
             "width": 768,
             "height": 768,
@@ -6914,13 +6914,10 @@ def generate_full_build():
                 else notes
             ),
 
-            # This is the key fix.
-            "blueprint_image_base64": blueprint_primary_b64,
-            "blueprint_image_url": "",
-
-            # Site/context reference stays separate.
-            "site_image_base64": site_context_b64,
-            "site_image_url": site_context_url,
+            # Engine expects image_base64 / image_url for the init image.
+            # For exterior mode the site/context image is the primary reference.
+            "image_base64": site_context_b64,
+            "image_url": site_context_url,
 
             "width": 1024,
             "height": 1024,
