@@ -235,6 +235,8 @@ from LoanMVP.services.investor.investor_media_helpers import (
     to_png_bytes,
     to_webp_bytes,
     upload_listing_photos_to_spaces,
+    SPACES_CDN_BASE,
+    SPACES_ENDPOINT,
 )
 
 from LoanMVP.services.investor.investor_mashvisor_helpers import (
@@ -349,12 +351,15 @@ def _saved_property_workspace_seed(saved_property):
     media = _saved_property_media(saved_property)
     listing_photos = _normalize_photo_urls(
         workspace_analysis.get("listing_photos"),
+        workspace_analysis.get("photos"),
         property_payload.get("listing_photos"),
+        property_payload.get("photos"),
         media.get("gallery"),
     )
     primary_photo = _resolve_photo(
         workspace_analysis.get("image_url")
         or property_payload.get("image_url")
+        or property_payload.get("primary_photo")
         or media.get("primary_photo"),
         listing_photos,
     )
@@ -403,12 +408,15 @@ def _resolve_rehab_before_seed(deal):
     gallery = _normalize_photo_urls(
         rehab_before.get("gallery"),
         workspace_analysis.get("listing_photos"),
+        workspace_analysis.get("photos"),
         property_payload.get("listing_photos"),
+        property_payload.get("photos"),
         property_seed.get("listing_photos"),
         property_media.get("gallery"),
         rehab_before.get("image_url"),
         workspace_analysis.get("image_url"),
         property_payload.get("image_url"),
+        property_payload.get("primary_photo"),
         property_seed.get("primary_photo"),
         property_media.get("primary_photo"),
     )
@@ -438,6 +446,10 @@ def _proxy_listing_image_url(source_url):
     if _is_map_tile_url(source_url):
         return None
     if source_url.startswith("/") or source_url.startswith("data:"):
+        return source_url
+    if (SPACES_CDN_BASE and source_url.startswith(SPACES_CDN_BASE)) or (
+        SPACES_ENDPOINT and source_url.startswith(SPACES_ENDPOINT)
+    ):
         return source_url
     return url_for("investor.api_property_tool_image", src=source_url)
 
@@ -3340,9 +3352,8 @@ def api_property_tool_image():
             timeout=12,
             stream=True,
             headers={
-                "User-Agent": "Mozilla/5.0 Ravlo/1.0",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
                 "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-                "Referer": f"{request.scheme}://{request.host}/",
             },
         )
         if not upstream.ok:
@@ -3472,8 +3483,9 @@ def api_property_tool_save():
             listing_photos,
         )
 
-        if image_url and hasattr(saved, "image_url"):
-            saved.image_url = image_url
+        if image_url:
+            if hasattr(saved, "image_url"):
+                saved.image_url = image_url
 
         if listing_photos:
             try:
@@ -3486,12 +3498,14 @@ def api_property_tool_save():
                     p.get("url") for p in uploaded_photos
                     if isinstance(p, dict) and p.get("url")
                 ]
-                if uploaded_urls and hasattr(saved, "image_url"):
-                    saved.image_url = _resolve_photo(uploaded_urls[0], uploaded_urls)
+                if uploaded_urls:
+                    best_uploaded = _resolve_photo(uploaded_urls[0], uploaded_urls)
+                    if hasattr(saved, "image_url"):
+                        saved.image_url = best_uploaded
                     _persist_property_core_fields(saved, {
                         **property_payload,
-                        "image_url": saved.image_url,
-                        "listing_photos": uploaded_urls,
+                        "image_url": best_uploaded,
+                        "listing_photos": _normalize_photo_urls(uploaded_urls, listing_photos),
                     })
             except Exception as e:
                 current_app.logger.warning("Listing photo attach failed on save-only: %s", e)
@@ -4203,7 +4217,9 @@ def deal_workspace():
                 _workspace_gallery_sources(
                     _normalize_photo_urls(
                         workspace_analysis.get("listing_photos"),
+                        workspace_analysis.get("photos"),
                         deal_results.get("listing_photos"),
+                        deal_results.get("photos"),
                         saved_seed.get("listing_photos"),
                     ),
                     featured=featured,

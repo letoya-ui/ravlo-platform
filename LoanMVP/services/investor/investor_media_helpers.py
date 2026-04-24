@@ -144,7 +144,8 @@ def _normalize_photo_list(value) -> list[str]:
     seen = set()
     clean = []
     for url in photos:
-        if url not in seen and not _is_map_tile_url(url):
+        url = _unwrap_proxy_url(url)
+        if url and url not in seen and not _is_map_tile_url(url):
             seen.add(url)
             clean.append(url)
 
