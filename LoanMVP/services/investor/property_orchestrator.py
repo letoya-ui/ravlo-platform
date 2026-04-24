@@ -109,6 +109,8 @@ class CanonicalProperty:
     airbnb_rent_estimate: Optional[float] = None
     airbnb_cap_rate: Optional[float] = None
     airbnb_cash_on_cash: Optional[float] = None
+    airbnb_nightly_rate: Optional[float] = None
+    airbnb_cash_flow: Optional[float] = None
     occupancy_rate: Optional[float] = None
 
     property_classification: Optional[str] = None
@@ -171,8 +173,13 @@ class CanonicalProperty:
             "traditional_cap_rate": self.traditional_cap_rate,
             "traditional_cash_on_cash": self.traditional_cash_on_cash,
             "airbnb_rent_estimate": self.airbnb_rent_estimate,
+            "airbnb_revenue": self.airbnb_rent_estimate,
             "airbnb_cap_rate": self.airbnb_cap_rate,
             "airbnb_cash_on_cash": self.airbnb_cash_on_cash,
+            "airbnb_nightly_rate": self.airbnb_nightly_rate,
+            "daily_rate": self.airbnb_nightly_rate,
+            "airbnb_cash_flow": self.airbnb_cash_flow,
+            "cash_flow": self.airbnb_cash_flow,
             "occupancy_rate": self.occupancy_rate,
             "property_classification": self.property_classification,
             "best_exit_strategy": self.best_exit_strategy,
@@ -816,6 +823,14 @@ class PropertyIntelligenceOrchestrator:
         cp.airbnb_cash_on_cash = self._first_truthy(
             self._as_float(normalized.get("cash_on_cash_return")),
             cp.airbnb_cash_on_cash,
+        )
+        cp.airbnb_nightly_rate = self._first_truthy(
+            self._as_float(normalized.get("adr")),
+            cp.airbnb_nightly_rate,
+        )
+        cp.airbnb_cash_flow = self._first_truthy(
+            self._as_float(normalized.get("cash_flow")),
+            cp.airbnb_cash_flow,
         )
         cp.comp_confidence = self._first_truthy(
             str(normalized.get("confidence")) if normalized.get("confidence") is not None else None,
