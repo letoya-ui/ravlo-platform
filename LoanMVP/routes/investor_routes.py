@@ -4337,7 +4337,7 @@ def deal_workspace():
                 "best_exit_reason": saved_property_payload.get("best_exit_reason"),
                 "ai_recommendation": saved_workspace.get("ai_recommendation") or {},
                 "exit_strategy_cards": saved_workspace.get("exit_strategy_cards") or [],
-                "workspace_short_term_rent": saved_property_payload.get("airbnb_revenue") or saved_property_payload.get("airbnb_rent"),
+                "workspace_short_term_rent": safe_float(saved_property_payload.get("airbnb_revenue") or saved_property_payload.get("airbnb_rent")),
             }
             comps = saved_resolved.get("comp_analysis", {}) or {}
             comps["normalized_comps"] = normalize_workspace_comps(
