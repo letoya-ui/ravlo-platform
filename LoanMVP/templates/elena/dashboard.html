@@ -196,6 +196,52 @@ Clients, listings, flyers, follow-ups, and Copilot in one realtor workspace.
       <section class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
+            <h3>Lead Requests + Workspace</h3>
+            <p>Elena keeps partner lead requests in the same branded workspace as her pipeline, listings, and MLS intake.</p>
+          </div>
+        </div>
+
+        <div class="listing-sync-grid">
+          <div class="listing-sync-card">
+            <div class="listing-sync-meta">
+              <strong>Pending</strong>
+              <span>{{ partner_request_stats.pending }}</span>
+            </div>
+            <div class="listing-sync-meta">
+              <strong>Accepted</strong>
+              <span>{{ partner_request_stats.accepted }}</span>
+            </div>
+            <div class="listing-sync-meta">
+              <strong>Completed</strong>
+              <span>{{ partner_request_stats.completed }}</span>
+            </div>
+          </div>
+
+          <div class="listing-sync-card">
+            {% if recent_partner_requests %}
+              <div class="activity-list">
+                {% for req in recent_partner_requests %}
+                  <div class="activity-item">
+                    <strong>{{ req.title or req.request_type or req.category or 'Lead Request' }}</strong>
+                    <p>{{ req.requester_name() }}</p>
+                    {% if req.related_address() %}<p>{{ req.related_address() }}</p>{% endif %}
+                    <p>
+                      {{ (req.status or 'pending') | replace('_', ' ') | title }}
+                      {% if req.budget %} - ${{ '{:,.0f}'.format(req.budget) }}{% endif %}
+                    </p>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="empty-panel">No lead requests yet. New partner requests will show up here automatically.</div>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
             <h3>Listings</h3>
             <p>
               {% if current_market == "All Markets" %}

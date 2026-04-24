@@ -1,9 +1,9 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • {{ header_name }}{% endblock %}
+{% block title %}Ravlo - Partner Dashboard{% endblock %}
 {% block page_title %}{{ header_name }}{% endblock %}
 {% block page_subline %}
-  Realtor Dashboard — clients, listings, closings, commissions, content, and assistant workflow.
+  Partner Dashboard - clients, listings, lead requests, finances, content, and assistant workflow in one place.
 {% endblock %}
 
 {% block topbar_actions %}
@@ -206,6 +206,62 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <section class="ravlo-card pad space-y-4">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+      <div>
+        <h3 class="text-lg font-semibold">Lead Requests + Workspace</h3>
+        <p class="text-sm text-gray-400">Your incoming partner requests now live in the same workspace as your listings, leads, and MLS tools, so there is no separate partner home to bounce into.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="ravlo-card p-3 bg-white/5">
+        <div class="text-xs uppercase tracking-wide text-gray-400">Pending</div>
+        <div class="text-2xl font-semibold mt-1">{{ partner_request_stats.pending }}</div>
+      </div>
+      <div class="ravlo-card p-3 bg-white/5">
+        <div class="text-xs uppercase tracking-wide text-gray-400">Accepted</div>
+        <div class="text-2xl font-semibold mt-1">{{ partner_request_stats.accepted }}</div>
+      </div>
+      <div class="ravlo-card p-3 bg-white/5">
+        <div class="text-xs uppercase tracking-wide text-gray-400">Completed</div>
+        <div class="text-2xl font-semibold mt-1">{{ partner_request_stats.completed }}</div>
+      </div>
+    </div>
+
+    {% if recent_partner_requests %}
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
+      {% for req in recent_partner_requests %}
+      <div class="ravlo-card p-3 bg-white/5">
+        <div class="flex justify-between gap-3 items-start">
+          <div>
+            <div class="font-medium">{{ req.title or req.request_type or req.category or 'Lead Request' }}</div>
+            <div class="text-xs text-gray-400 mt-1">{{ req.requester_name() }}</div>
+            {% if req.related_address() %}
+            <div class="text-xs text-gray-500 mt-1">{{ req.related_address() }}</div>
+            {% endif %}
+          </div>
+          <span class="text-xs px-2 py-0.5 rounded-full
+            {% if req.status == 'pending' %}bg-yellow-500/20 text-yellow-300
+            {% elif req.status == 'accepted' %}bg-blue-500/20 text-blue-300
+            {% elif req.status == 'completed' %}bg-green-500/20 text-green-300
+            {% else %}bg-white/10 text-gray-300{% endif %}">
+            {{ (req.status or 'pending') | replace('_', ' ') | title }}
+          </span>
+        </div>
+        <div class="flex flex-wrap gap-3 text-xs text-gray-500 mt-3">
+          {% if req.category %}<span>{{ req.category | replace('_', ' ') | title }}</span>{% endif %}
+          {% if req.budget %}<span>${{ '{:,.0f}'.format(req.budget) }}</span>{% endif %}
+          {% if req.created_at %}<span>{{ req.created_at.strftime('%b %d') }}</span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-500 italic">No lead requests yet. When partner requests come in, they'll show up here alongside the rest of your work.</p>
+    {% endif %}
   </section>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

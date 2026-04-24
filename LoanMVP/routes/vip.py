@@ -421,6 +421,25 @@ def _get_frank_market():
     return _get_vip_market()
 
 
+def _partner_request_snapshot(partner, limit=8):
+    recent_requests = []
+    stats = {"pending": 0, "accepted": 0, "completed": 0}
+
+    if not partner:
+        return recent_requests, stats
+
+    recent_requests = (
+        PartnerConnectionRequest.query
+        .filter_by(partner_id=partner.id)
+        .order_by(PartnerConnectionRequest.created_at.desc())
+        .limit(limit).all()
+    )
+    stats["pending"] = sum(1 for r in recent_requests if r.status == "pending")
+    stats["accepted"] = sum(1 for r in recent_requests if r.status == "accepted")
+    stats["completed"] = sum(1 for r in recent_requests if r.status == "completed")
+    return recent_requests, stats
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # VIP access gating
 # ─────────────────────────────────────────────────────────────────────────────
@@ -592,6 +611,7 @@ def realtor_dashboard():
         return gate
 
     profile           = get_or_create_vip_profile()
+    partner           = getattr(current_user, "partner_profile", None)
     now               = datetime.utcnow()
     week_ago          = now - timedelta(days=7)
     available_markets = get_user_markets(profile)
@@ -684,6 +704,7 @@ def realtor_dashboard():
         .order_by(VIPAssistantSuggestion.created_at.desc())
         .limit(5).all()
     )
+    recent_partner_requests, partner_request_stats = _partner_request_snapshot(partner)
 
     # Per-market breakdowns for the dual-market view. Only populated when
     # the realtor has 2+ markets. Empty dicts otherwise — the template uses
@@ -773,6 +794,8 @@ def realtor_dashboard():
         listing_status_filter = status_filter,
         recent_flyers         = recent_flyers,
         copilot_suggestions   = copilot_suggestions,
+        recent_partner_requests = recent_partner_requests,
+        partner_request_stats = partner_request_stats,
         # `effective_market` reflects what the queries were actually
         # scoped to — for a single-market realtor this is their one market
         # even though the session still holds "All Markets".
@@ -788,7 +811,7 @@ def realtor_dashboard():
         listing_sync_token    = _listing_sync_token(profile),
         listing_sync_prompt   = _listing_sync_prompt(profile),
         portal                = "vip",
-        portal_name           = "VIP",
+        portal_name           = "Partners",
         portal_home           = url_for("vip.realtor_dashboard"),
     )
 
@@ -1314,21 +1337,11 @@ def designer_dashboard():
 @role_required("partner_group", "admin")
 def partner_dashboard():
     profile = get_or_create_vip_profile()
+    if getattr(profile, "role_type", None) == "realtor":
+        return redirect(url_for("vip.realtor_dashboard"))
+
     partner = getattr(current_user, "partner_profile", None)
-
-    recent_requests = []
-    stats = {"pending": 0, "accepted": 0, "completed": 0}
-
-    if partner:
-        recent_requests = (
-            PartnerConnectionRequest.query
-            .filter_by(partner_id=partner.id)
-            .order_by(PartnerConnectionRequest.created_at.desc())
-            .limit(8).all()
-        )
-        stats["pending"]   = sum(1 for r in recent_requests if r.status == "pending")
-        stats["accepted"]  = sum(1 for r in recent_requests if r.status == "accepted")
-        stats["completed"] = sum(1 for r in recent_requests if r.status == "completed")
+    recent_requests, stats = _partner_request_snapshot(partner)
 
     copilot_suggestions = (
         VIPAssistantSuggestion.query
@@ -1346,7 +1359,7 @@ def partner_dashboard():
         stats               = stats,
         copilot_suggestions = copilot_suggestions,
         portal              = "vip",
-        portal_name         = "VIP",
+        portal_name         = "Partners",
         portal_home         = url_for("vip.partner_dashboard"),
     )
 

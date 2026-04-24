@@ -386,14 +386,8 @@ def _gate_elena_on_vip_access():
 @elena_bp.get("/")
 @role_required("partner_group", "admin")
 def dashboard():
-    """Elena's root URL redirects to the unified realtor dashboard.
-
-    Every realtor — Elena, Frank, and future beta partners — shares the same
-    VIP realtor dashboard at ``/vip/realtor``. The Elena blueprint keeps its
-    deep pages (listings, clients, interactions, template studio, etc.) so
-    existing URLs stay valid, but the landing page is the unified view.
-    """
-    return redirect(url_for("vip.realtor_dashboard"))
+    """Elena's branded dashboard entry point."""
+    return dashboard_legacy()
 
 
 @elena_bp.get("/legacy-dashboard")
@@ -402,6 +396,7 @@ def dashboard_legacy():
     now = datetime.utcnow()
     week_ago = now - timedelta(days=7)
     current_market = get_current_market()
+    partner = getattr(current_user, "partner_profile", None)
 
     total_clients = ElenaClient.query.count()
     new_leads = ElenaClient.query.filter(ElenaClient.created_at >= week_ago).count()
@@ -525,9 +520,15 @@ def dashboard_legacy():
         .all()
     )
 
-    from LoanMVP.routes.vip import _listing_sync_prompt, _listing_sync_token, _listing_sync_url
+    from LoanMVP.routes.vip import (
+        _listing_sync_prompt,
+        _listing_sync_token,
+        _listing_sync_url,
+        _partner_request_snapshot,
+    )
 
     profile = get_or_create_realtor_vip_profile()
+    recent_partner_requests, partner_request_stats = _partner_request_snapshot(partner)
 
     return render_template(
         "elena/dashboard.html",
@@ -546,6 +547,8 @@ def dashboard_legacy():
         listing_sync_token=_listing_sync_token(profile),
         listing_sync_prompt=_listing_sync_prompt(profile),
         copilot_suggestions=copilot_suggestions,
+        recent_partner_requests=recent_partner_requests,
+        partner_request_stats=partner_request_stats,
         portal="elena",
         portal_name="Elena",
         portal_home=url_for("elena.dashboard"),
