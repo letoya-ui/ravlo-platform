@@ -509,7 +509,7 @@ function buildPropertyPayload(r, analyzeId, saveId){
 
     airbnb_revenue: numOrNull(r.airbnb_revenue) ?? numOrNull(r.airbnb_rent_estimate),
     airbnb_rent_estimate: numOrNull(r.airbnb_rent_estimate) ?? numOrNull(r.airbnb_revenue),
-    occupancy_rate: r.occupancy_rate ?? null,
+    occupancy_rate: numOrNull(r.occupancy_rate) ?? null,
     daily_rate: numOrNull(r.daily_rate) ?? numOrNull(r.airbnb_nightly_rate),
     cash_flow: numOrNull(r.cash_flow) ?? numOrNull(r.airbnb_cash_flow),
     airbnb_cash_on_cash: numOrNull(r.airbnb_cash_on_cash),
