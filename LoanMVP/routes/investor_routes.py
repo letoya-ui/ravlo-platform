@@ -4352,6 +4352,13 @@ def deal_workspace():
                 comparison.get("airbnb", {}) or {},
                 saved_property_payload,
             )
+            comparison = build_workspace_exit_comparison(
+                selected_prop=selected_prop,
+                deal=None,
+                workspace_analysis=workspace_analysis,
+                comps=comps,
+                rehab_analysis=rehab_analysis,
+            )
             exit_strategy_analysis = saved_resolved.get("exit_strategy_analysis", {}) or {}
             recommendation = saved_resolved.get("recommendation", {}) or {
                 "best": workspace_analysis.get("best_exit_strategy"),
