@@ -5739,6 +5739,11 @@ def design_studio(deal_id=None):
             "gallery": property_gallery,
         }
 
+    build_project = results.get("build_project", {}) or {}
+    blueprint_result = build_project.get("blueprint", {}) or {}
+    interior_block = build_project.get("interior", {}) or {}
+    interior_result = interior_block.get("latest", {}) or {}
+
     return render_template(
         "investor/deal_rehab_studio.html",
         deal=deal,
@@ -5750,6 +5755,8 @@ def design_studio(deal_id=None):
         property_photo_gallery=property_gallery,
         workspace_images=workspace_images,
         preselected_image_url=preselected_image_url,
+        blueprint_result=blueprint_result,
+        interior_result=interior_result,
         page_title="Design Studio",
         page_subtitle="Create interior design concepts from blueprints, floor plans, and existing spaces.",
     )
