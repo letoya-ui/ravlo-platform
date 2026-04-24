@@ -5903,14 +5903,22 @@ def generate_build_exterior():
             reference_image_url = _upload_before_image(raw)
 
         # ---------------- FALLBACKS ----------------
+        # Prefer blueprint as the primary architectural reference for
+        # exterior generation.  Fall back to previous exterior render,
+        # then site plan, then project URLs.
         if not image_base64 and not reference_image_url and deal:
             results = deal.results_json or {}
             build_project = results.get("build_project", {}) or {}
+            blueprint = build_project.get("blueprint", {}) or {}
             exterior = build_project.get("exterior", {}) or {}
+            site_plan = build_project.get("site_plan", {}) or {}
 
             reference_image_url = (
-                exterior.get("image_url")
+                blueprint.get("image_url")
+                or blueprint.get("blueprint_url")
+                or exterior.get("image_url")
                 or exterior.get("build_reference_image")
+                or site_plan.get("image_url")
                 or ""
             ).strip()
 
@@ -5921,15 +5929,12 @@ def generate_build_exterior():
             ).first()
 
             if project:
-                reference_image_url = ""
+                reference_image_url = (
+                    getattr(project, "blueprint_url", "") or ""
+                ).strip()
 
-        # ---------------- CLEAN BAD INPUT ----------------
+        # ---------------- CONDITIONING ----------------
         use_conditioning = True
-
-        if _is_probably_blueprint(reference_image_url):
-            # ❌ DO NOT use blueprint for exterior
-            reference_image_url = ""
-            use_conditioning = False
 
         # ---------------- PROMPT ----------------
         exterior_prompt = build_exterior_concept_prompt(
@@ -6894,11 +6899,12 @@ def generate_full_build():
 
         # --------------------------------------------------
         # 3. GENERATE EXTERIOR
-        # Blueprint = architecture/massing.
-        # Site image/site plan = context only.
+        # Blueprint = architecture/massing (primary reference).
+        # Site image = land context only; site plan = fallback.
         # --------------------------------------------------
-        site_context_b64 = exterior_image_base64 or site_plan_primary_b64
-        site_context_url = "" if site_context_b64 else (reference_image_url or site_plan_primary_url or "")
+        # Prefer: user-uploaded land image > blueprint > site plan
+        exterior_ref_b64 = exterior_image_base64 or blueprint_primary_b64 or site_plan_primary_b64
+        exterior_ref_url = "" if exterior_ref_b64 else (reference_image_url or blueprint_primary_url or site_plan_primary_url or "")
 
         exterior_payload = {
             "mode": "exterior",
@@ -6923,9 +6929,9 @@ def generate_full_build():
             ),
 
             # Engine expects image_base64 / image_url for the init image.
-            # For exterior mode the site/context image is the primary reference.
-            "image_base64": site_context_b64,
-            "image_url": site_context_url,
+            # Blueprint is the primary architectural reference for exterior.
+            "image_base64": exterior_ref_b64,
+            "image_url": exterior_ref_url,
 
             "width": 1024,
             "height": 1024,
@@ -7054,7 +7060,7 @@ def generate_full_build():
                 "meta": exterior_meta,
                 "seed": exterior_seed,
                 "job_id": exterior_job_id,
-                "build_reference_image": reference_image_url or site_plan_primary_url,
+                "build_reference_image": reference_image_url or blueprint_primary_url or site_plan_primary_url,
                 "blueprint_reference_image": blueprint_primary_url,
                 "site_plan_reference_image": site_plan_primary_url,
             }
