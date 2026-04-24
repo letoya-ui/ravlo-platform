@@ -4082,6 +4082,7 @@ def deal_workspace():
                 target.get("airbnb_nightly_rate")
                 or source.get("nightly_rate")
                 or source.get("adr")
+                or source.get("daily_rate")
             )
             target["airbnb_occupancy_rate"] = (
                 target.get("airbnb_occupancy_rate")
@@ -4091,6 +4092,7 @@ def deal_workspace():
                 target.get("airbnb_gross_monthly")
                 or source.get("gross_monthly")
                 or source.get("airbnb_rent")
+                or source.get("airbnb_revenue")
             )
             target["airbnb_net_monthly"] = (
                 target.get("airbnb_net_monthly")
@@ -4195,6 +4197,7 @@ def deal_workspace():
             workspace_analysis["baths"] = workspace_analysis.get("baths") or saved_property_payload.get("baths")
             workspace_analysis["year_built"] = workspace_analysis.get("year_built") or saved_property_payload.get("year_built")
             workspace_analysis["lot_size_sqft"] = workspace_analysis.get("lot_size_sqft") or saved_property_payload.get("lot_size_sqft")
+            workspace_analysis["workspace_short_term_rent"] = workspace_analysis.get("workspace_short_term_rent") or safe_float(saved_property_payload.get("airbnb_revenue") or saved_property_payload.get("airbnb_rent"))
             workspace_analysis["listing_photos"] = _proxy_photo_list(
                 _workspace_gallery_sources(
                     _normalize_photo_urls(
@@ -4224,6 +4227,7 @@ def deal_workspace():
                 strategy_analysis.get("airbnb", {}) or {},
                 (deal_results.get("comparison", {}) or {}).get("airbnb", {}) or {},
                 (saved_resolved.get("comparison", {}) or {}).get("airbnb", {}) or {},
+                saved_property_payload,
             )
 
             comparison = build_workspace_exit_comparison(
@@ -4333,6 +4337,7 @@ def deal_workspace():
                 "best_exit_reason": saved_property_payload.get("best_exit_reason"),
                 "ai_recommendation": saved_workspace.get("ai_recommendation") or {},
                 "exit_strategy_cards": saved_workspace.get("exit_strategy_cards") or [],
+                "workspace_short_term_rent": saved_property_payload.get("airbnb_revenue") or saved_property_payload.get("airbnb_rent"),
             }
             comps = saved_resolved.get("comp_analysis", {}) or {}
             comps["normalized_comps"] = normalize_workspace_comps(
@@ -4345,6 +4350,7 @@ def deal_workspace():
                 workspace_analysis,
                 strategy_analysis.get("airbnb", {}) or {},
                 comparison.get("airbnb", {}) or {},
+                saved_property_payload,
             )
             exit_strategy_analysis = saved_resolved.get("exit_strategy_analysis", {}) or {}
             recommendation = saved_resolved.get("recommendation", {}) or {
