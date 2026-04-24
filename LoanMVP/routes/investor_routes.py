@@ -5864,6 +5864,7 @@ def generate_build_exterior():
         location = (request.form.get("location") or "").strip()
         notes = (request.form.get("notes") or "").strip()
         style = (request.form.get("style") or "modern_farmhouse").strip()
+        blueprint_style = (request.form.get("blueprint_style") or "technical_blueprint").strip().lower()
         save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
 
         land_image = request.files.get("land_image")
@@ -5920,6 +5921,7 @@ def generate_build_exterior():
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
+            "blueprint_style": blueprint_style,
             "description": description,
             "build_description": description,
             "prompt": exterior_prompt,
@@ -5970,6 +5972,7 @@ def generate_build_exterior():
                 "project_name": project_name,
                 "property_type": property_type,
                 "style": style,
+                "blueprint_style": blueprint_style,
                 "description": description,
                 "lot_size": lot_size,
                 "zoning": zoning,
@@ -6256,6 +6259,7 @@ def generate_build_blueprint():
         requested_style_preset = (
             request.form.get("style_preset") or "luxury_modern"
         ).strip().lower()
+        blueprint_style = (request.form.get("blueprint_style") or "technical_blueprint").strip().lower()
         renovation_level = (
             request.form.get("renovation_level") or "medium"
         ).strip().lower()
@@ -6390,6 +6394,7 @@ def generate_build_blueprint():
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
+            "blueprint_style": blueprint_style,
             "description": description,
             "build_description": description,
             "lot_size": lot_size,
@@ -6407,7 +6412,9 @@ def generate_build_blueprint():
         }
 
         if blueprint_image_base64:
-            payload["image_base64"] = blueprint_image_base64
+            payload["blueprint_image_base64"] = blueprint_image_base64
+        elif stored_blueprint_url:
+            payload["blueprint_image_url"] = stored_blueprint_url
 
         current_app.logger.warning(
             "BUILD BLUEPRINT ENGINE PAYLOAD deal_id=%s payload=%s",
@@ -6608,6 +6615,7 @@ def generate_full_build():
         project_name = (data.get("project_name") or "").strip()
         property_type = (data.get("property_type") or "single_family").strip()
         style = (data.get("style") or "modern_farmhouse").strip()
+        blueprint_style = (data.get("blueprint_style") or "technical_blueprint").strip()
         description = (data.get("description") or "").strip()
         lot_size = (data.get("lot_size") or "").strip()
         lot_count = _normalize_int(data.get("lot_count"))
@@ -6745,6 +6753,7 @@ def generate_full_build():
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
+            "blueprint_style": blueprint_style,
             "description": description,
             "build_description": description,
             "lot_size": lot_size,
@@ -6761,8 +6770,10 @@ def generate_full_build():
         }
 
         if blueprint_image_base64:
-            blueprint_payload["image_base64"] = blueprint_image_base64
-            blueprint_payload["image_url"] = ""
+            blueprint_payload["blueprint_image_base64"] = blueprint_image_base64
+            blueprint_payload["blueprint_image_url"] = ""
+        elif blueprint_url:
+            blueprint_payload["blueprint_image_url"] = blueprint_url
 
         current_app.logger.warning(f"FULL BUILD BLUEPRINT PAYLOAD: {blueprint_payload}")
 
@@ -6805,6 +6816,7 @@ def generate_full_build():
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
+            "blueprint_style": blueprint_style,
             "description": description,
             "build_description": description,
             "lot_size": lot_size,
@@ -6816,8 +6828,8 @@ def generate_full_build():
                 else f"{notes}, access, setbacks, and site circulation".strip(", ")
             ),
             "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
-            "image_base64": exterior_image_base64 or blueprint_primary_b64,
-            "image_url": "" if (exterior_image_base64 or blueprint_primary_b64) else reference_image_url,
+            "blueprint_image_base64": blueprint_image_base64 or blueprint_primary_b64,
+            "blueprint_image_url": "" if (blueprint_image_base64 or blueprint_primary_b64) else (blueprint_url or blueprint_primary_url),
             "width": 768,
             "height": 768,
             "steps": 24,
@@ -6864,6 +6876,7 @@ def generate_full_build():
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
+            "blueprint_style": blueprint_style,
             "description": description,
             "build_description": description,
             "lot_size": lot_size,
@@ -6874,8 +6887,8 @@ def generate_full_build():
                 if lot_count and lot_count > 1
                 else notes
             ),
-            "image_base64": exterior_image_base64 or blueprint_primary_b64,
-            "image_url": "" if (exterior_image_base64 or blueprint_primary_b64) else reference_image_url,
+            "site_image_base64": exterior_image_base64,
+            "site_image_url": reference_image_url or blueprint_primary_url,
             "width": 640,
             "height": 640,
             "steps": 20,
@@ -6944,6 +6957,7 @@ def generate_full_build():
             build_project["project_name"] = project_name
             build_project["property_type"] = property_type
             build_project["development_type"] = development_type
+            build_project["blueprint_style"] = blueprint_style
             build_project["lot_count"] = lot_count
             build_project["description"] = description
             build_project["lot_size"] = lot_size
@@ -6954,6 +6968,7 @@ def generate_full_build():
             build_project["blueprint"] = {
                 "project_name": project_name,
                 "property_type": property_type,
+                "blueprint_style": blueprint_style,
                 "description": description,
                 "lot_size": lot_size,
                 "zoning": zoning,

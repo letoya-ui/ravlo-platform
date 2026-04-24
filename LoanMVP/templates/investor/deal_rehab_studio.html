@@ -19,6 +19,7 @@
 
       <div class="hero-chips">
         <span class="chip"><i data-lucide="image"></i> Interior Concepts</span>
+        {% if deal %}<a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="chip chip-link"><i data-lucide="wallet"></i> Generate Budget</a>{% endif %}
         <span class="chip"><i data-lucide="layout-template"></i> Blueprint Ready</span>
         <span class="chip"><i data-lucide="sparkles"></i> AI Design</span>
         {% if deal %}
@@ -258,6 +259,13 @@
               <i data-lucide="sparkles"></i>
               Generate Design Concept
             </button>
+
+            {% if deal %}
+            <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ravlo-btn-secondary">
+              <i data-lucide="wallet"></i>
+              Generate Budget
+            </a>
+            {% endif %}
 
             <button type="button" class="ravlo-btn ravlo-btn-secondary" id="resetBtn">
               <i data-lucide="rotate-ccw"></i>
@@ -1263,6 +1271,7 @@
       grid-template-columns: 1fr;
     }
   }
+.chip-link{color:#eef6ff;text-decoration:none;border-color:rgba(122,184,255,.25);background:rgba(122,184,255,.10)}
 </style>
 
 <script>

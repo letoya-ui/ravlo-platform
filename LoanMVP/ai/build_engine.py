@@ -56,6 +56,7 @@ def run_build_concept(payload):
         "project_name": payload.get("project_name", ""),
         "property_type": payload.get("property_type", "single_family"),
         "style": payload.get("style", "modern_farmhouse"),
+        "blueprint_style": payload.get("blueprint_style", "technical_blueprint"),
         "description": payload.get("description", ""),
         "build_description": payload.get("description", ""),
         "lot_size": payload.get("lot_size", ""),
@@ -70,11 +71,16 @@ def run_build_concept(payload):
         "height": payload.get("height", 768),
     }
 
-    # Optional image input
-    if payload.get("image_base64"):
-        engine_payload["image_base64"] = payload["image_base64"]
-    if payload.get("image_url"):
-        engine_payload["image_url"] = payload["image_url"]
+    for source_key in (
+        "image_base64",
+        "image_url",
+        "blueprint_image_base64",
+        "blueprint_image_url",
+        "site_image_base64",
+        "site_image_url",
+    ):
+        if payload.get(source_key):
+            engine_payload[source_key] = payload[source_key]
 
     # Interior-specific fields
     if payload.get("room_type"):

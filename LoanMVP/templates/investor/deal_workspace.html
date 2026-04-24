@@ -31,9 +31,6 @@ Review a saved property, compare exit paths, and move the best opportunity into 
     </a>
     {% endif %}
 
-    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-        Renovation Studio
-    </a>
     <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
         Build Studio
     </a>
@@ -256,6 +253,15 @@ Review a saved property, compare exit paths, and move the best opportunity into 
     {% set airbnb_occ = ((airbnb.get("occupancy_rate", 0) or 0) | float) * 100 %}
     {% set airbnb_gross = (airbnb.get("gross_monthly", 0) or 0) | float %}
     {% set airbnb_net = (airbnb.get("net_monthly", 0) or 0) | float %}
+    {% set workspace_str_revenue = (
+        wa.get("workspace_short_term_rent")
+        or airbnb.get("gross_monthly")
+        or airbnb.get("monthly_revenue")
+        or wa.get("airbnb_rent")
+        or wa.get("airbnb_revenue")
+        or 0
+    ) | float %}
+    {% set airbnb_display_monthly = workspace_str_revenue if workspace_str_revenue > 0 else airbnb_gross %}
     {% set airbnb_roi = ((airbnb_net * 12) / purchase_price_safe) * 100 if purchase_price_safe > 0 else 0 %}
 
     {% set land_value = (land.get("land_value", 0) or 0) | float %}
@@ -292,9 +298,6 @@ Review a saved property, compare exit paths, and move the best opportunity into 
         <div class="workspace-hero-image-main">
             <img src="{{ hero_photo }}" alt="{{ selected_prop.address or 'Property photo' }}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
             {% if deal %}
-            <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id, image_url=hero_photo) }}" class="workspace-hero-image-overlay" title="Use in Renovation Studio">
-                <i data-lucide="sparkles"></i> Use in Renovation Studio
-            </a>
             {% endif %}
         </div>
         {% if listing_photos and listing_photos|length > 1 %}
@@ -351,6 +354,16 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                 </span>
 
                 <span class="ravlo-chip">
+                    Listing Photo: {% if hero_photo %}Loaded{% else %}Pending{% endif %}
+                </span>
+
+                {% if airbnb_display_monthly > 0 %}
+                <span class="ravlo-chip">
+                    STR Revenue: ${{ "{:,.0f}".format(airbnb_display_monthly) }}/mo
+                </span>
+                {% endif %}
+
+                <span class="ravlo-chip">
                     {% if deal %}
                         Deal #{{ deal.id }}
                     {% elif selected_prop %}
@@ -386,12 +399,9 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                 </a>
                 {% else %}
                 <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
-                    Start Budget
+                    Generate Budget
                 </a>
                 {% endif %}
-                <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost">
-                    Renovation Studio
-                </a>
                 <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
                     Build Studio
                 </a>
@@ -597,7 +607,7 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                         <div class="workspace-compare-meta">
                             <div><span>Nightly Rate</span><strong>${{ "{:,.0f}".format(airbnb_nightly) }}</strong></div>
                             <div><span>Occupancy</span><strong>{{ "{:.0f}".format(airbnb_occ) }}%</strong></div>
-                            <div><span>Gross Monthly</span><strong>${{ "{:,.0f}".format(airbnb_gross) }}</strong></div>
+                            <div><span>Mashvisor STR Revenue</span><strong>${{ "{:,.0f}".format(airbnb_display_monthly) }}</strong></div>
                             <div><span>Net Monthly</span><strong>${{ "{:,.0f}".format(airbnb_net) }}</strong></div>
                             <div><span>Annualized ROI</span><strong>{{ "{:.1f}".format(airbnb_roi) }}%</strong></div>
                         </div>
@@ -677,9 +687,6 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                     <div class="workspace-photo-main workspace-photo-rehab-link">
                         <img src="{{ primary_photo }}" alt="Primary listing photo" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
                         {% if deal %}
-                        <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id, image_url=primary_photo) }}" class="workspace-photo-overlay" title="Use in Renovation Studio">
-                            <i data-lucide="sparkles"></i> Use in Renovation Studio
-                        </a>
                         {% endif %}
                     </div>
                     {% endif %}
@@ -998,7 +1005,7 @@ Review a saved property, compare exit paths, and move the best opportunity into 
 .empty-state,.empty-state-inline{padding:16px 18px;border-radius:18px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12);color:var(--muted)}
 @media (max-width:1180px){
   .workspace-hero,.workspace-main-grid,.workspace-compare-grid{grid-template-columns:1fr}
-  .workspace-grid-4{grid-template-columns:repeat(2,1fr)}
+  .workspace-grid-4{grid-template-columns:repeat(3,1fr)}
   .workspace-photo-grid{grid-template-columns:repeat(3,1fr)}
   .workspace-hero-thumbs{grid-template-columns:repeat(4,1fr)}
 }

@@ -51,12 +51,24 @@
           </div>
           <div class="field">
             <label for="style">Exterior Style</label>
+            {% set exterior_style_value = build_project.get('style') or blueprint_result.get('style') or exterior_result.get('style') or 'modern_farmhouse' %}
             <select id="style" name="style">
-              <option value="modern_farmhouse">Modern Farmhouse</option>
-              <option value="modern">Modern</option>
-              <option value="luxury_modern">Luxury Modern</option>
-              <option value="traditional">Traditional</option>
-              <option value="contemporary">Contemporary</option>
+              <option value="modern_farmhouse" {{ 'selected' if exterior_style_value == 'modern_farmhouse' else '' }}>Modern Farmhouse</option>
+              <option value="modern" {{ 'selected' if exterior_style_value == 'modern' else '' }}>Modern</option>
+              <option value="luxury_modern" {{ 'selected' if exterior_style_value == 'luxury_modern' else '' }}>Luxury Modern</option>
+              <option value="traditional" {{ 'selected' if exterior_style_value == 'traditional' else '' }}>Traditional</option>
+              <option value="contemporary" {{ 'selected' if exterior_style_value == 'contemporary' else '' }}>Contemporary</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="blueprint_style">Blueprint Style</label>
+            {% set blueprint_style_value = build_project.get('blueprint_style') or blueprint_result.get('blueprint_style') or (blueprint_result.get('meta', {}) if blueprint_result else {}).get('blueprint_style') or 'technical_blueprint' %}
+            <select id="blueprint_style" name="blueprint_style">
+              <option value="technical_blueprint" {{ 'selected' if blueprint_style_value == 'technical_blueprint' else '' }}>Technical Blueprint</option>
+              <option value="permit_set" {{ 'selected' if blueprint_style_value == 'permit_set' else '' }}>Permit Set</option>
+              <option value="developer_marketing" {{ 'selected' if blueprint_style_value == 'developer_marketing' else '' }}>Developer Marketing</option>
+              <option value="monochrome_minimal" {{ 'selected' if blueprint_style_value == 'monochrome_minimal' else '' }}>Monochrome Minimal</option>
+              <option value="annotated_presentation" {{ 'selected' if blueprint_style_value == 'annotated_presentation' else '' }}>Annotated Presentation</option>
             </select>
           </div>
           <div class="field">
@@ -100,7 +112,25 @@
           </div>
         </div>
 
-        <button type="submit" class="ravlo-btn primary" id="generateProjectBuildBtn">{{ submit_label or "Generate Build Studio Package" }}</button>
+        {% if property_photo_gallery %}
+        <div class="field">
+          <label>Saved Listing Photos</label>
+          <div class="seed-thumb-row" id="savedSiteGallery">
+            {% for photo in property_photo_gallery[:8] %}
+            <button type="button" class="seed-thumb{% if exterior_result.get('build_reference_image') == photo %} is-active{% endif %}" data-site-url="{{ photo }}" aria-label="Use saved site photo {{ loop.index }}" title="Use saved listing photo {{ loop.index }}">
+              <img src="{{ photo }}" alt="Saved listing photo {{ loop.index }}">
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="cta-row">
+          <button type="submit" class="ravlo-btn primary" id="generateProjectBuildBtn">{{ submit_label or "Generate Build Studio Package" }}</button>
+          {% if deal %}
+          <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">Generate Budget</a>
+          {% endif %}
+        </div>
       </form>
     </section>
 
@@ -142,6 +172,19 @@
       <div class="result-media" id="exteriorMedia">{% if exterior_result and exterior_result.get('image_url') %}<img src="{{ exterior_result.get('image_url') }}" alt="Exterior concept">{% else %}<div class="empty-state-inline">Exterior concept will appear here.</div>{% endif %}</div>
     </article>
   </section>
+
+  <div class="loading-overlay hidden" id="buildLoadingOverlay">
+    <div class="loading-card">
+      <div class="loader-ring"></div>
+      <h3 id="buildLoadingTitle">Generating Build Studio Package...</h3>
+      <p id="buildLoadingMessage">Ravlo is building the blueprint, site plan, and exterior package now.</p>
+      <div class="loading-progress-list">
+        <div class="loading-step" id="buildLoadingStep1">Preparing project inputs...</div>
+        <div class="loading-step" id="buildLoadingStep2">Generating blueprint and site plan...</div>
+        <div class="loading-step" id="buildLoadingStep3">Saving exterior package to workspace...</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -154,6 +197,20 @@
 .result-meta{display:grid;gap:12px}.result-meta div{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
 .result-media{border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.03);min-height:320px;display:flex;align-items:center;justify-content:center;overflow:hidden}.result-media img{width:100%;height:100%;object-fit:cover;display:block}
 .analysis-note{margin-top:16px;padding:16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap}
+.seed-thumb-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
+.seed-thumb{position:relative;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.03);padding:0;overflow:hidden;cursor:pointer;min-height:84px}
+.seed-thumb img{width:100%;height:84px;object-fit:cover;display:block}
+.seed-thumb.is-active{border-color:rgba(122,184,255,.8);box-shadow:0 0 0 1px rgba(122,184,255,.35)}
+.loading-overlay{position:fixed;inset:0;background:rgba(5,8,14,.78);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:1200;padding:24px}
+.loading-overlay.hidden{display:none}
+.loading-card{width:min(100%,480px);padding:28px;border-radius:24px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(180deg,rgba(16,22,34,.98),rgba(10,15,24,.96));box-shadow:0 26px 70px rgba(0,0,0,.35);text-align:center}
+.loading-card h3{margin:14px 0 10px;color:#fff;font-size:1.4rem}
+.loading-card p{margin:0;color:#b8c5d6;line-height:1.6}
+.loading-progress-list{display:grid;gap:10px;margin-top:20px;text-align:left}
+.loading-step{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);color:#dbe6f5}
+.loader-ring{width:58px;height:58px;border-radius:50%;margin:0 auto;border:4px solid rgba(255,255,255,.12);border-top-color:#7ab8ff;animation:build-spin 1s linear infinite}
+@keyframes build-spin{to{transform:rotate(360deg)}}
 @media (max-width: 900px){.studio-hero-card,.project-build-grid,.form-grid.two{grid-template-columns:1fr}}
 </style>
 
@@ -163,8 +220,30 @@
   const button = document.getElementById('generateProjectBuildBtn');
   const lotCountInput = document.getElementById('lot_count');
   const summaryLots = document.getElementById('summaryLots');
+  const referenceImageField = document.getElementById('reference_image_url');
+  const buildLoadingOverlay = document.getElementById('buildLoadingOverlay');
+
+  function startBuildLoading() {
+    buildLoadingOverlay?.classList.remove('hidden');
+    button.disabled = true;
+    button.textContent = 'Generating...';
+  }
+
+  function stopBuildLoading() {
+    buildLoadingOverlay?.classList.add('hidden');
+    button.disabled = false;
+    button.textContent = {{ (submit_label or "Generate Build Studio Package")|tojson }};
+  }
 
   lotCountInput?.addEventListener('input', function () { summaryLots.textContent = this.value || '1'; });
+  document.querySelectorAll('[data-site-url]').forEach((buttonEl) => {
+    buttonEl.addEventListener('click', function () {
+      const nextUrl = this.dataset.siteUrl || '';
+      if (referenceImageField) referenceImageField.value = nextUrl;
+      document.querySelectorAll('[data-site-url]').forEach((node) => node.classList.remove('is-active'));
+      this.classList.add('is-active');
+    });
+  });
 
   function renderMedia(id, url, alt, fallback) {
     const el = document.getElementById(id);
@@ -174,8 +253,7 @@
 
   form?.addEventListener('submit', async function (e) {
     e.preventDefault();
-    button.disabled = true;
-    button.textContent = 'Generating...';
+    startBuildLoading();
 
     try {
       const response = await fetch("{{ url_for('investor.generate_full_build') }}", {
@@ -204,8 +282,7 @@
     } catch (error) {
       alert(error.message || 'Build Studio generation failed.');
     } finally {
-      button.disabled = false;
-      button.textContent = {{ (submit_label or "Generate Build Studio Package")|tojson }};
+      stopBuildLoading();
     }
   });
 })();

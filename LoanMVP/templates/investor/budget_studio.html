@@ -11,7 +11,6 @@ Build the financial operating system for your deal.
   {% if deal %}
     <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Deal Workspace</a>
     <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">Deal Architect</a>
-    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">Renovation Studio</a>
     <a class="ravlo-btn ghost sm" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">Build Studio</a>
     {% if existing_budget %}
       <a class="ravlo-btn primary sm" href="{{ url_for('investor.budget_detail', budget_id=existing_budget.id) }}">Open Budget Tracker</a>
@@ -692,11 +691,6 @@ Build the financial operating system for your deal.
           <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="workflow-card">
             <h4>Deal Architect</h4>
             <p>Set strategy, thesis, and risk posture before finalizing costs.</p>
-          </a>
-
-          <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="workflow-card">
-            <h4>Renovation Studio</h4>
-            <p>Use rehab scope and finish direction to sharpen your budget assumptions.</p>
           </a>
 
           <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="workflow-card">
