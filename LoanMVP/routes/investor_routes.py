@@ -6881,27 +6881,35 @@ def generate_full_build():
 
         exterior_payload = {
             "mode": "exterior",
+
+            # project context
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
-            "blueprint_style": blueprint_style,
             "description": description,
-            "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": site_notes,
-            "special_features": (
-                f"{lot_count} lots, cohesive streetscape, developer-ready massing"
-                if lot_count and lot_count > 1
-                else notes
+            "prompt_notes": (
+                site_notes
+                + " Use the blueprint as the architectural layout and massing constraint. "
+                + "Use the site plan as the land/context reference. "
+                + "Generate a realistic developer-grade exterior rendering."
             ),
-            "site_image_base64": exterior_reference_b64,
-            "site_image_url": exterior_reference_url,
-            "width": 640,
-            "height": 640,
-            "steps": 20,
-            "guidance": 7.5,
-            "strength": 0.68,
+
+            # architectural constraint
+            "blueprint_image_base64": blueprint_primary_b64,
+            "blueprint_image_url": "",
+
+            # site/context reference
+            "site_image_base64": exterior_image_base64 or site_plan_primary_b64,
+            "site_image_url": "",
+
+            # rendering settings
+            "width": 1024,
+            "height": 1024,
+            "steps": 28,
+            "guidance": 7.0,
+            "strength": 0.48,
             "count": 1,
         }
 
