@@ -167,7 +167,7 @@ from LoanMVP.services.partner_marketplace_service import (
     search_internal_partners,
     search_google_places,
 )
-from LoanMVP.services.deal_architect_service import generate_build_budget_from_package
+from LoanMVP.services.investor.deal_architect_service import generate_build_budget_from_package
 from LoanMVP.utils.pdf_utils import add_signature_to_pdf
 
 # -------------------------
