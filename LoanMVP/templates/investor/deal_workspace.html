@@ -294,11 +294,12 @@ Review a saved property, compare exit paths, and move the best opportunity into 
         {% endif %}
     {% endif %}
 
-    {% if hero_photo %}
     <section class="workspace-hero-image-section">
         <div class="workspace-hero-image-main">
+            {% if hero_photo %}
             <img src="{{ hero_photo }}" alt="{{ selected_prop.address or 'Property photo' }}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
-            {% if deal %}
+            {% else %}
+            <img src="/static/images/placeholder_property.jpg" alt="Property placeholder">
             {% endif %}
         </div>
         {% if listing_photos and listing_photos|length > 1 %}
@@ -318,7 +319,6 @@ Review a saved property, compare exit paths, and move the best opportunity into 
         </div>
         {% endif %}
     </section>
-    {% endif %}
 
     <section class="ravlo-hero-card workspace-hero">
         <div class="workspace-hero-copy">
@@ -682,15 +682,14 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                     </div>
                 </div>
 
-                {% if primary_photo or listing_photos %}
                 <div class="workspace-photo-shell">
-                    {% if primary_photo %}
                     <div class="workspace-photo-main workspace-photo-rehab-link">
+                        {% if primary_photo %}
                         <img src="{{ primary_photo }}" alt="Primary property photo" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
-                        {% if deal %}
+                        {% else %}
+                        <img src="/static/images/placeholder_property.jpg" alt="Property placeholder">
                         {% endif %}
                     </div>
-                    {% endif %}
 
                     {% if listing_photos %}
                     <div class="workspace-photo-grid">
@@ -709,11 +708,6 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                     </div>
                     {% endif %}
                 </div>
-                {% else %}
-                <div class="empty-state-inline">
-                    No property photos are attached yet.
-                </div>
-                {% endif %}
             </section>
 
         </div>

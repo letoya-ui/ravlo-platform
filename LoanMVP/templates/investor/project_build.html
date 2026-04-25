@@ -15,6 +15,8 @@
       {% elif deal and companion_endpoint %}
       <a href="{{ url_for(companion_endpoint, deal_id=deal.id) }}" class="ravlo-btn ghost">{{ companion_label or "Open Design Studio" }}</a>
       {% endif %}
+      <a href="#" class="ravlo-btn primary hidden" id="sendToDealArchitectBtn">Send to Deal Architect</a>
+      <a href="#" class="ravlo-btn ghost hidden" id="sendToBudgetStudioBtn">Send to Budget Studio</a>
     </div>
   </section>
 
@@ -168,8 +170,14 @@
     </article>
 
     <article class="ravlo-card pad">
-      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Exterior Concept</h2></div><strong id="exteriorStatus">{{ 'Generated' if exterior_result and exterior_result.get('image_url') else 'Waiting' }}</strong></div>
-      <div class="result-media" id="exteriorMedia">{% if exterior_result and exterior_result.get('image_url') %}<img src="{{ exterior_result.get('image_url') }}" alt="Exterior concept">{% else %}<div class="empty-state-inline">Exterior concept will appear here.</div>{% endif %}</div>
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Exterior — Front</h2></div><strong id="exteriorStatus">{{ 'Generated' if exterior_result and exterior_result.get('image_url') else 'Waiting' }}</strong></div>
+      <div class="result-media" id="exteriorMedia">{% if exterior_result and exterior_result.get('image_url') %}<img src="{{ exterior_result.get('image_url') }}" alt="Exterior front">{% else %}<div class="empty-state-inline">Front exterior concept will appear here.</div>{% endif %}</div>
+    </article>
+
+    <article class="ravlo-card pad">
+      {% set exterior_back = build_project.get('exterior_back', {}) or {} if build_project is defined else {} %}
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Exterior — Back</h2></div><strong id="exteriorBackStatus">{{ 'Generated' if exterior_back and exterior_back.get('image_url') else 'Waiting' }}</strong></div>
+      <div class="result-media" id="exteriorBackMedia">{% if exterior_back and exterior_back.get('image_url') %}<img src="{{ exterior_back.get('image_url') }}" alt="Exterior back">{% else %}<div class="empty-state-inline">Rear exterior concept will appear here.</div>{% endif %}</div>
     </article>
   </section>
 
@@ -274,10 +282,24 @@
       document.getElementById('exteriorStatus').textContent = data.exterior_result?.image_url ? 'Generated' : 'Waiting';
       renderMedia('blueprintMedia', data.blueprint_result?.image_url, 'Blueprint', 'Blueprint output will appear here.');
       renderMedia('sitePlanMedia', data.site_plan_result?.image_url, 'Site plan', 'Site development plan will appear here.');
-      renderMedia('exteriorMedia', data.exterior_result?.image_url, 'Exterior concept', 'Exterior concept will appear here.');
+      renderMedia('exteriorMedia', data.exterior_result?.image_url, 'Exterior front', 'Front exterior concept will appear here.');
+      renderMedia('exteriorBackMedia', data.exterior_back_result?.image_url, 'Exterior back', 'Rear exterior concept will appear here.');
+      const exteriorBackStatusEl = document.getElementById('exteriorBackStatus');
+      if (exteriorBackStatusEl) exteriorBackStatusEl.textContent = data.exterior_back_result?.image_url ? 'Generated' : 'Waiting';
       if (data.project_id) {
         const projectField = form.querySelector('input[name="project_id"]');
         if (projectField) projectField.value = data.project_id;
+      }
+
+      const dealArchitectBtn = document.getElementById('sendToDealArchitectBtn');
+      const budgetStudioBtn = document.getElementById('sendToBudgetStudioBtn');
+      if (data.next_url && dealArchitectBtn) {
+        dealArchitectBtn.href = data.next_url;
+        dealArchitectBtn.classList.remove('hidden');
+      }
+      if (data.deal_id && budgetStudioBtn) {
+        budgetStudioBtn.href = `/investor/deal-studio/budget/${data.deal_id}`;
+        budgetStudioBtn.classList.remove('hidden');
       }
     } catch (error) {
       alert(error.message || 'Build Studio generation failed.');
