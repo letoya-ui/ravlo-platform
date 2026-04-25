@@ -16,7 +16,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from typing import Any, Dict
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode, urlparse, quote_plus
 
 import requests
 
@@ -365,6 +365,23 @@ def _saved_property_workspace_seed(saved_property):
         listing_photos,
     )
 
+    if not primary_photo and not listing_photos:
+        sv_src = {
+            "address": (
+                property_payload.get("address")
+                or workspace_analysis.get("address")
+                or ""
+            ),
+            "city": property_payload.get("city") or workspace_analysis.get("city") or "",
+            "state": property_payload.get("state") or workspace_analysis.get("state") or "",
+            "zip_code": property_payload.get("zip_code") or workspace_analysis.get("zip_code") or "",
+        }
+        sv_url = _streetview_fallback_url(sv_src)
+        if sv_url:
+            proxied_sv = url_for("investor.api_property_tool_image", src=sv_url)
+            primary_photo = proxied_sv
+            listing_photos = [proxied_sv]
+
     return {
         "resolved": resolved,
         "property": property_payload,
@@ -476,6 +493,32 @@ def _proxy_photo_list(photo_urls):
     return proxied
 
 
+def _streetview_fallback_url(result):
+    """Build a Google Street View Static API URL for a property address.
+
+    Returns the raw external URL (caller should proxy it) or ``None``
+    when the address is too short or the API key is missing.
+    """
+    google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or ""
+    if not google_key:
+        return None
+
+    addr = safe_str(result.get("address") or "")
+    city = safe_str(result.get("city") or "")
+    state = safe_str(result.get("state") or "")
+    zip_code = safe_str(result.get("zip_code") or result.get("zip") or "")
+
+    location_parts = [p for p in (addr, city, state, zip_code) if p]
+    location = ", ".join(location_parts)
+    if len(location) < 5:
+        return None
+
+    return (
+        "https://maps.googleapis.com/maps/api/streetview"
+        f"?size=600x400&location={quote_plus(location)}&key={google_key}"
+    )
+
+
 def _proxy_search_result_images(result):
     if not isinstance(result, dict):
         return result
@@ -520,6 +563,20 @@ def _proxy_search_result_images(result):
             updated[_field] = None
         else:
             updated[_field] = _proxy_listing_image_url(raw_val) or raw_val
+
+    has_photo = bool(
+        proxied_listing_photos
+        or updated.get("primary_photo")
+        or updated.get("image_url")
+    )
+    if not has_photo:
+        sv_url = _streetview_fallback_url(updated)
+        if sv_url:
+            proxied_sv = url_for("investor.api_property_tool_image", src=sv_url)
+            updated["primary_photo"] = proxied_sv
+            updated["image_url"] = proxied_sv
+            updated.setdefault("photo_source", "streetview")
+
     return updated
 
 
@@ -2542,6 +2599,13 @@ def property_search():
 
                 photos = property_data.get("photos") or []
                 primary_photo = property_data.get("primary_photo")
+
+                if not primary_photo and not photos:
+                    sv_url = _streetview_fallback_url(property_data)
+                    if sv_url:
+                        proxied_sv = url_for("investor.api_property_tool_image", src=sv_url)
+                        primary_photo = proxied_sv
+                        photos = [proxied_sv]
 
                 if ip and property_data.get("address"):
                     try:
