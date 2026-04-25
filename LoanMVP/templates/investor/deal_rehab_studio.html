@@ -42,11 +42,11 @@
         {"key": "office", "label": "Office", "icon": "💼"}
       ] %}
       {% for slot in room_slots %}
-        {% set slot_concept = None %}
-        {% if interior_rooms %}
-          {% for r in interior_rooms %}
+        {% set ns = namespace(slot_concept=None) %}
+        {% if rehab_concepts %}
+          {% for r in rehab_concepts %}
             {% if r.get('room_type', '')|lower|replace(' ', '_') == slot.key %}
-              {% set slot_concept = r %}
+              {% set ns.slot_concept = r %}
             {% endif %}
           {% endfor %}
         {% endif %}
@@ -54,12 +54,12 @@
           class="room-slot{% if loop.first %} is-active{% endif %}"
           data-room-key="{{ slot.key }}"
           data-room-label="{{ slot.label }}"
-          data-has-render="{{ 'true' if slot_concept and slot_concept.get('image_url') else 'false' }}"
-          data-render-url="{{ slot_concept.get('image_url', '') if slot_concept else '' }}"
+          data-has-render="{{ 'true' if ns.slot_concept and ns.slot_concept.get('image_url') else 'false' }}"
+          data-render-url="{{ ns.slot_concept.get('image_url', '') if ns.slot_concept else '' }}"
         >
           <span class="room-slot-icon">{{ slot.icon }}</span>
           <span class="room-slot-label">{{ slot.label }}</span>
-          {% if slot_concept and slot_concept.get('image_url') %}
+          {% if ns.slot_concept and ns.slot_concept.get('image_url') %}
             <span class="room-slot-status done">Done</span>
           {% else %}
             <span class="room-slot-status pending">Pending</span>
@@ -218,9 +218,9 @@
       </div>
     </div>
 
-    {% if interior_rooms %}
+    {% if rehab_concepts %}
     <div class="room-gallery" id="roomGallery">
-      {% for room in interior_rooms %}
+      {% for room in rehab_concepts %}
       {% if room.get('image_url') %}
       <a href="{{ room.get('image_url') }}" target="_blank" class="room-card" data-image-url="{{ room.get('image_url') }}">
         <img src="{{ room.get('image_url') }}" alt="{{ room.get('room_type') or 'Interior room' }}">
