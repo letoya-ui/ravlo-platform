@@ -5759,6 +5759,12 @@ def design_studio(deal_id=None):
     blueprint_result = build_project.get("blueprint", {}) or {}
     interior_block = build_project.get("interior", {}) or {}
     interior_result = interior_block.get("latest", {}) or {}
+    design_budget = (
+        results.get("design_budget")
+        or interior_block.get("budget")
+        or rehab_project.get("budget")
+        or {}
+    )
 
     return render_template(
         "investor/deal_rehab_studio.html",
@@ -5773,9 +5779,134 @@ def design_studio(deal_id=None):
         preselected_image_url=preselected_image_url,
         blueprint_result=blueprint_result,
         interior_result=interior_result,
+        design_budget=design_budget,
         page_title="Design Studio",
         page_subtitle="Create interior design concepts from blueprints, floor plans, and existing spaces.",
     )
+
+
+@investor_bp.route("/deal-studio/design-studio/generate-budget", methods=["POST"])
+@login_required
+@role_required("investor")
+def design_studio_generate_budget():
+    try:
+        data = request.form.to_dict() or {}
+        deal_id = _normalize_int(data.get("deal_id"))
+        project_id = _normalize_int(data.get("project_id"))
+        deal = None
+        project = None
+        results = {}
+
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+            if not deal:
+                return jsonify({
+                    "status": "error",
+                    "message": "Deal not found or not authorized.",
+                }), 404
+            results = _deal_results(deal)
+
+        if project_id:
+            project = BuildProject.query.filter_by(
+                id=project_id,
+                user_id=current_user.id,
+            ).first()
+
+        project_name = (data.get("project_name") or "").strip()
+        property_type = (data.get("property_type") or "single_family").strip()
+        style = (data.get("style") or "modern_luxury").strip()
+        description = (data.get("description") or "").strip()
+        notes = (data.get("notes") or "").strip()
+        room_type = (data.get("room_type") or "living room").strip()
+        rehab_level = (data.get("rehab_level") or "medium").strip().lower()
+        save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
+
+        if project:
+            project_name = project_name or getattr(project, "project_name", "") or getattr(project, "title", "") or ""
+            property_type = property_type or getattr(project, "property_type", "") or "single_family"
+            description = description or getattr(project, "description", "") or ""
+
+        location_context = (
+            results.get("location_cost_context")
+            or results.get("local_cost_index")
+            or (results.get("deal_architect") or {}).get("location_cost_context")
+            or {}
+        )
+
+        payload = {
+            "project_name": project_name or (getattr(deal, "title", "") if deal else ""),
+            "property_type": property_type,
+            "style": style,
+            "design_style": style,
+            "rehab_level": rehab_level,
+            "room_type": room_type,
+            "room_focus": room_type,
+            "desired_updates": notes or description,
+            "prompt_notes": notes,
+            "location_cost_context": location_context if isinstance(location_context, dict) else None,
+        }
+
+        for source_key, payload_key in (
+            ("budget_min", "budget_min"),
+            ("budget_max", "budget_max"),
+            ("room_square_feet", "room_square_feet"),
+            ("square_feet", "square_feet"),
+            ("market_cost_multiplier", "market_cost_multiplier"),
+        ):
+            value = data.get(source_key)
+            if value not in (None, ""):
+                try:
+                    payload[payload_key] = float(value)
+                except (TypeError, ValueError):
+                    pass
+
+        if "market_cost_multiplier" not in payload and isinstance(location_context, dict):
+            try:
+                payload["market_cost_multiplier"] = float(location_context.get("cost_multiplier"))
+            except (TypeError, ValueError):
+                pass
+
+        engine_json = _post_renovation_engine_json(
+            "/v1/design_studio/generate_budget",
+            payload,
+            timeout=60,
+        )
+
+        budget = {
+            "cost_low": engine_json.get("cost_low") or 0,
+            "cost_high": engine_json.get("cost_high") or 0,
+            "summary": engine_json.get("summary") or "",
+            "line_items": engine_json.get("line_items") or [],
+            "meta": engine_json.get("meta") or {},
+        }
+
+        if save_to_deal and deal is not None:
+            results["design_budget"] = budget
+            build_project = results.get("build_project", {}) or {}
+            interior_block = build_project.get("interior", {}) or {}
+            interior_block["budget"] = budget
+            build_project["interior"] = interior_block
+            results["build_project"] = build_project
+            _set_deal_results(deal, results)
+            db.session.commit()
+
+        return jsonify({
+            "status": "ok",
+            "budget": budget,
+            "cost_low": budget["cost_low"],
+            "cost_high": budget["cost_high"],
+            "summary": budget["summary"],
+            "line_items": budget["line_items"],
+            "saved_to_deal": bool(save_to_deal and deal is not None),
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Design Studio budget generation error")
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+        }), 500
 
 
 # ---------------------------------------------------------
