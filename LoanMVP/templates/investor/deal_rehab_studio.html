@@ -19,7 +19,53 @@
 
       <button type="button" class="ravlo-btn ghost hidden" id="downloadCurrentBtn">Download Image</button>
       <button type="button" class="ravlo-btn ghost hidden" id="downloadAllBtn">Download All Images</button>
-      <a href="#" class="ravlo-btn primary hidden" id="continueToDealArchitectBtn">Continue to Deal Architect</a>
+      <a href="#" class="ravlo-btn primary hidden" id="continueToDealArchitectBtn">Send to Deal Architect</a>
+      <a href="#" class="ravlo-btn ghost hidden" id="continueToBudgetStudioBtn">Send to Budget Studio</a>
+    </div>
+  </section>
+
+  <!-- ROOM SLOT TABS -->
+  <section class="ravlo-card pad room-slot-section">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ROOMS</div>
+        <h2>Select a Room to Design</h2>
+      </div>
+    </div>
+    <div class="room-slot-grid" id="roomSlotGrid">
+      {% set room_slots = [
+        {"key": "living_room", "label": "Living Room", "icon": "🛋️"},
+        {"key": "kitchen", "label": "Kitchen", "icon": "🍳"},
+        {"key": "primary_bedroom", "label": "Primary Bedroom", "icon": "🛏️"},
+        {"key": "bathroom", "label": "Bathroom", "icon": "🚿"},
+        {"key": "dining_room", "label": "Dining Room", "icon": "🍽️"},
+        {"key": "office", "label": "Office", "icon": "💼"}
+      ] %}
+      {% for slot in room_slots %}
+        {% set ns = namespace(slot_concept=None) %}
+        {% if rehab_concepts %}
+          {% for r in rehab_concepts %}
+            {% if r.get('room_type', '')|lower|replace(' ', '_') == slot.key %}
+              {% set ns.slot_concept = r %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        <button type="button"
+          class="room-slot{% if loop.first %} is-active{% endif %}"
+          data-room-key="{{ slot.key }}"
+          data-room-label="{{ slot.label }}"
+          data-has-render="{{ 'true' if ns.slot_concept and ns.slot_concept.get('image_url') else 'false' }}"
+          data-render-url="{{ ns.slot_concept.get('image_url', '') if ns.slot_concept else '' }}"
+        >
+          <span class="room-slot-icon">{{ slot.icon }}</span>
+          <span class="room-slot-label">{{ slot.label }}</span>
+          {% if ns.slot_concept and ns.slot_concept.get('image_url') %}
+            <span class="room-slot-status done">Done</span>
+          {% else %}
+            <span class="room-slot-status pending">Pending</span>
+          {% endif %}
+        </button>
+      {% endfor %}
     </div>
   </section>
 
@@ -172,9 +218,9 @@
       </div>
     </div>
 
-    {% if interior_rooms %}
+    {% if rehab_concepts %}
     <div class="room-gallery" id="roomGallery">
-      {% for room in interior_rooms %}
+      {% for room in rehab_concepts %}
       {% if room.get('image_url') %}
       <a href="{{ room.get('image_url') }}" target="_blank" class="room-card" data-image-url="{{ room.get('image_url') }}">
         <img src="{{ room.get('image_url') }}" alt="{{ room.get('room_type') or 'Interior room' }}">
@@ -256,7 +302,18 @@
 .room-card img{width:100%;height:140px;object-fit:cover;border-radius:12px}
 .form-note{margin-top:12px;color:#9fb0ca}
 .hidden{display:none!important}
-@media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.budget-line-row,.budget-summary>div{flex-direction:column}}
+.room-slot-section{margin-bottom:4px}
+.room-slot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.room-slot{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;border-radius:16px;border:2px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);cursor:pointer;transition:all .2s;color:#eef3ff;font-size:13px}
+.room-slot:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.06)}
+.room-slot.is-active{border-color:#4f8cff;background:rgba(79,140,255,.08)}
+.room-slot-icon{font-size:28px}
+.room-slot-label{font-weight:600;text-align:center}
+.room-slot-status{font-size:11px;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em}
+.room-slot-status.done{background:rgba(34,197,94,.15);color:#22c55e}
+.room-slot-status.pending{background:rgba(255,255,255,.06);color:#9fb0ca}
+.room-slot-status.generating{background:rgba(79,140,255,.15);color:#4f8cff}
+@media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.budget-line-row,.budget-summary>div{flex-direction:column}.room-slot-grid{grid-template-columns:repeat(3,1fr)}}
 </style>
 
 <script>
@@ -281,10 +338,12 @@
   const downloadAllBtn = document.getElementById('downloadAllBtn');
   const downloadResultBtn = document.getElementById('downloadResultBtn');
   const continueToDealArchitectBtn = document.getElementById('continueToDealArchitectBtn');
+  const continueToBudgetStudioBtn = document.getElementById('continueToBudgetStudioBtn');
   const resultDealArchitectBtn = document.getElementById('resultDealArchitectBtn');
 
   let currentImageUrl = {{ (interior_result.get('image_url') if interior_result else '')|tojson }};
   let nextUrl = '';
+  let budgetStudioUrl = '';
 
   function money(value) {
     const amount = Number(value || 0);
@@ -382,6 +441,16 @@
         link.classList.add('hidden');
       }
     });
+
+    if (continueToBudgetStudioBtn) {
+      if (budgetStudioUrl) {
+        continueToBudgetStudioBtn.href = budgetStudioUrl;
+        continueToBudgetStudioBtn.classList.remove('hidden');
+      } else {
+        continueToBudgetStudioBtn.href = '#';
+        continueToBudgetStudioBtn.classList.add('hidden');
+      }
+    }
   }
 
   blueprintFile?.addEventListener('change', function () {
@@ -449,10 +518,24 @@
     button.textContent = 'Generating...';
     interiorStatus.textContent = 'Generating';
 
+    const activeSlot = document.querySelector('.room-slot.is-active');
+    if (activeSlot) {
+      const statusEl = activeSlot.querySelector('.room-slot-status');
+      if (statusEl) {
+        statusEl.textContent = 'Generating';
+        statusEl.className = 'room-slot-status generating';
+      }
+    }
+
     try {
-      const response = await fetch("{{ url_for('investor.generate_build_interior') }}", {
+      const fd = new FormData(form);
+      if (activeSlot) {
+        fd.set('room_type', activeSlot.dataset.roomLabel);
+      }
+
+      const response = await fetch("{{ url_for('investor.design_studio_generate') }}", {
         method: 'POST',
-        body: new FormData(form),
+        body: fd,
         headers: {
           'X-CSRFToken': '{{ csrf_token() }}',
           'X-Requested-With': 'XMLHttpRequest'
@@ -465,33 +548,47 @@
         throw new Error(data.message || 'Interior generation failed.');
       }
 
-      if (data.blueprint_url) setBlueprintPreviewFromUrl(data.blueprint_url);
+      const concept = data.concept_result || {};
+      const imgUrl = concept.image_url || '';
 
-      currentImageUrl = data.image_url || '';
+      currentImageUrl = imgUrl;
       nextUrl = data.next_url || data.deal_architect_url || '';
+      budgetStudioUrl = data.budget_studio_url || '';
 
       interiorStatus.textContent = 'Generated';
-      resultRoom.textContent = data.room_type || '—';
-      resultFloor.textContent = data.floor || '—';
-      resultSeed.textContent = data.seed || '—';
-      resultJob.textContent = data.job_id || '—';
+      resultRoom.textContent = concept.room_type || fd.get('room_type') || '—';
+      resultFloor.textContent = fd.get('floor') || '—';
+      resultSeed.textContent = concept.seed || '—';
+      resultJob.textContent = concept.job_id || '—';
 
-      resultMedia.innerHTML = data.image_url
-        ? `<img src="${data.image_url}" alt="Interior result">`
+      resultMedia.innerHTML = imgUrl
+        ? `<img src="${imgUrl}" alt="Interior result">`
         : '<div class="empty-state-inline">No image returned.</div>';
 
-      if (data.image_url) {
-        resultLink.href = data.image_url;
+      if (imgUrl) {
+        resultLink.href = imgUrl;
         resultLink.classList.remove('hidden');
       }
 
-      if (data.image_url && roomGallery) {
+      if (imgUrl && activeSlot) {
+        activeSlot.dataset.hasRender = 'true';
+        activeSlot.dataset.renderUrl = imgUrl;
+        const statusEl = activeSlot.querySelector('.room-slot-status');
+        if (statusEl) {
+          statusEl.textContent = 'Done';
+          statusEl.className = 'room-slot-status done';
+        }
+      }
+
+      if (imgUrl && roomGallery) {
+        const roomLabel = concept.room_type || fd.get('room_type') || 'Room';
+        const floorLabel = fd.get('floor') || 'Floor';
         const card = document.createElement('a');
         card.className = 'room-card';
-        card.href = data.image_url;
+        card.href = imgUrl;
         card.target = '_blank';
-        card.setAttribute('data-image-url', data.image_url);
-        card.innerHTML = `<img src="${data.image_url}" alt="${data.room_type || 'Interior room'}"><div><strong>${data.room_type || 'Room'}</strong><span>${data.floor || 'Floor'}</span></div>`;
+        card.setAttribute('data-image-url', imgUrl);
+        card.innerHTML = `<img src="${imgUrl}" alt="${roomLabel}"><div><strong>${roomLabel}</strong><span>${floorLabel}</span></div>`;
 
         if (roomGallery.classList.contains('empty-state-inline')) {
           roomGallery.className = 'room-gallery';
@@ -503,11 +600,55 @@
       refreshActionButtons();
     } catch (error) {
       interiorStatus.textContent = 'Error';
+      if (activeSlot) {
+        const statusEl = activeSlot.querySelector('.room-slot-status');
+        if (statusEl && activeSlot.dataset.hasRender !== 'true') {
+          statusEl.textContent = 'Pending';
+          statusEl.className = 'room-slot-status pending';
+        }
+      }
       alert(error.message || 'Interior generation failed.');
     } finally {
       button.disabled = false;
       button.textContent = {{ (submit_label or "Generate Design Concept")|tojson }};
     }
+  });
+
+  // Room slot click handlers
+  const roomSlotMap = {
+    'living_room': 'living room',
+    'kitchen': 'kitchen',
+    'primary_bedroom': 'primary bedroom',
+    'bathroom': 'bathroom',
+    'dining_room': 'dining room',
+    'office': 'office',
+  };
+
+  document.querySelectorAll('.room-slot').forEach((slot) => {
+    slot.addEventListener('click', () => {
+      document.querySelectorAll('.room-slot').forEach((s) => s.classList.remove('is-active'));
+      slot.classList.add('is-active');
+
+      const key = slot.dataset.roomKey;
+      const roomSelect = document.getElementById('room_type');
+      if (roomSelect && roomSlotMap[key]) {
+        roomSelect.value = roomSlotMap[key];
+      }
+
+      if (slot.dataset.hasRender === 'true' && slot.dataset.renderUrl) {
+        currentImageUrl = slot.dataset.renderUrl;
+        resultMedia.innerHTML = `<img src="${slot.dataset.renderUrl}" alt="${slot.dataset.roomLabel}">`;
+        interiorStatus.textContent = 'Generated';
+        resultRoom.textContent = slot.dataset.roomLabel;
+        resultLink.href = slot.dataset.renderUrl;
+        resultLink.classList.remove('hidden');
+      } else {
+        resultMedia.innerHTML = '<div class="empty-state-inline">Interior output will appear here.</div>';
+        interiorStatus.textContent = 'Waiting';
+        resultRoom.textContent = slot.dataset.roomLabel;
+      }
+      refreshActionButtons();
+    });
   });
 
   refreshActionButtons();

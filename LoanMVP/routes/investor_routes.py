@@ -9,6 +9,7 @@ import hashlib
 import zipfile
 import copy
 import mimetypes
+import random
 import re
 from collections import defaultdict
 from datetime import datetime
@@ -6934,11 +6935,11 @@ def generate_full_build():
             "prompt_notes": site_notes,
             "special_features": f"{lot_count} total lots" if lot_count and lot_count > 1 else notes,
             "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
-            "width": 768,
-            "height": 768,
-            "steps": 18,
-            "guidance": 6.0,
-            "strength": 0.28,
+            "width": 1024,
+            "height": 1024,
+            "steps": 30,
+            "guidance": 6.8,
+            "strength": 0.30,
             "count": 1,
         }
 
@@ -6982,8 +6983,21 @@ def generate_full_build():
         blueprint_job_id = blueprint_json.get("job_id")
 
         # --------------------------------------------------
-        # 2. GENERATE SITE PLAN
+        # 2. GENERATE SITE PLAN (uses generated blueprint as reference)
         # --------------------------------------------------
+        site_plan_prompt = (
+            f"Top-down site development plan for a {property_type.replace('_', ' ')} project, "
+            f"showing parcel boundary, building footprint, driveway, parking, walkways, setbacks, "
+            f"and landscape zones. "
+        )
+        if lot_count and lot_count > 1:
+            site_plan_prompt += f"Layout {lot_count} buildable lots with internal drives and circulation. "
+        if lot_size:
+            site_plan_prompt += f"Total lot area: {lot_size}. "
+        if zoning:
+            site_plan_prompt += f"Zoning: {zoning}. "
+        site_plan_prompt += "Clean architectural site plan, birds-eye view, no perspective, no 3D rendering."
+
         site_plan_payload = {
             "mode": "siteplan",
             "project_name": project_name,
@@ -6994,6 +7008,7 @@ def generate_full_build():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
+            "prompt": site_plan_prompt,
             "prompt_notes": site_notes,
             "special_features": (
                 f"{lot_count} buildable lots, internal drives, setbacks, parking, and site circulation"
@@ -7002,15 +7017,15 @@ def generate_full_build():
             ),
             "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
 
-            # Engine expects image_base64 / image_url for the init image.
-            "image_base64": blueprint_image_base64 or blueprint_primary_b64,
-            "image_url": "" if (blueprint_image_base64 or blueprint_primary_b64) else (blueprint_url or blueprint_primary_url),
+            # Use the GENERATED blueprint as the structural reference
+            "image_base64": blueprint_primary_b64,
+            "image_url": "" if blueprint_primary_b64 else blueprint_primary_url,
 
-            "width": 768,
-            "height": 768,
-            "steps": 24,
-            "guidance": 6.6,
-            "strength": 0.28,
+            "width": 1024,
+            "height": 1024,
+            "steps": 32,
+            "guidance": 7.0,
+            "strength": 0.58,
             "count": 1,
         }
 
@@ -7045,13 +7060,22 @@ def generate_full_build():
         site_plan_job_id = site_plan_json.get("job_id")
 
         # --------------------------------------------------
-        # 3. GENERATE EXTERIOR
-        # Blueprint = architecture/massing (primary reference).
-        # Site image = land context only; site plan = fallback.
+        # 3. GENERATE EXTERIOR FRONT
+        # Use blueprint as massing reference but with high strength
+        # so the output looks like a realistic exterior, not a blueprint.
         # --------------------------------------------------
-        # Prefer: user-uploaded land image > blueprint > site plan
-        exterior_ref_b64 = exterior_image_base64 or blueprint_primary_b64 or site_plan_primary_b64
-        exterior_ref_url = "" if exterior_ref_b64 else (reference_image_url or blueprint_primary_url or site_plan_primary_url or "")
+        exterior_front_prompt = (
+            f"Photorealistic front exterior rendering of a {style.replace('_', ' ')} "
+            f"{property_type.replace('_', ' ')} home, street-level eye-height camera angle, "
+            f"professional architectural photography, landscaped front yard, driveway, "
+            f"clean sky, warm daylight, developer-grade presentation. "
+        )
+        if description:
+            exterior_front_prompt += f"{description}. "
+        exterior_front_prompt += "Full building visible from foundation to roofline, no cropping."
+
+        exterior_ref_b64 = exterior_image_base64 or blueprint_primary_b64
+        exterior_ref_url = "" if exterior_ref_b64 else (reference_image_url or blueprint_primary_url or "")
 
         exterior_payload = {
             "mode": "exterior",
@@ -7063,11 +7087,11 @@ def generate_full_build():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
+            "prompt": exterior_front_prompt,
             "prompt_notes": (
                 site_notes
                 + " Use the blueprint as the architectural layout, footprint, massing, roofline, and structure constraint. "
-                + "Use the site plan or site image only for land context, lot placement, driveway, roads, setbacks, and surroundings. "
-                + "Generate a realistic developer-grade exterior rendering that matches the blueprint."
+                + "Generate a realistic developer-grade FRONT exterior rendering that matches the blueprint."
             ),
             "special_features": (
                 f"{lot_count} lots, cohesive streetscape, developer-ready massing"
@@ -7075,16 +7099,14 @@ def generate_full_build():
                 else notes
             ),
 
-            # Engine expects image_base64 / image_url for the init image.
-            # Blueprint is the primary architectural reference for exterior.
             "image_base64": exterior_ref_b64,
             "image_url": exterior_ref_url,
 
             "width": 1024,
             "height": 1024,
-            "steps": 28,
-            "guidance": 7.0,
-            "strength": 0.48,
+            "steps": 30,
+            "guidance": 7.5,
+            "strength": 0.72,
             "count": 1,
         }
 
@@ -7118,6 +7140,74 @@ def generate_full_build():
         exterior_meta = exterior_json.get("meta") or {}
         exterior_seed = exterior_json.get("seed")
         exterior_job_id = exterior_json.get("job_id")
+
+        # --------------------------------------------------
+        # 4. GENERATE EXTERIOR BACK
+        # --------------------------------------------------
+        exterior_back_prompt = (
+            f"Photorealistic rear exterior rendering of a {style.replace('_', ' ')} "
+            f"{property_type.replace('_', ' ')} home, backyard view, patio or deck area, "
+            f"professional architectural photography, landscaped rear yard, "
+            f"warm daylight, developer-grade presentation. "
+        )
+        if description:
+            exterior_back_prompt += f"{description}. "
+        exterior_back_prompt += "Full building visible from foundation to roofline, rear perspective, no cropping."
+
+        exterior_back_payload = {
+            "mode": "exterior",
+            "project_name": project_name,
+            "property_type": property_type,
+            "style": style,
+            "blueprint_style": blueprint_style,
+            "description": description,
+            "build_description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "prompt": exterior_back_prompt,
+            "prompt_notes": (
+                "Rear / backyard view of the home. "
+                + "Show the back of the building with patio, deck, or outdoor living space. "
+                + "Use the blueprint for massing and the front exterior for style consistency."
+            ),
+            "special_features": "rear view, backyard, patio, deck, outdoor living space",
+
+            "image_base64": exterior_ref_b64,
+            "image_url": exterior_ref_url,
+
+            "width": 1024,
+            "height": 1024,
+            "steps": 30,
+            "guidance": 7.5,
+            "strength": 0.78,
+            "count": 1,
+        }
+
+        exterior_back_url = ""
+        exterior_back_meta = {}
+        exterior_back_seed = None
+        exterior_back_job_id = None
+
+        try:
+            current_app.logger.warning(f"FULL BUILD EXTERIOR BACK PAYLOAD: {exterior_back_payload}")
+
+            exterior_back_json = _post_renovation_engine_json(
+                "/v1/build_concept",
+                exterior_back_payload,
+                timeout=UPLOAD_TIMEOUT,
+            )
+
+            exterior_back_images_b64 = exterior_back_json.get("images_base64") or []
+            if exterior_back_images_b64:
+                exterior_back_batch_id = uuid.uuid4().hex
+                exterior_back_urls = _upload_after_images_from_b64(exterior_back_images_b64, exterior_back_batch_id)
+                if exterior_back_urls:
+                    exterior_back_url = exterior_back_urls[0]
+                    exterior_back_meta = exterior_back_json.get("meta") or {}
+                    exterior_back_seed = exterior_back_json.get("seed")
+                    exterior_back_job_id = exterior_back_json.get("job_id")
+        except Exception:
+            current_app.logger.exception("Exterior back generation failed (non-fatal)")
 
         # --------------------------------------------------
         # SAVE PROJECT + DEAL
@@ -7212,6 +7302,15 @@ def generate_full_build():
                 "site_plan_reference_image": site_plan_primary_url,
             }
 
+            if exterior_back_url:
+                build_project["exterior_back"] = {
+                    "image_url": exterior_back_url,
+                    "meta": exterior_back_meta,
+                    "seed": exterior_back_seed,
+                    "job_id": exterior_back_job_id,
+                    "view": "back",
+                }
+
             if build_analysis:
                 results["build_analysis"] = build_analysis
 
@@ -7231,6 +7330,7 @@ def generate_full_build():
                 "site_plan": site_plan_primary_url,
                 "blueprint": blueprint_primary_url,
                 "exterior": exterior_primary_url,
+                "exterior_back": exterior_back_url,
             },
             "next_url": url_for(
                 "investor.deal_architect",
@@ -7260,6 +7360,12 @@ def generate_full_build():
                 "meta": exterior_meta,
                 "seed": exterior_seed,
                 "job_id": exterior_job_id,
+            },
+            "exterior_back_result": {
+                "image_url": exterior_back_url,
+                "meta": exterior_back_meta,
+                "seed": exterior_back_seed,
+                "job_id": exterior_back_job_id,
             },
             "build_analysis": build_analysis,
             "deal_id": deal.id if deal else None,
@@ -9129,16 +9235,7 @@ def design_studio_generate():
             or (getattr(deal, "resolved_json", {}) or {}).get("property", {}).get("property_type", "")
             or "residential property"
         )
-        stable_seed = _stable_render_seed(
-            "design",
-            getattr(deal, "id", None),
-            before_uploaded_url or image_url,
-            preset,
-            mode,
-            room_type,
-            rehab_level,
-            notes,
-        )
+        unique_seed = random.randint(1, 2_147_483_647)
         rehab_prompt = build_rehab_concept_prompt(
             room_type=room_type,
             style_preset=preset,
@@ -9163,12 +9260,12 @@ def design_studio_generate():
             "image_base64": image_base64,
             "image_url": "",
             "count": 1,
-            "steps": 22,
-            "guidance": 7.2,
+            "steps": 32,
+            "guidance": 7.5,
             "strength": strength,
-            "width": 768,
-            "height": 768,
-            "seed": stable_seed,
+            "width": 1024,
+            "height": 1024,
+            "seed": unique_seed,
         }
 
         engine_json = _post_renovation_engine_json(
@@ -9195,7 +9292,7 @@ def design_studio_generate():
             "room_type": room_type,
             "rehab_level": rehab_level,
             "notes": notes,
-            "seed": engine_json.get("seed") or stable_seed,
+            "seed": engine_json.get("seed") or unique_seed,
             "job_id": engine_json.get("job_id"),
             "meta": engine_json.get("meta") or {},
         }
@@ -9253,6 +9350,18 @@ def design_studio_generate():
 
         db.session.commit()
 
+        deal_architect_url = None
+        budget_studio_url = None
+        if deal is not None:
+            deal_architect_url = url_for(
+                "investor.deal_architect",
+                deal_id=deal.id,
+            )
+            budget_studio_url = url_for(
+                "investor.budget_studio",
+                deal_id=deal.id,
+            )
+
         return jsonify({
             "status": "ok",
             "before_result": before_result,
@@ -9260,6 +9369,9 @@ def design_studio_generate():
             "rehab_scope": rehab_scope_result,
             "deal_id": deal.id if deal else None,
             "saved_to_deal": bool(save_to_deal and deal is not None),
+            "next_url": deal_architect_url,
+            "deal_architect_url": deal_architect_url,
+            "budget_studio_url": budget_studio_url,
         })
 
     except Exception as e:

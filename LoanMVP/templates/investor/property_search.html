@@ -108,9 +108,9 @@ Search any address and instantly see property details, investor signals, comps, 
 
       <div class="ps-hero-media">
         {% if hero_photo %}
-          <img src="{{ hero_photo }}" alt="Property photo">
+          <img src="{{ hero_photo }}" alt="Property photo" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
         {% else %}
-          <div class="ps-no-photo">No Photo Available</div>
+          <img src="/static/images/placeholder_property.jpg" alt="Property placeholder">
         {% endif %}
       </div>
     </section>
