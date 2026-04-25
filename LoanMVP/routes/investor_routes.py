@@ -493,11 +493,15 @@ def _proxy_photo_list(photo_urls):
     return proxied
 
 
-def _streetview_fallback_url(result):
-    """Build a Google Street View Static API URL for a property address.
+_STREETVIEW_BASE = "https://maps.googleapis.com/maps/api/streetview"
 
-    Returns the raw external URL (caller should proxy it) or ``None``
-    when the address is too short or the API key is missing.
+
+def _streetview_fallback_url(result):
+    """Build a Google Street View URL *without* the API key.
+
+    The key is injected server-side by :func:`api_property_tool_image`
+    so it never appears in client-visible markup.
+    Returns ``None`` when the address is too short or key is missing.
     """
     google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or ""
     if not google_key:
@@ -513,10 +517,7 @@ def _streetview_fallback_url(result):
     if len(location) < 5:
         return None
 
-    return (
-        "https://maps.googleapis.com/maps/api/streetview"
-        f"?size=600x400&location={quote_plus(location)}&key={google_key}"
-    )
+    return f"{_STREETVIEW_BASE}?size=600x400&location={quote_plus(location)}"
 
 
 def _proxy_search_result_images(result):
@@ -2606,6 +2607,8 @@ def property_search():
                         proxied_sv = url_for("investor.api_property_tool_image", src=sv_url)
                         primary_photo = proxied_sv
                         photos = [proxied_sv]
+                        property_data["photos"] = photos
+                        property_data["primary_photo"] = primary_photo
 
                 if ip and property_data.get("address"):
                     try:
@@ -3410,6 +3413,12 @@ def api_property_tool_image():
     parsed = urlparse(source_url)
     if parsed.scheme not in {"http", "https"}:
         abort(400)
+
+    if source_url.startswith(_STREETVIEW_BASE):
+        google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or ""
+        if google_key:
+            sep = "&" if "?" in source_url else "?"
+            source_url = f"{source_url}{sep}key={google_key}"
 
     try:
         upstream = requests.get(
