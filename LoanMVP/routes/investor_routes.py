@@ -4464,6 +4464,35 @@ def deal_workspace():
         except Exception:
             partners = []
 
+    # ── Ravlo ARV Engine: multi-source comp analysis ──
+    ravlo_arv_report = {}
+    if selected_prop and workspace_analysis:
+        try:
+            from LoanMVP.services.ravlo_arv_engine import analyze_arv
+            _arv_address = workspace_analysis.get("address") or getattr(selected_prop, "address", "") or ""
+            _arv_city = workspace_analysis.get("city") or ""
+            _arv_state = workspace_analysis.get("state") or ""
+            _arv_zip = workspace_analysis.get("zip_code") or getattr(selected_prop, "zipcode", "") or ""
+            _arv_ptype = workspace_analysis.get("property_type") or "single_family"
+            if _arv_address and (_arv_city or _arv_zip):
+                ravlo_arv_report = analyze_arv(
+                    address=_arv_address,
+                    city=_arv_city,
+                    state=_arv_state,
+                    zip_code=_arv_zip,
+                    property_type=_arv_ptype,
+                    form_overrides={
+                        "beds": workspace_analysis.get("beds"),
+                        "baths": workspace_analysis.get("baths"),
+                        "sqft": workspace_analysis.get("square_feet"),
+                        "lot_sqft": workspace_analysis.get("lot_size_sqft"),
+                        "year_built": workspace_analysis.get("year_built"),
+                    },
+                )
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("Ravlo ARV engine error: %s", exc)
+
     return render_template(
         "investor/deal_workspace.html",
         saved_props=saved_props,
@@ -4481,6 +4510,7 @@ def deal_workspace():
         workspace_analysis=workspace_analysis,
         budget_snapshot=budget_snapshot,
         mode=mode,
+        ravlo_arv_report=ravlo_arv_report,
     )
 
 @investor_bp.route("/deals", methods=["GET"])

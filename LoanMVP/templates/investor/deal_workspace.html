@@ -474,6 +474,13 @@ Review a saved property, compare exit paths, and move the best opportunity into 
         </div>
     </section>
 
+    {% set ravlo_arv = ravlo_arv_report.get("arv", {}) if ravlo_arv_report else {} %}
+    {% set ravlo_conf = ravlo_arv.get("confidence", "") %}
+    {% set ravlo_base = ravlo_arv.get("base", 0) or 0 %}
+    {% set ravlo_cons = ravlo_arv.get("conservative", 0) or 0 %}
+    {% set ravlo_agg = ravlo_arv.get("aggressive", 0) or 0 %}
+    {% set ravlo_land = ravlo_arv.get("land_value") %}
+
     <section class="workspace-grid-4">
         <div class="workspace-stat">
             <span>Purchase Price</span>
@@ -485,9 +492,12 @@ Review a saved property, compare exit paths, and move the best opportunity into 
             <strong>{% if sqft_value > 0 %}{{ "{:,.0f}".format(sqft_value) }}{% else %}—{% endif %}</strong>
         </div>
 
-        <div class="workspace-stat">
-            <span>ARV Estimate</span>
-            <strong>{% if arv_value > 0 %}${{ "{:,.0f}".format(arv_value) }}{% else %}—{% endif %}</strong>
+        <div class="workspace-stat{% if ravlo_base > 0 %} ravlo-arv-highlight{% endif %}">
+            <span>{% if ravlo_base > 0 %}Ravlo ARV (Base){% else %}ARV Estimate{% endif %}</span>
+            <strong>{% if ravlo_base > 0 %}${{ "{:,.0f}".format(ravlo_base) }}{% elif arv_value > 0 %}${{ "{:,.0f}".format(arv_value) }}{% else %}—{% endif %}</strong>
+            {% if ravlo_conf %}
+            <span class="ravlo-confidence-badge ravlo-conf-{{ ravlo_conf }}">{{ ravlo_conf|upper }}</span>
+            {% endif %}
         </div>
 
         <div class="workspace-stat">
@@ -638,15 +648,203 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                 </div>
             </section>
 
+            {% set ravlo_comps = ravlo_arv_report.get("comps", {}) if ravlo_arv_report else {} %}
+            {% set ravlo_included = ravlo_comps.get("included", []) %}
+            {% set ravlo_rejected = ravlo_comps.get("rejected", []) %}
+            {% set ravlo_providers = ravlo_arv_report.get("provider_estimates", {}) if ravlo_arv_report else {} %}
+            {% set ravlo_explanation = ravlo_arv_report.get("explanation", "") if ravlo_arv_report else "" %}
+            {% set ravlo_warnings = ravlo_arv_report.get("warnings", []) if ravlo_arv_report else [] %}
+            {% set ravlo_web_used = ravlo_arv_report.get("web_search_used", false) if ravlo_arv_report else false %}
+
+            <!-- ══════ RAVLO ARV ANALYSIS ══════ -->
+            {% if ravlo_base > 0 %}
+            <section class="ravlo-card pad ravlo-arv-section">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">RAVLO ARV ENGINE</div>
+                        <h3>Multi-Source Comp Analysis</h3>
+                    </div>
+                    {% if ravlo_web_used %}
+                    <span class="ravlo-badge-sm ravlo-badge-info">Web Search Used</span>
+                    {% endif %}
+                </div>
+
+                <!-- ARV Range Bar -->
+                <div class="ravlo-arv-range">
+                    <div class="ravlo-arv-range-labels">
+                        <div class="ravlo-arv-band ravlo-band-cons">
+                            <span class="ravlo-band-label">Conservative</span>
+                            <strong>${{ "{:,.0f}".format(ravlo_cons) }}</strong>
+                        </div>
+                        <div class="ravlo-arv-band ravlo-band-base">
+                            <span class="ravlo-band-label">Base ARV</span>
+                            <strong>${{ "{:,.0f}".format(ravlo_base) }}</strong>
+                        </div>
+                        <div class="ravlo-arv-band ravlo-band-agg">
+                            <span class="ravlo-band-label">Aggressive</span>
+                            <strong>${{ "{:,.0f}".format(ravlo_agg) }}</strong>
+                        </div>
+                    </div>
+                    <div class="ravlo-arv-bar-track">
+                        {% if ravlo_agg > 0 and ravlo_cons > 0 %}
+                        {% set bar_range = ravlo_agg - ravlo_cons %}
+                        {% set bar_base_pct = ((ravlo_base - ravlo_cons) / bar_range * 100) if bar_range > 0 else 50 %}
+                        <div class="ravlo-arv-bar-fill" style="width: 100%;"></div>
+                        <div class="ravlo-arv-bar-marker" style="left: {{ bar_base_pct }}%;"></div>
+                        {% endif %}
+                    </div>
+                    <div class="ravlo-arv-confidence">
+                        <span>Confidence</span>
+                        <strong class="ravlo-conf-{{ ravlo_conf }}">{{ ravlo_conf|upper }}</strong>
+                        <span class="ravlo-conf-score">({{ ravlo_arv.get("confidence_score", 0) }}/100)</span>
+                    </div>
+                </div>
+
+                {% if ravlo_land %}
+                <div class="ravlo-land-value-note">
+                    <strong>Land Value Estimate:</strong> ${{ "{:,.0f}".format(ravlo_land) }}
+                    <span class="ravlo-label-sm">Finished-home ARV shown above</span>
+                </div>
+                {% endif %}
+
+                <!-- Warnings -->
+                {% if ravlo_warnings %}
+                <div class="ravlo-warnings">
+                    {% for w in ravlo_warnings %}
+                    <span class="ravlo-warning-badge">{{ w }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Explanation -->
+                {% if ravlo_explanation %}
+                <div class="ravlo-explanation">
+                    <div class="ravlo-explanation-label">Ravlo Analysis</div>
+                    <p>{{ ravlo_explanation }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Provider Estimates Side-by-Side -->
+                {% if ravlo_providers %}
+                <div class="ravlo-provider-grid">
+                    <div class="ravlo-provider-header">Provider Estimates</div>
+                    {% for pname, pdata in ravlo_providers.items() %}
+                    <div class="ravlo-provider-card">
+                        <strong class="ravlo-provider-name">{{ pname|title }}</strong>
+                        {% if pdata.get("market_value") or pdata.get("avm") or pdata.get("value") %}
+                        <div class="ravlo-provider-val">
+                            <span>AVM / Value</span>
+                            <strong>${{ "{:,.0f}".format((pdata.get("avm") or pdata.get("market_value") or pdata.get("value") or 0) | float) }}</strong>
+                        </div>
+                        {% endif %}
+                        {% if pdata.get("assessed_value") %}
+                        <div class="ravlo-provider-val">
+                            <span>Assessed</span>
+                            <strong>${{ "{:,.0f}".format(pdata.get("assessed_value") | float) }}</strong>
+                        </div>
+                        {% endif %}
+                        {% if pdata.get("rent") or pdata.get("traditional_rent") %}
+                        <div class="ravlo-provider-val">
+                            <span>Rent</span>
+                            <strong>${{ "{:,.0f}".format((pdata.get("rent") or pdata.get("traditional_rent") or 0) | float) }}/mo</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    <div class="ravlo-provider-card ravlo-provider-ravlo">
+                        <strong class="ravlo-provider-name">Ravlo Adjusted</strong>
+                        <div class="ravlo-provider-val">
+                            <span>Base ARV</span>
+                            <strong>${{ "{:,.0f}".format(ravlo_base) }}</strong>
+                        </div>
+                        <div class="ravlo-provider-val">
+                            <span>Range</span>
+                            <strong>${{ "{:,.0f}".format(ravlo_cons) }} – ${{ "{:,.0f}".format(ravlo_agg) }}</strong>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </section>
+            {% endif %}
+
+            <!-- ══════ COMP TABLE ══════ -->
             <section class="ravlo-card pad">
                 <div class="section-head">
                     <div>
                         <div class="eyebrow">COMPARABLES</div>
-                        <h3>Comp Cards</h3>
+                        <h3>Scored Comp Analysis</h3>
                     </div>
+                    {% if ravlo_included %}
+                    <span class="ravlo-comp-count">{{ ravlo_included|length }} included · {{ ravlo_rejected|length }} rejected</span>
+                    {% endif %}
                 </div>
 
-                {% if normalized_comps %}
+                {% if ravlo_included %}
+                <div class="ravlo-comp-table-wrap">
+                    <table class="ravlo-comp-table">
+                        <thead>
+                            <tr>
+                                <th>Address</th>
+                                <th>Status</th>
+                                <th>Price</th>
+                                <th>$/SqFt</th>
+                                <th>Beds/Baths</th>
+                                <th>SqFt</th>
+                                <th>Dist.</th>
+                                <th>Age</th>
+                                <th>Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for comp in ravlo_included[:10] %}
+                            <tr>
+                                <td class="ravlo-comp-addr">{{ comp.get("address") or "—" }}</td>
+                                <td>
+                                    {% set cstatus = comp.get("status", "unknown") %}
+                                    <span class="ravlo-status-pill ravlo-status-{{ cstatus }}">{{ cstatus|title }}</span>
+                                </td>
+                                <td>${{ "{:,.0f}".format((comp.get("price", 0) or 0) | float) }}</td>
+                                <td>{% if comp.get("price_per_sqft") %}${{ "{:,.0f}".format(comp.get("price_per_sqft")) }}{% else %}—{% endif %}</td>
+                                <td>{{ comp.get("beds") or "—" }} / {{ comp.get("baths") or "—" }}</td>
+                                <td>{{ "{:,.0f}".format((comp.get("sqft", 0) or 0) | float) if comp.get("sqft") else "—" }}</td>
+                                <td>{% if comp.get("distance") %}{{ "{:.1f}".format(comp.get("distance") | float) }} mi{% else %}—{% endif %}</td>
+                                <td>{% if comp.get("months_ago") is not none %}{{ "{:.0f}".format(comp.get("months_ago")) }}mo{% else %}—{% endif %}</td>
+                                <td><span class="ravlo-score-pill {% if (comp.get('comp_score', 0) or 0) >= 70 %}ravlo-score-strong{% elif (comp.get('comp_score', 0) or 0) >= 50 %}ravlo-score-ok{% else %}ravlo-score-weak{% endif %}">{{ comp.get("comp_score", 0) }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if ravlo_rejected %}
+                <details class="ravlo-rejected-toggle">
+                    <summary>{{ ravlo_rejected|length }} Rejected Comp{{ "s" if ravlo_rejected|length != 1 }}</summary>
+                    <div class="ravlo-comp-table-wrap">
+                        <table class="ravlo-comp-table ravlo-comp-rejected">
+                            <thead>
+                                <tr>
+                                    <th>Address</th>
+                                    <th>Price</th>
+                                    <th>Score</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for comp in ravlo_rejected[:8] %}
+                                <tr>
+                                    <td>{{ comp.get("address") or "—" }}</td>
+                                    <td>${{ "{:,.0f}".format((comp.get("price", 0) or 0) | float) }}</td>
+                                    <td><span class="ravlo-score-pill ravlo-score-weak">{{ comp.get("comp_score", 0) }}</span></td>
+                                    <td class="ravlo-reject-reason">{{ comp.get("rejection_reason") or "Low similarity" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+                {% endif %}
+
+                {% elif normalized_comps %}
                 <div class="comp-card-grid">
                     {% for comp in normalized_comps[:6] %}
                     <div class="comp-card">
@@ -670,7 +868,7 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="empty-state-inline">No normalized comps loaded yet.</div>
+                <div class="empty-state-inline">No comp data loaded yet.</div>
                 {% endif %}
             </section>
 
@@ -993,11 +1191,85 @@ Review a saved property, compare exit paths, and move the best opportunity into 
 .comp-card{padding:16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);display:grid;gap:10px}
 .comp-card-meta{display:flex;justify-content:space-between;gap:10px;font-size:13px}
 .empty-state,.empty-state-inline{padding:16px 18px;border-radius:18px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12);color:var(--muted)}
+
+/* ═══ RAVLO ARV ENGINE STYLES ═══ */
+.ravlo-arv-highlight{border-color:rgba(122,184,255,.3) !important;background:rgba(122,184,255,.06) !important}
+.ravlo-confidence-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;letter-spacing:.08em;margin-top:4px}
+.ravlo-conf-high{color:#6fe2b4;background:rgba(111,226,180,.12);border:1px solid rgba(111,226,180,.25)}
+.ravlo-conf-medium{color:#f0c674;background:rgba(240,198,116,.12);border:1px solid rgba(240,198,116,.25)}
+.ravlo-conf-low{color:#ff7b7b;background:rgba(255,123,123,.12);border:1px solid rgba(255,123,123,.25)}
+
+.ravlo-arv-section{border-color:rgba(122,184,255,.2) !important}
+.ravlo-arv-range{display:grid;gap:14px;padding:18px;border-radius:18px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06)}
+.ravlo-arv-range-labels{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center}
+.ravlo-arv-band{display:grid;gap:4px}
+.ravlo-band-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.ravlo-band-cons strong{color:#6fe2b4}
+.ravlo-band-base strong{font-size:24px;color:#7ab8ff}
+.ravlo-band-agg strong{color:#f0c674}
+
+.ravlo-arv-bar-track{position:relative;height:10px;border-radius:999px;background:rgba(255,255,255,.06);overflow:visible}
+.ravlo-arv-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#6fe2b4,#7ab8ff,#f0c674)}
+.ravlo-arv-bar-marker{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:#fff;transform:translateX(-50%)}
+
+.ravlo-arv-confidence{display:flex;align-items:center;gap:8px;font-size:13px}
+.ravlo-arv-confidence span{color:var(--muted)}
+.ravlo-conf-score{font-size:12px;color:var(--muted)}
+
+.ravlo-land-value-note{padding:12px 16px;border-radius:14px;background:rgba(240,198,116,.08);border:1px solid rgba(240,198,116,.18);font-size:13px;display:flex;align-items:center;gap:12px}
+.ravlo-label-sm{font-size:11px;color:var(--muted)}
+
+.ravlo-warnings{display:flex;flex-wrap:wrap;gap:8px}
+.ravlo-warning-badge{font-size:11px;padding:5px 10px;border-radius:999px;background:rgba(240,198,116,.1);border:1px solid rgba(240,198,116,.22);color:#f0c674;font-weight:600}
+
+.ravlo-explanation{padding:14px 18px;border-radius:16px;background:rgba(122,184,255,.05);border:1px solid rgba(122,184,255,.12)}
+.ravlo-explanation-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.ravlo-explanation p{font-size:14px;line-height:1.6;color:var(--text);margin:0}
+
+.ravlo-provider-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.ravlo-provider-header{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding-bottom:4px}
+.ravlo-provider-card{padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);display:grid;gap:8px}
+.ravlo-provider-ravlo{border-color:rgba(122,184,255,.25);background:rgba(122,184,255,.06)}
+.ravlo-provider-name{font-size:13px;font-weight:700}
+.ravlo-provider-val{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.ravlo-provider-val span{color:var(--muted)}
+
+.ravlo-badge-sm{font-size:10px;padding:4px 8px;border-radius:999px;font-weight:700;letter-spacing:.06em}
+.ravlo-badge-info{background:rgba(122,184,255,.12);border:1px solid rgba(122,184,255,.25);color:#7ab8ff}
+
+.ravlo-comp-count{font-size:12px;color:var(--muted)}
+.ravlo-comp-table-wrap{overflow-x:auto;border-radius:14px;border:1px solid rgba(255,255,255,.06)}
+.ravlo-comp-table{width:100%;border-collapse:collapse;font-size:13px}
+.ravlo-comp-table th{text-align:left;padding:10px 12px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap}
+.ravlo-comp-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+.ravlo-comp-table tbody tr:last-child td{border-bottom:none}
+.ravlo-comp-table tbody tr:hover{background:rgba(255,255,255,.03)}
+.ravlo-comp-addr{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ravlo-comp-rejected{opacity:.7}
+
+.ravlo-status-pill{font-size:10px;padding:3px 8px;border-radius:999px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.ravlo-status-sold{background:rgba(111,226,180,.12);border:1px solid rgba(111,226,180,.22);color:#6fe2b4}
+.ravlo-status-active{background:rgba(122,184,255,.12);border:1px solid rgba(122,184,255,.22);color:#7ab8ff}
+.ravlo-status-pending{background:rgba(240,198,116,.12);border:1px solid rgba(240,198,116,.22);color:#f0c674}
+.ravlo-status-unknown{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--muted)}
+
+.ravlo-score-pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;min-width:32px;text-align:center}
+.ravlo-score-strong{background:rgba(111,226,180,.15);color:#6fe2b4}
+.ravlo-score-ok{background:rgba(240,198,116,.15);color:#f0c674}
+.ravlo-score-weak{background:rgba(255,123,123,.15);color:#ff7b7b}
+
+.ravlo-rejected-toggle{margin-top:14px}
+.ravlo-rejected-toggle summary{font-size:13px;color:var(--muted);cursor:pointer;padding:10px 0}
+.ravlo-rejected-toggle summary:hover{color:var(--text)}
+.ravlo-reject-reason{font-size:12px;color:var(--muted);max-width:300px}
+
 @media (max-width:1180px){
   .workspace-hero,.workspace-main-grid,.workspace-compare-grid{grid-template-columns:1fr}
   .workspace-grid-4{grid-template-columns:repeat(3,1fr)}
   .workspace-photo-grid{grid-template-columns:repeat(3,1fr)}
   .workspace-hero-thumbs{grid-template-columns:repeat(4,1fr)}
+  .ravlo-arv-range-labels{grid-template-columns:repeat(3,1fr)}
+  .ravlo-provider-grid{grid-template-columns:repeat(2,1fr)}
 }
 @media (max-width:720px){
   .workspace-grid-4,.workspace-fit-grid,.comp-card-grid{grid-template-columns:1fr}
@@ -1007,6 +1279,9 @@ Review a saved property, compare exit paths, and move the best opportunity into 
   .workspace-hero-image-main{height:240px}
   .workspace-hero-thumbs{grid-template-columns:repeat(3,1fr)}
   .workspace-hero-thumb{height:70px}
+  .ravlo-arv-range-labels{grid-template-columns:1fr;text-align:left}
+  .ravlo-provider-grid{grid-template-columns:1fr}
+  .ravlo-comp-table{font-size:12px}
 }
 </style>
 {% endblock %}
