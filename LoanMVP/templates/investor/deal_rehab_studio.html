@@ -533,6 +533,23 @@
         fd.set('room_type', activeSlot.dataset.roomLabel);
       }
 
+      const bpFile = fd.get('blueprint_file');
+      if (bpFile && bpFile.size) {
+        fd.set('before_image', bpFile);
+      }
+      fd.delete('blueprint_file');
+
+      const bpUrl = fd.get('blueprint_url');
+      if (bpUrl) {
+        fd.set('image_url', bpUrl);
+      }
+      fd.delete('blueprint_url');
+
+      const styleVal = fd.get('style');
+      if (styleVal) {
+        fd.set('preset', styleVal);
+      }
+
       const response = await fetch("{{ url_for('investor.design_studio_generate') }}", {
         method: 'POST',
         body: fd,
