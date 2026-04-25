@@ -279,6 +279,7 @@ def _compute_bands(
         conservative = base_arv * 0.92
 
     conservative = max(conservative, base_arv * 0.88)
+    conservative = min(conservative, base_arv)
 
     if active_ppsfs and subj_sqft > 0:
         max_active_ppsf = max(active_ppsfs)

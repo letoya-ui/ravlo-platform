@@ -324,12 +324,12 @@ def _merge_comps(
 ) -> List[Dict[str, Any]]:
     """Merge new comps into existing list, avoiding duplicates."""
     existing_addrs = {
-        str(c.get("address") or c.get("formattedAddress") or "").lower().strip()
+        str(c.get("formattedAddress") or c.get("address") or "").lower().strip().replace(",", "").replace(".", "")
         for c in existing
     }
     merged = list(existing)
     for c in new:
-        addr = str(c.get("address") or c.get("formattedAddress") or "").lower().strip()
+        addr = str(c.get("formattedAddress") or c.get("address") or "").lower().strip().replace(",", "").replace(".", "")
         if addr and addr not in existing_addrs:
             merged.append(c)
             existing_addrs.add(addr)
