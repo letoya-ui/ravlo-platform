@@ -3414,6 +3414,8 @@ def api_property_tool_image():
     if parsed.scheme not in {"http", "https"}:
         abort(400)
 
+    log_url = source_url
+
     if source_url.startswith(_STREETVIEW_BASE):
         google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or ""
         if google_key:
@@ -3442,7 +3444,7 @@ def api_property_tool_image():
         response.headers["Cache-Control"] = "public, max-age=3600"
         return response
     except Exception:
-        current_app.logger.warning("property_tool_image proxy failed for %s", source_url, exc_info=True)
+        current_app.logger.warning("property_tool_image proxy failed for %s", log_url, exc_info=True)
         abort(404)
 
 @investor_bp.route("/api/property_detail", methods=["POST"])
