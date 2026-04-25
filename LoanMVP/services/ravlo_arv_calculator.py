@@ -176,15 +176,22 @@ def _calculate_lot_arv(
         base_arv = sold_prices
         method = "lot_weighted_comp_prices"
     else:
-        provider_values = _collect_provider_avms(providers)
-        if provider_values:
-            base_arv = statistics.median(provider_values)
-            method = "lot_provider_avm_median"
-            warnings.append("No nearby finished-home comps — using provider AVM as base")
-        else:
-            base_arv = land_value * 3 if land_value else 0
+        # For vacant lots, provider AVMs represent lot value not finished-home
+        # value, so skip them as a base. Use land_value multiplier instead.
+        if land_value and land_value > 0:
+            base_arv = land_value * 3
             method = "lot_land_multiplier"
-            warnings.append("No comps or provider data — ARV estimated as 3× land value")
+            warnings.append("No finished-home comps — ARV estimated as 3× land value")
+        else:
+            provider_values = _collect_provider_avms(providers)
+            if provider_values:
+                base_arv = statistics.median(provider_values) * 3
+                method = "lot_provider_avm_multiplier"
+                warnings.append("No finished-home comps — ARV estimated as 3× provider lot AVM")
+            else:
+                base_arv = 0
+                method = "lot_insufficient_data"
+                warnings.append("Insufficient data for finished-home ARV estimate")
 
     if base_arv and base_arv > 0:
         conservative, aggressive = _compute_bands(
