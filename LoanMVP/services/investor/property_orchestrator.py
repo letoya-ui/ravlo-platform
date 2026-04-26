@@ -1115,7 +1115,7 @@ class PropertyIntelligenceOrchestrator:
 
         # RentCast: re-check sale listing for imgSrc (skip if no usable address)
         rentcast_id = cp.provider_ids.get("rentcast")
-        if addr and (rentcast_id or addr):
+        if addr:
             try:
                 sale = find_rentcast_sale_listing(
                     address=addr,
