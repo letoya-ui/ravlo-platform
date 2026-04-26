@@ -1022,9 +1022,11 @@ class PropertyIntelligenceOrchestrator:
     def _recover_photos(self, cp: CanonicalProperty) -> CanonicalProperty:
         """Last-resort photo recovery after all enrichment providers failed.
 
-        Re-scans every raw data blob attached to the candidate for any
-        image URL that earlier normalisation may have missed, then checks
-        the Realtor.com photos endpoint if a Realtor property_id exists.
+        Tries every available source aggressively:
+        1. Re-scan raw data blobs for missed image URLs
+        2. Mashvisor get_property_images (by id or address lookup)
+        3. Realtor.com photos endpoint
+        4. RentCast sale listing imgSrc re-check
         """
         addr = cp.address or cp.address_line1 or "unknown"
         _log.info("[photo_recovery] attempting recovery for %s", addr)
@@ -1048,6 +1050,55 @@ class PropertyIntelligenceOrchestrator:
             cp.value_sources["photos"] = "raw_recovery"
             return cp
 
+        # Mashvisor: retry with property_id or address-based lookup
+        if self._mashvisor:
+            mashvisor_id = cp.provider_ids.get("mashvisor")
+            if mashvisor_id:
+                try:
+                    img_result = self._mashvisor.get_property_images(mashvisor_id)
+                    if img_result.get("status") == "success" and img_result.get("photos"):
+                        recovered = self._normalize_photo_candidates(
+                            img_result.get("photos"),
+                            img_result.get("primary_photo"),
+                        )
+                        if recovered:
+                            _log.info("[photo_recovery] mashvisor images returned %d for %s", len(recovered), addr)
+                            cp.photos = recovered
+                            cp.primary_photo = _resolve_photo(None, recovered)
+                            cp.value_sources["photos"] = "mashvisor_recovery"
+                            return cp
+                except Exception as exc:
+                    _log.warning("[photo_recovery] mashvisor get_property_images failed: %s", exc)
+
+            if not mashvisor_id and addr:
+                try:
+                    prop_data = self._mashvisor.get_property_by_address(
+                        address=addr,
+                        city=cp.city or "",
+                        state=cp.state or "",
+                        zip_code=cp.zip_code or "",
+                    )
+                    content = (prop_data.get("content") or {}) if isinstance(prop_data, dict) else {}
+                    if isinstance(content, dict):
+                        pid = content.get("id") or content.get("property_id")
+                        if pid:
+                            cp.provider_ids["mashvisor"] = pid
+                            img_result = self._mashvisor.get_property_images(pid)
+                            if img_result.get("status") == "success" and img_result.get("photos"):
+                                recovered = self._normalize_photo_candidates(
+                                    img_result.get("photos"),
+                                    img_result.get("primary_photo"),
+                                )
+                                if recovered:
+                                    _log.info("[photo_recovery] mashvisor address lookup returned %d photos for %s", len(recovered), addr)
+                                    cp.photos = recovered
+                                    cp.primary_photo = _resolve_photo(None, recovered)
+                                    cp.value_sources["photos"] = "mashvisor_recovery"
+                                    return cp
+                except Exception as exc:
+                    _log.warning("[photo_recovery] mashvisor address lookup failed: %s", exc)
+
+        # Realtor.com photos endpoint
         realtor_id = cp.provider_ids.get("realtor")
         if realtor_id:
             try:
@@ -1062,6 +1113,33 @@ class PropertyIntelligenceOrchestrator:
                     cp.primary_photo = _resolve_photo(None, recovered)
                     cp.value_sources["photos"] = "realtor_recovery"
                     return cp
+
+        # RentCast: re-check sale listing for imgSrc
+        rentcast_id = cp.provider_ids.get("rentcast")
+        if rentcast_id or addr:
+            try:
+                sale = find_rentcast_sale_listing(
+                    address=addr,
+                    city=cp.city or "",
+                    state=cp.state or "",
+                    zip_code=cp.zip_code or "",
+                    limit=5,
+                )
+                if sale:
+                    normalized_sale = normalize_rentcast_sale_listing(sale)
+                    recovered = self._normalize_photo_candidates(
+                        normalized_sale.get("primary_photo"),
+                        normalized_sale.get("photos"),
+                        (sale or {}).get("imgSrc"),
+                    )
+                    if recovered:
+                        _log.info("[photo_recovery] rentcast sale re-check returned %d for %s", len(recovered), addr)
+                        cp.photos = recovered
+                        cp.primary_photo = _resolve_photo(None, recovered)
+                        cp.value_sources["photos"] = "rentcast_recovery"
+                        return cp
+            except Exception as exc:
+                _log.warning("[photo_recovery] rentcast re-check failed: %s", exc)
 
         _log.info("[photo_recovery] no photos recovered for %s — will rely on streetview fallback", addr)
         return cp
