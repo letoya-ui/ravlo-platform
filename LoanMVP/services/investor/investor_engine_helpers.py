@@ -8,10 +8,15 @@ import requests
 from flask import current_app
 
 
-GPU_BASE_URL = os.getenv("GPU_BASE_URL", "").rstrip("/")
-RENOVATION_ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL", "").rstrip("/")
+def _clean_url_env(name: str, default: str = "") -> str:
+    """Read a URL env-var, stripping stray quotes that break requests."""
+    return os.getenv(name, default).strip().strip('"').strip("'").rstrip("/")
+
+
+GPU_BASE_URL = _clean_url_env("GPU_BASE_URL")
+RENOVATION_ENGINE_URL = _clean_url_env("RENOVATION_ENGINE_URL")
 RENOVATION_API_KEY = os.getenv("RENOVATION_API_KEY", "")
-SCOPE_ENGINE_URL = os.getenv("SCOPE_ENGINE_URL", "").rstrip("/")
+SCOPE_ENGINE_URL = _clean_url_env("SCOPE_ENGINE_URL")
 SCOPE_ENGINE_API_KEY = os.getenv("SCOPE_ENGINE_API_KEY", "")
 
 RENDER_TIMEOUT = 240
