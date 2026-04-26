@@ -979,10 +979,10 @@ async function runSearch(){
     });
 
     let data = {};
+    const rawText = await resp.text();
     try {
-      data = await resp.json();
+      data = JSON.parse(rawText);
     } catch (jsonErr) {
-      const rawText = await resp.text();
       console.error("Search returned non-JSON:", rawText);
       status.innerText = `Search failed (${resp.status}).`;
       renderEmpty("Search failed", rawText || "Server returned an invalid response.");
