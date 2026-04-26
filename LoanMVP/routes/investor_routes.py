@@ -4720,7 +4720,7 @@ def refresh_deal_property(deal_id):
 
         fresh = cp.to_result_dict()
 
-        resolved = deal.resolved_json or {}
+        resolved = copy.deepcopy(deal.resolved_json or {})
         old_property = resolved.get("property") or {}
         old_property.update({k: v for k, v in fresh.items() if v is not None})
         resolved["property"] = old_property
@@ -4733,6 +4733,7 @@ def refresh_deal_property(deal_id):
         if cp.deal_score is not None:
             deal.deal_score = cp.deal_score
 
+        flag_modified(deal, "resolved_json")
         db.session.commit()
 
         photos_count = len(cp.photos or [])
