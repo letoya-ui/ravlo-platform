@@ -1002,19 +1002,10 @@ class PropertyIntelligenceOrchestrator:
             if not norm_listing:
                 continue
 
-            # Compare house number (first token) exactly, then check the
-            # rest of the street name matches to avoid false positives
-            # like "5 elm st" matching "15 elm st".
-            target_parts = norm_target.split()
-            listing_parts = norm_listing.split()
-            if (not target_parts or not listing_parts
-                    or target_parts[0] != listing_parts[0]):
-                continue
-            target_street = " ".join(target_parts[1:])
-            listing_street = " ".join(listing_parts[1:])
-            if target_street and listing_street and (
-                target_street in listing_street or listing_street in target_street
-            ):
+            # Compare full normalized addresses with equality to avoid
+            # false positives (e.g. "5 elm st" != "15 elm st",
+            # "123 2nd st" != "123 22nd st").
+            if norm_target == norm_listing:
                 photos = self._normalize_photo_candidates(
                     listing.get("primary_photo"),
                     listing.get("photos"),
