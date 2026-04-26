@@ -6315,7 +6315,6 @@ def generate_build_exterior():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @investor_bp.route("/deal-studio/build-studio/generate-interior", methods=["POST"])
-@investor_bp.route("/deal-studio/design-studio/generate", methods=["POST"])
 @login_required
 @role_required("investor")
 def generate_build_interior():
@@ -11656,13 +11655,13 @@ def partners():
     external_partners = []
     fallback_used = False
 
-    if include_external and not partners:
+    if include_external:
         external_partners = search_external_partners_google(
             category=selected_category,
             city=selected_city,
             state=selected_state,
         )
-        fallback_used = bool(external_partners)
+        fallback_used = bool(external_partners) and not partners
 
     return render_template(
         "investor/partners.html",
