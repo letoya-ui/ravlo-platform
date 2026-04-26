@@ -1002,9 +1002,19 @@ class PropertyIntelligenceOrchestrator:
             if not norm_listing:
                 continue
 
-            # Accept if the street portion matches (first token sequence of the
-            # normalized addresses share a significant overlap).
-            if norm_target in norm_listing or norm_listing in norm_target:
+            # Compare house number (first token) exactly, then check the
+            # rest of the street name matches to avoid false positives
+            # like "5 elm st" matching "15 elm st".
+            target_parts = norm_target.split()
+            listing_parts = norm_listing.split()
+            if (not target_parts or not listing_parts
+                    or target_parts[0] != listing_parts[0]):
+                continue
+            target_street = " ".join(target_parts[1:])
+            listing_street = " ".join(listing_parts[1:])
+            if target_street and listing_street and (
+                target_street in listing_street or listing_street in target_street
+            ):
                 photos = self._normalize_photo_candidates(
                     listing.get("primary_photo"),
                     listing.get("photos"),
@@ -1028,8 +1038,9 @@ class PropertyIntelligenceOrchestrator:
         3. Realtor.com photos endpoint
         4. RentCast sale listing imgSrc re-check
         """
-        addr = cp.address or cp.address_line1 or "unknown"
-        _log.info("[photo_recovery] attempting recovery for %s", addr)
+        addr = cp.address or cp.address_line1 or ""
+        log_label = addr or "unknown"
+        _log.info("[photo_recovery] attempting recovery for %s", log_label)
 
         raw = cp.raw or {}
         recovered = self._normalize_photo_candidates(
@@ -1044,7 +1055,7 @@ class PropertyIntelligenceOrchestrator:
             raw.get("thumbnail"),
         )
         if recovered:
-            _log.info("[photo_recovery] found %d photos in raw data for %s", len(recovered), addr)
+            _log.info("[photo_recovery] found %d photos in raw data for %s", len(recovered), log_label)
             cp.photos = recovered
             cp.primary_photo = _resolve_photo(None, recovered)
             cp.value_sources["photos"] = "raw_recovery"
@@ -1062,7 +1073,7 @@ class PropertyIntelligenceOrchestrator:
                             img_result.get("primary_photo"),
                         )
                         if recovered:
-                            _log.info("[photo_recovery] mashvisor images returned %d for %s", len(recovered), addr)
+                            _log.info("[photo_recovery] mashvisor images returned %d for %s", len(recovered), log_label)
                             cp.photos = recovered
                             cp.primary_photo = _resolve_photo(None, recovered)
                             cp.value_sources["photos"] = "mashvisor_recovery"
@@ -1070,7 +1081,8 @@ class PropertyIntelligenceOrchestrator:
                 except Exception as exc:
                     _log.warning("[photo_recovery] mashvisor get_property_images failed: %s", exc)
 
-            if not mashvisor_id and addr:
+
+            if not mashvisor_id and addr:  # skip if addr is empty
                 try:
                     prop_data = self._mashvisor.get_property_by_address(
                         address=addr,
@@ -1090,13 +1102,14 @@ class PropertyIntelligenceOrchestrator:
                                     img_result.get("primary_photo"),
                                 )
                                 if recovered:
-                                    _log.info("[photo_recovery] mashvisor address lookup returned %d photos for %s", len(recovered), addr)
+                                    _log.info("[photo_recovery] mashvisor address lookup returned %d photos for %s", len(recovered), log_label)
                                     cp.photos = recovered
                                     cp.primary_photo = _resolve_photo(None, recovered)
                                     cp.value_sources["photos"] = "mashvisor_recovery"
                                     return cp
                 except Exception as exc:
                     _log.warning("[photo_recovery] mashvisor address lookup failed: %s", exc)
+
 
         # Realtor.com photos endpoint
         realtor_id = cp.provider_ids.get("realtor")
@@ -1108,15 +1121,15 @@ class PropertyIntelligenceOrchestrator:
             if gallery:
                 recovered = self._normalize_photo_candidates(gallery)
                 if recovered:
-                    _log.info("[photo_recovery] realtor photos endpoint returned %d for %s", len(recovered), addr)
+                    _log.info("[photo_recovery] realtor photos endpoint returned %d for %s", len(recovered), log_label)
                     cp.photos = recovered
                     cp.primary_photo = _resolve_photo(None, recovered)
                     cp.value_sources["photos"] = "realtor_recovery"
                     return cp
 
-        # RentCast: re-check sale listing for imgSrc
+        # RentCast: re-check sale listing for imgSrc (skip if no usable address)
         rentcast_id = cp.provider_ids.get("rentcast")
-        if rentcast_id or addr:
+        if addr and (rentcast_id or addr):
             try:
                 sale = find_rentcast_sale_listing(
                     address=addr,
@@ -1133,7 +1146,7 @@ class PropertyIntelligenceOrchestrator:
                         (sale or {}).get("imgSrc"),
                     )
                     if recovered:
-                        _log.info("[photo_recovery] rentcast sale re-check returned %d for %s", len(recovered), addr)
+                        _log.info("[photo_recovery] rentcast sale re-check returned %d for %s", len(recovered), log_label)
                         cp.photos = recovered
                         cp.primary_photo = _resolve_photo(None, recovered)
                         cp.value_sources["photos"] = "rentcast_recovery"
@@ -1141,7 +1154,7 @@ class PropertyIntelligenceOrchestrator:
             except Exception as exc:
                 _log.warning("[photo_recovery] rentcast re-check failed: %s", exc)
 
-        _log.info("[photo_recovery] no photos recovered for %s — will rely on streetview fallback", addr)
+        _log.info("[photo_recovery] no photos recovered for %s — will rely on streetview fallback", log_label)
         return cp
 
     def rank_candidates(self, results: List[CanonicalProperty]) -> List[CanonicalProperty]:
