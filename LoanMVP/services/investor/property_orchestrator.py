@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 _log = logging.getLogger(__name__)
+
+
+def _normalize_address_text(value: str) -> str:
+    """Lowercase, strip punctuation, and collapse whitespace for fuzzy matching."""
+    text = re.sub(r"[^a-z0-9\s]", "", str(value or "").lower())
+    return " ".join(text.split())
 
 from LoanMVP.services.attom_service import build_attom_dealfinder_profile, AttomServiceError
 from LoanMVP.services.rentcast_service import (
@@ -20,6 +27,7 @@ from LoanMVP.services.mashvisor_service import normalize_mashvisor_validation
 from LoanMVP.services.realtor_provider import (
     fetch_realtor_data,
     fetch_realtor_photos,
+    search_realtor_for_sale,
 )
 
 from LoanMVP.services.investor.investor_route_helpers import (
@@ -570,6 +578,9 @@ class PropertyIntelligenceOrchestrator:
 
             cp = self._enrich_with_realtor(cp)
 
+            if not cp.photos and not cp.primary_photo:
+                cp = self._recover_photos(cp)
+
             enriched.append(cp)
 
         return enriched
@@ -928,6 +939,9 @@ class PropertyIntelligenceOrchestrator:
             if gallery:
                 realtor_photos = self._normalize_photo_candidates(gallery)
 
+        if not realtor_photos:
+            realtor_photos = self._search_realtor_photos_fallback(cp)
+
         if realtor_photos:
             _log.info(
                 "[realtor] extracted %d photos for %s",
@@ -954,6 +968,102 @@ class PropertyIntelligenceOrchestrator:
         if isinstance(prop.get("description"), str) and prop.get("description"):
             cp.description = cp.description or prop.get("description")
 
+        return cp
+
+    def _search_realtor_photos_fallback(self, cp: CanonicalProperty) -> List[str]:
+        """Search Realtor.com for-sale listings to find photos for *cp*.
+
+        Only accepts results whose address closely matches the candidate
+        property so we never attach a random listing's photos to the wrong
+        property.
+        """
+        addr = cp.address or cp.address_line1 or ""
+        location_parts = [p for p in (addr, cp.city, cp.state, cp.zip_code) if p]
+        location = ", ".join(location_parts)
+        if len(location) < 8:
+            return []
+
+        try:
+            results = search_realtor_for_sale(location=location, limit=5, days_on=365)
+        except Exception as exc:
+            _log.warning("[realtor] search fallback failed: %s", exc)
+            return []
+
+        if not results:
+            return []
+
+        norm_target = _normalize_address_text(addr)
+        if not norm_target:
+            return []
+
+        for listing in results:
+            listing_addr = listing.get("address") or listing.get("address_line1") or ""
+            norm_listing = _normalize_address_text(listing_addr)
+            if not norm_listing:
+                continue
+
+            # Accept if the street portion matches (first token sequence of the
+            # normalized addresses share a significant overlap).
+            if norm_target in norm_listing or norm_listing in norm_target:
+                photos = self._normalize_photo_candidates(
+                    listing.get("primary_photo"),
+                    listing.get("photos"),
+                )
+                if photos:
+                    _log.info(
+                        "[realtor] search fallback matched %s -> %s (%d photos)",
+                        addr, listing_addr, len(photos),
+                    )
+                    return photos
+
+        _log.info("[realtor] search fallback found no address match for %s", addr)
+        return []
+
+    def _recover_photos(self, cp: CanonicalProperty) -> CanonicalProperty:
+        """Last-resort photo recovery after all enrichment providers failed.
+
+        Re-scans every raw data blob attached to the candidate for any
+        image URL that earlier normalisation may have missed, then checks
+        the Realtor.com photos endpoint if a Realtor property_id exists.
+        """
+        addr = cp.address or cp.address_line1 or "unknown"
+        _log.info("[photo_recovery] attempting recovery for %s", addr)
+
+        raw = cp.raw or {}
+        recovered = self._normalize_photo_candidates(
+            raw.get("imgSrc"),
+            raw.get("primaryPhoto"),
+            raw.get("photos"),
+            raw.get("images"),
+            raw.get("image"),
+            raw.get("media"),
+            raw.get("photo"),
+            raw.get("coverPhoto"),
+            raw.get("thumbnail"),
+        )
+        if recovered:
+            _log.info("[photo_recovery] found %d photos in raw data for %s", len(recovered), addr)
+            cp.photos = recovered
+            cp.primary_photo = _resolve_photo(None, recovered)
+            cp.value_sources["photos"] = "raw_recovery"
+            return cp
+
+        realtor_id = cp.provider_ids.get("realtor")
+        if realtor_id:
+            try:
+                gallery = fetch_realtor_photos(realtor_id)
+            except Exception:
+                gallery = []
+            if gallery:
+                recovered = self._normalize_photo_candidates(gallery)
+                if recovered:
+                    _log.info("[photo_recovery] realtor photos endpoint returned %d for %s", len(recovered), addr)
+                    cp.photos = recovered
+                    cp.primary_photo = _resolve_photo(None, recovered)
+                    cp.value_sources["photos"] = "realtor_recovery"
+                    return cp
+
+        _log.info("[photo_recovery] no photos recovered for %s — will rely on streetview fallback", addr)
         return cp
 
     def rank_candidates(self, results: List[CanonicalProperty]) -> List[CanonicalProperty]:
