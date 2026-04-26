@@ -1123,7 +1123,7 @@ class PropertyIntelligenceOrchestrator:
                         _log.warning("[photo_recovery] mashvisor get_property_images failed for pid=%s: %s", pid, exc)
 
 
-        # Realtor.com photos endpoint
+        # Realtor.com photos endpoint (by property ID)
         realtor_id = cp.provider_ids.get("realtor")
         if realtor_id:
             try:
@@ -1138,6 +1138,17 @@ class PropertyIntelligenceOrchestrator:
                     cp.primary_photo = _resolve_photo(None, recovered)
                     cp.value_sources["photos"] = "realtor_recovery"
                     return cp
+
+        # Realtor.com search fallback (address-based, no ID required).
+        # This may have been skipped during enrichment if the budget was
+        # exhausted, so we always try it here as a recovery step.
+        realtor_search_photos = self._search_realtor_photos_fallback(cp)
+        if realtor_search_photos:
+            cp.photos = realtor_search_photos
+            cp.primary_photo = _resolve_photo(None, realtor_search_photos)
+            cp.value_sources["photos"] = "realtor_search_recovery"
+            _log.info("[photo_recovery] realtor search fallback returned %d for %s", len(realtor_search_photos), log_label)
+            return cp
 
         # RentCast: re-check sale listing for imgSrc (skip if no usable address)
         rentcast_id = cp.provider_ids.get("rentcast")
@@ -1166,7 +1177,28 @@ class PropertyIntelligenceOrchestrator:
             except Exception as exc:
                 _log.warning("[photo_recovery] rentcast re-check failed: %s", exc)
 
-        _log.info("[photo_recovery] no photos recovered for %s — will rely on streetview fallback", log_label)
+        # Absolute last resort: generate a Google Street View URL from
+        # coordinates so the property card has a real photo instead of a
+        # placeholder.  The proxy layer will append the API key before
+        # requesting the image from Google.
+        lat = cp.latitude
+        lon = cp.longitude
+        if lat is not None and lon is not None:
+            try:
+                lat_f, lon_f = float(lat), float(lon)
+                if lat_f != 0.0 or lon_f != 0.0:
+                    sv_url = (
+                        "https://maps.googleapis.com/maps/api/streetview"
+                        f"?size=600x400&location={lat_f},{lon_f}"
+                    )
+                    cp.primary_photo = sv_url
+                    cp.value_sources["photos"] = "streetview"
+                    _log.info("[photo_recovery] set streetview fallback for %s (%.4f, %.4f)", log_label, lat_f, lon_f)
+                    return cp
+            except (TypeError, ValueError):
+                pass
+
+        _log.info("[photo_recovery] no photos recovered for %s — no coordinates for streetview", log_label)
         return cp
 
     def rank_candidates(self, results: List[CanonicalProperty]) -> List[CanonicalProperty]:

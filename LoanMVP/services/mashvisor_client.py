@@ -66,6 +66,11 @@ class MashvisorClient:
                 f"Mashvisor returned non-JSON response: {response.text[:500]}"
             ) from exc
 
+        # 409 "Property already exist" means Mashvisor knows the property;
+        # return the body so callers can still extract IDs or partial data.
+        if response.status_code == 409:
+            return data
+
         if not response.ok:
             raise MashvisorError(
                 f"Mashvisor error {response.status_code}: {data}"
