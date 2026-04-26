@@ -760,32 +760,26 @@ class PropertyIntelligenceOrchestrator:
     @staticmethod
     def _resolve_mashvisor_property_id(result: Dict[str, Any], normalized: Dict[str, Any]) -> Any:
         """Extract a Mashvisor property id from every possible location."""
-        # 1. normalized (if normalize_mashvisor_validation ever populates it)
-        pid = normalized.get("property_id") or normalized.get("id")
-        if pid:
-            return pid
+        _id_keys = ("id", "property_id", "pid", "mashvisor_id", "mls_id")
 
-        # 2. property response  {"status":"success","content":{"id":...}}
-        prop = result.get("property")
-        if isinstance(prop, dict):
-            content = prop.get("content")
-            if isinstance(content, dict):
-                pid = content.get("id") or content.get("property_id")
-                if pid:
-                    return pid
-            # some plans nest differently
-            pid = prop.get("id") or prop.get("property_id")
+        # 1. normalized (if normalize_mashvisor_validation ever populates it)
+        for k in _id_keys:
+            pid = normalized.get(k)
             if pid:
                 return pid
 
-        # 3. lookup response
-        lookup = result.get("lookup")
-        if isinstance(lookup, dict):
-            content = lookup.get("content")
-            if isinstance(content, dict):
-                pid = content.get("id") or content.get("property_id")
-                if pid:
-                    return pid
+        # 2. property response  {"status":"success","content":{"id":...}}
+        for section_key in ("property", "lookup"):
+            section = result.get(section_key)
+            if not isinstance(section, dict):
+                continue
+            for container in (section.get("content"), section):
+                if not isinstance(container, dict):
+                    continue
+                for k in _id_keys:
+                    pid = container.get(k)
+                    if pid:
+                        return pid
 
         return None
 
@@ -855,6 +849,7 @@ class PropertyIntelligenceOrchestrator:
         _log.info("[mashvisor] resolved property_id=%s", property_id)
 
         if property_id:
+            cp.provider_ids["mashvisor"] = property_id
             try:
                 image_result = self._mashvisor.get_property_images(property_id)
                 img_status = image_result.get("status")
