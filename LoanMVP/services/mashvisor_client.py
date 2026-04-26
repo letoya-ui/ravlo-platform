@@ -81,15 +81,45 @@ class MashvisorClient:
         state: str,
         zip_code: str,
     ) -> Dict[str, Any]:
-        return self._get(
-            "property",
-            params={
-                "address": address,
-                "city": city,
-                "state": state,
-                "zip_code": zip_code,
-            },
-        )
+        clean_params: Dict[str, Any] = {}
+        for key, value in {
+            "address": address,
+            "city": city,
+            "state": state,
+            "zip_code": zip_code,
+        }.items():
+            if value is not None and value != "":
+                clean_params[key] = value
+
+        url = self._build_url("property")
+
+        try:
+            response = self.session.get(
+                url,
+                params=clean_params,
+                timeout=self.config.timeout_seconds,
+            )
+        except requests.RequestException as exc:
+            raise MashvisorError(f"Network error calling Mashvisor: {exc}") from exc
+
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise MashvisorError(
+                f"Mashvisor returned non-JSON response: {response.text[:500]}"
+            ) from exc
+
+        if response.status_code == 409:
+            # "Property already exist" — Mashvisor knows this property.
+            # Return the response body so callers can extract any content/id.
+            return data
+
+        if not response.ok:
+            raise MashvisorError(
+                f"Mashvisor error {response.status_code}: {data}"
+            )
+
+        return data
 
     def get_property_images(self, property_id: Any) -> Dict[str, Any]:
         """

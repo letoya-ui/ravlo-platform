@@ -218,6 +218,7 @@ from LoanMVP.services.investor.investor_engine_helpers import (
     _post_scope_engine_json,
 )
 from LoanMVP.services.investor.property_orchestrator import (
+    CanonicalProperty,
     PropertyIntelligenceOrchestrator,
     ProviderBudget,
 )
@@ -4672,9 +4673,88 @@ def deal_detail(deal_id):
         rehab_analysis=rehab_analysis
     )
 
-            
 
-    
+@investor_bp.route("/deals/<int:deal_id>/refresh", methods=["POST"])
+@login_required
+@role_required("investor")
+def refresh_deal_property(deal_id):
+    """Re-enrich a deal with the latest property data from all providers."""
+    deal = Deal.query.get_or_404(deal_id)
+    if deal.user_id != current_user.id:
+        abort(403)
+
+    addr = deal.address or ""
+    city_val = deal.city or ""
+    state_val = deal.state or ""
+    zip_val = deal.zip_code or ""
+
+    if not addr and not zip_val:
+        return jsonify({
+            "status": "error",
+            "message": "Deal has no address or ZIP code to refresh.",
+        }), 400
+
+    strategy = deal.strategy or deal.recommended_strategy or "flip"
+
+    try:
+        orchestrator = PropertyIntelligenceOrchestrator(
+            strategy=strategy,
+            asset_type="any",
+        )
+
+        cp = CanonicalProperty(
+            address=addr,
+            address_line1=addr,
+            city=city_val,
+            state=state_val,
+            zip_code=zip_val,
+        )
+
+        cp = orchestrator._enrich_with_attom(cp)
+        cp = orchestrator._enrich_with_rentcast(cp)
+        cp = orchestrator._enrich_with_mashvisor(cp)
+        cp = orchestrator._enrich_with_realtor(cp)
+
+        if not cp.photos and not cp.primary_photo:
+            cp = orchestrator._recover_photos(cp)
+
+        fresh = cp.to_result_dict()
+
+        resolved = deal.resolved_json or {}
+        old_property = resolved.get("property") or {}
+        old_property.update({k: v for k, v in fresh.items() if v is not None})
+        resolved["property"] = old_property
+        deal.resolved_json = resolved
+
+        if cp.arv:
+            deal.arv = cp.arv
+        if cp.monthly_rent_estimate:
+            deal.estimated_rent = cp.monthly_rent_estimate
+        if cp.deal_score is not None:
+            deal.deal_score = cp.deal_score
+
+        db.session.commit()
+
+        photos_count = len(cp.photos or [])
+        photo_source = cp.value_sources.get("photos", "none")
+
+        return jsonify({
+            "status": "ok",
+            "message": f"Property data refreshed. {photos_count} photos loaded ({photo_source}).",
+            "photos_count": photos_count,
+            "photo_source": photo_source,
+            "primary_photo": cp.primary_photo,
+            "updated_fields": list(cp.value_sources.keys()),
+        })
+
+    except Exception as exc:
+        current_app.logger.exception("Deal property refresh failed for deal_id=%s", deal_id)
+        return jsonify({
+            "status": "error",
+            "message": f"Refresh failed: {exc}",
+        }), 500
+
+
 @investor_bp.route("/deal-comparison", methods=["GET"])
 @login_required
 @role_required("investor")
