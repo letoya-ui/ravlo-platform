@@ -1069,6 +1069,7 @@ class PropertyIntelligenceOrchestrator:
 
 
             if not mashvisor_id and addr:  # skip if addr is empty
+                pid = None
                 try:
                     prop_data = self._mashvisor.get_property_by_address(
                         address=addr,
@@ -1079,22 +1080,47 @@ class PropertyIntelligenceOrchestrator:
                     content = (prop_data.get("content") or {}) if isinstance(prop_data, dict) else {}
                     if isinstance(content, dict):
                         pid = content.get("id") or content.get("property_id")
-                        if pid:
-                            cp.provider_ids["mashvisor"] = pid
-                            img_result = self._mashvisor.get_property_images(pid)
-                            if img_result.get("status") == "success" and img_result.get("photos"):
-                                recovered = self._normalize_photo_candidates(
-                                    img_result.get("photos"),
-                                    img_result.get("primary_photo"),
-                                )
-                                if recovered:
-                                    _log.info("[photo_recovery] mashvisor address lookup returned %d photos for %s", len(recovered), log_label)
-                                    cp.photos = recovered
-                                    cp.primary_photo = _resolve_photo(None, recovered)
-                                    cp.value_sources["photos"] = "mashvisor_recovery"
-                                    return cp
                 except Exception as exc:
                     _log.warning("[photo_recovery] mashvisor address lookup failed: %s", exc)
+
+                # 409 "Property already exist" returns no pid — try airbnb lookup
+                if not pid:
+                    try:
+                        lookup_data = self._mashvisor.get_airbnb_lookup(
+                            address=addr,
+                            city=cp.city or "",
+                            state=cp.state or "",
+                            zip_code=cp.zip_code or "",
+                        )
+                        lookup_content = (lookup_data.get("content") or {}) if isinstance(lookup_data, dict) else {}
+                        if isinstance(lookup_content, dict):
+                            pid = (
+                                lookup_content.get("id")
+                                or lookup_content.get("property_id")
+                                or lookup_content.get("pid")
+                            )
+                            if not pid and isinstance(lookup_content.get("property_info"), dict):
+                                pid = lookup_content["property_info"].get("id")
+                    except Exception as exc:
+                        _log.warning("[photo_recovery] mashvisor airbnb lookup fallback failed: %s", exc)
+
+                if pid:
+                    try:
+                        cp.provider_ids["mashvisor"] = pid
+                        img_result = self._mashvisor.get_property_images(pid)
+                        if img_result.get("status") == "success" and img_result.get("photos"):
+                            recovered = self._normalize_photo_candidates(
+                                img_result.get("photos"),
+                                img_result.get("primary_photo"),
+                            )
+                            if recovered:
+                                _log.info("[photo_recovery] mashvisor address lookup returned %d photos for %s", len(recovered), log_label)
+                                cp.photos = recovered
+                                cp.primary_photo = _resolve_photo(None, recovered)
+                                cp.value_sources["photos"] = "mashvisor_recovery"
+                                return cp
+                    except Exception as exc:
+                        _log.warning("[photo_recovery] mashvisor get_property_images failed for pid=%s: %s", pid, exc)
 
 
         # Realtor.com photos endpoint
