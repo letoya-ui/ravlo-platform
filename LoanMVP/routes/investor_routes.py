@@ -502,10 +502,23 @@ def _streetview_fallback_url(result):
     The key is injected server-side by :func:`api_property_tool_image`
     so it never appears in client-visible markup.
     Returns ``None`` when the address is too short or key is missing.
+
+    Prefers latitude/longitude coordinates when available because they
+    produce more reliable Street View results than text addresses.
     """
     google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or ""
     if not google_key:
         return None
+
+    lat = result.get("latitude")
+    lon = result.get("longitude")
+    if lat is not None and lon is not None:
+        try:
+            lat_f, lon_f = float(lat), float(lon)
+            if lat_f != 0.0 or lon_f != 0.0:
+                return f"{_STREETVIEW_BASE}?size=600x400&location={lat_f},{lon_f}"
+        except (TypeError, ValueError):
+            pass
 
     addr = safe_str(result.get("address") or "")
     city = safe_str(result.get("city") or "")
