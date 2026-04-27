@@ -182,10 +182,10 @@
       </a>
       {% endif %}
 
-      {% if build_site_plan_url %}
-      <a href="{{ build_site_plan_url }}" target="_blank" class="build-preview-card" data-build-image="{{ build_site_plan_url }}">
-        <img src="{{ build_site_plan_url }}" alt="Build site plan">
-        <strong>Site Plan</strong>
+      {% if build_floor2_url %}
+      <a href="{{ build_floor2_url }}" target="_blank" class="build-preview-card" data-build-image="{{ build_floor2_url }}">
+        <img src="{{ build_floor2_url }}" alt="Second floor blueprint">
+        <strong>Floor 2</strong>
       </a>
       {% endif %}
 
@@ -215,7 +215,7 @@
       </div>
       <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn primary">Open Build Studio</a>
     </div>
-    <div class="empty-state-inline">Generate a blueprint, site plan, and exterior rendering before creating build costs.</div>
+    <div class="empty-state-inline">Generate floor blueprints and an exterior rendering before creating build costs.</div>
   </section>
   {% endif %}
 
