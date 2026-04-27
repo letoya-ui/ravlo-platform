@@ -6809,6 +6809,7 @@ def generate_build_blueprint():
         # ---------------- ENGINE ----------------
         style_preset = _normalize_style_preset(requested_style_preset)
         render_batch_id = uuid.uuid4().hex
+        style_prompt = ""
 
         payload = {
             "mode": "blueprint",
