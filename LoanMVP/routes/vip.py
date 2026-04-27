@@ -2868,10 +2868,25 @@ def onboarding_save():
     profile.business_name  = (request.form.get("business_name")  or "").strip() or None
     profile.dashboard_title = (request.form.get("dashboard_title") or "").strip() or None
     profile.assistant_name = (request.form.get("assistant_name") or "Ravlo").strip()
-    profile.role_type      = (request.form.get("role_type")      or profile.role_type or "partner").strip()
+    new_role = (request.form.get("role_type") or profile.role_type or "partner").strip()
+    profile.role_type      = new_role
     profile.service_area   = (request.form.get("service_area")   or "").strip() or None
     profile.headline       = (request.form.get("headline")       or "").strip() or None
     profile.bio            = (request.form.get("bio")            or "").strip() or None
+
+    # Keep partner.category in sync with role_type so login redirects work.
+    partner = getattr(current_user, "partner_profile", None)
+    if partner:
+        role_to_category = {
+            "insurance":    "insurance",
+            "realtor":      "realtor",
+            "contractor":   "contractor",
+            "designer":     "designer",
+            "loan_officer": "lender",
+        }
+        new_cat = role_to_category.get(new_role)
+        if new_cat:
+            partner.category = new_cat
 
     # External LO fields
     if profile.role_type in ("loan_officer", "lender"):
