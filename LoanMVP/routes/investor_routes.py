@@ -8618,6 +8618,7 @@ def deal_architect(deal_id=None):
     build_analysis = {}
     build_preview_url = ""
     build_mockups = []
+    build_costs = {}
 
     # -------------------------------------------------
     # LOAD DEAL DATA
@@ -8664,6 +8665,14 @@ def deal_architect(deal_id=None):
         build_analysis = results.get("build_analysis", {}) or {}
         build_preview_url = results.get("build_preview_url", "") or ""
         build_mockups = results.get("build_mockups", []) or []
+        build_costs = (results.get("deal_architect", {}) or {}).get("build_costs", {}) or {}
+        if build_costs.get("budget_id"):
+            build_costs = dict(build_costs)
+            build_costs["budget_url"] = url_for(
+                "investor.budget_studio",
+                deal_id=selected_deal.id,
+                budget_id=build_costs.get("budget_id"),
+            )
    
         build_project = results.get("build_project", {}) or {}
 
@@ -8776,6 +8785,7 @@ def deal_architect(deal_id=None):
         build_project_name=build_project_name,
         build_lot_count=build_lot_count,
         build_property_type=build_property_type,
+        build_costs=build_costs,
     )
 
 
@@ -9431,10 +9441,53 @@ def generate_build_costs_from_package():
                 "notes": "Fallback estimate generated from Build Studio package. Replace with RunPod cost engine output when available.",
             }
 
-        line_items = cost_json.get("line_items") or []
-        subtotal = float(cost_json.get("subtotal") or sum(float(i.get("estimated_amount") or 0) for i in line_items))
-        contingency = float(cost_json.get("contingency") or round(subtotal * 0.10, 2))
-        total_budget = float(cost_json.get("total_budget") or subtotal + contingency)
+        def _money_value(value, default=0.0):
+            if value in (None, "", "None"):
+                return default
+            try:
+                return float(str(value).replace("$", "").replace(",", "").strip())
+            except (TypeError, ValueError):
+                return default
+
+        def _first_present(mapping, *keys):
+            for key in keys:
+                value = mapping.get(key)
+                if value not in (None, "", "None"):
+                    return value
+            return None
+
+        line_items = []
+        for raw_item in cost_json.get("line_items") or []:
+            item = raw_item if isinstance(raw_item, dict) else {"description": str(raw_item)}
+            amount = _money_value(_first_present(
+                item,
+                "estimated_amount",
+                "amount",
+                "cost",
+                "total",
+                "total_cost",
+                "estimated_cost",
+                "price",
+                "cost_high",
+                "high",
+            ))
+            line_items.append({
+                "category": item.get("category") or "Construction",
+                "description": item.get("description") or item.get("name") or "Build cost item",
+                "name": item.get("name"),
+                "vendor": item.get("vendor"),
+                "estimated_amount": amount,
+                "amount": amount,
+                "cost_low": _money_value(_first_present(item, "cost_low", "low", "estimated_low", "min"), amount),
+                "cost_high": _money_value(_first_present(item, "cost_high", "high", "estimated_high", "max"), amount),
+                "status": item.get("status") or "planned",
+                "notes": item.get("notes"),
+            })
+
+        line_item_subtotal = sum(float(i.get("estimated_amount") or 0) for i in line_items)
+        subtotal = _money_value(cost_json.get("subtotal"), line_item_subtotal)
+        contingency = _money_value(cost_json.get("contingency"), round(subtotal * 0.10, 2))
+        total_budget = _money_value(cost_json.get("total_budget"), subtotal + contingency)
 
         investor_profile_id = getattr(deal, "investor_profile_id", None)
 
@@ -9470,6 +9523,8 @@ def generate_build_costs_from_package():
         budget.recalculate_totals()
 
         # Save into deal results for Deal Architect + Budget Studio views.
+        budget_url = url_for("investor.budget_studio", deal_id=deal.id, budget_id=budget.id)
+
         results["deal_architect"] = results.get("deal_architect", {}) or {}
         results["deal_architect"]["build_costs"] = {
             "budget_id": budget.id,
@@ -9478,6 +9533,7 @@ def generate_build_costs_from_package():
             "contingency": contingency,
             "total_budget": total_budget,
             "line_items": line_items,
+            "budget_url": budget_url,
             "package": package,
         }
 
@@ -9518,7 +9574,7 @@ def generate_build_costs_from_package():
             "contingency": contingency,
             "total_budget": total_budget,
             "line_items": line_items,
-            "budget_url": url_for("investor.budget_studio", deal_id=deal.id, budget_id=budget.id),
+            "budget_url": budget_url,
         })
 
     except Exception as e:

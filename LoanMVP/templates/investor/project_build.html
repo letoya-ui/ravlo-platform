@@ -117,7 +117,7 @@
             <input type="file" id="land_image" name="land_image" accept="image/*,.png,.jpg,.jpeg,.webp">
             <input id="reference_image_url" name="reference_image_url" value="{{ exterior_result.get('build_reference_image') or exterior_result.get('site_reference_image') or '' }}" placeholder="Optional lot or house reference URL">
             <label class="check-field">
-              <input type="checkbox" name="preserve_existing_exterior" value="true" {{ 'checked' if exterior_result.get('preserve_existing_exterior') else '' }}>
+              <input type="checkbox" id="preserve_existing_exterior" name="preserve_existing_exterior" value="true" autocomplete="off">
               <span>Preserve existing house</span>
             </label>
           </div>
@@ -245,8 +245,13 @@
   const lotCountInput = document.getElementById('lot_count');
   const summaryLots = document.getElementById('summaryLots');
   const referenceImageField = document.getElementById('reference_image_url');
+  const preserveExistingExteriorField = document.getElementById('preserve_existing_exterior');
   const buildLoadingOverlay = document.getElementById('buildLoadingOverlay');
   const buildLoadingMessage = document.getElementById('buildLoadingMessage');
+
+  if (preserveExistingExteriorField) {
+    preserveExistingExteriorField.checked = false;
+  }
 
   function startBuildLoading() {
     const floors = document.getElementById('number_of_floors')?.value || '1';

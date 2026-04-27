@@ -203,6 +203,7 @@
         <div><span>Contingency</span><strong id="buildCostContingency">—</strong></div>
         <div><span>Total Budget</span><strong id="buildCostTotal">—</strong></div>
       </div>
+      <div class="cost-line-items hidden" id="buildCostLineItems"></div>
       <a href="#" class="ravlo-btn primary hidden" id="openBudgetBtn">Open Budget Studio</a>
     </div>
   </section>
@@ -241,14 +242,22 @@
 .build-preview-card{display:grid;gap:10px;padding:12px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);text-decoration:none;color:inherit}
 .build-preview-card img{width:100%;height:210px;object-fit:cover;border-radius:14px;background:rgba(255,255,255,.04)}
 .cost-output{margin-top:18px;display:grid;gap:14px}
+.cost-line-items{display:grid;gap:10px}
+.cost-line-item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
+.cost-line-main{display:grid;gap:4px;min-width:0}
+.cost-line-main span,.cost-line-main small{color:#9fb0ca}
+.cost-line-main strong{color:#eef3ff}
+.cost-line-main small{line-height:1.45}
+.cost-line-amount{color:#eef3ff;white-space:nowrap}
 .hidden{display:none!important}
-@media (max-width:900px){.architect-hero-card,.architect-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions,.form-actions,.package-actions{justify-content:flex-start}}
+@media (max-width:900px){.architect-hero-card,.architect-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions,.form-actions,.package-actions{justify-content:flex-start}.cost-line-item{align-items:flex-start;flex-direction:column}}
 </style>
 
 <script>
 (() => {
   const dealId = {{ (deal.id if deal else None)|tojson }};
   const projectId = {{ (build_project.get('project_id') if build_project else None)|tojson }};
+  const initialBuildCosts = {{ (build_costs or {})|tojson }};
   const csrfToken = {{ csrf_token()|tojson }};
 
   const analyzeDealBtn = document.getElementById('analyzeDealBtn');
@@ -267,6 +276,7 @@
   const buildCostSubtotal = document.getElementById('buildCostSubtotal');
   const buildCostContingency = document.getElementById('buildCostContingency');
   const buildCostTotal = document.getElementById('buildCostTotal');
+  const buildCostLineItems = document.getElementById('buildCostLineItems');
   const openBudgetBtn = document.getElementById('openBudgetBtn');
 
   function parseMoney(value) {
@@ -278,6 +288,69 @@
   function formatMoney(value) {
     const parsed = Number(value || 0);
     return parsed.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (match) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[match]));
+  }
+
+  function firstPresent(item, keys) {
+    for (const key of keys) {
+      const value = item?.[key];
+      if (value !== null && value !== undefined && value !== '') return value;
+    }
+    return null;
+  }
+
+  function buildCostItemAmount(item) {
+    const amount = parseMoney(firstPresent(item, ['estimated_amount', 'amount', 'cost', 'total', 'total_cost', 'estimated_cost', 'price', 'cost_high', 'high']));
+    return amount === null ? 0 : amount;
+  }
+
+  function renderBuildCostLineItems(items) {
+    if (!buildCostLineItems) return;
+    if (!Array.isArray(items) || !items.length) {
+      buildCostLineItems.innerHTML = '';
+      buildCostLineItems.classList.add('hidden');
+      return;
+    }
+
+    buildCostLineItems.innerHTML = items.map((item) => {
+      const category = escapeHtml(item?.category || 'Construction');
+      const description = escapeHtml(item?.description || item?.name || 'Build cost item');
+      const notes = item?.notes ? `<small>${escapeHtml(item.notes)}</small>` : '';
+      return `
+        <div class="cost-line-item">
+          <div class="cost-line-main">
+            <span>${category}</span>
+            <strong>${description}</strong>
+            ${notes}
+          </div>
+          <strong class="cost-line-amount">${formatMoney(buildCostItemAmount(item))}</strong>
+        </div>
+      `;
+    }).join('');
+    buildCostLineItems.classList.remove('hidden');
+  }
+
+  function renderBuildCostResult(data) {
+    if (!data) return;
+    if (buildCostOutput) buildCostOutput.classList.remove('hidden');
+    if (buildCostSubtotal) buildCostSubtotal.textContent = formatMoney(data.subtotal);
+    if (buildCostContingency) buildCostContingency.textContent = formatMoney(data.contingency);
+    if (buildCostTotal) buildCostTotal.textContent = formatMoney(data.total_budget);
+    renderBuildCostLineItems(data.line_items || []);
+
+    if (openBudgetBtn && data.budget_url) {
+      openBudgetBtn.href = data.budget_url;
+      openBudgetBtn.classList.remove('hidden');
+    }
   }
 
   function imageFileName(prefix, url) {
@@ -348,24 +421,13 @@
         throw new Error(data.message || 'Failed to generate build costs.');
       }
 
-      if (buildCostOutput) buildCostOutput.classList.remove('hidden');
-      if (buildCostSubtotal) buildCostSubtotal.textContent = formatMoney(data.subtotal);
-      if (buildCostContingency) buildCostContingency.textContent = formatMoney(data.contingency);
-      if (buildCostTotal) buildCostTotal.textContent = formatMoney(data.total_budget);
+      renderBuildCostResult(data);
 
       const rehabCostInput = document.getElementById('rehab_cost');
       if (rehabCostInput && data.total_budget) rehabCostInput.value = Math.round(Number(data.total_budget));
-
-      if (openBudgetBtn && data.budget_url) {
-        openBudgetBtn.href = data.budget_url;
-        openBudgetBtn.classList.remove('hidden');
-      }
-
-      if (data.budget_url) {
-        window.location.href = data.budget_url;
-      }
     } catch (error) {
       alert(error.message || 'Failed to generate build costs.');
+    } finally {
       buttons.forEach((btn) => {
         btn.disabled = false;
         btn.textContent = 'Generate Build Costs';
@@ -431,6 +493,10 @@
 
   generateBuildCostsBtn?.addEventListener('click', () => generateBuildCosts(generateBuildCostsBtn));
   generateBuildCostsTopBtn?.addEventListener('click', () => generateBuildCosts(generateBuildCostsTopBtn));
+
+  if (initialBuildCosts && Object.keys(initialBuildCosts).length) {
+    renderBuildCostResult(initialBuildCosts);
+  }
 
   downloadBuildPackageBtn?.addEventListener('click', async () => {
     const urls = collectBuildImageUrls();
