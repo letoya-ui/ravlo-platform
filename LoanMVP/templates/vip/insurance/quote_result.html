@@ -37,7 +37,7 @@
       AI-Generated Quote
     </h3>
     <div class="prose prose-invert prose-sm max-w-none bg-white/5 rounded-lg p-4" id="quoteContent">
-      {{ quote_text|replace('\n', '<br>')|safe }}
+      {{ quote_text|e|replace('\n', '<br>')|safe }}
     </div>
   </section>
 
