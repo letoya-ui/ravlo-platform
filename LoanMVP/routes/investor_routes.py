@@ -8605,6 +8605,14 @@ def deal_architect(deal_id=None):
     build_analysis = {}
     build_preview_url = ""
     build_mockups = []
+    build_project = {}
+    build_blueprint_url = None
+    build_floor2_url = None
+    build_floor3_url = None
+    build_exterior_url = None
+    build_project_name = None
+    build_lot_count = None
+    build_property_type = None
 
     # -------------------------------------------------
     # LOAD DEAL DATA
