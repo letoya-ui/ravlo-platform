@@ -1,0 +1,129 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • New Insurance Quote{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}Generate an AI-powered {{ selected_line|replace('_', ' ')|title }} insurance quote.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.insurance_dashboard') }}" class="ravlo-btn ghost sm">Back to Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  {# ── LINE SELECTOR ─────────────────────────────────── #}
+  <section class="ravlo-card pad">
+    <h3 class="text-lg font-semibold mb-3">Select Insurance Line</h3>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {% for line in insurance_lines %}
+      <a href="{{ url_for('vip.insurance_new_quote', line=line.key) }}"
+         class="ravlo-card p-3 text-center transition-colors {% if selected_line == line.key %}bg-indigo-500/20 border border-indigo-500/40{% else %}bg-white/5 hover:bg-white/10{% endif %}">
+        <i class="lucide lucide-{{ line.icon }} text-lg {% if selected_line == line.key %}text-indigo-400{% else %}text-gray-400{% endif %}"></i>
+        <div class="text-xs font-semibold mt-1 {% if selected_line == line.key %}text-indigo-300{% else %}text-gray-300{% endif %}">{{ line.label }}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ── QUOTE FORM ─────────────────────────────────────── #}
+  <section class="ravlo-card pad">
+    <h3 class="text-lg font-semibold mb-1">Client Information</h3>
+    <p class="text-sm text-gray-400 mb-4">Enter the client and coverage details. AI will generate a professional quote.</p>
+
+    <form method="POST" action="{{ url_for('vip.insurance_generate_quote') }}" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="line" value="{{ selected_line }}">
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Client Name</label>
+          <input name="client_name" required placeholder="Full name" class="ravlo-input w-full">
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Client Email</label>
+          <input name="client_email" type="email" placeholder="client@example.com" class="ravlo-input w-full">
+        </div>
+      </div>
+
+      {% if selected_line == 'auto' %}
+      {# ── AUTO INSURANCE FIELDS ──────────────────────── #}
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Vehicle Year</label>
+          <input name="vehicle_year" placeholder="e.g. 2024" class="ravlo-input w-full">
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Vehicle Make</label>
+          <input name="vehicle_make" placeholder="e.g. Toyota" class="ravlo-input w-full">
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Vehicle Model</label>
+          <input name="vehicle_model" placeholder="e.g. Camry" class="ravlo-input w-full">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Driver Age</label>
+          <input name="driver_age" type="number" placeholder="e.g. 35" class="ravlo-input w-full">
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Driving Record</label>
+          <select name="driving_record" class="ravlo-input w-full">
+            <option value="Clean">Clean</option>
+            <option value="Minor violations">Minor Violations</option>
+            <option value="Major violations">Major Violations</option>
+            <option value="At-fault accident">At-Fault Accident</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Coverage Type</label>
+          <select name="coverage_type" class="ravlo-input w-full">
+            <option value="Full Coverage">Full Coverage</option>
+            <option value="Liability Only">Liability Only</option>
+            <option value="Comprehensive">Comprehensive</option>
+            <option value="Collision">Collision</option>
+          </select>
+        </div>
+      </div>
+
+      {% else %}
+      {# ── HOME / RENTERS / LANDLORD FIELDS ───────────── #}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Property Value</label>
+          <input name="property_value" placeholder="e.g. $350,000" class="ravlo-input w-full">
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Square Footage</label>
+          <input name="square_footage" placeholder="e.g. 2,400" class="ravlo-input w-full">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Year Built</label>
+          <input name="year_built" placeholder="e.g. 2005" class="ravlo-input w-full">
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Location</label>
+          <input name="location" placeholder="City, State" class="ravlo-input w-full">
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Coverage Amount</label>
+          <input name="coverage_amount" placeholder="e.g. $300,000" class="ravlo-input w-full">
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="pt-2">
+        <button type="submit" class="ravlo-btn primary">
+          <i class="lucide lucide-sparkles mr-1"></i>
+          Generate AI Quote
+        </button>
+      </div>
+    </form>
+  </section>
+
+</div>
+{% endblock %}

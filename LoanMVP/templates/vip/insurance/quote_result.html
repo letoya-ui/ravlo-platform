@@ -1,0 +1,79 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Quote Result{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}AI-generated {{ selected_line|replace('_', ' ')|title }} insurance quote for {{ client_name }}.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.insurance_dashboard') }}" class="ravlo-btn ghost sm">Back to Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  {# ── QUOTE HEADER ──────────────────────────────────── #}
+  <section class="ravlo-card pad">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-lg font-semibold">Quote for {{ client_name }}</h3>
+        <p class="text-sm text-gray-400">
+          {% for line in insurance_lines %}
+            {% if line.key == selected_line %}{{ line.label }}{% endif %}
+          {% endfor %}
+          {% if client_email %} — {{ client_email }}{% endif %}
+        </p>
+      </div>
+      {% if partner and (partner.logo_url or vip_profile.logo_url) %}
+      <img src="{{ partner.logo_url or vip_profile.logo_url }}"
+           alt="Agency Logo" class="h-10 w-auto rounded" style="max-height:40px; object-fit:contain;">
+      {% endif %}
+    </div>
+  </section>
+
+  {# ── AI QUOTE OUTPUT ────────────────────────────────── #}
+  <section class="ravlo-card pad">
+    <h3 class="text-lg font-semibold mb-3">
+      <i class="lucide lucide-sparkles text-indigo-400 mr-1"></i>
+      AI-Generated Quote
+    </h3>
+    <div class="prose prose-invert prose-sm max-w-none bg-white/5 rounded-lg p-4" id="quoteContent">
+      {{ quote_text|replace('\n', '<br>')|safe }}
+    </div>
+  </section>
+
+  {# ── CLIENT DETAILS ─────────────────────────────────── #}
+  <section class="ravlo-card pad">
+    <h3 class="text-sm font-semibold mb-2 text-gray-300">Quote Details</h3>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+      {% for key, val in details.items() %}
+      {% if val %}
+      <div>
+        <div class="text-xs uppercase tracking-wide text-gray-500">{{ key|replace('_', ' ')|title }}</div>
+        <div class="text-gray-200">{{ val }}</div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ── ACTIONS ────────────────────────────────────────── #}
+  <section class="flex flex-wrap gap-3">
+    <a href="{{ url_for('vip.insurance_compose_email', client_name=client_name, client_email=client_email, line=selected_line, quote_text=quote_text[:500]) }}"
+       class="ravlo-btn primary">
+      <i class="lucide lucide-mail mr-1"></i>
+      Send Quote via Email
+    </a>
+
+    <a href="{{ url_for('vip.insurance_new_quote', line=selected_line) }}"
+       class="ravlo-btn ghost">
+      <i class="lucide lucide-refresh-cw mr-1"></i>
+      Generate Another Quote
+    </a>
+
+    <a href="{{ url_for('vip.insurance_dashboard') }}" class="ravlo-btn ghost">
+      Back to Dashboard
+    </a>
+  </section>
+
+</div>
+{% endblock %}

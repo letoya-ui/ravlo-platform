@@ -69,6 +69,7 @@ from LoanMVP.models.elena_models import (
 from LoanMVP.models.admin import Company
 
 # ── Services / utils ─────────────────────────────────────────────────────────
+from LoanMVP.ai.base_ai import AIAssistant
 from LoanMVP.services.vip_ai_pilot import parse_vip_command
 from LoanMVP.services.elena_templates import TemplateType
 from LoanMVP.utils.decorators import role_required
@@ -174,7 +175,7 @@ def get_or_create_vip_profile():
             "vendor":           "partner",
             "property_manager": "partner",
             "attorney":         "partner",
-            "insurance":        "partner",
+            "insurance":        "insurance",
             "title":            "partner",
             "inspector":        "partner",
             "appraiser":        "partner",
@@ -544,6 +545,7 @@ def index():
         "realtor":    "vip.realtor_dashboard",
         "contractor": "vip.contractor_dashboard",
         "designer":   "vip.designer_dashboard",
+        "insurance":  "vip.insurance_dashboard",
         "partner":    "vip.partner_dashboard",
     }
     return redirect(url_for(role_map.get(profile.role_type, "vip.partner_dashboard")))
@@ -1326,6 +1328,349 @@ def designer_dashboard():
         portal_name         = "VIP",
         portal_home         = url_for("vip.designer_dashboard"),
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INSURANCE DASHBOARD
+# ─────────────────────────────────────────────────────────────────────────────
+
+INSURANCE_LINES = [
+    {"key": "auto", "label": "Auto Insurance", "icon": "car"},
+    {"key": "homeowners", "label": "Homeowners Insurance", "icon": "home"},
+    {"key": "renters", "label": "Renters Insurance", "icon": "key"},
+    {"key": "landlord", "label": "Landlord Insurance", "icon": "building"},
+]
+
+
+def _insurance_quote_stats(partner):
+    """Aggregate insurance quote stats from partner connection requests."""
+    if not partner:
+        return {"total_quotes": 0, "pending": 0, "sent": 0, "bound": 0}
+
+    base = PartnerConnectionRequest.query.filter_by(partner_id=partner.id)
+    return {
+        "total_quotes": base.count(),
+        "pending": base.filter_by(status="pending").count(),
+        "sent": base.filter_by(status="accepted").count(),
+        "bound": base.filter_by(status="completed").count(),
+    }
+
+
+@vip_bp.get("/insurance")
+@role_required("partner_group", "admin")
+def insurance_dashboard():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    stats = _insurance_quote_stats(partner)
+
+    recent_requests = []
+    if partner:
+        recent_requests = (
+            PartnerConnectionRequest.query
+            .filter_by(partner_id=partner.id)
+            .order_by(PartnerConnectionRequest.created_at.desc())
+            .limit(10).all()
+        )
+
+    copilot_suggestions = (
+        VIPAssistantSuggestion.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(VIPAssistantSuggestion.created_at.desc())
+        .limit(5).all()
+    )
+
+    return render_template(
+        "vip/insurance/dashboard.html",
+        vip_profile         = profile,
+        modules             = get_enabled_modules(profile),
+        header_name         = get_dashboard_name(profile),
+        partner             = partner,
+        insurance_lines     = INSURANCE_LINES,
+        stats               = stats,
+        recent_requests     = recent_requests,
+        copilot_suggestions = copilot_suggestions,
+        portal              = "vip",
+        portal_name         = "VIP Insurance",
+        portal_home         = url_for("vip.insurance_dashboard"),
+    )
+
+
+@vip_bp.get("/insurance/new-quote")
+@role_required("partner_group", "admin")
+def insurance_new_quote():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+    line = (request.args.get("line") or "auto").strip().lower()
+
+    return render_template(
+        "vip/insurance/quote_form.html",
+        vip_profile     = profile,
+        modules         = get_enabled_modules(profile),
+        header_name     = get_dashboard_name(profile),
+        partner         = partner,
+        insurance_lines = INSURANCE_LINES,
+        selected_line   = line,
+        portal          = "vip",
+        portal_name     = "VIP Insurance",
+        portal_home     = url_for("vip.insurance_dashboard"),
+    )
+
+
+@vip_bp.post("/insurance/generate-quote")
+@role_required("partner_group", "admin")
+def insurance_generate_quote():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    line = (request.form.get("line") or "auto").strip().lower()
+    client_name = (request.form.get("client_name") or "").strip()
+    client_email = (request.form.get("client_email") or "").strip()
+
+    details = {}
+    if line == "auto":
+        details = {
+            "vehicle_year": request.form.get("vehicle_year", ""),
+            "vehicle_make": request.form.get("vehicle_make", ""),
+            "vehicle_model": request.form.get("vehicle_model", ""),
+            "driver_age": request.form.get("driver_age", ""),
+            "driving_record": request.form.get("driving_record", "Clean"),
+            "coverage_type": request.form.get("coverage_type", "Full Coverage"),
+        }
+    else:
+        details = {
+            "property_type": line.title(),
+            "property_value": request.form.get("property_value", ""),
+            "square_footage": request.form.get("square_footage", ""),
+            "year_built": request.form.get("year_built", ""),
+            "location": request.form.get("location", ""),
+            "coverage_amount": request.form.get("coverage_amount", ""),
+        }
+
+    ai = AIAssistant()
+    prompt = _build_insurance_quote_prompt(line, client_name, details, partner)
+    quote_text = ai.generate_reply(prompt, "general")
+
+    return render_template(
+        "vip/insurance/quote_result.html",
+        vip_profile     = profile,
+        modules         = get_enabled_modules(profile),
+        header_name     = get_dashboard_name(profile),
+        partner         = partner,
+        insurance_lines = INSURANCE_LINES,
+        selected_line   = line,
+        client_name     = client_name,
+        client_email    = client_email,
+        details         = details,
+        quote_text      = quote_text,
+        portal          = "vip",
+        portal_name     = "VIP Insurance",
+        portal_home     = url_for("vip.insurance_dashboard"),
+    )
+
+
+def _build_insurance_quote_prompt(line, client_name, details, partner):
+    agent_name = ""
+    agency_name = ""
+    if partner:
+        agent_name = partner.display_name()
+        agency_name = partner.company or ""
+
+    detail_lines = "\n".join(f"- {k.replace('_', ' ').title()}: {v}" for k, v in details.items() if v)
+
+    line_labels = {
+        "auto": "Auto Insurance",
+        "homeowners": "Homeowners Insurance",
+        "renters": "Renters Insurance",
+        "landlord": "Landlord Insurance",
+    }
+    line_label = line_labels.get(line, "Insurance")
+
+    return (
+        f"You are a professional insurance agent assistant. Generate a detailed, "
+        f"professional {line_label} quote summary for a client.\n\n"
+        f"Agent: {agent_name}\n"
+        f"Agency: {agency_name}\n"
+        f"Client: {client_name}\n"
+        f"Insurance Type: {line_label}\n\n"
+        f"Client Details:\n{detail_lines}\n\n"
+        "Generate a professional quote that includes:\n"
+        "1. A brief greeting addressing the client by name\n"
+        "2. Coverage recommendation based on the details provided\n"
+        "3. Estimated premium range (monthly and annual)\n"
+        "4. Key coverage highlights and what's included\n"
+        "5. Deductible options\n"
+        "6. Any discounts that may apply\n"
+        "7. Next steps to finalize the policy\n\n"
+        "Format the quote professionally. Use clear sections with headers. "
+        "Keep the tone warm but professional."
+    )
+
+
+@vip_bp.get("/insurance/compose-email")
+@role_required("partner_group", "admin")
+def insurance_compose_email():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    client_name = request.args.get("client_name", "")
+    client_email = request.args.get("client_email", "")
+    quote_text = request.args.get("quote_text", "")
+    line = request.args.get("line", "auto")
+
+    return render_template(
+        "vip/insurance/email_composer.html",
+        vip_profile     = profile,
+        modules         = get_enabled_modules(profile),
+        header_name     = get_dashboard_name(profile),
+        partner         = partner,
+        insurance_lines = INSURANCE_LINES,
+        client_name     = client_name,
+        client_email    = client_email,
+        quote_text      = quote_text,
+        selected_line   = line,
+        portal          = "vip",
+        portal_name     = "VIP Insurance",
+        portal_home     = url_for("vip.insurance_dashboard"),
+    )
+
+
+@vip_bp.post("/insurance/send-email")
+@role_required("partner_group", "admin")
+def insurance_send_email():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    to_email = (request.form.get("to_email") or "").strip()
+    subject = (request.form.get("subject") or "").strip()
+    body_html = (request.form.get("body_html") or "").strip()
+
+    if not to_email or not subject or not body_html:
+        flash("Please fill in all email fields.", "warning")
+        return redirect(url_for("vip.insurance_compose_email"))
+
+    try:
+        from LoanMVP.utils.emailer import send_email
+        send_email(to_email, subject, body_html)
+        flash(f"Email sent successfully to {to_email}.", "success")
+    except Exception as e:
+        flash(f"Failed to send email: {str(e)}", "danger")
+
+    return redirect(url_for("vip.insurance_dashboard"))
+
+
+@vip_bp.post("/insurance/ai-draft-email")
+@role_required("partner_group", "admin")
+def insurance_ai_draft_email():
+    gate = require_vip_access()
+    if gate is not None:
+        return jsonify({"error": "VIP access required"}), 403
+
+    partner = getattr(current_user, "partner_profile", None)
+    data = request.get_json(silent=True) or {}
+
+    client_name = data.get("client_name", "")
+    line = data.get("line", "auto")
+    quote_text = data.get("quote_text", "")
+    tone = data.get("tone", "professional")
+
+    agent_name = partner.display_name() if partner else ""
+    agency_name = (partner.company or "") if partner else ""
+
+    prompt = (
+        f"You are an AI email assistant for an insurance agent. "
+        f"Draft a professional email to send a {line} insurance quote to a client.\n\n"
+        f"Agent: {agent_name}\n"
+        f"Agency: {agency_name}\n"
+        f"Client: {client_name}\n"
+        f"Tone: {tone}\n\n"
+        f"Quote Summary:\n{quote_text}\n\n"
+        "Write a complete email with:\n"
+        "- A warm, personalized subject line\n"
+        "- Professional greeting\n"
+        "- Brief introduction referencing their insurance needs\n"
+        "- The quote details formatted clearly\n"
+        "- A call to action to schedule a call or reply\n"
+        "- Professional sign-off with agent name and agency\n\n"
+        "Return the email as JSON with keys: subject, body_html (with basic HTML formatting)"
+    )
+
+    ai = AIAssistant()
+    raw = ai.generate_reply(prompt, "general")
+
+    try:
+        import re as _re
+        json_match = _re.search(r'\{[\s\S]*\}', raw)
+        if json_match:
+            result = json.loads(json_match.group())
+        else:
+            result = {"subject": f"Your Insurance Quote from {agency_name}", "body_html": raw}
+    except (json.JSONDecodeError, ValueError):
+        result = {"subject": f"Your Insurance Quote from {agency_name}", "body_html": raw}
+
+    return jsonify(result)
+
+
+@vip_bp.post("/insurance/upload-logo")
+@role_required("partner_group", "admin")
+def insurance_upload_logo():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    file = request.files.get("logo")
+    if not file or not file.filename:
+        flash("No file selected.", "warning")
+        return redirect(url_for("vip.insurance_dashboard"))
+
+    from werkzeug.utils import secure_filename as _secure_filename
+    import os as _os
+    import uuid as _uuid
+
+    filename = _secure_filename(file.filename)
+    ext = _os.path.splitext(filename)[1].lower()
+    if ext not in (".png", ".jpg", ".jpeg", ".svg", ".webp"):
+        flash("Please upload an image file (PNG, JPG, SVG, or WebP).", "warning")
+        return redirect(url_for("vip.insurance_dashboard"))
+
+    upload_dir = _os.path.join(current_app.static_folder, "uploads", "logos")
+    _os.makedirs(upload_dir, exist_ok=True)
+
+    saved_name = f"{_uuid.uuid4().hex}{ext}"
+    file.save(_os.path.join(upload_dir, saved_name))
+
+    logo_url = url_for("static", filename=f"uploads/logos/{saved_name}")
+
+    if partner:
+        partner.logo_url = logo_url
+    profile.logo_url = logo_url
+    db.session.commit()
+
+    flash("Logo uploaded successfully.", "success")
+    return redirect(url_for("vip.insurance_dashboard"))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

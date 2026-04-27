@@ -1,0 +1,140 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Email Composer{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}Compose and send AI-powered emails to clients.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.insurance_dashboard') }}" class="ravlo-btn ghost sm">Back to Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  {# ── AI DRAFT SECTION ──────────────────────────────── #}
+  <section class="ravlo-card pad">
+    <h3 class="text-lg font-semibold mb-1">
+      <i class="lucide lucide-sparkles text-indigo-400 mr-1"></i>
+      AI Email Assistant
+    </h3>
+    <p class="text-sm text-gray-400 mb-4">Let AI draft your email based on the quote details, then review and send.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Client Name</label>
+        <input id="aiClientName" value="{{ client_name }}" placeholder="Client name" class="ravlo-input w-full">
+      </div>
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Insurance Line</label>
+        <select id="aiLine" class="ravlo-input w-full">
+          {% for line in insurance_lines %}
+          <option value="{{ line.key }}" {% if selected_line == line.key %}selected{% endif %}>{{ line.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Quote Summary (for AI context)</label>
+      <textarea id="aiQuoteText" rows="3" placeholder="Paste or type the quote details here for AI to reference..." class="ravlo-input w-full">{{ quote_text }}</textarea>
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Tone</label>
+      <select id="aiTone" class="ravlo-input" style="max-width:200px;">
+        <option value="professional">Professional</option>
+        <option value="friendly">Friendly</option>
+        <option value="formal">Formal</option>
+      </select>
+    </div>
+
+    <button type="button" onclick="aiDraftEmail()" class="ravlo-btn primary" id="aiDraftBtn">
+      <i class="lucide lucide-sparkles mr-1"></i>
+      Generate AI Draft
+    </button>
+  </section>
+
+  {# ── EMAIL FORM ─────────────────────────────────────── #}
+  <section class="ravlo-card pad">
+    <h3 class="text-lg font-semibold mb-3">Compose Email</h3>
+
+    <form method="POST" action="{{ url_for('vip.insurance_send_email') }}" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">To (Email)</label>
+          <input name="to_email" id="toEmail" type="email" required
+                 value="{{ client_email }}" placeholder="client@example.com" class="ravlo-input w-full">
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Subject</label>
+          <input name="subject" id="emailSubject" required
+                 placeholder="Your Insurance Quote" class="ravlo-input w-full">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-gray-400 mb-1">Email Body</label>
+        <textarea name="body_html" id="emailBody" rows="12" required
+                  placeholder="Compose your email here or use AI to generate a draft..."
+                  class="ravlo-input w-full font-mono text-sm"></textarea>
+      </div>
+
+      {% if partner and (partner.logo_url or vip_profile.logo_url) %}
+      <div class="text-xs text-gray-400">
+        <i class="lucide lucide-image mr-1"></i>
+        Your agency logo will be included in the email header.
+      </div>
+      {% endif %}
+
+      <div class="flex gap-3">
+        <button type="submit" class="ravlo-btn primary">
+          <i class="lucide lucide-send mr-1"></i>
+          Send Email
+        </button>
+        <a href="{{ url_for('vip.insurance_dashboard') }}" class="ravlo-btn ghost">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+</div>
+
+<script>
+async function aiDraftEmail() {
+  const btn = document.getElementById('aiDraftBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+
+  try {
+    const csrfMeta = document.querySelector('input[name="csrf_token"]');
+    const res = await fetch('{{ url_for("vip.insurance_ai_draft_email") }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfMeta ? csrfMeta.value : '',
+      },
+      body: JSON.stringify({
+        client_name: document.getElementById('aiClientName').value,
+        line: document.getElementById('aiLine').value,
+        quote_text: document.getElementById('aiQuoteText').value,
+        tone: document.getElementById('aiTone').value,
+      }),
+    });
+
+    const data = await res.json();
+    if (data.subject) {
+      document.getElementById('emailSubject').value = data.subject;
+    }
+    if (data.body_html) {
+      document.getElementById('emailBody').value = data.body_html;
+    }
+  } catch (err) {
+    alert('Failed to generate draft. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="lucide lucide-sparkles mr-1"></i> Generate AI Draft';
+  }
+}
+</script>
+{% endblock %}

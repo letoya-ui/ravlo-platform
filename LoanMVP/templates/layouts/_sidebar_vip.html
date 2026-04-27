@@ -5,7 +5,7 @@
 <div class="ravlo-sidebar-inner">
 
   <div class="ravlo-sidebar-brand">
-    <a href="{% if role == 'contractor' %}{{ url_for('vip.contractor_dashboard') }}{% elif role == 'realtor' %}{{ url_for('vip.realtor_dashboard') }}{% else %}{{ url_for('vip.index') }}{% endif %}" class="ravlo-brand-link">
+    <a href="{% if role == 'contractor' %}{{ url_for('vip.contractor_dashboard') }}{% elif role == 'realtor' %}{{ url_for('vip.realtor_dashboard') }}{% elif role == 'insurance' %}{{ url_for('vip.insurance_dashboard') }}{% else %}{{ url_for('vip.index') }}{% endif %}" class="ravlo-brand-link">
       <div class="ravlo-brand-mark">
         <span>R</span>
       </div>
@@ -49,6 +49,80 @@
       <i class="lucide lucide-building-2"></i>
       <span>Deals</span>
     </a>
+
+    <a href="{{ url_for('vip.finances') }}"
+       class="ravlo-nav-link {% if ep in ['vip.finances', 'vip.finances_add_income', 'vip.finances_add_expense'] %}active{% endif %}">
+      <i class="lucide lucide-receipt"></i>
+      <span>Finances</span>
+    </a>
+
+    <a href="{{ url_for('vip.team') }}"
+       class="ravlo-nav-link {% if ep in ['vip.team', 'vip.team_add', 'vip.team_assign_lead', 'vip.team_auto_distribute', 'vip.team_toggle', 'vip.team_delete'] %}active{% endif %}">
+      <i class="lucide lucide-users"></i>
+      <span>Team</span>
+    </a>
+
+    <a href="{{ url_for('vip.ai_pilot') }}"
+       class="ravlo-nav-link {% if ep in ['vip.ai_pilot', 'vip.ai_pilot_command'] %}active{% endif %}">
+      <i class="lucide lucide-sparkles"></i>
+      <span>Copilot</span>
+    </a>
+
+    {% elif role == 'insurance' %}
+    {# ── INSURANCE SIDEBAR ── #}
+    <a href="{{ url_for('vip.insurance_dashboard') }}"
+       class="ravlo-nav-link {% if ep == 'vip.insurance_dashboard' %}active{% endif %}">
+      <i class="lucide lucide-layout-dashboard"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <div class="ravlo-nav-section">Insurance</div>
+
+    <a href="{{ url_for('vip.insurance_new_quote', line='auto') }}"
+       class="ravlo-nav-link {% if ep == 'vip.insurance_new_quote' %}active{% endif %}">
+      <i class="lucide lucide-file-plus"></i>
+      <span>New Quote</span>
+    </a>
+
+    <a href="{{ url_for('vip.insurance_compose_email') }}"
+       class="ravlo-nav-link {% if ep == 'vip.insurance_compose_email' %}active{% endif %}">
+      <i class="lucide lucide-mail"></i>
+      <span>Email Composer</span>
+    </a>
+
+    <a href="{{ url_for('partners.requests_inbox') }}"
+       class="ravlo-nav-link {% if ep == 'partners.requests_inbox' %}active{% endif %}">
+      <i class="lucide lucide-inbox"></i>
+      <span>Requests</span>
+    </a>
+
+    <div class="ravlo-nav-section">Realtor</div>
+
+    <a href="{{ url_for('elena.client_new') }}"
+       class="ravlo-nav-link {% if ep == 'elena.client_new' %}active{% endif %}">
+      <i class="lucide lucide-user-plus"></i>
+      <span>Clients</span>
+    </a>
+
+    <a href="{{ url_for('vip.realtor_listings') }}"
+       class="ravlo-nav-link {% if ep in ['vip.realtor_listings', 'vip.realtor_listing_detail', 'elena.listing_new'] %}active{% endif %}">
+      <i class="lucide lucide-building-2"></i>
+      <span>Properties</span>
+    </a>
+
+    <a href="{{ url_for('elena.interaction_new') }}"
+       class="ravlo-nav-link {% if ep == 'elena.interaction_new' %}active{% endif %}">
+      <i class="lucide lucide-message-square-plus"></i>
+      <span>Follow-Ups</span>
+    </a>
+
+    <a href="{{ url_for('elena.template_studio') }}"
+       class="ravlo-nav-link {% if ep in ['elena.template_studio', 'elena.template_studio_preview', 'elena.template_studio_generate', 'elena.template_studio_generate_and_save'] %}active{% endif %}">
+      <i class="lucide lucide-wand-sparkles"></i>
+      <span>Content Studio</span>
+    </a>
+
+    <div class="ravlo-nav-section">Tools</div>
 
     <a href="{{ url_for('vip.finances') }}"
        class="ravlo-nav-link {% if ep in ['vip.finances', 'vip.finances_add_income', 'vip.finances_add_expense'] %}active{% endif %}">
