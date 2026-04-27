@@ -14,7 +14,7 @@ from flask_login import current_user
 VIP_ACCESS_TIERS = {"premium", "enterprise"}
 from sqlalchemy import or_, func
 
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
 
 # ── VIP models ────────────────────────────────────────────────────────────────
 from LoanMVP.models.vip_models import (
@@ -1423,6 +1423,173 @@ INSURANCE_EXPENSE_CATEGORIES = [
 ]
 
 
+def _insurance_social_lead_token(profile):
+    if not profile:
+        return ""
+    secret = (current_app.config.get("SECRET_KEY") or "ravlo-insurance-social").encode("utf-8")
+    msg = f"ravlo-insurance-social:{profile.id}:{profile.user_id}".encode("utf-8")
+    return hmac.new(secret, msg, hashlib.sha256).hexdigest()[:32]
+
+
+def _insurance_social_lead_url(profile):
+    return url_for("vip.insurance_social_lead_webhook", profile_id=profile.id, _external=True)
+
+
+def _insurance_social_lead_prompt(profile):
+    return (
+        "Send new social leads to Ravlo as JSON.\n"
+        f"POST to: {_insurance_social_lead_url(profile)}\n"
+        f"Include header X-Ravlo-Social-Lead-Token: {_insurance_social_lead_token(profile)}\n"
+        "Supported fields: name, phone, email, source, coverage_line, message, campaign, ad_name, form_name."
+    )
+
+
+def _insurance_source_key(value):
+    raw = (value or "").strip().lower().replace(" ", "_").replace("-", "_")
+    aliases = {
+        "ig": "instagram",
+        "instagram": "instagram",
+        "facebook": "facebook",
+        "fb": "facebook",
+        "meta": "facebook",
+        "tiktok": "tiktok",
+        "tik_tok": "tiktok",
+        "youtube": "youtube",
+        "yt": "youtube",
+        "website": "website",
+        "web": "website",
+        "referral": "referral",
+        "ravlo": "ravlo",
+    }
+    return aliases.get(raw, "other")
+
+
+def _insurance_line_key(value):
+    raw = (value or "").strip().lower().replace(" ", "_").replace("-", "_")
+    aliases = {
+        "home": "homeowners",
+        "homeowner": "homeowners",
+        "homeowners": "homeowners",
+        "house": "homeowners",
+        "auto": "auto",
+        "car": "auto",
+        "vehicle": "auto",
+        "renters": "renters",
+        "renter": "renters",
+        "landlord": "landlord",
+        "rental_property": "landlord",
+    }
+    return aliases.get(raw, raw if raw in {line["key"] for line in INSURANCE_LINES} else "")
+
+
+def _social_payload_field(payload, *keys):
+    payload = payload or {}
+    normalized = {key.strip().lower().replace(" ", "_").replace("-", "_") for key in keys}
+    for key, value in payload.items():
+        clean_key = str(key).strip().lower().replace(" ", "_").replace("-", "_")
+        if clean_key in normalized and value not in (None, ""):
+            if isinstance(value, list):
+                return str(value[0]).strip() if value else None
+            return str(value).strip()
+
+    for field in payload.get("field_data") or payload.get("fields") or []:
+        if not isinstance(field, dict):
+            continue
+        clean_key = str(field.get("name") or field.get("key") or "").strip().lower().replace(" ", "_").replace("-", "_")
+        if clean_key not in normalized:
+            continue
+        values = field.get("values")
+        if isinstance(values, list) and values:
+            return str(values[0]).strip()
+        value = field.get("value")
+        if value not in (None, ""):
+            return str(value).strip()
+
+    return None
+
+
+def _upsert_insurance_social_contact(profile, payload):
+    first_name = _social_payload_field(payload, "first_name", "first name")
+    last_name = _social_payload_field(payload, "last_name", "last name")
+    name = (
+        _social_payload_field(payload, "name", "full_name", "full name", "contact_name", "lead_name")
+        or " ".join(part for part in [first_name, last_name] if part).strip()
+    )
+    email = _social_payload_field(payload, "email", "email_address")
+    phone = _social_payload_field(payload, "phone", "phone_number", "mobile", "mobile_phone")
+    source = _insurance_source_key(_social_payload_field(payload, "source", "platform", "lead_source", "social_source"))
+    line = _insurance_line_key(_social_payload_field(payload, "coverage_line", "line", "insurance_type", "product"))
+    stage = (_social_payload_field(payload, "pipeline_stage", "stage") or "new_lead").strip().lower()
+    valid_stages = {key for key, _label in INSURANCE_PIPELINE_STAGES}
+    if stage not in valid_stages:
+        stage = "new_lead"
+
+    campaign = _social_payload_field(payload, "campaign", "campaign_name")
+    ad_name = _social_payload_field(payload, "ad_name", "ad")
+    form_name = _social_payload_field(payload, "form_name", "form")
+    message = _social_payload_field(payload, "message", "notes", "comments", "question", "coverage_notes")
+
+    if not any([name, email, phone]):
+        return None, ["name_or_contact"]
+
+    contact = None
+    if email:
+        contact = (
+            _insurance_contacts_query(profile)
+            .filter(func.lower(func.coalesce(VIPContact.email, "")) == email.lower())
+            .first()
+        )
+    if not contact and phone:
+        contact = (
+            _insurance_contacts_query(profile)
+            .filter(func.lower(func.coalesce(VIPContact.phone, "")) == phone.lower())
+            .first()
+        )
+
+    tags = ["insurance", "social", "source:" + source]
+    if line:
+        tags.append("line:" + line)
+    if campaign:
+        tags.append("campaign:" + campaign)
+    if form_name:
+        tags.append("form:" + form_name)
+
+    notes_parts = []
+    if message:
+        notes_parts.append(message)
+    if ad_name:
+        notes_parts.append("Ad: " + ad_name)
+    if campaign:
+        notes_parts.append("Campaign: " + campaign)
+    if form_name:
+        notes_parts.append("Form: " + form_name)
+    notes = "\n".join(notes_parts) or None
+
+    if contact:
+        contact.name = contact.name or name or "Social media lead"
+        contact.email = contact.email or email
+        contact.phone = contact.phone or phone
+        contact.pipeline_stage = contact.pipeline_stage or stage
+        existing_tags = [tag.strip() for tag in (contact.tags or "").split(",") if tag.strip()]
+        contact.tags = ", ".join(dict.fromkeys(existing_tags + tags))
+        if notes:
+            contact.notes = ((contact.notes + "\n\n") if contact.notes else "") + notes
+        return contact, []
+
+    contact = VIPContact(
+        vip_profile_id=profile.id,
+        name=name or email or phone or "Social media lead",
+        email=email,
+        phone=phone,
+        contact_type="insurance_lead",
+        tags=", ".join(dict.fromkeys(tags)),
+        pipeline_stage=stage,
+        notes=notes,
+    )
+    db.session.add(contact)
+    return contact, []
+
+
 def _insurance_quote_stats(partner):
     """Aggregate insurance quote stats from partner connection requests."""
     if not partner:
@@ -1569,6 +1736,9 @@ def insurance_dashboard():
         insurance_stats     = insurance_stats,
         insurance_crm       = insurance_crm,
         recent_requests     = recent_requests,
+        social_lead_url     = _insurance_social_lead_url(profile),
+        social_lead_token   = _insurance_social_lead_token(profile),
+        social_lead_prompt  = _insurance_social_lead_prompt(profile),
         portal              = "vip",
         portal_name         = "VIP Insurance",
         portal_home         = url_for("vip.insurance_dashboard"),
@@ -1650,10 +1820,51 @@ def insurance_clients():
         insurance_lines  = INSURANCE_LINES,
         selected_stage   = selected_stage,
         selected_source  = selected_source,
+        social_lead_url  = _insurance_social_lead_url(profile),
+        social_lead_token = _insurance_social_lead_token(profile),
+        social_lead_prompt = _insurance_social_lead_prompt(profile),
         portal           = "vip",
         portal_name      = "VIP Insurance",
         portal_home      = url_for("vip.insurance_dashboard"),
     )
+
+
+@vip_bp.post("/insurance/<int:profile_id>/social-leads/sync")
+@csrf.exempt
+def insurance_social_lead_webhook(profile_id):
+    profile = VIPProfile.query.get(profile_id)
+    if not profile:
+        return jsonify({"status": "error", "message": "Profile not found."}), 404
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        payload = request.form.to_dict(flat=False)
+
+    submitted_token = (
+        request.headers.get("X-Ravlo-Social-Lead-Token")
+        or request.headers.get("X-Ravlo-Insurance-Lead-Token")
+        or request.args.get("token")
+        or _social_payload_field(payload, "token", "sync_token")
+    )
+    expected_token = _insurance_social_lead_token(profile)
+    if not submitted_token or not hmac.compare_digest(str(submitted_token), expected_token):
+        return jsonify({"status": "error", "message": "Invalid social lead token."}), 403
+
+    contact, missing = _upsert_insurance_social_contact(profile, payload)
+    if missing:
+        return jsonify({
+            "status": "error",
+            "message": "Missing name, phone, or email for social lead import.",
+            "missing": missing,
+        }), 400
+
+    db.session.commit()
+    return jsonify({
+        "status": "ok",
+        "contact_id": contact.id,
+        "name": contact.name,
+        "pipeline_stage": contact.pipeline_stage,
+    })
 
 
 @vip_bp.get("/insurance/finance")

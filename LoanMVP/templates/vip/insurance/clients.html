@@ -44,6 +44,34 @@
     </article>
   </section>
 
+  <section class="insurance-social-panel">
+    <div class="insurance-section-head">
+      <div>
+        <span>Social auto-capture</span>
+        <h3>Lead Webhook</h3>
+      </div>
+      <div class="insurance-auto-badges">
+        <span>Instagram</span>
+        <span>Facebook</span>
+        <span>TikTok</span>
+      </div>
+    </div>
+    <div class="insurance-webhook-grid">
+      <label>
+        Webhook URL
+        <input type="text" value="{{ social_lead_url }}" readonly>
+      </label>
+      <label>
+        Sync Token
+        <input type="text" value="{{ social_lead_token }}" readonly>
+      </label>
+      <label class="span-2">
+        Automation Prompt
+        <textarea rows="4" readonly>{{ social_lead_prompt }}</textarea>
+      </label>
+    </div>
+  </section>
+
   <div class="insurance-crm-grid">
     <section class="insurance-panel">
       <div class="insurance-section-head">
@@ -178,6 +206,7 @@
   }
 
   .insurance-crm-stats article,
+  .insurance-social-panel,
   .insurance-panel {
     border: 1px solid rgba(178, 198, 231, 0.14);
     border-radius: 8px;
@@ -197,6 +226,7 @@
   .insurance-crm-stats span,
   .insurance-crm-stats small,
   .insurance-section-head span,
+  .insurance-auto-badges span,
   .insurance-contact-list span,
   .insurance-contact-list small,
   .insurance-contact-list p {
@@ -240,15 +270,39 @@
     font-size: 1.08rem;
   }
 
+  .insurance-social-panel {
+    padding: 18px;
+  }
+
+  .insurance-auto-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .insurance-auto-badges span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(99, 210, 255, 0.12);
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
   .insurance-form-grid,
-  .insurance-filter-row {
+  .insurance-filter-row,
+  .insurance-webhook-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
 
   .insurance-form-grid label,
-  .insurance-filter-row label {
+  .insurance-filter-row label,
+  .insurance-webhook-grid label {
     display: flex;
     flex-direction: column;
     gap: 7px;
@@ -260,7 +314,9 @@
   .insurance-form-grid input,
   .insurance-form-grid select,
   .insurance-form-grid textarea,
-  .insurance-filter-row select {
+  .insurance-filter-row select,
+  .insurance-webhook-grid input,
+  .insurance-webhook-grid textarea {
     width: 100%;
     min-height: 40px;
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -269,6 +325,11 @@
     color: #f3f8ff;
     background: rgba(255, 255, 255, 0.05);
     outline: 0;
+  }
+
+  .insurance-webhook-grid textarea {
+    resize: vertical;
+    line-height: 1.45;
   }
 
   .span-2 {
@@ -344,7 +405,8 @@
 
   @media (max-width: 640px) {
     .insurance-form-grid,
-    .insurance-filter-row {
+    .insurance-filter-row,
+    .insurance-webhook-grid {
       grid-template-columns: 1fr;
     }
   }
