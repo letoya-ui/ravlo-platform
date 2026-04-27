@@ -152,6 +152,7 @@
         <div><span>Lots</span><strong id="summaryLots">{{ lot_count or '1' }}</strong></div>
         <div><span>Floor 1</span><strong id="summaryBlueprint">{{ 'Ready' if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) else 'Waiting' }}</strong></div>
         <div><span>Floor 2</span><strong id="summaryFloor2">{{ 'Ready' if blueprint_floor2_result and blueprint_floor2_result.get('image_url') else ('Skipped' if blueprint_floor2_result and blueprint_floor2_result.get('skipped') else 'Waiting') }}</strong></div>
+        <div><span>Floor 3</span><strong id="summaryFloor3">{{ 'Ready' if blueprint_floor3_result and blueprint_floor3_result.get('image_url') else ('Skipped' if blueprint_floor3_result and blueprint_floor3_result.get('skipped') else 'Waiting') }}</strong></div>
         <div><span>Exterior</span><strong id="summaryExterior">{{ 'Ready' if exterior_result and exterior_result.get('image_url') else 'Waiting' }}</strong></div>
       </div>
       {% if build_analysis %}
@@ -175,6 +176,11 @@
     </article>
 
     <article class="ravlo-card pad">
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint — Third Floor</h2></div><strong id="floor3Status">{{ 'Generated' if blueprint_floor3_result and blueprint_floor3_result.get('image_url') else ('Skipped' if blueprint_floor3_result and blueprint_floor3_result.get('skipped') else 'Waiting') }}</strong></div>
+      <div class="result-media" id="floor3Media">{% if blueprint_floor3_result and blueprint_floor3_result.get('image_url') %}<img src="{{ blueprint_floor3_result.get('image_url') }}" alt="Third floor blueprint">{% elif blueprint_floor3_result and blueprint_floor3_result.get('skipped') %}<div class="empty-state-inline">Project has fewer than 3 floors — no third floor blueprint.</div>{% else %}<div class="empty-state-inline">Third floor blueprint will appear here.</div>{% endif %}</div>
+    </article>
+
+    <article class="ravlo-card pad">
       <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Exterior — Front</h2></div><strong id="exteriorStatus">{{ 'Generated' if exterior_result and exterior_result.get('image_url') else 'Waiting' }}</strong></div>
       <div class="result-media" id="exteriorMedia">{% if exterior_result and exterior_result.get('image_url') %}<img src="{{ exterior_result.get('image_url') }}" alt="Exterior front">{% else %}<div class="empty-state-inline">Front exterior concept will appear here.</div>{% endif %}</div>
     </article>
@@ -194,7 +200,8 @@
       <div class="loading-progress-list">
         <div class="loading-step" id="buildLoadingStep1">Preparing project inputs...</div>
         <div class="loading-step" id="buildLoadingStep2">Generating first floor blueprint...</div>
-        <div class="loading-step" id="buildLoadingStep3">Generating second floor &amp; exterior concepts...</div>
+        <div class="loading-step" id="buildLoadingStep3">Generating additional floor blueprints...</div>
+        <div class="loading-step" id="buildLoadingStep4">Generating exterior concepts...</div>
       </div>
     </div>
   </div>
@@ -280,15 +287,20 @@
 
       const floor2Ready = Boolean(data.blueprint_floor2_result?.image_url);
       const floor2Skipped = Boolean(data.blueprint_floor2_result?.skipped);
+      const floor3Ready = Boolean(data.blueprint_floor3_result?.image_url);
+      const floor3Skipped = Boolean(data.blueprint_floor3_result?.skipped);
       summaryLots.textContent = data.lot_count || lotCountInput?.value || '1';
       document.getElementById('summaryBlueprint').textContent = data.blueprint_result?.image_url ? 'Ready' : 'Waiting';
       document.getElementById('summaryFloor2').textContent = floor2Ready ? 'Ready' : (floor2Skipped ? 'Skipped' : 'Waiting');
+      document.getElementById('summaryFloor3').textContent = floor3Ready ? 'Ready' : (floor3Skipped ? 'Skipped' : 'Waiting');
       document.getElementById('summaryExterior').textContent = data.exterior_result?.image_url ? 'Ready' : 'Waiting';
       document.getElementById('blueprintStatus').textContent = data.blueprint_result?.image_url ? 'Generated' : 'Waiting';
       document.getElementById('floor2Status').textContent = floor2Ready ? 'Generated' : (floor2Skipped ? 'Skipped' : 'Waiting');
+      document.getElementById('floor3Status').textContent = floor3Ready ? 'Generated' : (floor3Skipped ? 'Skipped' : 'Waiting');
       document.getElementById('exteriorStatus').textContent = data.exterior_result?.image_url ? 'Generated' : 'Waiting';
       renderMedia('blueprintMedia', data.blueprint_result?.image_url, 'First floor blueprint', 'First floor blueprint will appear here.');
       renderMedia('floor2Media', data.blueprint_floor2_result?.image_url, 'Second floor blueprint', floor2Skipped ? 'Single-story project — no second floor blueprint.' : 'Second floor blueprint will appear here.');
+      renderMedia('floor3Media', data.blueprint_floor3_result?.image_url, 'Third floor blueprint', floor3Skipped ? 'Project has fewer than 3 floors — no third floor blueprint.' : 'Third floor blueprint will appear here.');
       renderMedia('exteriorMedia', data.exterior_result?.image_url, 'Exterior concept', 'Exterior concept will appear here.');
       renderMedia('exteriorBackMedia', data.exterior_back_result?.image_url, 'Exterior back', 'Rear exterior concept will appear here.');
       document.getElementById('exteriorBackStatus').textContent = data.exterior_back_result?.image_url ? 'Generated' : 'Waiting';

@@ -5868,6 +5868,7 @@ def build_studio(deal_id=None):
         build_project=build_project,
         blueprint_result=blueprint_result,
         blueprint_floor2_result=build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {},
+        blueprint_floor3_result=build_project.get("blueprint_floor3", {}) or {},
         exterior_result=exterior_result,
         property_photo_gallery=property_gallery,
         package_result=package_result,
@@ -7333,6 +7334,82 @@ def generate_full_build():
                 blueprint_floor2_job_id = None
 
         # --------------------------------------------------
+        # 2b. GENERATE BLUEPRINT — THIRD FLOOR (when 3+ stories)
+        # --------------------------------------------------
+        blueprint_floor3_urls = []
+        blueprint_floor3_primary_url = ""
+        blueprint_floor3_primary_b64 = ""
+        blueprint_floor3_meta = {"skipped": True, "reason": "fewer_than_3_stories"}
+        blueprint_floor3_seed = None
+        blueprint_floor3_job_id = None
+
+        if number_of_floors and number_of_floors >= 3:
+            try:
+                blueprint_floor3_payload = {
+                    "mode": "blueprint",
+                    "blueprint_floor": "third",
+                    "project_name": project_name,
+                    "property_type": property_type,
+                    "style": style,
+                    "blueprint_style": blueprint_style,
+                    "description": description,
+                    "build_description": description,
+                    "lot_size": lot_size,
+                    "zoning": zoning,
+                    "prompt_notes": (
+                        f"{site_notes}. Generate the third floor / top level plan with bonus rooms, "
+                        "attic bedrooms, loft, flex spaces, or additional bedrooms. Must be a distinct top-level layout."
+                    ),
+                    "special_features": (
+                        "top level bonus rooms, attic bedrooms, loft, flex spaces, additional living areas"
+                    ),
+                    "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+                    "stories": number_of_floors,
+                    "number_of_floors": number_of_floors,
+                    "floor_count": number_of_floors,
+                    "image_base64": blueprint_primary_b64,
+                    "image_url": "" if blueprint_primary_b64 else blueprint_primary_url,
+                    "width": 1024,
+                    "height": 1024,
+                    "steps": 30,
+                    "guidance": 6.8,
+                    "strength": 0.30,
+                    "count": 1,
+                }
+
+                current_app.logger.warning(f"FULL BUILD BLUEPRINT FLOOR 3 PAYLOAD: {blueprint_floor3_payload}")
+
+                blueprint_floor3_json = _post_renovation_engine_json(
+                    "/v1/build_concept",
+                    blueprint_floor3_payload,
+                    timeout=FULL_BUILD_BLUEPRINT_TIMEOUT,
+                )
+
+                blueprint_floor3_images_b64 = blueprint_floor3_json.get("images_base64") or []
+                if not blueprint_floor3_images_b64:
+                    raise RuntimeError("Third floor blueprint step returned no images.")
+
+                blueprint_floor3_batch_id = uuid.uuid4().hex
+                blueprint_floor3_urls = _upload_after_images_from_b64(blueprint_floor3_images_b64, blueprint_floor3_batch_id)
+
+                if not blueprint_floor3_urls:
+                    raise RuntimeError("Third floor blueprint generated but uploads failed.")
+
+                blueprint_floor3_primary_b64 = blueprint_floor3_images_b64[0]
+                blueprint_floor3_primary_url = blueprint_floor3_urls[0]
+                blueprint_floor3_meta = blueprint_floor3_json.get("meta") or {}
+                blueprint_floor3_seed = blueprint_floor3_json.get("seed")
+                blueprint_floor3_job_id = blueprint_floor3_json.get("job_id")
+            except Exception:
+                current_app.logger.exception("Third floor blueprint generation failed (non-fatal)")
+                blueprint_floor3_urls = []
+                blueprint_floor3_primary_url = ""
+                blueprint_floor3_primary_b64 = ""
+                blueprint_floor3_meta = {"skipped": True, "reason": "floor3_generation_failed"}
+                blueprint_floor3_seed = None
+                blueprint_floor3_job_id = None
+
+        # --------------------------------------------------
         # 3. GENERATE EXTERIOR
         # Real exterior reference = primary source. Generated plans are only
         # fallback inputs when the user has not supplied/select a property photo.
@@ -7581,6 +7658,28 @@ def generate_full_build():
                 "skipped": not bool(blueprint_floor2_primary_url),
             }
 
+            build_project["blueprint_floor3"] = {
+                "project_name": project_name,
+                "property_type": property_type,
+                "description": description,
+                "lot_size": lot_size,
+                "lot_count": lot_count,
+                "zoning": zoning,
+                "location": location,
+                "notes": notes,
+                "style": style,
+                "stories": number_of_floors,
+                "number_of_floors": number_of_floors,
+                "floor_label": "Third Floor",
+                "blueprint_floor": "third",
+                "image_url": blueprint_floor3_primary_url,
+                "images": blueprint_floor3_urls,
+                "meta": blueprint_floor3_meta,
+                "seed": blueprint_floor3_seed,
+                "job_id": blueprint_floor3_job_id,
+                "skipped": not bool(blueprint_floor3_primary_url),
+            }
+
             build_project["exterior"] = {
                 "project_name": project_name,
                 "property_type": property_type,
@@ -7635,6 +7734,7 @@ def generate_full_build():
             "package": {
                 "blueprint": blueprint_primary_url,
                 "blueprint_floor2": blueprint_floor2_primary_url,
+                "blueprint_floor3": blueprint_floor3_primary_url,
                 "exterior": exterior_primary_url,
                 "exterior_back": exterior_back_url,
             },
@@ -7654,6 +7754,14 @@ def generate_full_build():
                 "seed": blueprint_floor2_seed,
                 "job_id": blueprint_floor2_job_id,
                 "skipped": not bool(blueprint_floor2_primary_url),
+            },
+            "blueprint_floor3_result": {
+                "image_url": blueprint_floor3_primary_url,
+                "images": blueprint_floor3_urls,
+                "meta": blueprint_floor3_meta,
+                "seed": blueprint_floor3_seed,
+                "job_id": blueprint_floor3_job_id,
+                "skipped": not bool(blueprint_floor3_primary_url),
             },
             "blueprint_result": {
                 "image_url": blueprint_primary_url,
@@ -8548,6 +8656,7 @@ def deal_architect(deal_id=None):
 
         build_blueprint_url = (build_project.get("blueprint", {}) or {}).get("image_url")
         build_floor2_url = (build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}).get("image_url")
+        build_floor3_url = (build_project.get("blueprint_floor3", {}) or {}).get("image_url")
         build_exterior_url = (build_project.get("exterior", {}) or {}).get("image_url")
 
         build_project_name = build_project.get("project_name")
@@ -8651,6 +8760,7 @@ def deal_architect(deal_id=None):
         build_project=build_project,
         build_blueprint_url=build_blueprint_url,
         build_floor2_url=build_floor2_url,
+        build_floor3_url=build_floor3_url,
         build_exterior_url=build_exterior_url,
         build_project_name=build_project_name,
         build_lot_count=build_lot_count,
@@ -9242,6 +9352,7 @@ def generate_build_costs_from_package():
 
         blueprint = build_project.get("blueprint", {}) or {}
         floor2 = build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}
+        floor3 = build_project.get("blueprint_floor3", {}) or {}
         exterior = build_project.get("exterior", {}) or {}
 
         package = {
@@ -9267,6 +9378,7 @@ def generate_build_costs_from_package():
 
             "blueprint_url": blueprint.get("image_url") or blueprint.get("blueprint_url"),
             "blueprint_floor2_url": floor2.get("image_url"),
+            "blueprint_floor3_url": floor3.get("image_url"),
             "exterior_url": exterior.get("image_url"),
         }
 
