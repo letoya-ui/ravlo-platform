@@ -5867,7 +5867,7 @@ def build_studio(deal_id=None):
         build_analysis=build_analysis,
         build_project=build_project,
         blueprint_result=blueprint_result,
-        blueprint_floor2_result=build_project.get("blueprint_floor2", {}) or {},
+        blueprint_floor2_result=build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {},
         exterior_result=exterior_result,
         property_photo_gallery=property_gallery,
         package_result=package_result,
@@ -8547,7 +8547,7 @@ def deal_architect(deal_id=None):
         build_project = results.get("build_project", {}) or {}
 
         build_blueprint_url = (build_project.get("blueprint", {}) or {}).get("image_url")
-        build_floor2_url = (build_project.get("blueprint_floor2", {}) or {}).get("image_url")
+        build_floor2_url = (build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}).get("image_url")
         build_exterior_url = (build_project.get("exterior", {}) or {}).get("image_url")
 
         build_project_name = build_project.get("project_name")
