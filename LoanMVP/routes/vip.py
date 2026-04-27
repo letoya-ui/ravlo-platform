@@ -19,6 +19,7 @@ from LoanMVP.extensions import db
 # ── VIP models ────────────────────────────────────────────────────────────────
 from LoanMVP.models.vip_models import (
     VIPProfile,
+    VIPContact,
     VIPIncome,
     VIPExpense,
     VIPAssistantSuggestion,
@@ -152,6 +153,51 @@ def build_enabled_modules_from_form(form):
     return modules
 
 
+def _partner_role_text(partner):
+    if not partner:
+        return ""
+
+    fields = [
+        getattr(partner, "category", ""),
+        getattr(partner, "type", ""),
+    ]
+    return " ".join(str(value or "").strip().lower() for value in fields)
+
+
+def _partner_role_mentions(partner, *terms):
+    role_text = _partner_role_text(partner)
+    return any(term in role_text for term in terms)
+
+
+def _default_vip_role_for_partner(partner):
+    if not partner:
+        return "partner"
+
+    if _partner_role_mentions(partner, "insurance", "insurer"):
+        return "insurance"
+
+    if _partner_role_mentions(partner, "realtor", "real estate", "real-estate", "realty"):
+        return "realtor"
+
+    raw_category = (getattr(partner, "category", "") or "").strip().lower()
+    role_map = {
+        "contractor":       "contractor",
+        "designer":         "designer",
+        "lender":           "loan_officer",
+        "loan_officer":     "loan_officer",
+        "broker":           "partner",
+        "vendor":           "partner",
+        "property_manager": "partner",
+        "attorney":         "partner",
+        "title":            "partner",
+        "inspector":        "partner",
+        "appraiser":        "partner",
+        "cleaner":          "contractor",
+        "janitorial":       "contractor",
+    }
+    return role_map.get(raw_category, "partner")
+
+
 def get_or_create_vip_profile():
     if not getattr(current_user, "is_authenticated", False):
         return None
@@ -161,28 +207,7 @@ def get_or_create_vip_profile():
         return profile
 
     partner = getattr(current_user, "partner_profile", None)
-    default_role_type = "partner"
-
-    if partner and getattr(partner, "category", None):
-        raw_category = (partner.category or "").strip().lower()
-        role_map = {
-            "realtor":          "realtor",
-            "contractor":       "contractor",
-            "designer":         "designer",
-            "lender":           "loan_officer",
-            "loan_officer":     "loan_officer",
-            "broker":           "partner",
-            "vendor":           "partner",
-            "property_manager": "partner",
-            "attorney":         "partner",
-            "insurance":        "insurance",
-            "title":            "partner",
-            "inspector":        "partner",
-            "appraiser":        "partner",
-            "cleaner":          "contractor",
-            "janitorial":       "contractor",
-        }
-        default_role_type = role_map.get(raw_category, "partner")
+    default_role_type = _default_vip_role_for_partner(partner)
 
     profile = VIPProfile(
         user_id=current_user.id,
@@ -527,6 +552,7 @@ def inject_vip_context():
 @role_required("partner_group", "admin")
 def index():
     profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
 
     if profile.role_type in ("loan_officer", "lender"):
         policy = get_user_lending_policy(current_user)
@@ -540,6 +566,9 @@ def index():
         gate = require_vip_access()
         if gate is not None:
             return gate
+
+    if profile.role_type == "realtor" and _partner_role_mentions(partner, "insurance", "insurer"):
+        return redirect(url_for("vip.insurance_dashboard"))
 
     role_map = {
         "realtor":    "vip.realtor_dashboard",
@@ -621,10 +650,22 @@ def _realtor_context(profile, partner):
     def _scope_listings(q):
         if effective_market != ALL_MARKETS:
             q = q.filter(ElenaListing.market == effective_market)
+        elif available_markets:
+            q = q.filter(ElenaListing.market.in_(available_markets))
         return q
 
-    total_clients = ElenaClient.query.count()
-    new_leads     = ElenaClient.query.filter(ElenaClient.created_at >= week_ago).count()
+    def _scope_clients(q):
+        if effective_market != ALL_MARKETS:
+            q = q.filter(ElenaClient.market == effective_market)
+        elif available_markets:
+            q = q.filter(ElenaClient.market.in_(available_markets))
+        return q
+
+    clients_q     = _scope_clients(ElenaClient.query)
+    total_clients = clients_q.count()
+    new_leads     = _scope_clients(
+        ElenaClient.query.filter(ElenaClient.created_at >= week_ago)
+    ).count()
 
     active_listings = _scope_listings(
         ElenaListing.query.filter_by(status="active")
@@ -640,7 +681,7 @@ def _realtor_context(profile, partner):
         "total_clients":   total_clients,
         "new_leads":       new_leads,
         "active_listings": active_listings,
-        "total_listings":  ElenaListing.query.filter_by(status="active").count(),
+        "total_listings":  _scope_listings(ElenaListing.query.filter_by(status="active")).count(),
         "followups_due":   followups_due,
     }
 
@@ -648,7 +689,7 @@ def _realtor_context(profile, partner):
     canonical_keys  = {s[0] for s in PIPELINE_STAGES}
 
     for stage_key, stage_label in PIPELINE_STAGES:
-        q = ElenaClient.query.filter_by(pipeline_stage=stage_key)
+        q = _scope_clients(ElenaClient.query.filter_by(pipeline_stage=stage_key))
         pipeline_groups.append({
             "key":     stage_key,
             "label":   stage_label,
@@ -660,14 +701,14 @@ def _realtor_context(profile, partner):
         ElenaClient.pipeline_stage.is_(None),
         ~ElenaClient.pipeline_stage.in_(canonical_keys),
     )
-    unstaged_total = ElenaClient.query.filter(unstaged_filter).count()
+    unstaged_q = _scope_clients(ElenaClient.query.filter(unstaged_filter))
+    unstaged_total = unstaged_q.count()
     if unstaged_total:
         pipeline_groups.insert(0, {
             "key":     "unstaged",
             "label":   "Unstaged",
             "count":   unstaged_total,
-            "clients": (ElenaClient.query.filter(unstaged_filter)
-                        .order_by(ElenaClient.updated_at.desc()).limit(12).all()),
+            "clients": (unstaged_q.order_by(ElenaClient.updated_at.desc()).limit(12).all()),
         })
 
     status_filter = (request.args.get("listing_status") or "").strip().lower()
@@ -768,6 +809,7 @@ def _realtor_context(profile, partner):
         "summary":               summary,
         "pipeline_groups":       pipeline_groups,
         "pipeline_stages":       PIPELINE_STAGES,
+        "realtor_clients":       clients_q.order_by(ElenaClient.updated_at.desc()).limit(8).all(),
         "recent_interactions":   recent_interactions,
         "listings":              listings,
         "listing_statuses":      LISTING_STATUSES,
@@ -788,6 +830,11 @@ def _realtor_context(profile, partner):
         "listing_sync_token":    _listing_sync_token(profile),
         "listing_sync_prompt":   _listing_sync_prompt(profile),
         "template_types":        [t.value for t in TemplateType],
+        "client_scope_label": (
+            effective_market
+            if effective_market != ALL_MARKETS
+            else ("Configured markets" if available_markets else "All realtor contacts")
+        ),
     }
 
 
@@ -1353,6 +1400,55 @@ def _insurance_quote_stats(partner):
     }
 
 
+INSURANCE_CONTACT_TERMS = {
+    "insurance",
+    "insured",
+    "policy",
+    "policyholder",
+    "quote",
+    "coverage",
+    "auto",
+    "homeowners",
+    "renters",
+    "landlord",
+}
+
+
+def _insurance_crm_snapshot(profile):
+    """Return VIP contacts split for the insurance side of a combo dashboard."""
+    if not profile:
+        return {
+            "total_contacts": 0,
+            "insurance_contacts": [],
+            "other_contacts": [],
+        }
+
+    contacts = (
+        VIPContact.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(VIPContact.updated_at.desc())
+        .limit(50).all()
+    )
+
+    insurance_contacts = []
+    other_contacts = []
+    for contact in contacts:
+        role_text = " ".join([
+            (getattr(contact, "contact_type", "") or ""),
+            (getattr(contact, "tags", "") or ""),
+        ]).lower()
+        if any(term in role_text for term in INSURANCE_CONTACT_TERMS):
+            insurance_contacts.append(contact)
+        else:
+            other_contacts.append(contact)
+
+    return {
+        "total_contacts": len(insurance_contacts),
+        "insurance_contacts": insurance_contacts[:8],
+        "other_contacts": other_contacts[:8],
+    }
+
+
 @vip_bp.get("/insurance")
 @role_required("partner_group", "admin")
 def insurance_dashboard():
@@ -1364,6 +1460,7 @@ def insurance_dashboard():
     partner = getattr(current_user, "partner_profile", None)
 
     insurance_stats = _insurance_quote_stats(partner)
+    insurance_crm = _insurance_crm_snapshot(profile)
 
     recent_requests = []
     if partner:
@@ -1384,6 +1481,7 @@ def insurance_dashboard():
         partner             = partner,
         insurance_lines     = INSURANCE_LINES,
         insurance_stats     = insurance_stats,
+        insurance_crm       = insurance_crm,
         recent_requests     = recent_requests,
         portal              = "vip",
         portal_name         = "VIP Insurance",
@@ -1673,10 +1771,15 @@ def insurance_upload_logo():
 @role_required("partner_group", "admin")
 def partner_dashboard():
     profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+    if (
+        getattr(profile, "role_type", None) == "insurance"
+        or _partner_role_mentions(partner, "insurance", "insurer")
+    ):
+        return redirect(url_for("vip.insurance_dashboard"))
     if getattr(profile, "role_type", None) == "realtor":
         return redirect(url_for("vip.realtor_dashboard"))
 
-    partner = getattr(current_user, "partner_profile", None)
     recent_requests, stats = _partner_request_snapshot(partner)
 
     copilot_suggestions = (

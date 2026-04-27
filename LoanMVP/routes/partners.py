@@ -124,20 +124,29 @@ def partner_has_premium_access(partner) -> bool:
 _VIP_ACCESS_TIERS = {"premium", "enterprise"}
 
 
+def _partner_role_text(partner) -> str:
+    if not partner:
+        return ""
+
+    fields = [
+        getattr(partner, "category", ""),
+        getattr(partner, "type", ""),
+    ]
+    return " ".join(str(value or "").strip().lower() for value in fields)
+
+
 def partner_is_realtor(partner) -> bool:
     if not partner:
         return False
-    category = (getattr(partner, "category", "") or "").strip().lower()
-    type_ = (getattr(partner, "type", "") or "").strip().lower()
-    return "realtor" in (category, type_)
+    role_text = _partner_role_text(partner)
+    return any(term in role_text for term in ("realtor", "real estate", "real-estate", "realty"))
 
 
 def partner_is_insurance(partner) -> bool:
     if not partner:
         return False
-    category = (getattr(partner, "category", "") or "").strip().lower()
-    type_ = (getattr(partner, "type", "") or "").strip().lower()
-    return "insurance" in (category, type_)
+    role_text = _partner_role_text(partner)
+    return any(term in role_text for term in ("insurance", "insurer"))
 
 
 def partner_vip_tier_unlocked(partner) -> bool:

@@ -1,5 +1,8 @@
 {% set ep = request.endpoint or "" %}
-{% set role = (vip_profile.role_type if vip_profile else "realtor") %}
+{% set partner_profile = current_user.partner_profile if current_user is defined and current_user.is_authenticated else None %}
+{% set partner_role_text = ((partner_profile.category or "") ~ " " ~ (partner_profile.type or ""))|lower if partner_profile else "" %}
+{% set stored_role = (vip_profile.role_type if vip_profile else "realtor") %}
+{% set role = "insurance" if ("insurance" in partner_role_text or "insurer" in partner_role_text) else stored_role %}
 {% set brand_sub = (vip_profile.business_name if vip_profile else None) or (vip_profile.display_name if vip_profile else None) or "Workspace" %}
 
 <div class="ravlo-sidebar-inner">
@@ -101,7 +104,7 @@
     <a href="{{ url_for('elena.client_new') }}"
        class="ravlo-nav-link {% if ep == 'elena.client_new' %}active{% endif %}">
       <i class="lucide lucide-user-plus"></i>
-      <span>Clients</span>
+      <span>Realtor Clients</span>
     </a>
 
     <a href="{{ url_for('vip.realtor_listings') }}"
