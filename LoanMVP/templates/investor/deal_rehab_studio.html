@@ -17,6 +17,11 @@
       <a href="{{ url_for(companion_endpoint, deal_id=deal.id) }}" class="ravlo-btn ghost">{{ companion_label or "Open Build Studio" }}</a>
       {% endif %}
 
+      {% if deal %}
+      <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn primary">Architect Deal</a>
+      {% else %}
+      <a href="{{ url_for('investor.deal_architect') }}" class="ravlo-btn primary">Architect Deal</a>
+      {% endif %}
       <button type="button" class="ravlo-btn ghost hidden" id="downloadCurrentBtn">Download Image</button>
       <button type="button" class="ravlo-btn ghost hidden" id="downloadAllBtn">Download All Images</button>
       <a href="#" class="ravlo-btn primary hidden" id="continueToDealArchitectBtn">Send to Deal Architect</a>
