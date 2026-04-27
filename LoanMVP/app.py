@@ -81,6 +81,8 @@ _SCHEMA_COMPAT_COLUMNS = [
     ("deals",                     "local_cost_factor",  "FLOAT"),
     ("deals",                     "local_cost_label",   "VARCHAR(120)"),
     ("elena_listings",            "market",             "VARCHAR(100)"),
+    ("elena_listings",            "updated_at",         "TIMESTAMP"),
+    ("elena_listings",            "county",             "VARCHAR(120)"),
     ("elena_clients",             "market",             "VARCHAR(100)"),
     ("elena_clients",             "assigned_member_id", "INTEGER"),
     ("vip_expenses",              "market",             "VARCHAR(100)"),
