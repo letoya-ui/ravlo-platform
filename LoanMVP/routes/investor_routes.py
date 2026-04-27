@@ -6251,6 +6251,12 @@ def generate_build_exterior():
         notes = (request.form.get("notes") or "").strip()
         style = (request.form.get("style") or "modern_farmhouse").strip()
         blueprint_style = (request.form.get("blueprint_style") or "technical_blueprint").strip().lower()
+        number_of_floors = _normalize_int(
+            request.form.get("number_of_floors")
+            or request.form.get("floor_count")
+            or request.form.get("stories")
+            or request.form.get("number_of_stories")
+        )
         save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
 
         land_image = request.files.get("land_image")
@@ -6339,6 +6345,9 @@ def generate_build_exterior():
             "zoning": zoning,
             "prompt_notes": exterior_prompt_notes,
             "special_features": notes,
+            "stories": number_of_floors,
+            "number_of_floors": number_of_floors,
+            "floor_count": number_of_floors,
             "preserve_existing_exterior": has_real_exterior_reference,
             "preserve_structure": has_real_exterior_reference,
             "count": 1,
@@ -6394,13 +6403,14 @@ def generate_build_exterior():
                 "zoning": zoning,
                 "location": location,
                 "notes": notes,
+                "stories": number_of_floors,
+                "number_of_floors": number_of_floors,
                 "image_url": build_urls[0],
                 "images": build_urls,
                 "meta": result.get("meta") or {},
                 "seed": result.get("seed"),
                 "job_id": result.get("job_id"),
 
-                # 🔥 ALWAYS USE GENERATED IMAGE
                 "build_reference_image": reference_image_url,
                 "reference_source": "user_reference" if has_real_exterior_reference else "blueprint_fallback",
                 "preserve_existing_exterior": has_real_exterior_reference,
@@ -6694,6 +6704,12 @@ def generate_build_blueprint():
         bedrooms = (request.form.get("bedrooms") or "").strip()
         bathrooms = (request.form.get("bathrooms") or "").strip()
         square_feet = (request.form.get("square_feet") or "").strip()
+        number_of_floors = _normalize_int(
+            request.form.get("number_of_floors")
+            or request.form.get("floor_count")
+            or request.form.get("stories")
+            or request.form.get("number_of_stories")
+        )
 
         deal_id = _normalize_int(request.form.get("deal_id"))
         saved_property_id = _normalize_int(request.form.get("saved_property_id"))
@@ -6820,6 +6836,9 @@ def generate_build_blueprint():
             "prompt_notes": notes,
             "special_features": notes,
             "square_feet_target": _normalize_int(square_feet),
+            "stories": number_of_floors,
+            "number_of_floors": number_of_floors,
+            "floor_count": number_of_floors,
             "prompt": style_prompt,
             "count": 1,
             "steps": 20,
@@ -6915,6 +6934,8 @@ def generate_build_blueprint():
                 "bedrooms": bedrooms,
                 "bathrooms": bathrooms,
                 "square_feet": square_feet,
+                "stories": number_of_floors,
+                "number_of_floors": number_of_floors,
                 "image_url": primary_blueprint,
                 "blueprint_url": fallback_reference,
                 "images": after_urls,
@@ -7038,6 +7059,12 @@ def generate_full_build():
         description = (data.get("description") or "").strip()
         lot_size = (data.get("lot_size") or "").strip()
         lot_count = _normalize_int(data.get("lot_count"))
+        number_of_floors = _normalize_int(
+            data.get("number_of_floors")
+            or data.get("floor_count")
+            or data.get("stories")
+            or data.get("number_of_stories")
+        )
         zoning = (data.get("zoning") or "").strip()
         location = (data.get("location") or "").strip()
         notes = (data.get("notes") or "").strip()
@@ -7182,6 +7209,9 @@ def generate_full_build():
             "prompt_notes": site_notes,
             "special_features": f"{lot_count} total lots" if lot_count and lot_count > 1 else notes,
             "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+            "stories": number_of_floors,
+            "number_of_floors": number_of_floors,
+            "floor_count": number_of_floors,
             "width": 1024,
             "height": 1024,
             "steps": 30,
@@ -7230,37 +7260,46 @@ def generate_full_build():
         blueprint_job_id = blueprint_json.get("job_id")
 
         # --------------------------------------------------
-        # 2. GENERATE SITE PLAN
+        # 2. GENERATE SITE PLAN (optional)
         # --------------------------------------------------
-        site_plan_payload = {
-            "mode": "siteplan",
-            "project_name": project_name,
-            "property_type": property_type,
-            "style": style,
-            "blueprint_style": blueprint_style,
-            "description": description,
-            "build_description": description,
-            "lot_size": lot_size,
-            "zoning": zoning,
-            "prompt_notes": site_notes,
-            "special_features": (
-                f"{lot_count} buildable lots, internal drives, setbacks, parking, and site circulation"
-                if lot_count and lot_count > 1
-                else f"{notes}, access, setbacks, and site circulation".strip(", ")
-            ),
-            "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+        site_plan_urls = []
+        site_plan_primary_b64 = ""
+        site_plan_primary_url = ""
+        site_plan_meta = {"skipped": True, "reason": "site_plan_disabled"}
+        site_plan_seed = None
+        site_plan_job_id = None
 
-            # Engine expects image_base64 / image_url for the init image.
-            "image_base64": blueprint_image_base64 or blueprint_primary_b64,
-            "image_url": "" if (blueprint_image_base64 or blueprint_primary_b64) else (blueprint_url or blueprint_primary_url),
-
-            "width": 768,
-            "height": 768,
-            "steps": 24,
-            "guidance": 6.6,
-            "strength": 0.28,
-            "count": 1,
-        }
+        if include_site_plan:
+            try:
+                site_plan_payload = {
+                    "mode": "siteplan",
+                    "project_name": project_name,
+                    "property_type": property_type,
+                    "style": style,
+                    "blueprint_style": blueprint_style,
+                    "description": description,
+                    "build_description": description,
+                    "lot_size": lot_size,
+                    "zoning": zoning,
+                    "prompt_notes": site_notes,
+                    "special_features": (
+                        f"{lot_count} buildable lots, internal drives, setbacks, parking, and site circulation"
+                        if lot_count and lot_count > 1
+                        else f"{notes}, access, setbacks, and site circulation".strip(", ")
+                    ),
+                    "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+                    "stories": number_of_floors,
+                    "number_of_floors": number_of_floors,
+                    "floor_count": number_of_floors,
+                    "image_base64": blueprint_image_base64 or blueprint_primary_b64,
+                    "image_url": "" if (blueprint_image_base64 or blueprint_primary_b64) else (blueprint_url or blueprint_primary_url),
+                    "width": 768,
+                    "height": 768,
+                    "steps": 24,
+                    "guidance": 6.6,
+                    "strength": 0.28,
+                    "count": 1,
+                }
 
                 current_app.logger.warning(f"PROJECT BUILD SITEPLAN PAYLOAD: {site_plan_payload}")
 
@@ -7296,12 +7335,30 @@ def generate_full_build():
 
         # --------------------------------------------------
         # 3. GENERATE EXTERIOR
-        # Blueprint = architecture/massing (primary reference).
-        # Site image = land context only; site plan = fallback.
+        # Real exterior reference = primary source. Generated plans are only
+        # fallback inputs when the user has not supplied/select a property photo.
         # --------------------------------------------------
-        # Prefer: user-uploaded land image > blueprint > site plan
-        exterior_ref_b64 = exterior_image_base64 or blueprint_primary_b64 or site_plan_primary_b64
-        exterior_ref_url = "" if exterior_ref_b64 else (reference_image_url or blueprint_primary_url or site_plan_primary_url or "")
+        has_real_exterior_reference = bool(exterior_image_base64 or reference_image_url)
+        exterior_ref_b64 = exterior_image_base64
+        exterior_ref_url = "" if exterior_ref_b64 else reference_image_url
+        exterior_source_kind = "user_reference" if has_real_exterior_reference else "blueprint_fallback"
+
+        if not exterior_ref_b64 and not exterior_ref_url:
+            exterior_ref_b64 = blueprint_primary_b64
+            exterior_ref_url = "" if exterior_ref_b64 else blueprint_primary_url
+
+        if has_real_exterior_reference:
+            exterior_prompt_notes = (
+                site_notes
+                + " Preserve the supplied exterior reference house massing, roofline, window rhythm, entry or garage placement, "
+                + "overall proportions, floor count, and camera relationship. Apply the requested style as a renovation concept without replacing it with a different house."
+            )
+        else:
+            exterior_prompt_notes = (
+                site_notes
+                + " Use the blueprint as the architectural layout, footprint, floor count, massing, roofline, and structure constraint. "
+                + "Generate a realistic developer-grade exterior rendering that matches the blueprint."
+            )
 
         exterior_payload = {
             "mode": "exterior_front",
@@ -7314,20 +7371,15 @@ def generate_full_build():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": (
-                site_notes
-                + " Use the blueprint as the architectural layout, footprint, massing, roofline, and structure constraint. "
-                + "Use the site plan or site image only for land context, lot placement, driveway, roads, setbacks, and surroundings. "
-                + "Generate a realistic developer-grade exterior rendering that matches the blueprint."
-            ),
+            "prompt_notes": exterior_prompt_notes,
             "special_features": (
                 f"{lot_count} lots, cohesive streetscape, developer-ready massing"
                 if lot_count and lot_count > 1
                 else notes
             ),
-
-            # Engine expects image_base64 / image_url for the init image.
-            # Blueprint is the primary architectural reference for exterior.
+            "stories": number_of_floors,
+            "number_of_floors": number_of_floors,
+            "floor_count": number_of_floors,
             "image_base64": exterior_ref_b64,
             "image_url": exterior_ref_url,
             "exterior_image_base64": exterior_image_base64,
@@ -7339,7 +7391,7 @@ def generate_full_build():
             "height": 1024,
             "steps": 28,
             "guidance": 7.0,
-            "strength": 0.48,
+            "strength": 0.34 if has_real_exterior_reference else 0.48,
             "count": 1,
         }
 
@@ -7388,7 +7440,8 @@ def generate_full_build():
         exterior_back_prompt += "Full building visible from foundation to roofline, rear perspective, no cropping."
 
         exterior_back_payload = {
-            "mode": "exterior",
+            "mode": "exterior_back",
+            "exterior_view": "back",
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
@@ -7399,20 +7452,26 @@ def generate_full_build():
             "zoning": zoning,
             "prompt": exterior_back_prompt,
             "prompt_notes": (
-                "Rear / backyard view of the home. "
-                + "Show the back of the building with patio, deck, or outdoor living space. "
-                + "Use the blueprint for massing and the front exterior for style consistency."
+                "Rear / backyard view of the home. Show the back of the building with patio, deck, or outdoor living space. "
+                + "Preserve the supplied reference house massing, roofline, floor count, overall proportions, and camera relationship when a reference photo is available. "
+                + "Use the blueprint only as a fallback massing reference."
             ),
             "special_features": "rear view, backyard, patio, deck, outdoor living space",
-
+            "stories": number_of_floors,
+            "number_of_floors": number_of_floors,
+            "floor_count": number_of_floors,
             "image_base64": exterior_ref_b64,
             "image_url": exterior_ref_url,
-
+            "exterior_image_base64": exterior_image_base64,
+            "exterior_image_url": reference_image_url if not exterior_image_base64 else "",
+            "reference_image_url": reference_image_url if not exterior_image_base64 else "",
+            "preserve_existing_exterior": has_real_exterior_reference,
+            "preserve_structure": has_real_exterior_reference,
             "width": 1024,
             "height": 1024,
             "steps": 30,
-            "guidance": 7.5,
-            "strength": 0.78,
+            "guidance": 7.0,
+            "strength": 0.34 if has_real_exterior_reference else 0.48,
             "count": 1,
         }
 
@@ -7473,6 +7532,8 @@ def generate_full_build():
             build_project["development_type"] = development_type
             build_project["blueprint_style"] = blueprint_style
             build_project["lot_count"] = lot_count
+            build_project["stories"] = number_of_floors
+            build_project["number_of_floors"] = number_of_floors
             build_project["description"] = description
             build_project["lot_size"] = lot_size
             build_project["zoning"] = zoning
@@ -7489,6 +7550,8 @@ def generate_full_build():
                 "location": location,
                 "notes": notes,
                 "style": style,
+                "stories": number_of_floors,
+                "number_of_floors": number_of_floors,
                 "image_url": blueprint_primary_url,
                 "images": blueprint_urls,
                 "blueprint_url": blueprint_primary_url,
@@ -7507,6 +7570,8 @@ def generate_full_build():
                 "location": location,
                 "notes": notes,
                 "style": style,
+                "stories": number_of_floors,
+                "number_of_floors": number_of_floors,
                 "image_url": site_plan_primary_url,
                 "images": site_plan_urls,
                 "site_plan_url": site_plan_primary_url,
@@ -7526,6 +7591,8 @@ def generate_full_build():
                 "location": location,
                 "notes": notes,
                 "style": style,
+                "stories": number_of_floors,
+                "number_of_floors": number_of_floors,
                 "image_url": exterior_primary_url,
                 "images": exterior_urls,
                 "meta": exterior_meta,
@@ -7545,6 +7612,8 @@ def generate_full_build():
                     "seed": exterior_back_seed,
                     "job_id": exterior_back_job_id,
                     "view": "back",
+                    "stories": number_of_floors,
+                    "number_of_floors": number_of_floors,
                 }
 
             if build_analysis:
@@ -7576,6 +7645,7 @@ def generate_full_build():
             ) if deal else None,
             "project_id": project.id,
             "lot_count": lot_count,
+            "number_of_floors": number_of_floors,
             "development_type": development_type,
             "site_plan_result": {
                 "image_url": site_plan_primary_url,
@@ -8017,6 +8087,12 @@ def generate_build_studio_upload():
         location = (request.form.get("location") or "").strip()
         notes = (request.form.get("notes") or "").strip()
         style = (request.form.get("style") or "modern_farmhouse").strip()
+        number_of_floors = _normalize_int(
+            request.form.get("number_of_floors")
+            or request.form.get("floor_count")
+            or request.form.get("stories")
+            or request.form.get("number_of_stories")
+        )
 
         save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
 
@@ -8044,8 +8120,10 @@ def generate_build_studio_upload():
         # -----------------------------
         # ENGINE PAYLOAD
         # -----------------------------
+        image_base64 = base64.b64encode(raw).decode("utf-8")
         payload = {
-            "mode": "exterior",
+            "mode": "exterior_front",
+            "exterior_view": "front",
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
@@ -8053,18 +8131,22 @@ def generate_build_studio_upload():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": notes,
+            "prompt_notes": notes + " Preserve the supplied exterior reference house massing, roofline, window rhythm, floor count, entry or garage placement, overall proportions, and camera relationship.",
             "special_features": notes,
-
-            # ALWAYS use uploaded image for exterior
-            "image_base64": base64.b64encode(raw).decode("utf-8"),
+            "stories": number_of_floors,
+            "number_of_floors": number_of_floors,
+            "floor_count": number_of_floors,
+            "image_base64": image_base64,
+            "exterior_image_base64": image_base64,
             "image_url": "",
+            "preserve_existing_exterior": True,
+            "preserve_structure": True,
 
             "width": 640,
             "height": 640,
             "steps": 22,
-            "guidance": 7.5,
-            "strength": 0.65,  # slight tweak from 0.68
+            "guidance": 7.0,
+            "strength": 0.34,
             "count": 1,
         }
 
@@ -8125,6 +8207,8 @@ def generate_build_studio_upload():
                     "location": location,
                     "notes": notes,
                     "style": style,
+                    "stories": number_of_floors,
+                    "number_of_floors": number_of_floors,
                     "image_url": build_urls[0],
                     "images": build_urls,
                     "meta": meta,
