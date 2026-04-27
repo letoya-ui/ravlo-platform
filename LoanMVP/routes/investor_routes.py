@@ -144,11 +144,7 @@ from LoanMVP.services.property_tool import (
 from LoanMVP.services.property_service import build_property_card, _build_property_tool_result
 from LoanMVP.services.notification_service import notify_team_on_conversion
 from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
-from LoanMVP.services.prompt_builder import build_blueprint_prompt
-from LoanMVP.services.investor.investor_prompt_helpers import (
-    build_exterior_concept_prompt,
-    build_rehab_concept_prompt,
-)
+from LoanMVP.services.prompt_builder import build_blueprint_prompt  # noqa: F401
 from LoanMVP.services.concept_build_service import run_concept_build
 from LoanMVP.services.renovation_engine_client import (
     generate_concept,
@@ -6316,11 +6312,6 @@ def generate_build_exterior():
         conditioning_url = reference_image_url if has_real_exterior_reference else fallback_blueprint_url
 
         # ---------------- PROMPT ----------------
-        exterior_prompt = build_exterior_concept_prompt(
-            property_type=property_type,
-            style=style,
-            description=description,
-        )
         exterior_prompt_notes = (
             notes
             + " Preserve the supplied exterior reference house massing, roofline, window rhythm, entry or garage placement, overall proportions, and camera relationship. Apply the requested style without replacing it with a different house."
@@ -6338,7 +6329,6 @@ def generate_build_exterior():
             "blueprint_style": blueprint_style,
             "description": description,
             "build_description": description,
-            "prompt": exterior_prompt,
             "lot_size": lot_size,
             "zoning": zoning,
             "prompt_notes": exterior_prompt_notes,
@@ -6819,8 +6809,6 @@ def generate_build_blueprint():
         style_preset = _normalize_style_preset(requested_style_preset)
         render_batch_id = uuid.uuid4().hex
 
-        style_prompt = build_blueprint_prompt("room", style_preset, renovation_level)
-
         payload = {
             "mode": "blueprint",
             "project_name": project_name,
@@ -6837,7 +6825,6 @@ def generate_build_blueprint():
             "stories": number_of_floors,
             "number_of_floors": number_of_floors,
             "floor_count": number_of_floors,
-            "prompt": style_prompt,
             "count": 1,
             "steps": 20,
             "strength": 0.28,
@@ -7449,7 +7436,6 @@ def generate_full_build():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt": exterior_back_prompt,
             "prompt_notes": (
                 "Rear / backyard view of the home. Show the back of the building with patio, deck, or outdoor living space. "
                 + "Preserve the supplied reference house massing, roofline, floor count, overall proportions, and camera relationship when a reference photo is available. "
@@ -9561,13 +9547,6 @@ def design_studio_generate():
             or "residential property"
         )
         unique_seed = random.randint(1, 2_147_483_647)
-        rehab_prompt = build_rehab_concept_prompt(
-            room_type=room_type,
-            style_preset=preset,
-            rehab_level=rehab_level,
-            property_type=property_type,
-            notes=notes,
-        )
 
         payload = {
             "preset": preset,
@@ -9579,14 +9558,13 @@ def design_studio_generate():
             "design_style": preset,
             "desired_updates": notes,
             "prompt_notes": notes,
-            "prompt": rehab_prompt,
             "keep_layout": True,
             "preserve_structure": True,
             "image_base64": image_base64,
             "image_url": "",
             "count": 1,
             "steps": 32,
-            "guidance": 7.5,
+            "guidance": 8.5,
             "strength": strength,
             "width": 1024,
             "height": 1024,
