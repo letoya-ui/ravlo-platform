@@ -58,11 +58,15 @@ def run_build_concept(payload):
         "style": payload.get("style", "modern_farmhouse"),
         "blueprint_style": payload.get("blueprint_style", "technical_blueprint"),
         "description": payload.get("description", ""),
-        "build_description": payload.get("description", ""),
+        "build_description": payload.get("build_description", payload.get("description", "")),
         "lot_size": payload.get("lot_size", ""),
         "zoning": payload.get("zoning", ""),
         "location": payload.get("location", ""),
-        "prompt_notes": payload.get("notes", ""),
+        "prompt_notes": payload.get("prompt_notes", payload.get("notes", "")),
+        "special_features": payload.get("special_features", ""),
+        "exterior_view": payload.get("exterior_view"),
+        "preserve_existing_exterior": payload.get("preserve_existing_exterior"),
+        "preserve_structure": payload.get("preserve_structure"),
         "count": 1,
         "steps": payload.get("steps", 20),
         "guidance": payload.get("guidance", 7.5),
@@ -78,9 +82,23 @@ def run_build_concept(payload):
         "blueprint_image_url",
         "site_image_base64",
         "site_image_url",
+        "reference_image_base64",
+        "reference_image_url",
+        "exterior_image_base64",
+        "exterior_image_url",
+        "front_exterior_image_base64",
+        "front_exterior_image_url",
+        "back_exterior_image_base64",
+        "back_exterior_image_url",
+        "rear_exterior_image_base64",
+        "rear_exterior_image_url",
     ):
         if payload.get(source_key):
             engine_payload[source_key] = payload[source_key]
+
+    for list_key in ("outputs", "output_modes"):
+        if payload.get(list_key):
+            engine_payload[list_key] = payload[list_key]
 
     # Interior-specific fields
     if payload.get("room_type"):

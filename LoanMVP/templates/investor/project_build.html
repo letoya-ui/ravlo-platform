@@ -32,6 +32,7 @@
         <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
         <input type="hidden" name="project_id" value="{{ project.id if project else '' }}">
         <input type="hidden" name="save_to_deal" value="true">
+        <input type="hidden" name="include_site_plan" value="false">
 
         <div class="form-grid two">
           <div class="field">
@@ -106,9 +107,9 @@
             <input id="blueprint_url" name="blueprint_url" value="{{ blueprint_result.get('blueprint_url') or blueprint_result.get('image_url') or (project.blueprint_url if project else '') }}" placeholder="Optional saved blueprint URL">
           </div>
           <div class="field">
-            <label for="land_image">Land / Site Image</label>
+            <label for="land_image">Exterior Reference</label>
             <input type="file" id="land_image" name="land_image" accept="image/*,.png,.jpg,.jpeg,.webp">
-            <input id="reference_image_url" name="reference_image_url" value="{{ exterior_result.get('build_reference_image') or exterior_result.get('image_url') or '' }}" placeholder="Optional site image URL">
+            <input id="reference_image_url" name="reference_image_url" value="{{ exterior_result.get('build_reference_image') or '' }}" placeholder="Optional exterior reference URL">
           </div>
         </div>
 
@@ -144,7 +145,7 @@
       <div class="result-meta compact">
         <div><span>Lots</span><strong id="summaryLots">{{ lot_count or '1' }}</strong></div>
         <div><span>Blueprint</span><strong id="summaryBlueprint">{{ 'Ready' if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) else 'Waiting' }}</strong></div>
-        <div><span>Site Plan</span><strong id="summarySitePlan">{{ 'Ready' if site_plan_result and site_plan_result.get('image_url') else 'Waiting' }}</strong></div>
+        <div><span>Site Plan</span><strong id="summarySitePlan">{{ 'Ready' if site_plan_result and site_plan_result.get('image_url') else ('Skipped' if site_plan_result and site_plan_result.get('skipped') else 'Waiting') }}</strong></div>
         <div><span>Exterior</span><strong id="summaryExterior">{{ 'Ready' if exterior_result and exterior_result.get('image_url') else 'Waiting' }}</strong></div>
       </div>
       {% if build_analysis %}
@@ -158,8 +159,8 @@
 
   <section class="result-stack">
     <article class="ravlo-card pad">
-      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Site Development Plan</h2></div><strong id="sitePlanStatus">{{ 'Generated' if site_plan_result and site_plan_result.get('image_url') else 'Waiting' }}</strong></div>
-      <div class="result-media" id="sitePlanMedia">{% if site_plan_result and site_plan_result.get('image_url') %}<img src="{{ site_plan_result.get('image_url') }}" alt="Site plan">{% else %}<div class="empty-state-inline">Site development plan will appear here.</div>{% endif %}</div>
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Site Development Plan</h2></div><strong id="sitePlanStatus">{{ 'Generated' if site_plan_result and site_plan_result.get('image_url') else ('Skipped' if site_plan_result and site_plan_result.get('skipped') else 'Waiting') }}</strong></div>
+      <div class="result-media" id="sitePlanMedia">{% if site_plan_result and site_plan_result.get('image_url') %}<img src="{{ site_plan_result.get('image_url') }}" alt="Site plan">{% elif site_plan_result and site_plan_result.get('skipped') %}<div class="empty-state-inline">Site plan skipped for this package.</div>{% else %}<div class="empty-state-inline">Site development plan will appear here.</div>{% endif %}</div>
     </article>
 
     <article class="ravlo-card pad">
@@ -177,10 +178,10 @@
     <div class="loading-card">
       <div class="loader-ring"></div>
       <h3 id="buildLoadingTitle">Generating Build Studio Package...</h3>
-      <p id="buildLoadingMessage">Ravlo is building the blueprint, site plan, and exterior package now.</p>
+      <p id="buildLoadingMessage">Ravlo is building the blueprint and exterior package now.</p>
       <div class="loading-progress-list">
         <div class="loading-step" id="buildLoadingStep1">Preparing project inputs...</div>
-        <div class="loading-step" id="buildLoadingStep2">Generating blueprint and site plan...</div>
+        <div class="loading-step" id="buildLoadingStep2">Generating blueprint and exterior concept...</div>
         <div class="loading-step" id="buildLoadingStep3">Saving exterior package to workspace...</div>
       </div>
     </div>
@@ -265,15 +266,17 @@
       const data = await response.json();
       if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Build Studio generation failed.');
 
+      const sitePlanReady = Boolean(data.site_plan_result?.image_url);
+      const sitePlanSkipped = Boolean(data.site_plan_result?.skipped);
       summaryLots.textContent = data.lot_count || lotCountInput?.value || '1';
       document.getElementById('summaryBlueprint').textContent = data.blueprint_result?.image_url ? 'Ready' : 'Waiting';
-      document.getElementById('summarySitePlan').textContent = data.site_plan_result?.image_url ? 'Ready' : 'Waiting';
+      document.getElementById('summarySitePlan').textContent = sitePlanReady ? 'Ready' : (sitePlanSkipped ? 'Skipped' : 'Waiting');
       document.getElementById('summaryExterior').textContent = data.exterior_result?.image_url ? 'Ready' : 'Waiting';
       document.getElementById('blueprintStatus').textContent = data.blueprint_result?.image_url ? 'Generated' : 'Waiting';
-      document.getElementById('sitePlanStatus').textContent = data.site_plan_result?.image_url ? 'Generated' : 'Waiting';
+      document.getElementById('sitePlanStatus').textContent = sitePlanReady ? 'Generated' : (sitePlanSkipped ? 'Skipped' : 'Waiting');
       document.getElementById('exteriorStatus').textContent = data.exterior_result?.image_url ? 'Generated' : 'Waiting';
       renderMedia('blueprintMedia', data.blueprint_result?.image_url, 'Blueprint', 'Blueprint output will appear here.');
-      renderMedia('sitePlanMedia', data.site_plan_result?.image_url, 'Site plan', 'Site development plan will appear here.');
+      renderMedia('sitePlanMedia', data.site_plan_result?.image_url, 'Site plan', sitePlanSkipped ? 'Site plan skipped for this package.' : 'Site development plan will appear here.');
       renderMedia('exteriorMedia', data.exterior_result?.image_url, 'Exterior concept', 'Exterior concept will appear here.');
       if (data.project_id) {
         const projectField = form.querySelector('input[name="project_id"]');

@@ -6050,21 +6050,31 @@ def generate_build_exterior():
             reference_image_url = _upload_before_image(raw)
 
         # ---------------- FALLBACKS ----------------
-        # Prefer blueprint as the primary architectural reference for
-        # exterior generation.  Fall back to previous exterior render,
-        # then site plan, then project URLs.
+        fallback_blueprint_url = ""
         if not image_base64 and not reference_image_url and deal:
             results = deal.results_json or {}
             build_project = results.get("build_project", {}) or {}
             blueprint = build_project.get("blueprint", {}) or {}
             exterior = build_project.get("exterior", {}) or {}
             site_plan = build_project.get("site_plan", {}) or {}
+            generated_urls = {
+                (exterior.get("image_url") or "").strip(),
+                (blueprint.get("image_url") or "").strip(),
+                (blueprint.get("blueprint_url") or "").strip(),
+                (site_plan.get("image_url") or "").strip(),
+                (site_plan.get("site_plan_url") or "").strip(),
+            }
+            candidate_reference = (
+                exterior.get("build_reference_image")
+                or exterior.get("reference_image_url")
+                or ""
+            ).strip()
+            if candidate_reference and candidate_reference not in generated_urls:
+                reference_image_url = candidate_reference
 
-            reference_image_url = (
+            fallback_blueprint_url = (
                 blueprint.get("image_url")
                 or blueprint.get("blueprint_url")
-                or exterior.get("image_url")
-                or exterior.get("build_reference_image")
                 or site_plan.get("image_url")
                 or ""
             ).strip()
@@ -6076,12 +6086,14 @@ def generate_build_exterior():
             ).first()
 
             if project:
-                reference_image_url = (
+                fallback_blueprint_url = (
                     getattr(project, "blueprint_url", "") or ""
                 ).strip()
 
         # ---------------- CONDITIONING ----------------
         use_conditioning = True
+        has_real_exterior_reference = bool(image_base64 or reference_image_url)
+        conditioning_url = reference_image_url if has_real_exterior_reference else fallback_blueprint_url
 
         # ---------------- PROMPT ----------------
         exterior_prompt = build_exterior_concept_prompt(
@@ -6089,10 +6101,17 @@ def generate_build_exterior():
             style=style,
             description=description,
         )
+        exterior_prompt_notes = (
+            notes
+            + " Preserve the supplied exterior reference house massing, roofline, window rhythm, entry or garage placement, overall proportions, and camera relationship. Apply the requested style without replacing it with a different house."
+            if has_real_exterior_reference
+            else notes
+        )
 
         # ---------------- PAYLOAD ----------------
         payload = {
-            "mode": "exterior",
+            "mode": "exterior_front",
+            "exterior_view": "front",
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
@@ -6102,8 +6121,10 @@ def generate_build_exterior():
             "prompt": exterior_prompt,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": notes,
+            "prompt_notes": exterior_prompt_notes,
             "special_features": notes,
+            "preserve_existing_exterior": has_real_exterior_reference,
+            "preserve_structure": has_real_exterior_reference,
             "count": 1,
             "steps": 22,
             "guidance": 7.5,
@@ -6112,13 +6133,17 @@ def generate_build_exterior():
         }
 
         # 🔥 ONLY CONDITION WHEN VALID
-        if use_conditioning and (image_base64 or reference_image_url):
-            payload["strength"] = 0.45
+        if use_conditioning and (image_base64 or conditioning_url):
+            payload["strength"] = 0.34 if has_real_exterior_reference else 0.45
 
             if image_base64:
                 payload["image_base64"] = image_base64
+                payload["exterior_image_base64"] = image_base64
             else:
-                payload["image_url"] = reference_image_url
+                payload["image_url"] = conditioning_url
+                if has_real_exterior_reference:
+                    payload["exterior_image_url"] = reference_image_url
+                    payload["reference_image_url"] = reference_image_url
 
         current_app.logger.warning(f"EXTERIOR FINAL PAYLOAD: {payload}")
 
@@ -6160,11 +6185,14 @@ def generate_build_exterior():
                 "job_id": result.get("job_id"),
 
                 # 🔥 ALWAYS USE GENERATED IMAGE
-                "build_reference_image": build_urls[0],
+                "build_reference_image": reference_image_url,
+                "reference_source": "user_reference" if has_real_exterior_reference else "blueprint_fallback",
+                "preserve_existing_exterior": has_real_exterior_reference,
             }
 
             results["build_project"] = build_project
-            results["build_reference_image"] = build_urls[0]
+            if reference_image_url:
+                results["build_reference_image"] = reference_image_url
 
             _set_deal_results(deal, results)
 
@@ -6759,6 +6787,7 @@ def generate_full_build():
         deal_id = _normalize_int(data.get("deal_id"))
         project_id = _normalize_int(data.get("project_id"))
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
+        include_site_plan = str(data.get("include_site_plan") or "").lower() in ("1", "true", "yes", "on")
 
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
@@ -6905,18 +6934,22 @@ def generate_full_build():
             results = deal.results_json or {}
             build_project = results.get("build_project", {}) or {}
             saved_exterior = build_project.get("exterior", {}) or {}
-            reference_image_url = (
-                saved_exterior.get("image_url")
-                or saved_exterior.get("build_reference_image")
+            saved_blueprint = build_project.get("blueprint", {}) or {}
+            saved_site_plan = build_project.get("site_plan", {}) or {}
+            generated_urls = {
+                (saved_exterior.get("image_url") or "").strip(),
+                (saved_blueprint.get("image_url") or "").strip(),
+                (saved_blueprint.get("blueprint_url") or "").strip(),
+                (saved_site_plan.get("image_url") or "").strip(),
+                (saved_site_plan.get("site_plan_url") or "").strip(),
+            }
+            candidate_reference = (
+                saved_exterior.get("build_reference_image")
+                or saved_exterior.get("reference_image_url")
                 or ""
             ).strip()
-
-        if not exterior_image_base64 and not reference_image_url and project:
-            reference_image_url = (
-                (project.concept_render_url or "").strip()
-                or (project.site_plan_url or "").strip()
-                or ""
-            )
+            if candidate_reference and candidate_reference not in generated_urls:
+                reference_image_url = candidate_reference
 
         # --------------------------------------------------
         # 1. GENERATE BLUEPRINT
@@ -6982,79 +7015,106 @@ def generate_full_build():
         blueprint_job_id = blueprint_json.get("job_id")
 
         # --------------------------------------------------
-        # 2. GENERATE SITE PLAN
+        # 2. GENERATE SITE PLAN (optional)
         # --------------------------------------------------
-        site_plan_payload = {
-            "mode": "siteplan",
-            "project_name": project_name,
-            "property_type": property_type,
-            "style": style,
-            "blueprint_style": blueprint_style,
-            "description": description,
-            "build_description": description,
-            "lot_size": lot_size,
-            "zoning": zoning,
-            "prompt_notes": site_notes,
-            "special_features": (
-                f"{lot_count} buildable lots, internal drives, setbacks, parking, and site circulation"
-                if lot_count and lot_count > 1
-                else f"{notes}, access, setbacks, and site circulation".strip(", ")
-            ),
-            "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+        site_plan_urls = []
+        site_plan_primary_b64 = ""
+        site_plan_primary_url = ""
+        site_plan_meta = {"skipped": True, "reason": "site_plan_disabled"}
+        site_plan_seed = None
+        site_plan_job_id = None
 
-            # Engine expects image_base64 / image_url for the init image.
-            "image_base64": blueprint_image_base64 or blueprint_primary_b64,
-            "image_url": "" if (blueprint_image_base64 or blueprint_primary_b64) else (blueprint_url or blueprint_primary_url),
+        if include_site_plan:
+            try:
+                site_plan_payload = {
+                    "mode": "siteplan",
+                    "project_name": project_name,
+                    "property_type": property_type,
+                    "style": style,
+                    "blueprint_style": blueprint_style,
+                    "description": description,
+                    "build_description": description,
+                    "lot_size": lot_size,
+                    "zoning": zoning,
+                    "prompt_notes": site_notes,
+                    "special_features": (
+                        f"{lot_count} buildable lots, internal drives, setbacks, parking, and site circulation"
+                        if lot_count and lot_count > 1
+                        else f"{notes}, access, setbacks, and site circulation".strip(", ")
+                    ),
+                    "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+                    "image_base64": blueprint_image_base64 or blueprint_primary_b64,
+                    "image_url": "" if (blueprint_image_base64 or blueprint_primary_b64) else (blueprint_url or blueprint_primary_url),
+                    "width": 768,
+                    "height": 768,
+                    "steps": 24,
+                    "guidance": 6.6,
+                    "strength": 0.28,
+                    "count": 1,
+                }
 
-            "width": 768,
-            "height": 768,
-            "steps": 24,
-            "guidance": 6.6,
-            "strength": 0.28,
-            "count": 1,
-        }
+                current_app.logger.warning(f"PROJECT BUILD SITEPLAN PAYLOAD: {site_plan_payload}")
 
-        current_app.logger.warning(f"PROJECT BUILD SITEPLAN PAYLOAD: {site_plan_payload}")
+                site_plan_json = _post_renovation_engine_json(
+                    "/v1/build_concept",
+                    site_plan_payload,
+                    timeout=FULL_BUILD_BLUEPRINT_TIMEOUT,
+                )
 
-        site_plan_json = _post_renovation_engine_json(
-            "/v1/build_concept",
-            site_plan_payload,
-            timeout=FULL_BUILD_BLUEPRINT_TIMEOUT,
-        )
+                site_plan_images_b64 = site_plan_json.get("images_base64") or []
+                if not site_plan_images_b64:
+                    raise RuntimeError("Site plan step returned no images.")
 
-        site_plan_images_b64 = site_plan_json.get("images_base64") or []
-        if not site_plan_images_b64:
-            return jsonify({
-                "status": "error",
-                "message": "Site plan step returned no images."
-            }), 502
+                site_plan_batch_id = uuid.uuid4().hex
+                site_plan_urls = _upload_after_images_from_b64(site_plan_images_b64, site_plan_batch_id)
 
-        site_plan_batch_id = uuid.uuid4().hex
-        site_plan_urls = _upload_after_images_from_b64(site_plan_images_b64, site_plan_batch_id)
+                if not site_plan_urls:
+                    raise RuntimeError("Site plan generated but uploads failed.")
 
-        if not site_plan_urls:
-            return jsonify({
-                "status": "error",
-                "message": "Site plan generated but uploads failed."
-            }), 500
-
-        site_plan_primary_b64 = site_plan_images_b64[0]
-        site_plan_primary_url = site_plan_urls[0]
-        site_plan_meta = site_plan_json.get("meta") or {}
-        site_plan_seed = site_plan_json.get("seed")
-        site_plan_job_id = site_plan_json.get("job_id")
+                site_plan_primary_b64 = site_plan_images_b64[0]
+                site_plan_primary_url = site_plan_urls[0]
+                site_plan_meta = site_plan_json.get("meta") or {}
+                site_plan_seed = site_plan_json.get("seed")
+                site_plan_job_id = site_plan_json.get("job_id")
+            except Exception:
+                current_app.logger.exception("Project build site plan skipped after generation failure")
+                site_plan_urls = []
+                site_plan_primary_b64 = ""
+                site_plan_primary_url = ""
+                site_plan_meta = {"skipped": True, "reason": "site_plan_generation_failed"}
+                site_plan_seed = None
+                site_plan_job_id = None
 
         # --------------------------------------------------
         # 3. GENERATE EXTERIOR
-        # Blueprint = architecture/massing (primary reference).
-        # Site image = land context only; site plan = fallback.
+        # Real exterior reference = primary source. Generated plans are only
+        # fallback inputs when the user has not supplied/select a property photo.
         # --------------------------------------------------
-        # Prefer: user-uploaded land image > blueprint > site plan
-        exterior_ref_b64 = exterior_image_base64 or blueprint_primary_b64 or site_plan_primary_b64
-        exterior_ref_url = "" if exterior_ref_b64 else (reference_image_url or blueprint_primary_url or site_plan_primary_url or "")
+        has_real_exterior_reference = bool(exterior_image_base64 or reference_image_url)
+        exterior_ref_b64 = exterior_image_base64
+        exterior_ref_url = "" if exterior_ref_b64 else reference_image_url
+        exterior_source_kind = "user_reference" if has_real_exterior_reference else "blueprint_fallback"
+
+        if not exterior_ref_b64 and not exterior_ref_url:
+            exterior_ref_b64 = blueprint_primary_b64
+            exterior_ref_url = "" if exterior_ref_b64 else blueprint_primary_url
+
+        if has_real_exterior_reference:
+            exterior_prompt_notes = (
+                site_notes
+                + " Preserve the supplied exterior reference house massing, roofline, window rhythm, entry or garage placement, "
+                + "overall proportions, and camera relationship. Apply the requested style as a renovation concept without replacing it with a different house."
+            )
+        else:
+            exterior_prompt_notes = (
+                site_notes
+                + " Use the blueprint as the architectural layout, footprint, massing, roofline, and structure constraint. "
+                + "Generate a realistic developer-grade exterior rendering that matches the blueprint."
+            )
 
         exterior_payload = {
-            "mode": "exterior",
+            "mode": "exterior_front",
+            "exterior_view": "front",
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
@@ -7063,28 +7123,24 @@ def generate_full_build():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": (
-                site_notes
-                + " Use the blueprint as the architectural layout, footprint, massing, roofline, and structure constraint. "
-                + "Use the site plan or site image only for land context, lot placement, driveway, roads, setbacks, and surroundings. "
-                + "Generate a realistic developer-grade exterior rendering that matches the blueprint."
-            ),
+            "prompt_notes": exterior_prompt_notes,
             "special_features": (
                 f"{lot_count} lots, cohesive streetscape, developer-ready massing"
                 if lot_count and lot_count > 1
                 else notes
             ),
-
-            # Engine expects image_base64 / image_url for the init image.
-            # Blueprint is the primary architectural reference for exterior.
             "image_base64": exterior_ref_b64,
             "image_url": exterior_ref_url,
-
+            "exterior_image_base64": exterior_image_base64,
+            "exterior_image_url": reference_image_url if not exterior_image_base64 else "",
+            "reference_image_url": reference_image_url if not exterior_image_base64 else "",
+            "preserve_existing_exterior": has_real_exterior_reference,
+            "preserve_structure": has_real_exterior_reference,
             "width": 1024,
             "height": 1024,
             "steps": 28,
             "guidance": 7.0,
-            "strength": 0.48,
+            "strength": 0.34 if has_real_exterior_reference else 0.48,
             "count": 1,
         }
 
@@ -7190,6 +7246,7 @@ def generate_full_build():
                 "meta": site_plan_meta,
                 "seed": site_plan_seed,
                 "job_id": site_plan_job_id,
+                "skipped": not bool(site_plan_primary_url),
             }
 
             build_project["exterior"] = {
@@ -7207,7 +7264,9 @@ def generate_full_build():
                 "meta": exterior_meta,
                 "seed": exterior_seed,
                 "job_id": exterior_job_id,
-                "build_reference_image": reference_image_url or blueprint_primary_url or site_plan_primary_url,
+                "build_reference_image": reference_image_url,
+                "reference_source": exterior_source_kind,
+                "preserve_existing_exterior": has_real_exterior_reference,
                 "blueprint_reference_image": blueprint_primary_url,
                 "site_plan_reference_image": site_plan_primary_url,
             }
@@ -7216,7 +7275,8 @@ def generate_full_build():
                 results["build_analysis"] = build_analysis
 
             results["build_project"] = build_project
-            results["build_reference_image"] = blueprint_primary_url
+            if reference_image_url:
+                results["build_reference_image"] = reference_image_url
             _set_deal_results(deal, results)
 
         if deal is not None:
@@ -7246,6 +7306,7 @@ def generate_full_build():
                 "meta": site_plan_meta,
                 "seed": site_plan_seed,
                 "job_id": site_plan_job_id,
+                "skipped": not bool(site_plan_primary_url),
             },
             "blueprint_result": {
                 "image_url": blueprint_primary_url,
@@ -7260,6 +7321,9 @@ def generate_full_build():
                 "meta": exterior_meta,
                 "seed": exterior_seed,
                 "job_id": exterior_job_id,
+                "build_reference_image": reference_image_url,
+                "reference_source": exterior_source_kind,
+                "preserve_existing_exterior": has_real_exterior_reference,
             },
             "build_analysis": build_analysis,
             "deal_id": deal.id if deal else None,
