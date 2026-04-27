@@ -116,6 +116,12 @@
       <span>Follow-Ups</span>
     </a>
 
+    <a href="{{ url_for('vip.listing_presentations') }}"
+       class="ravlo-nav-link {% if ep in ['vip.listing_presentations', 'vip.listing_presentation_new', 'vip.listing_presentation_edit'] %}active{% endif %}">
+      <i class="lucide lucide-presentation"></i>
+      <span>Listing Presentations</span>
+    </a>
+
     <a href="{{ url_for('elena.template_studio') }}"
        class="ravlo-nav-link {% if ep in ['elena.template_studio', 'elena.template_studio_preview', 'elena.template_studio_generate', 'elena.template_studio_generate_and_save'] %}active{% endif %}">
       <i class="lucide lucide-wand-sparkles"></i>

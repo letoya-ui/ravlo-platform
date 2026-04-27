@@ -606,23 +606,14 @@ def realtor_listing_sync_webhook(profile_id):
     })
 
 
-@vip_bp.get("/realtor")
-@role_required("partner_group", "admin")
-def realtor_dashboard():
-    gate = require_vip_access()
-    if gate is not None:
-        return gate
-
-    profile           = get_or_create_vip_profile()
-    partner           = getattr(current_user, "partner_profile", None)
+def _realtor_context(profile, partner):
+    """Build the full realtor dashboard context dict."""
     now               = datetime.utcnow()
     week_ago          = now - timedelta(days=7)
     available_markets = get_user_markets(profile)
     current_market    = _get_vip_market(profile)
     multi_market      = len(available_markets) >= 2
 
-    # When the profile has exactly one market, auto-scope everything to it so
-    # the dashboard isn't cluttered with a switcher the user doesn't need.
     effective_market = current_market
     if len(available_markets) == 1:
         effective_market = available_markets[0]
@@ -649,9 +640,6 @@ def realtor_dashboard():
         "total_clients":   total_clients,
         "new_leads":       new_leads,
         "active_listings": active_listings,
-        # Combined total across every market this realtor operates in. Used
-        # on the "Active Listings" stat card when viewing All Markets so the
-        # number isn't artificially filtered.
         "total_listings":  ElenaListing.query.filter_by(status="active").count(),
         "followups_due":   followups_due,
     }
@@ -709,9 +697,6 @@ def realtor_dashboard():
     )
     recent_partner_requests, partner_request_stats = _partner_request_snapshot(partner)
 
-    # Per-market breakdowns for the dual-market view. Only populated when
-    # the realtor has 2+ markets. Empty dicts otherwise — the template uses
-    # `multi_market` to decide whether to render these sections.
     market_stats       = {}
     listings_by_market = {}
     flyers_by_market   = {}
@@ -726,9 +711,6 @@ def realtor_dashboard():
                     .filter_by(status="active", market=market)
                     .count()
                 ),
-                # Clients aren't market-scoped today (no column on
-                # ElenaClient), so this mirrors Frank's prior behavior of
-                # showing the combined client total per market card.
                 "clients": total_clients,
             }
 
@@ -750,7 +732,6 @@ def realtor_dashboard():
         all_income   = VIPIncome.query.filter_by(vip_profile_id=profile.id).all()
         all_expenses = VIPExpense.query.filter_by(vip_profile_id=profile.id).all()
 
-        # NULL status is treated as "received" to match the finances page.
         def _is_received(i):
             return (i.status or "received") == "received"
         def _is_pending(i):
@@ -783,37 +764,53 @@ def realtor_dashboard():
                 "net":      m_received - m_expenses,
             }
 
+    return {
+        "summary":               summary,
+        "pipeline_groups":       pipeline_groups,
+        "pipeline_stages":       PIPELINE_STAGES,
+        "recent_interactions":   recent_interactions,
+        "listings":              listings,
+        "listing_statuses":      LISTING_STATUSES,
+        "listing_status_filter": status_filter,
+        "recent_flyers":         recent_flyers,
+        "copilot_suggestions":   copilot_suggestions,
+        "recent_partner_requests": recent_partner_requests,
+        "partner_request_stats": partner_request_stats,
+        "current_market":        effective_market,
+        "available_markets":     available_markets,
+        "multi_market":          multi_market,
+        "market_stats":          market_stats,
+        "listings_by_market":    listings_by_market,
+        "flyers_by_market":      flyers_by_market,
+        "finances_combined":     finances_combined,
+        "finances_by_market":    finances_by_market,
+        "listing_sync_url":      _listing_sync_url(profile),
+        "listing_sync_token":    _listing_sync_token(profile),
+        "listing_sync_prompt":   _listing_sync_prompt(profile),
+        "template_types":        [t.value for t in TemplateType],
+    }
+
+
+@vip_bp.get("/realtor")
+@role_required("partner_group", "admin")
+def realtor_dashboard():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+    ctx = _realtor_context(profile, partner)
+
     return render_template(
         "elena/dashboard.html",
-        vip_profile           = profile,
-        modules               = get_enabled_modules(profile),
-        header_name           = get_dashboard_name(profile),
-        summary               = summary,
-        pipeline_groups       = pipeline_groups,
-        pipeline_stages       = PIPELINE_STAGES,
-        recent_interactions   = recent_interactions,
-        listings              = listings,
-        listing_statuses      = LISTING_STATUSES,
-        listing_status_filter = status_filter,
-        recent_flyers         = recent_flyers,
-        copilot_suggestions   = copilot_suggestions,
-        recent_partner_requests = recent_partner_requests,
-        partner_request_stats = partner_request_stats,
-        current_market        = effective_market,
-        available_markets     = available_markets,
-        multi_market          = multi_market,
-        market_stats          = market_stats,
-        listings_by_market    = listings_by_market,
-        flyers_by_market      = flyers_by_market,
-        finances_combined     = finances_combined,
-        finances_by_market    = finances_by_market,
-        listing_sync_url      = _listing_sync_url(profile),
-        listing_sync_token    = _listing_sync_token(profile),
-        listing_sync_prompt   = _listing_sync_prompt(profile),
-        template_types        = [t.value for t in TemplateType],
-        portal                = "vip",
-        portal_name           = "VIP Workspace",
-        portal_home           = url_for("vip.realtor_dashboard"),
+        vip_profile = profile,
+        modules     = get_enabled_modules(profile),
+        header_name = get_dashboard_name(profile),
+        portal      = "vip",
+        portal_name = "VIP Workspace",
+        portal_home = url_for("vip.realtor_dashboard"),
+        **ctx,
     )
 
 
@@ -1366,7 +1363,7 @@ def insurance_dashboard():
     profile = get_or_create_vip_profile()
     partner = getattr(current_user, "partner_profile", None)
 
-    stats = _insurance_quote_stats(partner)
+    insurance_stats = _insurance_quote_stats(partner)
 
     recent_requests = []
     if partner:
@@ -1377,12 +1374,7 @@ def insurance_dashboard():
             .limit(10).all()
         )
 
-    copilot_suggestions = (
-        VIPAssistantSuggestion.query
-        .filter_by(vip_profile_id=profile.id)
-        .order_by(VIPAssistantSuggestion.created_at.desc())
-        .limit(5).all()
-    )
+    realtor_ctx = _realtor_context(profile, partner)
 
     return render_template(
         "vip/insurance/dashboard.html",
@@ -1391,12 +1383,12 @@ def insurance_dashboard():
         header_name         = get_dashboard_name(profile),
         partner             = partner,
         insurance_lines     = INSURANCE_LINES,
-        stats               = stats,
+        insurance_stats     = insurance_stats,
         recent_requests     = recent_requests,
-        copilot_suggestions = copilot_suggestions,
         portal              = "vip",
         portal_name         = "VIP Insurance",
         portal_home         = url_for("vip.insurance_dashboard"),
+        **realtor_ctx,
     )
 
 
