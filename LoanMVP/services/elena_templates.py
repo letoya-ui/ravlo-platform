@@ -425,4 +425,6 @@ def render_template(template_type: TemplateType, **kwargs) -> str:
     template = TEMPLATES.get(template_type)
     if not template:
         raise ValueError(f"Template not found: {template_type}")
+    kwargs.setdefault("agent_name", "Agent")
+    kwargs.setdefault("agent_company", "")
     return template.format(**kwargs)
