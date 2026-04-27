@@ -377,7 +377,7 @@ def _gate_elena_on_vip_access():
         return None
 
     flash(
-        "The Elena workspace is for realtor partners. "
+        "This workspace is for realtor partners. "
         "Opening your VIP dashboard instead.",
         "info",
     )
@@ -386,8 +386,8 @@ def _gate_elena_on_vip_access():
 @elena_bp.get("/")
 @role_required("partner_group", "admin")
 def dashboard():
-    """Elena's branded dashboard entry point."""
-    return dashboard_legacy()
+    """Redirect to the unified VIP realtor dashboard."""
+    return redirect(url_for("vip.realtor_dashboard"))
 
 
 @elena_bp.get("/legacy-dashboard")
@@ -549,9 +549,10 @@ def dashboard_legacy():
         copilot_suggestions=copilot_suggestions,
         recent_partner_requests=recent_partner_requests,
         partner_request_stats=partner_request_stats,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 @elena_bp.route("/clients/new", methods=["GET", "POST"])
@@ -577,16 +578,17 @@ def client_new():
         db.session.add(client)
         db.session.commit()
         flash(f"Client '{client.name}' added.", "success")
-        return redirect(url_for("elena.dashboard"))
+        return redirect(url_for("vip.realtor_dashboard"))
 
     return render_template(
         "elena/client_form.html",
         client=None,
         pipeline_stages=PIPELINE_STAGES,
         client_roles=CLIENT_ROLES,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 
@@ -655,7 +657,7 @@ def listing_new():
         db.session.commit()
 
         flash(f"Listing at {listing.address} added and flyer created.", "success")
-        return redirect(url_for("elena.dashboard"))
+        return redirect(url_for("vip.realtor_dashboard"))
 
     listing_seed = {
         "mls_number": (request.args.get("mls_number") or "").strip(),
@@ -671,9 +673,10 @@ def listing_new():
         available_markets=_elena_available_markets(),
         current_market=get_current_market(),
         clients=clients,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 
@@ -920,9 +923,10 @@ def template_studio():
         preview=None,
         output=None,
         saved_interaction_id=None,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 
@@ -958,9 +962,10 @@ def template_studio_preview():
         output=None,
         saved_interaction_id=None,
         saved_flyer_id=None,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 @elena_bp.post("/template-studio/generate")
@@ -995,9 +1000,10 @@ def template_studio_generate():
         output=output,
         saved_interaction_id=None,
         saved_flyer_id=None,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 @elena_bp.post("/template-studio/generate_and_save")
@@ -1061,9 +1067,10 @@ def template_studio_generate_and_save():
         output=output,
         saved_interaction_id=saved_interaction_id,
         saved_flyer_id=saved_flyer_id,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 
@@ -1445,7 +1452,7 @@ def switch_market():
     selected_market = (request.form.get("market") or "All Markets").strip()
     set_current_market(selected_market)
 
-    next_url = request.form.get("next") or url_for("elena.dashboard")
+    next_url = request.form.get("next") or url_for("vip.realtor_dashboard")
     return redirect(next_url)
 
 
@@ -1469,9 +1476,10 @@ def copilot():
         suggestions=suggestions,
         current_market=get_current_market(),
         available_markets=_elena_available_markets(),
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 

@@ -6,8 +6,8 @@
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 mb-0">New Interaction</h1>
-    <a href="{{ url_for('elena.dashboard') }}" class="btn btn-outline-secondary">
-      Back to Elena
+    <a href="{{ portal_home|default(url_for('vip.realtor_dashboard')) }}" class="btn btn-outline-secondary">
+      Back to Dashboard
     </a>
   </div>
 
@@ -47,16 +47,16 @@
             id="payload"
             name="payload"
             rows="6"
-            placeholder='{"text": "Hello Elena"}'
+            placeholder='{"text": "Hello"}'
           ></textarea>
           <div class="form-text">
-            For a message, you can use: {"text": "Hello Elena"}
+            For a message, you can use: {"text": "Hello"}
           </div>
         </div>
 
         <div class="d-flex gap-2">
           <button type="submit" class="btn btn-primary">Create Interaction</button>
-          <a href="{{ url_for('elena.dashboard') }}" class="btn btn-light">Cancel</a>
+          <a href="{{ portal_home|default(url_for('vip.realtor_dashboard')) }}" class="btn btn-light">Cancel</a>
         </div>
       </form>
     </div>

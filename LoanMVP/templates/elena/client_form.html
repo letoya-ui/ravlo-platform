@@ -1,8 +1,8 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Elena — Add Client{% endblock %}
+{% block title %}Ravlo • Add Client{% endblock %}
 {% block page_title %}Add Client{% endblock %}
-{% block page_subline %}Capture a contact inside Elena's CRM.{% endblock %}
+{% block page_subline %}Capture a contact inside your CRM.{% endblock %}
 
 {% block content %}
 <div class="partner-dashboard-page">
@@ -10,9 +10,9 @@
     <div class="section-head">
       <div>
         <h3>New Client</h3>
-        <p>Role, pipeline stage, and tags help Elena route follow‑ups automatically.</p>
+        <p>Role, pipeline stage, and tags help route follow‑ups automatically.</p>
       </div>
-      <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost sm">Back to Dashboard</a>
+      <a href="{{ portal_home|default(url_for('vip.realtor_dashboard')) }}" class="ravlo-btn ghost sm">Back to Dashboard</a>
     </div>
 
     <form method="POST" action="{{ url_for('elena.client_new') }}" class="elena-form">
@@ -68,7 +68,7 @@
 
       <div class="elena-form-actions">
         <button type="submit" class="ravlo-btn primary">Save Client</button>
-        <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost">Cancel</a>
+        <a href="{{ portal_home|default(url_for('vip.realtor_dashboard')) }}" class="ravlo-btn ghost">Cancel</a>
       </div>
     </form>
   </article>
