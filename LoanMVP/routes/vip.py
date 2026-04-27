@@ -1461,7 +1461,7 @@ def insurance_generate_quote():
 
     ai = AIAssistant()
     prompt = _build_insurance_quote_prompt(line, client_name, details, partner)
-    quote_text = ai.generate_reply(prompt, "general")
+    quote_text = ai.generate_reply(prompt, "insurance")
 
     return render_template(
         "vip/insurance/quote_result.html",
@@ -1616,7 +1616,7 @@ def insurance_ai_draft_email():
     )
 
     ai = AIAssistant()
-    raw = ai.generate_reply(prompt, "general")
+    raw = ai.generate_reply(prompt, "insurance")
 
     try:
         import re as _re
