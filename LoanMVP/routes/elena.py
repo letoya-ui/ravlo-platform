@@ -156,7 +156,21 @@ def _parse_due_at(raw):
 
 
 def _template_defaults():
+    profile = _elena_profile()
+    partner = getattr(current_user, "partner_profile", None) if current_user else None
+    agent_name = (
+        (profile.display_name if profile else None)
+        or (getattr(current_user, "name", None) if current_user else None)
+        or "Agent"
+    )
+    agent_company = (
+        (profile.business_name if profile else None)
+        or (getattr(partner, "company", None) if partner else None)
+        or ""
+    )
     return {
+        "agent_name": agent_name,
+        "agent_company": agent_company,
         "address": "",
         "city": "",
         "state": "",
