@@ -113,9 +113,13 @@
             <input id="blueprint_url" name="blueprint_url" value="{{ blueprint_result.get('blueprint_url') or blueprint_result.get('image_url') or (project.blueprint_url if project else '') }}" placeholder="Optional saved blueprint URL">
           </div>
           <div class="field">
-            <label for="land_image">Exterior Reference</label>
+            <label for="land_image">Lot / Exterior Photo</label>
             <input type="file" id="land_image" name="land_image" accept="image/*,.png,.jpg,.jpeg,.webp">
-            <input id="reference_image_url" name="reference_image_url" value="{{ exterior_result.get('build_reference_image') or '' }}" placeholder="Optional exterior reference URL">
+            <input id="reference_image_url" name="reference_image_url" value="{{ exterior_result.get('build_reference_image') or exterior_result.get('site_reference_image') or '' }}" placeholder="Optional lot or house reference URL">
+            <label class="check-field">
+              <input type="checkbox" name="preserve_existing_exterior" value="true" {{ 'checked' if exterior_result.get('preserve_existing_exterior') else '' }}>
+              <span>Preserve existing house</span>
+            </label>
           </div>
         </div>
 
@@ -124,7 +128,7 @@
           <label>Saved Listing Photos</label>
           <div class="seed-thumb-row" id="savedSiteGallery">
             {% for photo in property_photo_gallery[:8] %}
-            <button type="button" class="seed-thumb{% if exterior_result.get('build_reference_image') == photo %} is-active{% endif %}" data-site-url="{{ photo }}" aria-label="Use saved site photo {{ loop.index }}" title="Use saved listing photo {{ loop.index }}">
+            <button type="button" class="seed-thumb{% if (exterior_result.get('build_reference_image') or exterior_result.get('site_reference_image')) == photo %} is-active{% endif %}" data-site-url="{{ photo }}" aria-label="Use saved listing photo {{ loop.index }}" title="Use saved listing photo {{ loop.index }}">
               <img src="{{ photo }}" alt="Saved listing photo {{ loop.index }}">
             </button>
             {% endfor %}
@@ -166,28 +170,28 @@
 
   <section class="result-stack">
     <article class="ravlo-card pad">
-      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint — First Floor</h2></div><strong id="blueprintStatus">{{ 'Generated' if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) else 'Waiting' }}</strong></div>
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint - First Floor</h2></div><strong id="blueprintStatus">{{ 'Generated' if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) else 'Waiting' }}</strong></div>
       <div class="result-media" id="blueprintMedia">{% if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) %}<img src="{{ blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') }}" alt="First floor blueprint">{% else %}<div class="empty-state-inline">First floor blueprint will appear here.</div>{% endif %}</div>
     </article>
 
     <article class="ravlo-card pad">
-      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint — Second Floor</h2></div><strong id="floor2Status">{{ 'Generated' if blueprint_floor2_result and blueprint_floor2_result.get('image_url') else ('Skipped' if blueprint_floor2_result and blueprint_floor2_result.get('skipped') else 'Waiting') }}</strong></div>
-      <div class="result-media" id="floor2Media">{% if blueprint_floor2_result and blueprint_floor2_result.get('image_url') %}<img src="{{ blueprint_floor2_result.get('image_url') }}" alt="Second floor blueprint">{% elif blueprint_floor2_result and blueprint_floor2_result.get('skipped') %}<div class="empty-state-inline">Single-story project — no second floor blueprint.</div>{% else %}<div class="empty-state-inline">Second floor blueprint will appear here.</div>{% endif %}</div>
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint - Second Floor</h2></div><strong id="floor2Status">{{ 'Generated' if blueprint_floor2_result and blueprint_floor2_result.get('image_url') else ('Skipped' if blueprint_floor2_result and blueprint_floor2_result.get('skipped') else 'Waiting') }}</strong></div>
+      <div class="result-media" id="floor2Media">{% if blueprint_floor2_result and blueprint_floor2_result.get('image_url') %}<img src="{{ blueprint_floor2_result.get('image_url') }}" alt="Second floor blueprint">{% elif blueprint_floor2_result and blueprint_floor2_result.get('skipped') %}<div class="empty-state-inline">Single-story project - no second floor blueprint.</div>{% else %}<div class="empty-state-inline">Second floor blueprint will appear here.</div>{% endif %}</div>
     </article>
 
     <article class="ravlo-card pad">
-      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Exterior — Front</h2></div><strong id="exteriorStatus">{{ 'Generated' if exterior_result and exterior_result.get('image_url') else 'Waiting' }}</strong></div>
-      <div class="result-media" id="exteriorMedia">{% if exterior_result and exterior_result.get('image_url') %}<img src="{{ exterior_result.get('image_url') }}" alt="Exterior front">{% else %}<div class="empty-state-inline">Front exterior concept will appear here.</div>{% endif %}</div>
-    </article>
-
-    <article class="ravlo-card pad">
-      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint â€” Third Floor</h2></div><strong id="floor3Status">{{ 'Generated' if blueprint_floor3_result and blueprint_floor3_result.get('image_url') else ('Skipped' if blueprint_floor3_result and blueprint_floor3_result.get('skipped') else 'Waiting') }}</strong></div>
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint - Third Floor</h2></div><strong id="floor3Status">{{ 'Generated' if blueprint_floor3_result and blueprint_floor3_result.get('image_url') else ('Skipped' if blueprint_floor3_result and blueprint_floor3_result.get('skipped') else 'Waiting') }}</strong></div>
       <div class="result-media" id="floor3Media">{% if blueprint_floor3_result and blueprint_floor3_result.get('image_url') %}<img src="{{ blueprint_floor3_result.get('image_url') }}" alt="Third floor blueprint">{% elif blueprint_floor3_result and blueprint_floor3_result.get('skipped') %}<div class="empty-state-inline">Projects under three floors - no third floor blueprint.</div>{% else %}<div class="empty-state-inline">Third floor blueprint will appear here.</div>{% endif %}</div>
     </article>
 
     <article class="ravlo-card pad">
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Exterior - Front</h2></div><strong id="exteriorStatus">{{ 'Generated' if exterior_result and exterior_result.get('image_url') else 'Waiting' }}</strong></div>
+      <div class="result-media" id="exteriorMedia">{% if exterior_result and exterior_result.get('image_url') %}<img src="{{ exterior_result.get('image_url') }}" alt="Exterior front">{% else %}<div class="empty-state-inline">Front exterior concept will appear here.</div>{% endif %}</div>
+    </article>
+
+    <article class="ravlo-card pad">
       {% set exterior_back = build_project.get('exterior_back', {}) or {} if build_project is defined else {} %}
-      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Exterior — Back</h2></div><strong id="exteriorBackStatus">{{ 'Generated' if exterior_back and exterior_back.get('image_url') else 'Waiting' }}</strong></div>
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Exterior - Back</h2></div><strong id="exteriorBackStatus">{{ 'Generated' if exterior_back and exterior_back.get('image_url') else 'Waiting' }}</strong></div>
       <div class="result-media" id="exteriorBackMedia">{% if exterior_back and exterior_back.get('image_url') %}<img src="{{ exterior_back.get('image_url') }}" alt="Exterior back">{% else %}<div class="empty-state-inline">Rear exterior concept will appear here.</div>{% endif %}</div>
     </article>
   </section>
@@ -213,6 +217,7 @@
 .form-grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .field{display:grid;gap:8px;margin-bottom:14px}.field.full{grid-column:1/-1}
 .field input,.field select,.field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
+.check-field{display:flex!important;align-items:center;gap:10px;margin-top:2px;color:#dbe6f5;font-weight:700}.check-field input{width:18px!important;height:18px;padding:0!important}
 .result-meta{display:grid;gap:12px}.result-meta div{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
 .result-media{border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.03);min-height:320px;display:flex;align-items:center;justify-content:center;overflow:hidden}.result-media img{width:100%;height:100%;object-fit:cover;display:block}
 .analysis-note{margin-top:16px;padding:16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
@@ -221,7 +226,7 @@
 .seed-thumb{position:relative;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.03);padding:0;overflow:hidden;cursor:pointer;min-height:84px}
 .seed-thumb img{width:100%;height:84px;object-fit:cover;display:block}
 .seed-thumb.is-active{border-color:rgba(122,184,255,.8);box-shadow:0 0 0 1px rgba(122,184,255,.35)}
-.loading-overlay{position:fixed;inset:0;background:rgba(5,8,14,.78);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:1200;padding:24px}
+.loading-overlay{position:fixed;inset:0;background:rgba(5,8,14,.78);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:9999;padding:24px}
 .loading-overlay.hidden{display:none}
 .loading-card{width:min(100%,480px);padding:28px;border-radius:24px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(180deg,rgba(16,22,34,.98),rgba(10,15,24,.96));box-shadow:0 26px 70px rgba(0,0,0,.35);text-align:center}
 .loading-card h3{margin:14px 0 10px;color:#fff;font-size:1.4rem}
@@ -241,8 +246,13 @@
   const summaryLots = document.getElementById('summaryLots');
   const referenceImageField = document.getElementById('reference_image_url');
   const buildLoadingOverlay = document.getElementById('buildLoadingOverlay');
+  const buildLoadingMessage = document.getElementById('buildLoadingMessage');
 
   function startBuildLoading() {
+    const floors = document.getElementById('number_of_floors')?.value || '1';
+    if (buildLoadingMessage) {
+      buildLoadingMessage.textContent = `Ravlo is generating ${floors} floor plan${floors === '1' ? '' : 's'} and front/back exterior concepts.`;
+    }
     buildLoadingOverlay?.classList.remove('hidden');
     button.disabled = true;
     button.textContent = 'Generating...';
@@ -298,7 +308,7 @@
       document.getElementById('floor3Status').textContent = floor3Ready ? 'Generated' : (floor3Skipped ? 'Skipped' : 'Waiting');
       document.getElementById('exteriorStatus').textContent = data.exterior_result?.image_url ? 'Generated' : 'Waiting';
       renderMedia('blueprintMedia', data.blueprint_result?.image_url, 'First floor blueprint', 'First floor blueprint will appear here.');
-      renderMedia('floor2Media', data.blueprint_floor2_result?.image_url, 'Second floor blueprint', floor2Skipped ? 'Single-story project — no second floor blueprint.' : 'Second floor blueprint will appear here.');
+      renderMedia('floor2Media', data.blueprint_floor2_result?.image_url, 'Second floor blueprint', floor2Skipped ? 'Single-story project - no second floor blueprint.' : 'Second floor blueprint will appear here.');
       renderMedia('floor3Media', data.blueprint_floor3_result?.image_url, 'Third floor blueprint', floor3Skipped ? 'Projects under three floors - no third floor blueprint.' : 'Third floor blueprint will appear here.');
       renderMedia('exteriorMedia', data.exterior_result?.image_url, 'Exterior concept', 'Exterior concept will appear here.');
       renderMedia('exteriorBackMedia', data.exterior_back_result?.image_url, 'Exterior back', 'Rear exterior concept will appear here.');

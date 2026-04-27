@@ -7022,6 +7022,7 @@ def generate_full_build():
         deal_id = _normalize_int(data.get("deal_id"))
         project_id = _normalize_int(data.get("project_id"))
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
+        preserve_existing_exterior = str(data.get("preserve_existing_exterior") or "").lower() in ("1", "true", "yes", "on")
 
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
@@ -7417,10 +7418,15 @@ def generate_full_build():
         # Real exterior reference = primary source. Generated plans are only
         # fallback inputs when the user has not supplied/select a property photo.
         # --------------------------------------------------
-        has_real_exterior_reference = bool(exterior_image_base64 or reference_image_url)
-        exterior_ref_b64 = exterior_image_base64
-        exterior_ref_url = "" if exterior_ref_b64 else reference_image_url
-        exterior_source_kind = "user_reference" if has_real_exterior_reference else "blueprint_fallback"
+        has_site_context_reference = bool(exterior_image_base64 or reference_image_url)
+        has_real_exterior_reference = preserve_existing_exterior and has_site_context_reference
+        exterior_ref_b64 = exterior_image_base64 if has_real_exterior_reference else blueprint_primary_b64
+        exterior_ref_url = "" if exterior_ref_b64 else (reference_image_url if has_real_exterior_reference else blueprint_primary_url)
+        exterior_source_kind = (
+            "existing_house_reference"
+            if has_real_exterior_reference
+            else ("site_context_blueprint" if has_site_context_reference else "blueprint_fallback")
+        )
 
         if not exterior_ref_b64 and not exterior_ref_url:
             exterior_ref_b64 = blueprint_primary_b64
@@ -7436,7 +7442,8 @@ def generate_full_build():
             exterior_prompt_notes = (
                 site_notes
                 + " Use the blueprint as the architectural layout, footprint, floor count, massing, roofline, and structure constraint. "
-                + "Generate a realistic developer-grade exterior rendering that matches the blueprint."
+                + "Generate a realistic developer-grade exterior rendering that matches the blueprint. "
+                + "If a lot or listing photo was supplied, treat it only as site and neighborhood context; do not return the raw lot photo."
             )
 
         exterior_payload = {
@@ -7461,11 +7468,11 @@ def generate_full_build():
             "floor_count": number_of_floors,
             "image_base64": exterior_ref_b64,
             "image_url": exterior_ref_url,
-            "exterior_image_base64": exterior_image_base64,
-            "exterior_image_url": reference_image_url if not exterior_image_base64 else "",
-            "reference_image_url": reference_image_url if not exterior_image_base64 else "",
+            "exterior_image_base64": exterior_image_base64 if has_real_exterior_reference else "",
+            "exterior_image_url": reference_image_url if has_real_exterior_reference and not exterior_image_base64 else "",
+            "reference_image_url": reference_image_url if has_real_exterior_reference and not exterior_image_base64 else "",
             "preserve_existing_exterior": has_real_exterior_reference,
-            "preserve_structure": has_real_exterior_reference,
+            "preserve_structure": True,
             "width": 1024,
             "height": 1024,
             "steps": 28,
@@ -7541,11 +7548,11 @@ def generate_full_build():
             "floor_count": number_of_floors,
             "image_base64": exterior_ref_b64,
             "image_url": exterior_ref_url,
-            "exterior_image_base64": exterior_image_base64,
-            "exterior_image_url": reference_image_url if not exterior_image_base64 else "",
-            "reference_image_url": reference_image_url if not exterior_image_base64 else "",
+            "exterior_image_base64": exterior_image_base64 if has_real_exterior_reference else "",
+            "exterior_image_url": reference_image_url if has_real_exterior_reference and not exterior_image_base64 else "",
+            "reference_image_url": reference_image_url if has_real_exterior_reference and not exterior_image_base64 else "",
             "preserve_existing_exterior": has_real_exterior_reference,
-            "preserve_structure": has_real_exterior_reference,
+            "preserve_structure": True,
             "width": 1024,
             "height": 1024,
             "steps": 30,
@@ -7678,7 +7685,8 @@ def generate_full_build():
                 "meta": exterior_meta,
                 "seed": exterior_seed,
                 "job_id": exterior_job_id,
-                "build_reference_image": reference_image_url,
+                "build_reference_image": reference_image_url if has_real_exterior_reference else "",
+                "site_reference_image": reference_image_url if has_site_context_reference else "",
                 "reference_source": exterior_source_kind,
                 "preserve_existing_exterior": has_real_exterior_reference,
                 "blueprint_reference_image": blueprint_primary_url,
@@ -7723,7 +7731,7 @@ def generate_full_build():
                 results["build_analysis"] = build_analysis
 
             results["build_project"] = build_project
-            if reference_image_url:
+            if reference_image_url and has_real_exterior_reference:
                 results["build_reference_image"] = reference_image_url
             _set_deal_results(deal, results)
 
@@ -7780,7 +7788,8 @@ def generate_full_build():
                 "meta": exterior_meta,
                 "seed": exterior_seed,
                 "job_id": exterior_job_id,
-                "build_reference_image": reference_image_url,
+                "build_reference_image": reference_image_url if has_real_exterior_reference else "",
+                "site_reference_image": reference_image_url if has_site_context_reference else "",
                 "reference_source": exterior_source_kind,
                 "preserve_existing_exterior": has_real_exterior_reference,
             },
