@@ -13,6 +13,7 @@
     <div class="hero-actions">
       {% if deal %}
         <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">Open Build Studio</a>
+        <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">Send to Budget Studio</a>
       {% endif %}
       {% if deal and build_project %}
         <button type="button" class="ravlo-btn primary" id="generateBuildCostsTopBtn">Generate Build Costs</button>

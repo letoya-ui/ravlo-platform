@@ -73,6 +73,10 @@ Review the saved deal, check strategy and funding status, and launch the next to
           Generate Budget from AI
         </button>
       </form>
+      <button type="button" class="ravlo-btn ghost" id="refreshPropertyBtn"
+              onclick="refreshDealProperty({{ deal.id }})">
+        <i class="fa-solid fa-arrows-rotate"></i> Update Property Data
+      </button>
       <a href="{{ url_for('investor.capital_application', deal_id=deal.id) }}" class="ravlo-btn primary">
         Request Funding
       </a>
@@ -598,6 +602,37 @@ Review the saved deal, check strategy and funding status, and launch the next to
     </div>
   </div>
 </div>
+
+<script>
+function refreshDealProperty(dealId) {
+  const btn = document.getElementById('refreshPropertyBtn');
+  const origHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Updating...';
+
+  fetch('/investor/deals/' + dealId + '/refresh', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+    }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.status === 'ok') {
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + data.message;
+      setTimeout(function() { location.reload(); }, 1500);
+    } else {
+      btn.innerHTML = '<i class="fa-solid fa-exclamation-triangle"></i> ' + (data.message || 'Refresh failed');
+      setTimeout(function() { btn.innerHTML = origHTML; btn.disabled = false; }, 3000);
+    }
+  })
+  .catch(function() {
+    btn.innerHTML = '<i class="fa-solid fa-exclamation-triangle"></i> Network error';
+    setTimeout(function() { btn.innerHTML = origHTML; btn.disabled = false; }, 3000);
+  });
+}
+</script>
 
 <style>
   .deal-detail-shell{

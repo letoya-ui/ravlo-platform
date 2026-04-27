@@ -100,11 +100,13 @@ Track active opportunities, jump into workspace tools, and move the strongest de
         {% endif %}
 
         <article class="ravlo-card pad deal-card">
-          {% if image_url %}
             <div class="deal-card-image">
-              <img src="{{ image_url }}" alt="{{ deal.address or deal.title or 'Deal image' }}">
+              {% if image_url %}
+              <img src="{{ image_url }}" alt="{{ deal.address or deal.title or 'Deal image' }}" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
+              {% else %}
+              <img src="/static/images/placeholder_property.jpg" alt="Property placeholder">
+              {% endif %}
             </div>
-          {% endif %}
 
           <div class="deal-card-head">
             <div>

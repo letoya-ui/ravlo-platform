@@ -9,13 +9,14 @@ import hashlib
 import zipfile
 import copy
 import mimetypes
+import random
 import re
 from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from typing import Any, Dict
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode, urlparse, quote_plus
 
 import requests
 
@@ -217,6 +218,7 @@ from LoanMVP.services.investor.investor_engine_helpers import (
     _post_scope_engine_json,
 )
 from LoanMVP.services.investor.property_orchestrator import (
+    CanonicalProperty,
     PropertyIntelligenceOrchestrator,
     ProviderBudget,
 )
@@ -364,6 +366,23 @@ def _saved_property_workspace_seed(saved_property):
         listing_photos,
     )
 
+    if not primary_photo and not listing_photos:
+        sv_src = {
+            "address": (
+                property_payload.get("address")
+                or workspace_analysis.get("address")
+                or ""
+            ),
+            "city": property_payload.get("city") or workspace_analysis.get("city") or "",
+            "state": property_payload.get("state") or workspace_analysis.get("state") or "",
+            "zip_code": property_payload.get("zip_code") or workspace_analysis.get("zip_code") or "",
+        }
+        sv_url = _streetview_fallback_url(sv_src)
+        if sv_url:
+            proxied_sv = url_for("investor.api_property_tool_image", src=sv_url)
+            primary_photo = proxied_sv
+            listing_photos = [proxied_sv]
+
     return {
         "resolved": resolved,
         "property": property_payload,
@@ -475,6 +494,46 @@ def _proxy_photo_list(photo_urls):
     return proxied
 
 
+_STREETVIEW_BASE = "https://maps.googleapis.com/maps/api/streetview"
+
+
+def _streetview_fallback_url(result):
+    """Build a Google Street View URL *without* the API key.
+
+    The key is injected server-side by :func:`api_property_tool_image`
+    so it never appears in client-visible markup.
+    Returns ``None`` when the address is too short or key is missing.
+
+    Prefers latitude/longitude coordinates when available because they
+    produce more reliable Street View results than text addresses.
+    """
+    google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or ""
+    if not google_key:
+        return None
+
+    lat = result.get("latitude")
+    lon = result.get("longitude")
+    if lat is not None and lon is not None:
+        try:
+            lat_f, lon_f = float(lat), float(lon)
+            if lat_f != 0.0 or lon_f != 0.0:
+                return f"{_STREETVIEW_BASE}?size=600x400&location={lat_f},{lon_f}"
+        except (TypeError, ValueError):
+            pass
+
+    addr = safe_str(result.get("address") or "")
+    city = safe_str(result.get("city") or "")
+    state = safe_str(result.get("state") or "")
+    zip_code = safe_str(result.get("zip_code") or result.get("zip") or "")
+
+    location_parts = [p for p in (addr, city, state, zip_code) if p]
+    location = ", ".join(location_parts)
+    if len(location) < 5:
+        return None
+
+    return f"{_STREETVIEW_BASE}?size=600x400&location={quote_plus(location)}"
+
+
 def _proxy_search_result_images(result):
     if not isinstance(result, dict):
         return result
@@ -519,6 +578,20 @@ def _proxy_search_result_images(result):
             updated[_field] = None
         else:
             updated[_field] = _proxy_listing_image_url(raw_val) or raw_val
+
+    has_photo = bool(
+        proxied_listing_photos
+        or updated.get("primary_photo")
+        or updated.get("image_url")
+    )
+    if not has_photo:
+        sv_url = _streetview_fallback_url(updated)
+        if sv_url:
+            proxied_sv = url_for("investor.api_property_tool_image", src=sv_url)
+            updated["primary_photo"] = proxied_sv
+            updated["image_url"] = proxied_sv
+            updated.setdefault("photo_source", "streetview")
+
     return updated
 
 
@@ -2542,6 +2615,15 @@ def property_search():
                 photos = property_data.get("photos") or []
                 primary_photo = property_data.get("primary_photo")
 
+                if not primary_photo and not photos:
+                    sv_url = _streetview_fallback_url(property_data)
+                    if sv_url:
+                        proxied_sv = url_for("investor.api_property_tool_image", src=sv_url)
+                        primary_photo = proxied_sv
+                        photos = [proxied_sv]
+                        property_data["photos"] = photos
+                        property_data["primary_photo"] = primary_photo
+
                 if ip and property_data.get("address"):
                     try:
                         existing = SavedProperty.query.filter(
@@ -3346,6 +3428,14 @@ def api_property_tool_image():
     if parsed.scheme not in {"http", "https"}:
         abort(400)
 
+    log_url = source_url
+
+    if source_url.startswith(_STREETVIEW_BASE):
+        google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or ""
+        if google_key:
+            sep = "&" if "?" in source_url else "?"
+            source_url = f"{source_url}{sep}key={google_key}"
+
     try:
         upstream = requests.get(
             source_url,
@@ -3368,7 +3458,7 @@ def api_property_tool_image():
         response.headers["Cache-Control"] = "public, max-age=3600"
         return response
     except Exception:
-        current_app.logger.warning("property_tool_image proxy failed for %s", source_url, exc_info=True)
+        current_app.logger.warning("property_tool_image proxy failed for %s", log_url, exc_info=True)
         abort(404)
 
 @investor_bp.route("/api/property_detail", methods=["POST"])
@@ -4388,6 +4478,51 @@ def deal_workspace():
         except Exception:
             partners = []
 
+    # ── Ravlo ARV Engine: multi-source comp analysis ──
+    # Cache results in deal.results_json to avoid re-fetching on every page load.
+    # Use ?refresh_arv=1 query param to force a fresh analysis.
+    ravlo_arv_report = {}
+    _force_refresh = request.args.get("refresh_arv") == "1"
+    if selected_prop and workspace_analysis:
+        # Check cache first
+        if deal and not _force_refresh:
+            _cached = (deal.results_json or {}).get("ravlo_arv_report")
+            if _cached and isinstance(_cached, dict) and _cached.get("arv", {}).get("base", 0) > 0:
+                ravlo_arv_report = _cached
+
+        if not ravlo_arv_report:
+            try:
+                from LoanMVP.services.ravlo_arv_engine import analyze_arv
+                _arv_address = workspace_analysis.get("address") or getattr(selected_prop, "address", "") or ""
+                _arv_city = workspace_analysis.get("city") or ""
+                _arv_state = workspace_analysis.get("state") or ""
+                _arv_zip = workspace_analysis.get("zip_code") or getattr(selected_prop, "zipcode", "") or ""
+                _arv_ptype = workspace_analysis.get("property_type") or "single_family"
+                if _arv_address and (_arv_city or _arv_zip):
+                    ravlo_arv_report = analyze_arv(
+                        address=_arv_address,
+                        city=_arv_city,
+                        state=_arv_state,
+                        zip_code=_arv_zip,
+                        property_type=_arv_ptype,
+                        form_overrides={
+                            "beds": workspace_analysis.get("beds"),
+                            "baths": workspace_analysis.get("baths"),
+                            "sqft": workspace_analysis.get("square_feet"),
+                            "lot_sqft": workspace_analysis.get("lot_size_sqft"),
+                            "year_built": workspace_analysis.get("year_built"),
+                        },
+                    )
+                    # Persist to deal results_json for future loads
+                    if deal and ravlo_arv_report:
+                        deal_results = deal.results_json or {}
+                        deal_results["ravlo_arv_report"] = ravlo_arv_report
+                        deal.results_json = deal_results
+                        db.session.commit()
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).warning("Ravlo ARV engine error: %s", exc)
+
     return render_template(
         "investor/deal_workspace.html",
         saved_props=saved_props,
@@ -4405,6 +4540,7 @@ def deal_workspace():
         workspace_analysis=workspace_analysis,
         budget_snapshot=budget_snapshot,
         mode=mode,
+        ravlo_arv_report=ravlo_arv_report,
     )
 
 @investor_bp.route("/deals", methods=["GET"])
@@ -4537,9 +4673,89 @@ def deal_detail(deal_id):
         rehab_analysis=rehab_analysis
     )
 
-            
 
-    
+@investor_bp.route("/deals/<int:deal_id>/refresh", methods=["POST"])
+@login_required
+@role_required("investor")
+def refresh_deal_property(deal_id):
+    """Re-enrich a deal with the latest property data from all providers."""
+    deal = Deal.query.get_or_404(deal_id)
+    if deal.user_id != current_user.id:
+        abort(403)
+
+    addr = deal.address or ""
+    city_val = deal.city or ""
+    state_val = deal.state or ""
+    zip_val = deal.zip_code or ""
+
+    if not addr and not zip_val:
+        return jsonify({
+            "status": "error",
+            "message": "Deal has no address or ZIP code to refresh.",
+        }), 400
+
+    strategy = deal.strategy or deal.recommended_strategy or "flip"
+
+    try:
+        orchestrator = PropertyIntelligenceOrchestrator(
+            strategy=strategy,
+            asset_type="any",
+        )
+
+        cp = CanonicalProperty(
+            address=addr,
+            address_line1=addr,
+            city=city_val,
+            state=state_val,
+            zip_code=zip_val,
+        )
+
+        cp = orchestrator._enrich_with_attom(cp)
+        cp = orchestrator._enrich_with_rentcast(cp)
+        cp = orchestrator._enrich_with_mashvisor(cp)
+        cp = orchestrator._enrich_with_realtor(cp)
+
+        if not cp.photos and not cp.primary_photo:
+            cp = orchestrator._recover_photos(cp)
+
+        fresh = cp.to_result_dict()
+
+        resolved = copy.deepcopy(deal.resolved_json or {})
+        old_property = resolved.get("property") or {}
+        old_property.update({k: v for k, v in fresh.items() if v is not None})
+        resolved["property"] = old_property
+        deal.resolved_json = resolved
+
+        if cp.arv:
+            deal.arv = cp.arv
+        if cp.monthly_rent_estimate:
+            deal.estimated_rent = cp.monthly_rent_estimate
+        if cp.deal_score is not None:
+            deal.deal_score = cp.deal_score
+
+        flag_modified(deal, "resolved_json")
+        db.session.commit()
+
+        photos_count = len(cp.photos or [])
+        photo_source = cp.value_sources.get("photos", "none")
+
+        return jsonify({
+            "status": "ok",
+            "message": f"Property data refreshed. {photos_count} photos loaded ({photo_source}).",
+            "photos_count": photos_count,
+            "photo_source": photo_source,
+            "primary_photo": cp.primary_photo,
+            "updated_fields": list(cp.value_sources.keys()),
+        })
+
+    except Exception as exc:
+        current_app.logger.exception("Deal property refresh failed for deal_id=%s", deal_id)
+        return jsonify({
+            "status": "error",
+            "message": f"Refresh failed: {exc}",
+        }), 500
+
+
 @investor_bp.route("/deal-comparison", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -6221,7 +6437,6 @@ def generate_build_exterior():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @investor_bp.route("/deal-studio/build-studio/generate-interior", methods=["POST"])
-@investor_bp.route("/deal-studio/design-studio/generate", methods=["POST"])
 @login_required
 @role_required("investor")
 def generate_build_interior():
@@ -6967,11 +7182,11 @@ def generate_full_build():
             "prompt_notes": site_notes,
             "special_features": f"{lot_count} total lots" if lot_count and lot_count > 1 else notes,
             "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
-            "width": 768,
-            "height": 768,
-            "steps": 18,
-            "guidance": 6.0,
-            "strength": 0.28,
+            "width": 1024,
+            "height": 1024,
+            "steps": 30,
+            "guidance": 6.8,
+            "strength": 0.30,
             "count": 1,
         }
 
@@ -7015,43 +7230,37 @@ def generate_full_build():
         blueprint_job_id = blueprint_json.get("job_id")
 
         # --------------------------------------------------
-        # 2. GENERATE SITE PLAN (optional)
+        # 2. GENERATE SITE PLAN
         # --------------------------------------------------
-        site_plan_urls = []
-        site_plan_primary_b64 = ""
-        site_plan_primary_url = ""
-        site_plan_meta = {"skipped": True, "reason": "site_plan_disabled"}
-        site_plan_seed = None
-        site_plan_job_id = None
+        site_plan_payload = {
+            "mode": "siteplan",
+            "project_name": project_name,
+            "property_type": property_type,
+            "style": style,
+            "blueprint_style": blueprint_style,
+            "description": description,
+            "build_description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "prompt_notes": site_notes,
+            "special_features": (
+                f"{lot_count} buildable lots, internal drives, setbacks, parking, and site circulation"
+                if lot_count and lot_count > 1
+                else f"{notes}, access, setbacks, and site circulation".strip(", ")
+            ),
+            "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
 
-        if include_site_plan:
-            try:
-                site_plan_payload = {
-                    "mode": "siteplan",
-                    "project_name": project_name,
-                    "property_type": property_type,
-                    "style": style,
-                    "blueprint_style": blueprint_style,
-                    "description": description,
-                    "build_description": description,
-                    "lot_size": lot_size,
-                    "zoning": zoning,
-                    "prompt_notes": site_notes,
-                    "special_features": (
-                        f"{lot_count} buildable lots, internal drives, setbacks, parking, and site circulation"
-                        if lot_count and lot_count > 1
-                        else f"{notes}, access, setbacks, and site circulation".strip(", ")
-                    ),
-                    "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
-                    "image_base64": blueprint_image_base64 or blueprint_primary_b64,
-                    "image_url": "" if (blueprint_image_base64 or blueprint_primary_b64) else (blueprint_url or blueprint_primary_url),
-                    "width": 768,
-                    "height": 768,
-                    "steps": 24,
-                    "guidance": 6.6,
-                    "strength": 0.28,
-                    "count": 1,
-                }
+            # Engine expects image_base64 / image_url for the init image.
+            "image_base64": blueprint_image_base64 or blueprint_primary_b64,
+            "image_url": "" if (blueprint_image_base64 or blueprint_primary_b64) else (blueprint_url or blueprint_primary_url),
+
+            "width": 768,
+            "height": 768,
+            "steps": 24,
+            "guidance": 6.6,
+            "strength": 0.28,
+            "count": 1,
+        }
 
                 current_app.logger.warning(f"PROJECT BUILD SITEPLAN PAYLOAD: {site_plan_payload}")
 
@@ -7087,30 +7296,12 @@ def generate_full_build():
 
         # --------------------------------------------------
         # 3. GENERATE EXTERIOR
-        # Real exterior reference = primary source. Generated plans are only
-        # fallback inputs when the user has not supplied/select a property photo.
+        # Blueprint = architecture/massing (primary reference).
+        # Site image = land context only; site plan = fallback.
         # --------------------------------------------------
-        has_real_exterior_reference = bool(exterior_image_base64 or reference_image_url)
-        exterior_ref_b64 = exterior_image_base64
-        exterior_ref_url = "" if exterior_ref_b64 else reference_image_url
-        exterior_source_kind = "user_reference" if has_real_exterior_reference else "blueprint_fallback"
-
-        if not exterior_ref_b64 and not exterior_ref_url:
-            exterior_ref_b64 = blueprint_primary_b64
-            exterior_ref_url = "" if exterior_ref_b64 else blueprint_primary_url
-
-        if has_real_exterior_reference:
-            exterior_prompt_notes = (
-                site_notes
-                + " Preserve the supplied exterior reference house massing, roofline, window rhythm, entry or garage placement, "
-                + "overall proportions, and camera relationship. Apply the requested style as a renovation concept without replacing it with a different house."
-            )
-        else:
-            exterior_prompt_notes = (
-                site_notes
-                + " Use the blueprint as the architectural layout, footprint, massing, roofline, and structure constraint. "
-                + "Generate a realistic developer-grade exterior rendering that matches the blueprint."
-            )
+        # Prefer: user-uploaded land image > blueprint > site plan
+        exterior_ref_b64 = exterior_image_base64 or blueprint_primary_b64 or site_plan_primary_b64
+        exterior_ref_url = "" if exterior_ref_b64 else (reference_image_url or blueprint_primary_url or site_plan_primary_url or "")
 
         exterior_payload = {
             "mode": "exterior_front",
@@ -7123,12 +7314,20 @@ def generate_full_build():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": exterior_prompt_notes,
+            "prompt_notes": (
+                site_notes
+                + " Use the blueprint as the architectural layout, footprint, massing, roofline, and structure constraint. "
+                + "Use the site plan or site image only for land context, lot placement, driveway, roads, setbacks, and surroundings. "
+                + "Generate a realistic developer-grade exterior rendering that matches the blueprint."
+            ),
             "special_features": (
                 f"{lot_count} lots, cohesive streetscape, developer-ready massing"
                 if lot_count and lot_count > 1
                 else notes
             ),
+
+            # Engine expects image_base64 / image_url for the init image.
+            # Blueprint is the primary architectural reference for exterior.
             "image_base64": exterior_ref_b64,
             "image_url": exterior_ref_url,
             "exterior_image_base64": exterior_image_base64,
@@ -7140,7 +7339,7 @@ def generate_full_build():
             "height": 1024,
             "steps": 28,
             "guidance": 7.0,
-            "strength": 0.34 if has_real_exterior_reference else 0.48,
+            "strength": 0.48,
             "count": 1,
         }
 
@@ -7174,6 +7373,74 @@ def generate_full_build():
         exterior_meta = exterior_json.get("meta") or {}
         exterior_seed = exterior_json.get("seed")
         exterior_job_id = exterior_json.get("job_id")
+
+        # --------------------------------------------------
+        # 4. GENERATE EXTERIOR BACK
+        # --------------------------------------------------
+        exterior_back_prompt = (
+            f"Photorealistic rear exterior rendering of a {style.replace('_', ' ')} "
+            f"{property_type.replace('_', ' ')} home, backyard view, patio or deck area, "
+            f"professional architectural photography, landscaped rear yard, "
+            f"warm daylight, developer-grade presentation. "
+        )
+        if description:
+            exterior_back_prompt += f"{description}. "
+        exterior_back_prompt += "Full building visible from foundation to roofline, rear perspective, no cropping."
+
+        exterior_back_payload = {
+            "mode": "exterior",
+            "project_name": project_name,
+            "property_type": property_type,
+            "style": style,
+            "blueprint_style": blueprint_style,
+            "description": description,
+            "build_description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "prompt": exterior_back_prompt,
+            "prompt_notes": (
+                "Rear / backyard view of the home. "
+                + "Show the back of the building with patio, deck, or outdoor living space. "
+                + "Use the blueprint for massing and the front exterior for style consistency."
+            ),
+            "special_features": "rear view, backyard, patio, deck, outdoor living space",
+
+            "image_base64": exterior_ref_b64,
+            "image_url": exterior_ref_url,
+
+            "width": 1024,
+            "height": 1024,
+            "steps": 30,
+            "guidance": 7.5,
+            "strength": 0.78,
+            "count": 1,
+        }
+
+        exterior_back_url = ""
+        exterior_back_meta = {}
+        exterior_back_seed = None
+        exterior_back_job_id = None
+
+        try:
+            current_app.logger.warning(f"FULL BUILD EXTERIOR BACK PAYLOAD: {exterior_back_payload}")
+
+            exterior_back_json = _post_renovation_engine_json(
+                "/v1/build_concept",
+                exterior_back_payload,
+                timeout=UPLOAD_TIMEOUT,
+            )
+
+            exterior_back_images_b64 = exterior_back_json.get("images_base64") or []
+            if exterior_back_images_b64:
+                exterior_back_batch_id = uuid.uuid4().hex
+                exterior_back_urls = _upload_after_images_from_b64(exterior_back_images_b64, exterior_back_batch_id)
+                if exterior_back_urls:
+                    exterior_back_url = exterior_back_urls[0]
+                    exterior_back_meta = exterior_back_json.get("meta") or {}
+                    exterior_back_seed = exterior_back_json.get("seed")
+                    exterior_back_job_id = exterior_back_json.get("job_id")
+        except Exception:
+            current_app.logger.exception("Exterior back generation failed (non-fatal)")
 
         # --------------------------------------------------
         # SAVE PROJECT + DEAL
@@ -7271,6 +7538,15 @@ def generate_full_build():
                 "site_plan_reference_image": site_plan_primary_url,
             }
 
+            if exterior_back_url:
+                build_project["exterior_back"] = {
+                    "image_url": exterior_back_url,
+                    "meta": exterior_back_meta,
+                    "seed": exterior_back_seed,
+                    "job_id": exterior_back_job_id,
+                    "view": "back",
+                }
+
             if build_analysis:
                 results["build_analysis"] = build_analysis
 
@@ -7291,6 +7567,7 @@ def generate_full_build():
                 "site_plan": site_plan_primary_url,
                 "blueprint": blueprint_primary_url,
                 "exterior": exterior_primary_url,
+                "exterior_back": exterior_back_url,
             },
             "next_url": url_for(
                 "investor.deal_architect",
@@ -7324,6 +7601,12 @@ def generate_full_build():
                 "build_reference_image": reference_image_url,
                 "reference_source": exterior_source_kind,
                 "preserve_existing_exterior": has_real_exterior_reference,
+            },
+            "exterior_back_result": {
+                "image_url": exterior_back_url,
+                "meta": exterior_back_meta,
+                "seed": exterior_back_seed,
+                "job_id": exterior_back_job_id,
             },
             "build_analysis": build_analysis,
             "deal_id": deal.id if deal else None,
@@ -9193,16 +9476,7 @@ def design_studio_generate():
             or (getattr(deal, "resolved_json", {}) or {}).get("property", {}).get("property_type", "")
             or "residential property"
         )
-        stable_seed = _stable_render_seed(
-            "design",
-            getattr(deal, "id", None),
-            before_uploaded_url or image_url,
-            preset,
-            mode,
-            room_type,
-            rehab_level,
-            notes,
-        )
+        unique_seed = random.randint(1, 2_147_483_647)
         rehab_prompt = build_rehab_concept_prompt(
             room_type=room_type,
             style_preset=preset,
@@ -9227,12 +9501,12 @@ def design_studio_generate():
             "image_base64": image_base64,
             "image_url": "",
             "count": 1,
-            "steps": 22,
-            "guidance": 7.2,
+            "steps": 32,
+            "guidance": 7.5,
             "strength": strength,
-            "width": 768,
-            "height": 768,
-            "seed": stable_seed,
+            "width": 1024,
+            "height": 1024,
+            "seed": unique_seed,
         }
 
         engine_json = _post_renovation_engine_json(
@@ -9259,7 +9533,7 @@ def design_studio_generate():
             "room_type": room_type,
             "rehab_level": rehab_level,
             "notes": notes,
-            "seed": engine_json.get("seed") or stable_seed,
+            "seed": engine_json.get("seed") or unique_seed,
             "job_id": engine_json.get("job_id"),
             "meta": engine_json.get("meta") or {},
         }
@@ -9317,6 +9591,18 @@ def design_studio_generate():
 
         db.session.commit()
 
+        deal_architect_url = None
+        budget_studio_url = None
+        if deal is not None:
+            deal_architect_url = url_for(
+                "investor.deal_architect",
+                deal_id=deal.id,
+            )
+            budget_studio_url = url_for(
+                "investor.budget_studio",
+                deal_id=deal.id,
+            )
+
         return jsonify({
             "status": "ok",
             "before_result": before_result,
@@ -9324,6 +9610,9 @@ def design_studio_generate():
             "rehab_scope": rehab_scope_result,
             "deal_id": deal.id if deal else None,
             "saved_to_deal": bool(save_to_deal and deal is not None),
+            "next_url": deal_architect_url,
+            "deal_architect_url": deal_architect_url,
+            "budget_studio_url": budget_studio_url,
         })
 
     except Exception as e:
@@ -11487,13 +11776,13 @@ def partners():
     external_partners = []
     fallback_used = False
 
-    if include_external and not partners:
+    if include_external:
         external_partners = search_external_partners_google(
             category=selected_category,
             city=selected_city,
             state=selected_state,
         )
-        fallback_used = bool(external_partners)
+        fallback_used = bool(external_partners) and not partners
 
     return render_template(
         "investor/partners.html",
