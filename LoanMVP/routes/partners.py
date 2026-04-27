@@ -132,6 +132,14 @@ def partner_is_realtor(partner) -> bool:
     return "realtor" in (category, type_)
 
 
+def partner_is_insurance(partner) -> bool:
+    if not partner:
+        return False
+    category = (getattr(partner, "category", "") or "").strip().lower()
+    type_ = (getattr(partner, "type", "") or "").strip().lower()
+    return "insurance" in (category, type_)
+
+
 def partner_vip_tier_unlocked(partner) -> bool:
     """True if this partner's current tier already unlocks VIP."""
     if not partner:
@@ -163,6 +171,10 @@ def dashboard():
     # see a separate partner space.
     if partner_vip_tier_unlocked(partner) and partner_is_realtor(partner):
         return redirect(url_for("vip.realtor_dashboard"))
+
+    # VIP insurance partners use the unified insurance dashboard.
+    if partner_vip_tier_unlocked(partner) and partner_is_insurance(partner):
+        return redirect(url_for("vip.insurance_dashboard"))
 
     base_query = PartnerConnectionRequest.query.filter_by(partner_id=partner.id)
 

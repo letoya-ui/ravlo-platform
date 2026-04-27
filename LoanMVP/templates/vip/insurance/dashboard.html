@@ -1,0 +1,296 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Insurance Dashboard{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}
+Insurance Dashboard — quotes, clients, coverage lines, and AI-powered outreach in one workspace.
+{% endblock %}
+
+{% block topbar_actions %}
+  {% if 'ai_pilot' in modules %}
+    <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">AI Pilot</a>
+  {% endif %}
+  {% if 'finances' in modules %}
+    <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">Finances</a>
+  {% endif %}
+  <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Customize</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  {# ── LOGO + BRANDING ─────────────────────────────────── #}
+  {% if partner and (partner.logo_url or vip_profile.logo_url) %}
+  <section class="ravlo-card pad flex items-center gap-4">
+    <img src="{{ partner.logo_url or vip_profile.logo_url }}"
+         alt="Agency Logo"
+         class="h-12 w-auto rounded"
+         style="max-height:48px; object-fit:contain;">
+    <div>
+      <h3 class="text-lg font-semibold">{{ partner.company or vip_profile.business_name or header_name }}</h3>
+      <p class="text-sm text-gray-400">{{ partner.specialty or "Insurance Agency" }}</p>
+    </div>
+    <div class="ml-auto">
+      <form method="POST" action="{{ url_for('vip.insurance_upload_logo') }}" enctype="multipart/form-data" class="flex items-center gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="file" name="logo" accept="image/*" class="ravlo-input sm text-xs" style="max-width:200px;">
+        <button type="submit" class="ravlo-btn ghost sm">Update</button>
+      </form>
+    </div>
+  </section>
+  {% else %}
+  <section class="ravlo-card pad">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-lg font-semibold">{{ partner.company or vip_profile.business_name or header_name }}</h3>
+        <p class="text-sm text-gray-400">Upload your agency logo to brand your quotes and emails.</p>
+      </div>
+      <form method="POST" action="{{ url_for('vip.insurance_upload_logo') }}" enctype="multipart/form-data" class="flex items-center gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="file" name="logo" accept="image/*" class="ravlo-input sm text-xs" style="max-width:200px;">
+        <button type="submit" class="ravlo-btn primary sm">Upload Logo</button>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── SUMMARY STATS ──────────────────────────────────── #}
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Total Quotes</div>
+      <div class="partner-stat-value">{{ stats.total_quotes }}</div>
+      <div class="partner-stat-note">All quote activity</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Pending</div>
+      <div class="partner-stat-value">{{ stats.pending }}</div>
+      <div class="partner-stat-note">Awaiting client response</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Sent</div>
+      <div class="partner-stat-value">{{ stats.sent }}</div>
+      <div class="partner-stat-note">Quotes delivered to clients</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Bound</div>
+      <div class="partner-stat-value">{{ stats.bound }}</div>
+      <div class="partner-stat-note">Policies bound and active</div>
+    </article>
+  </section>
+
+  {# ── INSURANCE LINES ────────────────────────────────── #}
+  <section class="ravlo-card pad">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
+      <div>
+        <h3 class="text-lg font-semibold">Insurance Lines</h3>
+        <p class="text-sm text-gray-400">Generate AI-powered quotes for any coverage line.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {% for line in insurance_lines %}
+      <a href="{{ url_for('vip.insurance_new_quote', line=line.key) }}"
+         class="ravlo-card p-4 bg-white/5 hover:bg-white/10 transition-colors block">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+            <i class="lucide lucide-{{ line.icon }} text-indigo-400"></i>
+          </div>
+          <h4 class="text-sm font-semibold">{{ line.label }}</h4>
+        </div>
+        <p class="text-xs text-gray-400 mb-3">
+          {% if line.key == 'auto' %}
+            Vehicle coverage — liability, collision, comprehensive, and more.
+          {% elif line.key == 'homeowners' %}
+            Full homeowner protection — dwelling, personal property, liability.
+          {% elif line.key == 'renters' %}
+            Tenant coverage — personal property, liability, additional living expenses.
+          {% elif line.key == 'landlord' %}
+            Landlord protection — dwelling, rental income loss, liability coverage.
+          {% endif %}
+        </p>
+        <span class="ravlo-btn primary sm w-full text-center">Generate Quote</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ── QUICK ACTIONS ──────────────────────────────────── #}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <div class="lg:col-span-2 space-y-6">
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Quick Actions</h3>
+        <p class="text-sm text-gray-400 mb-4">Move quickly through your insurance workflow.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <a class="ravlo-card p-4 bg-white/5 hover:bg-white/10 transition-colors block"
+             href="{{ url_for('vip.insurance_new_quote', line='auto') }}">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="lucide lucide-file-plus text-indigo-400"></i>
+              <strong>New Quote</strong>
+            </div>
+            <p class="text-sm text-gray-400">Generate an AI-powered insurance quote for a client.</p>
+          </a>
+
+          <a class="ravlo-card p-4 bg-white/5 hover:bg-white/10 transition-colors block"
+             href="{{ url_for('vip.insurance_compose_email') }}">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="lucide lucide-mail text-indigo-400"></i>
+              <strong>Compose Email</strong>
+            </div>
+            <p class="text-sm text-gray-400">Use AI to draft and send professional quote emails.</p>
+          </a>
+
+          <a class="ravlo-card p-4 bg-white/5 hover:bg-white/10 transition-colors block"
+             href="{{ url_for('partners.requests_inbox') }}">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="lucide lucide-inbox text-indigo-400"></i>
+              <strong>Insurance Requests</strong>
+            </div>
+            <p class="text-sm text-gray-400">Review incoming coverage needs and client opportunities.</p>
+          </a>
+
+          <a class="ravlo-card p-4 bg-white/5 hover:bg-white/10 transition-colors block"
+             href="{{ url_for('vip.ai_pilot') }}">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="lucide lucide-sparkles text-indigo-400"></i>
+              <strong>AI Copilot</strong>
+            </div>
+            <p class="text-sm text-gray-400">Get help drafting responses, follow-ups, and smart suggestions.</p>
+          </a>
+        </div>
+      </section>
+
+      {# ── REALTOR TOOLS ────────────────────────────────── #}
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Realtor Tools</h3>
+        <p class="text-sm text-gray-400 mb-4">Manage your real estate clients, listings, and content.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <a class="ravlo-card p-4 bg-white/5 hover:bg-white/10 transition-colors block"
+             href="{{ url_for('elena.client_new') }}">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="lucide lucide-user-plus text-emerald-400"></i>
+              <strong>Clients</strong>
+            </div>
+            <p class="text-sm text-gray-400">Add and manage your real estate clients.</p>
+          </a>
+
+          <a class="ravlo-card p-4 bg-white/5 hover:bg-white/10 transition-colors block"
+             href="{{ url_for('vip.realtor_listings') }}">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="lucide lucide-building-2 text-emerald-400"></i>
+              <strong>Properties</strong>
+            </div>
+            <p class="text-sm text-gray-400">View and manage your property listings.</p>
+          </a>
+
+          <a class="ravlo-card p-4 bg-white/5 hover:bg-white/10 transition-colors block"
+             href="{{ url_for('elena.interaction_new') }}">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="lucide lucide-message-square-plus text-emerald-400"></i>
+              <strong>Follow-Ups</strong>
+            </div>
+            <p class="text-sm text-gray-400">Track and schedule client follow-ups.</p>
+          </a>
+
+          <a class="ravlo-card p-4 bg-white/5 hover:bg-white/10 transition-colors block"
+             href="{{ url_for('elena.template_studio') }}">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="lucide lucide-wand-sparkles text-emerald-400"></i>
+              <strong>Content Studio</strong>
+            </div>
+            <p class="text-sm text-gray-400">Create branded flyers, emails, and marketing content.</p>
+          </a>
+        </div>
+      </section>
+
+      {# ── RECENT ACTIVITY ──────────────────────────────── #}
+      {% if recent_requests %}
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Recent Activity</h3>
+        <p class="text-sm text-gray-400 mb-4">Latest quote requests and client interactions.</p>
+
+        <div class="space-y-2">
+          {% for req in recent_requests %}
+          <div class="ravlo-card p-3 bg-white/5 flex justify-between items-center">
+            <div>
+              <div class="text-sm font-medium">{{ req.requester_name() or "Client" }}</div>
+              <div class="text-xs text-gray-400">{{ req.category or "Insurance" }} — {{ req.status|title }}</div>
+            </div>
+            <div class="text-xs text-gray-500">
+              {{ req.created_at.strftime('%b %d') if req.created_at else "" }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+    </div>
+
+    {# ── RIGHT SIDEBAR ──────────────────────────────────── #}
+    <div class="space-y-6">
+
+      {# ── WORKFLOW ──────────────────────────────────────── #}
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-3">Insurance Workflow</h3>
+        <div class="space-y-3">
+          <div class="flex gap-3">
+            <span class="text-xs font-bold text-indigo-400 mt-0.5 w-6 shrink-0">01</span>
+            <div>
+              <h4 class="text-sm font-semibold">Generate Quote</h4>
+              <p class="text-xs text-gray-400">Select coverage line and enter client details.</p>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <span class="text-xs font-bold text-indigo-400 mt-0.5 w-6 shrink-0">02</span>
+            <div>
+              <h4 class="text-sm font-semibold">Review & Customize</h4>
+              <p class="text-xs text-gray-400">AI generates a professional quote with coverage details.</p>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <span class="text-xs font-bold text-indigo-400 mt-0.5 w-6 shrink-0">03</span>
+            <div>
+              <h4 class="text-sm font-semibold">Send to Client</h4>
+              <p class="text-xs text-gray-400">Use AI email composer to deliver the quote.</p>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <span class="text-xs font-bold text-indigo-400 mt-0.5 w-6 shrink-0">04</span>
+            <div>
+              <h4 class="text-sm font-semibold">Bind Policy</h4>
+              <p class="text-xs text-gray-400">Finalize coverage and track active policies.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {# ── AI COPILOT SUGGESTIONS ────────────────────────── #}
+      {% if copilot_suggestions %}
+      <section class="ravlo-card pad">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-lg font-semibold">AI Suggestions</h3>
+          <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost xs">Open</a>
+        </div>
+        <div class="space-y-2">
+          {% for s in copilot_suggestions %}
+          <div class="ravlo-card p-3 bg-white/5 text-sm">
+            <div class="text-xs text-gray-400 mb-1">{{ s.created_at.strftime('%b %d, %H:%M') if s.created_at else "" }}</div>
+            {{ s.suggestion_text or s.content or "" }}
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

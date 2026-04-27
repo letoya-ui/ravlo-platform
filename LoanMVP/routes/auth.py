@@ -552,10 +552,12 @@ def post_login_redirect():
     # VIP-eligible realtors go straight to the unified VIP dashboard.
     if role == "partner":
         from LoanMVP.routes.vip import partner_has_vip_access
-        from LoanMVP.routes.partners import partner_is_realtor
+        from LoanMVP.routes.partners import partner_is_realtor, partner_is_insurance
         partner = getattr(current_user, "partner_profile", None)
         if partner_has_vip_access(current_user) and partner_is_realtor(partner):
             return redirect(url_for("vip.realtor_dashboard"))
+        if partner_has_vip_access(current_user) and partner_is_insurance(partner):
+            return redirect(url_for("vip.insurance_dashboard"))
 
     if _is_executive_dashboard_user(current_user):
         return redirect(url_for("executive.dashboard"))
