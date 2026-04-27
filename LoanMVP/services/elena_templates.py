@@ -26,7 +26,7 @@ class TemplateType(str, Enum):
 
 TEMPLATES = {
     TemplateType.JUST_LISTED: """
-You are writing a JUST LISTED real estate flyer for Elena James of Keller Williams Hudson Valley.
+You are writing a JUST LISTED real estate flyer for {agent_name} of {agent_company}.
 
 Property:
 Address: {address}
@@ -59,7 +59,7 @@ Rules:
 """,
 
     TemplateType.JUST_SOLD: """
-You are writing a JUST SOLD real estate flyer for Elena James.
+You are writing a JUST SOLD real estate flyer for {agent_name}.
 
 Property:
 Address: {address}
@@ -90,7 +90,7 @@ Rules:
 """,
 
     TemplateType.COMING_SOON: """
-You are writing a COMING SOON flyer for Elena James.
+You are writing a COMING SOON flyer for {agent_name}.
 
 Property:
 Address: {address}
@@ -123,7 +123,7 @@ Rules:
 """,
 
     TemplateType.OPEN_HOUSE: """
-You are writing an OPEN HOUSE flyer for Elena James.
+You are writing an OPEN HOUSE flyer for {agent_name}.
 
 Property:
 Address: {address}
@@ -158,7 +158,7 @@ Rules:
 """,
 
     TemplateType.PRICE_DROP: """
-You are writing a PRICE IMPROVEMENT flyer for Elena James.
+You are writing a PRICE IMPROVEMENT flyer for {agent_name}.
 
 Property:
 Address: {address}
@@ -191,7 +191,7 @@ Rules:
 """,
 
     TemplateType.BUYER_NEED: """
-You are writing a BUYER NEED flyer for Elena James.
+You are writing a BUYER NEED flyer for {agent_name}.
 
 Buyer:
 Buyer Type: {buyer_type}
@@ -221,7 +221,7 @@ Rules:
 """,
 
     TemplateType.MARKET_UPDATE: """
-You are writing a local MARKET UPDATE flyer for Elena James.
+You are writing a local MARKET UPDATE flyer for {agent_name}.
 
 Area: {area}
 Timeframe: {timeframe}
@@ -248,7 +248,7 @@ Rules:
 """,
 
     TemplateType.FOLLOWUP_GENERAL: """
-Write a follow-up email from Elena James.
+Write a follow-up email from {agent_name}.
 
 Client Name: {client_name}
 Pipeline Stage: {pipeline_stage}
@@ -267,7 +267,7 @@ Rules:
 """,
 
     TemplateType.FOLLOWUP_AFTER_SHOWING: """
-Write a post-showing follow-up email from Elena James.
+Write a post-showing follow-up email from {agent_name}.
 
 Client Name: {client_name}
 Property Address: {address}
@@ -288,7 +288,7 @@ Rules:
 """,
 
     TemplateType.FOLLOWUP_NEW_LEAD: """
-Write a new lead follow-up email from Elena James.
+Write a new lead follow-up email from {agent_name}.
 
 Client Name: {client_name}
 Lead Source: {source}
@@ -301,14 +301,14 @@ EMAIL:
 
 Rules:
 - Acknowledge how they came in
-- Briefly introduce Elena’s approach
+- Briefly introduce the agent's approach
 - Invite a call or reply
 - Email must be 4 to 7 sentences
 - Tone: warm, confident, approachable
 """,
 
     TemplateType.FOLLOWUP_INACTIVE: """
-Write a re-engagement email from Elena James.
+Write a re-engagement email from {agent_name}.
 
 Client Name: {client_name}
 Last Contact Context: {context}
