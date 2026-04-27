@@ -1385,6 +1385,43 @@ INSURANCE_LINES = [
     {"key": "landlord", "label": "Landlord Insurance", "icon": "building"},
 ]
 
+INSURANCE_LEAD_SOURCES = [
+    ("instagram", "Instagram"),
+    ("facebook", "Facebook"),
+    ("tiktok", "TikTok"),
+    ("youtube", "YouTube"),
+    ("website", "Website"),
+    ("referral", "Referral"),
+    ("ravlo", "Ravlo"),
+    ("other", "Other"),
+]
+
+INSURANCE_PIPELINE_STAGES = [
+    ("new_lead", "New Lead"),
+    ("quote_needed", "Quote Needed"),
+    ("quote_sent", "Quote Sent"),
+    ("follow_up", "Follow-Up"),
+    ("bound", "Bound Policy"),
+    ("nurture", "Nurture"),
+]
+
+INSURANCE_INCOME_CATEGORIES = [
+    ("insurance_commission", "Commission"),
+    ("insurance_referral", "Referral"),
+    ("insurance_renewal", "Renewal"),
+    ("insurance_bonus", "Bonus"),
+    ("insurance_other", "Other"),
+]
+
+INSURANCE_EXPENSE_CATEGORIES = [
+    ("insurance_marketing", "Marketing / Social Ads"),
+    ("insurance_leads", "Purchased Leads"),
+    ("insurance_licenses", "Licenses / Appointments"),
+    ("insurance_software", "Software"),
+    ("insurance_ce", "Continuing Education"),
+    ("insurance_other", "Other"),
+]
+
 
 def _insurance_quote_stats(partner):
     """Aggregate insurance quote stats from partner connection requests."""
@@ -1414,38 +1451,87 @@ INSURANCE_CONTACT_TERMS = {
 }
 
 
-def _insurance_crm_snapshot(profile):
-    """Return VIP contacts split for the insurance side of a combo dashboard."""
+def _insurance_contact_filter():
+    type_filter = func.lower(func.coalesce(VIPContact.contact_type, "")).in_([
+        "insurance_client",
+        "insurance_lead",
+        "policyholder",
+    ])
+    tag_filters = [
+        func.lower(func.coalesce(VIPContact.tags, "")).like("%" + term + "%")
+        for term in INSURANCE_CONTACT_TERMS
+    ]
+    return or_(type_filter, *tag_filters)
+
+
+def _insurance_contacts_query(profile):
+    return (
+        VIPContact.query
+        .filter(VIPContact.vip_profile_id == profile.id)
+        .filter(_insurance_contact_filter())
+    )
+
+
+def _insurance_crm_snapshot(profile, limit=8):
+    """Return VIP contacts for the insurance side of a combo dashboard."""
     if not profile:
         return {
             "total_contacts": 0,
             "insurance_contacts": [],
-            "other_contacts": [],
+            "stage_counts": {key: 0 for key, _label in INSURANCE_PIPELINE_STAGES},
         }
 
+    base = _insurance_contacts_query(profile)
     contacts = (
-        VIPContact.query
-        .filter_by(vip_profile_id=profile.id)
+        base
         .order_by(VIPContact.updated_at.desc())
+        .limit(limit).all()
+    )
+    stage_counts = {
+        key: base.filter(VIPContact.pipeline_stage == key).count()
+        for key, _label in INSURANCE_PIPELINE_STAGES
+    }
+
+    return {
+        "total_contacts": base.count(),
+        "insurance_contacts": contacts,
+        "stage_counts": stage_counts,
+    }
+
+
+def _insurance_finance_query(model, profile):
+    categories = [key for key, _label in (
+        INSURANCE_INCOME_CATEGORIES if model is VIPIncome else INSURANCE_EXPENSE_CATEGORIES
+    )]
+    return model.query.filter(
+        model.vip_profile_id == profile.id,
+        model.category.in_(categories),
+    )
+
+
+def _insurance_finance_summary(profile):
+    incomes = (
+        _insurance_finance_query(VIPIncome, profile)
+        .order_by(VIPIncome.created_at.desc())
+        .limit(50).all()
+    )
+    expenses = (
+        _insurance_finance_query(VIPExpense, profile)
+        .order_by(VIPExpense.created_at.desc())
         .limit(50).all()
     )
 
-    insurance_contacts = []
-    other_contacts = []
-    for contact in contacts:
-        role_text = " ".join([
-            (getattr(contact, "contact_type", "") or ""),
-            (getattr(contact, "tags", "") or ""),
-        ]).lower()
-        if any(term in role_text for term in INSURANCE_CONTACT_TERMS):
-            insurance_contacts.append(contact)
-        else:
-            other_contacts.append(contact)
+    total_received = sum((i.amount or 0) for i in incomes if (i.status or "received") == "received")
+    total_pending = sum((i.amount or 0) for i in incomes if (i.status or "received") == "pending")
+    total_expenses = sum((e.amount or 0) for e in expenses)
 
     return {
-        "total_contacts": len(insurance_contacts),
-        "insurance_contacts": insurance_contacts[:8],
-        "other_contacts": other_contacts[:8],
+        "incomes": incomes,
+        "expenses": expenses,
+        "total_received": total_received,
+        "total_pending": total_pending,
+        "total_expenses": total_expenses,
+        "net_profit": total_received - total_expenses,
     }
 
 
@@ -1488,6 +1574,219 @@ def insurance_dashboard():
         portal_home         = url_for("vip.insurance_dashboard"),
         **realtor_ctx,
     )
+
+
+@vip_bp.route("/insurance/clients", methods=["GET", "POST"])
+@role_required("partner_group", "admin")
+def insurance_clients():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        if not name:
+            flash("Client name is required.", "warning")
+            return redirect(url_for("vip.insurance_clients"))
+
+        source = (request.form.get("lead_source") or "other").strip().lower()
+        line = (request.form.get("coverage_line") or "").strip().lower()
+        stage = (request.form.get("pipeline_stage") or "new_lead").strip().lower()
+        extra_tags = [
+            tag.strip()
+            for tag in (request.form.get("tags") or "").replace(";", ",").split(",")
+            if tag.strip()
+        ]
+
+        tags = ["insurance"]
+        if source:
+            tags.append("source:" + source)
+        if line:
+            tags.append("line:" + line)
+        tags.extend(extra_tags)
+
+        contact = VIPContact(
+            vip_profile_id=profile.id,
+            name=name,
+            email=(request.form.get("email") or "").strip() or None,
+            phone=(request.form.get("phone") or "").strip() or None,
+            contact_type="insurance_client",
+            tags=", ".join(dict.fromkeys(tags)),
+            pipeline_stage=stage,
+            notes=(request.form.get("notes") or "").strip() or None,
+        )
+        db.session.add(contact)
+        db.session.commit()
+        flash("Insurance client captured.", "success")
+        return redirect(url_for("vip.insurance_clients"))
+
+    selected_stage = (request.args.get("stage") or "").strip().lower()
+    selected_source = (request.args.get("source") or "").strip().lower()
+    contacts_q = _insurance_contacts_query(profile)
+
+    if selected_stage:
+        contacts_q = contacts_q.filter(VIPContact.pipeline_stage == selected_stage)
+    if selected_source:
+        contacts_q = contacts_q.filter(
+            func.lower(func.coalesce(VIPContact.tags, "")).like("%source:" + selected_source + "%")
+        )
+
+    contacts = contacts_q.order_by(VIPContact.updated_at.desc()).limit(80).all()
+    crm_snapshot = _insurance_crm_snapshot(profile, limit=12)
+
+    return render_template(
+        "vip/insurance/clients.html",
+        vip_profile      = profile,
+        modules          = get_enabled_modules(profile),
+        header_name      = get_dashboard_name(profile),
+        partner          = partner,
+        contacts         = contacts,
+        crm_snapshot     = crm_snapshot,
+        lead_sources     = INSURANCE_LEAD_SOURCES,
+        pipeline_stages  = INSURANCE_PIPELINE_STAGES,
+        insurance_lines  = INSURANCE_LINES,
+        selected_stage   = selected_stage,
+        selected_source  = selected_source,
+        portal           = "vip",
+        portal_name      = "VIP Insurance",
+        portal_home      = url_for("vip.insurance_dashboard"),
+    )
+
+
+@vip_bp.get("/insurance/finance")
+@role_required("partner_group", "admin")
+def insurance_finance():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+    summary = _insurance_finance_summary(profile)
+    contacts = _insurance_contacts_query(profile).order_by(VIPContact.name.asc()).limit(100).all()
+    tax_rate = _finance_tax_rate(profile)
+    taxable_income = max(summary["total_received"] - summary["total_expenses"], 0)
+
+    return render_template(
+        "vip/insurance/finance.html",
+        vip_profile         = profile,
+        modules             = get_enabled_modules(profile),
+        header_name         = get_dashboard_name(profile),
+        partner             = partner,
+        contacts            = contacts,
+        income_categories   = INSURANCE_INCOME_CATEGORIES,
+        expense_categories  = INSURANCE_EXPENSE_CATEGORIES,
+        total_received      = summary["total_received"],
+        total_pending       = summary["total_pending"],
+        total_expenses      = summary["total_expenses"],
+        net_profit          = summary["net_profit"],
+        tax_rate_pct        = int(round(tax_rate * 100)),
+        tax_set_aside       = int(round(taxable_income * tax_rate)),
+        incomes             = summary["incomes"],
+        expenses            = summary["expenses"],
+        portal              = "vip",
+        portal_name         = "VIP Insurance",
+        portal_home         = url_for("vip.insurance_dashboard"),
+    )
+
+
+@vip_bp.post("/insurance/finance/income/new")
+@role_required("partner_group", "admin")
+def insurance_finance_add_income():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    amount = _parse_money(request.form.get("amount"))
+    if amount is None or amount <= 0:
+        flash("Income amount must be a positive number.", "warning")
+        return redirect(url_for("vip.insurance_finance"))
+
+    category = (request.form.get("category") or "insurance_commission").strip().lower()
+    valid_categories = {key for key, _label in INSURANCE_INCOME_CATEGORIES}
+    if category not in valid_categories:
+        category = "insurance_other"
+
+    contact_id = request.form.get("contact_id", type=int)
+    contact = None
+    if contact_id:
+        contact = _insurance_contacts_query(profile).filter(VIPContact.id == contact_id).first()
+
+    db.session.add(VIPIncome(
+        vip_profile_id = profile.id,
+        contact_id     = contact.id if contact else None,
+        category       = category,
+        description    = (request.form.get("description") or "").strip() or None,
+        amount         = amount,
+        income_date    = _parse_date_input(request.form.get("income_date")) or datetime.utcnow(),
+        status         = (request.form.get("status") or "received").strip().lower(),
+        notes          = (request.form.get("notes") or "").strip() or None,
+    ))
+    db.session.commit()
+    flash("Insurance income added.", "success")
+    return redirect(url_for("vip.insurance_finance"))
+
+
+@vip_bp.post("/insurance/finance/expense/new")
+@role_required("partner_group", "admin")
+def insurance_finance_add_expense():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    amount = _parse_money(request.form.get("amount"))
+    if amount is None or amount <= 0:
+        flash("Expense amount must be a positive number.", "warning")
+        return redirect(url_for("vip.insurance_finance"))
+
+    category = (request.form.get("category") or "insurance_marketing").strip().lower()
+    valid_categories = {key for key, _label in INSURANCE_EXPENSE_CATEGORIES}
+    if category not in valid_categories:
+        category = "insurance_other"
+
+    contact_id = request.form.get("contact_id", type=int)
+    contact = None
+    if contact_id:
+        contact = _insurance_contacts_query(profile).filter(VIPContact.id == contact_id).first()
+
+    db.session.add(VIPExpense(
+        vip_profile_id = profile.id,
+        contact_id     = contact.id if contact else None,
+        category       = category,
+        description    = (request.form.get("description") or "").strip() or None,
+        amount         = amount,
+        expense_date   = _parse_date_input(request.form.get("expense_date")) or datetime.utcnow(),
+        source         = "insurance",
+        notes          = (request.form.get("notes") or "").strip() or None,
+    ))
+    db.session.commit()
+    flash("Insurance expense added.", "success")
+    return redirect(url_for("vip.insurance_finance"))
+
+
+@vip_bp.post("/insurance/finance/income/<int:income_id>/mark-received")
+@role_required("partner_group", "admin")
+def insurance_finance_mark_income_received(income_id):
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    income = (
+        _insurance_finance_query(VIPIncome, profile)
+        .filter(VIPIncome.id == income_id)
+        .first_or_404()
+    )
+    income.status = "received"
+    income.income_date = income.income_date or datetime.utcnow()
+    db.session.commit()
+    flash("Insurance income marked as received.", "success")
+    return redirect(url_for("vip.insurance_finance"))
 
 
 @vip_bp.get("/insurance/new-quote")
