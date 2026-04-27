@@ -83,6 +83,10 @@
             <input id="lot_count" name="lot_count" type="number" min="1" step="1" value="{{ lot_count or 1 }}">
           </div>
           <div class="field">
+            <label for="number_of_floors">Number of Floors</label>
+            <input id="number_of_floors" name="number_of_floors" type="number" min="1" max="5" step="1" value="{{ build_project.get('number_of_floors') or build_project.get('stories') or (project.stories if project and project.stories is defined else '') }}" placeholder="2">
+          </div>
+          <div class="field">
             <label for="zoning">Zoning</label>
             <input id="zoning" name="zoning" value="{{ build_project.get('zoning') or (project.zoning if project else '') }}" placeholder="R-3">
           </div>
