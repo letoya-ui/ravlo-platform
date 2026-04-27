@@ -36,8 +36,8 @@
       <i class="lucide lucide-sparkles text-indigo-400 mr-1"></i>
       AI-Generated Quote
     </h3>
-    <div class="prose prose-invert prose-sm max-w-none bg-white/5 rounded-lg p-4" id="quoteContent">
-      {{ quote_text|e|replace('\n', '<br>')|safe }}
+    <div class="prose prose-invert prose-sm max-w-none bg-white/5 rounded-lg p-4" id="quoteContent" style="white-space:pre-line;">
+      {{ quote_text|e }}
     </div>
   </section>
 
