@@ -11,7 +11,7 @@ Add a new property and assign it to a market.
     <i class="lucide lucide-sparkles"></i>
     <span>Copilot</span>
   </a>
-  <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost sm">
+  <a href="{{ portal_home|default(url_for('vip.realtor_dashboard')) }}" class="ravlo-btn ghost sm">
     <i class="lucide lucide-arrow-left"></i>
     <span>Back to Dashboard</span>
   </a>

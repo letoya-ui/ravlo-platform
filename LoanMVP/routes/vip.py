@@ -70,6 +70,7 @@ from LoanMVP.models.admin import Company
 
 # ── Services / utils ─────────────────────────────────────────────────────────
 from LoanMVP.services.vip_ai_pilot import parse_vip_command
+from LoanMVP.services.elena_templates import TemplateType
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.utils.company_policy import (
     get_user_lending_policy,
@@ -781,7 +782,7 @@ def realtor_dashboard():
             }
 
     return render_template(
-        "vip/realtor/dashboard.html",
+        "elena/dashboard.html",
         vip_profile           = profile,
         modules               = get_enabled_modules(profile),
         header_name           = get_dashboard_name(profile),
@@ -796,9 +797,6 @@ def realtor_dashboard():
         copilot_suggestions   = copilot_suggestions,
         recent_partner_requests = recent_partner_requests,
         partner_request_stats = partner_request_stats,
-        # `effective_market` reflects what the queries were actually
-        # scoped to — for a single-market realtor this is their one market
-        # even though the session still holds "All Markets".
         current_market        = effective_market,
         available_markets     = available_markets,
         multi_market          = multi_market,
@@ -810,8 +808,9 @@ def realtor_dashboard():
         listing_sync_url      = _listing_sync_url(profile),
         listing_sync_token    = _listing_sync_token(profile),
         listing_sync_prompt   = _listing_sync_prompt(profile),
+        template_types        = [t.value for t in TemplateType],
         portal                = "vip",
-        portal_name           = "Partners",
+        portal_name           = "VIP Workspace",
         portal_home           = url_for("vip.realtor_dashboard"),
     )
 

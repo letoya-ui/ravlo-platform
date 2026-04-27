@@ -1,6 +1,6 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Elena Content Studio{% endblock %}
+{% block title %}Ravlo • Content Studio{% endblock %}
 
 {% block page_title %}Create Content{% endblock %}
 {% block page_subline %}
@@ -8,8 +8,8 @@ Build flyers, follow-ups, and social posts with client and listing details fille
 {% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost sm">
-    Back to Elena
+  <a href="{{ portal_home|default(url_for('vip.realtor_dashboard')) }}" class="ravlo-btn ghost sm">
+    Back to Dashboard
   </a>
 {% endblock %}
 
@@ -107,7 +107,7 @@ Build flyers, follow-ups, and social posts with client and listing details fille
         <div class="section-head">
           <div>
             <h3>Prompt Preview</h3>
-            <p>This is the exact prompt Elena will use to generate the final content.</p>
+            <p>This is the exact prompt that will be used to generate the final content.</p>
           </div>
         </div>
 
