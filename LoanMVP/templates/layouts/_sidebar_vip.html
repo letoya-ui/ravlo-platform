@@ -81,6 +81,18 @@
 
     <div class="ravlo-nav-section">Insurance</div>
 
+    <a href="{{ url_for('vip.insurance_clients') }}"
+       class="ravlo-nav-link {% if ep == 'vip.insurance_clients' %}active{% endif %}">
+      <i class="lucide lucide-users"></i>
+      <span>Insurance CRM</span>
+    </a>
+
+    <a href="{{ url_for('vip.insurance_finance') }}"
+       class="ravlo-nav-link {% if ep in ['vip.insurance_finance', 'vip.insurance_finance_add_income', 'vip.insurance_finance_add_expense'] %}active{% endif %}">
+      <i class="lucide lucide-receipt"></i>
+      <span>Insurance Finance</span>
+    </a>
+
     <a href="{{ url_for('vip.insurance_new_quote', line='auto') }}"
        class="ravlo-nav-link {% if ep == 'vip.insurance_new_quote' %}active{% endif %}">
       <i class="lucide lucide-file-plus"></i>
@@ -136,7 +148,7 @@
     <a href="{{ url_for('vip.finances') }}"
        class="ravlo-nav-link {% if ep in ['vip.finances', 'vip.finances_add_income', 'vip.finances_add_expense'] %}active{% endif %}">
       <i class="lucide lucide-receipt"></i>
-      <span>Finances</span>
+      <span>All Finances</span>
     </a>
 
     <a href="{{ url_for('vip.team') }}"

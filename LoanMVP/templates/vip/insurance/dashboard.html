@@ -27,6 +27,14 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
     <i class="lucide lucide-file-plus"></i>
     <span>New Quote</span>
   </a>
+  <a href="{{ url_for('vip.insurance_clients') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-users"></i>
+    <span>Insurance CRM</span>
+  </a>
+  <a href="{{ url_for('vip.insurance_finance') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-receipt"></i>
+    <span>Insurance Finance</span>
+  </a>
   <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn ghost sm">
     <i class="lucide lucide-house-plus"></i>
     <span>Add Listing</span>
@@ -69,6 +77,14 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
         <a href="{{ url_for('vip.insurance_compose_email') }}" class="ravlo-btn ghost">
           <i class="lucide lucide-mail"></i>
           <span>Draft Email</span>
+        </a>
+        <a href="{{ url_for('vip.insurance_clients') }}" class="ravlo-btn ghost">
+          <i class="lucide lucide-users"></i>
+          <span>Insurance CRM</span>
+        </a>
+        <a href="{{ url_for('vip.insurance_finance') }}" class="ravlo-btn ghost">
+          <i class="lucide lucide-receipt"></i>
+          <span>Insurance Finance</span>
         </a>
         <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn ghost">
           <i class="lucide lucide-user-plus"></i>
@@ -195,6 +211,10 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
         {% else %}
           <div class="combo-empty">No tagged insurance contacts yet. Quote requests stay separate below until contacts are created.</div>
         {% endif %}
+        <a href="{{ url_for('vip.insurance_clients') }}" class="ravlo-btn ghost sm combo-crm-link">
+          <i class="lucide lucide-arrow-right"></i>
+          <span>Open Insurance CRM</span>
+        </a>
       </article>
 
       <article class="combo-crm-card request-crm">
@@ -877,6 +897,11 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
   .combo-crm-list span {
     color: #edf6ff;
     font-weight: 700;
+  }
+
+  .combo-crm-link {
+    margin-top: auto;
+    width: fit-content;
   }
 
   .combo-lane-grid,
