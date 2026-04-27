@@ -3696,6 +3696,32 @@ def _int(val):
         return None
 
 
+def _safe_float(val):
+    if val in (None, ""):
+        return None
+    try:
+        cleaned = str(val).replace(",", "").replace("$", "").replace("%", "").strip()
+        return float(cleaned)
+    except (TypeError, ValueError):
+        return None
+
+
+def _median(values):
+    vals = sorted(v for v in values if v is not None)
+    if not vals:
+        return None
+    mid = len(vals) // 2
+    if len(vals) % 2:
+        return vals[mid]
+    return (vals[mid - 1] + vals[mid]) / 2
+
+
+def _round_listing_number(value, step=5000):
+    if not value:
+        return None
+    return int(round(float(value) / step) * step)
+
+
 def _json_list(raw):
     """Decode a JSON-encoded list column. Returns [] on any failure so the
     template never has to defensively null-check."""
@@ -3733,6 +3759,227 @@ def _new_share_slug():
 def _listing_or_404(listing_id):
     listing = ElenaListing.query.get(listing_id)
     return listing
+
+
+def _presentation_subject_snapshot(pres):
+    listing = getattr(pres, "listing", None)
+    return {
+        "address": (pres.property_address or getattr(listing, "address", "") or "").strip(),
+        "city": (pres.property_city or getattr(listing, "city", "") or "").strip(),
+        "state": (pres.property_state or getattr(listing, "state", "") or "").strip(),
+        "zip": (pres.property_zip or getattr(listing, "zip_code", "") or "").strip(),
+        "market": (getattr(listing, "market", "") or "").strip(),
+        "beds": _int(pres.property_beds or getattr(listing, "beds", None)),
+        "baths": _safe_float(pres.property_baths or getattr(listing, "baths", None)),
+        "sqft": _int(pres.property_sqft or getattr(listing, "sqft", None)),
+    }
+
+
+def _listing_to_cma_row(listing):
+    return {
+        "address": listing.address or "",
+        "status": (listing.status or "active").title(),
+        "price": str(listing.price or ""),
+        "sqft": str(listing.sqft or ""),
+        "beds": str(listing.beds or ""),
+        "baths": str(listing.baths or ""),
+        "adjustments": "",
+    }
+
+
+def _seed_cma_rows_from_saved_listings(profile, pres, limit=6):
+    subject = _presentation_subject_snapshot(pres)
+    base = ElenaListing.query.filter(ElenaListing.price.isnot(None))
+    if pres.listing_id:
+        base = base.filter(ElenaListing.id != pres.listing_id)
+    if subject["address"]:
+        base = base.filter(func.lower(ElenaListing.address) != subject["address"].lower())
+
+    filters = []
+    if subject["zip"]:
+        filters.append(ElenaListing.zip_code == subject["zip"])
+    if subject["city"]:
+        filters.append(func.lower(ElenaListing.city) == subject["city"].lower())
+    if subject["market"]:
+        filters.append(ElenaListing.market == subject["market"])
+    elif profile:
+        markets = get_user_markets(profile)
+        if markets:
+            filters.append(ElenaListing.market.in_(markets))
+
+    candidates = []
+    for clause in filters:
+        for listing in base.filter(clause).order_by(ElenaListing.updated_at.desc()).limit(limit * 2).all():
+            if listing.id not in {getattr(item, "id", None) for item in candidates}:
+                candidates.append(listing)
+            if len(candidates) >= limit:
+                break
+        if len(candidates) >= limit:
+            break
+
+    if not candidates:
+        candidates = base.order_by(ElenaListing.updated_at.desc()).limit(limit).all()
+
+    return [_listing_to_cma_row(listing) for listing in candidates[:limit]]
+
+
+def _score_cma_comp(row, subject):
+    score = 45
+    status = (row.get("status") or "").strip().lower()
+    if status in {"sold", "closed", "settled"}:
+        score += 20
+    elif status in {"pending", "under contract"}:
+        score += 12
+    elif status in {"active", "coming soon"}:
+        score += 6
+
+    if subject.get("sqft") and row.get("sqft"):
+        spread = abs(row["sqft"] - subject["sqft"]) / max(subject["sqft"], 1)
+        if spread <= 0.10:
+            score += 18
+        elif spread <= 0.20:
+            score += 12
+        elif spread <= 0.35:
+            score += 6
+
+    if subject.get("beds") and row.get("beds"):
+        score += 8 if row["beds"] == subject["beds"] else 3
+    if subject.get("baths") and row.get("baths"):
+        score += 7 if abs(row["baths"] - subject["baths"]) <= 0.5 else 2
+    if row.get("price") and row.get("sqft"):
+        score += 5
+    return max(0, min(100, score))
+
+
+def _presentation_cma_analysis(pres):
+    rows = _json_list(pres.cma_rows_json)
+    subject = _presentation_subject_snapshot(pres)
+    normalized = []
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        price = _parse_money(row.get("price"))
+        sqft = _int(row.get("sqft"))
+        beds = _int(row.get("beds"))
+        baths = _safe_float(row.get("baths"))
+        adjustment = _parse_money(row.get("adjustments"))
+        adjusted_price = (price or 0) + (adjustment or 0)
+        price_per_sqft = (adjusted_price / sqft) if adjusted_price and sqft else None
+        item = {
+            "address": (row.get("address") or "").strip(),
+            "status": (row.get("status") or "").strip(),
+            "price": price,
+            "sqft": sqft,
+            "beds": beds,
+            "baths": baths,
+            "adjustment": adjustment or 0,
+            "adjusted_price": adjusted_price if adjusted_price else None,
+            "price_per_sqft": price_per_sqft,
+            "adjustments": (row.get("adjustments") or "").strip(),
+        }
+        item["score"] = _score_cma_comp(item, subject)
+        normalized.append(item)
+
+    usable = [row for row in normalized if row.get("adjusted_price")]
+    prices = [row["adjusted_price"] for row in usable if row.get("adjusted_price")]
+    ppsf_values = [row["price_per_sqft"] for row in usable if row.get("price_per_sqft")]
+    median_price = _median(prices)
+    average_price = (sum(prices) / len(prices)) if prices else None
+    median_ppsf = _median(ppsf_values)
+    average_ppsf = (sum(ppsf_values) / len(ppsf_values)) if ppsf_values else None
+
+    if subject.get("sqft") and median_ppsf:
+        suggested = subject["sqft"] * median_ppsf
+        method = "median_ppsf"
+    else:
+        suggested = median_price
+        method = "median_price"
+
+    suggested_price = _round_listing_number(suggested)
+    if suggested_price:
+        range_low = _round_listing_number(suggested_price * 0.96)
+        range_high = _round_listing_number(suggested_price * 1.04)
+    else:
+        range_low = range_high = None
+
+    comp_count = len(usable)
+    if comp_count >= 5 and subject.get("sqft") and median_ppsf:
+        confidence_label = "High"
+        confidence_score = 85
+    elif comp_count >= 3:
+        confidence_label = "Solid"
+        confidence_score = 68
+    elif comp_count >= 1:
+        confidence_label = "Directional"
+        confidence_score = 42
+    else:
+        confidence_label = "Needs comps"
+        confidence_score = 0
+
+    warnings = []
+    if comp_count == 0:
+        warnings.append("Add at least one priced comparable to calculate a CMA number.")
+    elif comp_count < 3:
+        warnings.append("Use at least three comps before treating this as a client-ready CMA.")
+    if not subject.get("sqft"):
+        warnings.append("Add subject square footage to calculate a stronger price-per-square-foot CMA.")
+
+    current_price = pres.suggested_list_price or None
+    delta = current_price - suggested_price if current_price and suggested_price else None
+    delta_pct = round((delta / suggested_price) * 100, 1) if delta and suggested_price else None
+
+    return {
+        "subject": subject,
+        "rows": normalized,
+        "comp_count": comp_count,
+        "suggested_price": suggested_price,
+        "range_low": range_low,
+        "range_high": range_high,
+        "average_price": _round_listing_number(average_price, step=1000) if average_price else None,
+        "median_price": _round_listing_number(median_price, step=1000) if median_price else None,
+        "average_ppsf": round(average_ppsf, 2) if average_ppsf else None,
+        "median_ppsf": round(median_ppsf, 2) if median_ppsf else None,
+        "confidence_label": confidence_label,
+        "confidence_score": confidence_score,
+        "method": method,
+        "warnings": warnings,
+        "delta": delta,
+        "delta_pct": delta_pct,
+    }
+
+
+def _apply_cma_analysis_to_presentation(pres, analysis, overwrite_numbers=False, overwrite_text=False):
+    if not analysis or not analysis.get("suggested_price"):
+        return False
+
+    if overwrite_numbers or not pres.suggested_list_price:
+        pres.suggested_list_price = analysis["suggested_price"]
+    if overwrite_numbers or not pres.pricing_range_low:
+        pres.pricing_range_low = analysis["range_low"]
+    if overwrite_numbers or not pres.pricing_range_high:
+        pres.pricing_range_high = analysis["range_high"]
+
+    comp_count = analysis.get("comp_count") or 0
+    avg_ppsf = analysis.get("average_ppsf")
+    range_low = analysis.get("range_low")
+    range_high = analysis.get("range_high")
+    suggested = analysis.get("suggested_price")
+
+    if overwrite_text or not pres.cma_summary:
+        pres.cma_summary = (
+            f"Ravlo reviewed {comp_count} comparable listing"
+            f"{'s' if comp_count != 1 else ''}. "
+            f"The in-app CMA indicates a target list price near ${suggested:,.0f}"
+            + (f" and an average comp value of ${avg_ppsf:,.0f}/sqft." if avg_ppsf else ".")
+        )
+    if overwrite_text or not pres.pricing_rationale:
+        pres.pricing_rationale = (
+            f"The recommended range is ${range_low:,.0f} to ${range_high:,.0f}, "
+            f"with ${suggested:,.0f} positioned as the launch price based on the comparable set. "
+            "Final pricing should still account for condition, showing feedback, and seller timing."
+        )
+    return True
 
 
 def _presentation_or_404(pres_id, profile):
@@ -3802,10 +4049,12 @@ def _create_presentation_from_listing(profile, listing, fallback_address=None):
 def _serialize_presentation_view(pres):
     """Shape the DB row into a dict the templates render directly. Keeps
     all JSON decoding in one place."""
+    cma_analysis = _presentation_cma_analysis(pres)
     return {
         "id":   pres.id,
         "row":  pres,
         "cma_rows":        _json_list(pres.cma_rows_json),
+        "cma_analysis":    cma_analysis,
         "marketing_plan":  _json_list(pres.marketing_plan_json),
         "testimonials":    _json_list(pres.testimonials_json),
         "agent_stats":     _json_list(pres.agent_stats_json),
@@ -4144,6 +4393,33 @@ def listing_presentation_edit(pres_id):
         portal_name           = "VIP",
         portal_home           = url_for("vip.realtor_dashboard"),
     )
+
+
+@vip_bp.post("/realtor/presentations/<int:pres_id>/cma/refresh")
+@role_required("partner_group", "admin")
+def listing_presentation_cma_refresh(pres_id):
+    profile = get_or_create_vip_profile()
+    pres = _presentation_or_404(pres_id, profile)
+    if not pres:
+        flash("Presentation not found.", "warning")
+        return redirect(url_for("vip.listing_presentations"))
+
+    _apply_presentation_form(pres, request.form)
+    current_rows = _json_list(pres.cma_rows_json)
+    if not current_rows:
+        seeded_rows = _seed_cma_rows_from_saved_listings(profile, pres)
+        if seeded_rows:
+            pres.cma_rows_json = _dump_list(seeded_rows)
+
+    analysis = _presentation_cma_analysis(pres)
+    applied = _apply_cma_analysis_to_presentation(pres, analysis, overwrite_numbers=True)
+    db.session.commit()
+
+    if applied:
+        flash("CMA numbers refreshed inside the presentation.", "success")
+    else:
+        flash("Add priced comps or saved Ravlo listings before building the CMA number.", "warning")
+    return redirect(url_for("vip.listing_presentation_edit", pres_id=pres.id))
 
 
 @vip_bp.post("/realtor/presentations/<int:pres_id>/delete")

@@ -1,6 +1,7 @@
 {# Shared "deck" renderer used by the internal print view and the public view.
    Callers must pass `pres` (RealtorListingPresentation) and `view`
    (dict returned from routes/vip.py::_serialize_presentation_view). #}
+{% set cma = view.cma_analysis or {} %}
 
 <section class="deck-cover"
          {% if pres.cover_image_url %}style="background-image: linear-gradient(180deg, rgba(0,0,0,0.2), rgba(0,0,0,0.75)), url('{{ pres.cover_image_url }}');"{% endif %}>
@@ -71,8 +72,24 @@
 
 {% if view.cma_rows or pres.cma_summary %}
 <section class="deck-section">
-  <h2>Comparable Sales</h2>
+  <h2>CMA &amp; Comparable Sales</h2>
   {% if pres.cma_summary %}<p class="deck-body">{{ pres.cma_summary }}</p>{% endif %}
+  {% if cma.suggested_price %}
+    <div class="deck-cma-band">
+      <div class="deck-cma-number">
+        <span>Ravlo CMA Number</span>
+        <strong>${{ "{:,.0f}".format(cma.suggested_price) }}</strong>
+        {% if cma.range_low and cma.range_high %}
+          <small>Recommended range ${{ "{:,.0f}".format(cma.range_low) }} - ${{ "{:,.0f}".format(cma.range_high) }}</small>
+        {% endif %}
+      </div>
+      <div class="deck-cma-metrics">
+        <div><span>Comps</span><strong>{{ cma.comp_count }}</strong></div>
+        <div><span>Median $/Sqft</span><strong>{% if cma.median_ppsf %}${{ "{:,.0f}".format(cma.median_ppsf) }}{% else %}-{% endif %}</strong></div>
+        <div><span>Confidence</span><strong>{{ cma.confidence_label }}</strong></div>
+      </div>
+    </div>
+  {% endif %}
   {% if view.cma_rows %}
     <table class="deck-table">
       <thead>
