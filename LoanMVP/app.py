@@ -99,6 +99,22 @@ _SCHEMA_COMPAT_COLUMNS = [
 _SCHEMA_COMPAT_TABLES = [
     "cost_observations",
     "vip_team_members",
+    "realtor_listing_presentations",
+]
+
+_SCHEMA_COMPAT_INDEXES = [
+    (
+        "ix_realtor_presentations_vip_profile_id",
+        "realtor_listing_presentations",
+        ("vip_profile_id",),
+        False,
+    ),
+    (
+        "ix_realtor_presentations_listing_id",
+        "realtor_listing_presentations",
+        ("listing_id",),
+        False,
+    ),
 ]
 
 
@@ -115,6 +131,7 @@ def _ensure_schema_compat(app):
     catch up.
     """
     try:
+        import sqlalchemy as sa
         from sqlalchemy import inspect, text
     except Exception as e:
         print(f"[schema-compat] sqlalchemy import failed: {e}")
@@ -156,6 +173,32 @@ def _ensure_schema_compat(app):
                 table_obj.create(bind=db.engine, checkfirst=True)
             except Exception as e:
                 print(f"[schema-compat] failed creating table {table_name}: {e}")
+
+        for index_name, table_name, columns, unique in _SCHEMA_COMPAT_INDEXES:
+            try:
+                inspector = inspect(db.engine)
+                if not inspector.has_table(table_name):
+                    continue
+                table_obj = db.metadata.tables.get(table_name)
+                if table_obj is None:
+                    print(f"[schema-compat] no model found for index {index_name}")
+                    continue
+                if any(column not in table_obj.c for column in columns):
+                    print(f"[schema-compat] skipped index {index_name}; missing columns")
+                    continue
+
+                existing_indexes = {idx.name: idx for idx in table_obj.indexes}
+                index_obj = existing_indexes.get(index_name)
+                if index_obj is None:
+                    index_obj = sa.Index(
+                        index_name,
+                        *(table_obj.c[column] for column in columns),
+                        unique=unique,
+                    )
+                print(f"[schema-compat] ensuring index {index_name}")
+                index_obj.create(bind=db.engine, checkfirst=True)
+            except Exception as e:
+                print(f"[schema-compat] failed creating index {index_name}: {e}")
 
 
 # ---------------------------------------------------------
