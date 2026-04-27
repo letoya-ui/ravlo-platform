@@ -159,6 +159,11 @@ def dashboard():
         flash("Partner profile not found. Please register.", "warning")
         return redirect(url_for("partners.register"))
 
+    # VIP realtors use the unified VIP dashboard — redirect so they never
+    # see a separate partner space.
+    if partner_vip_tier_unlocked(partner) and partner_is_realtor(partner):
+        return redirect(url_for("vip.realtor_dashboard"))
+
     base_query = PartnerConnectionRequest.query.filter_by(partner_id=partner.id)
 
     pending_count = base_query.filter_by(status="pending").count()
