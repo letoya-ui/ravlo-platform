@@ -1476,7 +1476,6 @@ def copilot():
         suggestions=suggestions,
         current_market=get_current_market(),
         available_markets=_elena_available_markets(),
-        vip_profile=_elena_profile(),
         portal="vip",
         portal_name="VIP Workspace",
         portal_home=url_for("vip.realtor_dashboard"),
