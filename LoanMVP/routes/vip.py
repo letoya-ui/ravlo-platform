@@ -2883,6 +2883,7 @@ def onboarding_save():
             "contractor":   "contractor",
             "designer":     "designer",
             "loan_officer": "lender",
+            "partner":      "partner",
         }
         new_cat = role_to_category.get(new_role)
         if new_cat:
