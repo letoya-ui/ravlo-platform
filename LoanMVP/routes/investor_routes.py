@@ -4171,7 +4171,7 @@ def deal_workspace():
             [getattr(mockup, "after_url", None) for mockup in mockups],
             (build_project.get("blueprint", {}) or {}).get("image_url"),
             (build_project.get("blueprint", {}) or {}).get("blueprint_url"),
-            (build_project.get("site_plan", {}) or {}).get("image_url"),
+            (build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}).get("image_url"),
             exterior_block.get("image_url"),
             exterior_block.get("build_reference_image"),
             exterior_block.get("gallery"),
@@ -5709,9 +5709,8 @@ def _seed_build_project_from_saved_project(project: BuildProject | None) -> dict
         }
 
     if project.site_plan_url:
-        build_project["site_plan"] = {
+        build_project["blueprint_floor2"] = {
             "image_url": project.site_plan_url,
-            "site_plan_url": project.site_plan_url,
         }
 
     if project.concept_render_url:
@@ -5868,15 +5867,15 @@ def build_studio(deal_id=None):
         build_analysis=build_analysis,
         build_project=build_project,
         blueprint_result=blueprint_result,
-        site_plan_result=build_project.get("site_plan", {}) or {},
+        blueprint_floor2_result=build_project.get("blueprint_floor2", {}) or {},
         exterior_result=exterior_result,
         property_photo_gallery=property_gallery,
         package_result=package_result,
         has_saved_package=has_saved_package,
         page_title="Build Studio",
-        page_subtitle="Site planning, exterior design, and blueprint development for new builds, renovations, and property transformations.",
+        page_subtitle="Exterior design and multi-floor blueprint development for new builds, renovations, and property transformations.",
         lot_count=lot_count,
-        hero_title="Site plans, exterior concepts, and blueprint-ready layouts.",
+        hero_title="Multi-floor blueprints and exterior concepts.",
         hero_eyebrow="RAVLO BUILD STUDIO",
         companion_endpoint="investor.design_studio",
         companion_label="Open Design Studio",
@@ -6278,13 +6277,12 @@ def generate_build_exterior():
             build_project = results.get("build_project", {}) or {}
             blueprint = build_project.get("blueprint", {}) or {}
             exterior = build_project.get("exterior", {}) or {}
-            site_plan = build_project.get("site_plan", {}) or {}
+            floor2 = build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}
             generated_urls = {
                 (exterior.get("image_url") or "").strip(),
                 (blueprint.get("image_url") or "").strip(),
                 (blueprint.get("blueprint_url") or "").strip(),
-                (site_plan.get("image_url") or "").strip(),
-                (site_plan.get("site_plan_url") or "").strip(),
+                (floor2.get("image_url") or "").strip(),
             }
             candidate_reference = (
                 exterior.get("build_reference_image")
@@ -6297,7 +6295,7 @@ def generate_build_exterior():
             fallback_blueprint_url = (
                 blueprint.get("image_url")
                 or blueprint.get("blueprint_url")
-                or site_plan.get("image_url")
+                or floor2.get("image_url")
                 or ""
             ).strip()
 
@@ -7023,7 +7021,6 @@ def generate_full_build():
         deal_id = _normalize_int(data.get("deal_id"))
         project_id = _normalize_int(data.get("project_id"))
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
-        include_site_plan = str(data.get("include_site_plan") or "").lower() in ("1", "true", "yes", "on")
 
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
@@ -7177,13 +7174,12 @@ def generate_full_build():
             build_project = results.get("build_project", {}) or {}
             saved_exterior = build_project.get("exterior", {}) or {}
             saved_blueprint = build_project.get("blueprint", {}) or {}
-            saved_site_plan = build_project.get("site_plan", {}) or {}
+            saved_floor2 = build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}
             generated_urls = {
                 (saved_exterior.get("image_url") or "").strip(),
                 (saved_blueprint.get("image_url") or "").strip(),
                 (saved_blueprint.get("blueprint_url") or "").strip(),
-                (saved_site_plan.get("image_url") or "").strip(),
-                (saved_site_plan.get("site_plan_url") or "").strip(),
+                (saved_floor2.get("image_url") or "").strip(),
             }
             candidate_reference = (
                 saved_exterior.get("build_reference_image")
@@ -7194,10 +7190,11 @@ def generate_full_build():
                 reference_image_url = candidate_reference
 
         # --------------------------------------------------
-        # 1. GENERATE BLUEPRINT
+        # 1. GENERATE BLUEPRINT (First Floor)
         # --------------------------------------------------
         blueprint_payload = {
             "mode": "blueprint",
+            "blueprint_floor": "first" if number_of_floors and number_of_floors >= 2 else "",
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
@@ -7260,19 +7257,20 @@ def generate_full_build():
         blueprint_job_id = blueprint_json.get("job_id")
 
         # --------------------------------------------------
-        # 2. GENERATE SITE PLAN (optional)
+        # 2. GENERATE BLUEPRINT — SECOND FLOOR (when multi-story)
         # --------------------------------------------------
-        site_plan_urls = []
-        site_plan_primary_b64 = ""
-        site_plan_primary_url = ""
-        site_plan_meta = {"skipped": True, "reason": "site_plan_disabled"}
-        site_plan_seed = None
-        site_plan_job_id = None
+        blueprint_floor2_urls = []
+        blueprint_floor2_primary_url = ""
+        blueprint_floor2_primary_b64 = ""
+        blueprint_floor2_meta = {"skipped": True, "reason": "single_story"}
+        blueprint_floor2_seed = None
+        blueprint_floor2_job_id = None
 
-        if include_site_plan:
+        if number_of_floors and number_of_floors >= 2:
             try:
-                site_plan_payload = {
-                    "mode": "siteplan",
+                blueprint_floor2_payload = {
+                    "mode": "blueprint",
+                    "blueprint_floor": "second",
                     "project_name": project_name,
                     "property_type": property_type,
                     "style": style,
@@ -7281,57 +7279,58 @@ def generate_full_build():
                     "build_description": description,
                     "lot_size": lot_size,
                     "zoning": zoning,
-                    "prompt_notes": site_notes,
+                    "prompt_notes": (
+                        f"{site_notes}. Generate the second floor / upper level plan with bedrooms, bathrooms, "
+                        "laundry, and hallway circulation. Must be a distinct upper-level layout, not a copy of the first floor."
+                    ),
                     "special_features": (
-                        f"{lot_count} buildable lots, internal drives, setbacks, parking, and site circulation"
-                        if lot_count and lot_count > 1
-                        else f"{notes}, access, setbacks, and site circulation".strip(", ")
+                        "upper level bedrooms, bathrooms, laundry, hallway, secondary living spaces"
                     ),
                     "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
                     "stories": number_of_floors,
                     "number_of_floors": number_of_floors,
                     "floor_count": number_of_floors,
-                    "image_base64": blueprint_image_base64 or blueprint_primary_b64,
-                    "image_url": "" if (blueprint_image_base64 or blueprint_primary_b64) else (blueprint_url or blueprint_primary_url),
-                    "width": 768,
-                    "height": 768,
-                    "steps": 24,
-                    "guidance": 6.6,
-                    "strength": 0.28,
+                    "image_base64": blueprint_primary_b64,
+                    "image_url": "" if blueprint_primary_b64 else blueprint_primary_url,
+                    "width": 1024,
+                    "height": 1024,
+                    "steps": 30,
+                    "guidance": 6.8,
+                    "strength": 0.30,
                     "count": 1,
                 }
 
-                current_app.logger.warning(f"PROJECT BUILD SITEPLAN PAYLOAD: {site_plan_payload}")
+                current_app.logger.warning(f"FULL BUILD BLUEPRINT FLOOR 2 PAYLOAD: {blueprint_floor2_payload}")
 
-                site_plan_json = _post_renovation_engine_json(
+                blueprint_floor2_json = _post_renovation_engine_json(
                     "/v1/build_concept",
-                    site_plan_payload,
+                    blueprint_floor2_payload,
                     timeout=FULL_BUILD_BLUEPRINT_TIMEOUT,
                 )
 
-                site_plan_images_b64 = site_plan_json.get("images_base64") or []
-                if not site_plan_images_b64:
-                    raise RuntimeError("Site plan step returned no images.")
+                blueprint_floor2_images_b64 = blueprint_floor2_json.get("images_base64") or []
+                if not blueprint_floor2_images_b64:
+                    raise RuntimeError("Second floor blueprint step returned no images.")
 
-                site_plan_batch_id = uuid.uuid4().hex
-                site_plan_urls = _upload_after_images_from_b64(site_plan_images_b64, site_plan_batch_id)
+                blueprint_floor2_batch_id = uuid.uuid4().hex
+                blueprint_floor2_urls = _upload_after_images_from_b64(blueprint_floor2_images_b64, blueprint_floor2_batch_id)
 
-                if not site_plan_urls:
-                    raise RuntimeError("Site plan generated but uploads failed.")
+                if not blueprint_floor2_urls:
+                    raise RuntimeError("Second floor blueprint generated but uploads failed.")
 
-                site_plan_primary_b64 = site_plan_images_b64[0]
-                site_plan_primary_url = site_plan_urls[0]
-                site_plan_meta = site_plan_json.get("meta") or {}
-                site_plan_seed = site_plan_json.get("seed")
-                site_plan_job_id = site_plan_json.get("job_id")
+                blueprint_floor2_primary_b64 = blueprint_floor2_images_b64[0]
+                blueprint_floor2_primary_url = blueprint_floor2_urls[0]
+                blueprint_floor2_meta = blueprint_floor2_json.get("meta") or {}
+                blueprint_floor2_seed = blueprint_floor2_json.get("seed")
+                blueprint_floor2_job_id = blueprint_floor2_json.get("job_id")
             except Exception:
-                current_app.logger.exception("Project build site plan skipped after generation failure")
-                site_plan_urls = []
-                site_plan_primary_b64 = ""
-                site_plan_primary_url = ""
-                site_plan_meta = {"skipped": True, "reason": "site_plan_generation_failed"}
-                site_plan_seed = None
-                site_plan_job_id = None
+                current_app.logger.exception("Second floor blueprint generation failed (non-fatal)")
+                blueprint_floor2_urls = []
+                blueprint_floor2_primary_url = ""
+                blueprint_floor2_primary_b64 = ""
+                blueprint_floor2_meta = {"skipped": True, "reason": "floor2_generation_failed"}
+                blueprint_floor2_seed = None
+                blueprint_floor2_job_id = None
 
         # --------------------------------------------------
         # 3. GENERATE EXTERIOR
@@ -7517,7 +7516,7 @@ def generate_full_build():
         project.location = location
         project.notes = notes
         project.blueprint_url = blueprint_primary_url
-        project.site_plan_url = site_plan_primary_url
+        project.site_plan_url = blueprint_floor2_primary_url
         project.concept_render_url = exterior_primary_url
 
         db.session.flush()
@@ -7560,7 +7559,7 @@ def generate_full_build():
                 "job_id": blueprint_job_id,
             }
 
-            build_project["site_plan"] = {
+            build_project["blueprint_floor2"] = {
                 "project_name": project_name,
                 "property_type": property_type,
                 "description": description,
@@ -7572,13 +7571,14 @@ def generate_full_build():
                 "style": style,
                 "stories": number_of_floors,
                 "number_of_floors": number_of_floors,
-                "image_url": site_plan_primary_url,
-                "images": site_plan_urls,
-                "site_plan_url": site_plan_primary_url,
-                "meta": site_plan_meta,
-                "seed": site_plan_seed,
-                "job_id": site_plan_job_id,
-                "skipped": not bool(site_plan_primary_url),
+                "floor_label": "Second Floor",
+                "blueprint_floor": "second",
+                "image_url": blueprint_floor2_primary_url,
+                "images": blueprint_floor2_urls,
+                "meta": blueprint_floor2_meta,
+                "seed": blueprint_floor2_seed,
+                "job_id": blueprint_floor2_job_id,
+                "skipped": not bool(blueprint_floor2_primary_url),
             }
 
             build_project["exterior"] = {
@@ -7602,7 +7602,7 @@ def generate_full_build():
                 "reference_source": exterior_source_kind,
                 "preserve_existing_exterior": has_real_exterior_reference,
                 "blueprint_reference_image": blueprint_primary_url,
-                "site_plan_reference_image": site_plan_primary_url,
+                "blueprint_floor2_reference_image": blueprint_floor2_primary_url,
             }
 
             if exterior_back_url:
@@ -7633,8 +7633,8 @@ def generate_full_build():
             "status": "ok",
             "mode": "full",
             "package": {
-                "site_plan": site_plan_primary_url,
                 "blueprint": blueprint_primary_url,
+                "blueprint_floor2": blueprint_floor2_primary_url,
                 "exterior": exterior_primary_url,
                 "exterior_back": exterior_back_url,
             },
@@ -7647,13 +7647,13 @@ def generate_full_build():
             "lot_count": lot_count,
             "number_of_floors": number_of_floors,
             "development_type": development_type,
-            "site_plan_result": {
-                "image_url": site_plan_primary_url,
-                "images": site_plan_urls,
-                "meta": site_plan_meta,
-                "seed": site_plan_seed,
-                "job_id": site_plan_job_id,
-                "skipped": not bool(site_plan_primary_url),
+            "blueprint_floor2_result": {
+                "image_url": blueprint_floor2_primary_url,
+                "images": blueprint_floor2_urls,
+                "meta": blueprint_floor2_meta,
+                "seed": blueprint_floor2_seed,
+                "job_id": blueprint_floor2_job_id,
+                "skipped": not bool(blueprint_floor2_primary_url),
             },
             "blueprint_result": {
                 "image_url": blueprint_primary_url,
@@ -8280,7 +8280,7 @@ def save_build_studio():
     # 🔥 Pull all modes
     exterior_url = (data.get("concept_render_url") or "").strip()
     blueprint_url = (data.get("blueprint_url") or "").strip()
-    site_plan_url = (data.get("site_plan_url") or "").strip()
+    floor2_url = (data.get("blueprint_floor2_url") or data.get("site_plan_url") or "").strip()
 
     project = BuildProject(
         user_id=current_user.id,
@@ -8292,10 +8292,10 @@ def save_build_studio():
         location=data.get("location"),
         notes=data.get("notes"),
 
-        # 🔥 Main outputs
+        # Main outputs
         concept_render_url=exterior_url,
         blueprint_url=blueprint_url,
-        site_plan_url=site_plan_url,
+        site_plan_url=floor2_url,
 
         presentation_url=data.get("presentation_url")
     )
@@ -8332,7 +8332,7 @@ def save_build_studio():
             # 🔥 quick access
             "concept_render_url": exterior_url,
             "blueprint_url": blueprint_url,
-            "site_plan_url": site_plan_url,
+            "blueprint_floor2_url": floor2_url,
         }
 
         _set_deal_results(deal, results)
@@ -8425,7 +8425,7 @@ def convert_build_project_to_deal(project_id):
                 "location": project.location,
                 "notes": project.notes,
                 "concept_render_url": project.concept_render_url,
-                "site_plan_url": project.site_plan_url,
+                "blueprint_floor2_url": project.site_plan_url,
                 "exterior_url": getattr(project, "exterior_url", None),
                 "blueprint_url": project.blueprint_url,
                 "presentation_url": project.presentation_url,
@@ -8547,7 +8547,7 @@ def deal_architect(deal_id=None):
         build_project = results.get("build_project", {}) or {}
 
         build_blueprint_url = (build_project.get("blueprint", {}) or {}).get("image_url")
-        build_site_plan_url = (build_project.get("site_plan", {}) or {}).get("image_url")
+        build_floor2_url = (build_project.get("blueprint_floor2", {}) or {}).get("image_url")
         build_exterior_url = (build_project.get("exterior", {}) or {}).get("image_url")
 
         build_project_name = build_project.get("project_name")
@@ -8650,7 +8650,7 @@ def deal_architect(deal_id=None):
         build_mockups=build_mockups,
         build_project=build_project,
         build_blueprint_url=build_blueprint_url,
-        build_site_plan_url=build_site_plan_url,
+        build_floor2_url=build_floor2_url,
         build_exterior_url=build_exterior_url,
         build_project_name=build_project_name,
         build_lot_count=build_lot_count,
@@ -9241,7 +9241,7 @@ def generate_build_costs_from_package():
             }), 400
 
         blueprint = build_project.get("blueprint", {}) or {}
-        site_plan = build_project.get("site_plan", {}) or {}
+        floor2 = build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}
         exterior = build_project.get("exterior", {}) or {}
 
         package = {
@@ -9266,7 +9266,7 @@ def generate_build_costs_from_package():
             "notes": build_project.get("notes"),
 
             "blueprint_url": blueprint.get("image_url") or blueprint.get("blueprint_url"),
-            "site_plan_url": site_plan.get("image_url") or site_plan.get("site_plan_url"),
+            "blueprint_floor2_url": floor2.get("image_url"),
             "exterior_url": exterior.get("image_url"),
         }
 

@@ -160,7 +160,7 @@ Review your saved build concept, development inputs, and launch this project int
 
           <a href="{{ url_for('investor.build_studio', project_id=project.id) }}" class="quick-card">
             <span class="quick-title">Open in Build Studio</span>
-            <span class="quick-sub">Generate site plans, blueprint layouts, and exterior concepts for this deal.</span>
+            <span class="quick-sub">Generate multi-floor blueprints and exterior concepts for this deal.</span>
           </a>
 
           <a href="{{ url_for('investor.design_studio', project_id=project.id) }}" class="quick-card">
@@ -231,8 +231,8 @@ Review your saved build concept, development inputs, and launch this project int
 
           {% if project.site_plan_url %}
             <a href="{{ project.site_plan_url }}" target="_blank" class="quick-card">
-              <span class="quick-title">Site Plan</span>
-              <span class="quick-sub">Open uploaded site plan</span>
+              <span class="quick-title">Second Floor Blueprint</span>
+              <span class="quick-sub">Open second floor blueprint</span>
             </a>
           {% endif %}
 
