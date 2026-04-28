@@ -2,13 +2,13 @@
 {% set partner_profile = current_user.partner_profile if current_user is defined and current_user.is_authenticated else None %}
 {% set partner_role_text = ((partner_profile.category or "") ~ " " ~ (partner_profile.type or ""))|lower if partner_profile else "" %}
 {% set stored_role = (vip_profile.role_type if vip_profile else "realtor") %}
-{% set role = "insurance" if ("insurance" in partner_role_text or "insurer" in partner_role_text) else stored_role %}
+{% set role = stored_role if stored_role in ("insurance", "insurance_realtor") else ("insurance" if ("insurance" in partner_role_text or "insurer" in partner_role_text) else stored_role) %}
 {% set brand_sub = (vip_profile.business_name if vip_profile else None) or (vip_profile.display_name if vip_profile else None) or "Workspace" %}
 
 <div class="ravlo-sidebar-inner">
 
   <div class="ravlo-sidebar-brand">
-    <a href="{% if role == 'contractor' %}{{ url_for('vip.contractor_dashboard') }}{% elif role == 'realtor' %}{{ url_for('vip.realtor_dashboard') }}{% elif role == 'insurance' %}{{ url_for('vip.insurance_dashboard') }}{% else %}{{ url_for('vip.index') }}{% endif %}" class="ravlo-brand-link">
+    <a href="{% if role == 'contractor' %}{{ url_for('vip.contractor_dashboard') }}{% elif role == 'realtor' %}{{ url_for('vip.realtor_dashboard') }}{% elif role in ('insurance', 'insurance_realtor') %}{{ url_for('vip.insurance_dashboard') }}{% else %}{{ url_for('vip.index') }}{% endif %}" class="ravlo-brand-link">
       <div class="ravlo-brand-mark">
         <span>R</span>
       </div>
@@ -71,7 +71,7 @@
       <span>Copilot</span>
     </a>
 
-    {% elif role == 'insurance' %}
+    {% elif role in ('insurance', 'insurance_realtor') %}
     {# ── INSURANCE SIDEBAR ── #}
     <a href="{{ url_for('vip.insurance_dashboard') }}"
        class="ravlo-nav-link {% if ep == 'vip.insurance_dashboard' %}active{% endif %}">
@@ -111,6 +111,7 @@
       <span>Requests</span>
     </a>
 
+    {% if role == 'insurance_realtor' %}
     <div class="ravlo-nav-section">Realtor</div>
 
     <a href="{{ url_for('elena.client_new') }}"
@@ -142,13 +143,14 @@
       <i class="lucide lucide-wand-sparkles"></i>
       <span>Content Studio</span>
     </a>
+    {% endif %}
 
     <div class="ravlo-nav-section">Tools</div>
 
     <a href="{{ url_for('vip.finances') }}"
        class="ravlo-nav-link {% if ep in ['vip.finances', 'vip.finances_add_income', 'vip.finances_add_expense'] %}active{% endif %}">
       <i class="lucide lucide-receipt"></i>
-      <span>All Finances</span>
+      <span>{% if role == 'insurance_realtor' %}All Finances{% else %}Finances{% endif %}</span>
     </a>
 
     <a href="{{ url_for('vip.team') }}"
