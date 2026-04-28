@@ -2481,7 +2481,8 @@ def partner_dashboard():
 def loan_officer_dashboard():
     profile    = get_or_create_vip_profile()
     policy     = get_user_lending_policy(current_user)
-    lo_profile = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
+    core_dashboard = build_loan_officer_dashboard_context(include_ai_summary=False)
+    lo_profile = core_dashboard["officer"]
 
     if not policy["is_caughman_mason"] and not policy["investment_only"]:
         return redirect(url_for("vip.loan_officer_external_dashboard"))
@@ -2547,7 +2548,7 @@ def loan_officer_dashboard():
     )
 
     return render_template(
-        "vip/loan_officer/dashboard.html",
+        "vip/loan_officer/lo_cm_dashboard.html",
         vip_profile           = profile,
         modules               = get_enabled_modules(profile),
         header_name           = get_dashboard_name(profile),
@@ -2559,6 +2560,12 @@ def loan_officer_dashboard():
         stats                 = stats,
         copilot_suggestions   = copilot_suggestions,
         investment_loan_types = INVESTMENT_LOAN_TYPES,
+        core_dashboard        = core_dashboard,
+        core_stats            = core_dashboard["stats"],
+        core_leads            = core_dashboard["leads"],
+        core_loans            = core_dashboard["loans"],
+        core_pipeline         = core_dashboard["pipeline"],
+        core_pending_intakes  = core_dashboard["pending_intakes"],
         portal                = "vip",
         portal_name           = "VIP",
         portal_home           = url_for("vip.loan_officer_dashboard"),
@@ -2625,7 +2632,7 @@ def loan_officer_external_dashboard():
     )
 
     return render_template(
-        "vip/loan_officer/external_dashboard.html",
+        "vip/loan_officer/dashboard.html",
         vip_profile         = profile,
         modules             = get_enabled_modules(profile),
         header_name         = get_dashboard_name(profile),
