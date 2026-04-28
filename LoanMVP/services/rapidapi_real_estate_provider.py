@@ -64,6 +64,7 @@ def _extract_photos(value: Any) -> List[str]:
 
     clean = []
     seen = set()
+
     for url in photos:
         if url not in seen:
             seen.add(url)
@@ -81,27 +82,22 @@ def fetch_zillow_photos(
     """
     Fallback photo lookup for the All-in-One Real Estate Data API.
 
-    The exact params depend on the RapidAPI endpoint docs. This supports the
-    common variants: zpid, url, and address.
+    Best path when available:
+    /real-estate/zillow/photos/{zpid}
+
+    If Ravlo does not have a zpid yet, this returns [].
+    Later, we can add a Zillow search/details lookup to find zpid by address.
     """
     if not RAPIDAPI_REAL_ESTATE_KEY:
         return []
 
-    params: Dict[str, str] = {}
-    if zpid:
-        params["zpid"] = str(zpid)
-    elif property_url:
-        params["url"] = property_url
-    elif address:
-        params["address"] = address
-    else:
+    if not zpid:
         return []
 
     try:
         resp = requests.get(
-            f"{BASE_URL}/zillowPhotos",
+            f"{BASE_URL}/real-estate/zillow/photos/{zpid}",
             headers=_headers(),
-            params=params,
             timeout=20,
         )
 
@@ -126,23 +122,8 @@ def fetch_rapidapi_real_estate_photos(property_data: Dict[str, Any]) -> List[str
         property_data.get("zpid")
         or property_data.get("zillow_id")
         or property_data.get("zillowId")
+        or property_data.get("zillow_property_id")
+        or property_data.get("zillowPropertyId")
     )
 
-    property_url = (
-        property_data.get("zillow_url")
-        or property_data.get("zillowUrl")
-        or property_data.get("source_property_url")
-        or property_data.get("url")
-    )
-
-    address = (
-        property_data.get("address")
-        or property_data.get("address_line1")
-        or property_data.get("full_address")
-    )
-
-    return fetch_zillow_photos(
-        zpid=zpid,
-        property_url=property_url,
-        address=address,
-    )
+    return fetch_zillow_photos(zpid=zpid)
