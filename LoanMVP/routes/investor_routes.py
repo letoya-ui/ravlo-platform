@@ -5798,6 +5798,7 @@ def design_studio_generate_variant():
         preset = (data.get("preset") or "luxury").strip()
         mode = (data.get("mode") or "hgtv").strip()
         room_type = (data.get("room_type") or "living room").strip()
+        floor = (data.get("floor") or "main").strip()
         notes = (data.get("notes") or "").strip()
         design_prompt_notes = _compose_design_studio_prompt(
             notes=notes,
@@ -5815,11 +5816,15 @@ def design_studio_generate_variant():
             "image_base64": image_base64,
             "image_url": "",
             "count": 1,
-            "steps": 18,
-            "guidance": 7.2,
-            "strength": 0.58,
-            "width": 768,
-            "height": 768,
+            "steps": 26,
+            "guidance": 7.8,
+            "strength": 0.74,
+            "width": 1024,
+            "height": 1024,
+            "concept_intensity": "full_concept",
+            "reference_role": "source_room_photo",
+            "keep_layout": True,
+            "preserve_structure": True,
             "desired_updates": design_prompt_notes,
             "prompt_notes": design_prompt_notes,
             "negative_prompt": _INTERIOR_NEGATIVE_PROMPT,
@@ -5846,20 +5851,27 @@ def design_studio_generate_variant():
             "image_url": after_urls[0],
             "images": after_urls,
             "preset": preset,
+            "style": preset,
             "mode": mode,
             "room_type": room_type,
+            "floor": floor,
+            "result_key": "|".join(_design_room_result_key(room_type, floor, preset)),
             "notes": notes,
             "seed": engine_json.get("seed"),
             "job_id": engine_json.get("job_id"),
             "meta": engine_json.get("meta") or {},
         }
 
+        result_key = _design_room_result_key(room_type, floor, preset)
         concepts = rehab_project.get("concepts", []) or []
         concepts = [
             c for c in concepts
             if not (
-                (c.get("preset") or "").strip().lower() == preset.lower()
-                and (c.get("mode") or "").strip().lower() == mode.lower()
+                _design_room_result_key(
+                    c.get("room_type"),
+                    c.get("floor"),
+                    c.get("style") or c.get("preset"),
+                ) == result_key
             )
         ]
         concepts.append(concept_entry)
@@ -6611,20 +6623,30 @@ def _prompt_join(*parts):
     return ". ".join(cleaned).strip() + ("." if cleaned else "")
 
 
+def _design_room_result_key(room_type="", floor="", style=""):
+    return (
+        safe_str(room_type).strip().lower(),
+        safe_str(floor).strip().lower() or "main",
+        safe_str(style).strip().lower(),
+    )
+
+
 def _compose_design_studio_prompt(*, notes="", preset="", mode="", room_type="", property_type="", rehab_level=""):
     return _prompt_join(
-        "Professional investor-grade interior renovation concept for a real estate presentation",
+        "Professional investor-grade full-concept interior redesign for a real estate presentation",
         f"Room focus: {room_type}" if room_type else "",
         f"Design style: {preset}" if preset else "",
         f"Presentation mode: {mode}" if mode else "",
         f"Property type: {property_type}" if property_type else "",
         f"Rehab level: {rehab_level}" if rehab_level else "",
         "Output must be one photorealistic interior room image, not a collage, split-screen, blueprint, mood board, or render sheet",
-        "Preserve the original room footprint, camera angle, walls, windows, doors, ceiling height, and major structural elements",
-        "Upgrade finishes with realistic materials, correct scale, clean lighting, functional circulation, and marketable staging",
+        "Keep the source room recognizable through its camera angle, wall/window/door placement, ceiling height, and main structural envelope",
+        "Make the design visibly new: update finishes, cabinetry, counters, backsplash, flooring, fixtures, lighting, paint, hardware, furnishings, styling, and staging",
+        "Do not simply clean up, sharpen, or reproduce the reference photo; the buyer should immediately see a professionally redesigned concept",
+        "Use realistic materials, correct scale, clean lighting, functional circulation, and marketable staging",
         "Use believable real-estate photography, accurate shadows, natural material transitions, and furniture sized for the room",
         "Keep the result photorealistic, buildable, current, and appropriate for a lender/investor presentation",
-        "Do not add people, text, labels, logos, fake views, impossible openings, fake appliances, or structural changes unless requested",
+        "Do not add people, text, labels, logos, fake views, impossible openings, fake appliances, or major structural changes unless requested",
         notes,
     )
 
@@ -7116,8 +7138,11 @@ def generate_build_interior():
             }), 400
 
         interior_prompt_notes = _compose_build_studio_prompt(
-            notes=notes,
-            mode="interior",
+            notes=_prompt_join(
+                "Full-concept interior redesign. Keep the room geometry recognizable but visibly replace finishes, fixtures, lighting, cabinetry or furnishings appropriate to the selected style",
+                notes,
+            ),
+            mode="interior_room",
             project_name=project_name,
             property_type=property_type,
             style=style,
@@ -7144,14 +7169,18 @@ def generate_build_interior():
             "prompt_notes": interior_prompt_notes,
             "special_features": notes,
             "count": 1,
-            "steps": 18,
-            "guidance": 7.0,
-            "strength": 0.42,
-            "width": 768,
-            "height": 768,
-            "negative_prompt": _build_studio_negative_prompt("interior"),
+            "steps": 26,
+            "guidance": 7.8,
+            "strength": 0.66,
+            "width": 1024,
+            "height": 1024,
+            "concept_intensity": "full_concept",
+            "reference_role": "source_room_or_plan_reference",
+            "keep_layout": True,
+            "preserve_structure": True,
+            "negative_prompt": _build_studio_negative_prompt("interior_room"),
         }
-        payload.update(_build_studio_quality_controls("interior"))
+        payload.update(_build_studio_quality_controls("interior_room"))
 
         if image_base64:
             payload["image_base64"] = image_base64
@@ -7214,6 +7243,7 @@ def generate_build_interior():
                 "notes": notes,
                 "room_type": room_type,
                 "floor": floor,
+                "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
                 "image_url": build_urls[0] if build_urls else "",
                 "images": build_urls,
                 "meta": meta,
@@ -7222,6 +7252,15 @@ def generate_build_interior():
                 "build_reference_image": image_url,
             }
 
+            result_key = _design_room_result_key(room_type, floor, style)
+            rooms = [
+                r for r in rooms
+                if _design_room_result_key(
+                    r.get("room_type"),
+                    r.get("floor"),
+                    r.get("style") or r.get("preset"),
+                ) != result_key
+            ]
             rooms.append(room_entry)
             interior_block["rooms"] = rooms
             interior_block["latest"] = room_entry
@@ -8739,7 +8778,10 @@ def generate_build_room():
         room_type = _clean_str(data.get("room_type")) or "kitchen"
         floor = _clean_str(data.get("floor")) or "main"
         room_prompt_notes = _compose_build_studio_prompt(
-            notes=notes,
+            notes=_prompt_join(
+                "Full-concept interior redesign. Keep the room geometry recognizable but visibly change finishes, fixtures, lighting, cabinetry or furnishings for a professional investor presentation",
+                notes,
+            ),
             mode="interior_room",
             project_name=project_name,
             property_type=property_type,
@@ -8769,11 +8811,15 @@ def generate_build_room():
             "image_base64": blueprint_b64,
             "image_url": "",
             "count": 1,
-            "steps": 22,
-            "guidance": 7.0,
-            "strength": 0.42,
-            "width": 768,
-            "height": 768,
+            "steps": 26,
+            "guidance": 7.8,
+            "strength": 0.66,
+            "width": 1024,
+            "height": 1024,
+            "concept_intensity": "full_concept",
+            "reference_role": "source_room_or_plan_reference",
+            "keep_layout": True,
+            "preserve_structure": True,
             "negative_prompt": _build_studio_negative_prompt("interior_room"),
         }
         payload.update(_build_studio_quality_controls("interior_room"))
@@ -8808,6 +8854,7 @@ def generate_build_room():
             "notes": notes,
             "room_type": room_type,
             "floor": floor,
+            "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
             "image_url": room_urls[0],
             "images": room_urls,
             "meta": engine_json.get("meta") or {},
@@ -8816,12 +8863,14 @@ def generate_build_room():
             "build_reference_image": blueprint_url,
         }
 
+        result_key = _design_room_result_key(room_type, floor, style)
         rooms = [
             r for r in rooms
-            if not (
-                _clean_str(r.get("room_type")).lower() == room_type.lower()
-                and _clean_str(r.get("floor")).lower() == floor.lower()
-            )
+            if _design_room_result_key(
+                r.get("room_type"),
+                r.get("floor"),
+                r.get("style") or r.get("preset"),
+            ) != result_key
         ]
         rooms.append(room_entry)
 
@@ -10414,12 +10463,13 @@ def design_studio_generate():
         preset = (data.get("preset") or "luxury").strip()
         mode = (data.get("mode") or "hgtv").strip()
         room_type = (data.get("room_type") or "living room").strip()
+        floor = (data.get("floor") or "main").strip()
         notes = (data.get("notes") or "").strip()
         rehab_level = (data.get("rehab_level") or "medium").strip().lower()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
 
         try:
-            strength = float(data.get("strength") or 0.58)
+            strength = float(data.get("strength") or 0.74)
         except (ValueError, TypeError):
             if deal is not None:
                 _clear_deal_render_processing(deal)
@@ -10504,6 +10554,7 @@ def design_studio_generate():
             "mode": mode,
             "room_type": room_type,
             "room_focus": room_type,
+            "floor": floor,
             "rehab_level": rehab_level,
             "property_type": property_type,
             "design_style": preset,
@@ -10511,6 +10562,8 @@ def design_studio_generate():
             "prompt_notes": design_prompt_notes,
             "keep_layout": True,
             "preserve_structure": True,
+            "concept_intensity": "full_concept",
+            "reference_role": "source_room_photo",
             "image_base64": image_base64,
             "image_url": "",
             "count": 1,
@@ -10544,8 +10597,11 @@ def design_studio_generate():
             "image_url": after_urls[0],
             "images": after_urls,
             "preset": preset,
+            "style": preset,
             "mode": mode,
             "room_type": room_type,
+            "floor": floor,
+            "result_key": "|".join(_design_room_result_key(room_type, floor, preset)),
             "rehab_level": rehab_level,
             "notes": notes,
             "seed": engine_json.get("seed") or unique_seed,
@@ -10576,12 +10632,15 @@ def design_studio_generate():
             rehab_project["before"] = before_result
 
             concepts = rehab_project.get("concepts", []) or []
+            result_key = _design_room_result_key(room_type, floor, preset)
             concepts = [
                 c for c in concepts
                 if not (
-                    (c.get("preset") or "").strip().lower() == preset.lower()
-                    and (c.get("mode") or "").strip().lower() == mode.lower()
-                    and (c.get("room_type") or "").strip().lower() == room_type.lower()
+                    _design_room_result_key(
+                        c.get("room_type"),
+                        c.get("floor"),
+                        c.get("style") or c.get("preset"),
+                    ) == result_key
                 )
             ]
             concepts.append(concept_entry)

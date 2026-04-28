@@ -307,6 +307,112 @@
     {% endif %}
   </section>
 
+  <section class="re-card pad" data-widget-key="compensation">
+    {% set comp = compensation_summary or {} %}
+    {% set comp_totals = comp.get('totals', {}) %}
+    {% set comp_rows = comp.get('rows', []) %}
+    {% set pending_comp = comp.get('pending_requests', []) %}
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">COMPENSATION</div>
+        <h3 style="margin:.35rem 0 .2rem;">Team Pay And Commission View</h3>
+        <div class="re-card-subtitle">Owner/admin visibility into loan officer, processor, and underwriter production for {{ company.name }}.</div>
+      </div>
+    </div>
+
+    <div class="re-grid-3 mt-16">
+      <div class="re-stat">
+        <div class="re-stat-label">Active Pipeline</div>
+        <div class="re-stat-value">{{ comp_totals.get('active_loans', 0) }}</div>
+        <div class="re-stat-meta">Assigned files still moving</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Funded Volume</div>
+        <div class="re-stat-value" style="font-size:1.35rem;">${{ "{:,.0f}".format(comp_totals.get('funded_volume', 0)|float) }}</div>
+        <div class="re-stat-meta">{{ comp_totals.get('funded_loans', 0) }} funded or closed files</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Estimated Team Pay</div>
+        <div class="re-stat-value" style="font-size:1.35rem;">${{ "{:,.0f}".format(comp_totals.get('estimated_pay', 0)|float) }}</div>
+        <div class="re-stat-meta">{{ comp.get('pay_basis_note') }}</div>
+      </div>
+    </div>
+
+    {% if comp_rows %}
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Team Member</th>
+              <th>Role</th>
+              <th>Assigned</th>
+              <th>Active</th>
+              <th>Funded Volume</th>
+              <th>Estimated Pay</th>
+              <th>Basis</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in comp_rows %}
+            <tr>
+              <td>
+                <div style="font-weight:600;">{{ row.name }}</div>
+                <div class="re-stat-meta">{{ row.email or "No email on profile" }}</div>
+              </td>
+              <td><span class="badge badge-info">{{ row.role }}</span></td>
+              <td>{{ row.assigned_count }}</td>
+              <td>{{ row.active_count }}</td>
+              <td>${{ "{:,.0f}".format(row.funded_volume|float) }}</td>
+              <td>${{ "{:,.0f}".format(row.estimated_pay|float) }}</td>
+              <td><span class="re-stat-meta">{{ row.pay_basis }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">Add loan officers, processors, or underwriters to see compensation estimates.</div>
+    {% endif %}
+
+    <div class="section-head mt-16">
+      <div>
+        <div class="eyebrow">REQUESTS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Pending Commission / Pay Requests</h3>
+      </div>
+    </div>
+
+    {% if pending_comp %}
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Person</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in pending_comp %}
+            <tr>
+              <td>{{ item.person or "Unassigned" }}</td>
+              <td>{{ item.type or "Compensation" }}</td>
+              <td>${{ "{:,.0f}".format(item.amount|float) }}</td>
+              <td><span class="badge badge-neutral">{{ (item.status or "pending")|replace("_", " ")|title }}</span></td>
+              <td><span class="re-stat-meta">{{ item.source }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">No pending commission or pay requests are waiting right now.</div>
+    {% endif %}
+  </section>
+
   {% if not team_members and not invites and not loans and not borrowers %}
     <section class="re-card pad" data-widget-key="empty_state">
       <div class="section-head">

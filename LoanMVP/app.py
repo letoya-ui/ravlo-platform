@@ -98,6 +98,17 @@ _SCHEMA_COMPAT_COLUMNS = [
 # here is kept small on purpose.
 _SCHEMA_COMPAT_TABLES = [
     "cost_observations",
+    "vip_profiles",
+    "vip_contacts",
+    "vip_interactions",
+    "vip_expenses",
+    "vip_income",
+    "vip_budgets",
+    "vip_assistant_suggestions",
+    "vip_assistant_actions",
+    "vip_notifications",
+    "vip_design_projects",
+    "vip_design_annotations",
     "vip_team_members",
     "realtor_listing_presentations",
 ]

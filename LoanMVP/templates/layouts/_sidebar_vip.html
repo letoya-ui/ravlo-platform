@@ -171,6 +171,32 @@
       <span>Copilot</span>
     </a>
 
+    {% elif role in ('loan_officer', 'lender') %}
+    {# LOAN OFFICER SIDEBAR #}
+    <a href="{{ url_for('vip.loan_officer_dashboard') }}"
+       class="ravlo-nav-link {% if ep == 'vip.loan_officer_dashboard' %}active{% endif %}">
+      <i class="lucide lucide-layout-dashboard"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('vip.finances') }}"
+       class="ravlo-nav-link {% if ep in ['vip.finances', 'vip.finances_add_income', 'vip.finances_add_expense'] %}active{% endif %}">
+      <i class="lucide lucide-receipt"></i>
+      <span>Commissions</span>
+    </a>
+
+    <a href="{{ url_for('vip.team') }}"
+       class="ravlo-nav-link {% if ep in ['vip.team', 'vip.team_add', 'vip.team_assign_lead', 'vip.team_auto_distribute', 'vip.team_toggle', 'vip.team_delete'] %}active{% endif %}">
+      <i class="lucide lucide-users"></i>
+      <span>Team</span>
+    </a>
+
+    <a href="{{ url_for('vip.ai_pilot') }}"
+       class="ravlo-nav-link {% if ep in ['vip.ai_pilot', 'vip.ai_pilot_command'] %}active{% endif %}">
+      <i class="lucide lucide-sparkles"></i>
+      <span>Copilot</span>
+    </a>
+
     {% else %}
     {# ── REALTOR / DEFAULT SIDEBAR ── #}
     <a href="{{ url_for('vip.realtor_dashboard') }}"

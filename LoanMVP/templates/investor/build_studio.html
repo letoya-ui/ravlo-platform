@@ -94,8 +94,8 @@
           </div>
 
           <div class="field">
-            <label for="blueprint_url">Blueprint URL</label>
-            <input id="blueprint_url" name="blueprint_url" value="{{ blueprint_result.get('blueprint_url') or blueprint_result.get('image_url') or (project.blueprint_url if project else '') }}" placeholder="Paste a saved blueprint URL">
+            <label for="blueprint_url">Reference Image URL</label>
+            <input id="blueprint_url" name="blueprint_url" value="{{ blueprint_result.get('blueprint_url') or blueprint_result.get('image_url') or (project.blueprint_url if project else '') }}" placeholder="Paste a saved room photo or plan URL">
           </div>
         </div>
 
@@ -110,7 +110,7 @@
         </div>
 
         <div class="field">
-          <label for="blueprint_file">Upload Blueprint</label>
+          <label for="blueprint_file">Upload Reference Image</label>
           <input type="file" id="blueprint_file" name="blueprint_file" accept="image/*,.png,.jpg,.jpeg,.webp,.pdf">
         </div>
 
@@ -123,15 +123,15 @@
       <div class="section-head">
         <div>
           <div class="eyebrow">REFERENCE</div>
-          <h2>Blueprint Source</h2>
+          <h2>Reference Image</h2>
         </div>
       </div>
       <div class="reference-panel" id="blueprintPreview">
         {% set blueprint_src = blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') or (project.blueprint_url if project else '') %}
         {% if blueprint_src %}
-        <img src="{{ blueprint_src }}" alt="Blueprint reference">
+        <img src="{{ blueprint_src }}" alt="Reference image">
         {% else %}
-        <div class="empty-state-inline">Upload a blueprint or open a saved project with one attached.</div>
+        <div class="empty-state-inline">Upload a room photo, blueprint, or open a saved project with a reference attached.</div>
         {% endif %}
       </div>
       {% if lot_count %}<div class="ravlo-chip-row"><span class="ravlo-chip">{{ lot_count }} Lots Planned</span></div>{% endif %}
@@ -236,7 +236,7 @@
 
   function setBlueprintPreviewFromUrl(url) {
     if (!url) return;
-    blueprintPreview.innerHTML = `<img src="${url}" alt="Blueprint reference">`;
+    blueprintPreview.innerHTML = `<img src="${url}" alt="Reference image">`;
   }
 
   function imageFileName(prefix, url) {
