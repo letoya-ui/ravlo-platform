@@ -155,7 +155,8 @@ def _parse_due_at(raw):
     return None
 
 
-def _template_defaults():
+def _agent_identity():
+    """Return agent_name and agent_company for the current user."""
     profile = _elena_profile()
     partner = getattr(current_user, "partner_profile", None) if current_user else None
     agent_name = (
@@ -168,9 +169,12 @@ def _template_defaults():
         or (getattr(partner, "company", None) if partner else None)
         or ""
     )
-    return {
-        "agent_name": agent_name,
-        "agent_company": agent_company,
+    return {"agent_name": agent_name, "agent_company": agent_company}
+
+
+def _template_defaults():
+    defaults = _agent_identity()
+    defaults.update({
         "address": "",
         "city": "",
         "state": "",
@@ -201,7 +205,8 @@ def _template_defaults():
         "phone": "",
         "title": "",
         "cta": "",
-    }
+    })
+    return defaults
 
 def assign_market(state=None, city=None, explicit_market=None):
     """Resolve the market label for a new listing.
@@ -864,6 +869,7 @@ def mls_import():
     flyer_id = None
 
     if auto_generate_flyer:
+        listing_data.update(_agent_identity())
         prompt = render_elena_template(TemplateType.JUST_LISTED, **listing_data)
         flyer_output = generate_text(prompt)
 
@@ -1106,7 +1112,8 @@ def create_canva_flyer(listing_id):
     if not template_enum:
         return jsonify({"error": "Invalid template_type"}), 400
 
-    variables = {
+    variables = _agent_identity()
+    variables.update({
         "address": listing.address,
         "city": listing.city,
         "state": listing.state,
@@ -1137,7 +1144,7 @@ def create_canva_flyer(listing_id):
         "phone": "",
         "title": "",
         "cta": "",
-    }
+    })
 
     prompt = render_elena_template(template_enum, **variables)
     output = generate_text(prompt)
