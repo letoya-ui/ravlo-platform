@@ -328,10 +328,30 @@ def resolve_property_unified(address: str, *, beds=None, baths=None, sqft=None, 
                 or []
             )
 
+        rapidapi_real_estate_photos = []
+        try:
+            from LoanMVP.services.rapidapi_real_estate_provider import (
+                fetch_rapidapi_real_estate_photos,
+            )
+
+            rapidapi_real_estate_photos = fetch_rapidapi_real_estate_photos({
+                **prop,
+                "address": prop.get("address"),
+                "address_line1": prop.get("address_line1"),
+                "city": prop.get("city"),
+                "state": prop.get("state"),
+                "zip_code": prop.get("zip_code"),
+            })
+
+        except Exception as e:
+            current_app.logger.warning(f"RapidAPI Real Estate photos failed: {e}")
+
+
         photos = _normalize_photos(
             _extract_photos(mashvisor_data)
             + _extract_photos(rentcast_data)
-        )
+            + rapidapi_real_estate_photos
+        )  
 
         primary_photo = photos[0] if photos else None
 
