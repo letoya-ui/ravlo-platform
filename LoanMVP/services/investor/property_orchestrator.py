@@ -587,6 +587,9 @@ class PropertyIntelligenceOrchestrator:
 
             cp = self._enrich_with_rapidapi_real_estate(cp)
 
+            if len(self._normalize_photo_candidates(cp.photos, cp.primary_photo)) < 4:
+                cp = self._recover_gallery_depth(cp)
+
             if not cp.photos and not cp.primary_photo:
                 cp = self._recover_photos(cp)
 
@@ -1067,6 +1070,110 @@ class PropertyIntelligenceOrchestrator:
 
         _log.info("[realtor] search fallback found no address match for %s", addr)
         return []
+
+    def _recover_gallery_depth(self, cp: CanonicalProperty, target_count: int = 4) -> CanonicalProperty:
+        """Try to expand thin one-photo galleries without losing the primary photo."""
+        existing = self._normalize_photo_candidates(cp.photos, cp.primary_photo)
+        if len(existing) >= target_count:
+            cp.photos = existing
+            cp.primary_photo = _resolve_photo(cp.primary_photo, existing)
+            return cp
+
+        addr = cp.address or cp.address_line1 or ""
+        log_label = addr or "unknown"
+
+        def merge(source_label: str, *sources: Any) -> bool:
+            nonlocal existing
+            merged = self._normalize_photo_candidates(existing, *sources)
+            if len(merged) > len(existing):
+                existing = merged
+                cp.photos = merged
+                cp.primary_photo = _resolve_photo(cp.primary_photo, merged)
+                cp.value_sources["photos"] = source_label
+                _log.info(
+                    "[photo_recovery] expanded gallery for %s to %d photos via %s",
+                    log_label,
+                    len(merged),
+                    source_label,
+                )
+                return True
+            return False
+
+        raw = cp.raw or {}
+        merge(
+            "raw_gallery_expansion",
+            raw.get("imgSrc"),
+            raw.get("primaryPhoto"),
+            raw.get("primaryPhotoUrl"),
+            raw.get("photos"),
+            raw.get("images"),
+            raw.get("image"),
+            raw.get("media"),
+            raw.get("gallery"),
+            raw.get("responsivePhotos"),
+            raw.get("mixedSources"),
+            raw.get("imageSources"),
+            raw.get("data"),
+            raw,
+        )
+        if len(existing) >= target_count:
+            return cp
+
+        if self._mashvisor:
+            mashvisor_id = cp.provider_ids.get("mashvisor")
+            if mashvisor_id:
+                try:
+                    img_result = self._mashvisor.get_property_images(mashvisor_id)
+                    if isinstance(img_result, dict) and img_result.get("photos"):
+                        merge("mashvisor_gallery_expansion", img_result.get("photos"), img_result.get("primary_photo"))
+                except Exception as exc:
+                    _log.warning("[photo_recovery] mashvisor gallery expansion failed: %s", exc)
+            if len(existing) >= target_count:
+                return cp
+
+        realtor_id = cp.provider_ids.get("realtor")
+        if realtor_id:
+            try:
+                merge("realtor_gallery_expansion", fetch_realtor_photos(realtor_id))
+            except Exception as exc:
+                _log.warning("[photo_recovery] realtor gallery expansion failed: %s", exc)
+        if len(existing) >= target_count:
+            return cp
+
+        realtor_search_photos = self._search_realtor_photos_fallback(cp)
+        if realtor_search_photos:
+            merge("realtor_search_gallery_expansion", realtor_search_photos)
+        if len(existing) >= target_count:
+            return cp
+
+        if addr:
+            try:
+                sale = find_rentcast_sale_listing(
+                    address=addr,
+                    city=cp.city or "",
+                    state=cp.state or "",
+                    zip_code=cp.zip_code or "",
+                    limit=10,
+                )
+                if sale:
+                    normalized_sale = normalize_rentcast_sale_listing(sale)
+                    merge(
+                        "rentcast_gallery_expansion",
+                        normalized_sale.get("primary_photo"),
+                        normalized_sale.get("photos"),
+                        sale.get("imgSrc"),
+                        sale.get("photos"),
+                        sale.get("images"),
+                        sale,
+                    )
+            except Exception as exc:
+                _log.warning("[photo_recovery] rentcast gallery expansion failed: %s", exc)
+
+        if existing:
+            cp.photos = existing
+            cp.primary_photo = _resolve_photo(cp.primary_photo, existing)
+
+        return cp
 
     def _recover_photos(self, cp: CanonicalProperty) -> CanonicalProperty:
         """Last-resort photo recovery after all enrichment providers failed.

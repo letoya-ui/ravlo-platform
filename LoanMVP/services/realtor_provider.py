@@ -63,8 +63,18 @@ def _extract_photos(raw_photos: Any) -> List[str]:
             node.get("full_size"),
             node.get("original"),
             node.get("original_url"),
+            node.get("highRes"),
+            node.get("high_res"),
+            node.get("hiRes"),
+            node.get("hi_res"),
             node.get("large"),
             node.get("large_url"),
+            node.get("medium"),
+            node.get("medium_url"),
+            node.get("imageUrl"),
+            node.get("image_url"),
+            node.get("photoUrl"),
+            node.get("photo_url"),
             node.get("href"),
             node.get("url"),
             node.get("src"),
@@ -78,10 +88,7 @@ def _extract_photos(raw_photos: Any) -> List[str]:
             if isinstance(p, str) and p.strip():
                 photos.append(p.strip())
             elif isinstance(p, dict):
-                for url in _ordered_photo_values(p):
-                    if isinstance(url, str) and url.strip():
-                        photos.append(url.strip())
-                        break
+                photos.extend(_extract_photos(p))
 
     elif isinstance(raw_photos, dict):
         for direct in _ordered_photo_values(raw_photos):
@@ -89,7 +96,32 @@ def _extract_photos(raw_photos: Any) -> List[str]:
                 photos.append(direct.strip())
                 break
 
-        for key in ("photos", "images", "media", "gallery"):
+        for key in (
+            "photos",
+            "images",
+            "media",
+            "gallery",
+            "responsivePhotos",
+            "responsive_photos",
+            "mixedSources",
+            "mixed_sources",
+            "imageSources",
+            "image_sources",
+            "sources",
+            "jpeg",
+            "jpg",
+            "webp",
+            "data",
+            "result",
+            "results",
+            "home",
+            "home_search",
+            "property",
+            "listing",
+            "listings",
+            "description",
+            "location",
+        ):
             nested = raw_photos.get(key)
             if nested:
                 photos.extend(_extract_photos(nested))

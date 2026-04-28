@@ -44,12 +44,20 @@ def _extract_photos(value: Any) -> List[str]:
                 "href",
                 "src",
                 "photo",
+                "photoUrl",
+                "photo_url",
                 "image",
+                "imageUrl",
+                "image_url",
                 "thumbnail",
                 "full",
                 "full_url",
+                "highRes",
+                "hiRes",
                 "large",
                 "large_url",
+                "medium",
+                "medium_url",
                 "original",
                 "original_url",
             ):
@@ -57,7 +65,27 @@ def _extract_photos(value: Any) -> List[str]:
                 if isinstance(val, str) and val.startswith("http"):
                     photos.append(val.strip())
 
-            for key in ("photos", "images", "media", "gallery", "data", "results"):
+            for key in (
+                "photos",
+                "images",
+                "media",
+                "gallery",
+                "responsivePhotos",
+                "mixedSources",
+                "imageSources",
+                "sources",
+                "jpeg",
+                "jpg",
+                "webp",
+                "data",
+                "result",
+                "results",
+                "home",
+                "home_search",
+                "property",
+                "listing",
+                "listings",
+            ):
                 walk(node.get(key))
 
     walk(value)

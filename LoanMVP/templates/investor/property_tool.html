@@ -298,37 +298,55 @@ function normalizePhotoArray(photos){
     return s;
   };
 
-    const candidates = values.flatMap((p) => {
+  const directKeys = [
+    "full", "full_url", "fullSize", "full_size",
+    "original", "original_url",
+    "large", "large_url",
+    "medium", "medium_url",
+    "highRes", "high_res", "hiRes", "hi_res",
+    "url", "src", "href",
+    "photo", "photo_url", "photoUrl",
+    "image", "image_url", "imageUrl",
+    "primaryPhoto", "primaryPhotoUrl",
+    "thumbnail"
+  ];
+  const nestedKeys = [
+    "photos", "images", "media", "gallery",
+    "listing_photos", "listingPhotos",
+    "property_photos", "propertyPhotos",
+    "responsivePhotos", "responsive_photos",
+    "mixedSources", "mixed_sources",
+    "imageSources", "image_sources",
+    "sources", "jpeg", "jpg", "webp",
+    "data", "result", "results",
+    "home", "home_search", "property", "listing", "listings",
+    "description", "location"
+  ];
+
+  function collectPhotoCandidates(p, depth = 0){
     if (!p) return [];
+    if (depth > 6) return [];
     if (typeof p === "string") return [canonicalizeUrl(p)].filter(Boolean);
-    const ordered = [
-      p?.full,
-      p?.full_url,
-      p?.fullSize,
-      p?.full_size,
-      p?.original,
-      p?.original_url,
-      p?.large,
-      p?.large_url,
-      p?.medium,
-      p?.medium_url,
-      p?.highRes,
-      p?.high_res,
-      p?.url,
-      p?.src,
-      p?.href,
-      p?.photo,
-      p?.photo_url,
-      p?.photoUrl,
-      p?.image,
-      p?.image_url,
-      p?.imageUrl,
-      p?.primaryPhoto,
-      p?.primaryPhotoUrl,
-      p?.thumbnail
-    ].map(canonicalizeUrl).filter(Boolean);
-    return ordered.length ? [ordered[0]] : [];
-  });
+    if (Array.isArray(p)) return p.flatMap((item) => collectPhotoCandidates(item, depth + 1));
+    if (typeof p !== "object") return [];
+
+    const found = [];
+    directKeys.forEach((key) => {
+      const value = p?.[key];
+      if (typeof value === "string") {
+        const clean = canonicalizeUrl(value);
+        if (clean) found.push(clean);
+      } else if (value) {
+        found.push(...collectPhotoCandidates(value, depth + 1));
+      }
+    });
+    nestedKeys.forEach((key) => {
+      if (p?.[key]) found.push(...collectPhotoCandidates(p[key], depth + 1));
+    });
+    return found;
+  }
+
+  const candidates = values.flatMap((p) => collectPhotoCandidates(p));
 
   const isMapTile = (u) => {
     const lc = String(u || "").toLowerCase();

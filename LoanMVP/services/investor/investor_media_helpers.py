@@ -74,10 +74,13 @@ SPACES_SECRET = os.getenv("SPACES_SECRET_ACCESS_KEY", "") or os.getenv("SPACES_S
 SPACES_CDN_BASE = (os.getenv("SPACES_PUBLIC_BASE_URL", "") or os.getenv("SPACES_CDN_BASE", "")).rstrip("/")
 
 
-def _normalize_photo_list(value) -> list[str]:
+def _normalize_photo_list(value, _depth: int = 0) -> list[str]:
     photos = []
 
     if not value:
+        return photos
+
+    if _depth > 8:
         return photos
 
     # Keys that hold a direct image URL inside a photo dict, ordered by
@@ -95,6 +98,10 @@ def _normalize_photo_list(value) -> list[str]:
         "primaryPhoto", "primary_photo", "primaryPhotoUrl", "primary_photo_url",
         "mainImage", "main_image", "listingImage", "listing_image",
         "coverImage", "cover_image",
+        "hiRes", "hi_res",
+        "sourceUrl", "source_url",
+        "assetUrl", "asset_url",
+        "cdnUrl", "cdn_url",
         "picture", "pictureUrl", "picture_url",
         "secure_url", "public_url", "cdn_url",
         "url", "src", "href",
@@ -113,9 +120,18 @@ def _normalize_photo_list(value) -> list[str]:
         "listingImages", "listing_images",
         "propertyPhotos", "property_photos",
         "propertyImages", "property_images",
+        "responsivePhotos", "responsive_photos",
+        "mixedSources", "mixed_sources",
+        "imageSources", "image_sources",
+        "photoSources", "photo_sources",
+        "jpeg", "jpg", "webp",
+        "sources", "source",
         "carouselPhotos", "carousel_photos",
         "galleryUrls", "gallery_urls",
         "extra_images",
+        "data", "result", "results",
+        "home", "home_search", "property", "listing", "listings",
+        "description", "location",
     )
 
     if isinstance(value, list):
@@ -135,7 +151,7 @@ def _normalize_photo_list(value) -> list[str]:
                 for key in _NESTED_COLLECTION_KEYS:
                     nested = item.get(key)
                     if nested:
-                        photos.extend(_normalize_photo_list(nested))
+                        photos.extend(_normalize_photo_list(nested, _depth + 1))
 
     elif isinstance(value, dict):
         direct_url = None
@@ -144,13 +160,15 @@ def _normalize_photo_list(value) -> list[str]:
             if isinstance(candidate, str) and candidate.strip():
                 direct_url = candidate.strip()
                 break
+            if candidate and not isinstance(candidate, str):
+                photos.extend(_normalize_photo_list(candidate, _depth + 1))
         if direct_url:
             photos.append(direct_url)
 
         for key in _NESTED_COLLECTION_KEYS:
             nested = value.get(key)
             if nested:
-                photos.extend(_normalize_photo_list(nested))
+                photos.extend(_normalize_photo_list(nested, _depth + 1))
 
     elif isinstance(value, str) and value.strip():
         photos.append(value.strip())

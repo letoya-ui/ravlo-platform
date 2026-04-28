@@ -226,6 +226,7 @@ from LoanMVP.services.investor.investor_media_helpers import (
     _resolve_photo,
     _saved_property_media,
     _try_upload_and_attach_listing_photos,
+    _unwrap_proxy_url,
     _upload_before_image,
     _upload_after_images_from_b64,
     _upload_build_images_from_b64,
@@ -500,6 +501,85 @@ def _proxy_unique_photo_urls(photo_urls):
 _STREETVIEW_BASE = "https://maps.googleapis.com/maps/api/streetview"
 
 
+def _download_streetview_image_bytes(source_url: str) -> bytes | None:
+    source_url = safe_str(_unwrap_proxy_url(source_url))
+    if not source_url.startswith(_STREETVIEW_BASE):
+        return None
+
+    google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_PLACES_API_KEY") or ""
+    if not google_key:
+        return None
+
+    sep = "&" if "?" in source_url else "?"
+    try:
+        res = requests.get(
+            f"{source_url}{sep}key={google_key}",
+            timeout=15,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+            },
+        )
+        if not res.ok:
+            return None
+        content_type = res.headers.get("Content-Type", "")
+        if content_type and not content_type.startswith("image/"):
+            return None
+        if len(res.content) < 1000:
+            return None
+        return res.content
+    except Exception:
+        current_app.logger.info("Street View reference download failed", exc_info=True)
+        return None
+
+
+def _engine_ready_reference_image_url(source_url: str, *, prefix: str = "build-reference") -> str:
+    """Return an engine-fetchable URL for listing/site references.
+
+    Build image generation runs on a remote engine, so authenticated proxy URLs
+    and Google Street View URLs without a key need to be resolved server-side
+    and re-uploaded to public storage before they can be used as conditioning.
+    """
+    source_url = safe_str(source_url)
+    if not source_url or source_url.startswith("data:"):
+        return ""
+
+    unwrapped_url = safe_str(_unwrap_proxy_url(source_url))
+    if not unwrapped_url:
+        return ""
+
+    if (SPACES_CDN_BASE and unwrapped_url.startswith(SPACES_CDN_BASE)) or (
+        SPACES_ENDPOINT and unwrapped_url.startswith(SPACES_ENDPOINT)
+    ):
+        return unwrapped_url
+
+    raw = _download_streetview_image_bytes(unwrapped_url)
+    if not raw:
+        raw = download_image_bytes(unwrapped_url)
+
+    if raw:
+        try:
+            uploaded = _upload_before_image(to_png_bytes(raw), prefix=prefix)
+        except Exception:
+            current_app.logger.info("Reference image PNG conversion failed; uploading raw image", exc_info=True)
+            uploaded = _upload_before_image(raw, prefix=prefix)
+        if uploaded:
+            return uploaded
+
+    if unwrapped_url.startswith(("http://", "https://")) and not unwrapped_url.startswith(_STREETVIEW_BASE):
+        return unwrapped_url
+
+    return ""
+
+
+def _streetview_engine_reference_url(source: dict[str, Any], *, prefix: str = "build-site-reference") -> str:
+    streetview_url = _streetview_fallback_url(source)
+    if not streetview_url:
+        return ""
+    return _engine_ready_reference_image_url(streetview_url, prefix=prefix)
+
+
 def _streetview_fallback_url(result):
     """Build a Google Street View URL *without* the API key.
 
@@ -557,10 +637,24 @@ def _collect_property_photo_urls(*payloads):
             payload.get("images"),
             payload.get("image_urls"),
             payload.get("imageUrls"),
+            payload.get("responsivePhotos"),
+            payload.get("responsive_photos"),
+            payload.get("mixedSources"),
+            payload.get("mixed_sources"),
+            payload.get("imageSources"),
+            payload.get("image_sources"),
+            payload.get("photoSources"),
+            payload.get("photo_sources"),
             payload.get("media"),
             payload.get("gallery"),
+            payload.get("galleryUrls"),
+            payload.get("gallery_urls"),
             payload.get("image_url"),
             payload.get("imageUrl"),
+            payload.get("hiRes"),
+            payload.get("highRes"),
+            payload.get("sourceUrl"),
+            payload.get("assetUrl"),
             payload.get("primary_photo"),
             payload.get("primaryPhoto"),
             payload.get("primaryPhotoUrl"),
@@ -574,12 +668,20 @@ def _collect_property_photo_urls(*payloads):
 
         for key in (
             "raw",
+            "data",
+            "result",
+            "results",
             "source",
             "provider_payload",
             "property",
+            "home",
+            "home_search",
+            "description",
+            "location",
             "workspace_analysis",
             "media",
             "listing",
+            "listings",
             "realtor",
             "rentcast",
             "attom",
@@ -6663,6 +6765,22 @@ def generate_build_exterior():
                     getattr(project, "blueprint_url", "") or ""
                 ).strip()
 
+        if reference_image_url:
+            prepared_reference_url = _engine_ready_reference_image_url(
+                reference_image_url,
+                prefix="build-site-reference",
+            )
+            if prepared_reference_url:
+                reference_image_url = prepared_reference_url
+            elif "property_tool_image" in reference_image_url or not reference_image_url.startswith(("http://", "https://")):
+                reference_image_url = ""
+
+        if not image_base64 and not reference_image_url and location:
+            reference_image_url = _streetview_engine_reference_url(
+                {"address": location},
+                prefix="build-site-reference",
+            )
+
         # ---------------- CONDITIONING ----------------
         use_conditioning = True
         has_real_exterior_reference = bool(image_base64 or reference_image_url)
@@ -7505,6 +7623,7 @@ def generate_full_build():
         exterior_image_base64 = ""
         raw_blueprint = None
         raw_land = None
+        site_reference_source = ""
 
         # --------------------------------------------------
         # BLUEPRINT SOURCE RESOLUTION
@@ -7570,6 +7689,7 @@ def generate_full_build():
             raw_land = land_image.read()
             if raw_land:
                 exterior_image_base64 = base64.b64encode(raw_land).decode("utf-8")
+                site_reference_source = "uploaded_site_photo"
                 if not reference_image_url:
                     try:
                         reference_image_url = _upload_before_image(raw_land)
@@ -7595,6 +7715,27 @@ def generate_full_build():
             ).strip()
             if candidate_reference and candidate_reference not in generated_urls:
                 reference_image_url = candidate_reference
+                site_reference_source = "saved_site_reference"
+
+        if reference_image_url:
+            prepared_reference_url = _engine_ready_reference_image_url(
+                reference_image_url,
+                prefix="build-site-reference",
+            )
+            if prepared_reference_url:
+                reference_image_url = prepared_reference_url
+                site_reference_source = site_reference_source or "site_context_image"
+            elif not reference_image_url.startswith(("http://", "https://")):
+                reference_image_url = ""
+
+        if not exterior_image_base64 and not reference_image_url and location:
+            streetview_reference_url = _streetview_engine_reference_url(
+                {"address": location},
+                prefix="build-site-reference",
+            )
+            if streetview_reference_url:
+                reference_image_url = streetview_reference_url
+                site_reference_source = "streetview_site_context"
 
         # --------------------------------------------------
         # 1. GENERATE BLUEPRINT (First Floor)
@@ -7863,13 +8004,14 @@ def generate_full_build():
         # --------------------------------------------------
         has_site_context_reference = bool(exterior_image_base64 or reference_image_url)
         has_real_exterior_reference = preserve_existing_exterior and has_site_context_reference
-        exterior_ref_b64 = exterior_image_base64 if has_real_exterior_reference else ""
-        exterior_ref_url = "" if exterior_ref_b64 else (reference_image_url if has_real_exterior_reference else "")
-        exterior_source_kind = (
-            "existing_house_reference"
-            if has_real_exterior_reference
-            else ("site_context_text_prompt" if has_site_context_reference else "text_prompt")
-        )
+        exterior_ref_b64 = exterior_image_base64
+        exterior_ref_url = "" if exterior_ref_b64 else (reference_image_url if has_site_context_reference else "")
+        if has_real_exterior_reference:
+            exterior_source_kind = "existing_house_reference"
+        elif has_site_context_reference:
+            exterior_source_kind = site_reference_source or "site_context_image"
+        else:
+            exterior_source_kind = "text_prompt"
 
         exterior_prompt_notes = _compose_build_studio_prompt(
             notes=site_notes,
@@ -7909,9 +8051,11 @@ def generate_full_build():
             "floor_count": number_of_floors,
             "image_base64": exterior_ref_b64,
             "image_url": exterior_ref_url,
-            "exterior_image_base64": exterior_image_base64 if has_real_exterior_reference else "",
-            "exterior_image_url": reference_image_url if has_real_exterior_reference and not exterior_image_base64 else "",
-            "reference_image_url": reference_image_url if has_real_exterior_reference and not exterior_image_base64 else "",
+            "exterior_image_base64": exterior_ref_b64,
+            "exterior_image_url": exterior_ref_url,
+            "reference_image_url": exterior_ref_url,
+            "site_reference_image": exterior_ref_url,
+            "site_image_url": exterior_ref_url,
             "preserve_existing_exterior": has_real_exterior_reference,
             "preserve_structure": has_real_exterior_reference,
             "blueprint_reference_url": blueprint_primary_url,
@@ -7921,7 +8065,7 @@ def generate_full_build():
             "height": 1024,
             "steps": 28,
             "guidance": 7.0,
-            "strength": 0.34 if has_real_exterior_reference else 0.22,
+            "strength": 0.34 if has_real_exterior_reference else (0.42 if has_site_context_reference else 0.22),
             "count": 1,
             "negative_prompt": _build_studio_negative_prompt("exterior_front"),
         }
@@ -8005,9 +8149,11 @@ def generate_full_build():
             "floor_count": number_of_floors,
             "image_base64": exterior_ref_b64,
             "image_url": exterior_ref_url,
-            "exterior_image_base64": exterior_image_base64 if has_real_exterior_reference else "",
-            "exterior_image_url": reference_image_url if has_real_exterior_reference and not exterior_image_base64 else "",
-            "reference_image_url": reference_image_url if has_real_exterior_reference and not exterior_image_base64 else "",
+            "exterior_image_base64": exterior_ref_b64,
+            "exterior_image_url": exterior_ref_url,
+            "reference_image_url": exterior_ref_url,
+            "site_reference_image": exterior_ref_url,
+            "site_image_url": exterior_ref_url,
             "preserve_existing_exterior": has_real_exterior_reference,
             "preserve_structure": has_real_exterior_reference,
             "blueprint_reference_url": blueprint_primary_url,
@@ -8017,7 +8163,7 @@ def generate_full_build():
             "height": 1024,
             "steps": 30,
             "guidance": 7.0,
-            "strength": 0.34 if has_real_exterior_reference else 0.22,
+            "strength": 0.34 if has_real_exterior_reference else (0.42 if has_site_context_reference else 0.22),
             "count": 1,
             "negative_prompt": _build_studio_negative_prompt("exterior_rear"),
         }
