@@ -3347,20 +3347,29 @@ def api_deal_architect_proxy():
 @login_required
 @role_required("investor")
 def api_property_tool_search():
-    payload = request.get_json(force=True) or {}
+    payload = request.get_json(silent=True) or {}
 
     address = (payload.get("address") or "").strip()
-    zip_code = (payload.get("zip") or "").strip()
     city = (payload.get("city") or "").strip()
-    state = (payload.get("state") or "").strip()
-    strategy = (payload.get("strategy") or "flip").strip().lower()
-    asset_type = payload.get("asset_type") or "any"
+    state = (payload.get("state") or "").strip().upper()
+    zip_code = (
+        payload.get("zip_code")
+        or payload.get("zip")
+        or payload.get("postal_code")
+        or ""
+    ).strip()
 
-    if not address and not zip_code:
+    latitude = payload.get("latitude")
+    longitude = payload.get("longitude")
+
+    has_market = bool(zip_code or (city and state))
+    has_location = bool(latitude and longitude)
+    has_address = bool(address)
+
+    if not (has_market or has_location or has_address):
         return jsonify({
             "status": "error",
-            "message": "Address or ZIP code is required.",
-            "results": [],
+            "error": "Enter a ZIP code, city/state, address, or use your location."
         }), 400
 
     raw_limit = payload.get("limit")
@@ -3375,12 +3384,12 @@ def api_property_tool_search():
             asset_type=asset_type,
         )
 
-        results, meta = orchestrator.run_search(
+        results = orchestrator.search_candidates(
             address=address,
             city=city,
             state=state,
             zip_code=zip_code,
-            limit=limit,
+            limit=12,
         )
         results = [_proxy_search_result_images(result) for result in results]
 
