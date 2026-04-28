@@ -84,7 +84,8 @@
           </div>
           <div class="field">
             <label for="number_of_floors">Number of Floors</label>
-            <input id="number_of_floors" name="number_of_floors" type="number" min="1" max="5" step="1" value="{{ build_project.get('number_of_floors') or build_project.get('stories') or (project.stories if project and project.stories is defined else '') }}" placeholder="2">
+            {% set number_of_floors_value = floor_count or build_project.get('number_of_floors') or build_project.get('stories') or (project.stories if project and project.stories is defined else '') %}
+            <input id="number_of_floors" name="number_of_floors" type="number" min="1" max="5" step="1" value="{{ number_of_floors_value or '' }}" placeholder="2">
           </div>
           <div class="field">
             <label for="zoning">Zoning</label>
@@ -244,6 +245,9 @@
   const form = document.getElementById('projectBuildForm');
   const button = document.getElementById('generateProjectBuildBtn');
   const lotCountInput = document.getElementById('lot_count');
+  const floorCountInput = document.getElementById('number_of_floors');
+  const descriptionInput = document.getElementById('description');
+  const notesInput = document.getElementById('notes');
   const summaryLots = document.getElementById('summaryLots');
   const referenceImageField = document.getElementById('reference_image_url');
   const preserveExistingExteriorField = document.getElementById('preserve_existing_exterior');
@@ -254,10 +258,32 @@
     preserveExistingExteriorField.checked = false;
   }
 
+  function inferFloorCountFromText(text) {
+    const normalized = String(text || '').toLowerCase().replace(/-/g, ' ');
+    const words = { one: 1, single: 1, two: 2, three: 3, four: 4, five: 5 };
+    const digitMatch = normalized.match(/\b([1-5])\s*(floor|floors|story|stories|storey|storeys|level|levels)\b/);
+    if (digitMatch) return Number(digitMatch[1]);
+    const countMatch = normalized.match(/\b(floor|floors|story|stories|storey|storeys|level|levels)\s*(count|total)?\s*[:=]?\s*([1-5])\b/);
+    if (countMatch) return Number(countMatch[3]);
+    const wordMatch = normalized.match(/\b(one|single|two|three|four|five)\s*(floor|floors|story|stories|storey|storeys|level|levels)\b/);
+    if (wordMatch) return words[wordMatch[1]];
+    const ordinalMatch = normalized.match(/\b(second|2nd|third|3rd|fourth|4th|fifth|5th)\s+floor\b/);
+    if (ordinalMatch) return { second: 2, '2nd': 2, third: 3, '3rd': 3, fourth: 4, '4th': 4, fifth: 5, '5th': 5 }[ordinalMatch[1]];
+    return null;
+  }
+
+  function currentFloorCount() {
+    const explicit = Number.parseInt(floorCountInput?.value || '', 10);
+    const inferred = inferFloorCountFromText(`${descriptionInput?.value || ''} ${notesInput?.value || ''}`);
+    if (Number.isInteger(explicit) && explicit >= 1 && explicit <= 5) return Math.max(explicit, inferred || 0);
+    return inferred || 1;
+  }
+
   function startBuildLoading() {
-    const floors = document.getElementById('number_of_floors')?.value || '1';
+    const floors = currentFloorCount();
+    if (floorCountInput && floors && floorCountInput.value !== String(floors)) floorCountInput.value = String(floors);
     if (buildLoadingMessage) {
-      buildLoadingMessage.textContent = `Ravlo is generating ${floors} floor plan${floors === '1' ? '' : 's'} and front/back exterior concepts.`;
+      buildLoadingMessage.textContent = `Ravlo is generating ${floors} floor plan${floors === 1 ? '' : 's'} and front/back exterior concepts.`;
     }
     buildLoadingOverlay?.classList.remove('hidden');
     button.disabled = true;

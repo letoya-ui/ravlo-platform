@@ -5916,6 +5916,77 @@ def _build_project_lot_count(*values):
     return None
 
 
+def _build_project_floor_count(*values, default: int | None = None) -> int | None:
+    word_numbers = {
+        "one": 1,
+        "single": 1,
+        "two": 2,
+        "three": 3,
+        "four": 4,
+        "five": 5,
+    }
+
+    def _clean_floor_count(value) -> int | None:
+        try:
+            normalized = int(value)
+        except (TypeError, ValueError):
+            return None
+        return normalized if 1 <= normalized <= 5 else None
+
+    best_count = None
+
+    def _use_candidate(candidate: int | None) -> None:
+        nonlocal best_count
+        if candidate and 1 <= candidate <= 5:
+            best_count = max(best_count or 0, candidate)
+
+    for value in values:
+        _use_candidate(_clean_floor_count(value))
+
+        raw = safe_str(value).strip().lower()
+        if not raw:
+            continue
+        normalized_text = raw.replace("-", " ")
+
+        digit_match = re.search(
+            r"\b([1-5])\s*(?:floor|floors|story|stories|storey|storeys|level|levels)\b",
+            normalized_text,
+        )
+        if digit_match:
+            _use_candidate(int(digit_match.group(1)))
+
+        count_match = re.search(
+            r"\b(?:floor|floors|story|stories|storey|storeys|level|levels)"
+            r"\s*(?:count|total)?\s*[:=]?\s*([1-5])\b",
+            normalized_text,
+        )
+        if count_match:
+            _use_candidate(int(count_match.group(1)))
+
+        word_match = re.search(
+            r"\b(one|single|two|three|four|five)\s*"
+            r"(?:floor|floors|story|stories|storey|storeys|level|levels)\b",
+            normalized_text,
+        )
+        if word_match:
+            _use_candidate(word_numbers[word_match.group(1)])
+
+        ordinal_match = re.search(r"\b(second|2nd|third|3rd|fourth|4th|fifth|5th)\s+floor\b", normalized_text)
+        if ordinal_match:
+            _use_candidate({
+                "second": 2,
+                "2nd": 2,
+                "third": 3,
+                "3rd": 3,
+                "fourth": 4,
+                "4th": 4,
+                "fifth": 5,
+                "5th": 5,
+            }[ordinal_match.group(1)])
+
+    return best_count or default
+
+
 def _build_project_development_label(property_type: str, lot_count: int | None) -> str:
     label = (property_type or "development").replace("_", " ").title()
     if lot_count and lot_count > 1:
@@ -5935,12 +6006,22 @@ def _seed_build_project_from_saved_project(project: BuildProject | None) -> dict
         return {}
 
     lot_count = _build_project_lot_count(project.development_type)
+    floor_count = _build_project_floor_count(
+        getattr(project, "number_of_floors", None),
+        getattr(project, "stories", None),
+        getattr(project, "floor_count", None),
+        project.description,
+        project.notes,
+        project.development_type,
+    )
     build_project = {
         "project_id": project.id,
         "project_name": project.project_name or "",
         "property_type": project.property_type or "",
         "development_type": project.development_type or "",
         "lot_count": lot_count,
+        "stories": floor_count,
+        "number_of_floors": floor_count,
         "description": project.description or "",
         "lot_size": project.lot_size or "",
         "zoning": project.zoning or "",
@@ -5970,6 +6051,14 @@ def _seed_build_project_from_saved_project(project: BuildProject | None) -> dict
 def _build_project_from_request_args() -> dict[str, Any]:
     property_type = _clean_str(request.args.get("property_type"))
     lot_count = _normalize_int(request.args.get("lot_count"))
+    floor_count = _build_project_floor_count(
+        request.args.get("number_of_floors"),
+        request.args.get("floor_count"),
+        request.args.get("stories"),
+        request.args.get("number_of_stories"),
+        request.args.get("description"),
+        request.args.get("notes"),
+    )
 
     if not any([
         _clean_str(request.args.get("project_name")),
@@ -5980,6 +6069,7 @@ def _build_project_from_request_args() -> dict[str, Any]:
         _clean_str(request.args.get("description")),
         _clean_str(request.args.get("notes")),
         lot_count,
+        floor_count,
     ]):
         return {}
 
@@ -5991,6 +6081,8 @@ def _build_project_from_request_args() -> dict[str, Any]:
         "property_type": property_type,
         "development_type": _build_project_development_label(property_type, lot_count),
         "lot_count": lot_count,
+        "stories": floor_count,
+        "number_of_floors": floor_count,
         "lot_size": _clean_str(request.args.get("lot_size")),
         "zoning": _clean_str(request.args.get("zoning")),
         "location": _clean_str(request.args.get("location")),
@@ -6059,6 +6151,18 @@ def build_studio(deal_id=None):
         build_project.get("development_type"),
         getattr(project, "development_type", None),
     )
+    floor_count = _build_project_floor_count(
+        build_project.get("number_of_floors"),
+        build_project.get("stories"),
+        build_project.get("floor_count"),
+        getattr(project, "number_of_floors", None) if project else None,
+        getattr(project, "stories", None) if project else None,
+        getattr(project, "floor_count", None) if project else None,
+        build_project.get("description"),
+        build_project.get("notes"),
+        getattr(project, "description", None) if project else None,
+        getattr(project, "notes", None) if project else None,
+    )
 
     package_result = {
         "blueprint": blueprint_result.get("image_url") or blueprint_result.get("blueprint_url") or "",
@@ -6122,6 +6226,7 @@ def build_studio(deal_id=None):
         page_title="Build Studio",
         page_subtitle="Exterior design and multi-floor blueprint development for new builds, renovations, and property transformations.",
         lot_count=lot_count,
+        floor_count=floor_count,
         hero_title="Multi-floor blueprints and exterior concepts.",
         hero_eyebrow="RAVLO BUILD STUDIO",
         companion_endpoint="investor.design_studio",
@@ -6705,11 +6810,13 @@ def generate_build_exterior():
         notes = (request.form.get("notes") or "").strip()
         style = (request.form.get("style") or "modern_farmhouse").strip()
         blueprint_style = _normalize_build_blueprint_style(request.form.get("blueprint_style"))
-        number_of_floors = _normalize_int(
+        number_of_floors = _build_project_floor_count(
             request.form.get("number_of_floors")
-            or request.form.get("floor_count")
-            or request.form.get("stories")
-            or request.form.get("number_of_stories")
+            or request.form.get("floor_count"),
+            request.form.get("stories"),
+            request.form.get("number_of_stories"),
+            description,
+            notes,
         )
         save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
 
@@ -7195,11 +7302,13 @@ def generate_build_blueprint():
         bedrooms = (request.form.get("bedrooms") or "").strip()
         bathrooms = (request.form.get("bathrooms") or "").strip()
         square_feet = (request.form.get("square_feet") or "").strip()
-        number_of_floors = _normalize_int(
+        number_of_floors = _build_project_floor_count(
             request.form.get("number_of_floors")
-            or request.form.get("floor_count")
-            or request.form.get("stories")
-            or request.form.get("number_of_stories")
+            or request.form.get("floor_count"),
+            request.form.get("stories"),
+            request.form.get("number_of_stories"),
+            description,
+            notes,
         )
 
         deal_id = _normalize_int(request.form.get("deal_id"))
@@ -7565,11 +7674,13 @@ def generate_full_build():
         description = (data.get("description") or "").strip()
         lot_size = (data.get("lot_size") or "").strip()
         lot_count = _normalize_int(data.get("lot_count"))
-        number_of_floors = _normalize_int(
+        number_of_floors = _build_project_floor_count(
             data.get("number_of_floors")
-            or data.get("floor_count")
-            or data.get("stories")
-            or data.get("number_of_stories")
+            or data.get("floor_count"),
+            data.get("stories"),
+            data.get("number_of_stories"),
+            data.get("description"),
+            data.get("notes"),
         )
         zoning = (data.get("zoning") or "").strip()
         location = (data.get("location") or "").strip()
@@ -8832,11 +8943,13 @@ def generate_build_studio_upload():
         location = (request.form.get("location") or "").strip()
         notes = (request.form.get("notes") or "").strip()
         style = (request.form.get("style") or "modern_farmhouse").strip()
-        number_of_floors = _normalize_int(
+        number_of_floors = _build_project_floor_count(
             request.form.get("number_of_floors")
-            or request.form.get("floor_count")
-            or request.form.get("stories")
-            or request.form.get("number_of_stories")
+            or request.form.get("floor_count"),
+            request.form.get("stories"),
+            request.form.get("number_of_stories"),
+            description,
+            notes,
         )
 
         save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
