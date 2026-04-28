@@ -126,6 +126,12 @@
       <span>Properties</span>
     </a>
 
+    <a href="{{ url_for('vip.realtor_investor_flow') }}"
+       class="ravlo-nav-link {% if ep == 'vip.realtor_investor_flow' %}active{% endif %}">
+      <i class="lucide lucide-chart-network"></i>
+      <span>Investor Flow</span>
+    </a>
+
     <a href="{{ url_for('elena.interaction_new') }}"
        class="ravlo-nav-link {% if ep == 'elena.interaction_new' %}active{% endif %}">
       <i class="lucide lucide-message-square-plus"></i>
@@ -183,6 +189,12 @@
        class="ravlo-nav-link {% if ep in ['vip.realtor_listings', 'vip.realtor_listing_detail', 'elena.listing_new'] %}active{% endif %}">
       <i class="lucide lucide-building-2"></i>
       <span>Properties</span>
+    </a>
+
+    <a href="{{ url_for('vip.realtor_investor_flow') }}"
+       class="ravlo-nav-link {% if ep == 'vip.realtor_investor_flow' %}active{% endif %}">
+      <i class="lucide lucide-chart-network"></i>
+      <span>Investor Flow</span>
     </a>
 
     <a href="{{ url_for('vip.listing_presentations') }}"

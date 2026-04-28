@@ -886,6 +886,91 @@ def frank_dashboard():
 # REALTOR — Investor flow
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _safe_number(value):
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _deal_market_text(sp=None, deal=None, analysis=None):
+    """Collect searchable location text without assuming optional columns exist."""
+    parts = []
+
+    for obj in (sp, deal, analysis):
+        if not obj:
+            continue
+        for attr in (
+            "market", "address", "city", "state", "zip_code", "zipcode",
+            "local_cost_label", "title", "property_name",
+        ):
+            value = getattr(obj, attr, None)
+            if value:
+                parts.append(str(value))
+
+    payload = getattr(sp, "resolved_json", None) if sp else None
+    if payload:
+        if isinstance(payload, str):
+            parts.append(payload)
+        else:
+            try:
+                parts.append(json.dumps(payload))
+            except TypeError:
+                pass
+
+    return " ".join(parts).lower()
+
+
+def _market_text_matches(text, market):
+    tokens = [
+        token.strip().lower()
+        for token in (market or "").replace(",", " ").split()
+        if token.strip()
+    ]
+    if not tokens:
+        return True
+    return all(token in text for token in tokens) or any(token in text for token in tokens)
+
+
+def _build_investor_flow_item(sp):
+    deal = (
+        Deal.query
+        .filter_by(saved_property_id=sp.id)
+        .order_by(Deal.updated_at.desc())
+        .first()
+    )
+    analysis = (
+        PropertyAnalysis.query
+        .filter_by(investor_profile_id=sp.investor_profile_id)
+        .order_by(PropertyAnalysis.created_at.desc())
+        .first()
+    )
+
+    arv = _safe_number(getattr(deal, "arv", None) if deal else getattr(analysis, "arv", None))
+    rehab = _safe_number(getattr(deal, "rehab_cost", None) if deal else getattr(analysis, "rehab_cost", None))
+    purchase = _safe_number(getattr(deal, "purchase_price", None) if deal else getattr(analysis, "purchase_price", None))
+    results = getattr(deal, "results_json", None) or {}
+    feedback = results.get("realtor_market_data") if isinstance(results, dict) else None
+
+    return {
+        "property": sp,
+        "deal": deal,
+        "analysis": analysis,
+        "arv": arv,
+        "rehab": rehab,
+        "purchase": purchase,
+        "strategy": getattr(deal, "strategy", None) if deal else None,
+        "address": (
+            getattr(sp, "address", None)
+            or (getattr(deal, "address", None) if deal else None)
+            or (getattr(analysis, "address", None) if analysis else None)
+            or "Address unavailable"
+        ),
+        "market_text": _deal_market_text(sp, deal, analysis),
+        "feedback": feedback,
+    }
+
+
 @vip_bp.get("/realtor/investor-flow")
 @role_required("partner_group", "admin")
 def realtor_investor_flow():
@@ -908,54 +993,22 @@ def realtor_investor_flow():
     analyzed_investor_ids = [row[0] for row in analyzed_ids]
 
     if analyzed_investor_ids:
-        sp_query = SavedProperty.query.filter(
-            SavedProperty.investor_profile_id.in_(analyzed_investor_ids)
+        saved_properties = (
+            SavedProperty.query
+            .filter(SavedProperty.investor_profile_id.in_(analyzed_investor_ids))
+            .order_by(SavedProperty.created_at.desc())
+            .limit(60)
+            .all()
         )
+        candidate_items = [_build_investor_flow_item(sp) for sp in saved_properties]
 
-        market_matches = []
-        geo_matches    = []
-
-        if current_market != "All Markets":
-            if hasattr(SavedProperty, "market"):
-                market_matches = sp_query.filter_by(market=current_market).limit(20).all()
-
-            if not market_matches:
-                # Realtors now define their own markets, so we fall back to
-                # fuzzy-matching the market label against the saved property
-                # city/state instead of hard-coding state codes.
-                label_tokens = [
-                    t for t in (current_market or "").lower().split() if t
-                ]
-                if label_tokens:
-                    conditions = []
-                    for token in label_tokens:
-                        like = f"%{token}%"
-                        conditions.append(db.func.lower(SavedProperty.city).like(like))
-                        if hasattr(SavedProperty, "state"):
-                            conditions.append(db.func.lower(SavedProperty.state).like(like))
-                    geo_matches = sp_query.filter(or_(*conditions)).limit(20).all()
+        if current_market == ALL_MARKETS:
+            matched_properties = candidate_items[:30]
         else:
-            market_matches = sp_query.limit(30).all()
-
-        for sp in (market_matches or geo_matches):
-            deal     = Deal.query.filter_by(saved_property_id=sp.id).first()
-            analysis = (
-                PropertyAnalysis.query
-                .filter_by(investor_profile_id=sp.investor_profile_id)
-                .order_by(PropertyAnalysis.created_at.desc())
-                .first()
-            )
-            matched_properties.append({
-                "property": sp,
-                "deal":     deal,
-                "analysis": analysis,
-                "arv":      float(deal.arv or 0) if deal else float(getattr(analysis, "arv", 0) or 0),
-                "rehab":    float(deal.rehab_cost or 0) if deal else float(getattr(analysis, "rehab_cost", 0) or 0),
-                "strategy": deal.strategy if deal else None,
-                "address":  (getattr(sp, "address", None)
-                             or (deal.address if deal else None)
-                             or (analysis.address if analysis else "—")),
-            })
+            matched_properties = [
+                item for item in candidate_items
+                if _market_text_matches(item.get("market_text", ""), current_market)
+            ][:30]
 
     realtor_requests = []
     if partner:
@@ -970,13 +1023,26 @@ def realtor_investor_flow():
             .limit(10).all()
         )
 
+    scored_deals = [
+        item["deal"].deal_score for item in matched_properties
+        if item.get("deal") and item["deal"].deal_score is not None
+    ]
+    flow_summary = {
+        "active_properties": len(matched_properties),
+        "direct_requests": len(realtor_requests),
+        "feedback_attached": sum(1 for item in matched_properties if item.get("feedback")),
+        "average_score": round(sum(scored_deals) / len(scored_deals)) if scored_deals else None,
+        "total_arv": sum(item.get("arv") or 0 for item in matched_properties),
+    }
+
     return render_template(
-        "vip/realtor/investor_flow.html",
+        "vip/investor_flow.html",
         vip_profile        = profile,
         modules            = get_enabled_modules(profile),
         header_name        = get_dashboard_name(profile),
         matched_properties = matched_properties,
         realtor_requests   = realtor_requests,
+        flow_summary       = flow_summary,
         current_market     = current_market,
         available_markets  = available_markets,
         multi_market       = len(available_markets) >= 2,

@@ -3326,7 +3326,24 @@ def project_studio():
 @login_required
 @role_required("investor")
 def api_deal_architect_proxy():
-    payload = request.get_json(force=True) or {}
+    payload = request.get_json(silent=True) or {}
+
+    address = (payload.get("address") or "").strip()
+    city = (payload.get("city") or "").strip()
+    state = (payload.get("state") or "").strip().upper()
+
+    zip_code = (
+        payload.get("zip_code")
+        or payload.get("zip")
+        or payload.get("postal_code")
+        or ""
+    ).strip()
+
+    strategy = (payload.get("strategy") or "all").strip().lower()
+    asset_type = (payload.get("asset_type") or payload.get("assetType") or    "any").strip().lower()
+
+    latitude = payload.get("latitude")
+    longitude = payload.get("longitude")
 
     try:
         data = _call_deal_architect(payload)

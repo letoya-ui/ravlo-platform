@@ -1,317 +1,1033 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Investor Deal Flow{% endblock %}
-{% block page_title %}{{ header_name }}{% endblock %}
-{% block page_subline %}Investor properties being analyzed in your market{% endblock %}
+{% block title %}Ravlo | Investor Deal Flow{% endblock %}
+{% block page_title %}Investor Deal Flow{% endblock %}
+{% block page_subline %}
+Live investor analyses, direct requests, and market intelligence awaiting your review.
+{% endblock %}
 
 {% block topbar_actions %}
-  {# Market switcher #}
-  <form method="POST" action="{{ url_for('vip.realtor_market_switch') }}"
-        class="inline-flex items-center gap-2">
+  <form method="POST" action="{{ url_for('vip.realtor_market_switch') }}" class="flow-market-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="next" value="{{ request.path }}">
-    <div class="inline-flex rounded-lg overflow-hidden border border-white/10 text-xs font-medium">
-      {% for option in ['All Markets'] + available_markets %}
-        <button type="submit" name="market" value="{{ option }}"
-                class="px-3 py-1.5 transition
-                  {% if current_market == option %}bg-white text-black
-                  {% else %}bg-white/5 text-gray-400 hover:bg-white/10{% endif %}">
-          {{ option }}
-        </button>
+    <label for="flow-market" class="sr-only">Market</label>
+    <select id="flow-market" name="market" class="flow-market-select" onchange="this.form.submit()">
+      <option value="All Markets" {% if current_market == "All Markets" %}selected{% endif %}>All Markets</option>
+      {% for option in available_markets %}
+        <option value="{{ option }}" {% if current_market == option %}selected{% endif %}>{{ option }}</option>
       {% endfor %}
-    </div>
+    </select>
   </form>
-  <a href="{{ url_for('vip.realtor_dashboard') }}" class="ravlo-btn ghost sm">← Dashboard</a>
+
+  <a href="{{ url_for('vip.realtor_dashboard') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-layout-dashboard"></i>
+    <span>Dashboard</span>
+  </a>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto space-y-6">
+<div class="investor-flow-page">
+  <section class="flow-hero">
+    <div class="flow-hero-copy">
+      <span class="flow-kicker">Market Desk</span>
+      <h2>Convert investor activity into precise local guidance.</h2>
+      <p>
+        Review the properties investors are actively underwriting, add your ARV and comp notes,
+        and keep every deal moving with professional market context.
+      </p>
+    </div>
 
-  {# ── Intro ── #}
-  <section class="ravlo-card pad">
-    <div class="flex justify-between items-start">
-      <div>
-        <h3 class="text-lg font-semibold">Investor Deal Flow</h3>
-        <p class="text-sm text-gray-400 mt-1">
-          Properties investors are actively analyzing
-          {% if current_market != 'All Markets' %}in <strong class="text-white">{{ current_market }}</strong>{% endif %}.
-          Attach your market expertise — comps, listing context, ARV opinion — back into their deal.
-        </p>
+    <div class="flow-hero-panel">
+      <div class="flow-panel-row">
+        <span>Current Market</span>
+        <strong>{{ current_market }}</strong>
       </div>
-      <div class="text-2xl font-bold text-gray-200">{{ matched_properties | length }}</div>
+      <div class="flow-panel-row">
+        <span>Coverage</span>
+        <strong>
+          {% if available_markets %}
+            {{ available_markets | length }} configured
+          {% else %}
+            All markets
+          {% endif %}
+        </strong>
+      </div>
+      <div class="flow-panel-row">
+        <span>Review Queue</span>
+        <strong>{{ flow_summary.active_properties + flow_summary.direct_requests }} open</strong>
+      </div>
     </div>
   </section>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <section class="flow-stat-grid" aria-label="Investor flow summary">
+    <article class="flow-stat-card">
+      <div class="flow-stat-icon"><i class="lucide lucide-building-2"></i></div>
+      <div>
+        <span>Properties In Review</span>
+        <strong>{{ flow_summary.active_properties }}</strong>
+      </div>
+    </article>
 
-    {# LEFT: Matched properties #}
-    <div class="lg:col-span-2 space-y-4">
+    <article class="flow-stat-card">
+      <div class="flow-stat-icon"><i class="lucide lucide-inbox"></i></div>
+      <div>
+        <span>Direct Requests</span>
+        <strong>{{ flow_summary.direct_requests }}</strong>
+      </div>
+    </article>
 
-      {# Direct requests from investors TO this realtor #}
+    <article class="flow-stat-card">
+      <div class="flow-stat-icon"><i class="lucide lucide-clipboard-check"></i></div>
+      <div>
+        <span>Market Notes Attached</span>
+        <strong>{{ flow_summary.feedback_attached }}</strong>
+      </div>
+    </article>
+
+    <article class="flow-stat-card">
+      <div class="flow-stat-icon"><i class="lucide lucide-gauge"></i></div>
+      <div>
+        <span>Average Deal Score</span>
+        <strong>{{ flow_summary.average_score if flow_summary.average_score is not none else "--" }}</strong>
+      </div>
+    </article>
+  </section>
+
+  <div class="flow-layout">
+    <main class="flow-main">
       {% if realtor_requests %}
-      <section class="ravlo-card pad">
-        <h3 class="text-base font-semibold mb-3">
-          Direct Requests
-          <span class="text-gray-500 font-normal text-sm">({{ realtor_requests | length }})</span>
-        </h3>
-        <div class="space-y-2">
-          {% for req in realtor_requests %}
-          <div class="ravlo-card p-3 border border-blue-500/20">
-            <div class="flex justify-between items-start">
-              <div>
-                <div class="text-sm font-medium">{{ req.title or req.category | title }}</div>
-                <div class="text-xs text-gray-500 mt-0.5">
-                  {{ req.requester_name() }}
-                  {% if req.related_address() %} · {{ req.related_address() }}{% endif %}
-                  {% if req.created_at %} · {{ req.created_at.strftime('%b %d') }}{% endif %}
-                </div>
-              </div>
-              <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
-                {{ req.status | title }}
-              </span>
+        <section class="flow-section">
+          <div class="flow-section-head">
+            <div>
+              <span class="flow-section-label">Priority</span>
+              <h3>Direct Investor Requests</h3>
             </div>
-            {% if req.budget %}
-            <div class="text-xs text-gray-500 mt-1">
-              Budget: <strong class="text-gray-300">${{ '{:,.0f}'.format(req.budget) }}</strong>
-            </div>
-            {% endif %}
-            {% if req.message %}
-            <div class="text-xs text-gray-600 italic truncate mt-1">{{ req.message }}</div>
-            {% endif %}
+            <span class="flow-count">{{ realtor_requests | length }}</span>
           </div>
-          {% endfor %}
-        </div>
-      </section>
-      {% endif %}
 
-      {# Market-matched investor properties #}
-      {% if matched_properties %}
-      <section>
-        <h3 class="text-base font-semibold mb-3 px-1">
-          Properties in Your Market
-          {% if current_market != 'All Markets' %}
-            <span class="text-sm font-normal
-              {% if current_market == 'Hudson Valley' %}text-emerald-400
-              {% else %}text-sky-400{% endif %}">
-              · {{ current_market }}
-            </span>
-          {% endif %}
-        </h3>
-
-        <div class="space-y-4">
-          {% for item in matched_properties %}
-          {% set sp = item.property %}
-          {% set deal = item.deal %}
-
-          <div class="ravlo-card p-4 border border-white/10">
-            <div class="flex justify-between items-start mb-3">
-              <div>
-                <div class="font-medium text-sm">{{ item.address or 'Address unavailable' }}</div>
-                <div class="text-xs text-gray-500 mt-0.5">
-                  {% if item.strategy %}
-                    <span class="text-purple-400">{{ item.strategy | upper }}</span> ·
-                  {% endif %}
-                  {% if deal %}
-                    Deal #{{ deal.id }}
-                    {% if deal.status %} · {{ deal.status | title }}{% endif %}
-                  {% endif %}
-                  {% if sp and sp.created_at %}
-                    · Analyzed {{ sp.created_at.strftime('%b %d') }}
-                  {% endif %}
-                </div>
-              </div>
-
-              {# Deal score if available #}
-              {% if deal and deal.deal_score %}
-              <div class="text-center">
-                <div class="text-lg font-bold
-                  {% if deal.deal_score >= 75 %}text-green-400
-                  {% elif deal.deal_score >= 50 %}text-yellow-400
-                  {% else %}text-red-400{% endif %}">
-                  {{ deal.deal_score }}
-                </div>
-                <div class="text-xs text-gray-600">Score</div>
-              </div>
-              {% endif %}
-            </div>
-
-            {# Deal numbers #}
-            <div class="grid grid-cols-3 gap-2 mb-3">
-              {% if item.arv %}
-              <div class="ravlo-card p-2 text-center">
-                <div class="text-xs text-gray-500 mb-0.5">AI ARV</div>
-                <div class="text-sm font-semibold text-green-400">
-                  ${{ '{:,.0f}'.format(item.arv) }}
-                </div>
-              </div>
-              {% endif %}
-              {% if item.rehab %}
-              <div class="ravlo-card p-2 text-center">
-                <div class="text-xs text-gray-500 mb-0.5">Rehab Est.</div>
-                <div class="text-sm font-semibold text-blue-400">
-                  ${{ '{:,.0f}'.format(item.rehab) }}
-                </div>
-              </div>
-              {% endif %}
-              {% if deal and deal.purchase_price %}
-              <div class="ravlo-card p-2 text-center">
-                <div class="text-xs text-gray-500 mb-0.5">Purchase</div>
-                <div class="text-sm font-semibold">
-                  ${{ '{:,.0f}'.format(deal.purchase_price) }}
-                </div>
-              </div>
-              {% endif %}
-            </div>
-
-            {# Realtor market data form — attach your expertise #}
-            {% if deal %}
-            <details class="border-t border-white/5 pt-3 mt-1">
-              <summary class="text-xs text-blue-400 cursor-pointer hover:text-blue-300">
-                Attach Market Data to This Deal →
-              </summary>
-
-              <form method="POST"
-                    action="{{ url_for('vip.realtor_attach_market_data', deal_id=deal.id) }}"
-                    class="mt-3 space-y-2">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="text-xs text-gray-500">Your ARV Opinion ($)</label>
-                    <input name="suggested_arv" type="number" step="0.01"
-                           class="design-input text-xs mt-1"
-                           placeholder="{{ item.arv or '' }}">
+          <div class="request-list">
+            {% for req in realtor_requests %}
+              <article class="request-item">
+                <div class="request-main">
+                  <div class="request-title">
+                    {{ req.title or req.request_type or req.category | replace("_", " ") | title }}
                   </div>
-                  <div>
-                    <label class="text-xs text-gray-500">List Price ($)</label>
-                    <input name="list_price" type="number" step="0.01"
-                           class="design-input text-xs mt-1"
-                           placeholder="Current or suggested">
+                  <div class="request-meta">
+                    <span>{{ req.requester_name() }}</span>
+                    {% if req.related_address() %}
+                      <span>{{ req.related_address() }}</span>
+                    {% endif %}
+                    {% if req.created_at %}
+                      <span>{{ req.created_at.strftime("%b %d") }}</span>
+                    {% endif %}
                   </div>
+                  {% if req.message %}
+                    <p>{{ req.message }}</p>
+                  {% endif %}
                 </div>
-
-                <div>
-                  <label class="text-xs text-gray-500">Days on Market (avg for area)</label>
-                  <input name="days_on_market" type="number"
-                         class="design-input text-xs mt-1"
-                         placeholder="e.g. 45">
-                </div>
-
-                <div>
-                  <label class="text-xs text-gray-500">Comps Note</label>
-                  <textarea name="comps_note" class="design-input text-xs mt-1"
-                            placeholder="Recent comps you know of, price per sqft, neighborhood notes…"></textarea>
-                </div>
-
-                <div>
-                  <label class="text-xs text-gray-500">Market Note</label>
-                  <textarea name="market_note" class="design-input text-xs mt-1"
-                            placeholder="Market conditions, buyer demand, seasonality…"></textarea>
-                </div>
-
-                <button type="submit" class="ravlo-btn primary sm w-full">
-                  Submit to Deal Architect
-                </button>
-              </form>
-            </details>
-            {% endif %}
-
-            {# Show if market data was already attached #}
-            {% if deal and deal.results_json and deal.results_json.get('realtor_market_data') %}
-            {% set rmd = deal.results_json.realtor_market_data %}
-            <div class="mt-2 border-t border-white/5 pt-2">
-              <div class="text-xs text-green-400">✓ Market data attached</div>
-              {% if rmd.suggested_arv %}
-              <div class="text-xs text-gray-500">
-                Your ARV: ${{ '{:,.0f}'.format(rmd.suggested_arv) }}
-                {% if rmd.arv_delta %}
-                  <span class="{% if rmd.arv_delta > 0 %}text-green-400{% else %}text-red-400{% endif %}">
-                    ({{ '+' if rmd.arv_delta > 0 else '' }}${{ '{:,.0f}'.format(rmd.arv_delta | abs) }})
+                <div class="request-side">
+                  <span class="flow-badge status-{{ (req.status or 'pending') | lower }}">
+                    {{ (req.status or "pending") | replace("_", " ") | title }}
                   </span>
+                  {% if req.budget %}
+                    <strong>${{ "{:,.0f}".format(req.budget) }}</strong>
+                  {% endif %}
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+      {% endif %}
+
+      <section class="flow-section">
+        <div class="flow-section-head">
+          <div>
+            <span class="flow-section-label">Underwriting Desk</span>
+            <h3>Properties In Review</h3>
+          </div>
+          <span class="flow-count">{{ matched_properties | length }}</span>
+        </div>
+
+        {% if matched_properties %}
+          <div class="deal-list">
+            {% for item in matched_properties %}
+              {% set deal = item.deal %}
+              {% set sp = item.property %}
+              {% set spread = (item.arv or 0) - (item.purchase or 0) - (item.rehab or 0) %}
+              <article class="deal-card">
+                <div class="deal-card-head">
+                  <div class="deal-identity">
+                    <div class="deal-title">{{ item.address }}</div>
+                    <div class="deal-meta">
+                      {% if item.strategy %}
+                        <span>{{ item.strategy | replace("_", " ") | title }}</span>
+                      {% endif %}
+                      {% if deal %}
+                        <span>Deal #{{ deal.id }}</span>
+                        {% if deal.status %}
+                          <span>{{ deal.status | replace("_", " ") | title }}</span>
+                        {% endif %}
+                      {% endif %}
+                      {% if sp and sp.created_at %}
+                        <span>Analyzed {{ sp.created_at.strftime("%b %d") }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="deal-status-stack">
+                    {% if item.feedback %}
+                      <span class="flow-badge badge-success">
+                        <i class="lucide lucide-check"></i>
+                        Market data attached
+                      </span>
+                    {% endif %}
+                    {% if deal and deal.deal_score is not none %}
+                      <div class="score-pill {% if deal.deal_score >= 75 %}score-high{% elif deal.deal_score >= 50 %}score-mid{% else %}score-low{% endif %}">
+                        <strong>{{ deal.deal_score }}</strong>
+                        <span>Score</span>
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="deal-metrics">
+                  <div class="metric-tile">
+                    <span>Purchase</span>
+                    <strong>{% if item.purchase %}${{ "{:,.0f}".format(item.purchase) }}{% else %}--{% endif %}</strong>
+                  </div>
+                  <div class="metric-tile">
+                    <span>AI ARV</span>
+                    <strong>{% if item.arv %}${{ "{:,.0f}".format(item.arv) }}{% else %}--{% endif %}</strong>
+                  </div>
+                  <div class="metric-tile">
+                    <span>Rehab Estimate</span>
+                    <strong>{% if item.rehab %}${{ "{:,.0f}".format(item.rehab) }}{% else %}--{% endif %}</strong>
+                  </div>
+                  <div class="metric-tile">
+                    <span>Projected Spread</span>
+                    <strong class="{% if spread > 0 %}positive{% elif spread < 0 %}negative{% endif %}">
+                      {% if item.arv and (item.purchase or item.rehab) %}
+                        ${{ "{:,.0f}".format(spread) }}
+                      {% else %}
+                        --
+                      {% endif %}
+                    </strong>
+                  </div>
+                </div>
+
+                {% if item.feedback %}
+                  {% set feedback = item.feedback %}
+                  <div class="attached-intel">
+                    <div>
+                      <span class="flow-section-label">Submitted Market Intel</span>
+                      <p>
+                        {% if feedback.suggested_arv %}
+                          Your ARV: ${{ "{:,.0f}".format(feedback.suggested_arv) }}
+                          {% if feedback.arv_delta %}
+                            <span class="{% if feedback.arv_delta > 0 %}positive{% else %}negative{% endif %}">
+                              ({{ "+" if feedback.arv_delta > 0 else "" }}${{ "{:,.0f}".format(feedback.arv_delta | abs) }})
+                            </span>
+                          {% endif %}
+                        {% else %}
+                          Local market note attached.
+                        {% endif %}
+                      </p>
+                    </div>
+                    {% if feedback.days_on_market %}
+                      <span class="flow-badge">DOM {{ feedback.days_on_market }}</span>
+                    {% endif %}
+                  </div>
                 {% endif %}
-              </div>
+
+                {% if deal %}
+                  <details class="intel-form-panel">
+                    <summary>
+                      <span>
+                        <i class="lucide lucide-plus-circle"></i>
+                        Attach market intelligence
+                      </span>
+                      <i class="lucide lucide-chevron-down"></i>
+                    </summary>
+
+                    <form method="POST" action="{{ url_for('vip.realtor_attach_market_data', deal_id=deal.id) }}" class="intel-form">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                      <div class="intel-grid">
+                        <label>
+                          <span>Your ARV Opinion</span>
+                          <input name="suggested_arv" type="number" step="0.01" class="flow-input" placeholder="{% if item.arv %}{{ item.arv | round | int }}{% else %}0{% endif %}">
+                        </label>
+                        <label>
+                          <span>List Price</span>
+                          <input name="list_price" type="number" step="0.01" class="flow-input" placeholder="Current or suggested">
+                        </label>
+                        <label>
+                          <span>Average Days On Market</span>
+                          <input name="days_on_market" type="number" class="flow-input" placeholder="45">
+                        </label>
+                      </div>
+
+                      <label>
+                        <span>Comps Note</span>
+                        <textarea name="comps_note" rows="3" class="flow-input" placeholder="Recent comparable sales, price per square foot, concessions, and nearby demand signals."></textarea>
+                      </label>
+
+                      <label>
+                        <span>Market Note</span>
+                        <textarea name="market_note" rows="3" class="flow-input" placeholder="Buyer appetite, neighborhood risk, timing, listing strategy, and anything the AI should weigh."></textarea>
+                      </label>
+
+                      <div class="intel-form-actions">
+                        <button type="submit" class="ravlo-btn primary sm">
+                          <i class="lucide lucide-send"></i>
+                          <span>Submit Intel</span>
+                        </button>
+                      </div>
+                    </form>
+                  </details>
+                {% endif %}
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="flow-empty">
+            <div class="flow-empty-icon"><i class="lucide lucide-search-x"></i></div>
+            <h3>No investor activity for this view</h3>
+            <p>
+              {% if current_market != "All Markets" %}
+                No active investor analyses matched {{ current_market }}. Switch to All Markets to review the full queue.
+              {% else %}
+                New investor analyses and partner requests will appear here when they are ready for local review.
               {% endif %}
-            </div>
-            {% endif %}
-
+            </p>
           </div>
-          {% endfor %}
-        </div>
-      </section>
-
-      {% else %}
-      <section class="ravlo-card pad text-center py-12">
-        <div class="text-3xl mb-3">🏘</div>
-        <h3 class="text-base font-semibold mb-1">No investor activity yet</h3>
-        <p class="text-sm text-gray-500">
-          {% if current_market != 'All Markets' %}
-            No investors are analyzing properties in {{ current_market }} right now.
-            Try switching to All Markets.
-          {% else %}
-            No investor deal flow to show yet.
-          {% endif %}
-        </p>
-      </section>
-      {% endif %}
-
-    </div>
-
-    {# RIGHT: Sidebar #}
-    <aside class="space-y-5">
-
-      <section class="ravlo-card pad">
-        <h3 class="text-base font-semibold mb-2">How This Works</h3>
-        <div class="space-y-3 text-xs text-gray-500 leading-relaxed">
-          <div class="flex gap-2">
-            <span class="text-blue-400 flex-shrink-0">1.</span>
-            Investor runs deal analysis on a property in your market
-          </div>
-          <div class="flex gap-2">
-            <span class="text-blue-400 flex-shrink-0">2.</span>
-            Property appears here with their AI numbers — ARV, rehab estimate, strategy
-          </div>
-          <div class="flex gap-2">
-            <span class="text-blue-400 flex-shrink-0">3.</span>
-            You attach your market expertise — comps, ARV opinion, days on market
-          </div>
-          <div class="flex gap-2">
-            <span class="text-blue-400 flex-shrink-0">4.</span>
-            Deal Architect compares your ARV to the AI estimate — trains accuracy for your market
-          </div>
-        </div>
-      </section>
-
-      {% if current_market != 'All Markets' %}
-      <section class="ravlo-card pad">
-        <h3 class="text-base font-semibold mb-2">
-          {% if current_market == 'Hudson Valley' %}
-            <span class="text-emerald-400">Hudson Valley</span>
-          {% else %}
-            <span class="text-sky-400">Sarasota</span>
-          {% endif %}
-        </h3>
-        <div class="text-xs text-gray-500 space-y-1">
-          <div>{{ matched_properties | length }} propert{{ 'ies' if matched_properties | length != 1 else 'y' }} being analyzed</div>
-          <div>{{ realtor_requests | length }} direct request{{ 's' if realtor_requests | length != 1 else '' }}</div>
-        </div>
-      </section>
-      {% endif %}
-
-      <section class="ravlo-card pad">
-        <h3 class="text-base font-semibold mb-2">Back to Dashboard</h3>
-        <a href="{{ url_for('vip.realtor_dashboard') }}"
-           class="ravlo-btn ghost sm w-full text-center block">
-          ← Realtor Dashboard
-        </a>
-        {% if 'ai_pilot' in modules %}
-        <a href="{{ url_for('vip.ai_pilot') }}"
-           class="ravlo-btn ghost sm w-full text-center block mt-2">
-          Open Copilot
-        </a>
         {% endif %}
       </section>
+    </main>
 
+    <aside class="flow-sidebar">
+      <section class="side-panel">
+        <div class="side-panel-head">
+          <i class="lucide lucide-route"></i>
+          <h3>Operating Rhythm</h3>
+        </div>
+        <div class="rhythm-list">
+          <div class="rhythm-item">
+            <span>01</span>
+            <div>
+              <strong>Triage</strong>
+              <p>Prioritize direct requests and active analyses with complete deal numbers.</p>
+            </div>
+          </div>
+          <div class="rhythm-item">
+            <span>02</span>
+            <div>
+              <strong>Validate</strong>
+              <p>Compare AI ARV, rehab estimate, pricing, and local demand signals.</p>
+            </div>
+          </div>
+          <div class="rhythm-item">
+            <span>03</span>
+            <div>
+              <strong>Submit</strong>
+              <p>Attach local comps, ARV opinion, days on market, and listing context.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="side-panel">
+        <div class="side-panel-head">
+          <i class="lucide lucide-map"></i>
+          <h3>Market Coverage</h3>
+        </div>
+        <div class="coverage-stack">
+          <div>
+            <span>Selected</span>
+            <strong>{{ current_market }}</strong>
+          </div>
+          <div>
+            <span>Pipeline ARV</span>
+            <strong>
+              {% if flow_summary.total_arv %}
+                ${{ "{:,.0f}".format(flow_summary.total_arv) }}
+              {% else %}
+                --
+              {% endif %}
+            </strong>
+          </div>
+          <div>
+            <span>Open Tasks</span>
+            <strong>{{ flow_summary.active_properties + flow_summary.direct_requests }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="side-panel">
+        <div class="side-panel-head">
+          <i class="lucide lucide-bolt"></i>
+          <h3>Next Actions</h3>
+        </div>
+        <div class="side-actions">
+          <a href="{{ url_for('vip.realtor_dashboard') }}" class="ravlo-btn ghost sm">
+            <i class="lucide lucide-layout-dashboard"></i>
+            <span>Realtor Dashboard</span>
+          </a>
+          {% if "ai_pilot" in modules %}
+            <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">
+              <i class="lucide lucide-sparkles"></i>
+              <span>Open Copilot</span>
+            </a>
+          {% endif %}
+        </div>
+      </section>
     </aside>
   </div>
-
 </div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .flow-market-form {
+    margin: 0;
+  }
+
+  .flow-market-select {
+    min-height: 38px;
+    padding: 0 36px 0 12px;
+    color: #eef6ff;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    outline: none;
+  }
+
+  .investor-flow-page {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .flow-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.75fr);
+    gap: 18px;
+    align-items: stretch;
+    padding: 24px;
+    border: 1px solid rgba(198, 216, 235, 0.14);
+    border-radius: 20px;
+    background:
+      linear-gradient(135deg, rgba(245, 248, 252, 0.08), rgba(255, 255, 255, 0.025)),
+      linear-gradient(180deg, rgba(18, 27, 39, 0.98), rgba(9, 17, 29, 0.96));
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
+  }
+
+  .flow-hero-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .flow-kicker,
+  .flow-section-label {
+    color: rgba(189, 206, 225, 0.74);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .flow-hero h2 {
+    margin: 0;
+    max-width: 780px;
+    color: #ffffff;
+    font-size: clamp(1.65rem, 2.6vw, 2.65rem);
+    line-height: 1.08;
+    font-weight: 800;
+  }
+
+  .flow-hero p {
+    margin: 0;
+    max-width: 760px;
+    color: rgba(226, 235, 246, 0.76);
+    font-size: 0.98rem;
+    line-height: 1.65;
+  }
+
+  .flow-hero-panel,
+  .side-panel,
+  .flow-section,
+  .deal-card,
+  .flow-stat-card {
+    border: 1px solid rgba(198, 216, 235, 0.12);
+    background: rgba(255, 255, 255, 0.035);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+  }
+
+  .flow-hero-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .flow-panel-row,
+  .coverage-stack > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .flow-panel-row:last-child,
+  .coverage-stack > div:last-child {
+    border-bottom: 0;
+  }
+
+  .flow-panel-row span,
+  .coverage-stack span {
+    color: rgba(205, 218, 233, 0.68);
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+
+  .flow-panel-row strong,
+  .coverage-stack strong {
+    color: #f8fbff;
+    font-size: 0.95rem;
+    text-align: right;
+  }
+
+  .flow-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .flow-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .flow-stat-icon {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: #dcecff;
+    background: rgba(143, 188, 255, 0.11);
+    border: 1px solid rgba(162, 196, 255, 0.18);
+    border-radius: 12px;
+  }
+
+  .flow-stat-card span {
+    display: block;
+    color: rgba(205, 218, 233, 0.68);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .flow-stat-card strong {
+    display: block;
+    margin-top: 5px;
+    color: #ffffff;
+    font-size: 1.45rem;
+    line-height: 1;
+    font-weight: 800;
+  }
+
+  .flow-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.75fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .flow-main,
+  .flow-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .flow-section,
+  .side-panel {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .flow-section-head,
+  .deal-card-head,
+  .side-panel-head,
+  .attached-intel,
+  .request-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .flow-section-head {
+    margin-bottom: 14px;
+  }
+
+  .flow-section-head h3,
+  .side-panel-head h3 {
+    margin: 4px 0 0;
+    color: #f7fbff;
+    font-size: 1.02rem;
+    font-weight: 800;
+  }
+
+  .flow-count {
+    min-width: 34px;
+    height: 34px;
+    display: inline-grid;
+    place-items: center;
+    color: #f7fbff;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    font-weight: 800;
+  }
+
+  .request-list,
+  .deal-list,
+  .rhythm-list,
+  .side-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .request-item,
+  .deal-card {
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .request-item {
+    padding: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  .request-title,
+  .deal-title {
+    color: #ffffff;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .request-meta,
+  .deal-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 6px;
+    color: rgba(205, 218, 233, 0.66);
+    font-size: 0.82rem;
+  }
+
+  .request-meta span,
+  .deal-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .request-meta span:not(:last-child)::after,
+  .deal-meta span:not(:last-child)::after {
+    content: "";
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(205, 218, 233, 0.35);
+  }
+
+  .request-main p {
+    margin: 8px 0 0;
+    color: rgba(220, 230, 242, 0.72);
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  .request-side,
+  .deal-status-stack {
+    display: flex;
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .request-side strong {
+    color: #f8fbff;
+    font-size: 0.95rem;
+  }
+
+  .flow-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 0 10px;
+    color: #dcecff;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .badge-success,
+  .status-accepted {
+    color: #dbfff3;
+    background: rgba(56, 189, 142, 0.12);
+    border-color: rgba(94, 234, 188, 0.22);
+  }
+
+  .status-pending {
+    color: #fff2cf;
+    background: rgba(255, 199, 95, 0.12);
+    border-color: rgba(255, 213, 122, 0.22);
+  }
+
+  .deal-card {
+    padding: 16px;
+  }
+
+  .deal-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .metric-tile {
+    min-height: 78px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    background: rgba(2, 8, 16, 0.22);
+  }
+
+  .metric-tile span {
+    display: block;
+    color: rgba(205, 218, 233, 0.62);
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .metric-tile strong {
+    display: block;
+    margin-top: 9px;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 800;
+  }
+
+  .positive {
+    color: #7ee7bd !important;
+  }
+
+  .negative {
+    color: #ffaaa5 !important;
+  }
+
+  .score-pill {
+    min-width: 64px;
+    padding: 8px 10px;
+    text-align: center;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .score-pill strong {
+    display: block;
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  .score-pill span {
+    display: block;
+    margin-top: 3px;
+    color: rgba(255, 255, 255, 0.64);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .score-high {
+    color: #8df0c6;
+    background: rgba(56, 189, 142, 0.12);
+  }
+
+  .score-mid {
+    color: #ffe39a;
+    background: rgba(255, 199, 95, 0.11);
+  }
+
+  .score-low {
+    color: #ffaaa5;
+    background: rgba(255, 127, 127, 0.10);
+  }
+
+  .attached-intel {
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(126, 231, 189, 0.08);
+    border: 1px solid rgba(126, 231, 189, 0.16);
+  }
+
+  .attached-intel p {
+    margin: 5px 0 0;
+    color: rgba(238, 247, 255, 0.86);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .intel-form-panel {
+    margin-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 12px;
+  }
+
+  .intel-form-panel summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 40px;
+    color: #e7f1ff;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 800;
+  }
+
+  .intel-form-panel summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .intel-form-panel summary span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .intel-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .intel-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .intel-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: rgba(223, 235, 249, 0.78);
+    font-size: 0.84rem;
+    font-weight: 800;
+  }
+
+  .flow-input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    outline: none;
+  }
+
+  textarea.flow-input {
+    resize: vertical;
+    line-height: 1.5;
+  }
+
+  .flow-input:focus {
+    border-color: rgba(148, 190, 255, 0.48);
+    box-shadow: 0 0 0 4px rgba(95, 168, 255, 0.08);
+  }
+
+  .flow-input::placeholder {
+    color: rgba(206, 219, 235, 0.48);
+  }
+
+  .intel-form-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .flow-empty {
+    padding: 36px 18px;
+    text-align: center;
+    border: 1px dashed rgba(205, 222, 242, 0.16);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  .flow-empty-icon {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 14px;
+    color: #dcecff;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.055);
+  }
+
+  .flow-empty h3 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 1.05rem;
+  }
+
+  .flow-empty p {
+    max-width: 560px;
+    margin: 8px auto 0;
+    color: rgba(211, 225, 240, 0.68);
+    line-height: 1.6;
+  }
+
+  .side-panel-head {
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 14px;
+  }
+
+  .side-panel-head i {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: #dcecff;
+    background: rgba(255, 255, 255, 0.055);
+    border-radius: 10px;
+  }
+
+  .rhythm-item {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .rhythm-item > span {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    color: #f7fbff;
+    background: rgba(143, 188, 255, 0.11);
+    border: 1px solid rgba(162, 196, 255, 0.16);
+    border-radius: 10px;
+    font-size: 0.76rem;
+    font-weight: 900;
+  }
+
+  .rhythm-item strong {
+    color: #ffffff;
+    font-size: 0.92rem;
+  }
+
+  .rhythm-item p {
+    margin: 4px 0 0;
+    color: rgba(211, 225, 240, 0.66);
+    font-size: 0.84rem;
+    line-height: 1.5;
+  }
+
+  .side-actions .ravlo-btn {
+    width: 100%;
+  }
+
+  @media (max-width: 1180px) {
+    .flow-stat-grid,
+    .deal-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .flow-layout,
+    .flow-hero {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .flow-hero,
+    .flow-section,
+    .side-panel,
+    .deal-card {
+      padding: 14px;
+      border-radius: 16px;
+    }
+
+    .flow-stat-grid,
+    .deal-metrics,
+    .intel-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .deal-card-head,
+    .request-item,
+    .attached-intel {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .request-side,
+    .deal-status-stack {
+      align-items: flex-start;
+    }
+
+    .intel-form-actions {
+      justify-content: stretch;
+    }
+
+    .intel-form-actions .ravlo-btn {
+      width: 100%;
+    }
+  }
+</style>
 {% endblock %}
