@@ -7167,19 +7167,21 @@ def generate_build_interior():
             "lot_size": lot_size,
             "zoning": zoning,
             "room_type": room_type,
+            "room_focus": room_type,
             "floor": floor,
+            "style": style,
+            "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
 
             "prompt_notes": (
-                f"Modern luxury redesign of the same {room_type}. "
-                "Preserve the same room size, camera angle, window locations, walls, ceiling plane, "
-                "door openings, and architectural shell from the reference photo. "
-                "Completely replace all visible furniture, sofa, chair, ottoman, lamp, window treatments, "
-                "blinds, curtains, rug, decor, accessories, and dated finishes. "
-                "Add high-end modern luxury furnishings, premium neutral palette, layered warm lighting, "
-                "marble or stone accents, elegant drapery, designer coffee table, luxury area rug, curated artwork, "
-                "upscale staging, clean lines, magazine-quality composition, bright professional interior photography. "
-                "Do not keep the existing dated furniture or window treatments. "
-                f"Additional user notes: {interior_prompt_notes or notes or description}"
+                f"REDESIGN THIS EXACT ROOM AS A MODERN LUXURY {room_type.upper()}. "
+                f"This is a {room_type}, not a living room. Preserve the same camera angle, room dimensions, window and door locations, "
+                "ceiling, walls, and architectural shell. Completely replace the visible contents and finishes. "
+                "Install high-end modern luxury cabinetry or built-ins appropriate for the room type, premium countertops or surfaces, "
+                "designer hardware, luxury lighting, upscale furniture only where appropriate, elegant neutral materials, "
+                "marble or stone accents, curated decor, and magazine-quality staging. "
+                "Do not keep the existing cabinet faces, appliances, sofa, chair, ottoman, lamp, blinds, curtains, countertop clutter, "
+                "old furniture, dated finishes, or cheap builder-grade look. "
+                f"User design notes: {interior_prompt_notes or notes or description}"
             ),
 
             "special_features": (
@@ -7188,14 +7190,14 @@ def generate_build_interior():
             ),
 
             "count": 1,
-            "steps": 34,
-            "guidance": 8.8,
-            "strength": 0.64,
+            "steps": 36,
+            "guidance": 9.2,
+            "strength": 0.70,
             "width": 1024,
             "height": 1024,
 
             "concept_intensity": "full_concept",
-            "reference_role": "preserve_room_shell_redesign_contents",
+            "reference_role": "preserve_architecture_replace_contents",
             "keep_layout": True,
             "preserve_structure": True,
             "preserve_room_shell": True,
@@ -7272,21 +7274,22 @@ def generate_build_interior():
                 "location": location,
                 "notes": notes,
                 "room_type": room_type,
+                "room_focus": room_type,
                 "floor": floor,
-                "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
+                "result_key": "|".join(result_key),
                 "image_url": build_urls[0] if build_urls else "",
                 "images": build_urls,
                 "meta": meta,
                 "seed": seed,
                 "job_id": job_id,
-                "build_reference_image": image_url,
+                "build_reference_image": reference_image_url or image_url or "",
             }
 
             result_key = _design_room_result_key(room_type, floor, style)
             rooms = [
                 r for r in rooms
                 if _design_room_result_key(
-                    r.get("room_type"),
+                    r.get("room_type") or r.get("room_focus"),
                     r.get("floor"),
                     r.get("style") or r.get("preset"),
                 ) != result_key
