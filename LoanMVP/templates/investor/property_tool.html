@@ -22,27 +22,43 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
 <div class="dfv4-shell">
   <aside class="ravlo-card pad dfv4-search-panel">
     <div class="eyebrow">DEAL FINDER</div>
-    <h3 class="dfv4-panel-title">Start Finding Deals</h3>
-    <p class="muted">
-      Search by address or ZIP, then review Ravlo's top opportunities with classification, best exit strategy, risk notes, and a direct Save & Analyze path into Deal Workspace.
-    </p>
+<h3 class="dfv4-panel-title">Find Deals by Market</h3>
+<p class="muted">
+  Deal Finder works best by ZIP code, city/state, or your current location.
+  For one specific property, use Property Tool or enter an address below as optional.
+</p>
 
-    <label class="ravlo-label mt-16">Address</label>
-    <input id="address" class="ravlo-input" placeholder="e.g. 123 Main St" />
+<div class="dfv4-location-actions mt-16">
+  <button class="ravlo-btn ghost w-full" type="button" onclick="useMyLocation()">
+    Use My Location
+  </button>
+  <div id="locationStatus" class="dfv4-status small">
+    Location is optional. ZIP code is usually fastest.
+  </div>
+</div>
 
-    <div class="dfv4-form-grid mt-12">
-      <div>
-        <label class="ravlo-label">City</label>
-        <input id="city" class="ravlo-input" placeholder="e.g. Otisville" />
-      </div>
-      <div>
-        <label class="ravlo-label">State</label>
-        <input id="state" class="ravlo-input" placeholder="e.g. NY" />
-      </div>
-    </div>
+<label class="ravlo-label mt-16">ZIP Code</label>
+<input id="zip" class="ravlo-input" placeholder="e.g. 10924" inputmode="numeric" />
 
-    <label class="ravlo-label mt-16">ZIP Code</label>
-    <input id="zip" class="ravlo-input" placeholder="e.g. 10924" />
+<div class="dfv4-form-grid mt-12">
+  <div>
+    <label class="ravlo-label">City</label>
+    <input id="city" class="ravlo-input" placeholder="e.g. Otisville" />
+  </div>
+  <div>
+    <label class="ravlo-label">State</label>
+    <input id="state" class="ravlo-input" placeholder="e.g. NY" maxlength="2" />
+  </div>
+</div>
+
+<details class="dfv4-advanced mt-16">
+  <summary>Optional: search a specific address</summary>
+  <label class="ravlo-label mt-12">Address</label>
+  <input id="address" class="ravlo-input" placeholder="e.g. 123 Main St" />
+  <p class="muted mt-8 mb-0">
+    Exact address lookup may return fewer results. If it fails, Ravlo will still search the ZIP/city market.
+  </p>
+</details>
 
     <label class="ravlo-label mt-16">Asset Type</label>
     <select id="assetType" class="ravlo-input">
@@ -135,7 +151,7 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
         <div class="eyebrow">DEAL FINDER</div>
         <h3 class="mb-8">This is where the right properties should start showing up</h3>
         <p class="muted mb-0">
-          Enter an address or ZIP code, choose an asset type, and let Ravlo rank the strongest opportunities for planning.
+          Enter a ZIP code, city/state, or use your location. Ravlo will rank the strongest opportunities in that market.
         </p>
       </div>
     </div>
@@ -935,93 +951,118 @@ async function saveAndAnalyze(item){
   }
 }
 
-async function runSearch(){
-  const address = document.getElementById("address").value.trim();
-  const city = document.getElementById("city").value.trim();
-  const state = document.getElementById("state").value.trim();
-  const zip = document.getElementById("zip").value.trim();
-  const assetType = document.getElementById("assetType").value;
-  const strategy = document.getElementById("strategy").value;
-  const status = document.getElementById("searchStatus");
-  const resultsSummary = document.getElementById("resultsSummary");
+async function useMyLocation(){
+  const status = document.getElementById("locationStatus");
 
-  if (!zip && !address) {
-    status.innerText = "Enter an address or ZIP code first.";
+  if (!navigator.geolocation) {
+    status.innerText = "Your browser does not support location lookup. Enter a ZIP code instead.";
     return;
   }
+
+  status.innerText = "Reading your location...";
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      status.innerText = "Location found. Searching nearby deals...";
+
+      // Store lat/lng on hidden fields if backend supports it later.
+      let latInput = document.getElementById("latitude");
+      let lngInput = document.getElementById("longitude");
+
+      if (!latInput) {
+        latInput = document.createElement("input");
+        latInput.type = "hidden";
+        latInput.id = "latitude";
+        document.body.appendChild(latInput);
+      }
+
+      if (!lngInput) {
+        lngInput = document.createElement("input");
+        lngInput.type = "hidden";
+        lngInput.id = "longitude";
+        document.body.appendChild(lngInput);
+      }
+
+      latInput.value = lat;
+      lngInput.value = lng;
+
+      await runSearch();
+    },
+    (error) => {
+      status.innerText = "Location permission was denied. Enter a ZIP code or city/state instead.";
+    },
+    {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 300000
+    }
+  );
+}
+
+async function runSearch(){
+  const address = document.getElementById("address")?.value?.trim() || "";
+  const city = document.getElementById("city")?.value?.trim() || "";
+  const state = document.getElementById("state")?.value?.trim() || "";
+  const zip = document.getElementById("zip")?.value?.trim() || "";
+  const assetType = document.getElementById("assetType")?.value || "any";
+  const strategy = document.getElementById("strategy")?.value || "all";
+  const latitude = document.getElementById("latitude")?.value || "";
+  const longitude = document.getElementById("longitude")?.value || "";
+
+  const status = document.getElementById("searchStatus");
+
+  if (!zip && !(city && state) && !(latitude && longitude) && !address) {
+    status.innerText = "Enter a ZIP code, city/state, address, or use your location.";
+    return;
+  }
+
+  status.innerText = "Searching for deals...";
 
   const payload = {
     address,
     city,
     state,
     zip,
+    zip_code: zip,
     asset_type: assetType,
     strategy,
-    limit: 12
+    latitude,
+    longitude
   };
 
-  status.innerText = "Searching the market for opportunity candidates...";
-  resultsSummary.style.display = "none";
-  renderEmpty(
-    "Ranking opportunities",
-    "Pulling listing data, pricing signals, and best-use clues so Ravlo can return a focused top set."
-  );
-
   try {
-    const resp = await fetch(SEARCH_URL, {
+    const res = await fetch(SEARCH_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-CSRFToken": csrfToken
       },
-      credentials: "include",
       body: JSON.stringify(payload)
     });
 
-    let data = {};
-    const rawText = await resp.text();
-    try {
-      data = JSON.parse(rawText);
-    } catch (jsonErr) {
-      console.error("Search returned non-JSON:", rawText);
-      status.innerText = `Search failed (${resp.status}).`;
-      renderEmpty("Search failed", rawText || "Server returned an invalid response.");
+    const data = await res.json();
+
+    if (!res.ok || data.status === "error") {
+      status.innerText = data.error || "Search failed. Try ZIP code or city/state.";
+      renderEmpty("No matches yet", "Try another ZIP code, city/state, or use your location.");
       return;
     }
 
-    console.log("Deal Finder search response:", data);
+    const results = data.results || data.properties || [];
+    renderSummary(zip, strategy, assetType, results.length, true, data.total_matches || results.length);
+    renderCards(results);
 
-    if (!resp.ok || data.status !== "ok") {
-      const msg = data.message || `Search failed (${resp.status}).`;
-      status.innerText = msg;
-      renderEmpty("Search failed", msg);
-      return;
-    }
+    status.innerText = results.length
+      ? `Found ${results.length} opportunities.`
+      : "No matches found. Try another ZIP code or nearby market.";
 
-    const enriched = Array.isArray(data.results) ? data.results : [];
-    const engineReady =
-      Boolean(data.engine_ready) ||
-      enriched.some(x => Number.isFinite(Number(x.deal_score)));
-
-    renderSummary(
-      data.zip,
-      data.strategy,
-      data.asset_type,
-      enriched.length,
-      engineReady,
-      data.total_matches
-    );
-
-    const locationLabel = data.zip || data.address || "your search";
-    status.innerText = enriched.length
-      ? `Ravlo found ${data.total_matches || enriched.length} matches and returned the top ${enriched.length} opportunities for ${locationLabel}.`
-      : `No properties matched ${locationLabel}.`;
-
-    renderCards(enriched);
-  } catch (e) {
-    console.error("Deal Finder network error:", e);
-    status.innerText = "Investor OS could not load this search right now.";
-    renderEmpty("Unable to load this search", e?.message || "Please try again in a moment.");
+  } catch (err) {
+    console.error(err);
+    status.innerText = "Search failed. Try ZIP code or city/state.";
+    renderEmpty("Search failed", "Try another ZIP code, city/state, or use your location.");
   }
 }
 </script>
