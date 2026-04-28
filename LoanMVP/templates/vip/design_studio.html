@@ -6,46 +6,106 @@
 
 {% block head %}
 <style>
-  /* ── Canvas ─────────────────────────────────────────── */
+  /* ── Canvas wrapper ───────────────────────────────── */
   .design-canvas-wrap {
     position: relative;
     width: 100%;
     overflow: hidden;
     border-radius: 12px;
-    background: #080d14;
+    background: #060a10;
     border: 1px solid rgba(255,255,255,0.06);
   }
 
-  #blueprintCanvas {
+  #blueprintViewport {
     position: relative;
-    min-height: 580px;
     width: 100%;
-    background:
-      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
-      #080d14;
-    background-size: 40px 40px;
-    cursor: crosshair;
+    height: 620px;
     overflow: hidden;
+    cursor: grab;
+    background:
+      linear-gradient(rgba(100,160,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(100,160,255,0.04) 1px, transparent 1px),
+      #060a10;
+    background-size: 40px 40px;
   }
 
-  #blueprintCanvas.has-image {
-    cursor: crosshair;
-    background: #080d14;
+  #blueprintViewport.dragging { cursor: grabbing; }
+  #blueprintViewport.placing  { cursor: crosshair; }
+
+  #blueprintCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: 0 0;
+    will-change: transform;
   }
 
   #blueprintImage {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    object-fit: contain;
+    display: block;
+    max-width: none;
     pointer-events: none;
-    display: none;
+    image-rendering: -webkit-optimize-contrast;
+    filter: contrast(1.1) brightness(1.05);
   }
 
-  #blueprintImage.visible { display: block; }
+  #blueprintImage.blueprint-tint {
+    filter: contrast(1.15) brightness(1.05) sepia(0.15) saturate(1.4) hue-rotate(190deg);
+  }
 
-  /* ── Annotations ────────────────────────────────────── */
+  /* ── Zoom toolbar ─────────────────────────────────── */
+  .zoom-toolbar {
+    position: absolute;
+    bottom: 12px; left: 12px;
+    display: flex;
+    gap: 4px;
+    z-index: 30;
+    background: rgba(0,0,0,0.7);
+    border-radius: 8px;
+    padding: 4px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .zoom-btn {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.1s, color 0.1s;
+  }
+
+  .zoom-btn:hover { background: rgba(255,255,255,0.1); color: #e5e7eb; }
+  .zoom-btn.active { background: rgba(59,130,246,0.3); color: #93c5fd; }
+
+  .zoom-level {
+    display: flex; align-items: center;
+    padding: 0 8px;
+    font-size: 11px;
+    color: #6b7280;
+    min-width: 44px;
+    justify-content: center;
+    user-select: none;
+  }
+
+  /* ── Mode toolbar ─────────────────────────────────── */
+  .mode-toolbar {
+    position: absolute;
+    bottom: 12px; right: 12px;
+    display: flex;
+    gap: 4px;
+    z-index: 30;
+    background: rgba(0,0,0,0.7);
+    border-radius: 8px;
+    padding: 4px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  /* ── Annotations ──────────────────────────────────── */
   .design-annotation {
     position: absolute;
     padding: 4px 10px;
@@ -60,18 +120,11 @@
     transition: transform 0.1s, box-shadow 0.1s;
     user-select: none;
     border: 1px solid transparent;
+    transform-origin: left top;
   }
 
-  .design-annotation:hover {
-    transform: scale(1.05);
-    z-index: 10;
-  }
-
-  .design-annotation.selected {
-    outline: 2px solid white;
-    outline-offset: 2px;
-    z-index: 20;
-  }
+  .design-annotation:hover { transform: scale(1.05); z-index: 10; }
+  .design-annotation.selected { outline: 2px solid white; outline-offset: 2px; z-index: 20; }
 
   .annotation-remove   { background: rgba(239,68,68,0.25);  color: #fca5a5; border-color: rgba(239,68,68,0.3); }
   .annotation-move     { background: rgba(234,179,8,0.2);   color: #fde68a; border-color: rgba(234,179,8,0.3); }
@@ -85,7 +138,7 @@
     pointer-events: none;
   }
 
-  /* ── Empty state ────────────────────────────────────── */
+  /* ── Empty state ──────────────────────────────────── */
   .canvas-empty-state {
     position: absolute;
     inset: 0;
@@ -95,11 +148,25 @@
     justify-content: center;
     gap: 12px;
     pointer-events: none;
+    z-index: 5;
   }
 
   .canvas-empty-state.hidden { display: none; }
 
-  /* ── Right panel ────────────────────────────────────── */
+  .blueprint-drop-zone {
+    border: 2px dashed rgba(100,160,255,0.2);
+    border-radius: 16px;
+    padding: 40px 32px;
+    text-align: center;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .blueprint-drop-zone.drag-over {
+    border-color: rgba(100,160,255,0.5);
+    background: rgba(100,160,255,0.05);
+  }
+
+  /* ── Right panel ──────────────────────────────────── */
   .design-input {
     width: 100%;
     background: rgba(255,255,255,0.04);
@@ -112,13 +179,11 @@
     transition: border-color 0.15s;
   }
 
-  .design-input:focus {
-    border-color: rgba(255,255,255,0.25);
-  }
+  .design-input:focus { border-color: rgba(255,255,255,0.25); }
 
   textarea.design-input { resize: vertical; min-height: 80px; }
 
-  /* ── Action type legend ─────────────────────────────── */
+  /* ── Legend / annotation list ──────────────────────── */
   .legend-dot {
     width: 10px; height: 10px;
     border-radius: 50%;
@@ -126,7 +191,6 @@
     flex-shrink: 0;
   }
 
-  /* ── Annotation list ────────────────────────────────── */
   .annotation-list-item {
     display: flex;
     gap: 8px;
@@ -140,6 +204,10 @@
 
   .annotation-list-item:hover  { background: rgba(255,255,255,0.04); }
   .annotation-list-item.active { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.1); }
+
+  @media (max-width: 1280px) {
+    #blueprintViewport { height: 500px; }
+  }
 </style>
 {% endblock %}
 
@@ -161,7 +229,7 @@
     <div class="text-4xl mb-4">🏗</div>
     <h3 class="text-xl font-semibold mb-2">Design Studio</h3>
     <p class="text-sm text-gray-400 mb-6 max-w-sm mx-auto">
-      Create a project, upload a blueprint or floor plan image, then annotate what to remove, move, or redesign.
+      Create a project, upload a blueprint or floor plan, then annotate what to remove, move, or redesign.
     </p>
     <button onclick="document.getElementById('newProjectModal').classList.remove('hidden')"
             class="ravlo-btn primary">
@@ -176,20 +244,26 @@
     {# ── LEFT: Canvas ── #}
     <div class="space-y-3">
 
-      {# Toolbar #}
+      {# Top toolbar #}
       <div class="ravlo-card px-4 py-3 flex items-center gap-3 flex-wrap">
-        {# Mode indicator #}
         <div class="flex items-center gap-2 text-sm text-gray-400">
-          <span id="modeLabel" class="text-white font-medium">Place Mode</span>
-          <span class="text-gray-600">— click canvas to add annotation</span>
+          <span id="modeLabel" class="text-white font-medium">Navigate</span>
+          <span id="modeHint" class="text-gray-600">— drag to pan, scroll to zoom</span>
         </div>
 
         <div class="flex-1"></div>
 
+        {# Toggle blueprint tint #}
+        <button onclick="toggleBlueprintTint()" id="tintBtn"
+                class="ravlo-btn ghost sm" title="Toggle blueprint color enhancement">
+          🔵 Tint
+        </button>
+
         {# Image upload #}
         <label class="ravlo-btn ghost sm cursor-pointer">
-          Upload Blueprint
-          <input type="file" accept="image/*" class="hidden" onchange="loadBlueprintImage(this)">
+          📐 Upload Blueprint
+          <input type="file" accept="image/*" class="hidden" id="blueprintFileInput"
+                 onchange="uploadBlueprint(this)">
         </label>
 
         {# Clear selection #}
@@ -199,36 +273,66 @@
         </button>
       </div>
 
-      {# Canvas #}
+      {# Canvas viewport #}
       <section class="design-canvas-wrap">
-        <div id="blueprintCanvas" onclick="handleCanvasClick(event)">
+        <div id="blueprintViewport">
 
-          <img id="blueprintImage" src="" alt="Blueprint">
+          <div id="blueprintCanvas">
+            <img id="blueprintImage"
+                 src="{{ project.blueprint_url or '' }}"
+                 alt="Blueprint"
+                 {% if not project.blueprint_url %}style="display:none"{% endif %}
+                 onload="onBlueprintLoaded()">
 
-          {# Empty state #}
-          <div class="canvas-empty-state" id="emptyState">
-            <div class="text-gray-600 text-sm">Upload a blueprint or click to place annotations</div>
-            <div class="text-gray-700 text-xs">Click anywhere on the canvas to start</div>
+            {# Annotations layer #}
+            <div id="annotationsLayer">
+              {% for item in annotations %}
+              <div
+                class="design-annotation annotation-{{ item.action_type or 'review' }}"
+                id="ann-{{ item.id }}"
+                style="left: {{ item.x }}px; top: {{ item.y }}px;"
+                onclick="event.stopPropagation(); selectAnnotation({{ item.id }}, '{{ item.annotation_type }}', '{{ item.action_type }}', `{{ (item.label or '') | replace('`', "'") }}`, `{{ (item.body or '') | replace('`', "'") }}`)"
+                title="{{ item.label or 'Annotation' }}"
+              >
+                {{ item.label or "Note" }}
+              </div>
+              {% endfor %}
+
+              {# Draft (placement preview) #}
+              <div id="draftAnnotation"
+                   class="design-annotation annotation-draft hidden"
+                   style="pointer-events:none;">
+                New
+              </div>
+            </div>
           </div>
 
-          {# Existing annotations #}
-          {% for item in annotations %}
-          <div
-            class="design-annotation annotation-{{ item.action_type or 'review' }}"
-            id="ann-{{ item.id }}"
-            style="left: {{ item.x }}px; top: {{ item.y }}px;"
-            onclick="event.stopPropagation(); selectAnnotation({{ item.id }}, '{{ item.annotation_type }}', '{{ item.action_type }}', `{{ (item.label or '') | replace('`', "'") }}`, `{{ (item.body or '') | replace('`', "'") }}`)"
-            title="{{ item.label or 'Annotation' }}"
-          >
-            {{ item.label or "Note" }}
+          {# Empty state / drop zone #}
+          <div class="canvas-empty-state" id="emptyState"
+               {% if project.blueprint_url %}style="display:none"{% endif %}>
+            <div class="blueprint-drop-zone" id="dropZone">
+              <div class="text-gray-500 text-3xl mb-3">📐</div>
+              <div class="text-gray-400 text-sm font-medium">Drop a blueprint here</div>
+              <div class="text-gray-600 text-xs mt-1">or click "Upload Blueprint" above</div>
+              <div class="text-gray-700 text-xs mt-3">
+                Supports PNG, JPG, WebP, SVG
+              </div>
+            </div>
           </div>
-          {% endfor %}
 
-          {# Draft (placement preview) #}
-          <div id="draftAnnotation"
-               class="design-annotation annotation-draft hidden"
-               style="pointer-events:none;">
-            New
+          {# Zoom controls #}
+          <div class="zoom-toolbar">
+            <button class="zoom-btn" onclick="zoomIn()" title="Zoom in">+</button>
+            <button class="zoom-btn" onclick="zoomOut()" title="Zoom out">−</button>
+            <div class="zoom-level" id="zoomLevel">100%</div>
+            <button class="zoom-btn" onclick="zoomFit()" title="Fit to view">⊡</button>
+            <button class="zoom-btn" onclick="zoomReset()" title="Reset zoom">1:1</button>
+          </div>
+
+          {# Mode controls #}
+          <div class="mode-toolbar">
+            <button class="zoom-btn" id="navModeBtn" onclick="setMode('navigate')" title="Navigate (pan & zoom)">✋</button>
+            <button class="zoom-btn" id="placeModeBtn" onclick="setMode('place')" title="Place annotation">📌</button>
           </div>
 
         </div>
@@ -358,6 +462,9 @@
         <div class="text-xs text-gray-600 mt-1">
           {{ annotations | length }} annotation{{ 's' if annotations | length != 1 else '' }}
         </div>
+        {% if project.blueprint_url %}
+        <div class="text-xs text-green-500 mt-1">Blueprint uploaded</div>
+        {% endif %}
       </section>
 
     </aside>
@@ -396,207 +503,373 @@
 
 {% block scripts %}
 <script>
-// ── State ─────────────────────────────────────────────────
-let selectedAnnotationId = null;
-let pendingX = 0;
-let pendingY = 0;
+(() => {
+  // ── State ──────────────────────────────────────────────
+  let selectedAnnotationId = null;
+  let pendingX = 0;
+  let pendingY = 0;
+  let currentMode = 'navigate';  // 'navigate' or 'place'
 
-const canvas    = document.getElementById("blueprintCanvas");
-const draft     = document.getElementById("draftAnnotation");
-const emptyState = document.getElementById("emptyState");
+  // Zoom / pan state
+  let scale = 1;
+  let panX = 0;
+  let panY = 0;
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let dragStartPanX = 0;
+  let dragStartPanY = 0;
 
-// ── Canvas click: place new annotation ───────────────────
-function handleCanvasClick(e) {
-  // If clicking on an existing annotation, let it handle
-  if (e.target.classList.contains("design-annotation") && !e.target.id.startsWith("draft")) return;
+  const MIN_SCALE = 0.1;
+  const MAX_SCALE = 5;
 
-  // Deselect if we had one selected
-  if (selectedAnnotationId) {
-    clearSelection();
-    return;
+  const viewport   = document.getElementById('blueprintViewport');
+  const canvasEl   = document.getElementById('blueprintCanvas');
+  const blueprintImg = document.getElementById('blueprintImage');
+  const draft      = document.getElementById('draftAnnotation');
+  const emptyState = document.getElementById('emptyState');
+  const dropZone   = document.getElementById('dropZone');
+  const zoomLabel  = document.getElementById('zoomLevel');
+  const navBtn     = document.getElementById('navModeBtn');
+  const placeBtn   = document.getElementById('placeModeBtn');
+  const modeLabel  = document.getElementById('modeLabel');
+  const modeHint   = document.getElementById('modeHint');
+
+  // ── Transform helpers ──────────────────────────────────
+  function applyTransform() {
+    canvasEl.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+    zoomLabel.textContent = Math.round(scale * 100) + '%';
   }
 
-  const rect = canvas.getBoundingClientRect();
-  pendingX = Math.round(e.clientX - rect.left);
-  pendingY = Math.round(e.clientY - rect.top);
-
-  document.getElementById("annotationX").value = pendingX;
-  document.getElementById("annotationY").value = pendingY;
-
-  // Show draft marker
-  draft.style.left = pendingX + "px";
-  draft.style.top  = pendingY + "px";
-  draft.textContent = document.getElementById("annotationLabel").value || "New";
-  draft.classList.remove("hidden");
-
-  // Hide empty state
-  if (emptyState) emptyState.classList.add("hidden");
-
-  // Focus label
-  document.getElementById("annotationLabel").focus();
-}
-
-// ── Select existing annotation ────────────────────────────
-function selectAnnotation(id, type, action, label, body) {
-  // Clear previous
-  clearSelection(false);
-
-  selectedAnnotationId = id;
-
-  document.getElementById("annotationType").value  = type   || "area";
-  document.getElementById("annotationAction").value = action || "review";
-  document.getElementById("annotationLabel").value  = label  || "";
-  document.getElementById("annotationBody").value   = body   || "";
-
-  document.getElementById("panelTitle").textContent = "Edit Annotation";
-  document.getElementById("saveBtn").textContent    = "Update";
-  document.getElementById("deleteBtn").classList.remove("hidden");
-  document.getElementById("clearBtn").classList.remove("hidden");
-
-  // Hide draft
-  draft.classList.add("hidden");
-
-  // Highlight in canvas
-  const el = document.getElementById("ann-" + id);
-  if (el) el.classList.add("selected");
-
-  // Highlight in list
-  const li = document.getElementById("list-" + id);
-  if (li) li.classList.add("active");
-}
-
-// ── Clear selection ───────────────────────────────────────
-function clearSelection(resetForm = true) {
-  if (selectedAnnotationId) {
-    const el = document.getElementById("ann-" + selectedAnnotationId);
-    if (el) el.classList.remove("selected");
-    const li = document.getElementById("list-" + selectedAnnotationId);
-    if (li) li.classList.remove("active");
+  function viewportToCanvas(clientX, clientY) {
+    const rect = viewport.getBoundingClientRect();
+    const vx = clientX - rect.left;
+    const vy = clientY - rect.top;
+    return {
+      x: Math.round((vx - panX) / scale),
+      y: Math.round((vy - panY) / scale),
+    };
   }
 
-  selectedAnnotationId = null;
-
-  if (resetForm) {
-    document.getElementById("panelTitle").textContent = "New Annotation";
-    document.getElementById("saveBtn").textContent    = "Save Annotation";
-    document.getElementById("deleteBtn").classList.add("hidden");
-    document.getElementById("clearBtn").classList.add("hidden");
-    document.getElementById("annotationLabel").value  = "";
-    document.getElementById("annotationBody").value   = "";
-    draft.classList.add("hidden");
-  }
-}
-
-// ── Update draft pill color when action changes ───────────
-function updateDraftColor() {
-  if (!draft.classList.contains("hidden")) {
-    draft.textContent = document.getElementById("annotationLabel").value || "New";
-  }
-}
-
-// Live update draft label as user types
-document.getElementById("annotationLabel").addEventListener("input", function() {
-  if (!draft.classList.contains("hidden")) {
-    draft.textContent = this.value || "New";
-  }
-});
-
-// ── Save (create or update) ───────────────────────────────
-async function saveAnnotation() {
-  const projectId = document.getElementById("projectId").value;
-  if (!projectId) {
-    alert("Please create a project first.");
-    return;
-  }
-
-  const label = document.getElementById("annotationLabel").value.trim();
-  if (!label) {
-    document.getElementById("annotationLabel").focus();
-    return;
-  }
-
-  const payload = {
-    id:         selectedAnnotationId || null,
-    project_id: parseInt(projectId),
-    type:       document.getElementById("annotationType").value,
-    action:     document.getElementById("annotationAction").value,
-    label:      label,
-    body:       document.getElementById("annotationBody").value.trim(),
-    x:          parseInt(document.getElementById("annotationX").value) || pendingX,
-    y:          parseInt(document.getElementById("annotationY").value) || pendingY,
-    width:      140,
-    height:     30,
+  // ── Mode switching ─────────────────────────────────────
+  window.setMode = function(mode) {
+    currentMode = mode;
+    if (mode === 'navigate') {
+      viewport.classList.remove('placing');
+      navBtn.classList.add('active');
+      placeBtn.classList.remove('active');
+      modeLabel.textContent = 'Navigate';
+      modeHint.textContent = '— drag to pan, scroll to zoom';
+    } else {
+      viewport.classList.add('placing');
+      placeBtn.classList.add('active');
+      navBtn.classList.remove('active');
+      modeLabel.textContent = 'Place Mode';
+      modeHint.textContent = '— click canvas to add annotation';
+    }
   };
 
-  const url = selectedAnnotationId
-    ? "{{ url_for('vip.update_annotation') }}"
-    : "{{ url_for('vip.save_annotation') }}";
+  // Default to navigate
+  setMode('navigate');
 
-  const btn = document.getElementById("saveBtn");
-  btn.textContent = "Saving…";
-  btn.disabled = true;
+  // ── Zoom ───────────────────────────────────────────────
+  window.zoomIn = function() {
+    const newScale = Math.min(scale * 1.25, MAX_SCALE);
+    zoomAroundCenter(newScale);
+  };
 
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": "{{ csrf_token() }}"
-      },
-      body: JSON.stringify(payload)
-    });
+  window.zoomOut = function() {
+    const newScale = Math.max(scale / 1.25, MIN_SCALE);
+    zoomAroundCenter(newScale);
+  };
 
-    if (res.ok) {
-      location.reload();
-    } else {
-      btn.textContent = "Error — retry";
-      btn.disabled = false;
+  window.zoomReset = function() {
+    scale = 1;
+    panX = 0;
+    panY = 0;
+    applyTransform();
+  };
+
+  window.zoomFit = function() {
+    if (!blueprintImg || !blueprintImg.naturalWidth) {
+      zoomReset();
+      return;
     }
-  } catch {
-    btn.textContent = "Error — retry";
-    btn.disabled = false;
+    const vw = viewport.clientWidth;
+    const vh = viewport.clientHeight;
+    const iw = blueprintImg.naturalWidth;
+    const ih = blueprintImg.naturalHeight;
+    const fitScale = Math.min(vw / iw, vh / ih, 2) * 0.92;
+    scale = fitScale;
+    panX = (vw - iw * scale) / 2;
+    panY = (vh - ih * scale) / 2;
+    applyTransform();
+  };
+
+  function zoomAroundCenter(newScale) {
+    const vw = viewport.clientWidth;
+    const vh = viewport.clientHeight;
+    const cx = vw / 2;
+    const cy = vh / 2;
+    panX = cx - (cx - panX) * (newScale / scale);
+    panY = cy - (cy - panY) * (newScale / scale);
+    scale = newScale;
+    applyTransform();
   }
-}
 
-// ── Delete ────────────────────────────────────────────────
-async function deleteAnnotation() {
-  if (!selectedAnnotationId) return;
-  if (!confirm("Delete this annotation?")) return;
+  // ── Mouse wheel zoom ───────────────────────────────────
+  viewport.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    const rect = viewport.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    const newScale = Math.min(Math.max(scale * factor, MIN_SCALE), MAX_SCALE);
+    panX = mx - (mx - panX) * (newScale / scale);
+    panY = my - (my - panY) * (newScale / scale);
+    scale = newScale;
+    applyTransform();
+  }, { passive: false });
 
-  await fetch("{{ url_for('vip.delete_annotation') }}", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": "{{ csrf_token() }}"
-    },
-    body: JSON.stringify({ id: selectedAnnotationId })
+  // ── Mouse drag pan + annotation placement ──────────────
+  viewport.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    if (e.target.classList.contains('design-annotation') && !e.target.id.startsWith('draft')) return;
+
+    if (currentMode === 'place') {
+      handlePlaceClick(e);
+      return;
+    }
+
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragStartPanX = panX;
+    dragStartPanY = panY;
+    viewport.classList.add('dragging');
+    e.preventDefault();
   });
 
-  location.reload();
-}
+  window.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    panX = dragStartPanX + (e.clientX - dragStartX);
+    panY = dragStartPanY + (e.clientY - dragStartY);
+    applyTransform();
+  });
 
-// ── Load blueprint image ──────────────────────────────────
-function loadBlueprintImage(input) {
-  if (!input.files || !input.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const img = document.getElementById("blueprintImage");
-    img.src = e.target.result;
-    img.classList.add("visible");
-    canvas.classList.add("has-image");
-    // Remove grid background when image is loaded
-    canvas.style.backgroundImage = "none";
-    if (emptyState) emptyState.classList.add("hidden");
-  };
-  reader.readAsDataURL(input.files[0]);
-}
+  window.addEventListener('mouseup', function() {
+    isDragging = false;
+    viewport.classList.remove('dragging');
+  });
 
-// ── Init: hide empty state if annotations exist ───────────
-document.addEventListener("DOMContentLoaded", function() {
-  const hasAnnotations = document.querySelectorAll(".design-annotation:not(#draftAnnotation)").length > 0;
-  if (hasAnnotations && emptyState) {
-    emptyState.classList.add("hidden");
+  // ── Place annotation on click ──────────────────────────
+  function handlePlaceClick(e) {
+    if (selectedAnnotationId) {
+      clearSelection();
+      return;
+    }
+
+    const pos = viewportToCanvas(e.clientX, e.clientY);
+    pendingX = pos.x;
+    pendingY = pos.y;
+
+    document.getElementById('annotationX').value = pendingX;
+    document.getElementById('annotationY').value = pendingY;
+
+    draft.style.left = pendingX + 'px';
+    draft.style.top  = pendingY + 'px';
+    draft.textContent = document.getElementById('annotationLabel').value || 'New';
+    draft.classList.remove('hidden');
+
+    if (emptyState) emptyState.style.display = 'none';
+    document.getElementById('annotationLabel').focus();
   }
-});
+
+  // ── Select existing annotation ─────────────────────────
+  window.selectAnnotation = function(id, type, action, label, body) {
+    clearSelection(false);
+    selectedAnnotationId = id;
+
+    document.getElementById('annotationType').value  = type   || 'area';
+    document.getElementById('annotationAction').value = action || 'review';
+    document.getElementById('annotationLabel').value  = label  || '';
+    document.getElementById('annotationBody').value   = body   || '';
+
+    document.getElementById('panelTitle').textContent = 'Edit Annotation';
+    document.getElementById('saveBtn').textContent    = 'Update';
+    document.getElementById('deleteBtn').classList.remove('hidden');
+    document.getElementById('clearBtn').classList.remove('hidden');
+
+    draft.classList.add('hidden');
+
+    const el = document.getElementById('ann-' + id);
+    if (el) el.classList.add('selected');
+    const li = document.getElementById('list-' + id);
+    if (li) li.classList.add('active');
+  };
+
+  // ── Clear selection ────────────────────────────────────
+  window.clearSelection = function(resetForm = true) {
+    if (selectedAnnotationId) {
+      const el = document.getElementById('ann-' + selectedAnnotationId);
+      if (el) el.classList.remove('selected');
+      const li = document.getElementById('list-' + selectedAnnotationId);
+      if (li) li.classList.remove('active');
+    }
+    selectedAnnotationId = null;
+    if (resetForm) {
+      document.getElementById('panelTitle').textContent = 'New Annotation';
+      document.getElementById('saveBtn').textContent    = 'Save Annotation';
+      document.getElementById('deleteBtn').classList.add('hidden');
+      document.getElementById('clearBtn').classList.add('hidden');
+      document.getElementById('annotationLabel').value  = '';
+      document.getElementById('annotationBody').value   = '';
+      draft.classList.add('hidden');
+    }
+  };
+
+  // ── Draft color helper ─────────────────────────────────
+  window.updateDraftColor = function() {
+    if (!draft.classList.contains('hidden')) {
+      draft.textContent = document.getElementById('annotationLabel').value || 'New';
+    }
+  };
+
+  document.getElementById('annotationLabel').addEventListener('input', function() {
+    if (!draft.classList.contains('hidden')) {
+      draft.textContent = this.value || 'New';
+    }
+  });
+
+  // ── Save (create or update) ────────────────────────────
+  window.saveAnnotation = async function() {
+    const projectId = document.getElementById('projectId').value;
+    if (!projectId) { alert('Please create a project first.'); return; }
+
+    const label = document.getElementById('annotationLabel').value.trim();
+    if (!label) { document.getElementById('annotationLabel').focus(); return; }
+
+    const payload = {
+      id:         selectedAnnotationId || null,
+      project_id: parseInt(projectId),
+      type:       document.getElementById('annotationType').value,
+      action:     document.getElementById('annotationAction').value,
+      label:      label,
+      body:       document.getElementById('annotationBody').value.trim(),
+      x:          parseInt(document.getElementById('annotationX').value) || pendingX,
+      y:          parseInt(document.getElementById('annotationY').value) || pendingY,
+      width:      140,
+      height:     30,
+    };
+
+    const url = selectedAnnotationId
+      ? "{{ url_for('vip.update_annotation') }}"
+      : "{{ url_for('vip.save_annotation') }}";
+
+    const btn = document.getElementById('saveBtn');
+    btn.textContent = 'Saving…';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) { location.reload(); }
+      else { btn.textContent = 'Error — retry'; btn.disabled = false; }
+    } catch {
+      btn.textContent = 'Error — retry';
+      btn.disabled = false;
+    }
+  };
+
+  // ── Delete ─────────────────────────────────────────────
+  window.deleteAnnotation = async function() {
+    if (!selectedAnnotationId) return;
+    if (!confirm('Delete this annotation?')) return;
+
+    await fetch("{{ url_for('vip.delete_annotation') }}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+      body: JSON.stringify({ id: selectedAnnotationId })
+    });
+    location.reload();
+  };
+
+  // ── Blueprint image upload (persisted to server) ───────
+  window.uploadBlueprint = async function(input) {
+    if (!input.files || !input.files[0]) return;
+    const projectId = document.getElementById('projectId').value;
+    if (!projectId) { alert('Create a project first.'); return; }
+
+    const formData = new FormData();
+    formData.append('blueprint', input.files[0]);
+    formData.append('project_id', projectId);
+
+    try {
+      const res = await fetch("{{ url_for('vip.upload_design_blueprint') }}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.blueprint_url) {
+        blueprintImg.src = data.blueprint_url;
+        blueprintImg.style.display = 'block';
+        if (emptyState) emptyState.style.display = 'none';
+      } else {
+        alert(data.error || 'Upload failed');
+      }
+    } catch {
+      alert('Upload failed — please try again.');
+    }
+  };
+
+  // ── Blueprint loaded callback ──────────────────────────
+  window.onBlueprintLoaded = function() {
+    if (emptyState) emptyState.style.display = 'none';
+    zoomFit();
+  };
+
+  // ── Toggle blueprint tint ──────────────────────────────
+  window.toggleBlueprintTint = function() {
+    blueprintImg.classList.toggle('blueprint-tint');
+    const btn = document.getElementById('tintBtn');
+    btn.classList.toggle('active', blueprintImg.classList.contains('blueprint-tint'));
+  };
+
+  // ── Drag and drop ──────────────────────────────────────
+  if (viewport) {
+    viewport.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      if (dropZone) dropZone.classList.add('drag-over');
+    });
+    viewport.addEventListener('dragleave', function() {
+      if (dropZone) dropZone.classList.remove('drag-over');
+    });
+    viewport.addEventListener('drop', function(e) {
+      e.preventDefault();
+      if (dropZone) dropZone.classList.remove('drag-over');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        const input = document.getElementById('blueprintFileInput');
+        input.files = e.dataTransfer.files;
+        uploadBlueprint(input);
+      }
+    });
+  }
+
+  // ── Init ───────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    const hasAnnotations = document.querySelectorAll('.design-annotation:not(#draftAnnotation)').length > 0;
+    if (hasAnnotations && emptyState) {
+      emptyState.style.display = 'none';
+    }
+    if (blueprintImg && blueprintImg.src && blueprintImg.naturalWidth > 0) {
+      onBlueprintLoaded();
+    }
+    applyTransform();
+  });
+})();
 </script>
 {% endblock %}

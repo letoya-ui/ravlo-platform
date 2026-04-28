@@ -290,10 +290,11 @@ class VIPDesignProject(VIPBaseModel):
     vip_profile_id = Column(Integer, ForeignKey("vip_profiles.id"), nullable=False)
     contact_id     = Column(Integer, ForeignKey("vip_contacts.id"), nullable=True)
 
-    title       = Column(String(255), nullable=False)
-    status      = Column(String(50),  nullable=False, default="draft")
-    source_file = Column(Text,        nullable=True)
-    notes       = Column(Text,        nullable=True)
+    title         = Column(String(255), nullable=False)
+    status        = Column(String(50),  nullable=False, default="draft")
+    source_file   = Column(Text,        nullable=True)
+    blueprint_url = Column(Text,        nullable=True)
+    notes         = Column(Text,        nullable=True)
 
     # ✅ FIXED — back_populates on both sides, overlaps silences the warning
     vip_profile = relationship(

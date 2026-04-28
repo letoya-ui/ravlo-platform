@@ -4051,6 +4051,48 @@ def delete_annotation():
     return jsonify({"status": "deleted"})
 
 
+@vip_bp.post("/design-studio/upload-blueprint")
+@role_required("partner_group", "admin")
+def upload_design_blueprint():
+    profile = get_or_create_vip_profile()
+    project_id = request.form.get("project_id", type=int)
+
+    if not project_id:
+        return jsonify({"error": "Missing project_id"}), 400
+
+    project = VIPDesignProject.query.filter_by(
+        id=project_id, vip_profile_id=profile.id
+    ).first()
+
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    file = request.files.get("blueprint")
+    if not file or not file.filename:
+        return jsonify({"error": "No file selected"}), 400
+
+    from werkzeug.utils import secure_filename as _secure_filename
+    import os as _os
+    import uuid as _uuid
+
+    filename = _secure_filename(file.filename)
+    ext = _os.path.splitext(filename)[1].lower()
+    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".svg", ".pdf"):
+        return jsonify({"error": "Unsupported file format"}), 400
+
+    upload_dir = _os.path.join(current_app.static_folder, "uploads", "blueprints")
+    _os.makedirs(upload_dir, exist_ok=True)
+
+    saved_name = f"{_uuid.uuid4().hex}{ext}"
+    file.save(_os.path.join(upload_dir, saved_name))
+
+    blueprint_url = url_for("static", filename=f"uploads/blueprints/{saved_name}")
+    project.blueprint_url = blueprint_url
+    db.session.commit()
+
+    return jsonify({"status": "ok", "blueprint_url": blueprint_url})
+
+
 # =============================================================================
 # REALTOR • PROPERTY / LISTING HUB + LISTING PRESENTATION BUILDER
 # =============================================================================
