@@ -1,129 +1,399 @@
-{# templates/investor/saved_properties.html #}
 {% extends "layouts/ravlo_base.html" %}
-{% block title %}Ravlo • Saved Properties{% endblock %}
 
+{% block title %}Ravlo | Saved Properties{% endblock %}
 {% block page_title %}Saved Properties{% endblock %}
-{% block page_subline %}All properties you’ve saved from Property Search or Deal Workspace.{% endblock %}
+{% block page_subline %}
+Your watchlist of potential deals, ready to move into Deal Workspace.
+{% endblock %}
 
 {% block topbar_actions %}
-  <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for("investor.property_search") }}'">
-    🔍 Search
-  </button>
-
-  <button class="ravlo-btn primary sm" type="button"
-          onclick="location.href='{{ url_for("investor.deal_workspace") }}'">
-    🧠 Deal Workspace
-  </button>
+  <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-search"></i>
+    <span>Find Deals</span>
+  </a>
+  <a href="{{ url_for('investor.deal_workspace') }}" class="ravlo-btn primary sm">
+    <i class="lucide lucide-columns-3"></i>
+    <span>Deal Workspace</span>
+  </a>
 {% endblock %}
 
 {% block content %}
+{% set property_count = properties|length if properties else 0 %}
 
-<div class="ravlo-card pad" style="margin-bottom:1rem;">
-  <div class="row between" style="gap:1rem; flex-wrap:wrap;">
+<div class="saved-flow-page">
+  <section class="saved-hero">
     <div>
-      <div class="ravlo-card-title">🏘️ My Saved Properties ({{ properties|length if properties else 0 }})</div>
-      <div style="color:var(--muted); margin-top:.35rem;">
-        Manage your targets, add notes, and send any property into Deal Workspace.
+      <span class="saved-kicker">Watchlist</span>
+      <h2>{{ property_count }} saved propert{{ "y" if property_count == 1 else "ies" }}</h2>
+      <p>
+        Keep targets organized, add underwriting notes, and send the right property into the workspace when it is ready for strategy, budget, and capital planning.
+      </p>
+    </div>
+
+    <div class="saved-hero-panel">
+      <div>
+        <span>Next Step</span>
+        <strong>Open a target in Deal Workspace</strong>
+      </div>
+      <div>
+        <span>Best Use</span>
+        <strong>Compare, plan, then fund</strong>
       </div>
     </div>
-  </div>
-</div>
+  </section>
 
-{% if properties %}
-  <div class="ravlo-grid cols-3" style="gap:1rem; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
-    {% for prop in properties %}
-      <div class="ravlo-card pad">
+  {% if properties %}
+    <section class="saved-grid">
+      {% for prop in properties %}
+        <article class="saved-card">
+          <div class="saved-card-head">
+            <div>
+              <span class="saved-kicker">Property #{{ prop.id }}</span>
+              <h3>{{ prop.address or "Saved Property" }}</h3>
+              <p>
+                {% if prop.zipcode %}{{ prop.zipcode }}{% else %}ZIP pending{% endif %}
+                {% if prop.sqft %} - {{ "{:,.0f}".format(prop.sqft) }} sq ft{% endif %}
+              </p>
+            </div>
 
-        <div style="font-weight:900; font-size:1.05rem; color:var(--text);">
-          {{ prop.address }}
-        </div>
-
-        <div style="color:var(--muted); font-size:.85rem; margin-top:.35rem;">
-          {% if prop.zipcode %}{{ prop.zipcode }}{% else %}Zip not saved{% endif %}
-          • {{ prop.sqft or 0 }} sq ft
-        </div>
-
-        <div style="margin-top:.45rem;">
-          <strong style="font-size:1.05rem;">
-            {% if prop.price %}
-              ${{ "{:,.0f}".format(prop.price|float) }}
-            {% else %}
-              —
-            {% endif %}
-          </strong>
-        </div>
-
-        {% if prop.created_at %}
-          <div style="color:var(--muted); font-size:.85rem; margin-top:.35rem;">
-            Saved on {{ prop.created_at.strftime('%b %d, %Y') }}
+            <div class="saved-price">
+              <span>Price</span>
+              <strong>
+                {% if prop.price %}
+                  ${{ "{:,.0f}".format(prop.price|float) }}
+                {% else %}
+                  --
+                {% endif %}
+              </strong>
+            </div>
           </div>
-        {% elif prop.saved_at %}
-          <div style="color:var(--muted); font-size:.85rem; margin-top:.35rem;">
-            Saved on {{ prop.saved_at.strftime('%b %d, %Y') }}
+
+          <div class="saved-meta-grid">
+            <div>
+              <span>Saved</span>
+              <strong>
+                {% if prop.created_at %}
+                  {{ prop.created_at.strftime("%b %d, %Y") }}
+                {% elif prop.saved_at %}
+                  {{ prop.saved_at.strftime("%b %d, %Y") }}
+                {% else %}
+                  Date pending
+                {% endif %}
+              </strong>
+            </div>
+            <div>
+              <span>Status</span>
+              <strong>Ready to review</strong>
+            </div>
           </div>
-        {% endif %}
 
-        <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.75rem;">
-          <a class="ravlo-btn ghost sm" style="text-decoration:none;"
-             href="{{ url_for('investor.deal_workspace', prop_id=prop.id, mode='flip') }}">
-            🧮 Open Deal Workspace
-          </a>
-
-          <a class="ravlo-btn ghost sm" style="text-decoration:none;"
-             href="{{ url_for('investor.property_explore_plus', prop_id=prop.id) }}">
-            🔎 Explore Plus
-          </a>
-        </div>
-
-        <!-- Notes + Delete -->
-        <form method="POST"
-              action="{{ url_for('investor.saved_properties_manage') }}"
-              style="margin-top:.85rem; display:flex; flex-direction:column; gap:.6rem;">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="prop_id" value="{{ prop.id }}">
-
-          <textarea name="notes"
-                    rows="2"
-                    placeholder="Add notes…"
-                    style="width:100%; border-radius:12px; background:rgba(255,255,255,.04);
-                           color:rgba(230,235,240,.92); border:1px solid rgba(255,255,255,.10);
-                           padding:.65rem .75rem; resize:none;">{{ prop.notes or '' }}</textarea>
-
-          <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-            <button type="submit" name="action" value="edit" class="ravlo-btn primary sm">
-              💾 Save Notes
-            </button>
-
-            <button type="submit" name="action" value="delete" class="ravlo-btn ghost sm"
-                    onclick="return confirm('Delete this saved property?');"
-                    style="border-color: rgba(255,101,101,.55); color: rgba(255,101,101,.95);">
-              🗑️ Delete
-            </button>
+          <div class="saved-actions">
+            <a href="{{ url_for('investor.deal_workspace', prop_id=prop.id, mode='flip') }}" class="ravlo-btn primary sm">
+              <i class="lucide lucide-columns-3"></i>
+              <span>Open Workspace</span>
+            </a>
+            <a href="{{ url_for('investor.property_explore_plus', prop_id=prop.id) }}" class="ravlo-btn ghost sm">
+              <i class="lucide lucide-search-check"></i>
+              <span>Explore</span>
+            </a>
           </div>
-        </form>
 
-      </div>
-    {% endfor %}
-  </div>
+          <form method="POST" action="{{ url_for('investor.saved_properties_manage') }}" class="saved-note-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="prop_id" value="{{ prop.id }}">
 
-{% else %}
-  <div class="ravlo-card pad" style="text-align:center;">
-    <div style="color:var(--muted);">No saved properties yet.</div>
-    <div style="margin-top:1rem;">
-      <a class="ravlo-btn primary" style="text-decoration:none;"
-         href="{{ url_for('investor.property_search') }}">
-        🔍 Search Properties
+            <label>
+              <span>Investor Notes</span>
+              <textarea name="notes" rows="3" placeholder="Add assumptions, seller context, risks, or next steps.">{{ prop.notes or "" }}</textarea>
+            </label>
+
+            <div class="saved-form-actions">
+              <button type="submit" name="action" value="edit" class="ravlo-btn ghost sm">
+                <i class="lucide lucide-save"></i>
+                <span>Save Notes</span>
+              </button>
+              <button type="submit" name="action" value="delete" class="ravlo-btn ghost sm danger-action"
+                      onclick="return confirm('Delete this saved property?');">
+                <i class="lucide lucide-trash-2"></i>
+                <span>Delete</span>
+              </button>
+            </div>
+          </form>
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <section class="empty-saved-state">
+      <div class="empty-icon"><i class="lucide lucide-folder-heart"></i></div>
+      <h3>No saved properties yet</h3>
+      <p>Use Deal Finder to search a market and save the strongest opportunities into your watchlist.</p>
+      <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn primary">
+        <i class="lucide lucide-search"></i>
+        <span>Open Deal Finder</span>
       </a>
-    </div>
-  </div>
-{% endif %}
+    </section>
+  {% endif %}
 
-{% if ai_summary %}
-  <div class="ravlo-card pad" style="margin-top:1rem;">
-    <div class="ravlo-card-title">🤖 Portfolio Insight</div>
-    <div style="color:var(--muted); margin-top:.5rem;">{{ ai_summary }}</div>
-  </div>
-{% endif %}
+  {% if ai_summary %}
+    <section class="saved-insight">
+      <span class="saved-kicker">Portfolio Insight</span>
+      <p>{{ ai_summary }}</p>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}
 
+{% block head %}
+<style>
+  .saved-flow-page {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .saved-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.75fr);
+    gap: 18px;
+    padding: 24px;
+    border: 1px solid rgba(210, 224, 240, 0.13);
+    border-radius: 20px;
+    background:
+      linear-gradient(135deg, rgba(244, 248, 252, 0.08), rgba(255, 255, 255, 0.025)),
+      linear-gradient(180deg, rgba(18, 27, 39, 0.98), rgba(9, 17, 29, 0.96));
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.25);
+  }
+
+  .saved-kicker {
+    color: rgba(193, 209, 227, 0.72);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .saved-hero h2 {
+    margin: 6px 0 0;
+    color: #ffffff;
+    font-size: clamp(1.8rem, 2.8vw, 2.6rem);
+    line-height: 1.08;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  .saved-hero p {
+    max-width: 760px;
+    margin: 10px 0 0;
+    color: rgba(226, 236, 247, 0.76);
+    line-height: 1.65;
+  }
+
+  .saved-hero-panel,
+  .saved-card,
+  .saved-insight,
+  .empty-saved-state {
+    border: 1px solid rgba(210, 224, 240, 0.11);
+    background: rgba(255, 255, 255, 0.035);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
+  }
+
+  .saved-hero-panel {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .saved-hero-panel > div {
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .saved-hero-panel span,
+  .saved-meta-grid span,
+  .saved-price span,
+  .saved-note-form label span {
+    display: block;
+    color: rgba(205, 218, 233, 0.66);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .saved-hero-panel strong,
+  .saved-meta-grid strong,
+  .saved-price strong {
+    display: block;
+    margin-top: 6px;
+    color: #ffffff;
+  }
+
+  .saved-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .saved-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .saved-card-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .saved-card h3 {
+    margin: 5px 0 0;
+    color: #ffffff;
+    font-size: 1.08rem;
+    line-height: 1.3;
+  }
+
+  .saved-card p {
+    margin: 5px 0 0;
+    color: rgba(212, 226, 241, 0.66);
+    line-height: 1.5;
+  }
+
+  .saved-price {
+    min-width: 120px;
+    text-align: right;
+  }
+
+  .saved-price strong {
+    font-size: 1.12rem;
+  }
+
+  .saved-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .saved-meta-grid > div {
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .saved-actions,
+  .saved-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .saved-note-form {
+    display: grid;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .saved-note-form label {
+    display: grid;
+    gap: 7px;
+  }
+
+  .saved-note-form textarea {
+    width: 100%;
+    min-height: 92px;
+    padding: 11px 12px;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    resize: vertical;
+    outline: none;
+    line-height: 1.5;
+  }
+
+  .saved-note-form textarea:focus {
+    border-color: rgba(148, 190, 255, 0.48);
+    box-shadow: 0 0 0 4px rgba(95, 168, 255, 0.08);
+  }
+
+  .danger-action {
+    color: #ffd9d6 !important;
+    border-color: rgba(255, 132, 123, 0.34) !important;
+  }
+
+  .empty-saved-state {
+    padding: 40px 18px;
+    text-align: center;
+    border-radius: 18px;
+  }
+
+  .empty-icon {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 14px;
+    color: #dcecff;
+    background: rgba(255, 255, 255, 0.055);
+    border-radius: 16px;
+  }
+
+  .empty-saved-state h3 {
+    margin: 0;
+    color: #ffffff;
+  }
+
+  .empty-saved-state p {
+    max-width: 560px;
+    margin: 8px auto 16px;
+    color: rgba(212, 226, 241, 0.66);
+    line-height: 1.6;
+  }
+
+  .saved-insight {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .saved-insight p {
+    margin: 8px 0 0;
+    color: rgba(242, 248, 255, 0.86);
+    line-height: 1.6;
+  }
+
+  @media (max-width: 1080px) {
+    .saved-hero,
+    .saved-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .saved-hero,
+    .saved-card {
+      padding: 14px;
+      border-radius: 16px;
+    }
+
+    .saved-card-head {
+      flex-direction: column;
+    }
+
+    .saved-price {
+      text-align: left;
+    }
+
+    .saved-meta-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
 {% endblock %}

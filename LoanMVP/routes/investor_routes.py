@@ -3376,6 +3376,16 @@ def api_property_tool_search():
         or ""
     ).strip()
 
+    strategy = (payload.get("strategy") or "all").strip().lower()
+    if strategy not in {"flip", "rental", "airbnb", "brrrr", "land", "all"}:
+        strategy = "all"
+
+    asset_type = _normalize_asset_type(
+        payload.get("asset_type")
+        or payload.get("assetType")
+        or "any"
+    )
+
     latitude = payload.get("latitude")
     longitude = payload.get("longitude")
 
@@ -3391,7 +3401,7 @@ def api_property_tool_search():
 
     raw_limit = payload.get("limit")
     try:
-        limit = min(int(raw_limit or 12), 12)
+        limit = max(1, min(int(raw_limit or 12), 12))
     except (TypeError, ValueError):
         limit = 12
 
@@ -3401,12 +3411,12 @@ def api_property_tool_search():
             asset_type=asset_type,
         )
 
-        results = orchestrator.search_candidates(
+        results, meta = orchestrator.run_search(
             address=address,
             city=city,
             state=state,
             zip_code=zip_code,
-            limit=12,
+            limit=limit,
         )
         results = [_proxy_search_result_images(result) for result in results]
 

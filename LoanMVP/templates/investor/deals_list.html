@@ -1,96 +1,107 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Investor OS • Deals{% endblock %}
-{% block page_title %}Deals{% endblock %}
+{% block title %}Ravlo | Deal Pipeline{% endblock %}
+{% block page_title %}Deal Pipeline{% endblock %}
 {% block page_subline %}
-Track active opportunities, jump into workspace tools, and move the strongest deals into execution.
+Track active opportunities, compare economics, and move the strongest deals into execution.
 {% endblock %}
 
 {% block topbar_actions %}
   <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost sm">
-    Deal Finder
+    <i class="lucide lucide-search"></i>
+    <span>Deal Finder</span>
   </a>
   <a href="{{ url_for('investor.deal_workspace') }}" class="ravlo-btn primary sm">
-    Deal Workspace
+    <i class="lucide lucide-columns-3"></i>
+    <span>Deal Workspace</span>
   </a>
 {% endblock %}
 
 {% block content %}
-<div class="deals-shell">
+<div class="deal-pipeline-page">
+  <section class="pipeline-hero">
+    <div>
+      <span class="pipeline-kicker">Underwriting Pipeline</span>
+      <h2>Every saved opportunity, organized for action.</h2>
+      <p>
+        Filter your active deals, review score and economics, then open the right workflow: workspace, architect, budget, or capital.
+      </p>
+    </div>
 
-  <section class="ravlo-card pad">
-    <div class="section-head">
+    <div class="pipeline-hero-panel">
       <div>
-        <div class="eyebrow">PIPELINE</div>
-        <h3>Search & Filter Deals</h3>
+        <span>Total Deals</span>
+        <strong>{{ deals|length }}</strong>
+      </div>
+      <div>
+        <span>Funding Requested</span>
+        <strong>{{ deals|selectattr("submitted_for_funding")|list|length }}</strong>
+      </div>
+      <div>
+        <span>Budgets Attached</span>
+        <strong>{{ budget_map|length }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="pipeline-filter-panel">
+    <div class="pipeline-section-head">
+      <div>
+        <span class="pipeline-kicker">Filters</span>
+        <h3>Search and segment the pipeline</h3>
       </div>
     </div>
 
-    <form method="GET" class="deals-filter-grid">
-      <div class="deals-filter-span">
-        <label class="ravlo-label">Search</label>
-        <input
-          type="text"
-          name="q"
-          class="ravlo-input"
-          value="{{ q }}"
-          placeholder="Search by title, address, city, state, ZIP"
-        >
-      </div>
+    <form method="GET" class="pipeline-filter-grid">
+      <label class="filter-field filter-wide">
+        <span>Search</span>
+        <input type="text" name="q" value="{{ q }}" placeholder="Title, address, city, state, or ZIP">
+      </label>
 
-      <div>
-        <label class="ravlo-label">Status</label>
-        <select name="status" class="ravlo-input">
+      <label class="filter-field">
+        <span>Status</span>
+        <select name="status">
           <option value="">All Statuses</option>
-          <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
-          <option value="funding_requested" {% if status_filter == 'funding_requested' %}selected{% endif %}>Funding Requested</option>
-          <option value="under_review" {% if status_filter == 'under_review' %}selected{% endif %}>Under Review</option>
-          <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>Closed</option>
+          <option value="active" {% if status_filter == "active" %}selected{% endif %}>Active</option>
+          <option value="funding_requested" {% if status_filter == "funding_requested" %}selected{% endif %}>Funding Requested</option>
+          <option value="under_review" {% if status_filter == "under_review" %}selected{% endif %}>Under Review</option>
+          <option value="closed" {% if status_filter == "closed" %}selected{% endif %}>Closed</option>
         </select>
-      </div>
+      </label>
 
-      <div>
-        <label class="ravlo-label">Strategy</label>
-        <select name="strategy" class="ravlo-input">
+      <label class="filter-field">
+        <span>Strategy</span>
+        <select name="strategy">
           <option value="">All Strategies</option>
-          <option value="flip" {% if strategy_filter == 'flip' %}selected{% endif %}>Flip</option>
-          <option value="rental" {% if strategy_filter == 'rental' %}selected{% endif %}>Rental</option>
-          <option value="airbnb" {% if strategy_filter == 'airbnb' %}selected{% endif %}>Airbnb</option>
-          <option value="land" {% if strategy_filter == 'land' %}selected{% endif %}>Land</option>
+          <option value="flip" {% if strategy_filter == "flip" %}selected{% endif %}>Fix and Flip</option>
+          <option value="rental" {% if strategy_filter == "rental" %}selected{% endif %}>Rental</option>
+          <option value="airbnb" {% if strategy_filter == "airbnb" %}selected{% endif %}>Airbnb</option>
+          <option value="land" {% if strategy_filter == "land" %}selected{% endif %}>Land</option>
         </select>
-      </div>
+      </label>
 
-      <div class="deals-filter-actions">
-        <button type="submit" class="ravlo-btn primary">Apply Filters</button>
-        <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost">Reset</a>
+      <div class="filter-actions">
+        <button type="submit" class="ravlo-btn primary">
+          <i class="lucide lucide-filter"></i>
+          <span>Apply</span>
+        </button>
+        <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost">
+          <span>Reset</span>
+        </a>
       </div>
     </form>
   </section>
 
-  <section class="deals-summary-grid">
-    <div class="deals-summary-card">
-      <span>Total Deals</span>
-      <strong>{{ deals|length }}</strong>
-    </div>
-    <div class="deals-summary-card">
-      <span>Funding Requested</span>
-      <strong>{{ deals|selectattr('submitted_for_funding')|list|length }}</strong>
-    </div>
-    <div class="deals-summary-card">
-      <span>With Budget</span>
-      <strong>{{ budget_map|length }}</strong>
-    </div>
-  </section>
-
   {% if deals %}
-    <section class="deals-grid">
+    <section class="pipeline-grid">
       {% for deal in deals %}
         {% set budget = budget_map.get(deal.id) %}
         {% set budget_metrics = budget_snapshot_map.get(deal.id, {}) %}
         {% set saved_media = deal_media_map.get(deal.saved_property_id, {}) %}
-        {% set score = deal.deal_score if deal.deal_score is not none else None %}
+        {% set score = deal.deal_score if deal.deal_score is not none else none %}
         {% set strategy = deal.recommended_strategy or deal.strategy or "Pending" %}
-        {% set image_url = None %}
+        {% set profit = (deal.arv or 0) - ((deal.purchase_price or 0) + (deal.rehab_cost or 0)) %}
+        {% set image_url = none %}
         {% if deal.results_json %}
           {% set wa = deal.results_json.get("workspace_analysis", {}) %}
           {% set image_url = wa.get("image_url") %}
@@ -99,373 +110,440 @@ Track active opportunities, jump into workspace tools, and move the strongest de
           {% set image_url = saved_media.get("image_url") %}
         {% endif %}
 
-        <article class="ravlo-card pad deal-card">
-            <div class="deal-card-image">
-              {% if image_url %}
-              <img src="{{ image_url }}" alt="{{ deal.address or deal.title or 'Deal image' }}" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
-              {% else %}
-              <img src="/static/images/placeholder_property.jpg" alt="Property placeholder">
-              {% endif %}
-            </div>
-
-          <div class="deal-card-head">
-            <div>
-              <div class="eyebrow">DEAL #{{ deal.id }}</div>
-              <h3>{{ deal.title or deal.address or ("Deal " ~ deal.id) }}</h3>
-              <p class="muted mb-0">
-                {{ deal.address or "No address saved" }}
-                {% if deal.city or deal.state %}
-                  <br>
-                  {{ deal.city or "" }}{% if deal.city and deal.state %}, {% endif %}{{ deal.state or "" }} {{ deal.zip_code or "" }}
-                {% endif %}
-              </p>
-            </div>
-
-            <div class="deal-chip-stack">
-              <span class="ravlo-chip">{{ strategy|title }}</span>
-              <span class="ravlo-chip">{{ deal.status or "active" }}</span>
-              {% if deal.submitted_for_funding %}
-                <span class="ravlo-chip success">Funding Requested</span>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="deal-kpi-grid">
-            <div class="deal-kpi">
-              <span>Purchase</span>
-              <strong>${{ "{:,.0f}".format(deal.purchase_price or 0) }}</strong>
-            </div>
-            <div class="deal-kpi">
-              <span>Rehab</span>
-              <strong>${{ "{:,.0f}".format(deal.rehab_cost or 0) }}</strong>
-            </div>
-            <div class="deal-kpi">
-              <span>ARV</span>
-              <strong>${{ "{:,.0f}".format(deal.arv or 0) }}</strong>
-            </div>
-            <div class="deal-kpi">
-              <span>Rent</span>
-              <strong>
-                {% if deal.estimated_rent %}
-                  ${{ "{:,.0f}".format(deal.estimated_rent) }}/mo
-                {% else %}
-                  —
-                {% endif %}
-              </strong>
-            </div>
-          </div>
-
-          <div class="deal-meta-grid">
-            <div class="deal-meta-box">
-              <span>Deal Score</span>
-              <strong>
-                {% if score is not none %}
-                  {{ score }}/100
-                {% else %}
-                  Pending
-                {% endif %}
-              </strong>
-            </div>
-
-            <div class="deal-meta-box">
-              <span>Projected Profit</span>
-              <strong>
-                ${{ "{:,.0f}".format((deal.arv or 0) - ((deal.purchase_price or 0) + (deal.rehab_cost or 0))) }}
-              </strong>
-            </div>
-
-            <div class="deal-meta-box">
-              <span>Budget</span>
-              <strong>{% if budget %}Ready{% else %}Not Started{% endif %}</strong>
-            </div>
-
-            <div class="deal-meta-box">
-              <span>Updated</span>
-              <strong>
-                {% if deal.updated_at %}
-                  {{ deal.updated_at.strftime('%b %d, %Y') }}
-                {% else %}
-                  —
-                {% endif %}
-              </strong>
-            </div>
-          </div>
-
-          {% if budget %}
-            <div class="deal-budget-strip">
-              <div class="deal-budget-item">
-                <span>Budget Name</span>
-                <strong>{{ budget.project_name or budget.name or "Project Budget" }}</strong>
-              </div>
-              <div class="deal-budget-item">
-                <span>Total Budget</span>
-                <strong>${{ "{:,.0f}".format(budget_metrics.get("estimated_total_with_contingency", budget.total_budget if budget else 0) or 0) }}</strong>
-              </div>
-              <div class="deal-budget-item">
-                <span>Estimated</span>
-                <strong>${{ "{:,.0f}".format(budget_metrics.get("estimated_subtotal", budget.total_cost if budget else 0) or 0) }}</strong>
-              </div>
-              <div class="deal-budget-item">
-                <span>Actual</span>
-                <strong>${{ "{:,.0f}".format(budget_metrics.get("actual_total", budget.total_cost if budget else 0) or 0) }}</strong>
-              </div>
-              <div class="deal-budget-item">
-                <span>Paid</span>
-                <strong>${{ "{:,.0f}".format(budget_metrics.get("paid_total", budget.paid_amount if budget else 0) or 0) }}</strong>
-              </div>
-              <div class="deal-budget-item">
-                <span>Contingency</span>
-                <strong>${{ "{:,.0f}".format(budget_metrics.get("contingency_amount", budget.contingency if budget else 0) or 0) }}</strong>
-              </div>
-            </div>
-
-            {% if budget.notes %}
-              <div class="deal-notes">
-                <strong>Budget Notes</strong>
-                <p>{{ budget.notes }}</p>
-              </div>
-            {% endif %}
-          {% endif %}
-
-          <div class="deal-actions">
-            <a href="{{ url_for('investor.deal_workspace', prop_id=deal.saved_property_id) }}" class="ravlo-btn primary">
-              Open Workspace
-            </a>
-            <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost">
-              Deal Detail
-            </a>
-            <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost">
-              Deal Architect
-            </a>
-            {% if budget %}
-              <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-btn ghost">
-                Open Budget
-              </a>
+        <article class="pipeline-card">
+          <div class="pipeline-image">
+            {% if image_url %}
+              <img src="{{ image_url }}" alt="{{ deal.address or deal.title or 'Deal image' }}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
             {% else %}
-              <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
-                Start Budget
-              </a>
+              <img src="/static/images/placeholder_property.jpg" alt="Property placeholder">
             {% endif %}
+          </div>
+
+          <div class="pipeline-card-body">
+            <div class="pipeline-card-head">
+              <div>
+                <span class="pipeline-kicker">Deal #{{ deal.id }}</span>
+                <h3>{{ deal.title or deal.address or ("Deal " ~ deal.id) }}</h3>
+                <p>
+                  {{ deal.address or "No address saved" }}
+                  {% if deal.city or deal.state %}
+                    <br>{{ deal.city or "" }}{% if deal.city and deal.state %}, {% endif %}{{ deal.state or "" }} {{ deal.zip_code or "" }}
+                  {% endif %}
+                </p>
+              </div>
+
+              <div class="chip-stack">
+                <span class="pipeline-chip">{{ strategy|replace("_", " ")|title }}</span>
+                <span class="pipeline-chip">{{ deal.status or "active" }}</span>
+                {% if deal.submitted_for_funding %}
+                  <span class="pipeline-chip success">Funding Requested</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="pipeline-metrics">
+              <div>
+                <span>Purchase</span>
+                <strong>${{ "{:,.0f}".format(deal.purchase_price or 0) }}</strong>
+              </div>
+              <div>
+                <span>Rehab</span>
+                <strong>${{ "{:,.0f}".format(deal.rehab_cost or 0) }}</strong>
+              </div>
+              <div>
+                <span>ARV</span>
+                <strong>${{ "{:,.0f}".format(deal.arv or 0) }}</strong>
+              </div>
+              <div>
+                <span>Projected Profit</span>
+                <strong class="{% if profit > 0 %}good-text{% elif profit < 0 %}risk-text{% endif %}">
+                  ${{ "{:,.0f}".format(profit) }}
+                </strong>
+              </div>
+            </div>
+
+            <div class="pipeline-meta-grid">
+              <div>
+                <span>Deal Score</span>
+                <strong>{% if score is not none %}{{ score }}/100{% else %}Pending{% endif %}</strong>
+              </div>
+              <div>
+                <span>Rent</span>
+                <strong>{% if deal.estimated_rent %}${{ "{:,.0f}".format(deal.estimated_rent) }}/mo{% else %}--{% endif %}</strong>
+              </div>
+              <div>
+                <span>Budget</span>
+                <strong>{% if budget %}Attached{% else %}Not Started{% endif %}</strong>
+              </div>
+              <div>
+                <span>Updated</span>
+                <strong>{% if deal.updated_at %}{{ deal.updated_at.strftime("%b %d, %Y") }}{% else %}--{% endif %}</strong>
+              </div>
+            </div>
+
+            {% if budget %}
+              <div class="budget-strip">
+                <div>
+                  <span>Total Budget</span>
+                  <strong>${{ "{:,.0f}".format(budget_metrics.get("estimated_total_with_contingency", budget.total_budget if budget else 0) or 0) }}</strong>
+                </div>
+                <div>
+                  <span>Estimated</span>
+                  <strong>${{ "{:,.0f}".format(budget_metrics.get("estimated_subtotal", budget.total_cost if budget else 0) or 0) }}</strong>
+                </div>
+                <div>
+                  <span>Actual</span>
+                  <strong>${{ "{:,.0f}".format(budget_metrics.get("actual_total", budget.total_cost if budget else 0) or 0) }}</strong>
+                </div>
+                <div>
+                  <span>Paid</span>
+                  <strong>${{ "{:,.0f}".format(budget_metrics.get("paid_total", budget.paid_amount if budget else 0) or 0) }}</strong>
+                </div>
+              </div>
+            {% endif %}
+
+            <div class="pipeline-actions">
+              {% if deal.saved_property_id %}
+                <a href="{{ url_for('investor.deal_workspace', prop_id=deal.saved_property_id) }}" class="ravlo-btn primary sm">
+                  <i class="lucide lucide-columns-3"></i>
+                  <span>Workspace</span>
+                </a>
+              {% endif %}
+              <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+                <span>Detail</span>
+              </a>
+              <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+                <span>Architect</span>
+              </a>
+              {% if budget %}
+                <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-btn ghost sm">
+                  <span>Budget</span>
+                </a>
+              {% else %}
+                <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+                  <span>Start Budget</span>
+                </a>
+              {% endif %}
+            </div>
           </div>
         </article>
       {% endfor %}
     </section>
   {% else %}
-    <section class="ravlo-card pad">
-      <div class="empty-state-inline">
-        No deals found yet. Start in Deal Finder, save a property, and send it into Deal Workspace.
-      </div>
-      <div style="margin-top:16px;">
-        <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn primary">
-          Open Deal Finder
-        </a>
-      </div>
+    <section class="pipeline-empty">
+      <div class="empty-icon"><i class="lucide lucide-briefcase-business"></i></div>
+      <h3>No deals match this view</h3>
+      <p>Start in Deal Finder, save a property, and send it into Deal Workspace to create the first deal record.</p>
+      <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn primary">
+        <i class="lucide lucide-search"></i>
+        <span>Open Deal Finder</span>
+      </a>
     </section>
   {% endif %}
 </div>
+{% endblock %}
 
+{% block head %}
 <style>
-.deals-shell{
-  display:grid;
-  gap:18px;
-}
-
-.deals-filter-grid{
-  display:grid;
-  grid-template-columns:2fr 1fr 1fr auto;
-  gap:14px;
-  align-items:end;
-}
-
-.deals-filter-span{
-  min-width:0;
-}
-
-.deals-filter-actions{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-.deals-summary-grid{
-  display:grid;
-  grid-template-columns:repeat(3, minmax(0, 1fr));
-  gap:14px;
-}
-
-.deals-summary-card{
-  padding:16px 18px;
-  border-radius:18px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-  display:grid;
-  gap:6px;
-}
-
-.deals-summary-card span{
-  font-size:12px;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:.06em;
-}
-
-.deals-summary-card strong{
-  font-size:24px;
-  color:var(--text);
-}
-
-.deals-grid{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:18px;
-}
-
-.deal-card{
-  display:grid;
-  gap:16px;
-}
-
-.deal-card-image{
-  width:100%;
-  height:240px;
-  border-radius:18px;
-  overflow:hidden;
-  border:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.03);
-}
-
-.deal-card-image img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-}
-
-.deal-card-head{
-  display:flex;
-  justify-content:space-between;
-  gap:16px;
-  align-items:flex-start;
-}
-
-.deal-chip-stack{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  justify-content:flex-end;
-}
-
-.ravlo-chip.success{
-  background:rgba(60,203,127,.12);
-  border:1px solid rgba(60,203,127,.24);
-  color:#D7FFE6;
-}
-
-.deal-kpi-grid{
-  display:grid;
-  grid-template-columns:repeat(4, minmax(0, 1fr));
-  gap:12px;
-}
-
-.deal-kpi,
-.deal-meta-box,
-.deal-budget-item{
-  padding:14px 16px;
-  border-radius:16px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-  display:grid;
-  gap:6px;
-}
-
-.deal-kpi span,
-.deal-meta-box span,
-.deal-budget-item span{
-  font-size:12px;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:.06em;
-}
-
-.deal-kpi strong,
-.deal-meta-box strong,
-.deal-budget-item strong{
-  font-size:16px;
-  color:var(--text);
-}
-
-.deal-meta-grid{
-  display:grid;
-  grid-template-columns:repeat(4, minmax(0, 1fr));
-  gap:12px;
-}
-
-.deal-budget-strip{
-  display:grid;
-  grid-template-columns:repeat(5, minmax(0, 1fr));
-  gap:12px;
-}
-
-.deal-notes{
-  padding:14px 16px;
-  border-radius:16px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.deal-notes strong{
-  display:block;
-  margin-bottom:8px;
-  color:var(--text);
-}
-
-.deal-notes p{
-  margin:0;
-  color:var(--muted);
-  line-height:1.55;
-}
-
-.deal-actions{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-@media (max-width: 1180px){
-  .deals-grid{
-    grid-template-columns:1fr;
+  .deal-pipeline-page {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
   }
 
-  .deals-filter-grid{
-    grid-template-columns:1fr 1fr;
+  .pipeline-hero,
+  .pipeline-filter-panel,
+  .pipeline-card,
+  .pipeline-empty {
+    border: 1px solid rgba(210, 224, 240, 0.11);
+    background: rgba(255, 255, 255, 0.035);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
   }
 
-  .deals-summary-grid{
-    grid-template-columns:1fr;
+  .pipeline-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.75fr);
+    gap: 18px;
+    align-items: stretch;
+    padding: 24px;
+    border-color: rgba(210, 224, 240, 0.13);
+    border-radius: 20px;
+    background:
+      linear-gradient(135deg, rgba(244, 248, 252, 0.08), rgba(255, 255, 255, 0.025)),
+      linear-gradient(180deg, rgba(18, 27, 39, 0.98), rgba(9, 17, 29, 0.96));
   }
 
-  .deal-budget-strip{
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 760px){
-  .deal-card-head,
-  .deal-actions{
-    flex-direction:column;
-    align-items:flex-start;
+  .pipeline-kicker {
+    color: rgba(193, 209, 227, 0.72);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
-  .deal-kpi-grid,
-  .deal-meta-grid,
-  .deals-filter-grid,
-  .deal-budget-strip{
-    grid-template-columns:1fr;
+  .pipeline-hero h2,
+  .pipeline-section-head h3,
+  .pipeline-card h3,
+  .pipeline-empty h3 {
+    margin: 6px 0 0;
+    color: #ffffff;
+    line-height: 1.14;
+    font-weight: 800;
+    letter-spacing: 0;
   }
 
-  .deal-chip-stack{
-    justify-content:flex-start;
+  .pipeline-hero h2 {
+    font-size: clamp(1.8rem, 2.8vw, 2.6rem);
   }
-}
+
+  .pipeline-hero p,
+  .pipeline-card p,
+  .pipeline-empty p {
+    margin: 10px 0 0;
+    color: rgba(226, 236, 247, 0.76);
+    line-height: 1.62;
+  }
+
+  .pipeline-hero-panel {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(210, 224, 240, 0.11);
+  }
+
+  .pipeline-hero-panel > div,
+  .pipeline-metrics > div,
+  .pipeline-meta-grid > div,
+  .budget-strip > div {
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .pipeline-hero-panel > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .pipeline-hero-panel span,
+  .pipeline-metrics span,
+  .pipeline-meta-grid span,
+  .budget-strip span,
+  .filter-field span {
+    display: block;
+    color: rgba(205, 218, 233, 0.66);
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .pipeline-hero-panel strong,
+  .pipeline-metrics strong,
+  .pipeline-meta-grid strong,
+  .budget-strip strong {
+    display: block;
+    margin-top: 6px;
+    color: #ffffff;
+  }
+
+  .pipeline-filter-panel {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .pipeline-section-head {
+    margin-bottom: 14px;
+  }
+
+  .pipeline-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(240px, 2fr) minmax(160px, 1fr) minmax(160px, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+  }
+
+  .filter-field {
+    display: grid;
+    gap: 7px;
+  }
+
+  .filter-field input,
+  .filter-field select {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    outline: none;
+  }
+
+  .filter-field input:focus,
+  .filter-field select:focus {
+    border-color: rgba(148, 190, 255, 0.48);
+    box-shadow: 0 0 0 4px rgba(95, 168, 255, 0.08);
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .pipeline-card {
+    overflow: hidden;
+    border-radius: 18px;
+  }
+
+  .pipeline-image {
+    width: 100%;
+    height: 230px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .pipeline-image img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
+
+  .pipeline-card-body {
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .pipeline-card-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .chip-stack,
+  .pipeline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .pipeline-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 10px;
+    color: #dcecff;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .pipeline-chip.success {
+    color: #d9fff2;
+    background: rgba(81, 204, 155, 0.12);
+    border-color: rgba(81, 204, 155, 0.22);
+  }
+
+  .pipeline-metrics,
+  .pipeline-meta-grid,
+  .budget-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .good-text {
+    color: #86e8c2 !important;
+  }
+
+  .risk-text {
+    color: #ffaaa5 !important;
+  }
+
+  .pipeline-actions {
+    justify-content: flex-start;
+    padding-top: 2px;
+  }
+
+  .pipeline-empty {
+    padding: 40px 18px;
+    text-align: center;
+    border-radius: 18px;
+  }
+
+  .empty-icon {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 14px;
+    color: #dcecff;
+    background: rgba(255, 255, 255, 0.055);
+    border-radius: 16px;
+  }
+
+  .pipeline-empty p {
+    max-width: 560px;
+    margin: 8px auto 16px;
+  }
+
+  @media (max-width: 1180px) {
+    .pipeline-hero,
+    .pipeline-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .pipeline-filter-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .pipeline-hero,
+    .pipeline-filter-panel,
+    .pipeline-card-body {
+      padding: 14px;
+      border-radius: 16px;
+    }
+
+    .pipeline-filter-grid,
+    .pipeline-metrics,
+    .pipeline-meta-grid,
+    .budget-strip {
+      grid-template-columns: 1fr;
+    }
+
+    .pipeline-card-head {
+      flex-direction: column;
+    }
+
+    .chip-stack {
+      justify-content: flex-start;
+    }
+
+    .filter-actions .ravlo-btn {
+      flex: 1 1 auto;
+    }
+  }
 </style>
 {% endblock %}
