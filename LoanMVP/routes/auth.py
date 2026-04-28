@@ -240,6 +240,7 @@ def verify_reset_token(token: str, expiration_seconds: int = 3600):
 # mapping here.
 VIP_USER_DASHBOARDS = {
     "nyrealtorelena@gmail.com": "elena.dashboard",
+    "officer@caughmanmason.com": "vip.loan_officer_dashboard",
 }
 
 

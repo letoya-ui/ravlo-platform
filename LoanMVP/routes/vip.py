@@ -137,6 +137,13 @@ FULL_LOAN_OFFICER_MODULES = list(MODULE_FIELD_MAP.values())
 
 
 def get_enabled_modules(profile):
+    if (
+        profile
+        and has_full_loan_officer_access(current_user)
+        and getattr(profile, "user_id", None) == getattr(current_user, "id", None)
+    ):
+        return FULL_LOAN_OFFICER_MODULES
+
     raw = profile.enabled_modules or "[]"
     try:
         value = json.loads(raw)
@@ -202,99 +209,52 @@ def _default_vip_role_for_partner(partner):
     return role_map.get(raw_category, "partner")
 
 
-def _sync_full_access_loan_officer_profile(user, profile):
-    if not has_full_loan_officer_access(user) or not profile:
-        return
-
-    company = Company.query.filter(func.lower(Company.email_domain) == "caughmanmason.com").first()
-    company_name = getattr(company, "name", None) or "Caughman and Mason Lending Services"
-    display_name = "Caughman Mason VIP Loan Officer"
-    modules_json = json.dumps(FULL_LOAN_OFFICER_MODULES)
-    changed = False
-
-    def set_if_changed(obj, field, value):
-        nonlocal changed
-        if getattr(obj, field, None) != value:
-            setattr(obj, field, value)
-            changed = True
-
-    if company:
-        set_if_changed(user, "company_id", company.id)
-
-    for field, value in {
-        "role": "loan_officer",
-        "invite_accepted": True,
-        "nda_accepted": True,
-        "onboarding_complete": True,
-        "ica_accepted": True,
-        "onboarding_step": "complete",
-        "subscription": "enterprise",
-        "is_blocked": False,
-    }.items():
-        set_if_changed(user, field, value)
-
-    for field, value in {
-        "display_name": display_name,
-        "business_name": company_name,
-        "dashboard_title": display_name,
-        "role_type": "loan_officer",
-        "marketplace_enabled": "yes",
-        "enabled_modules": modules_json,
-        "lo_is_external": False,
-        "lo_licensed_residential": False,
-        "lo_company_id": getattr(company, "id", None),
-    }.items():
-        set_if_changed(profile, field, value)
-
-    lo_profile = LoanOfficerProfile.query.filter_by(user_id=user.id).first()
-    if not lo_profile:
-        lo_profile = LoanOfficerProfile(
-            user_id=user.id,
-            name=display_name,
-            email=getattr(user, "email", None),
-            region=company_name,
-            specialization="VIP investor and lending flow testing",
-        )
-        db.session.add(lo_profile)
-        changed = True
-    else:
-        for field, value in {
-            "name": display_name,
-            "email": getattr(user, "email", None),
-            "region": company_name,
-            "specialization": "VIP investor and lending flow testing",
-        }.items():
-            set_if_changed(lo_profile, field, value)
-
-    if changed:
-        db.session.commit()
-
-
 def get_or_create_vip_profile():
     if not getattr(current_user, "is_authenticated", False):
         return None
 
     profile = VIPProfile.query.filter_by(user_id=current_user.id).first()
     if profile:
-        _sync_full_access_loan_officer_profile(current_user, profile)
         return profile
 
     partner = getattr(current_user, "partner_profile", None)
     default_role_type = _default_vip_role_for_partner(partner)
+    company = None
+    if has_full_loan_officer_access(current_user):
+        default_role_type = "loan_officer"
+        company = Company.query.filter(func.lower(Company.email_domain) == "caughmanmason.com").first()
 
     profile = VIPProfile(
         user_id=current_user.id,
         display_name=(
+            "Caughman Mason VIP Loan Officer"
+            if has_full_loan_officer_access(current_user)
+            else None
+        ) or (
             getattr(current_user, "name", None)
             or getattr(current_user, "email", "VIP User")
         ),
-        business_name=getattr(partner, "company", None) if partner else None,
+        business_name=(
+            getattr(company, "name", None)
+            or (getattr(partner, "company", None) if partner else None)
+        ),
+        dashboard_title=(
+            "Caughman Mason VIP Loan Officer"
+            if has_full_loan_officer_access(current_user)
+            else None
+        ),
         role_type=default_role_type,
         assistant_name="Ravlo",
+        marketplace_enabled="yes" if has_full_loan_officer_access(current_user) else "no",
+        enabled_modules=(
+            json.dumps(FULL_LOAN_OFFICER_MODULES)
+            if has_full_loan_officer_access(current_user)
+            else None
+        ),
+        lo_company_id=getattr(company, "id", None) if company else None,
     )
     db.session.add(profile)
     db.session.commit()
-    _sync_full_access_loan_officer_profile(current_user, profile)
     return profile
 
 
