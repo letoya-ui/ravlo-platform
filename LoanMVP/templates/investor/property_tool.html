@@ -310,11 +310,21 @@ function normalizePhotoArray(photos){
       p?.original_url,
       p?.large,
       p?.large_url,
+      p?.medium,
+      p?.medium_url,
+      p?.highRes,
+      p?.high_res,
       p?.url,
       p?.src,
       p?.href,
       p?.photo,
+      p?.photo_url,
+      p?.photoUrl,
       p?.image,
+      p?.image_url,
+      p?.imageUrl,
+      p?.primaryPhoto,
+      p?.primaryPhotoUrl,
       p?.thumbnail
     ].map(canonicalizeUrl).filter(Boolean);
     return ordered.length ? [ordered[0]] : [];
@@ -395,8 +405,13 @@ function resolveImage(r){
     ...listingPhotos,
     r.primary_photo,
     r.primary_photo_url,
+    r.primaryPhoto,
+    r.primaryPhotoUrl,
     r.image_url,
+    r.imageUrl,
     r.photo,
+    r.photo_url,
+    r.photoUrl,
     r.thumbnail
   ]);
 

@@ -347,17 +347,12 @@ def _saved_property_workspace_seed(saved_property):
         workspace_analysis = {}
 
     media = _saved_property_media(saved_property)
-    listing_photos = _normalize_photo_urls(
-        workspace_analysis.get("listing_photos"),
-        workspace_analysis.get("photos"),
-        property_payload.get("listing_photos"),
-        property_payload.get("photos"),
-        media.get("gallery"),
-    )
+    listing_photos = _collect_property_photo_urls(workspace_analysis, property_payload, media, resolved)
     primary_photo = _resolve_photo(
         workspace_analysis.get("image_url")
         or property_payload.get("image_url")
         or property_payload.get("primary_photo")
+        or property_payload.get("primaryPhoto")
         or media.get("primary_photo"),
         listing_photos,
     )
@@ -372,12 +367,19 @@ def _saved_property_workspace_seed(saved_property):
             "city": property_payload.get("city") or workspace_analysis.get("city") or "",
             "state": property_payload.get("state") or workspace_analysis.get("state") or "",
             "zip_code": property_payload.get("zip_code") or workspace_analysis.get("zip_code") or "",
+            "latitude": property_payload.get("latitude") or workspace_analysis.get("latitude"),
+            "longitude": property_payload.get("longitude") or workspace_analysis.get("longitude"),
         }
         sv_url = _streetview_fallback_url(sv_src)
         if sv_url:
             proxied_sv = url_for("investor.api_property_tool_image", src=sv_url)
             primary_photo = proxied_sv
             listing_photos = [proxied_sv]
+
+    listing_photos = _proxy_unique_photo_urls(listing_photos)
+    primary_photo = _proxy_listing_image_url(primary_photo) or (listing_photos[0] if listing_photos else primary_photo)
+    if primary_photo and primary_photo not in listing_photos:
+        listing_photos.insert(0, primary_photo)
 
     return {
         "resolved": resolved,
@@ -420,20 +422,12 @@ def _resolve_rehab_before_seed(deal):
     property_seed = _saved_property_workspace_seed(saved_property) if saved_property else {}
     property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "gallery": []}
 
-    gallery = _normalize_photo_urls(
-        rehab_before.get("gallery"),
-        workspace_analysis.get("listing_photos"),
-        workspace_analysis.get("photos"),
-        property_payload.get("listing_photos"),
-        property_payload.get("photos"),
-        property_seed.get("listing_photos"),
-        property_media.get("gallery"),
-        rehab_before.get("image_url"),
-        workspace_analysis.get("image_url"),
-        property_payload.get("image_url"),
-        property_payload.get("primary_photo"),
-        property_seed.get("primary_photo"),
-        property_media.get("primary_photo"),
+    gallery = _collect_property_photo_urls(
+        rehab_before,
+        workspace_analysis,
+        property_payload,
+        property_seed,
+        property_media,
     )
     url = _resolve_photo(
         rehab_before.get("image_url")
@@ -443,6 +437,10 @@ def _resolve_rehab_before_seed(deal):
         or property_media.get("primary_photo"),
         gallery,
     )
+    gallery = _proxy_unique_photo_urls(gallery)
+    url = _proxy_listing_image_url(url) or (gallery[0] if gallery else "")
+    if url and url not in gallery:
+        gallery.insert(0, url)
     return {"url": url or "", "gallery": gallery}
 
 
@@ -490,6 +488,15 @@ def _proxy_photo_list(photo_urls):
     return proxied
 
 
+def _proxy_unique_photo_urls(photo_urls):
+    proxied = []
+    for photo in photo_urls or []:
+        proxied_photo = _proxy_listing_image_url(photo)
+        if proxied_photo and proxied_photo not in proxied:
+            proxied.append(proxied_photo)
+    return proxied
+
+
 _STREETVIEW_BASE = "https://maps.googleapis.com/maps/api/streetview"
 
 
@@ -498,15 +505,11 @@ def _streetview_fallback_url(result):
 
     The key is injected server-side by :func:`api_property_tool_image`
     so it never appears in client-visible markup.
-    Returns ``None`` when the address is too short or key is missing.
+    Returns ``None`` when the address is too short.
 
     Prefers latitude/longitude coordinates when available because they
     produce more reliable Street View results than text addresses.
     """
-    google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or ""
-    if not google_key:
-        return None
-
     lat = result.get("latitude")
     lon = result.get("longitude")
     if lat is not None and lon is not None:
@@ -530,50 +533,132 @@ def _streetview_fallback_url(result):
     return f"{_STREETVIEW_BASE}?size=600x400&location={quote_plus(location)}"
 
 
+def _collect_property_photo_urls(*payloads):
+    sources = []
+    for payload in payloads:
+        if not payload:
+            continue
+        if not isinstance(payload, dict):
+            sources.append(payload)
+            continue
+
+        sources.extend([
+            payload.get("listing_photos"),
+            payload.get("listingPhotos"),
+            payload.get("listing_images"),
+            payload.get("listingImages"),
+            payload.get("property_photos"),
+            payload.get("propertyPhotos"),
+            payload.get("photos"),
+            payload.get("photo_urls"),
+            payload.get("photoUrls"),
+            payload.get("photo_links"),
+            payload.get("photoLinks"),
+            payload.get("images"),
+            payload.get("image_urls"),
+            payload.get("imageUrls"),
+            payload.get("media"),
+            payload.get("gallery"),
+            payload.get("image_url"),
+            payload.get("imageUrl"),
+            payload.get("primary_photo"),
+            payload.get("primaryPhoto"),
+            payload.get("primaryPhotoUrl"),
+            payload.get("photo"),
+            payload.get("photo_url"),
+            payload.get("photoUrl"),
+            payload.get("thumbnail"),
+            payload.get("imgSrc"),
+            payload.get("img_src"),
+        ])
+
+        for key in (
+            "raw",
+            "source",
+            "provider_payload",
+            "property",
+            "workspace_analysis",
+            "media",
+            "listing",
+            "realtor",
+            "rentcast",
+            "attom",
+            "mashvisor",
+            "rapidapi_real_estate",
+        ):
+            nested = payload.get(key)
+            if nested:
+                sources.append(nested)
+
+    return _normalize_photo_urls(*sources)
+
+
+def _ensure_property_image_coverage(payload, *extra_payloads):
+    if not isinstance(payload, dict):
+        return payload
+
+    photos = _collect_property_photo_urls(payload, *extra_payloads)
+    primary = _resolve_photo(
+        payload.get("image_url")
+        or payload.get("imageUrl")
+        or payload.get("primary_photo")
+        or payload.get("primaryPhoto")
+        or payload.get("primaryPhotoUrl")
+        or payload.get("imgSrc")
+        or payload.get("photo")
+        or payload.get("photo_url")
+        or payload.get("photoUrl"),
+        photos,
+    )
+
+    if not primary:
+        sv_url = _streetview_fallback_url(payload)
+        if sv_url:
+            primary = url_for("investor.api_property_tool_image", src=sv_url)
+            photos = [primary] + [photo for photo in photos if photo != primary]
+            payload.setdefault("photo_source", "streetview")
+
+    if primary:
+        payload["image_url"] = primary
+        payload["primary_photo"] = primary
+
+    if photos:
+        payload["listing_photos"] = photos
+        payload["photos"] = photos
+
+    return payload
+
+
 def _proxy_search_result_images(result):
     if not isinstance(result, dict):
         return result
 
-    updated = dict(result)
+    updated = _ensure_property_image_coverage(dict(result), result.get("raw"))
+    raw_listing_photos = _collect_property_photo_urls(updated, updated.get("raw"))
+    primary = _resolve_photo(updated.get("image_url") or updated.get("primary_photo"), raw_listing_photos)
     proxied_listing_photos = []
-    raw_listing_photos = updated.get("listing_photos") or updated.get("photos") or []
 
-    for photo in raw_listing_photos:
-        if isinstance(photo, dict):
-            photo_copy = dict(photo)
-            best_url = (
-                photo_copy.get("full")
-                or photo_copy.get("full_url")
-                or photo_copy.get("fullSize")
-                or photo_copy.get("full_size")
-                or photo_copy.get("original")
-                or photo_copy.get("original_url")
-                or photo_copy.get("large")
-                or photo_copy.get("large_url")
-                or photo_copy.get("url")
-                or photo_copy.get("src")
-                or photo_copy.get("href")
-                or photo_copy.get("photo")
-                or photo_copy.get("image")
-                or photo_copy.get("thumbnail")
-            )
-            proxied = _proxy_listing_image_url(best_url)
-            if proxied:
-                photo_copy["url"] = proxied
-                proxied_listing_photos.append(photo_copy)
-        else:
-            proxied = _proxy_listing_image_url(photo)
-            if proxied:
-                proxied_listing_photos.append(proxied)
+    for photo in raw_listing_photos[:12]:
+        proxied = _proxy_listing_image_url(photo)
+        if proxied and proxied not in proxied_listing_photos:
+            proxied_listing_photos.append(proxied)
 
-    updated["listing_photos"] = proxied_listing_photos
-    updated["photos"] = proxied_listing_photos
     for _field in ("primary_photo", "primary_photo_url", "image_url", "photo", "thumbnail"):
         raw_val = updated.get(_field)
         if _is_map_tile_url(raw_val):
             updated[_field] = None
         else:
             updated[_field] = _proxy_listing_image_url(raw_val) or raw_val
+
+    proxied_primary = _proxy_listing_image_url(primary) or updated.get("image_url") or updated.get("primary_photo")
+    if proxied_primary:
+        updated["primary_photo"] = proxied_primary
+        updated["image_url"] = proxied_primary
+        if proxied_primary not in proxied_listing_photos:
+            proxied_listing_photos.insert(0, proxied_primary)
+
+    updated["listing_photos"] = proxied_listing_photos
+    updated["photos"] = proxied_listing_photos
 
     has_photo = bool(
         proxied_listing_photos
@@ -3619,16 +3704,10 @@ def api_property_tool_save():
                 "message": "Address is required."
             }), 400
 
+        property_payload = _ensure_property_image_coverage(property_payload)
         saved = _upsert_saved_property_from_payload(investor_profile, property_payload)
 
-        listing_photos = _normalize_photo_urls(
-            property_payload.get("listing_photos"),
-            property_payload.get("photos"),
-            property_payload.get("images"),
-            property_payload.get("media"),
-            property_payload.get("photo_links"),
-            property_payload.get("image_urls"),
-        )
+        listing_photos = _collect_property_photo_urls(property_payload)
 
         image_url = _resolve_photo(
             property_payload.get("image_url") or property_payload.get("primary_photo"),
@@ -3712,6 +3791,7 @@ def api_property_tool_save_and_analyze():
                 "message": "Address is required."
             }), 400
 
+        property_payload = _ensure_property_image_coverage(property_payload)
         saved = _upsert_saved_property_from_payload(investor_profile, property_payload)
 
         comps = property_payload.get("comp_analysis") or {}
@@ -3794,14 +3874,7 @@ def api_property_tool_save_and_analyze():
         best_reason = exit_strategy_analysis.get("best_exit_reason")
         property_classification = exit_strategy_analysis.get("property_classification")
 
-        listing_photos = _normalize_photo_urls(
-            property_payload.get("listing_photos"),
-            property_payload.get("photos"),
-            property_payload.get("images"),
-            property_payload.get("media"),
-            property_payload.get("photo_links"),
-            property_payload.get("image_urls"),
-        )
+        listing_photos = _collect_property_photo_urls(property_payload, workspace_analysis)
 
         image_url = _resolve_photo(
             property_payload.get("image_url") or property_payload.get("primary_photo"),
@@ -5624,6 +5697,13 @@ def design_studio_generate_variant():
         mode = (data.get("mode") or "hgtv").strip()
         room_type = (data.get("room_type") or "living room").strip()
         notes = (data.get("notes") or "").strip()
+        design_prompt_notes = _compose_design_studio_prompt(
+            notes=notes,
+            preset=preset,
+            mode=mode,
+            room_type=room_type,
+            property_type=(getattr(deal, "property_type", "") or "residential property") if deal else "residential property",
+        )
 
         payload = {
             "preset": preset,
@@ -5638,9 +5718,11 @@ def design_studio_generate_variant():
             "strength": 0.58,
             "width": 768,
             "height": 768,
-            "desired_updates": notes,
-            "prompt_notes": notes,
+            "desired_updates": design_prompt_notes,
+            "prompt_notes": design_prompt_notes,
+            "negative_prompt": _INTERIOR_NEGATIVE_PROMPT,
         }
+        payload.update(_build_studio_quality_controls("interior"))
 
         engine_json = _post_renovation_engine_json(
             "/v1/renovate",
@@ -6282,6 +6364,214 @@ def _is_probably_blueprint(url: str) -> bool:
     return any(x in url for x in ["blueprint", "floorplan", "layout"])
 
 
+_VISUAL_NEGATIVE_PROMPT = (
+    "low quality, blurry, distorted perspective, warped walls, melted fixtures, "
+    "extra doors, extra windows, duplicated stairs, impossible structure, fantasy architecture, "
+    "cartoon, illustration, over-saturated HDR, text, labels, watermark, logo, people, vehicles blocking facade"
+)
+
+_BLUEPRINT_NEGATIVE_PROMPT = (
+    _VISUAL_NEGATIVE_PROMPT
+    + ", photorealistic photo, 3D render, exterior elevation, facade rendering, presentation board, collage, "
+      "split panels, mood board, material swatches, title block, dimension strings, fake handwriting, colored blocks"
+)
+
+_EXTERIOR_NEGATIVE_PROMPT = (
+    _VISUAL_NEGATIVE_PROMPT
+    + ", blueprint, floor plan, CAD drawing, elevation drawing, section drawing, line art, presentation sheet, "
+      "collage, split panels, title block, dimension lines, room layout, cutaway, material board"
+)
+
+_INTERIOR_NEGATIVE_PROMPT = (
+    _VISUAL_NEGATIVE_PROMPT
+    + ", blueprint, floor plan, exterior elevation, CAD drawing, line art, split panels, collage, cutaway, "
+      "empty shell, impossible furniture scale"
+)
+
+
+def _prompt_join(*parts):
+    cleaned = []
+    seen = set()
+    for part in parts:
+        text = safe_str(part).strip()
+        if not text:
+            continue
+        key = text.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(text.rstrip("."))
+    return ". ".join(cleaned).strip() + ("." if cleaned else "")
+
+
+def _compose_design_studio_prompt(*, notes="", preset="", mode="", room_type="", property_type="", rehab_level=""):
+    return _prompt_join(
+        "Professional investor-grade interior renovation concept for a real estate presentation",
+        f"Room focus: {room_type}" if room_type else "",
+        f"Design style: {preset}" if preset else "",
+        f"Presentation mode: {mode}" if mode else "",
+        f"Property type: {property_type}" if property_type else "",
+        f"Rehab level: {rehab_level}" if rehab_level else "",
+        "Output must be one photorealistic interior room image, not a collage, split-screen, blueprint, mood board, or render sheet",
+        "Preserve the original room footprint, camera angle, walls, windows, doors, ceiling height, and major structural elements",
+        "Upgrade finishes with realistic materials, correct scale, clean lighting, functional circulation, and marketable staging",
+        "Use believable real-estate photography, accurate shadows, natural material transitions, and furniture sized for the room",
+        "Keep the result photorealistic, buildable, current, and appropriate for a lender/investor presentation",
+        "Do not add people, text, labels, logos, fake views, impossible openings, fake appliances, or structural changes unless requested",
+        notes,
+    )
+
+
+def _build_studio_negative_prompt(mode=""):
+    mode_key = safe_str(mode).lower()
+    if "blueprint" in mode_key or "floor_plan" in mode_key:
+        return _BLUEPRINT_NEGATIVE_PROMPT
+    if "interior" in mode_key or "room" in mode_key:
+        return _INTERIOR_NEGATIVE_PROMPT
+    if "exterior" in mode_key or "facade" in mode_key or "front" in mode_key or "rear" in mode_key:
+        return _EXTERIOR_NEGATIVE_PROMPT
+    return _VISUAL_NEGATIVE_PROMPT
+
+
+def _build_studio_quality_controls(mode=""):
+    mode_key = safe_str(mode).lower()
+    base = {
+        "allow_text": False,
+        "allow_logos": False,
+        "single_image_output": True,
+        "avoid_collage": True,
+    }
+
+    if "blueprint" in mode_key or "floor_plan" in mode_key:
+        return {
+            **base,
+            "output_type": "top_down_architectural_floor_plan",
+            "render_type": "technical_floor_plan",
+            "camera_view": "orthographic_top_down",
+            "composition": "single_plan_only",
+            "avoid_output_types": "collage,presentation_board,exterior_elevation,3d_render,title_block,mood_board",
+        }
+
+    if "interior" in mode_key or "room" in mode_key:
+        return {
+            **base,
+            "output_type": "photorealistic_interior_room",
+            "render_type": "interior_photo",
+            "camera_view": "eye_level_real_estate_photo",
+            "composition": "single_room_photo_only",
+            "avoid_output_types": "blueprint,floor_plan,elevation,collage,split_panel,cutaway",
+        }
+
+    if "exterior" in mode_key or "facade" in mode_key or "front" in mode_key or "rear" in mode_key:
+        return {
+            **base,
+            "output_type": "photorealistic_exterior_rendering",
+            "render_type": "exterior_photo",
+            "camera_view": "eye_level_architectural_photo",
+            "composition": "single_building_view_only",
+            "avoid_output_types": "blueprint,floor_plan,elevation_drawing,cad_linework,collage,split_panel,title_block",
+        }
+
+    return base
+
+
+def _normalize_build_blueprint_style(value=""):
+    style = safe_str(value).strip().lower() or "technical_blueprint"
+    aliases = {
+        "developer_marketing": "technical_blueprint",
+        "annotated_presentation": "permit_set",
+        "presentation": "permit_set",
+        "marketing": "technical_blueprint",
+    }
+    style = aliases.get(style, style)
+    allowed = {
+        "technical_blueprint",
+        "permit_set",
+        "monochrome_minimal",
+        "schematic_plan",
+        "builder_plan",
+    }
+    return style if style in allowed else "technical_blueprint"
+
+
+def _compose_build_studio_prompt(
+    *,
+    notes="",
+    mode="",
+    project_name="",
+    property_type="",
+    style="",
+    description="",
+    lot_size="",
+    zoning="",
+    location="",
+    floors=None,
+    room_type="",
+    floor="",
+    lot_count=None,
+    preserve_reference=False,
+    blueprint_constrained=False,
+):
+    mode_key = safe_str(mode).lower()
+    is_blueprint = "blueprint" in mode_key or "floor_plan" in mode_key
+    is_exterior = "exterior" in mode_key or "facade" in mode_key or "front" in mode_key or "rear" in mode_key
+    is_rear = "rear" in mode_key or "back" in mode_key
+    is_interior = "interior" in mode_key or "room" in mode_key
+
+    mode_specific = []
+    if is_blueprint:
+        mode_specific = [
+            "Output requirement: one single top-down architectural floor plan only",
+            f"Floor requirement: {floor} floor only" if floor else "",
+            "Use clean black and dark gray linework on an off-white sheet; include walls, doors, windows, stairs, closets, kitchen and bath fixtures, and simple furniture blocks by shape",
+            "Do not use room labels, dimensions, notes, title blocks, decorative typography, handwriting, logos, colored blocks, or fake text because generated text becomes unreliable",
+            "Do not create an exterior elevation, photorealistic render, perspective view, material board, collage, split panel layout, or mixed architectural presentation sheet",
+            "For upper floors, keep the stair position aligned with the lower floor but make the room layout visibly distinct and appropriate for that level",
+        ]
+    elif is_exterior:
+        view_label = "rear/backyard" if is_rear else "front/street"
+        mode_specific = [
+            f"Output requirement: one single photorealistic {view_label} exterior rendering only",
+            "Show the complete building from foundation to roofline in a grounded real-world setting with correct scale, realistic siding/brick/trim materials, windows, doors, roof pitch, grading, and landscaping",
+            "Use the blueprint only as architectural context for footprint, floor count, massing, and circulation; do not render the blueprint image itself",
+            "Do not create a blueprint, floor plan, elevation sheet, CAD drawing, split panel board, title block, annotations, labels, material swatches, or cutaway diagram",
+            "For rear views, show the back facade, rear windows/doors, patio or deck, yard relationship, and no street-front garage view",
+        ]
+    elif is_interior:
+        mode_specific = [
+            "Output requirement: one single photorealistic interior room image only",
+            "Render from an eye-level real-estate photography angle with believable lighting, correct furniture scale, functional circulation, and market-ready finishes",
+            "Use the plan/reference only to infer room geometry and openings; do not render the floor plan or any architectural sheet",
+            "Do not create a collage, split panel, blueprint, exterior view, cutaway, text overlay, label, watermark, or mood board",
+        ]
+    else:
+        mode_specific = [
+            "Keep each requested output type separate and professional; do not combine blueprints, exteriors, interiors, and material boards in one image",
+        ]
+
+    return _prompt_join(
+        "Professional Ravlo Build Studio architecture visualization",
+        f"Mode: {mode}" if mode else "",
+        f"Project: {project_name}" if project_name else "",
+        f"Property type: {property_type}" if property_type else "",
+        f"Architectural style: {style}" if style else "",
+        f"Description: {description}" if description else "",
+        f"Location: {location}" if location else "",
+        f"Lot size: {lot_size}" if lot_size else "",
+        f"Zoning: {zoning}" if zoning else "",
+        f"Floor count: {floors}" if floors else "",
+        f"Lot count: {lot_count}" if lot_count else "",
+        f"Room focus: {room_type}" if room_type else "",
+        f"Floor: {floor}" if floor else "",
+        "Use realistic U.S. residential construction, correct proportions, grounded foundation, believable roof geometry, window rhythm, entry placement, grading, driveway, and material transitions",
+        *mode_specific,
+        "Preserve the supplied reference massing, roofline, floor count, openings, entry or garage placement, proportions, and camera relationship" if preserve_reference else "",
+        "Treat the blueprint as a binding architectural constraint for footprint, massing, floor count, stair placement, and circulation, but never as a visual style for photorealistic exterior or interior outputs" if blueprint_constrained else "",
+        "Avoid fantasy architecture, impossible cantilevers, duplicate rooms, extra stories, unreadable plans, mixed output types, text overlays, watermarks, and generic stock-photo styling",
+        notes,
+    )
+
+
 @investor_bp.route("/deal-studio/build-studio/generate-exterior", methods=["POST"])
 @login_required
 @role_required("investor")
@@ -6312,7 +6602,7 @@ def generate_build_exterior():
         location = (request.form.get("location") or "").strip()
         notes = (request.form.get("notes") or "").strip()
         style = (request.form.get("style") or "modern_farmhouse").strip()
-        blueprint_style = (request.form.get("blueprint_style") or "technical_blueprint").strip().lower()
+        blueprint_style = _normalize_build_blueprint_style(request.form.get("blueprint_style"))
         number_of_floors = _normalize_int(
             request.form.get("number_of_floors")
             or request.form.get("floor_count")
@@ -6379,11 +6669,19 @@ def generate_build_exterior():
         conditioning_url = reference_image_url if has_real_exterior_reference else fallback_blueprint_url
 
         # ---------------- PROMPT ----------------
-        exterior_prompt_notes = (
-            notes
-            + " Preserve the supplied exterior reference house massing, roofline, window rhythm, entry or garage placement, overall proportions, and camera relationship. Apply the requested style without replacing it with a different house."
-            if has_real_exterior_reference
-            else notes
+        exterior_prompt_notes = _compose_build_studio_prompt(
+            notes=notes,
+            mode="exterior_front",
+            project_name=project_name,
+            property_type=property_type,
+            style=style,
+            description=description,
+            lot_size=lot_size,
+            zoning=zoning,
+            location=location,
+            floors=number_of_floors,
+            preserve_reference=has_real_exterior_reference,
+            blueprint_constrained=bool(conditioning_url and not has_real_exterior_reference),
         )
 
         # ---------------- PAYLOAD ----------------
@@ -6410,20 +6708,24 @@ def generate_build_exterior():
             "guidance": 7.5,
             "width": 768,
             "height": 768,
+            "negative_prompt": _build_studio_negative_prompt("exterior_front"),
         }
+        payload.update(_build_studio_quality_controls("exterior_front"))
 
         # 🔥 ONLY CONDITION WHEN VALID
-        if use_conditioning and (image_base64 or conditioning_url):
-            payload["strength"] = 0.34 if has_real_exterior_reference else 0.45
+        if use_conditioning and (image_base64 or conditioning_url) and has_real_exterior_reference:
+            payload["strength"] = 0.34
 
             if image_base64:
                 payload["image_base64"] = image_base64
                 payload["exterior_image_base64"] = image_base64
             else:
                 payload["image_url"] = conditioning_url
-                if has_real_exterior_reference:
-                    payload["exterior_image_url"] = reference_image_url
-                    payload["reference_image_url"] = reference_image_url
+                payload["exterior_image_url"] = reference_image_url
+                payload["reference_image_url"] = reference_image_url
+        elif conditioning_url:
+            payload["blueprint_reference_url"] = conditioning_url
+            payload["strength"] = 0.22
 
         current_app.logger.warning(f"EXTERIOR FINAL PAYLOAD: {payload}")
 
@@ -6588,6 +6890,20 @@ def generate_build_interior():
                 "message": "Upload a blueprint or use a saved project blueprint before generating interiors."
             }), 400
 
+        interior_prompt_notes = _compose_build_studio_prompt(
+            notes=notes,
+            mode="interior",
+            project_name=project_name,
+            property_type=property_type,
+            style=style,
+            description=description,
+            lot_size=lot_size,
+            zoning=zoning,
+            location=location,
+            room_type=room_type,
+            floor=floor,
+            blueprint_constrained=True,
+        )
 
         payload = {
             "mode": "interior",
@@ -6600,15 +6916,17 @@ def generate_build_interior():
             "zoning": zoning,
             "room_type": room_type,
             "floor": floor,
-            "prompt_notes": notes,
+            "prompt_notes": interior_prompt_notes,
             "special_features": notes,
             "count": 1,
             "steps": 18,
             "guidance": 7.0,
-            "strength": 0.65,
+            "strength": 0.42,
             "width": 768,
             "height": 768,
+            "negative_prompt": _build_studio_negative_prompt("interior"),
         }
+        payload.update(_build_studio_quality_controls("interior"))
 
         if image_base64:
             payload["image_base64"] = image_base64
@@ -6742,7 +7060,7 @@ def generate_build_blueprint():
         requested_style_preset = (
             request.form.get("style_preset") or "luxury_modern"
         ).strip().lower()
-        blueprint_style = (request.form.get("blueprint_style") or "technical_blueprint").strip().lower()
+        blueprint_style = _normalize_build_blueprint_style(request.form.get("blueprint_style"))
         renovation_level = (
             request.form.get("renovation_level") or "medium"
         ).strip().lower()
@@ -6876,9 +7194,24 @@ def generate_build_blueprint():
         style_preset = _normalize_style_preset(requested_style_preset)
         render_batch_id = uuid.uuid4().hex
         style_prompt = ""
+        blueprint_prompt_notes = _compose_build_studio_prompt(
+            notes=notes,
+            mode="blueprint",
+            project_name=project_name,
+            property_type=property_type,
+            style=style,
+            description=description,
+            lot_size=lot_size,
+            zoning=zoning,
+            floors=number_of_floors,
+            floor="first",
+            blueprint_constrained=bool(blueprint_image_base64 or stored_blueprint_url),
+        )
 
         payload = {
             "mode": "blueprint",
+            "blueprint_floor": "first",
+            "floor": "first",
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
@@ -6887,7 +7220,7 @@ def generate_build_blueprint():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": notes,
+            "prompt_notes": blueprint_prompt_notes,
             "special_features": notes,
             "square_feet_target": _normalize_int(square_feet),
             "stories": number_of_floors,
@@ -6899,7 +7232,9 @@ def generate_build_blueprint():
             "guidance": 6.0,
             "width": 768,
             "height": 768,
+            "negative_prompt": _build_studio_negative_prompt("blueprint"),
         }
+        payload.update(_build_studio_quality_controls("blueprint"))
 
         if blueprint_image_base64:
             payload["image_base64"] = blueprint_image_base64
@@ -7108,7 +7443,7 @@ def generate_full_build():
         project_name = (data.get("project_name") or "").strip()
         property_type = (data.get("property_type") or "single_family").strip()
         style = (data.get("style") or "modern_farmhouse").strip()
-        blueprint_style = (data.get("blueprint_style") or "technical_blueprint").strip()
+        blueprint_style = _normalize_build_blueprint_style(data.get("blueprint_style"))
         description = (data.get("description") or "").strip()
         lot_size = (data.get("lot_size") or "").strip()
         lot_count = _normalize_int(data.get("lot_count"))
@@ -7126,6 +7461,22 @@ def generate_full_build():
         site_notes = notes
         if lot_count and lot_count > 1:
             site_notes = f"{notes}. Plan for {lot_count} buildable lots across the site.".strip(". ").strip()
+
+        base_build_prompt_notes = _compose_build_studio_prompt(
+            notes=site_notes,
+            mode="blueprint_first_floor",
+            project_name=project_name,
+            property_type=property_type,
+            style=style,
+            description=description,
+            lot_size=lot_size,
+            zoning=zoning,
+            location=location,
+            floors=number_of_floors,
+            floor="first",
+            lot_count=lot_count,
+            blueprint_constrained=bool(data.get("blueprint_url") or data.get("site_plan_url")),
+        )
 
         if SCOPE_ENGINE_URL and description:
             try:
@@ -7250,7 +7601,8 @@ def generate_full_build():
         # --------------------------------------------------
         blueprint_payload = {
             "mode": "blueprint",
-            "blueprint_floor": "first" if number_of_floors and number_of_floors >= 2 else "",
+            "blueprint_floor": "first",
+            "floor": "first",
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
@@ -7259,7 +7611,7 @@ def generate_full_build():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": site_notes,
+            "prompt_notes": base_build_prompt_notes,
             "special_features": f"{lot_count} total lots" if lot_count and lot_count > 1 else notes,
             "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
             "stories": number_of_floors,
@@ -7271,7 +7623,9 @@ def generate_full_build():
             "guidance": 6.8,
             "strength": 0.30,
             "count": 1,
+            "negative_prompt": _build_studio_negative_prompt("blueprint_first_floor"),
         }
+        blueprint_payload.update(_build_studio_quality_controls("blueprint_first_floor"))
 
         if blueprint_image_base64:
             blueprint_payload["image_base64"] = blueprint_image_base64
@@ -7327,6 +7681,7 @@ def generate_full_build():
                 blueprint_floor2_payload = {
                     "mode": "blueprint",
                     "blueprint_floor": "second",
+                    "floor": "second",
                     "project_name": project_name,
                     "property_type": property_type,
                     "style": style,
@@ -7335,9 +7690,24 @@ def generate_full_build():
                     "build_description": description,
                     "lot_size": lot_size,
                     "zoning": zoning,
-                    "prompt_notes": (
-                        f"{site_notes}. Generate the second floor / upper level plan with bedrooms, bathrooms, "
-                        "laundry, and hallway circulation. Must be a distinct upper-level layout, not a copy of the first floor."
+                    "prompt_notes": _compose_build_studio_prompt(
+                        notes=(
+                            f"{site_notes}. Generate the second floor / upper level plan with bedrooms, bathrooms, "
+                            "laundry, and hallway circulation. Use the first floor only for stair and bearing-wall alignment. "
+                            "Must be a distinct upper-level layout, not a copy of the first floor."
+                        ),
+                        mode="blueprint_second_floor",
+                        project_name=project_name,
+                        property_type=property_type,
+                        style=style,
+                        description=description,
+                        lot_size=lot_size,
+                        zoning=zoning,
+                        location=location,
+                        floors=number_of_floors,
+                        floor="second",
+                        lot_count=lot_count,
+                        blueprint_constrained=True,
                     ),
                     "special_features": (
                         "upper level bedrooms, bathrooms, laundry, hallway, secondary living spaces"
@@ -7352,9 +7722,11 @@ def generate_full_build():
                     "height": 1024,
                     "steps": 30,
                     "guidance": 6.8,
-                    "strength": 0.30,
+                    "strength": 0.24,
                     "count": 1,
+                    "negative_prompt": _build_studio_negative_prompt("blueprint_second_floor"),
                 }
+                blueprint_floor2_payload.update(_build_studio_quality_controls("blueprint_second_floor"))
 
                 current_app.logger.warning(f"FULL BUILD BLUEPRINT FLOOR 2 PAYLOAD: {blueprint_floor2_payload}")
 
@@ -7405,6 +7777,7 @@ def generate_full_build():
                 blueprint_floor3_payload = {
                     "mode": "blueprint",
                     "blueprint_floor": "third",
+                    "floor": "third",
                     "project_name": project_name,
                     "property_type": property_type,
                     "style": style,
@@ -7413,10 +7786,24 @@ def generate_full_build():
                     "build_description": description,
                     "lot_size": lot_size,
                     "zoning": zoning,
-                    "prompt_notes": (
-                        f"{site_notes}. Generate the third floor / top level plan. "
-                        "Must be a distinct upper-level layout that aligns stairs and stacked walls "
-                        "with the lower floors, not a copy of the first or second floor."
+                    "prompt_notes": _compose_build_studio_prompt(
+                        notes=(
+                            f"{site_notes}. Generate the third floor / top level plan. "
+                            "Must be a distinct upper-level layout that aligns stairs and stacked walls "
+                            "with the lower floors, not a copy of the first or second floor."
+                        ),
+                        mode="blueprint_third_floor",
+                        project_name=project_name,
+                        property_type=property_type,
+                        style=style,
+                        description=description,
+                        lot_size=lot_size,
+                        zoning=zoning,
+                        location=location,
+                        floors=number_of_floors,
+                        floor="third",
+                        lot_count=lot_count,
+                        blueprint_constrained=True,
                     ),
                     "special_features": (
                         "third floor top level bedrooms bathrooms flex loft storage stair continuation"
@@ -7431,9 +7818,11 @@ def generate_full_build():
                     "height": 1024,
                     "steps": 30,
                     "guidance": 6.8,
-                    "strength": 0.30,
+                    "strength": 0.24,
                     "count": 1,
+                    "negative_prompt": _build_studio_negative_prompt("blueprint_third_floor"),
                 }
+                blueprint_floor3_payload.update(_build_studio_quality_controls("blueprint_third_floor"))
 
                 current_app.logger.warning(f"FULL BUILD BLUEPRINT FLOOR 3 PAYLOAD: {blueprint_floor3_payload}")
 
@@ -7474,31 +7863,29 @@ def generate_full_build():
         # --------------------------------------------------
         has_site_context_reference = bool(exterior_image_base64 or reference_image_url)
         has_real_exterior_reference = preserve_existing_exterior and has_site_context_reference
-        exterior_ref_b64 = exterior_image_base64 if has_real_exterior_reference else blueprint_primary_b64
-        exterior_ref_url = "" if exterior_ref_b64 else (reference_image_url if has_real_exterior_reference else blueprint_primary_url)
+        exterior_ref_b64 = exterior_image_base64 if has_real_exterior_reference else ""
+        exterior_ref_url = "" if exterior_ref_b64 else (reference_image_url if has_real_exterior_reference else "")
         exterior_source_kind = (
             "existing_house_reference"
             if has_real_exterior_reference
-            else ("site_context_blueprint" if has_site_context_reference else "blueprint_fallback")
+            else ("site_context_text_prompt" if has_site_context_reference else "text_prompt")
         )
 
-        if not exterior_ref_b64 and not exterior_ref_url:
-            exterior_ref_b64 = blueprint_primary_b64
-            exterior_ref_url = "" if exterior_ref_b64 else blueprint_primary_url
-
-        if has_real_exterior_reference:
-            exterior_prompt_notes = (
-                site_notes
-                + " Preserve the supplied exterior reference house massing, roofline, window rhythm, entry or garage placement, "
-                + "overall proportions, floor count, and camera relationship. Apply the requested style as a renovation concept without replacing it with a different house."
-            )
-        else:
-            exterior_prompt_notes = (
-                site_notes
-                + " Use the blueprint as the architectural layout, footprint, floor count, massing, roofline, and structure constraint. "
-                + "Generate a realistic developer-grade exterior rendering that matches the blueprint. "
-                + "If a lot or listing photo was supplied, treat it only as site and neighborhood context; do not return the raw lot photo."
-            )
+        exterior_prompt_notes = _compose_build_studio_prompt(
+            notes=site_notes,
+            mode="exterior_front",
+            project_name=project_name,
+            property_type=property_type,
+            style=style,
+            description=description,
+            lot_size=lot_size,
+            zoning=zoning,
+            location=location,
+            floors=number_of_floors,
+            lot_count=lot_count,
+            preserve_reference=has_real_exterior_reference,
+            blueprint_constrained=not has_real_exterior_reference,
+        )
 
         exterior_payload = {
             "mode": "exterior_front",
@@ -7526,14 +7913,19 @@ def generate_full_build():
             "exterior_image_url": reference_image_url if has_real_exterior_reference and not exterior_image_base64 else "",
             "reference_image_url": reference_image_url if has_real_exterior_reference and not exterior_image_base64 else "",
             "preserve_existing_exterior": has_real_exterior_reference,
-            "preserve_structure": True,
+            "preserve_structure": has_real_exterior_reference,
+            "blueprint_reference_url": blueprint_primary_url,
+            "blueprint_floor2_reference_url": blueprint_floor2_primary_url,
+            "blueprint_floor3_reference_url": blueprint_floor3_primary_url,
             "width": 1024,
             "height": 1024,
             "steps": 28,
             "guidance": 7.0,
-            "strength": 0.34 if has_real_exterior_reference else 0.48,
+            "strength": 0.34 if has_real_exterior_reference else 0.22,
             "count": 1,
+            "negative_prompt": _build_studio_negative_prompt("exterior_front"),
         }
+        exterior_payload.update(_build_studio_quality_controls("exterior_front"))
 
         current_app.logger.warning(f"FULL BUILD EXTERIOR PAYLOAD: {exterior_payload}")
 
@@ -7590,10 +7982,22 @@ def generate_full_build():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": (
-                "Rear / backyard view of the home. Show the back of the building with patio, deck, or outdoor living space. "
-                + "Preserve the supplied reference house massing, roofline, floor count, overall proportions, and camera relationship when a reference photo is available. "
-                + "Use the blueprint only as a fallback massing reference."
+            "prompt_notes": _compose_build_studio_prompt(
+                notes=(
+                    "Rear / backyard view of the home. Show the back of the building with patio, deck, or outdoor living space."
+                ),
+                mode="exterior_rear",
+                project_name=project_name,
+                property_type=property_type,
+                style=style,
+                description=description,
+                lot_size=lot_size,
+                zoning=zoning,
+                location=location,
+                floors=number_of_floors,
+                lot_count=lot_count,
+                preserve_reference=has_real_exterior_reference,
+                blueprint_constrained=not has_real_exterior_reference,
             ),
             "special_features": "rear view, backyard, patio, deck, outdoor living space",
             "stories": number_of_floors,
@@ -7605,14 +8009,19 @@ def generate_full_build():
             "exterior_image_url": reference_image_url if has_real_exterior_reference and not exterior_image_base64 else "",
             "reference_image_url": reference_image_url if has_real_exterior_reference and not exterior_image_base64 else "",
             "preserve_existing_exterior": has_real_exterior_reference,
-            "preserve_structure": True,
+            "preserve_structure": has_real_exterior_reference,
+            "blueprint_reference_url": blueprint_primary_url,
+            "blueprint_floor2_reference_url": blueprint_floor2_primary_url,
+            "blueprint_floor3_reference_url": blueprint_floor3_primary_url,
             "width": 1024,
             "height": 1024,
             "steps": 30,
             "guidance": 7.0,
-            "strength": 0.34 if has_real_exterior_reference else 0.48,
+            "strength": 0.34 if has_real_exterior_reference else 0.22,
             "count": 1,
+            "negative_prompt": _build_studio_negative_prompt("exterior_rear"),
         }
+        exterior_back_payload.update(_build_studio_quality_controls("exterior_rear"))
 
         exterior_back_url = ""
         exterior_back_meta = {}
@@ -8072,6 +8481,20 @@ def generate_build_room():
         notes = _clean_str(data.get("notes"))
         room_type = _clean_str(data.get("room_type")) or "kitchen"
         floor = _clean_str(data.get("floor")) or "main"
+        room_prompt_notes = _compose_build_studio_prompt(
+            notes=notes,
+            mode="interior_room",
+            project_name=project_name,
+            property_type=property_type,
+            style=style,
+            description=description,
+            lot_size=lot_size,
+            zoning=zoning,
+            location=location,
+            room_type=room_type,
+            floor=floor,
+            blueprint_constrained=True,
+        )
 
         payload = {
             "mode": "interior",
@@ -8084,7 +8507,7 @@ def generate_build_room():
             "zoning": zoning,
             "room_type": room_type,
             "floor": floor,
-            "prompt_notes": notes,
+            "prompt_notes": room_prompt_notes,
             "special_features": notes,
             "image_base64": blueprint_b64,
             "image_url": "",
@@ -8094,7 +8517,9 @@ def generate_build_room():
             "strength": 0.42,
             "width": 768,
             "height": 768,
+            "negative_prompt": _build_studio_negative_prompt("interior_room"),
         }
+        payload.update(_build_studio_quality_controls("interior_room"))
 
         engine_json = _post_renovation_engine_json(
             "/v1/build_concept",
@@ -8295,6 +8720,19 @@ def generate_build_studio_upload():
         # ENGINE PAYLOAD
         # -----------------------------
         image_base64 = base64.b64encode(raw).decode("utf-8")
+        upload_prompt_notes = _compose_build_studio_prompt(
+            notes=notes,
+            mode="exterior_front",
+            project_name=project_name,
+            property_type=property_type,
+            style=style,
+            description=description,
+            lot_size=lot_size,
+            zoning=zoning,
+            location=location,
+            floors=number_of_floors,
+            preserve_reference=True,
+        )
         payload = {
             "mode": "exterior_front",
             "exterior_view": "front",
@@ -8305,7 +8743,7 @@ def generate_build_studio_upload():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": notes + " Preserve the supplied exterior reference house massing, roofline, window rhythm, floor count, entry or garage placement, overall proportions, and camera relationship.",
+            "prompt_notes": upload_prompt_notes,
             "special_features": notes,
             "stories": number_of_floors,
             "number_of_floors": number_of_floors,
@@ -8322,7 +8760,9 @@ def generate_build_studio_upload():
             "guidance": 7.0,
             "strength": 0.34,
             "count": 1,
+            "negative_prompt": _build_studio_negative_prompt("exterior_front"),
         }
+        payload.update(_build_studio_quality_controls("exterior_front"))
 
         seed = request.form.get("seed")
         if seed not in (None, "", "None"):
@@ -9791,6 +10231,14 @@ def design_studio_generate():
             or "residential property"
         )
         unique_seed = random.randint(1, 2_147_483_647)
+        design_prompt_notes = _compose_design_studio_prompt(
+            notes=notes,
+            preset=preset,
+            mode=mode,
+            room_type=room_type,
+            property_type=property_type,
+            rehab_level=rehab_level,
+        )
 
         payload = {
             "preset": preset,
@@ -9800,8 +10248,8 @@ def design_studio_generate():
             "rehab_level": rehab_level,
             "property_type": property_type,
             "design_style": preset,
-            "desired_updates": notes,
-            "prompt_notes": notes,
+            "desired_updates": design_prompt_notes,
+            "prompt_notes": design_prompt_notes,
             "keep_layout": True,
             "preserve_structure": True,
             "image_base64": image_base64,
@@ -9813,7 +10261,9 @@ def design_studio_generate():
             "width": 1024,
             "height": 1024,
             "seed": unique_seed,
+            "negative_prompt": _INTERIOR_NEGATIVE_PROMPT,
         }
+        payload.update(_build_studio_quality_controls("interior"))
 
         engine_json = _post_renovation_engine_json(
             "/v1/renovate",

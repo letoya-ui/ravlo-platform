@@ -87,10 +87,16 @@ def _normalize_photo_list(value) -> list[str]:
         "full", "full_url", "fullSize", "full_size",
         "original", "original_url",
         "large", "large_url",
+        "medium", "medium_url",
+        "highRes", "high_res", "highResUrl", "high_res_url",
         "imgSrc", "img_src",
+        "imageUrl", "image_url", "imageURL",
+        "photoUrl", "photo_url", "photoURL",
         "primaryPhoto", "primary_photo", "primaryPhotoUrl", "primary_photo_url",
         "mainImage", "main_image", "listingImage", "listing_image",
         "coverImage", "cover_image",
+        "picture", "pictureUrl", "picture_url",
+        "secure_url", "public_url", "cdn_url",
         "url", "src", "href",
         "photo", "image",
         "thumbnail",
@@ -99,8 +105,16 @@ def _normalize_photo_list(value) -> list[str]:
     # Keys that hold nested collections of photos.
     _NESTED_COLLECTION_KEYS = (
         "photos", "images", "media", "gallery", "variants",
+        "photoUrls", "photo_urls",
+        "imageUrls", "image_urls",
+        "photoLinks", "photo_links",
+        "mediaUrls", "media_urls",
         "listingPhotos", "listing_photos",
+        "listingImages", "listing_images",
         "propertyPhotos", "property_photos",
+        "propertyImages", "property_images",
+        "carouselPhotos", "carousel_photos",
+        "galleryUrls", "gallery_urls",
         "extra_images",
     )
 
@@ -368,18 +382,20 @@ def _saved_property_media(saved_property):
     if not saved_property:
         return {"primary_photo": None, "gallery": []}
 
-    gallery = (
+    raw_gallery = (
         getattr(saved_property, "photo_gallery", None)
         or getattr(saved_property, "listing_photos_json", None)
         or getattr(saved_property, "photos_json", None)
         or []
     )
 
-    primary = (
+    raw_primary = (
         getattr(saved_property, "primary_photo", None)
         or getattr(saved_property, "image_url", None)
-        or (gallery[0] if gallery else None)
     )
+
+    gallery = _normalize_photo_urls(raw_primary, raw_gallery)
+    primary = _resolve_photo(raw_primary, gallery)
 
     return {
         "primary_photo": primary,
@@ -398,12 +414,25 @@ def _extract_listing_photos_from_payload(payload) -> list[str]:
         payload.get("media"),
         payload.get("gallery"),
         payload.get("image_url"),
+        payload.get("imageUrl"),
         payload.get("primary_photo"),
+        payload.get("primaryPhoto"),
+        payload.get("primaryPhotoUrl"),
         payload.get("photo"),
+        payload.get("photo_url"),
+        payload.get("photoUrl"),
         payload.get("thumbnail"),
         payload.get("photo_links"),
+        payload.get("photoLinks"),
         payload.get("image_urls"),
+        payload.get("imageUrls"),
+        payload.get("property_photos"),
+        payload.get("propertyPhotos"),
+        payload.get("listing_images"),
+        payload.get("listingImages"),
+        payload.get("raw"),
         (payload.get("workspace_analysis") or {}).get("listing_photos") if isinstance(payload.get("workspace_analysis"), dict) else None,
+        (payload.get("workspace_analysis") or {}).get("photos") if isinstance(payload.get("workspace_analysis"), dict) else None,
         (payload.get("workspace_analysis") or {}).get("image_url") if isinstance(payload.get("workspace_analysis"), dict) else None,
     )
 

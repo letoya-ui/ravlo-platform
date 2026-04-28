@@ -69,9 +69,9 @@
             <select id="blueprint_style" name="blueprint_style">
               <option value="technical_blueprint" {{ 'selected' if blueprint_style_value == 'technical_blueprint' else '' }}>Technical Blueprint</option>
               <option value="permit_set" {{ 'selected' if blueprint_style_value == 'permit_set' else '' }}>Permit Set</option>
-              <option value="developer_marketing" {{ 'selected' if blueprint_style_value == 'developer_marketing' else '' }}>Developer Marketing</option>
+              <option value="builder_plan" {{ 'selected' if blueprint_style_value == 'builder_plan' else '' }}>Builder Plan</option>
+              <option value="schematic_plan" {{ 'selected' if blueprint_style_value == 'schematic_plan' else '' }}>Schematic Plan</option>
               <option value="monochrome_minimal" {{ 'selected' if blueprint_style_value == 'monochrome_minimal' else '' }}>Monochrome Minimal</option>
-              <option value="annotated_presentation" {{ 'selected' if blueprint_style_value == 'annotated_presentation' else '' }}>Annotated Presentation</option>
             </select>
           </div>
           <div class="field">
@@ -171,28 +171,28 @@
   <section class="result-stack">
     <article class="ravlo-card pad">
       <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint - First Floor</h2></div><strong id="blueprintStatus">{{ 'Generated' if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) else 'Waiting' }}</strong></div>
-      <div class="result-media" id="blueprintMedia">{% if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) %}<img src="{{ blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') }}" alt="First floor blueprint">{% else %}<div class="empty-state-inline">First floor blueprint will appear here.</div>{% endif %}</div>
+      <div class="result-media plan-media" id="blueprintMedia">{% if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) %}<img src="{{ blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') }}" alt="First floor blueprint">{% else %}<div class="empty-state-inline">First floor blueprint will appear here.</div>{% endif %}</div>
     </article>
 
     <article class="ravlo-card pad">
       <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint - Second Floor</h2></div><strong id="floor2Status">{{ 'Generated' if blueprint_floor2_result and blueprint_floor2_result.get('image_url') else ('Skipped' if blueprint_floor2_result and blueprint_floor2_result.get('skipped') else 'Waiting') }}</strong></div>
-      <div class="result-media" id="floor2Media">{% if blueprint_floor2_result and blueprint_floor2_result.get('image_url') %}<img src="{{ blueprint_floor2_result.get('image_url') }}" alt="Second floor blueprint">{% elif blueprint_floor2_result and blueprint_floor2_result.get('skipped') %}<div class="empty-state-inline">Single-story project - no second floor blueprint.</div>{% else %}<div class="empty-state-inline">Second floor blueprint will appear here.</div>{% endif %}</div>
+      <div class="result-media plan-media" id="floor2Media">{% if blueprint_floor2_result and blueprint_floor2_result.get('image_url') %}<img src="{{ blueprint_floor2_result.get('image_url') }}" alt="Second floor blueprint">{% elif blueprint_floor2_result and blueprint_floor2_result.get('skipped') %}<div class="empty-state-inline">Single-story project - no second floor blueprint.</div>{% else %}<div class="empty-state-inline">Second floor blueprint will appear here.</div>{% endif %}</div>
     </article>
 
     <article class="ravlo-card pad">
       <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint - Third Floor</h2></div><strong id="floor3Status">{{ 'Generated' if blueprint_floor3_result and blueprint_floor3_result.get('image_url') else ('Skipped' if blueprint_floor3_result and blueprint_floor3_result.get('skipped') else 'Waiting') }}</strong></div>
-      <div class="result-media" id="floor3Media">{% if blueprint_floor3_result and blueprint_floor3_result.get('image_url') %}<img src="{{ blueprint_floor3_result.get('image_url') }}" alt="Third floor blueprint">{% elif blueprint_floor3_result and blueprint_floor3_result.get('skipped') %}<div class="empty-state-inline">Projects under three floors - no third floor blueprint.</div>{% else %}<div class="empty-state-inline">Third floor blueprint will appear here.</div>{% endif %}</div>
+      <div class="result-media plan-media" id="floor3Media">{% if blueprint_floor3_result and blueprint_floor3_result.get('image_url') %}<img src="{{ blueprint_floor3_result.get('image_url') }}" alt="Third floor blueprint">{% elif blueprint_floor3_result and blueprint_floor3_result.get('skipped') %}<div class="empty-state-inline">Projects under three floors - no third floor blueprint.</div>{% else %}<div class="empty-state-inline">Third floor blueprint will appear here.</div>{% endif %}</div>
     </article>
 
     <article class="ravlo-card pad">
       <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Exterior - Front</h2></div><strong id="exteriorStatus">{{ 'Generated' if exterior_result and exterior_result.get('image_url') else 'Waiting' }}</strong></div>
-      <div class="result-media" id="exteriorMedia">{% if exterior_result and exterior_result.get('image_url') %}<img src="{{ exterior_result.get('image_url') }}" alt="Exterior front">{% else %}<div class="empty-state-inline">Front exterior concept will appear here.</div>{% endif %}</div>
+      <div class="result-media photo-media" id="exteriorMedia">{% if exterior_result and exterior_result.get('image_url') %}<img src="{{ exterior_result.get('image_url') }}" alt="Exterior front">{% else %}<div class="empty-state-inline">Front exterior concept will appear here.</div>{% endif %}</div>
     </article>
 
     <article class="ravlo-card pad">
       {% set exterior_back = build_project.get('exterior_back', {}) or {} if build_project is defined else {} %}
       <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Exterior - Back</h2></div><strong id="exteriorBackStatus">{{ 'Generated' if exterior_back and exterior_back.get('image_url') else 'Waiting' }}</strong></div>
-      <div class="result-media" id="exteriorBackMedia">{% if exterior_back and exterior_back.get('image_url') %}<img src="{{ exterior_back.get('image_url') }}" alt="Exterior back">{% else %}<div class="empty-state-inline">Rear exterior concept will appear here.</div>{% endif %}</div>
+      <div class="result-media photo-media" id="exteriorBackMedia">{% if exterior_back and exterior_back.get('image_url') %}<img src="{{ exterior_back.get('image_url') }}" alt="Exterior back">{% else %}<div class="empty-state-inline">Rear exterior concept will appear here.</div>{% endif %}</div>
     </article>
   </section>
 
@@ -219,7 +219,8 @@
 .field input,.field select,.field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
 .check-field{display:flex!important;align-items:center;gap:10px;margin-top:2px;color:#dbe6f5;font-weight:700}.check-field input{width:18px!important;height:18px;padding:0!important}
 .result-meta{display:grid;gap:12px}.result-meta div{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
-.result-media{border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.03);min-height:320px;display:flex;align-items:center;justify-content:center;overflow:hidden}.result-media img{width:100%;height:100%;object-fit:cover;display:block}
+.result-media{border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.03);min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px;aspect-ratio:16/10}.result-media.plan-media{aspect-ratio:1/1;background:rgba(242,246,250,.92)}.result-media.photo-media{aspect-ratio:16/10;background:rgba(5,10,18,.65)}.result-media img{width:100%;height:100%;object-fit:contain;display:block;border-radius:14px}.plan-media .empty-state-inline{color:#233044}
+.section-head>strong{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:#dbeafe;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
 .analysis-note{margin-top:16px;padding:16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .cta-row{display:flex;gap:12px;flex-wrap:wrap}
 .seed-thumb-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
