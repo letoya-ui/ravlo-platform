@@ -2514,12 +2514,18 @@ def upload_condition(cond_id):
 # =========================================================
 
 COMMERCIAL_ASSET_LABELS = {
-    "any": "All Asset Types",
+    "any": "All Property Types",
+    "single_family": "Single Family",
+    "multi_family": "Multi Family",
+    "condo": "Condo",
+    "townhome": "Townhome",
+    "land": "Land",
+    "manufactured": "Manufactured",
+    "commercial": "Commercial",
     "office": "Office",
     "retail": "Retail",
     "restaurant": "Restaurant",
     "mixed_use": "Mixed Use",
-    "multifamily": "Multifamily",
     "industrial": "Industrial",
     "warehouse": "Warehouse",
     "hospitality": "Hospitality",
@@ -2529,6 +2535,24 @@ COMMERCIAL_ASSET_LABELS = {
 
 def _normalize_asset_type(value):
     value = (value or "any").strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "all": "any",
+        "sfr": "single_family",
+        "single": "single_family",
+        "single_family_home": "single_family",
+        "multi": "multi_family",
+        "multifamily": "multi_family",
+        "multi_family_home": "multi_family",
+        "duplex": "multi_family",
+        "triplex": "multi_family",
+        "quadplex": "multi_family",
+        "townhouse": "townhome",
+        "vacant_land": "land",
+        "lot": "land",
+        "mobile_home": "manufactured",
+        "mobile": "manufactured",
+    }
+    value = aliases.get(value, value)
     return value if value in COMMERCIAL_ASSET_LABELS else "any"
 
 
@@ -2558,11 +2582,17 @@ def _property_matches_asset_type(prop, asset_type):
     ).lower()
 
     aliases = {
+        "single_family": ("single family", "single-family", "sfr", "detached"),
+        "multi_family": ("multifamily", "multi family", "multi-family", "apartment", "duplex", "triplex", "fourplex"),
+        "condo": ("condo", "condominium"),
+        "townhome": ("townhome", "townhouse", "town house"),
+        "land": ("land", "lot", "vacant", "acre", "parcel"),
+        "manufactured": ("manufactured", "mobile home", "mobile"),
+        "commercial": ("commercial",),
         "office": ("office", "coworking", "workspace", "commercial office"),
         "retail": ("retail", "storefront", "shopping", "boutique", "strip center"),
         "restaurant": ("restaurant", "cafe", "bar", "dining", "food service", "kitchen"),
         "mixed_use": ("mixed use", "mixed-use", "live/work", "retail residential"),
-        "multifamily": ("multifamily", "multi family", "apartment", "duplex", "triplex", "fourplex"),
         "industrial": ("industrial", "flex", "manufacturing", "distribution"),
         "warehouse": ("warehouse", "distribution", "storage"),
         "hospitality": ("hotel", "hospitality", "motel", "inn", "lodging"),
