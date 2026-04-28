@@ -110,6 +110,7 @@ _SCHEMA_COMPAT_TABLES = [
     "vip_design_projects",
     "vip_design_annotations",
     "vip_team_members",
+    "insurance_quote_requests",
     "realtor_listing_presentations",
 ]
 

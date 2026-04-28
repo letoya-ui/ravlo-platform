@@ -67,8 +67,9 @@ class VIPProfile(VIPBaseModel):
     budgets       = relationship("VIPBudget",             back_populates="vip_profile", lazy=True)
     suggestions   = relationship("VIPAssistantSuggestion", back_populates="vip_profile", lazy=True)
     actions       = relationship("VIPAssistantAction",    back_populates="vip_profile", lazy=True)
-    notifications = relationship("VIPNotification",       back_populates="vip_profile", lazy=True)
-    team_members  = relationship("VIPTeamMember",         back_populates="vip_profile", lazy=True)
+    notifications  = relationship("VIPNotification",       back_populates="vip_profile", lazy=True)
+    team_members   = relationship("VIPTeamMember",         back_populates="vip_profile", lazy=True)
+    quote_requests = relationship("InsuranceQuoteRequest", back_populates="vip_profile", lazy=True)
 
     # ✅ FIXED — back_populates on both sides, overlaps silences the warning
     design_projects = relationship(
@@ -250,6 +251,39 @@ class VIPNotification(VIPBaseModel):
 # ---------------------------------------------------------
 # DESIGN STUDIO
 # ---------------------------------------------------------
+class InsuranceQuoteRequest(VIPBaseModel):
+    __tablename__ = "insurance_quote_requests"
+
+    vip_profile_id = Column(Integer, ForeignKey("vip_profiles.id"), nullable=False)
+
+    # Client info
+    client_name    = Column(String(255), nullable=False)
+    client_email   = Column(String(255), nullable=True)
+    client_phone   = Column(String(50),  nullable=True)
+    client_dob     = Column(String(20),  nullable=True)
+    drivers_license = Column(String(100), nullable=True)
+    client_address = Column(String(500), nullable=True)
+    current_carrier = Column(String(255), nullable=True)
+
+    # Insurance details
+    insurance_line = Column(String(50),  nullable=False, default="auto")
+    details_json   = Column(Text,        nullable=True)
+    declarations_file = Column(String(500), nullable=True)
+
+    # Workflow
+    status         = Column(String(30),  nullable=False, default="new")
+    followup_notes = Column(Text,        nullable=True)
+    followup_date  = Column(DateTime,    nullable=True)
+
+    # Source tracking
+    source         = Column(String(50),  nullable=True, default="dashboard")
+
+    vip_profile = relationship("VIPProfile", back_populates="quote_requests")
+
+    def __repr__(self):
+        return f"<InsuranceQuoteRequest {self.id} - {self.client_name}>"
+
+
 class VIPDesignProject(VIPBaseModel):
     __tablename__ = "vip_design_projects"
 

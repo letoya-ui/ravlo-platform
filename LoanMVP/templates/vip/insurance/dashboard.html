@@ -27,7 +27,11 @@
 
   <a href="{{ url_for('vip.insurance_new_quote', line='homeowners') }}" class="ravlo-btn primary sm">
     <i class="lucide lucide-file-plus"></i>
-    <span>New Quote</span>
+    <span>New Quote Request</span>
+  </a>
+  <a href="{{ url_for('vip.insurance_quote_requests') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-inbox"></i>
+    <span>Quote Requests</span>
   </a>
   <a href="{{ url_for('vip.insurance_clients') }}" class="ravlo-btn ghost sm">
     <i class="lucide lucide-users"></i>
@@ -76,7 +80,11 @@
       <div class="combo-hero-actions">
         <a href="{{ url_for('vip.insurance_new_quote', line='homeowners') }}" class="ravlo-btn primary">
           <i class="lucide lucide-file-plus"></i>
-          <span>Create Quote</span>
+          <span>New Quote Request</span>
+        </a>
+        <a href="{{ url_for('vip.insurance_quote_requests') }}" class="ravlo-btn ghost">
+          <i class="lucide lucide-inbox"></i>
+          <span>Quote Requests</span>
         </a>
         <a href="{{ url_for('vip.insurance_compose_email') }}" class="ravlo-btn ghost">
           <i class="lucide lucide-mail"></i>
@@ -421,6 +429,39 @@
         {% endif %}
       </section>
 
+      <section class="combo-panel">
+        <div class="combo-section-head">
+          <div>
+            <span class="combo-section-kicker">Insurance</span>
+            <h3>Recent Quote Requests</h3>
+          </div>
+          <a href="{{ url_for('vip.insurance_quote_requests') }}" class="ravlo-btn ghost sm">
+            <i class="lucide lucide-inbox"></i>
+            <span>View All</span>
+          </a>
+        </div>
+
+        {% if recent_quote_requests %}
+        <div class="combo-request-list">
+          {% for qr in recent_quote_requests[:5] %}
+          <article class="combo-request-item">
+            <div>
+              <strong>{{ qr.client_name }}</strong>
+              <span>{{ qr.insurance_line|replace('_', ' ')|title }}</span>
+              {% if qr.client_phone %}<small>{{ qr.client_phone }}</small>{% endif %}
+            </div>
+            <div class="combo-request-meta">
+              <span class="combo-status status-{{ qr.status }}">{{ qr.status|replace('_', ' ')|title }}</span>
+              <small>{{ qr.created_at.strftime('%b %d') if qr.created_at else '' }}</small>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="combo-empty">No quote requests yet. New submissions from the form or public link will appear here.</div>
+        {% endif %}
+      </section>
+
       {% if is_combined %}
       <section class="combo-panel">
         <div class="combo-section-head">
@@ -472,6 +513,27 @@
     </main>
 
     <aside class="combo-work-side">
+      <section class="combo-panel compact">
+        <div class="combo-section-head">
+          <div>
+            <span class="combo-section-kicker">Public Link</span>
+            <h3>Quote Request Form</h3>
+          </div>
+        </div>
+        <p style="color:#94a7bb; font-size:0.85rem; margin-bottom:10px;">Share this link on Facebook or social media so clients can submit quote requests directly.</p>
+        <div class="combo-copy-fields">
+          <label>
+            Public Form URL
+            <input type="text" value="{{ public_form_url }}" readonly id="publicFormUrl">
+          </label>
+        </div>
+        <button type="button" class="ravlo-btn primary sm" style="margin-top:8px; width:100%;"
+                onclick="navigator.clipboard.writeText(document.getElementById('publicFormUrl').value); this.textContent='Link Copied!';">
+          <i class="lucide lucide-copy"></i>
+          <span>Copy Link</span>
+        </button>
+      </section>
+
       {% if is_combined %}
       <section class="combo-panel compact">
         <div class="combo-section-head">
@@ -1213,6 +1275,26 @@
   .status-sent {
     color: #cfe7ff;
     background: rgba(99, 210, 255, 0.14);
+  }
+
+  .status-new {
+    color: #93c5fd;
+    background: rgba(96, 165, 250, 0.14);
+  }
+
+  .status-reviewed {
+    color: #fde68a;
+    background: rgba(251, 191, 36, 0.14);
+  }
+
+  .status-quoted {
+    color: #c4b5fd;
+    background: rgba(167, 139, 250, 0.14);
+  }
+
+  .status-closed {
+    color: #86efac;
+    background: rgba(74, 222, 128, 0.14);
   }
 
   .combo-listing-table {
