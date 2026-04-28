@@ -3,10 +3,11 @@
 {% block title %}Ravlo - {{ header_name }}{% endblock %}
 {% block page_title %}{{ header_name }}{% endblock %}
 {% block page_subline %}
-Insurance, real estate clients, listings, quote requests, and follow-ups in one operating view.
+{% if is_combined %}Insurance, real estate clients, listings, quote requests, and follow-ups in one operating view.{% else %}Insurance quotes, CRM, email composer, and finance tools.{% endif %}
 {% endblock %}
 
 {% block topbar_actions %}
+  {% if is_combined %}
   {% if multi_market %}
   <form method="POST" action="{{ url_for('vip.realtor_market_switch') }}" class="combo-topbar-market">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -22,6 +23,7 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
   {% elif available_markets|length == 1 %}
     <span class="combo-topbar-chip"><i class="lucide lucide-map-pin"></i>{{ available_markets[0] }}</span>
   {% endif %}
+  {% endif %}
 
   <a href="{{ url_for('vip.insurance_new_quote', line='homeowners') }}" class="ravlo-btn primary sm">
     <i class="lucide lucide-file-plus"></i>
@@ -35,10 +37,12 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
     <i class="lucide lucide-receipt"></i>
     <span>Insurance Finance</span>
   </a>
+  {% if is_combined %}
   <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn ghost sm">
     <i class="lucide lucide-house-plus"></i>
     <span>Add Listing</span>
   </a>
+  {% endif %}
   {% if 'ai_pilot' in modules %}
   <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">
     <i class="lucide lucide-sparkles"></i>
@@ -50,7 +54,7 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
 {% block content %}
 {% set agency_name = partner.company or vip_profile.business_name or header_name %}
 {% set brand_logo = partner.logo_url or vip_profile.logo_url %}
-{% set visible_requests = recent_requests if recent_requests else recent_partner_requests %}
+{% set visible_requests = recent_requests if recent_requests else (recent_partner_requests if recent_partner_requests is defined else []) %}
 
 <div class="combo-dashboard-page">
   <section class="combo-hero-panel">
@@ -61,12 +65,12 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
       </div>
       <h2>{{ agency_name }}</h2>
       <p>
-        A dual-licensed workspace for moving a client from first conversation to property decision, coverage quote,
-        follow-up, and closing activity without splitting the work across disconnected dashboards.
+        {% if is_combined %}A dual-licensed workspace for moving a client from first conversation to property decision, coverage quote,
+        follow-up, and closing activity without splitting the work across disconnected dashboards.{% else %}Your insurance workspace — quotes, CRM, email composer, and finance tools in one place.{% endif %}
       </p>
       <div class="combo-role-strip" aria-label="Workspace lanes">
         <span><i class="lucide lucide-shield-check"></i> Insurance</span>
-        <span><i class="lucide lucide-home"></i> Realtor</span>
+        {% if is_combined %}<span><i class="lucide lucide-home"></i> Realtor</span>{% endif %}
         <span><i class="lucide lucide-users"></i> Client pipeline</span>
       </div>
       <div class="combo-hero-actions">
@@ -86,10 +90,12 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
           <i class="lucide lucide-receipt"></i>
           <span>Insurance Finance</span>
         </a>
+        {% if is_combined %}
         <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn ghost">
           <i class="lucide lucide-user-plus"></i>
           <span>Add Realtor Client</span>
         </a>
+        {% endif %}
       </div>
     </div>
 
@@ -118,11 +124,13 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
   </section>
 
   <section class="combo-stat-grid" aria-label="Dashboard summary">
+    {% if is_combined %}
     <article class="combo-stat-card accent-clients">
       <span>Realtor CRM</span>
       <strong>{{ summary.total_clients }}</strong>
       <small>{{ summary.new_leads }} new this week</small>
     </article>
+    {% endif %}
     <article class="combo-stat-card accent-insurance">
       <span>Insurance CRM</span>
       <strong>{{ insurance_crm.total_contacts }}</strong>
@@ -138,6 +146,7 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
       <strong>{{ insurance_stats.bound }}</strong>
       <small>{{ insurance_stats.sent }} sent</small>
     </article>
+    {% if is_combined %}
     <article class="combo-stat-card accent-listings">
       <span>Active Listings</span>
       <strong>{{ summary.active_listings }}</strong>
@@ -148,17 +157,19 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
       <strong>{{ summary.followups_due }}</strong>
       <small>Next 7 days</small>
     </article>
+    {% endif %}
   </section>
 
   <section class="combo-panel">
     <div class="combo-section-head">
       <div>
-        <span class="combo-section-kicker">CRM separation</span>
-        <h3>Separate Client Workspaces</h3>
+        <span class="combo-section-kicker">{% if is_combined %}CRM separation{% else %}Client management{% endif %}</span>
+        <h3>{% if is_combined %}Separate Client Workspaces{% else %}Client Workspaces{% endif %}</h3>
       </div>
     </div>
 
     <div class="combo-crm-grid">
+      {% if is_combined %}
       <article class="combo-crm-card realtor-crm">
         <div class="combo-crm-head">
           <i class="lucide lucide-home"></i>
@@ -185,6 +196,7 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
           <div class="combo-empty">No realtor clients in this CRM scope yet.</div>
         {% endif %}
       </article>
+      {% endif %}
 
       <article class="combo-crm-card insurance-crm">
         <div class="combo-crm-head">
@@ -282,6 +294,7 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
       </div>
     </article>
 
+    {% if is_combined %}
     <article class="combo-lane-panel">
       <div class="combo-section-head">
         <div>
@@ -315,9 +328,10 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
         {% endfor %}
       </div>
     </article>
+    {% endif %}
   </section>
 
-  {% if multi_market and current_market == "All Markets" %}
+  {% if is_combined and multi_market and current_market == "All Markets" %}
   <section class="combo-panel">
     <div class="combo-section-head">
       <div>
@@ -407,6 +421,7 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
         {% endif %}
       </section>
 
+      {% if is_combined %}
       <section class="combo-panel">
         <div class="combo-section-head">
           <div>
@@ -453,9 +468,11 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
           <div class="combo-empty">No listings found for this market.</div>
         {% endif %}
       </section>
+      {% endif %}
     </main>
 
     <aside class="combo-work-side">
+      {% if is_combined %}
       <section class="combo-panel compact">
         <div class="combo-section-head">
           <div>
@@ -505,6 +522,7 @@ Insurance, real estate clients, listings, quote requests, and follow-ups in one 
           </label>
         </div>
       </section>
+      {% endif %}
 
       {% if 'ai_pilot' in modules %}
       <section class="combo-panel compact">

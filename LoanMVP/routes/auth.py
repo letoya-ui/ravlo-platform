@@ -559,7 +559,7 @@ def post_login_redirect():
             vip_profile = VIPProfile.query.filter_by(user_id=current_user.id).first()
             vip_role = (getattr(vip_profile, "role_type", "") or "").strip().lower()
 
-            if vip_role == "insurance" or partner_is_insurance(partner):
+            if vip_role in ("insurance", "insurance_realtor") or partner_is_insurance(partner):
                 return redirect(url_for("vip.insurance_dashboard"))
             if vip_role == "realtor" or partner_is_realtor(partner):
                 return redirect(url_for("vip.realtor_dashboard"))

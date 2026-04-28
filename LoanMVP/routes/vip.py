@@ -571,11 +571,12 @@ def index():
         return redirect(url_for("vip.insurance_dashboard"))
 
     role_map = {
-        "realtor":    "vip.realtor_dashboard",
-        "contractor": "vip.contractor_dashboard",
-        "designer":   "vip.designer_dashboard",
-        "insurance":  "vip.insurance_dashboard",
-        "partner":    "vip.partner_dashboard",
+        "realtor":           "vip.realtor_dashboard",
+        "contractor":        "vip.contractor_dashboard",
+        "designer":          "vip.designer_dashboard",
+        "insurance":         "vip.insurance_dashboard",
+        "insurance_realtor": "vip.insurance_dashboard",
+        "partner":           "vip.partner_dashboard",
     }
     return redirect(url_for(role_map.get(profile.role_type, "vip.partner_dashboard")))
 
@@ -1724,7 +1725,21 @@ def insurance_dashboard():
             .limit(10).all()
         )
 
-    realtor_ctx = _realtor_context(profile, partner)
+    is_combined = profile.role_type == "insurance_realtor"
+    if is_combined:
+        realtor_ctx = _realtor_context(profile, partner)
+    else:
+        _, pr_stats = _partner_request_snapshot(partner)
+        copilot_suggestions = (
+            VIPAssistantSuggestion.query
+            .filter_by(vip_profile_id=profile.id)
+            .order_by(VIPAssistantSuggestion.created_at.desc())
+            .limit(5).all()
+        )
+        realtor_ctx = {
+            "partner_request_stats": pr_stats,
+            "copilot_suggestions": copilot_suggestions,
+        }
 
     return render_template(
         "vip/insurance/dashboard.html",
@@ -1739,6 +1754,7 @@ def insurance_dashboard():
         social_lead_url     = _insurance_social_lead_url(profile),
         social_lead_token   = _insurance_social_lead_token(profile),
         social_lead_prompt  = _insurance_social_lead_prompt(profile),
+        is_combined         = is_combined,
         portal              = "vip",
         portal_name         = "VIP Insurance",
         portal_home         = url_for("vip.insurance_dashboard"),
@@ -2283,7 +2299,7 @@ def partner_dashboard():
     profile = get_or_create_vip_profile()
     partner = getattr(current_user, "partner_profile", None)
     if (
-        getattr(profile, "role_type", None) == "insurance"
+        getattr(profile, "role_type", None) in ("insurance", "insurance_realtor")
         or _partner_role_mentions(partner, "insurance", "insurer")
     ):
         return redirect(url_for("vip.insurance_dashboard"))
@@ -3495,11 +3511,12 @@ def onboarding_save():
         partner = getattr(current_user, "partner_profile", None)
         if partner:
             role_to_category = {
-                "insurance":    "insurance",
-                "realtor":      "realtor",
-                "contractor":   "contractor",
-                "designer":     "designer",
-                "loan_officer": "lender",
+                "insurance":         "insurance",
+                "insurance_realtor": "insurance",
+                "realtor":           "realtor",
+                "contractor":        "contractor",
+                "designer":          "designer",
+                "loan_officer":      "lender",
             }
             new_cat = role_to_category.get(new_role)
             if new_cat:
