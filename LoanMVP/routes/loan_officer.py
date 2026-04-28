@@ -199,23 +199,8 @@ def enforce_onboarding_flow():
 
     return None
 
-# =============================================================
-# 1. DASHBOARD
-# =============================================================
-@loan_officer_bp.route("/dashboard")
-@role_required("loan_officer")
-@loan_officer_onboarding_required 
-def dashboard():
-    # Check if this LO has a VIP profile — send them to VIP
-    from LoanMVP.models.vip_models import VIPProfile
-    vip = VIPProfile.query.filter_by(user_id=current_user.id).first()
-    if vip:
-        return redirect(url_for("vip.loan_officer_dashboard"))
-    # Otherwise fall through to the original dashboard
-    redirect_response = enforce_onboarding_flow()
-    if redirect_response:
-        return redirect_response
 
+def build_loan_officer_dashboard_context(include_ai_summary=True):
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
 
     if not officer:
@@ -302,28 +287,48 @@ def dashboard():
         "capital_requests": len(capital_loans),
     }
 
-    try:
-        assistant = AIAssistant()
-        ai_summary = assistant.generate_reply(
-            "Summarize loan officer performance across leads, loans, pipeline, and capital applications.",
-            "loan_officer_dashboard"
-        )
-    except Exception:
-        ai_summary = "AI summary unavailable."
+    ai_summary = "AI summary unavailable."
+    if include_ai_summary:
+        try:
+            dashboard_assistant = AIAssistant()
+            ai_summary = dashboard_assistant.generate_reply(
+                "Summarize loan officer performance across leads, loans, pipeline, and capital applications.",
+                "loan_officer_dashboard"
+            )
+        except Exception:
+            ai_summary = "AI summary unavailable."
 
-    return render_template(
-        "loan_officer/dashboard.html",
-        officer=officer,
-        leads=leads,
-        loans=loans,
-        capital_loans=capital_loans,
-        pending_intakes=pending_intakes,
-        pipeline=pipeline,
-        stats=stats,
-        ai_summary=ai_summary,
-        active_tab="dashboard",
-        title="Loan Officer Dashboard",
-    )
+    return {
+        "officer": officer,
+        "leads": leads,
+        "loans": loans,
+        "capital_loans": capital_loans,
+        "pending_intakes": pending_intakes,
+        "pipeline": pipeline,
+        "stats": stats,
+        "ai_summary": ai_summary,
+        "active_tab": "dashboard",
+        "title": "Loan Officer Dashboard",
+    }
+
+# =============================================================
+# 1. DASHBOARD
+# =============================================================
+@loan_officer_bp.route("/dashboard")
+@role_required("loan_officer")
+@loan_officer_onboarding_required 
+def dashboard():
+    # Check if this LO has a VIP profile — send them to VIP
+    from LoanMVP.models.vip_models import VIPProfile
+    vip = VIPProfile.query.filter_by(user_id=current_user.id).first()
+    if vip:
+        return redirect(url_for("vip.loan_officer_dashboard"))
+    # Otherwise fall through to the original dashboard
+    redirect_response = enforce_onboarding_flow()
+    if redirect_response:
+        return redirect_response
+
+    return render_template("loan_officer/dashboard.html", **build_loan_officer_dashboard_context())
 
 
 
