@@ -392,7 +392,7 @@ def _gate_elena_on_vip_access():
         return None
 
     existing_profile = VIPProfile.query.filter_by(user_id=current_user.id).first()
-    if existing_profile and (existing_profile.role_type or "").lower() == "realtor":
+    if existing_profile and (existing_profile.role_type or "").lower() in ("realtor", "insurance_realtor"):
         return None
 
     flash(
