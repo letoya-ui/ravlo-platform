@@ -1,0 +1,305 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Quote Requests{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}View and manage all incoming insurance quote requests.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.insurance_dashboard') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-arrow-left"></i>
+    <span>Dashboard</span>
+  </a>
+  <a href="{{ url_for('vip.insurance_new_quote', line='homeowners') }}" class="ravlo-btn primary sm">
+    <i class="lucide lucide-plus"></i>
+    <span>New Quote Request</span>
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="qr-page">
+
+  {# ── STATS ──────────────────────────────────────────── #}
+  <section class="qr-stat-grid">
+    <article class="qr-stat-card">
+      <span>Total Requests</span>
+      <strong>{{ stats.total }}</strong>
+    </article>
+    <article class="qr-stat-card accent-new">
+      <span>New</span>
+      <strong>{{ stats.new }}</strong>
+    </article>
+    <article class="qr-stat-card accent-reviewed">
+      <span>Reviewed</span>
+      <strong>{{ stats.reviewed }}</strong>
+    </article>
+    <article class="qr-stat-card accent-quoted">
+      <span>Quoted</span>
+      <strong>{{ stats.quoted }}</strong>
+    </article>
+    <article class="qr-stat-card accent-closed">
+      <span>Closed</span>
+      <strong>{{ stats.closed }}</strong>
+    </article>
+  </section>
+
+  {# ── FILTER BAR ─────────────────────────────────────── #}
+  <section class="qr-filter-bar">
+    <form method="GET" class="qr-filter-form">
+      <select name="status" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        <option value="new" {% if current_status == 'new' %}selected{% endif %}>New</option>
+        <option value="reviewed" {% if current_status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+        <option value="quoted" {% if current_status == 'quoted' %}selected{% endif %}>Quoted</option>
+        <option value="closed" {% if current_status == 'closed' %}selected{% endif %}>Closed</option>
+      </select>
+      <select name="line" onchange="this.form.submit()">
+        <option value="">All Lines</option>
+        {% for line in insurance_lines %}
+          <option value="{{ line.key }}" {% if current_line == line.key %}selected{% endif %}>{{ line.label }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <span class="qr-count">{{ quote_requests|length }} result{{ 's' if quote_requests|length != 1 else '' }}</span>
+  </section>
+
+  {# ── TABLE ──────────────────────────────────────────── #}
+  {% if quote_requests %}
+  <section class="qr-table-wrap">
+    <div class="qr-table" role="table">
+      <div class="qr-table-head" role="row">
+        <span>Client</span>
+        <span>Line</span>
+        <span>Contact</span>
+        <span>Source</span>
+        <span>Submitted</span>
+        <span>Status</span>
+        <span>Actions</span>
+      </div>
+      {% for qr in quote_requests %}
+      <div class="qr-table-row" role="row">
+        <span>
+          <strong>{{ qr.client_name }}</strong>
+          {% if qr.client_address %}<small>{{ qr.client_address[:40] }}{% if qr.client_address|length > 40 %}...{% endif %}</small>{% endif %}
+        </span>
+        <span>
+          <span class="qr-line-badge">{{ qr.insurance_line|replace('_', ' ')|title }}</span>
+        </span>
+        <span>
+          {% if qr.client_email %}<small>{{ qr.client_email }}</small>{% endif %}
+          {% if qr.client_phone %}<small>{{ qr.client_phone }}</small>{% endif %}
+        </span>
+        <span>{{ (qr.source or 'dashboard')|replace('_', ' ')|title }}</span>
+        <span>{{ qr.created_at.strftime('%b %d, %Y') if qr.created_at else 'N/A' }}</span>
+        <span>
+          <span class="qr-status status-{{ qr.status }}">{{ qr.status|replace('_', ' ')|title }}</span>
+        </span>
+        <span class="qr-actions">
+          <a href="{{ url_for('vip.insurance_quote_request_detail', request_id=qr.id) }}" class="ravlo-btn ghost sm">
+            View
+          </a>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% else %}
+  <section class="qr-empty">
+    <i class="lucide lucide-inbox" style="font-size:2rem; color:#4b5e76; margin-bottom:12px;"></i>
+    <p>No quote requests found{% if current_status %} with status "{{ current_status }}"{% endif %}.</p>
+  </section>
+  {% endif %}
+
+  {# ── PUBLIC LINK ────────────────────────────────────── #}
+  <section class="qr-panel">
+    <div class="qr-panel-head">
+      <div>
+        <h3>Public Quote Request Link</h3>
+        <p>Share this link on Facebook, social media, or anywhere. Clients can submit quote requests without logging in.</p>
+      </div>
+    </div>
+    <div class="qr-link-box">
+      <input type="text" value="{{ public_form_url }}" readonly id="publicLinkInput">
+      <button type="button" class="ravlo-btn primary sm" onclick="navigator.clipboard.writeText(document.getElementById('publicLinkInput').value); this.textContent='Copied!';">
+        Copy Link
+      </button>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .qr-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .qr-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+
+  .qr-stat-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .qr-stat-card span { color: #94a7bb; font-size: 0.82rem; }
+  .qr-stat-card strong { color: #f0f6ff; font-size: 1.5rem; }
+
+  .qr-stat-card.accent-new strong { color: #60a5fa; }
+  .qr-stat-card.accent-reviewed strong { color: #fbbf24; }
+  .qr-stat-card.accent-quoted strong { color: #a78bfa; }
+  .qr-stat-card.accent-closed strong { color: #4ade80; }
+
+  .qr-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .qr-filter-form {
+    display: flex;
+    gap: 10px;
+  }
+
+  .qr-filter-form select {
+    background: rgba(255,255,255,0.04);
+    color: #e4edf8;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+  }
+
+  .qr-count {
+    margin-left: auto;
+    color: #6b7f96;
+    font-size: 0.85rem;
+  }
+
+  .qr-table-wrap {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .qr-table-head,
+  .qr-table-row {
+    display: grid;
+    grid-template-columns: 1.5fr 0.8fr 1.2fr 0.7fr 0.8fr 0.7fr 0.6fr;
+    align-items: center;
+    padding: 12px 18px;
+    gap: 10px;
+  }
+
+  .qr-table-head {
+    background: rgba(255,255,255,0.04);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7f96;
+  }
+
+  .qr-table-row {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font-size: 0.88rem;
+  }
+
+  .qr-table-row span { display: flex; flex-direction: column; gap: 2px; }
+  .qr-table-row small { color: #6b7f96; font-size: 0.8rem; }
+
+  .qr-line-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(99,102,241,0.12);
+    color: #a5b4fc;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .qr-status {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .qr-status.status-new { background: rgba(96,165,250,0.15); color: #60a5fa; }
+  .qr-status.status-reviewed { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .qr-status.status-quoted { background: rgba(167,139,250,0.15); color: #a78bfa; }
+  .qr-status.status-closed { background: rgba(74,222,128,0.15); color: #4ade80; }
+
+  .qr-empty {
+    text-align: center;
+    padding: 48px;
+    color: #6b7f96;
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed rgba(255,255,255,0.08);
+    border-radius: 12px;
+  }
+
+  .qr-panel {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .qr-panel-head {
+    margin-bottom: 14px;
+  }
+
+  .qr-panel-head h3 {
+    font-size: 1rem;
+    color: #f0f6ff;
+    margin-bottom: 4px;
+  }
+
+  .qr-panel-head p {
+    color: #94a7bb;
+    font-size: 0.88rem;
+  }
+
+  .qr-link-box {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .qr-link-box input {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    color: #e4edf8;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.88rem;
+    font-family: monospace;
+  }
+
+  @media (max-width: 900px) {
+    .qr-stat-grid { grid-template-columns: repeat(3, 1fr); }
+    .qr-table-head,
+    .qr-table-row { grid-template-columns: 1fr 0.7fr 1fr 0.7fr; }
+    .qr-table-head span:nth-child(4),
+    .qr-table-head span:nth-child(5),
+    .qr-table-row span:nth-child(4),
+    .qr-table-row span:nth-child(5) { display: none; }
+  }
+</style>
+{% endblock %}
