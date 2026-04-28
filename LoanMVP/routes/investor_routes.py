@@ -7157,6 +7157,8 @@ def generate_build_interior():
 
         payload = {
             "mode": "interior",
+            "task": "interior_design",
+
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
@@ -7166,19 +7168,47 @@ def generate_build_interior():
             "zoning": zoning,
             "room_type": room_type,
             "floor": floor,
-            "prompt_notes": interior_prompt_notes,
-            "special_features": notes,
+
+            "prompt_notes": (
+                f"Modern luxury redesign of the same {room_type}. "
+                "Preserve the same room size, camera angle, window locations, walls, ceiling plane, "
+                "door openings, and architectural shell from the reference photo. "
+                "Completely replace all visible furniture, sofa, chair, ottoman, lamp, window treatments, "
+                "blinds, curtains, rug, decor, accessories, and dated finishes. "
+                "Add high-end modern luxury furnishings, premium neutral palette, layered warm lighting, "
+                "marble or stone accents, elegant drapery, designer coffee table, luxury area rug, curated artwork, "
+                "upscale staging, clean lines, magazine-quality composition, bright professional interior photography. "
+                "Do not keep the existing dated furniture or window treatments. "
+                f"Additional user notes: {interior_prompt_notes or notes or description}"
+            ),
+
+            "special_features": (
+                "modern luxury interior redesign, high-end furniture, premium finishes, layered lighting, "
+                "designer decor, luxury staging"
+            ),
+
             "count": 1,
-            "steps": 26,
-            "guidance": 7.8,
-            "strength": 0.66,
+            "steps": 34,
+            "guidance": 8.8,
+            "strength": 0.64,
             "width": 1024,
             "height": 1024,
+
             "concept_intensity": "full_concept",
-            "reference_role": "source_room_or_plan_reference",
+            "reference_role": "preserve_room_shell_redesign_contents",
             "keep_layout": True,
             "preserve_structure": True,
-            "negative_prompt": _build_studio_negative_prompt("interior_room"),
+            "preserve_room_shell": True,
+            "redesign_contents": True,
+            "force_image_guided": True,
+
+            "negative_prompt": (
+                _build_studio_negative_prompt("interior_room")
+                + ", same sofa, same chair, same ottoman, same lamp, same blinds, same curtains, "
+                  "same dated furniture, unchanged contents, unchanged furniture, old furniture, cheap furniture, "
+                  "dark room, gloomy room, low quality, blurry, distorted walls, warped windows, extra windows, "
+                  "exterior scene, text, watermark"
+            ),
         }
         payload.update(_build_studio_quality_controls("interior_room"))
 
