@@ -41,6 +41,12 @@ from LoanMVP.services.investor.investor_media_helpers import (
     _resolve_photo,
 )
 
+try:
+    from LoanMVP.services.rapidapi_real_estate_provider import (
+        fetch_rapidapi_real_estate_photos,
+    )
+except Exception:
+    fetch_rapidapi_real_estate_photos = None
 
 @dataclass
 class ProviderBudget:
@@ -49,6 +55,7 @@ class ProviderBudget:
     rentcast_detail: int = 4
     mashvisor_detail: int = 4
     realtor_detail: int = 4
+    rapidapi_real_estate_detail: int = 4
     deal_architect: int = 4
 
     def use(self, key: str, amount: int = 1) -> bool:
@@ -578,6 +585,8 @@ class PropertyIntelligenceOrchestrator:
 
             cp = self._enrich_with_realtor(cp)
 
+            cp = self._enrich_with_rapidapi_real_estate(cp)
+
             if not cp.photos and not cp.primary_photo:
                 cp = self._recover_photos(cp)
 
@@ -643,6 +652,50 @@ class PropertyIntelligenceOrchestrator:
             cp.photos = self._normalize_photo_candidates(cp.photos, attom_photos)
             cp.primary_photo = _resolve_photo(cp.primary_photo, cp.photos)
             cp.value_sources["photos"] = "attom"
+
+        return cp
+
+    def _enrich_with_rapidapi_real_estate(self, cp: CanonicalProperty) -> CanonicalProperty:
+        if not self.budget.use("rapidapi_real_estate_detail", 1):
+            return cp
+
+        if fetch_rapidapi_real_estate_photos is None:
+            return cp
+
+        # Only use this as a fallback. Do not spend calls when we already have photos.
+        if cp.photos or cp.primary_photo:
+            return cp
+
+        try:
+            payload = {
+                "address": cp.address or cp.address_line1,
+                "address_line1": cp.address_line1 or cp.address,
+                "city": cp.city,
+                "state": cp.state,
+                "zip_code": cp.zip_code,
+                "zpid": cp.provider_ids.get("zillow"),
+                "zillow_id": cp.provider_ids.get("zillow"),
+            }
+
+            photos = fetch_rapidapi_real_estate_photos(payload)
+
+        except Exception as exc:
+            _log.warning("[rapidapi-real-estate] photo fallback failed: %s", exc)
+            return cp
+
+        if photos:
+            cp.photos = self._normalize_photo_candidates(cp.photos, photos)
+            cp.primary_photo = _resolve_photo(cp.primary_photo, cp.photos)
+            cp.value_sources["photos"] = "rapidapi_real_estate"
+
+            cp.raw.setdefault("rapidapi_real_estate", {})
+            cp.raw["rapidapi_real_estate"]["photo_count"] = len(photos)
+
+            _log.info(
+                "[rapidapi-real-estate] extracted %d photos for %s",
+                len(photos),
+                cp.address or cp.address_line1 or "unknown",
+            )
 
         return cp
 
