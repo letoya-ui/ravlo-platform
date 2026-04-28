@@ -1730,7 +1730,16 @@ def insurance_dashboard():
         realtor_ctx = _realtor_context(profile, partner)
     else:
         _, pr_stats = _partner_request_snapshot(partner)
-        realtor_ctx = {"partner_request_stats": pr_stats}
+        copilot_suggestions = (
+            VIPAssistantSuggestion.query
+            .filter_by(vip_profile_id=profile.id)
+            .order_by(VIPAssistantSuggestion.created_at.desc())
+            .limit(5).all()
+        )
+        realtor_ctx = {
+            "partner_request_stats": pr_stats,
+            "copilot_suggestions": copilot_suggestions,
+        }
 
     return render_template(
         "vip/insurance/dashboard.html",

@@ -37,10 +37,12 @@
     <i class="lucide lucide-receipt"></i>
     <span>Insurance Finance</span>
   </a>
+  {% if is_combined %}
   <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn ghost sm">
     <i class="lucide lucide-house-plus"></i>
     <span>Add Listing</span>
   </a>
+  {% endif %}
   {% if 'ai_pilot' in modules %}
   <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">
     <i class="lucide lucide-sparkles"></i>
