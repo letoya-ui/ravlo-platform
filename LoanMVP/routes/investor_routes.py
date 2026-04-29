@@ -21,7 +21,7 @@ from urllib.parse import urlencode, urlparse, quote_plus
 import requests
 
 from openai import OpenAI
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageStat
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import LETTER
 from sqlalchemy import or_
@@ -6583,6 +6583,184 @@ def _is_probably_blueprint(url: str) -> bool:
     return any(x in url for x in ["blueprint", "floorplan", "layout"])
 
 
+_FLOOR_PLAN_REFERENCE_MARKERS = (
+    "blueprint",
+    "floorplan",
+    "floor-plan",
+    "floor_plan",
+    "floor plan",
+    "siteplan",
+    "site-plan",
+    "site_plan",
+    "layout",
+    "architectural-plan",
+    "architectural_plan",
+    "plan-view",
+    "plan_view",
+)
+
+
+def _canonical_reference_url(url: str) -> str:
+    url = safe_str(url).strip()
+    if not url:
+        return ""
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme and parsed.netloc:
+            return f"{parsed.netloc}{parsed.path}".lower().rstrip("/")
+    except Exception:
+        pass
+    return url.lower().split("?", 1)[0].rstrip("/")
+
+
+def _build_project_plan_reference_urls(build_project: dict[str, Any] | None) -> set[str]:
+    build_project = build_project or {}
+    urls: set[str] = set()
+
+    for block_key in ("blueprint", "blueprint_floor2", "blueprint_floor3", "site_plan", "siteplan"):
+        block = build_project.get(block_key, {}) or {}
+        if not isinstance(block, dict):
+            continue
+        for field in ("image_url", "blueprint_url", "site_plan_url", "reference_image_url"):
+            value = safe_str(block.get(field)).strip()
+            if value:
+                urls.add(value)
+                urls.add(_canonical_reference_url(value))
+        for value in block.get("images") or []:
+            value = safe_str(value).strip()
+            if value:
+                urls.add(value)
+                urls.add(_canonical_reference_url(value))
+
+    for field in ("blueprint_url", "site_plan_url"):
+        value = safe_str(build_project.get(field)).strip()
+        if value:
+            urls.add(value)
+            urls.add(_canonical_reference_url(value))
+
+    return {url for url in urls if url}
+
+
+def _reference_matches_known_plan(url: str, known_plan_urls: set[str] | None) -> bool:
+    if not url or not known_plan_urls:
+        return False
+    return url in known_plan_urls or _canonical_reference_url(url) in known_plan_urls
+
+
+def _reference_looks_like_floor_plan(*values) -> bool:
+    text = " ".join(safe_str(value).lower() for value in values if value)
+    return any(marker in text for marker in _FLOOR_PLAN_REFERENCE_MARKERS)
+
+
+def _image_bytes_look_like_floor_plan(raw: bytes | None) -> bool:
+    if not raw:
+        return False
+    try:
+        img = Image.open(BytesIO(raw)).convert("RGB")
+        img.thumbnail((180, 180))
+        gray = img.convert("L")
+        hsv = img.convert("HSV")
+        gray_hist = gray.histogram()
+        total = max(1, sum(gray_hist))
+        pct_dark = sum(gray_hist[:55]) / total
+        pct_light = sum(gray_hist[205:]) / total
+        saturation_mean = ImageStat.Stat(hsv).mean[1]
+        return pct_light >= 0.38 and pct_dark >= 0.012 and saturation_mean <= 72
+    except Exception:
+        return False
+
+
+def _room_program_prompt(room_type: str = "") -> str:
+    room_key = safe_str(room_type).strip().lower().replace("_", " ") or "living room"
+    room_map = {
+        "living room": (
+            "Use a sofa-centered seating arrangement, accent chairs, coffee table, rug, layered lighting, "
+            "a clear focal wall or fireplace/media wall, and open circulation."
+        ),
+        "kitchen": (
+            "Use a functional cabinet run, island or peninsula when space allows, stone counters, backsplash, "
+            "real appliance placement, sink, task lighting, and practical work-triangle circulation."
+        ),
+        "primary bedroom": (
+            "Use a bed-centered layout, nightstands, layered bedding, soft lighting, storage, calm finishes, "
+            "and clear walking space around the bed."
+        ),
+        "bedroom": (
+            "Use a bed-centered layout, nightstands, layered bedding, soft lighting, storage, calm finishes, "
+            "and clear walking space around the bed."
+        ),
+        "bathroom": (
+            "Use realistic vanity, mirror, shower or tub, plumbing fixture placement, tile, lighting, storage, "
+            "and clear wet/dry zones."
+        ),
+        "dining room": (
+            "Use a centered dining table, proportionate chairs, statement lighting, storage or built-ins when appropriate, "
+            "and comfortable circulation around seating."
+        ),
+        "office": (
+            "Use a desk-centered workspace, task lighting, shelving or built-ins, professional storage, acoustic softness, "
+            "and a polished residential work setting."
+        ),
+    }
+    return room_map.get(
+        room_key,
+        f"Design a complete {room_key} with realistic furniture, fixtures, lighting, finishes, and circulation.",
+    )
+
+
+def _compose_blueprint_to_interior_prompt(
+    *,
+    notes="",
+    preset="",
+    room_type="",
+    property_type="",
+    floor="",
+    project_name="",
+    description="",
+):
+    room_label = safe_str(room_type).strip().lower() or "living room"
+    return _prompt_join(
+        f"Photorealistic eye-level {room_label} interior rendering, not a blueprint or floor plan",
+        "The reference is a top-down architectural plan only; use it as spatial context and never as the camera angle, visual style, linework, page border, labels, or output composition",
+        f"Render exactly one finished {room_label} on the {floor} floor" if floor else f"Render exactly one finished {room_label}",
+        f"Project: {project_name}" if project_name else "",
+        f"Property type: {property_type}" if property_type else "",
+        f"Interior style: {preset}" if preset else "",
+        f"Project description: {description}" if description else "",
+        "Camera must be inside the room at normal standing height with walls, ceiling, floor, doors, windows, and architectural openings visible",
+        "Infer a believable room volume from the plan: wall positions, circulation, openings, adjacency, daylight direction, and ceiling height",
+        _room_program_prompt(room_label),
+        "Use market-ready residential staging, realistic materials, correct scale, natural lighting, clean construction logic, and buildable finish transitions",
+        "Do not output a top-down view, diagram, CAD drawing, plan sheet, labels, text, exterior, cutaway, collage, or mood board",
+        notes,
+    )
+
+
+def _compose_photo_to_interior_prompt(
+    *,
+    notes="",
+    preset="",
+    mode="",
+    room_type="",
+    property_type="",
+    rehab_level="",
+):
+    return _prompt_join(
+        f"Photorealistic eye-level {safe_str(room_type).strip().lower() or 'room'} interior redesign",
+        "Preserve the source room shell, camera angle, structural openings, and believable room geometry",
+        "Replace finishes, fixtures, furniture, lighting, cabinetry where relevant, styling, and staging so the result is visibly redesigned",
+        _room_program_prompt(room_type),
+        _compose_design_studio_prompt(
+            notes=notes,
+            preset=preset,
+            mode=mode,
+            room_type=room_type,
+            property_type=property_type,
+            rehab_level=rehab_level,
+        ),
+    )
+
+
 _VISUAL_NEGATIVE_PROMPT = (
     "low quality, blurry, distorted perspective, warped walls, melted fixtures, "
     "extra doors, extra windows, duplicated stairs, impossible structure, fantasy architecture, "
@@ -6943,6 +7121,7 @@ def generate_build_exterior():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
+            "prompt": exterior_prompt_notes,
             "prompt_notes": exterior_prompt_notes,
             "special_features": notes,
             "stories": number_of_floors,
@@ -7096,6 +7275,9 @@ def generate_build_interior():
         room_type = (data.get("room_type") or "living room").strip()
         floor = (data.get("floor") or "main").strip()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
+        source_results = _deal_results(deal) if deal is not None else {}
+        source_build_project = source_results.get("build_project", {}) or {}
+        known_plan_urls = _build_project_plan_reference_urls(source_build_project)
 
         interior_image = (
             request.files.get("interior_image")
@@ -7111,15 +7293,22 @@ def generate_build_interior():
         ).strip()
 
         image_base64 = (data.get("image_base64") or "").strip()
+        source_filename = safe_str(getattr(interior_image, "filename", "") if interior_image else "")
+        source_is_floor_plan = (
+            _reference_looks_like_floor_plan(image_url, source_filename)
+            or _reference_matches_known_plan(image_url, known_plan_urls)
+        )
 
         if interior_image:
             raw = interior_image.read()
             if raw:
                 image_base64 = base64.b64encode(raw).decode("utf-8")
                 image_url = ""
+                source_is_floor_plan = source_is_floor_plan or _image_bytes_look_like_floor_plan(raw)
 
         if not image_url and not image_base64 and project and getattr(project, "blueprint_url", None):
             image_url = (project.blueprint_url or "").strip()
+            source_is_floor_plan = True
 
         if not image_url and not image_base64 and deal is not None:
             results = _deal_results(deal)
@@ -7130,6 +7319,7 @@ def generate_build_interior():
                 or saved_blueprint.get("image_url")
                 or ""
             ).strip()
+            source_is_floor_plan = bool(image_url)
 
         if not image_url and not image_base64:
             return jsonify({
@@ -7137,27 +7327,29 @@ def generate_build_interior():
                 "message": "Upload a blueprint or use a saved project blueprint before generating interiors."
             }), 400
 
-        interior_prompt_notes = _compose_build_studio_prompt(
-            notes=_prompt_join(
-                "Full-concept interior redesign. Keep the room geometry recognizable but visibly replace finishes, fixtures, lighting, cabinetry or furnishings appropriate to the selected style",
-                notes,
-            ),
-            mode="interior_room",
-            project_name=project_name,
-            property_type=property_type,
-            style=style,
-            description=description,
-            lot_size=lot_size,
-            zoning=zoning,
-            location=location,
-            room_type=room_type,
-            floor=floor,
-            blueprint_constrained=True,
-        )
+        if source_is_floor_plan:
+            interior_prompt_notes = _compose_blueprint_to_interior_prompt(
+                notes=notes,
+                preset=style,
+                room_type=room_type,
+                property_type=property_type,
+                floor=floor,
+                project_name=project_name,
+                description=description,
+            )
+        else:
+            interior_prompt_notes = _compose_photo_to_interior_prompt(
+                notes=notes,
+                preset=style,
+                mode="interior",
+                room_type=room_type,
+                property_type=property_type,
+                rehab_level="full_concept",
+            )
 
         payload = {
             "mode": "interior",
-            "task": "interior_design",
+            "task": "blueprint_to_interior_room" if source_is_floor_plan else "interior_design",
 
             "project_name": project_name,
             "property_type": property_type,
@@ -7172,51 +7364,49 @@ def generate_build_interior():
             "style": style,
             "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
 
-            "prompt_notes": (
-                f"REDESIGN THIS EXACT ROOM AS A HIGH-END MODERN LUXURY {room_type.upper()}. "
-                f"This is a {room_type}. Preserve only the room shell: same camera angle, room dimensions, window location, "
-                "door location, wall positions, ceiling plane, and general architectural perspective. "
-                "Do not preserve the existing cabinet faces, counters, backsplash, appliances, sink, hardware, lighting, clutter, "
-                "paint color, flooring finish, or builder-grade materials. "
-                "Replace the kitchen with luxury custom cabinetry, marble or quartz waterfall countertops, premium backsplash, "
-                "integrated stainless steel or panel-ready appliances, designer cabinet hardware, under-cabinet lighting, "
-                "recessed ceiling lighting, warm luxury staging, clean counters, curated decor, premium neutral palette, "
-                "architectural digest style, magazine-quality real estate interior photography. "
-                f"User design notes: {interior_prompt_notes or notes or description}"
-            ),
+            "prompt": interior_prompt_notes,
+            "prompt_notes": interior_prompt_notes,
+            "desired_updates": interior_prompt_notes,
 
             "special_features": (
-                "modern luxury interior redesign, high-end furniture, premium finishes, layered lighting, "
-                "designer decor, luxury staging"
+                f"{room_type} interior, {_room_program_prompt(room_type)}, high-end furniture, premium finishes, "
+                "layered lighting, designer decor, luxury staging"
             ),
 
             "count": 1,
             "steps": 36,
             "guidance": 9.2,
-            "strength": 0.70,
+            "strength": 1.0 if source_is_floor_plan else 0.70,
             "width": 1024,
             "height": 1024,
 
-            "concept_intensity": "full_concept",
-            "reference_role": "preserve_architecture_replace_contents",
-            "keep_layout": True,
-            "preserve_structure": True,
-            "preserve_room_shell": True,
+            "concept_intensity": "blueprint_to_photoreal_room" if source_is_floor_plan else "full_concept",
+            "reference_role": "floor_plan_context_only_not_init_image" if source_is_floor_plan else "preserve_architecture_replace_contents",
+            "keep_layout": False if source_is_floor_plan else True,
+            "preserve_structure": False if source_is_floor_plan else True,
+            "preserve_room_shell": False if source_is_floor_plan else True,
             "redesign_contents": True,
-            "force_image_guided": True,
+            "force_image_guided": False if source_is_floor_plan else True,
 
             "negative_prompt": (
                 _build_studio_negative_prompt("interior_room")
                 + ", same cabinets, same cabinet doors, same countertop, same backsplash, same appliances, same sink, "
                 "same kitchen, unchanged kitchen, builder grade cabinets, dated cabinets, old countertops, cluttered counter, "
-                "same sofa, same chair, same ottoman, same lamp, same blinds, same curtains, wrong room type, living room, "
+                "same sofa, same chair, same ottoman, same lamp, same blinds, same curtains, wrong room type, "
                 "cheap materials, dark room, gloomy room, blurry, low quality, distorted walls, warped windows, extra windows, "
-                "text, watermark"
+                "top down view, overhead view, floor plan, blueprint, plan sheet, text, watermark"
         ),
         }
         payload.update(_build_studio_quality_controls("interior_room"))
 
-        if image_base64:
+        if source_is_floor_plan:
+            if image_base64:
+                payload["blueprint_image_base64"] = image_base64
+                payload["reference_image_base64"] = image_base64
+            elif image_url:
+                payload["blueprint_image_url"] = image_url
+                payload["reference_image_url"] = image_url
+        elif image_base64:
             payload["image_base64"] = image_base64
             payload["image_url"] = ""
         else:
@@ -7248,7 +7438,10 @@ def generate_build_interior():
                 "message": "Build render completed but uploads failed."
             }), 500
 
-        meta = engine_json.get("meta") or {}
+        meta = {
+            **(engine_json.get("meta") or {}),
+            "reference_source": "floor_plan" if source_is_floor_plan else "room_photo",
+        }
         seed = engine_json.get("seed")
         job_id = engine_json.get("job_id")
 
@@ -7265,6 +7458,7 @@ def generate_build_interior():
 
             interior_block = build_project.get("interior", {}) or {}
             rooms = interior_block.get("rooms", []) or []
+            result_key = _design_room_result_key(room_type, floor, style)
 
             room_entry = {
                 "project_name": project_name,
@@ -7284,10 +7478,9 @@ def generate_build_interior():
                 "meta": meta,
                 "seed": seed,
                 "job_id": job_id,
-                "build_reference_image": reference_image_url or image_url or "",
+                "build_reference_image": image_url or "",
             }
 
-            result_key = _design_room_result_key(room_type, floor, style)
             rooms = [
                 r for r in rooms
                 if _design_room_result_key(
@@ -7941,6 +8134,7 @@ def generate_full_build():
             "lot_size": lot_size,
             "zoning": zoning,
             "location": location,
+            "prompt": base_build_prompt_notes,
             "prompt_notes": base_build_prompt_notes,
             "special_features": f"{lot_count} total lots" if lot_count and lot_count > 1 else notes,
             "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
@@ -8007,6 +8201,25 @@ def generate_full_build():
 
         if number_of_floors and number_of_floors >= 2:
             try:
+                blueprint_floor2_prompt_notes = _compose_build_studio_prompt(
+                    notes=(
+                        f"{site_notes}. Generate the second floor / upper level plan with bedrooms, bathrooms, "
+                        "laundry, and hallway circulation. Use the first floor only for stair and bearing-wall alignment. "
+                        "Must be a distinct upper-level layout, not a copy of the first floor."
+                    ),
+                    mode="blueprint_second_floor",
+                    project_name=project_name,
+                    property_type=property_type,
+                    style=style,
+                    description=description,
+                    lot_size=lot_size,
+                    zoning=zoning,
+                    location=location,
+                    floors=number_of_floors,
+                    floor="second",
+                    lot_count=lot_count,
+                    blueprint_constrained=True,
+                )
                 blueprint_floor2_payload = {
                     "mode": "blueprint",
                     "blueprint_floor": "second",
@@ -8020,31 +8233,16 @@ def generate_full_build():
                     "lot_size": lot_size,
                     "zoning": zoning,
                     "location": location,
-                    "prompt_notes": _compose_build_studio_prompt(
-                        notes=(
-                            f"{site_notes}. Generate the second floor / upper level plan with bedrooms, bathrooms, "
-                            "laundry, and hallway circulation. Use the first floor only for stair and bearing-wall alignment. "
-                            "Must be a distinct upper-level layout, not a copy of the first floor."
-                        ),
-                        mode="blueprint_second_floor",
-                        project_name=project_name,
-                        property_type=property_type,
-                        style=style,
-                        description=description,
-                        lot_size=lot_size,
-                        zoning=zoning,
-                        location=location,
-                        floors=number_of_floors,
-                        floor="second",
-                        lot_count=lot_count,
-                        blueprint_constrained=True,
-                    ),
+                    "prompt": blueprint_floor2_prompt_notes,
+                    "prompt_notes": blueprint_floor2_prompt_notes,
                     "special_features": "upper level bedrooms, bathrooms, laundry, hallway, secondary living spaces",
                     "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
                     "stories": number_of_floors,
                     "number_of_floors": number_of_floors,
                     "floor_count": number_of_floors,
-                    "image_base64": blueprint_primary_b64,
+                    "blueprint_image_base64": blueprint_primary_b64,
+                    "reference_image_base64": blueprint_primary_b64,
+                    "lower_floor_reference_image_base64": blueprint_primary_b64,
                     "width": 1024,
                     "height": 1024,
                     "steps": 30,
@@ -8101,6 +8299,25 @@ def generate_full_build():
             try:
                 floor3_reference_b64 = blueprint_floor2_primary_b64 or blueprint_primary_b64
                 floor3_reference_url = "" if floor3_reference_b64 else (blueprint_floor2_primary_url or blueprint_primary_url)
+                blueprint_floor3_prompt_notes = _compose_build_studio_prompt(
+                    notes=(
+                        f"{site_notes}. Generate the third floor / top level plan. "
+                        "Must be a distinct upper-level layout that aligns stairs and stacked walls "
+                        "with the lower floors, not a copy of the first or second floor."
+                    ),
+                    mode="blueprint_third_floor",
+                    project_name=project_name,
+                    property_type=property_type,
+                    style=style,
+                    description=description,
+                    lot_size=lot_size,
+                    zoning=zoning,
+                    location=location,
+                    floors=number_of_floors,
+                    floor="third",
+                    lot_count=lot_count,
+                    blueprint_constrained=True,
+                )
 
                 blueprint_floor3_payload = {
                     "mode": "blueprint",
@@ -8115,25 +8332,8 @@ def generate_full_build():
                     "lot_size": lot_size,
                     "zoning": zoning,
                     "location": location,
-                    "prompt_notes": _compose_build_studio_prompt(
-                        notes=(
-                            f"{site_notes}. Generate the third floor / top level plan. "
-                            "Must be a distinct upper-level layout that aligns stairs and stacked walls "
-                            "with the lower floors, not a copy of the first or second floor."
-                        ),
-                        mode="blueprint_third_floor",
-                        project_name=project_name,
-                        property_type=property_type,
-                        style=style,
-                        description=description,
-                        lot_size=lot_size,
-                        zoning=zoning,
-                        location=location,
-                        floors=number_of_floors,
-                        floor="third",
-                        lot_count=lot_count,
-                        blueprint_constrained=True,
-                    ),
+                    "prompt": blueprint_floor3_prompt_notes,
+                    "prompt_notes": blueprint_floor3_prompt_notes,
                     "special_features": "third floor top level bedrooms bathrooms flex loft storage stair continuation",
                     "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
                     "stories": number_of_floors,
@@ -8149,9 +8349,13 @@ def generate_full_build():
                 }
 
                 if floor3_reference_b64:
-                    blueprint_floor3_payload["image_base64"] = floor3_reference_b64
+                    blueprint_floor3_payload["blueprint_image_base64"] = floor3_reference_b64
+                    blueprint_floor3_payload["reference_image_base64"] = floor3_reference_b64
+                    blueprint_floor3_payload["lower_floor_reference_image_base64"] = floor3_reference_b64
                 elif floor3_reference_url:
-                    blueprint_floor3_payload["image_url"] = floor3_reference_url
+                    blueprint_floor3_payload["blueprint_image_url"] = floor3_reference_url
+                    blueprint_floor3_payload["reference_image_url"] = floor3_reference_url
+                    blueprint_floor3_payload["lower_floor_reference_image_url"] = floor3_reference_url
 
                 blueprint_floor3_payload.update(_build_studio_quality_controls("blueprint_third_floor"))
 
@@ -8237,6 +8441,7 @@ def generate_full_build():
             "lot_size": lot_size,
             "zoning": zoning,
             "location": location,
+            "prompt": exterior_prompt_notes,
             "prompt_notes": exterior_prompt_notes,
             "special_features": (
                 f"{lot_count} lots, cohesive streetscape, developer-ready massing"
@@ -8350,6 +8555,7 @@ def generate_full_build():
             "lot_size": lot_size,
             "zoning": zoning,
             "location": location,
+            "prompt": exterior_back_prompt_notes,
             "prompt_notes": exterior_back_prompt_notes,
             "special_features": "rear view, backyard, patio, deck, outdoor living space",
             "stories": number_of_floors,
@@ -8863,26 +9069,19 @@ def generate_build_room():
         notes = _clean_str(data.get("notes"))
         room_type = _clean_str(data.get("room_type")) or "kitchen"
         floor = _clean_str(data.get("floor")) or "main"
-        room_prompt_notes = _compose_build_studio_prompt(
-            notes=_prompt_join(
-                "Full-concept interior redesign. Keep the room geometry recognizable but visibly change finishes, fixtures, lighting, cabinetry or furnishings for a professional investor presentation",
-                notes,
-            ),
-            mode="interior_room",
-            project_name=project_name,
-            property_type=property_type,
-            style=style,
-            description=description,
-            lot_size=lot_size,
-            zoning=zoning,
-            location=location,
+        room_prompt_notes = _compose_blueprint_to_interior_prompt(
+            notes=notes,
+            preset=style,
             room_type=room_type,
+            property_type=property_type,
             floor=floor,
-            blueprint_constrained=True,
+            project_name=project_name,
+            description=description,
         )
 
         payload = {
             "mode": "interior",
+            "task": "blueprint_to_interior_room",
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
@@ -8892,21 +9091,29 @@ def generate_build_room():
             "zoning": zoning,
             "room_type": room_type,
             "floor": floor,
+            "prompt": room_prompt_notes,
             "prompt_notes": room_prompt_notes,
-            "special_features": notes,
-            "image_base64": blueprint_b64,
+            "desired_updates": room_prompt_notes,
+            "special_features": f"{room_type} interior, {_room_program_prompt(room_type)}, {notes}".strip(", "),
+            "blueprint_image_base64": blueprint_b64,
+            "reference_image_base64": blueprint_b64,
+            "blueprint_image_url": blueprint_url,
+            "reference_image_url": blueprint_url,
             "image_url": "",
             "count": 1,
-            "steps": 26,
-            "guidance": 7.8,
-            "strength": 0.66,
+            "steps": 32,
+            "guidance": 8.6,
+            "strength": 1.0,
             "width": 1024,
             "height": 1024,
-            "concept_intensity": "full_concept",
-            "reference_role": "source_room_or_plan_reference",
-            "keep_layout": True,
-            "preserve_structure": True,
-            "negative_prompt": _build_studio_negative_prompt("interior_room"),
+            "concept_intensity": "blueprint_to_photoreal_room",
+            "reference_role": "floor_plan_context_only_not_init_image",
+            "keep_layout": False,
+            "preserve_structure": False,
+            "negative_prompt": (
+                _build_studio_negative_prompt("interior_room")
+                + ", top down view, overhead view, floor plan, blueprint, plan sheet, text, labels, watermark"
+            ),
         }
         payload.update(_build_studio_quality_controls("interior_room"))
 
@@ -10553,6 +10760,9 @@ def design_studio_generate():
         notes = (data.get("notes") or "").strip()
         rehab_level = (data.get("rehab_level") or "medium").strip().lower()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
+        source_results = _deal_results(deal) if deal is not None else {}
+        source_build_project = source_results.get("build_project", {}) or {}
+        known_plan_urls = _build_project_plan_reference_urls(source_build_project)
 
         try:
             strength = float(data.get("strength") or 0.74)
@@ -10568,6 +10778,11 @@ def design_studio_generate():
         before_image = request.files.get("before_image")
         image_url = (data.get("image_url") or "").strip()
         image_base64 = ""
+        before_filename = safe_str(getattr(before_image, "filename", "") if before_image else "")
+        source_is_floor_plan = (
+            _reference_looks_like_floor_plan(image_url, before_filename)
+            or _reference_matches_known_plan(image_url, known_plan_urls)
+        )
 
         raw_before = None
         before_uploaded_url = ""
@@ -10584,6 +10799,7 @@ def design_studio_generate():
                 }), 400
 
             image_base64 = base64.b64encode(raw_before).decode("utf-8")
+            source_is_floor_plan = source_is_floor_plan or _image_bytes_look_like_floor_plan(raw_before)
 
             try:
                 before_uploaded_url = _upload_before_image(raw_before)
@@ -10596,6 +10812,7 @@ def design_studio_generate():
                 if raw_before:
                     image_base64 = base64.b64encode(raw_before).decode("utf-8")
                     before_uploaded_url = image_url
+                    source_is_floor_plan = source_is_floor_plan or _image_bytes_look_like_floor_plan(raw_before)
             except Exception:
                 raw_before = None
 
@@ -10608,6 +10825,12 @@ def design_studio_generate():
                     if raw_before:
                         image_base64 = base64.b64encode(raw_before).decode("utf-8")
                         before_uploaded_url = saved_before_url
+                        source_is_floor_plan = (
+                            source_is_floor_plan
+                            or _reference_looks_like_floor_plan(saved_before_url)
+                            or _reference_matches_known_plan(saved_before_url, known_plan_urls)
+                            or _image_bytes_look_like_floor_plan(raw_before)
+                        )
                 except Exception:
                     raw_before = None
 
@@ -10626,48 +10849,107 @@ def design_studio_generate():
             or "residential property"
         )
         unique_seed = random.randint(1, 2_147_483_647)
-        design_prompt_notes = _compose_design_studio_prompt(
-            notes=notes,
-            preset=preset,
-            mode=mode,
-            room_type=room_type,
-            property_type=property_type,
-            rehab_level=rehab_level,
-        )
+        if source_is_floor_plan:
+            design_prompt_notes = _compose_blueprint_to_interior_prompt(
+                notes=notes,
+                preset=preset,
+                room_type=room_type,
+                property_type=property_type,
+                floor=floor,
+                project_name=data.get("project_name") or (getattr(deal, "title", "") if deal else ""),
+                description=data.get("description") or "",
+            )
+            payload = {
+                "mode": "interior",
+                "task": "blueprint_to_interior_room",
+                "project_name": data.get("project_name") or (getattr(deal, "title", "") if deal else ""),
+                "property_type": property_type,
+                "style": preset,
+                "design_style": preset,
+                "description": data.get("description") or "",
+                "build_description": data.get("description") or "",
+                "room_type": room_type,
+                "room_focus": room_type,
+                "floor": floor,
+                "prompt": design_prompt_notes,
+                "prompt_notes": design_prompt_notes,
+                "desired_updates": design_prompt_notes,
+                "concept_intensity": "blueprint_to_photoreal_room",
+                "reference_role": "floor_plan_context_only_not_init_image",
+                "keep_layout": False,
+                "preserve_structure": False,
+                "requires_reference_image": False,
+                "allow_text_only": True,
+                "count": 1,
+                "steps": 34,
+                "guidance": 8.8,
+                "strength": 1.0,
+                "width": 1024,
+                "height": 1024,
+                "seed": unique_seed,
+                "negative_prompt": (
+                    _INTERIOR_NEGATIVE_PROMPT
+                    + ", top down view, overhead view, plan view, room labels, dimension labels, "
+                      "architectural sheet, document border, white page, line drawing, copied floor plan"
+                ),
+            }
+            if image_base64:
+                payload["blueprint_image_base64"] = image_base64
+                payload["reference_image_base64"] = image_base64
+            if before_uploaded_url or image_url:
+                payload["blueprint_image_url"] = before_uploaded_url or image_url
+                payload["reference_image_url"] = before_uploaded_url or image_url
+            payload.update(_build_studio_quality_controls("interior_room"))
 
-        payload = {
-            "preset": preset,
-            "mode": mode,
-            "room_type": room_type,
-            "room_focus": room_type,
-            "floor": floor,
-            "rehab_level": rehab_level,
-            "property_type": property_type,
-            "design_style": preset,
-            "desired_updates": design_prompt_notes,
-            "prompt_notes": design_prompt_notes,
-            "keep_layout": True,
-            "preserve_structure": True,
-            "concept_intensity": "full_concept",
-            "reference_role": "source_room_photo",
-            "image_base64": image_base64,
-            "image_url": "",
-            "count": 1,
-            "steps": 32,
-            "guidance": 8.5,
-            "strength": strength,
-            "width": 1024,
-            "height": 1024,
-            "seed": unique_seed,
-            "negative_prompt": _INTERIOR_NEGATIVE_PROMPT,
-        }
-        payload.update(_build_studio_quality_controls("interior"))
+            engine_json = _post_renovation_engine_json(
+                "/v1/build_concept",
+                payload,
+                timeout=BLUEPRINT_RENDER_TIMEOUT,
+            )
+        else:
+            design_prompt_notes = _compose_photo_to_interior_prompt(
+                notes=notes,
+                preset=preset,
+                mode=mode,
+                room_type=room_type,
+                property_type=property_type,
+                rehab_level=rehab_level,
+            )
 
-        engine_json = _post_renovation_engine_json(
-            "/v1/renovate",
-            payload,
-            timeout=RENDER_TIMEOUT,
-        )
+            payload = {
+                "preset": preset,
+                "mode": mode,
+                "room_type": room_type,
+                "room_focus": room_type,
+                "floor": floor,
+                "rehab_level": rehab_level,
+                "property_type": property_type,
+                "design_style": preset,
+                "prompt": design_prompt_notes,
+                "desired_updates": design_prompt_notes,
+                "prompt_notes": design_prompt_notes,
+                "keep_layout": True,
+                "preserve_structure": True,
+                "concept_intensity": "full_concept",
+                "reference_role": "source_room_photo",
+                "image_base64": image_base64,
+                "image_url": "",
+                "count": 1,
+                "steps": 32,
+                "guidance": 8.5,
+                "strength": strength,
+                "width": 1024,
+                "height": 1024,
+                "seed": unique_seed,
+                "negative_prompt": _INTERIOR_NEGATIVE_PROMPT,
+            }
+            payload.update(_build_studio_quality_controls("interior"))
+
+            engine_json = _post_renovation_engine_json(
+                "/v1/renovate",
+                payload,
+                timeout=RENDER_TIMEOUT,
+            )
 
         images_b64 = engine_json.get("images_base64") or []
         if not images_b64:
@@ -10692,15 +10974,19 @@ def design_studio_generate():
             "notes": notes,
             "seed": engine_json.get("seed") or unique_seed,
             "job_id": engine_json.get("job_id"),
-            "meta": engine_json.get("meta") or {},
+            "meta": {
+                **(engine_json.get("meta") or {}),
+                "reference_source": "floor_plan" if source_is_floor_plan else "room_photo",
+            },
         }
 
         before_result = {
             "image_url": before_uploaded_url,
+            "source": "floor_plan_reference" if source_is_floor_plan else "room_photo_reference",
         }
 
         scope_image_url = before_uploaded_url or image_url
-        if scope_image_url and SCOPE_ENGINE_URL:
+        if scope_image_url and SCOPE_ENGINE_URL and not source_is_floor_plan:
             try:
                 rehab_scope_result = _post_scope_engine_json(
                     "/v1/rehab_scope",
