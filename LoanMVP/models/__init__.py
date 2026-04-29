@@ -150,6 +150,7 @@ from LoanMVP.models.vip_models import (
     VIPAssistantSuggestion,
     VIPAssistantAction,
     VIPNotification,
+    InsuranceQuoteRequest,
 )
 
 from LoanMVP.models.canva_models import CanvaConnection
@@ -211,6 +212,7 @@ __all__ = [
     "VIPAssistantSuggestion",
     "VIPAssistantAction",
     "VIPNotification",
+    "InsuranceQuoteRequest",
 
     "CanvaConnection",
 

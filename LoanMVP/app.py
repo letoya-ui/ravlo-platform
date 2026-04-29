@@ -90,6 +90,7 @@ _SCHEMA_COMPAT_COLUMNS = [
     ("vip_income",                "status",             "VARCHAR(50) DEFAULT 'received'"),
     ("vip_assistant_suggestions", "proposed_amount",    "INTEGER"),
     ("vip_assistant_suggestions", "source",             "VARCHAR(50)"),
+    ("vip_design_projects",       "blueprint_url",      "TEXT"),
 ]
 
 # Tables that must exist at boot. If missing, we ask SQLAlchemy's metadata
@@ -110,6 +111,7 @@ _SCHEMA_COMPAT_TABLES = [
     "vip_design_projects",
     "vip_design_annotations",
     "vip_team_members",
+    "insurance_quote_requests",
     "realtor_listing_presentations",
 ]
 

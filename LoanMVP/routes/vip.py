@@ -23,9 +23,11 @@ from LoanMVP.models.vip_models import (
     VIPIncome,
     VIPExpense,
     VIPAssistantSuggestion,
+    VIPNotification,
     VIPDesignProject,
     VIPDesignAnnotation,
     VIPTeamMember,
+    InsuranceQuoteRequest,
 )
 
 # ── Investor / deal models ────────────────────────────────────────────────────
@@ -1694,18 +1696,25 @@ def _upsert_insurance_social_contact(profile, payload):
     return contact, []
 
 
-def _insurance_quote_stats(partner):
-    """Aggregate insurance quote stats from partner connection requests."""
-    if not partner:
-        return {"total_quotes": 0, "pending": 0, "sent": 0, "bound": 0}
+def _insurance_quote_stats(partner, profile=None):
+    """Aggregate insurance quote stats from InsuranceQuoteRequest + partner requests."""
+    stats = {"total_quotes": 0, "pending": 0, "sent": 0, "bound": 0}
 
-    base = PartnerConnectionRequest.query.filter_by(partner_id=partner.id)
-    return {
-        "total_quotes": base.count(),
-        "pending": base.filter_by(status="pending").count(),
-        "sent": base.filter_by(status="accepted").count(),
-        "bound": base.filter_by(status="completed").count(),
-    }
+    if partner:
+        base = PartnerConnectionRequest.query.filter_by(partner_id=partner.id)
+        stats["total_quotes"] += base.count()
+        stats["pending"] += base.filter_by(status="pending").count()
+        stats["sent"] += base.filter_by(status="accepted").count()
+        stats["bound"] += base.filter_by(status="completed").count()
+
+    if profile:
+        qr_base = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id)
+        stats["total_quotes"] += qr_base.count()
+        stats["pending"] += qr_base.filter_by(status="new").count()
+        stats["sent"] += qr_base.filter_by(status="quoted").count()
+        stats["bound"] += qr_base.filter_by(status="closed").count()
+
+    return stats
 
 
 INSURANCE_CONTACT_TERMS = {
@@ -1816,7 +1825,7 @@ def insurance_dashboard():
     profile = get_or_create_vip_profile()
     partner = getattr(current_user, "partner_profile", None)
 
-    insurance_stats = _insurance_quote_stats(partner)
+    insurance_stats = _insurance_quote_stats(partner, profile)
     insurance_crm = _insurance_crm_snapshot(profile)
 
     recent_requests = []
@@ -1827,6 +1836,19 @@ def insurance_dashboard():
             .order_by(PartnerConnectionRequest.created_at.desc())
             .limit(10).all()
         )
+
+    recent_quote_requests = (
+        InsuranceQuoteRequest.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(InsuranceQuoteRequest.created_at.desc())
+        .limit(10).all()
+    )
+
+    public_form_url = url_for(
+        "vip.insurance_public_quote_form",
+        profile_id=profile.id,
+        _external=True,
+    )
 
     is_combined = profile.role_type == "insurance_realtor"
     if is_combined:
@@ -1853,11 +1875,13 @@ def insurance_dashboard():
         insurance_lines     = INSURANCE_LINES,
         insurance_stats     = insurance_stats,
         insurance_crm       = insurance_crm,
-        recent_requests     = recent_requests,
-        social_lead_url     = _insurance_social_lead_url(profile),
-        social_lead_token   = _insurance_social_lead_token(profile),
-        social_lead_prompt  = _insurance_social_lead_prompt(profile),
-        is_combined         = is_combined,
+        recent_requests        = recent_requests,
+        recent_quote_requests  = recent_quote_requests,
+        public_form_url        = public_form_url,
+        social_lead_url        = _insurance_social_lead_url(profile),
+        social_lead_token      = _insurance_social_lead_token(profile),
+        social_lead_prompt     = _insurance_social_lead_prompt(profile),
+        is_combined            = is_combined,
         portal              = "vip",
         portal_name         = "VIP Insurance",
         portal_home         = url_for("vip.insurance_dashboard"),
@@ -2144,9 +2168,9 @@ def insurance_new_quote():
     )
 
 
-@vip_bp.post("/insurance/generate-quote")
+@vip_bp.post("/insurance/submit-quote-request")
 @role_required("partner_group", "admin")
-def insurance_generate_quote():
+def insurance_submit_quote_request():
     gate = require_vip_access()
     if gate is not None:
         return gate
@@ -2157,6 +2181,11 @@ def insurance_generate_quote():
     line = (request.form.get("line") or "auto").strip().lower()
     client_name = (request.form.get("client_name") or "").strip()
     client_email = (request.form.get("client_email") or "").strip()
+    client_phone = (request.form.get("client_phone") or "").strip()
+    client_dob = (request.form.get("client_dob") or "").strip()
+    drivers_license = (request.form.get("drivers_license") or "").strip()
+    client_address = (request.form.get("client_address") or "").strip()
+    current_carrier = (request.form.get("current_carrier") or "").strip()
 
     details = {}
     if line == "auto":
@@ -2178,9 +2207,36 @@ def insurance_generate_quote():
             "coverage_amount": request.form.get("coverage_amount", ""),
         }
 
-    ai = AIAssistant()
-    prompt = _build_insurance_quote_prompt(line, client_name, details, partner)
-    quote_text = ai.generate_reply(prompt, "insurance")
+    declarations_path = _save_declarations_file(request.files.get("declarations_file"))
+
+    qr = InsuranceQuoteRequest(
+        vip_profile_id=profile.id,
+        client_name=client_name,
+        client_email=client_email or None,
+        client_phone=client_phone or None,
+        client_dob=client_dob or None,
+        drivers_license=drivers_license or None,
+        client_address=client_address or None,
+        current_carrier=current_carrier or None,
+        insurance_line=line,
+        details_json=json.dumps({k: v for k, v in details.items() if v}),
+        declarations_file=declarations_path,
+        status="new",
+        source="dashboard",
+    )
+    db.session.add(qr)
+
+    notification = VIPNotification(
+        vip_profile_id=profile.id,
+        notification_type="quote_request",
+        title=f"New quote request from {client_name}",
+        body=f"{line.replace('_', ' ').title()} insurance quote request submitted. {client_phone or client_email or ''}",
+        action_url=url_for("vip.insurance_quote_requests"),
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    flash("Quote request submitted successfully.", "success")
 
     return render_template(
         "vip/insurance/quote_result.html",
@@ -2193,48 +2249,254 @@ def insurance_generate_quote():
         client_name     = client_name,
         client_email    = client_email,
         details         = details,
-        quote_text      = quote_text,
         portal          = "vip",
         portal_name     = "VIP Insurance",
         portal_home     = url_for("vip.insurance_dashboard"),
     )
 
 
-def _build_insurance_quote_prompt(line, client_name, details, partner):
-    agent_name = ""
-    agency_name = ""
-    if partner:
-        agent_name = partner.display_name()
-        agency_name = partner.company or ""
+def _save_declarations_file(file_storage):
+    if not file_storage or not file_storage.filename:
+        return None
+    import os as _os
+    import uuid as _uuid
+    from werkzeug.utils import secure_filename as _secure_filename
 
-    detail_lines = "\n".join(f"- {k.replace('_', ' ').title()}: {v}" for k, v in details.items() if v)
+    filename = _secure_filename(file_storage.filename)
+    ext = _os.path.splitext(filename)[1].lower()
+    if ext not in (".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"):
+        return None
 
-    line_labels = {
-        "auto": "Auto Insurance",
-        "homeowners": "Homeowners Insurance",
-        "renters": "Renters Insurance",
-        "landlord": "Landlord Insurance",
+    upload_dir = _os.path.join(current_app.static_folder, "uploads", "declarations")
+    _os.makedirs(upload_dir, exist_ok=True)
+
+    saved_name = f"{_uuid.uuid4().hex}{ext}"
+    file_storage.save(_os.path.join(upload_dir, saved_name))
+    return url_for("static", filename=f"uploads/declarations/{saved_name}")
+
+
+# ── Quote Requests list ──────────────────────────────────────────────────────
+@vip_bp.get("/insurance/quote-requests")
+@role_required("partner_group", "admin")
+def insurance_quote_requests():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    status_filter = (request.args.get("status") or "").strip().lower()
+    line_filter = (request.args.get("line") or "").strip().lower()
+
+    q = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id)
+    if status_filter:
+        q = q.filter_by(status=status_filter)
+    if line_filter:
+        q = q.filter_by(insurance_line=line_filter)
+
+    quote_requests = q.order_by(InsuranceQuoteRequest.created_at.desc()).limit(100).all()
+
+    total = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id).count()
+    new_count = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id, status="new").count()
+    reviewed_count = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id, status="reviewed").count()
+    quoted_count = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id, status="quoted").count()
+    closed_count = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id, status="closed").count()
+
+    stats = {
+        "total": total,
+        "new": new_count,
+        "reviewed": reviewed_count,
+        "quoted": quoted_count,
+        "closed": closed_count,
     }
-    line_label = line_labels.get(line, "Insurance")
 
-    return (
-        f"You are a professional insurance agent assistant. Generate a detailed, "
-        f"professional {line_label} quote summary for a client.\n\n"
-        f"Agent: {agent_name}\n"
-        f"Agency: {agency_name}\n"
-        f"Client: {client_name}\n"
-        f"Insurance Type: {line_label}\n\n"
-        f"Client Details:\n{detail_lines}\n\n"
-        "Generate a professional quote that includes:\n"
-        "1. A brief greeting addressing the client by name\n"
-        "2. Coverage recommendation based on the details provided\n"
-        "3. Estimated premium range (monthly and annual)\n"
-        "4. Key coverage highlights and what's included\n"
-        "5. Deductible options\n"
-        "6. Any discounts that may apply\n"
-        "7. Next steps to finalize the policy\n\n"
-        "Format the quote professionally. Use clear sections with headers. "
-        "Keep the tone warm but professional."
+    public_form_url = url_for("vip.insurance_public_quote_form", profile_id=profile.id, _external=True)
+
+    return render_template(
+        "vip/insurance/quote_requests.html",
+        vip_profile      = profile,
+        modules          = get_enabled_modules(profile),
+        header_name      = get_dashboard_name(profile),
+        partner          = partner,
+        insurance_lines  = INSURANCE_LINES,
+        quote_requests   = quote_requests,
+        stats            = stats,
+        current_status   = status_filter,
+        current_line     = line_filter,
+        public_form_url  = public_form_url,
+        portal           = "vip",
+        portal_name      = "VIP Insurance",
+        portal_home      = url_for("vip.insurance_dashboard"),
+    )
+
+
+# ── Quote Request detail ─────────────────────────────────────────────────────
+@vip_bp.get("/insurance/quote-requests/<int:request_id>")
+@role_required("partner_group", "admin")
+def insurance_quote_request_detail(request_id):
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    qr = InsuranceQuoteRequest.query.filter_by(
+        id=request_id, vip_profile_id=profile.id
+    ).first_or_404()
+
+    details = {}
+    if qr.details_json:
+        try:
+            details = json.loads(qr.details_json)
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    return render_template(
+        "vip/insurance/quote_request_detail.html",
+        vip_profile     = profile,
+        modules         = get_enabled_modules(profile),
+        header_name     = get_dashboard_name(profile),
+        partner         = partner,
+        insurance_lines = INSURANCE_LINES,
+        qr              = qr,
+        details         = details,
+        portal          = "vip",
+        portal_name     = "VIP Insurance",
+        portal_home     = url_for("vip.insurance_dashboard"),
+    )
+
+
+# ── Update quote request (status + follow-up) ───────────────────────────────
+@vip_bp.post("/insurance/quote-requests/<int:request_id>/update")
+@role_required("partner_group", "admin")
+def insurance_update_quote_request(request_id):
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    qr = InsuranceQuoteRequest.query.filter_by(
+        id=request_id, vip_profile_id=profile.id
+    ).first_or_404()
+
+    new_status = (request.form.get("status") or "").strip().lower()
+    if new_status in ("new", "reviewed", "quoted", "closed"):
+        qr.status = new_status
+
+    followup_notes = request.form.get("followup_notes")
+    if followup_notes is not None:
+        qr.followup_notes = followup_notes.strip() or None
+
+    followup_date_str = (request.form.get("followup_date") or "").strip()
+    if followup_date_str:
+        try:
+            qr.followup_date = datetime.strptime(followup_date_str, "%Y-%m-%d")
+        except ValueError:
+            pass
+    elif "followup_date" in request.form:
+        qr.followup_date = None
+
+    db.session.commit()
+    flash("Quote request updated.", "success")
+    return redirect(url_for("vip.insurance_quote_request_detail", request_id=qr.id))
+
+
+# ── Public quote form (no auth) ─────────────────────────────────────────────
+@vip_bp.route("/insurance/<int:profile_id>/get-quote", methods=["GET", "POST"])
+@csrf.exempt
+def insurance_public_quote_form(profile_id):
+    profile = VIPProfile.query.get_or_404(profile_id)
+    partner = None
+    user = None
+    try:
+        from LoanMVP.models.user_model import User
+        user = User.query.get(profile.user_id)
+        partner = getattr(user, "partner_profile", None) if user else None
+    except Exception:
+        pass
+
+    agent_name = ""
+    agency_name = profile.business_name or profile.display_name or "Our Agency"
+    brand_logo = profile.logo_url
+    if partner:
+        agent_name = partner.display_name() if hasattr(partner, "display_name") else ""
+        agency_name = partner.company or agency_name
+        brand_logo = partner.logo_url or brand_logo
+
+    line = (request.args.get("line") or request.form.get("line") or "auto").strip().lower()
+
+    submitted = False
+    client_name = ""
+
+    if request.method == "POST":
+        client_name = (request.form.get("client_name") or "").strip()
+        client_email = (request.form.get("client_email") or "").strip()
+        client_phone = (request.form.get("client_phone") or "").strip()
+        client_dob = (request.form.get("client_dob") or "").strip()
+        drivers_license = (request.form.get("drivers_license") or "").strip()
+        client_address = (request.form.get("client_address") or "").strip()
+        current_carrier = (request.form.get("current_carrier") or "").strip()
+
+        details = {}
+        if line == "auto":
+            details = {
+                "vehicle_year": request.form.get("vehicle_year", ""),
+                "vehicle_make": request.form.get("vehicle_make", ""),
+                "vehicle_model": request.form.get("vehicle_model", ""),
+                "driving_record": request.form.get("driving_record", "Clean"),
+                "coverage_type": request.form.get("coverage_type", "Full Coverage"),
+            }
+        else:
+            details = {
+                "property_type": line.title(),
+                "property_value": request.form.get("property_value", ""),
+                "square_footage": request.form.get("square_footage", ""),
+                "year_built": request.form.get("year_built", ""),
+                "coverage_amount": request.form.get("coverage_amount", ""),
+            }
+
+        declarations_path = _save_declarations_file(request.files.get("declarations_file"))
+
+        if client_name:
+            qr = InsuranceQuoteRequest(
+                vip_profile_id=profile.id,
+                client_name=client_name,
+                client_email=client_email or None,
+                client_phone=client_phone or None,
+                client_dob=client_dob or None,
+                drivers_license=drivers_license or None,
+                client_address=client_address or None,
+                current_carrier=current_carrier or None,
+                insurance_line=line,
+                details_json=json.dumps({k: v for k, v in details.items() if v}),
+                declarations_file=declarations_path,
+                status="new",
+                source="public_form",
+            )
+            db.session.add(qr)
+
+            notification = VIPNotification(
+                vip_profile_id=profile.id,
+                notification_type="quote_request",
+                title=f"New quote request from {client_name}",
+                body=f"{line.replace('_', ' ').title()} insurance quote request via public form. {client_phone or client_email or ''}",
+                action_url=url_for("vip.insurance_quote_requests"),
+            )
+            db.session.add(notification)
+            db.session.commit()
+            submitted = True
+
+    return render_template(
+        "vip/insurance/public_quote_form.html",
+        insurance_lines = INSURANCE_LINES,
+        selected_line   = line,
+        agent_name      = agent_name,
+        agency_name     = agency_name,
+        brand_logo      = brand_logo,
+        submitted       = submitted,
+        client_name     = client_name,
     )
 
 
@@ -3787,6 +4049,48 @@ def delete_annotation():
     db.session.commit()
 
     return jsonify({"status": "deleted"})
+
+
+@vip_bp.post("/design-studio/upload-blueprint")
+@role_required("partner_group", "admin")
+def upload_design_blueprint():
+    profile = get_or_create_vip_profile()
+    project_id = request.form.get("project_id", type=int)
+
+    if not project_id:
+        return jsonify({"error": "Missing project_id"}), 400
+
+    project = VIPDesignProject.query.filter_by(
+        id=project_id, vip_profile_id=profile.id
+    ).first()
+
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    file = request.files.get("blueprint")
+    if not file or not file.filename:
+        return jsonify({"error": "No file selected"}), 400
+
+    from werkzeug.utils import secure_filename as _secure_filename
+    import os as _os
+    import uuid as _uuid
+
+    filename = _secure_filename(file.filename)
+    ext = _os.path.splitext(filename)[1].lower()
+    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".svg", ".pdf"):
+        return jsonify({"error": "Unsupported file format"}), 400
+
+    upload_dir = _os.path.join(current_app.static_folder, "uploads", "blueprints")
+    _os.makedirs(upload_dir, exist_ok=True)
+
+    saved_name = f"{_uuid.uuid4().hex}{ext}"
+    file.save(_os.path.join(upload_dir, saved_name))
+
+    blueprint_url = url_for("static", filename=f"uploads/blueprints/{saved_name}")
+    project.blueprint_url = blueprint_url
+    db.session.commit()
+
+    return jsonify({"status": "ok", "blueprint_url": blueprint_url})
 
 
 # =============================================================================

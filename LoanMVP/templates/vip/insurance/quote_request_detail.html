@@ -1,0 +1,321 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Quote Request #{{ qr.id }}{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}Quote request from {{ qr.client_name }} — {{ qr.insurance_line|replace('_', ' ')|title }}.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.insurance_quote_requests') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-arrow-left"></i>
+    <span>All Requests</span>
+  </a>
+  <a href="{{ url_for('vip.insurance_dashboard') }}" class="ravlo-btn ghost sm">Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<div class="qrd-page">
+
+  {# ── STATUS BAR ─────────────────────────────────────── #}
+  <section class="qrd-status-bar">
+    <div class="qrd-status-left">
+      <span class="qrd-status-badge status-{{ qr.status }}">{{ qr.status|replace('_', ' ')|title }}</span>
+      <span class="qrd-date">Submitted {{ qr.created_at.strftime('%B %d, %Y at %I:%M %p') if qr.created_at else 'N/A' }}</span>
+      {% if qr.source %}<span class="qrd-source">Source: {{ qr.source|replace('_', ' ')|title }}</span>{% endif %}
+    </div>
+    <form method="POST" action="{{ url_for('vip.insurance_update_quote_request', request_id=qr.id) }}" class="qrd-status-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <select name="status">
+        <option value="new" {% if qr.status == 'new' %}selected{% endif %}>New</option>
+        <option value="reviewed" {% if qr.status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+        <option value="quoted" {% if qr.status == 'quoted' %}selected{% endif %}>Quoted</option>
+        <option value="closed" {% if qr.status == 'closed' %}selected{% endif %}>Closed</option>
+      </select>
+      <button type="submit" class="ravlo-btn primary sm">Update Status</button>
+    </form>
+  </section>
+
+  <div class="qrd-grid">
+    <main class="qrd-main">
+
+      {# ── CLIENT INFORMATION ──────────────────────────── #}
+      <section class="qrd-card">
+        <h3>Client Information</h3>
+        <div class="qrd-detail-grid">
+          <div class="qrd-detail">
+            <span>Name</span>
+            <strong>{{ qr.client_name }}</strong>
+          </div>
+          {% if qr.client_email %}
+          <div class="qrd-detail">
+            <span>Email</span>
+            <strong><a href="mailto:{{ qr.client_email }}" style="color:#a5b4fc;">{{ qr.client_email }}</a></strong>
+          </div>
+          {% endif %}
+          {% if qr.client_phone %}
+          <div class="qrd-detail">
+            <span>Phone</span>
+            <strong><a href="tel:{{ qr.client_phone }}" style="color:#a5b4fc;">{{ qr.client_phone }}</a></strong>
+          </div>
+          {% endif %}
+          {% if qr.client_dob %}
+          <div class="qrd-detail">
+            <span>Date of Birth</span>
+            <strong>{{ qr.client_dob }}</strong>
+          </div>
+          {% endif %}
+          {% if qr.drivers_license %}
+          <div class="qrd-detail">
+            <span>Driver's License</span>
+            <strong>{{ qr.drivers_license }}</strong>
+          </div>
+          {% endif %}
+          {% if qr.client_address %}
+          <div class="qrd-detail full-width">
+            <span>Address</span>
+            <strong>{{ qr.client_address }}</strong>
+          </div>
+          {% endif %}
+          {% if qr.current_carrier %}
+          <div class="qrd-detail">
+            <span>Current Carrier</span>
+            <strong>{{ qr.current_carrier }}</strong>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+      {# ── COVERAGE DETAILS ────────────────────────────── #}
+      <section class="qrd-card">
+        <h3>Coverage Details — {{ qr.insurance_line|replace('_', ' ')|title }}</h3>
+        {% if details %}
+        <div class="qrd-detail-grid">
+          {% for key, val in details.items() %}
+          {% if val %}
+          <div class="qrd-detail">
+            <span>{{ key|replace('_', ' ')|title }}</span>
+            <strong>{{ val }}</strong>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="qrd-muted">No additional coverage details provided.</p>
+        {% endif %}
+      </section>
+
+      {# ── DECLARATIONS FILE ──────────────────────────── #}
+      {% if qr.declarations_file %}
+      <section class="qrd-card">
+        <h3>Declarations Page</h3>
+        <a href="{{ qr.declarations_file }}" target="_blank" class="ravlo-btn ghost sm">
+          <i class="lucide lucide-file-text"></i>
+          <span>View Uploaded Document</span>
+        </a>
+      </section>
+      {% endif %}
+
+    </main>
+
+    <aside class="qrd-side">
+      {# ── FOLLOW-UP TRACKING ────────────────────────── #}
+      <section class="qrd-card">
+        <h3>Follow-Up Tracking</h3>
+        <form method="POST" action="{{ url_for('vip.insurance_update_quote_request', request_id=qr.id) }}" class="qrd-followup-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="status" value="{{ qr.status }}">
+
+          <div class="form-group">
+            <label>Follow-Up Date</label>
+            <input name="followup_date" type="date" value="{{ qr.followup_date.strftime('%Y-%m-%d') if qr.followup_date else '' }}">
+          </div>
+
+          <div class="form-group">
+            <label>Follow-Up Notes</label>
+            <textarea name="followup_notes" rows="5" placeholder="Add notes about this quote request, follow-up actions, etc.">{{ qr.followup_notes or '' }}</textarea>
+          </div>
+
+          <button type="submit" class="ravlo-btn primary sm" style="width:100%;">
+            <i class="lucide lucide-save"></i>
+            Save Follow-Up
+          </button>
+        </form>
+      </section>
+
+      {# ── QUICK ACTIONS ─────────────────────────────── #}
+      <section class="qrd-card">
+        <h3>Quick Actions</h3>
+        <div class="qrd-action-list">
+          {% if qr.client_email %}
+          <a href="{{ url_for('vip.insurance_compose_email', client_name=qr.client_name, client_email=qr.client_email, line=qr.insurance_line) }}"
+             class="ravlo-btn ghost sm" style="width:100%; justify-content:flex-start;">
+            <i class="lucide lucide-mail"></i>
+            <span>Send Email</span>
+          </a>
+          {% endif %}
+          {% if qr.client_phone %}
+          <a href="tel:{{ qr.client_phone }}" class="ravlo-btn ghost sm" style="width:100%; justify-content:flex-start;">
+            <i class="lucide lucide-phone"></i>
+            <span>Call Client</span>
+          </a>
+          {% endif %}
+        </div>
+      </section>
+    </aside>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .qrd-page {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .qrd-status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+  }
+
+  .qrd-status-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .qrd-status-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  .qrd-status-badge.status-new { background: rgba(96,165,250,0.15); color: #60a5fa; }
+  .qrd-status-badge.status-reviewed { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .qrd-status-badge.status-quoted { background: rgba(167,139,250,0.15); color: #a78bfa; }
+  .qrd-status-badge.status-closed { background: rgba(74,222,128,0.15); color: #4ade80; }
+
+  .qrd-date, .qrd-source { color: #6b7f96; font-size: 0.85rem; }
+
+  .qrd-status-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .qrd-status-form select {
+    background: rgba(255,255,255,0.04);
+    color: #e4edf8;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+  }
+
+  .qrd-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.8fr);
+    gap: 18px;
+  }
+
+  .qrd-main, .qrd-side {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .qrd-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .qrd-card h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #f0f6ff;
+    margin-bottom: 14px;
+  }
+
+  .qrd-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .qrd-detail.full-width { grid-column: 1 / -1; }
+
+  .qrd-detail span {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7f96;
+    margin-bottom: 3px;
+  }
+
+  .qrd-detail strong {
+    color: #e4edf8;
+    font-size: 0.92rem;
+    font-weight: 500;
+  }
+
+  .qrd-muted { color: #6b7f96; font-size: 0.88rem; }
+
+  .qrd-followup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .qrd-followup-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .qrd-followup-form label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6b7f96;
+  }
+
+  .qrd-followup-form input,
+  .qrd-followup-form textarea {
+    background: rgba(255,255,255,0.04);
+    color: #e4edf8;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    resize: vertical;
+  }
+
+  .qrd-action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  @media (max-width: 900px) {
+    .qrd-grid { grid-template-columns: 1fr; }
+    .qrd-detail-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
