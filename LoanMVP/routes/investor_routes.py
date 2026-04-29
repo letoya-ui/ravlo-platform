@@ -7173,14 +7173,15 @@ def generate_build_interior():
             "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
 
             "prompt_notes": (
-                f"REDESIGN THIS EXACT ROOM AS A MODERN LUXURY {room_type.upper()}. "
-                f"This is a {room_type}, not a living room. Preserve the same camera angle, room dimensions, window and door locations, "
-                "ceiling, walls, and architectural shell. Completely replace the visible contents and finishes. "
-                "Install high-end modern luxury cabinetry or built-ins appropriate for the room type, premium countertops or surfaces, "
-                "designer hardware, luxury lighting, upscale furniture only where appropriate, elegant neutral materials, "
-                "marble or stone accents, curated decor, and magazine-quality staging. "
-                "Do not keep the existing cabinet faces, appliances, sofa, chair, ottoman, lamp, blinds, curtains, countertop clutter, "
-                "old furniture, dated finishes, or cheap builder-grade look. "
+                f"REDESIGN THIS EXACT ROOM AS A HIGH-END MODERN LUXURY {room_type.upper()}. "
+                f"This is a {room_type}. Preserve only the room shell: same camera angle, room dimensions, window location, "
+                "door location, wall positions, ceiling plane, and general architectural perspective. "
+                "Do not preserve the existing cabinet faces, counters, backsplash, appliances, sink, hardware, lighting, clutter, "
+                "paint color, flooring finish, or builder-grade materials. "
+                "Replace the kitchen with luxury custom cabinetry, marble or quartz waterfall countertops, premium backsplash, "
+                "integrated stainless steel or panel-ready appliances, designer cabinet hardware, under-cabinet lighting, "
+                "recessed ceiling lighting, warm luxury staging, clean counters, curated decor, premium neutral palette, "
+                "architectural digest style, magazine-quality real estate interior photography. "
                 f"User design notes: {interior_prompt_notes or notes or description}"
             ),
 
@@ -7206,11 +7207,12 @@ def generate_build_interior():
 
             "negative_prompt": (
                 _build_studio_negative_prompt("interior_room")
-                + ", same sofa, same chair, same ottoman, same lamp, same blinds, same curtains, "
-                  "same dated furniture, unchanged contents, unchanged furniture, old furniture, cheap furniture, "
-                  "dark room, gloomy room, low quality, blurry, distorted walls, warped windows, extra windows, "
-                  "exterior scene, text, watermark"
-            ),
+                + ", same cabinets, same cabinet doors, same countertop, same backsplash, same appliances, same sink, "
+                "same kitchen, unchanged kitchen, builder grade cabinets, dated cabinets, old countertops, cluttered counter, "
+                "same sofa, same chair, same ottoman, same lamp, same blinds, same curtains, wrong room type, living room, "
+                "cheap materials, dark room, gloomy room, blurry, low quality, distorted walls, warped windows, extra windows, "
+                "text, watermark"
+        ),
         }
         payload.update(_build_studio_quality_controls("interior_room"))
 
