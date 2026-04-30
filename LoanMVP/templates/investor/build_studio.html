@@ -6,8 +6,8 @@
   <section class="studio-hero-card">
     <div>
       <div class="eyebrow">{{ hero_eyebrow or "RAVLO DESIGN STUDIO" }}</div>
-      <h1>{{ hero_title or "Generate interiors from a blueprint." }}</h1>
-      <p class="muted">{{ page_subtitle or "Design Studio focuses on interior rooms, finishes, and furnishing concepts." }}</p>
+      <h1>{{ hero_title or "Tell Ravlo what you want. AI designs the room." }}</h1>
+      <p class="muted">{{ page_subtitle or "Describe your dream interior in plain language — Ravlo's AI turns it into a photorealistic room design." }}</p>
     </div>
     <div class="hero-actions">
       {% if project and companion_endpoint %}
@@ -55,8 +55,9 @@
     <section class="ravlo-card pad">
       <div class="section-head">
         <div>
-          <div class="eyebrow">INPUT</div>
+          <div class="eyebrow">AI DESIGN INPUTS</div>
           <h2>{{ page_title or "Design Studio" }} Interior Generator</h2>
+          <p class="muted" style="margin-top:4px;font-size:.85rem;">The AI chat fills these automatically — or edit them directly.</p>
         </div>
       </div>
 
@@ -140,7 +141,7 @@
         </div>
 
         <button type="submit" class="ravlo-btn primary" id="generateInteriorBtn">{{ submit_label or "Generate Design Concept" }}</button>
-        <p class="form-note">Use Build Studio for multi-floor blueprints, exterior concepts, and floor plan layouts.</p>
+        <p class="form-note">The AI composes your prompt from everything above. Use Build Studio for multi-floor blueprints, exterior concepts, and floor plan layouts.</p>
       </form>
     </section>
 
