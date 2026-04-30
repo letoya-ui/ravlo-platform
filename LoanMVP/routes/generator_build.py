@@ -1,7 +1,8 @@
 import os
 import requests
 import traceback
-
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from flask import Blueprint, current_app, jsonify, request
 from LoanMVP.extensions import csrf
 from openai import OpenAI
@@ -134,8 +135,12 @@ def build_generate():
         response = requests.post(
             f"{engine_url}/api/generator/build/generate",
             json={"spec": spec},
-            headers={"ngrok-skip-browser-warning": "true"},
+            headers={
+                "Content-Type": "application/json",
+                "ngrok-skip-browser-warning": "true",
+            },
             timeout=600,
+            verify=False,  # dev/ngrok only
         )
 
         try:
