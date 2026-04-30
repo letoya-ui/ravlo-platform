@@ -82,6 +82,7 @@ class CanonicalProperty:
     assessed_value: Optional[float] = None
     last_sale_price: Optional[float] = None
     last_sale_date: Optional[str] = None
+    tax_amount: Optional[float] = None
 
     beds: Optional[float] = None
     baths: Optional[float] = None
@@ -153,6 +154,7 @@ class CanonicalProperty:
             "assessed_value": self.assessed_value,
             "last_sale_price": self.last_sale_price,
             "last_sale_date": self.last_sale_date,
+            "tax_amount": self.tax_amount,
             "beds": self.beds,
             "baths": self.baths,
             "square_feet": self.square_feet,
@@ -252,6 +254,26 @@ class PropertyIntelligenceOrchestrator:
     def _normalize_photo_candidates(*sources):
         return _normalize_photo_urls(*sources)
 
+    @staticmethod
+    def _clamp(value: float, low: float, high: float) -> float:
+        return max(low, min(high, value))
+
+    @staticmethod
+    def _median(values: List[float]) -> Optional[float]:
+        clean = sorted(v for v in values if v is not None and v > 0)
+        if not clean:
+            return None
+        mid = len(clean) // 2
+        if len(clean) % 2:
+            return clean[mid]
+        return (clean[mid - 1] + clean[mid]) / 2.0
+
+    def _occupancy_percent(self, value: Any) -> float:
+        occupancy = self._as_float(value) or 0.0
+        if 0 < occupancy <= 1:
+            return occupancy * 100.0
+        return occupancy
+
     def _extract_mashvisor_photos(
         self,
         normalized: Dict[str, Any],
@@ -299,7 +321,7 @@ class PropertyIntelligenceOrchestrator:
         if looks_like_land or (lot_size > 0 and not has_structure):
             return "land"
 
-        if cp.airbnb_rent_estimate and (cp.occupancy_rate or 0) >= 0.45:
+        if cp.airbnb_rent_estimate and self._occupancy_percent(cp.occupancy_rate) >= 45:
             return "str_candidate"
 
         if cp.monthly_rent_estimate and (cp.market_value or cp.listing_price):
@@ -310,28 +332,124 @@ class PropertyIntelligenceOrchestrator:
 
         return "general_opportunity"
 
+    def _estimate_rehab_cost(self, cp: CanonicalProperty) -> float:
+        if self._classify_property(cp) == "land":
+            return 0.0
+
+        sqft = self._as_float(cp.square_feet) or 0.0
+        year_built = self._as_int(cp.year_built)
+
+        if year_built and year_built < 1950:
+            floor, per_sqft = 65000.0, 42.0
+        elif year_built and year_built < 1980:
+            floor, per_sqft = 42000.0, 30.0
+        elif year_built and year_built < 2005:
+            floor, per_sqft = 22000.0, 18.0
+        else:
+            floor, per_sqft = 12000.0, 10.0
+
+        if sqft <= 0:
+            return floor
+
+        return min(max(sqft * per_sqft, floor), 180000.0)
+
+    def _pre_rank_candidates(self, candidates: List[CanonicalProperty]) -> List[CanonicalProperty]:
+        price_per_sqft_values: List[float] = []
+        for cp in candidates:
+            price = self._as_float(cp.listing_price or cp.purchase_price)
+            sqft = self._as_float(cp.square_feet)
+            if price and sqft:
+                price_per_sqft_values.append(price / sqft)
+
+        market_ppsf = self._median(price_per_sqft_values)
+
+        def score(cp: CanonicalProperty) -> float:
+            value = 50.0
+            price = self._as_float(cp.listing_price or cp.purchase_price)
+            sqft = self._as_float(cp.square_feet)
+            ppsf = (price / sqft) if price and sqft else None
+            classification = self._classify_property(cp)
+
+            if ppsf and market_ppsf:
+                ratio = ppsf / market_ppsf
+                if ratio <= 0.72:
+                    value += 18
+                elif ratio <= 0.86:
+                    value += 12
+                elif ratio <= 0.95:
+                    value += 6
+                elif ratio >= 1.25:
+                    value -= 10
+
+            if cp.days_on_market is not None:
+                dom = cp.days_on_market
+                if 21 <= dom <= 120:
+                    value += 5
+                elif 121 <= dom <= 240:
+                    value += 8
+                elif dom > 240:
+                    value += 4
+
+            if self.strategy == "flip" and cp.year_built and cp.year_built < 1980:
+                value += 5
+            elif self.strategy in {"rental", "airbnb"} and cp.year_built and cp.year_built < 1950:
+                value -= 4
+
+            if self.strategy == "land":
+                value += 14 if classification == "land" else -16
+            elif classification == "land":
+                value -= 12
+
+            if cp.photos or cp.primary_photo:
+                value += 3
+            if cp.address and (cp.city or cp.zip_code):
+                value += 2
+            if cp.beds or cp.baths:
+                value += 2
+            if sqft:
+                value += 2
+
+            return value
+
+        for cp in candidates:
+            cp.raw.setdefault("deal_finder", {})
+            cp.raw["deal_finder"]["pre_rank_score"] = round(score(cp), 2)
+
+        return sorted(candidates, key=score, reverse=True)
+
     def _build_exit_strategy_cards(self, cp: CanonicalProperty) -> List[Dict[str, Any]]:
         purchase_price = self._as_float(cp.purchase_price) or self._as_float(cp.listing_price) or 0.0
-        rehab_cost = 0.0
+        rehab_cost = self._estimate_rehab_cost(cp)
         arv = self._as_float(cp.arv) or self._as_float(cp.market_value) or 0.0
         monthly_rent = self._as_float(cp.monthly_rent_estimate) or 0.0
         airbnb_monthly = self._as_float(cp.airbnb_rent_estimate) or 0.0
-        occupancy = self._as_float(cp.occupancy_rate) or 0.0
+        occupancy = self._occupancy_percent(cp.occupancy_rate)
 
-        flip_total = purchase_price + rehab_cost
-        flip_profit = (arv - (flip_total + (arv * 0.08))) if arv > 0 else 0.0
-        flip_roi = (flip_profit / flip_total * 100.0) if flip_total > 0 else 0.0
+        flip_basis = purchase_price + rehab_cost
+        holding_cost = flip_basis * 0.06 if flip_basis > 0 else 0.0
+        selling_cost = arv * 0.08 if arv > 0 else 0.0
+        flip_total = flip_basis + holding_cost + selling_cost
+        flip_profit = (arv - flip_total) if arv > 0 and flip_basis > 0 else 0.0
+        flip_roi = (flip_profit / flip_basis * 100.0) if flip_basis > 0 else 0.0
 
-        rental_expenses = monthly_rent * 0.35 if monthly_rent > 0 else 0.0
-        rental_cashflow = monthly_rent - rental_expenses
-        annual_noi = rental_cashflow * 12.0
+        monthly_taxes = (self._as_float(cp.tax_amount) or 0.0) / 12.0
+        insurance = max(purchase_price * 0.004 / 12.0, 100.0) if purchase_price > 0 else 150.0
+        operating_reserve = monthly_rent * 0.28 if monthly_rent > 0 else 0.0
+        rental_expenses = operating_reserve + monthly_taxes + insurance
+        rental_noi = monthly_rent - rental_expenses if monthly_rent > 0 else 0.0
+        monthly_debt = purchase_price * 0.0075 if purchase_price > 0 else 0.0
+        rental_cashflow = rental_noi - monthly_debt if monthly_rent > 0 else 0.0
+        annual_noi = rental_noi * 12.0
         rental_cap = (annual_noi / purchase_price * 100.0) if purchase_price > 0 else 0.0
-        rental_dscr = ((monthly_rent - rental_expenses) / max((purchase_price * 0.0075), 1.0)) if purchase_price > 0 else 0.0
+        rental_dscr = (rental_noi / max(monthly_debt, 1.0)) if purchase_price > 0 else 0.0
 
-        airbnb_net = airbnb_monthly * 0.62 if airbnb_monthly > 0 else 0.0
+        airbnb_expense_ratio = 0.42 if occupancy >= 55 else 0.48
+        airbnb_net = airbnb_monthly * (1.0 - airbnb_expense_ratio) if airbnb_monthly > 0 else 0.0
+        airbnb_cashflow = airbnb_net - monthly_debt if airbnb_monthly > 0 else 0.0
         airbnb_roi = ((airbnb_net * 12.0) / purchase_price * 100.0) if purchase_price > 0 else 0.0
 
-        land_score = 70.0 if self._classify_property(cp) == "land" else 20.0
+        is_land = self._classify_property(cp) == "land"
+        land_score = 70.0 if is_land else 0.0
         land_upside = ((cp.market_value or 0) - purchase_price) if (cp.market_value and purchase_price) else 0.0
 
         return [
@@ -345,6 +463,8 @@ class PropertyIntelligenceOrchestrator:
                 "metrics": {
                     "purchase_price": purchase_price,
                     "rehab_cost": rehab_cost,
+                    "holding_cost": holding_cost,
+                    "selling_cost": selling_cost,
                     "arv": arv,
                     "profit": flip_profit,
                     "roi": flip_roi,
@@ -360,6 +480,8 @@ class PropertyIntelligenceOrchestrator:
                 "summary": "Long-term hold and income path.",
                 "metrics": {
                     "monthly_rent": monthly_rent,
+                    "monthly_noi": rental_noi,
+                    "monthly_debt": monthly_debt,
                     "net_cashflow": rental_cashflow,
                     "annual_noi": annual_noi,
                     "cap_rate": rental_cap,
@@ -376,6 +498,7 @@ class PropertyIntelligenceOrchestrator:
                 "metrics": {
                     "gross_monthly": airbnb_monthly,
                     "net_monthly": airbnb_net,
+                    "monthly_cash_flow": airbnb_cashflow,
                     "occupancy_rate": occupancy,
                     "annualized_roi": airbnb_roi,
                 },
@@ -400,14 +523,41 @@ class PropertyIntelligenceOrchestrator:
         cards = self._build_exit_strategy_cards(cp)
         property_classification = self._classify_property(cp)
 
-        scores = {card["key"]: self._as_float(card.get("score")) or 0.0 for card in cards}
+        by_key = {card["key"]: card for card in cards}
+        flip_metrics = by_key.get("flip", {}).get("metrics", {})
+        rental_metrics = by_key.get("rental", {}).get("metrics", {})
+        airbnb_metrics = by_key.get("airbnb", {}).get("metrics", {})
+
+        scores = {
+            "flip": (
+                (self._as_float(flip_metrics.get("roi")) or 0.0) * 1.2
+                + self._clamp((self._as_float(flip_metrics.get("profit")) or 0.0) / 5000.0, -18.0, 22.0)
+            ),
+            "rental": (
+                (self._as_float(rental_metrics.get("cap_rate")) or 0.0) * 2.0
+                + self._clamp((self._as_float(rental_metrics.get("net_cashflow")) or 0.0) / 100.0, -12.0, 16.0)
+                + self._clamp(((self._as_float(rental_metrics.get("dscr")) or 0.0) - 1.0) * 10.0, -8.0, 10.0)
+            ),
+            "airbnb": (
+                (self._as_float(airbnb_metrics.get("annualized_roi")) or 0.0) * 1.25
+                + self._clamp((self._as_float(airbnb_metrics.get("monthly_cash_flow")) or 0.0) / 150.0, -12.0, 16.0)
+                + self._clamp(self._occupancy_percent(airbnb_metrics.get("occupancy_rate")) / 10.0, 0.0, 8.0)
+            ),
+            "land": (self._as_float(by_key.get("land", {}).get("score")) or 0.0),
+        }
 
         if property_classification == "land":
             scores["land"] += 20
             scores["flip"] -= 20
             scores["rental"] -= 20
             scores["airbnb"] -= 20
-        elif property_classification == "fixer_upper":
+        else:
+            scores["land"] = -999.0
+
+        if self.strategy in scores and self.strategy != "all":
+            scores[self.strategy] += 8
+
+        if property_classification == "fixer_upper":
             scores["flip"] += 10
         elif property_classification == "rental_candidate":
             scores["rental"] += 10
@@ -475,6 +625,139 @@ class PropertyIntelligenceOrchestrator:
             "watch_items": watch_map[best],
         }
         return cp
+
+    def _score_candidate(self, cp: CanonicalProperty) -> Tuple[int, List[str], List[str]]:
+        cards = cp.exit_strategy_cards or self._build_exit_strategy_cards(cp)
+        by_key = {card["key"]: card for card in cards}
+        flip = by_key.get("flip", {}).get("metrics", {})
+        rental = by_key.get("rental", {}).get("metrics", {})
+        airbnb = by_key.get("airbnb", {}).get("metrics", {})
+
+        score = 44.0
+        why: List[str] = []
+        risks: List[str] = []
+
+        price = self._as_float(cp.purchase_price or cp.listing_price)
+        value = self._as_float(cp.arv or cp.market_value)
+        rent = self._as_float(cp.monthly_rent_estimate)
+
+        if price and value:
+            discount = (value - price) / value
+            if discount >= 0.20:
+                score += 24
+                why.append("Price is at least 20% below the current value signal.")
+            elif discount >= 0.12:
+                score += 17
+                why.append("Price is meaningfully below the current value signal.")
+            elif discount >= 0.06:
+                score += 10
+                why.append("There is a modest value gap to validate.")
+            elif discount <= -0.05:
+                score -= 14
+                risks.append("Asking price is above the current value signal.")
+        elif not value:
+            score -= 8
+            risks.append("Value signal still needs validation.")
+
+        flip_profit = self._as_float(flip.get("profit")) or 0.0
+        flip_roi = self._as_float(flip.get("roi")) or 0.0
+        if flip_profit >= 75000:
+            score += 15
+            why.append("Flip spread clears a strong profit threshold.")
+        elif flip_profit >= 40000:
+            score += 10
+            why.append("Flip spread is worth deeper underwriting.")
+        elif flip_profit < 0 and (self.strategy == "flip" or cp.best_exit_strategy == "flip"):
+            score -= 10
+            risks.append("Conservative flip math is currently negative.")
+
+        if flip_roi >= 25:
+            score += 10
+        elif flip_roi >= 16:
+            score += 6
+
+        if price and rent:
+            rent_to_price = (rent * 12.0) / price
+            if rent_to_price >= 0.12:
+                score += 16
+                why.append("Rent-to-price ratio clears the 1% rule.")
+            elif rent_to_price >= 0.10:
+                score += 12
+                why.append("Rent-to-price ratio is strong for a hold review.")
+            elif rent_to_price >= 0.08:
+                score += 8
+                why.append("Rental income support is present.")
+            elif self.strategy == "rental":
+                score -= 8
+                risks.append("Rent-to-price ratio is light for a rental-first search.")
+        elif self.strategy == "rental":
+            score -= 10
+            risks.append("Rental strategy needs a rent estimate.")
+
+        cap_rate = self._as_float(rental.get("cap_rate")) or 0.0
+        dscr = self._as_float(rental.get("dscr")) or 0.0
+        if cap_rate >= 8:
+            score += 10
+        elif cap_rate >= 6:
+            score += 6
+        if dscr >= 1.25:
+            score += 6
+        elif self.strategy == "rental" and dscr and dscr < 1.0:
+            score -= 6
+            risks.append("Debt-service coverage looks tight.")
+
+        airbnb_cashflow = self._as_float(airbnb.get("monthly_cash_flow")) or 0.0
+        airbnb_roi = self._as_float(airbnb.get("annualized_roi")) or 0.0
+        if self.strategy == "airbnb":
+            if cp.airbnb_rent_estimate:
+                score += 6
+                why.append("Short-term rental revenue support is available.")
+            else:
+                score -= 10
+                risks.append("Short-term rental strategy needs stronger STR data.")
+            if airbnb_cashflow > 350:
+                score += 8
+            if airbnb_roi >= 10:
+                score += 6
+
+        if self.strategy != "all" and cp.best_exit_strategy and cp.best_exit_strategy != self.strategy:
+            score -= 5
+            risks.append(f"Best current exit reads as {cp.best_exit_strategy}, not {self.strategy}.")
+        elif self.strategy != "all" and cp.best_exit_strategy == self.strategy:
+            score += 5
+
+        if cp.days_on_market is not None:
+            if 45 <= cp.days_on_market <= 180:
+                score += 5
+                why.append("Days on market may create negotiation room.")
+            elif cp.days_on_market > 240:
+                score += 2
+                risks.append("Stale listing; verify condition and seller motivation.")
+
+        if cp.year_built and cp.year_built < 1950:
+            score -= 6
+            risks.append("Older property may require heavier systems review.")
+        elif cp.year_built and cp.year_built < 1980 and self.strategy == "flip":
+            score += 3
+            why.append("Older property profile can support a value-add plan.")
+
+        classification = self._classify_property(cp)
+        if classification == "land" and self.strategy not in {"land", "all"} and self.asset_type != "land":
+            score -= 12
+            risks.append("This reads as land/build optionality, not an in-place income deal.")
+        if classification != "land" and self.strategy == "land":
+            score -= 14
+            risks.append("Selected land strategy does not match this property type.")
+
+        if cp.photos or cp.primary_photo:
+            score += 2
+        if cp.square_feet:
+            score += 2
+        if cp.market_value and cp.monthly_rent_estimate:
+            score += 4
+
+        clean_score = int(round(self._clamp(score, 1, 99)))
+        return clean_score, why[:4], risks[:3]
 
     def search_candidates(
         self,
@@ -618,6 +901,7 @@ class PropertyIntelligenceOrchestrator:
         cp.assessed_value = self._first_truthy(self._as_float(profile.get("assessed_value")), cp.assessed_value)
         cp.last_sale_price = self._first_truthy(self._as_float(profile.get("last_sale_price")), cp.last_sale_price)
         cp.last_sale_date = self._first_truthy(profile.get("last_sale_date"), cp.last_sale_date)
+        cp.tax_amount = self._first_truthy(self._as_float(profile.get("tax_amount")), cp.tax_amount)
         cp.square_feet = self._first_truthy(self._as_int(profile.get("sqft")), cp.square_feet)
         cp.lot_size_sqft = self._first_truthy(self._as_int(profile.get("lot_sqft")), cp.lot_size_sqft)
         cp.year_built = self._first_truthy(self._as_int(profile.get("year_built")), cp.year_built)
@@ -1378,45 +1662,7 @@ class PropertyIntelligenceOrchestrator:
         return ranked
 
     def _apply_ravlo_opinion(self, cp: CanonicalProperty) -> CanonicalProperty:
-        score = 50
-        why: List[str] = []
-        risks: List[str] = []
-
-        if cp.listing_price and cp.market_value and cp.market_value > cp.listing_price:
-            score += 12
-            why.append("Pricing appears below current value signal.")
-
-        if cp.monthly_rent_estimate:
-            score += 10
-            why.append("Rent estimate supports investor review.")
-
-        if cp.assessed_value and cp.market_value and cp.assessed_value < cp.market_value:
-            score += 4
-            why.append("Public record values leave room for upside review.")
-
-        if cp.primary_photo:
-            score += 3
-
-        if cp.square_feet:
-            score += 3
-
-        if not cp.market_value and not cp.assessed_value:
-            score -= 10
-            risks.append("Value signal still needs validation.")
-
-        if self.strategy == "rental" and not cp.monthly_rent_estimate:
-            score -= 10
-            risks.append("Rental strategy needs stronger rent support.")
-
-        if self.strategy == "airbnb" and not cp.airbnb_rent_estimate:
-            score -= 12
-            risks.append("Short-term rental strategy needs stronger hospitality signal.")
-
-        if cp.year_built and cp.year_built < 1950:
-            score -= 5
-            risks.append("Older property may require heavier rehab review.")
-
-        score = max(1, min(99, round(score)))
+        score, why, risks = self._score_candidate(cp)
         cp.deal_score = score
 
         if score >= 72:
@@ -1451,15 +1697,20 @@ class PropertyIntelligenceOrchestrator:
             else "Validate comps, scope, and pricing before planning."
         )
 
-        cp.why_it_made_list = why[:3] if why else cp.why_it_made_list or ["Worth deeper review in Project Studio."]
-        cp.risk_notes = risks[:2] if risks else cp.risk_notes or ["Confirm data before committing to execution."]
+        cp.why_it_made_list = why if why else cp.why_it_made_list or ["Worth deeper review in Project Studio."]
+        cp.risk_notes = risks if risks else cp.risk_notes or ["Confirm data before committing to execution."]
         cp.primary_strengths = cp.primary_strengths or cp.why_it_made_list[:2]
         cp.primary_risks = cp.primary_risks or cp.risk_notes[:2]
 
         return cp
 
     def _annotate_default(self, cp: CanonicalProperty) -> CanonicalProperty:
-        result = _annotate_deal_finder_opportunity(cp.to_result_dict(), self.strategy)
+        result_payload = cp.to_result_dict()
+        if result_payload.get("deal_score") is None:
+            pre_rank = (cp.raw.get("deal_finder") or {}).get("pre_rank_score")
+            result_payload["deal_score"] = int(round(self._clamp(pre_rank or 42, 35, 49)))
+
+        result = _annotate_deal_finder_opportunity(result_payload, self.strategy)
         cp.deal_score = result.get("deal_score")
         cp.opportunity_tier = result.get("opportunity_tier")
         cp.deal_finder_signal = result.get("deal_finder_signal")
@@ -1489,6 +1740,7 @@ class PropertyIntelligenceOrchestrator:
             zip_code=zip_code,
             limit=limit,
         )
+        candidates = self._pre_rank_candidates(candidates)
         enriched = self.enrich_top_candidates(candidates, top_n=4)
         ranked = self.rank_candidates(enriched)
 

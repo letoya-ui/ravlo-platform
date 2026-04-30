@@ -3618,9 +3618,9 @@ def api_property_tool_search():
 
     raw_limit = payload.get("limit")
     try:
-        limit = max(1, min(int(raw_limit or 12), 12))
+        limit = max(1, min(int(raw_limit or 20), 25))
     except (TypeError, ValueError):
-        limit = 12
+        limit = 20
 
     try:
         orchestrator = PropertyIntelligenceOrchestrator(

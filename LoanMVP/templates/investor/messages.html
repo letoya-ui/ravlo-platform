@@ -318,6 +318,8 @@
       Ask about your deals, documents, funding, or next steps.
     </div>
 
+    {% include "investor/_ai_accuracy_notice.html" %}
+
     <form id="aiForm" method="POST" action="{{ url_for('investor.ask_ai_post') }}" class="ai-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="text"
