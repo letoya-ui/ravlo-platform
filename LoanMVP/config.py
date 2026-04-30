@@ -168,7 +168,7 @@ class Config:
 
     # AI
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-    AI_MODEL = os.environ.get("AI_MODEL", "gpt-4-turbo-preview")
+    AI_MODEL = os.environ.get("AI_MODEL", "gpt-4o-mini")
     AI_TIMEOUT = _env_int("AI_TIMEOUT", 30)
     RENOVATION_ENGINE_URL = _engine_url_from_env("")
     
