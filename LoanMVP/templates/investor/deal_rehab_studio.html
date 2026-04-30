@@ -16,8 +16,8 @@
   <section class="studio-hero-card">
     <div>
       <div class="eyebrow">{{ hero_eyebrow or "RAVLO DESIGN STUDIO" }}</div>
-      <h1>{{ hero_title or "Generate interiors from a blueprint." }}</h1>
-      <p class="muted">{{ page_subtitle or "Design Studio focuses on interior rooms, finishes, and furnishing concepts." }}</p>
+      <h1>{{ hero_title or "Tell Ravlo what you want. AI designs the room." }}</h1>
+      <p class="muted">{{ page_subtitle or "Describe your dream interior in plain language — Ravlo's AI turns it into a photorealistic room design." }}</p>
     </div>
 
     <div class="hero-actions">
@@ -117,12 +117,38 @@
     </div>
   </section>
 
+  <section class="ravlo-card pad design-chat-panel">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">DESIGN CONVERSATION</div>
+        <h2>Tell Ravlo What You Want</h2>
+      </div>
+      <strong id="designChatStatus">Ready</strong>
+    </div>
+
+    <div class="design-chat-thread" id="designChatThread">
+      <div class="design-chat-message assistant">
+        <strong>Ravlo</strong>
+        <p>Tell me exactly what you want this room to look like — be as specific as possible. Describe the style, materials, colors, furniture, lighting, and any special details. I'll use your vision to generate the design. The more detail you give, the closer the result will be to what you're imagining.</p>
+      </div>
+    </div>
+
+    <div class="design-chat-composer">
+      <textarea id="designChatInput" rows="3" placeholder="Example: 'I want a luxury modern kitchen with a white marble waterfall island, matte black fixtures, warm oak floating shelves, brass pendant lights over the island, and herringbone tile backsplash.' Be specific!"></textarea>
+      <div class="cta-row">
+        <button type="button" class="ravlo-btn ghost" id="askDesignBtn">Ask Ravlo</button>
+        <button type="button" class="ravlo-btn primary" id="applyDesignBtn">Apply & Generate</button>
+      </div>
+    </div>
+  </section>
+
   <section class="build-lite-grid">
     <section class="ravlo-card pad">
       <div class="section-head">
         <div>
-          <div class="eyebrow">INPUT</div>
+          <div class="eyebrow">AI DESIGN INPUTS</div>
           <h2>{{ page_title or "Design Studio" }} Interior Generator</h2>
+          <p class="muted" style="margin-top:4px;font-size:.85rem;">The AI chat fills these automatically — or edit them directly.</p>
         </div>
       </div>
 
@@ -245,7 +271,7 @@
           <button type="submit" class="ravlo-btn primary" id="generateInteriorBtn">{{ submit_label or "Generate Design Concept" }}</button>
           <button type="button" class="ravlo-btn ghost" id="generateBudgetBtn">Generate Budget</button>
         </div>
-        <p class="form-note">Use Build Studio for multi-floor blueprints, exterior concepts, and floor plan layouts.</p>
+        <p class="form-note">The AI composes your prompt from everything above. Use Build Studio for multi-floor blueprints, exterior concepts, and floor plan layouts.</p>
       </form>
     </section>
 
@@ -361,12 +387,12 @@
   <div class="design-loading-overlay hidden" id="designLoadingOverlay" role="status" aria-live="polite">
     <div class="design-loading-card">
       <div class="loader-ring"></div>
-      <h3>Generating design concept...</h3>
-      <p id="designLoadingMessage">Ravlo is preparing the selected room concept.</p>
+      <h3>AI is generating your design concept...</h3>
+      <p id="designLoadingMessage">Ravlo's AI is crafting the selected room concept from your description.</p>
       <div class="loading-progress-list">
-        <div class="loading-step">Reading reference image and room inputs...</div>
-        <div class="loading-step">Building interior style direction...</div>
-        <div class="loading-step">Rendering the design concept...</div>
+        <div class="loading-step">AI is reading your description and room inputs...</div>
+        <div class="loading-step">Composing the perfect interior style direction...</div>
+        <div class="loading-step">Rendering your AI-powered design concept...</div>
       </div>
     </div>
   </div>
@@ -427,7 +453,17 @@
 .loading-step{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);color:#dbe6f5}
 .loader-ring{width:58px;height:58px;border-radius:50%;margin:0 auto;border:4px solid rgba(255,255,255,.12);border-top-color:#7ab8ff;animation:design-spin 1s linear infinite}
 @keyframes design-spin{to{transform:rotate(360deg)}}
-@media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two,.build-package-strip{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.budget-line-row,.budget-summary>div{flex-direction:column}.room-slot-grid{grid-template-columns:repeat(3,1fr)}.build-package-assets{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.design-chat-panel{margin-bottom:4px}
+.design-chat-thread{display:grid;gap:12px;max-height:300px;overflow:auto;padding-right:4px}
+.design-chat-message{padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.035)}
+.design-chat-message.user{margin-left:42px;background:rgba(122,184,255,.08);border-color:rgba(122,184,255,.18)}
+.design-chat-message.assistant{margin-right:42px}
+.design-chat-message strong{display:block;color:#fff;margin-bottom:6px}
+.design-chat-message p{margin:0;color:#c9d5e6;line-height:1.55}
+.design-chat-composer{display:grid;gap:12px;margin-top:14px}
+.design-chat-composer textarea{width:100%;resize:vertical;min-height:80px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap}
+@media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two,.build-package-strip{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.budget-line-row,.budget-summary>div{flex-direction:column}.room-slot-grid{grid-template-columns:repeat(3,1fr)}.build-package-assets{grid-template-columns:repeat(2,minmax(0,1fr))}.design-chat-message.user,.design-chat-message.assistant{margin-left:0;margin-right:0}}
 </style>
 
 <script>
@@ -460,6 +496,101 @@
   let currentImageUrl = {{ (interior_result.get('image_url') if interior_result else '')|tojson }};
   let nextUrl = '';
   let budgetStudioUrl = '';
+  let designMessages = [];
+
+  // ── Design Chat ───────────────────────────────────
+  const designChatThread = document.getElementById('designChatThread');
+  const designChatInput = document.getElementById('designChatInput');
+  const askDesignBtn = document.getElementById('askDesignBtn');
+  const applyDesignBtn = document.getElementById('applyDesignBtn');
+  const designChatStatus = document.getElementById('designChatStatus');
+  const descriptionField = document.getElementById('description');
+  const notesField = document.getElementById('notes');
+  const styleField = document.getElementById('style');
+  const roomTypeField = document.getElementById('room_type');
+
+  function appendDesignMessage(role, text) {
+    if (!designChatThread || !text) return;
+    const node = document.createElement('div');
+    node.className = `design-chat-message ${role === 'user' ? 'user' : 'assistant'}`;
+    const label = role === 'user' ? 'You' : 'Ravlo';
+    node.innerHTML = `<strong>${label}</strong><p></p>`;
+    node.querySelector('p').textContent = text;
+    designChatThread.appendChild(node);
+    designChatThread.scrollTop = designChatThread.scrollHeight;
+  }
+
+  function gatherDesignConfig() {
+    return {
+      style: styleField?.value || '',
+      room_type: roomTypeField?.value || '',
+      description: descriptionField?.value || '',
+      notes: notesField?.value || '',
+    };
+  }
+
+  function applyDesignConfig(config) {
+    if (!config || typeof config !== 'object') return;
+    if (config.style && styleField) {
+      const opt = styleField.querySelector(`option[value="${config.style}"]`);
+      if (opt) styleField.value = config.style;
+    }
+    if (config.room_type && roomTypeField) {
+      for (const opt of roomTypeField.options) {
+        if (opt.value.toLowerCase() === config.room_type.toLowerCase()) {
+          roomTypeField.value = opt.value;
+          break;
+        }
+      }
+    }
+    if (config.description && descriptionField) descriptionField.value = config.description;
+    if (config.notes && notesField) notesField.value = config.notes;
+  }
+
+  askDesignBtn?.addEventListener('click', async () => {
+    const message = String(designChatInput?.value || '').trim();
+    if (!message) return;
+    appendDesignMessage('user', message);
+    designMessages.push({ role: 'user', content: message });
+    designChatInput.value = '';
+    askDesignBtn.disabled = true;
+    askDesignBtn.textContent = 'Thinking...';
+
+    try {
+      const response = await fetch("{{ url_for('investor.design_studio_chat') }}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token() }}',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ messages: designMessages, config: gatherDesignConfig() })
+      });
+      const data = await response.json();
+      const reply = data.assistant_message || 'I\'ve updated the design configuration.';
+      applyDesignConfig(data.config || {});
+      appendDesignMessage('assistant', reply);
+      designMessages.push({ role: 'assistant', content: reply });
+      if (designChatStatus) designChatStatus.textContent = data.ready ? 'Ready' : 'Refining';
+    } catch (error) {
+      appendDesignMessage('assistant', error.message || 'Something went wrong. Please try again.');
+    } finally {
+      askDesignBtn.disabled = false;
+      askDesignBtn.textContent = 'Ask Ravlo';
+    }
+  });
+
+  applyDesignBtn?.addEventListener('click', () => {
+    if (form) form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit'));
+  });
+
+  designChatInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      askDesignBtn?.click();
+    }
+  });
 
   function money(value) {
     const amount = Number(value || 0);
