@@ -7525,6 +7525,146 @@ def generate_build_exterior():
 
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@investor_bp.route("/deal-studio/design-studio/chat", methods=["POST"])
+@login_required
+@role_required("investor")
+def design_studio_chat():
+    """AI chat endpoint for Design Studio. Understands user's design request
+    and responds with structured design guidance + form field suggestions."""
+    try:
+        data = request.get_json(silent=True) or {}
+        messages = data.get("messages") or []
+        current_config = data.get("config") or {}
+
+        api_key = current_app.config.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return jsonify(_design_studio_fallback_chat(messages, current_config))
+
+        client = OpenAI(api_key=api_key)
+
+        system_prompt = (
+            "You are Ravlo Design Studio's intelligent interior design assistant. "
+            "Your top priority is to understand exactly what the user wants and help them "
+            "create the perfect interior design.\n\n"
+            "When the user describes what they want:\n"
+            "1. Extract EVERY specific detail: style, materials, colors, furniture, lighting, fixtures.\n"
+            "2. Respond conversationally confirming what you understood.\n"
+            "3. If key details are missing, ask targeted follow-up questions.\n"
+            "4. Return structured suggestions for the form fields.\n\n"
+            "Return ONLY valid JSON:\n"
+            '{\n'
+            '  "assistant_message": "Your conversational response to the user",\n'
+            '  "config": {\n'
+            '    "style": "modern_luxury|modern_farmhouse|minimal_modern|traditional|industrial_loft|coastal",\n'
+            '    "room_type": "living room|kitchen|primary bedroom|bathroom|dining room|office",\n'
+            '    "description": "The user\'s full creative vision — this drives image generation",\n'
+            '    "notes": "Additional technical details about materials, finishes, etc."\n'
+            '  },\n'
+            '  "ready": true or false\n'
+            '}\n\n'
+            "Set ready=true when you have enough information to generate a great design. "
+            "Don't over-ask — if the user gave a clear description, you're ready."
+        )
+
+        user_prompt = (
+            f"Current config: {json.dumps(current_config)}\n\n"
+            f"Conversation:\n{json.dumps(messages)}"
+        )
+
+        response = client.chat.completions.create(
+            model=current_app.config.get("AI_MODEL") or "gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.3,
+        )
+
+        text = (response.choices[0].message.content or "").strip()
+        # Strip markdown fences if present
+        text = re.sub(r"^```(?:json)?\s*", "", text)
+        text = re.sub(r"\s*```$", "", text)
+        try:
+            parsed = json.loads(text)
+        except (json.JSONDecodeError, ValueError):
+            parsed = {
+                "assistant_message": text or "I understand your design vision. Let me help you refine it.",
+                "config": current_config,
+                "ready": False,
+            }
+
+        return jsonify(parsed)
+
+    except Exception as exc:
+        current_app.logger.warning("Design studio chat error", exc_info=True)
+        return jsonify(_design_studio_fallback_chat(
+            data.get("messages") if "data" in dir() else [],
+            data.get("config") if "data" in dir() else {},
+        ))
+
+
+def _design_studio_fallback_chat(messages, current_config):
+    """Keyword-based fallback when OpenAI is unavailable."""
+    user_text = ""
+    if isinstance(messages, list) and messages:
+        last = messages[-1]
+        if isinstance(last, dict):
+            user_text = str(last.get("content") or last.get("message") or last.get("text") or "")
+        else:
+            user_text = str(last)
+    lowered = user_text.lower()
+
+    config = dict(current_config or {})
+
+    style_keywords = {
+        "modern luxury": "modern_luxury",
+        "luxury modern": "modern_luxury",
+        "modern farmhouse": "modern_farmhouse",
+        "farmhouse": "modern_farmhouse",
+        "minimal": "minimal_modern",
+        "minimalist": "minimal_modern",
+        "traditional": "traditional",
+        "industrial": "industrial_loft",
+        "loft": "industrial_loft",
+        "coastal": "coastal",
+        "beach": "coastal",
+    }
+    for keyword, style_val in style_keywords.items():
+        if keyword in lowered:
+            config["style"] = style_val
+            break
+
+    room_keywords = {
+        "kitchen": "kitchen",
+        "living room": "living room",
+        "living area": "living room",
+        "bedroom": "primary bedroom",
+        "master bedroom": "primary bedroom",
+        "primary bedroom": "primary bedroom",
+        "bathroom": "bathroom",
+        "bath": "bathroom",
+        "dining": "dining room",
+        "office": "office",
+        "study": "office",
+    }
+    for keyword, room_val in room_keywords.items():
+        if keyword in lowered:
+            config["room_type"] = room_val
+            break
+
+    if user_text.strip():
+        config["description"] = user_text.strip()
+
+    return {
+        "assistant_message": (
+            "I've captured your design preferences. "
+            "You can add more details or click Generate to see the result."
+        ),
+        "config": config,
+        "ready": True,
+    }
+
+
 @investor_bp.route("/deal-studio/build-studio/generate-interior", methods=["POST"])
 @login_required
 @role_required("investor")
