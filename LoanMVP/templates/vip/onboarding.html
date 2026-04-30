@@ -58,11 +58,16 @@ Tell Ravlo how you work so your dashboard feels personal from day one.
             <select name="role_type" class="border rounded px-3 py-2 w-full bg-white text-black">
               {% set role = vip_profile.role_type or 'realtor' %}
               <option value="realtor" {% if role == 'realtor' %}selected{% endif %}>Realtor</option>
+              <option value="insurance" {% if role == 'insurance' %}selected{% endif %}>Insurance</option>
+              <option value="insurance_realtor" {% if role == 'insurance_realtor' %}selected{% endif %}>Insurance + Realtor</option>
               <option value="contractor" {% if role == 'contractor' %}selected{% endif %}>Contractor</option>
               <option value="designer" {% if role == 'designer' %}selected{% endif %}>Designer</option>
               <option value="partner" {% if role == 'partner' %}selected{% endif %}>Partner</option>
               <option value="loan_officer" {% if role == 'loan_officer' %}selected{% endif %}>Loan Officer</option>
             </select>
+            <p class="mt-1 text-xs text-gray-500">
+              "Insurance" for insurance only. "Insurance + Realtor" for both insurance and realtor tools in one dashboard.
+            </p>
           </div>
 
           <div>

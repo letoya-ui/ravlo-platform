@@ -155,8 +155,26 @@ def _parse_due_at(raw):
     return None
 
 
+def _agent_identity():
+    """Return agent_name and agent_company for the current user."""
+    profile = _elena_profile()
+    partner = getattr(current_user, "partner_profile", None) if current_user else None
+    agent_name = (
+        (profile.display_name if profile else None)
+        or (getattr(current_user, "name", None) if current_user else None)
+        or "Agent"
+    )
+    agent_company = (
+        (profile.business_name if profile else None)
+        or (getattr(partner, "company", None) if partner else None)
+        or ""
+    )
+    return {"agent_name": agent_name, "agent_company": agent_company}
+
+
 def _template_defaults():
-    return {
+    defaults = _agent_identity()
+    defaults.update({
         "address": "",
         "city": "",
         "state": "",
@@ -187,7 +205,8 @@ def _template_defaults():
         "phone": "",
         "title": "",
         "cta": "",
-    }
+    })
+    return defaults
 
 def assign_market(state=None, city=None, explicit_market=None):
     """Resolve the market label for a new listing.
@@ -373,11 +392,11 @@ def _gate_elena_on_vip_access():
         return None
 
     existing_profile = VIPProfile.query.filter_by(user_id=current_user.id).first()
-    if existing_profile and (existing_profile.role_type or "").lower() == "realtor":
+    if existing_profile and (existing_profile.role_type or "").lower() in ("realtor", "insurance_realtor"):
         return None
 
     flash(
-        "The Elena workspace is for realtor partners. "
+        "This workspace is for realtor partners. "
         "Opening your VIP dashboard instead.",
         "info",
     )
@@ -386,8 +405,8 @@ def _gate_elena_on_vip_access():
 @elena_bp.get("/")
 @role_required("partner_group", "admin")
 def dashboard():
-    """Elena's branded dashboard entry point."""
-    return dashboard_legacy()
+    """Redirect to the unified VIP realtor dashboard."""
+    return redirect(url_for("vip.realtor_dashboard"))
 
 
 @elena_bp.get("/legacy-dashboard")
@@ -549,9 +568,10 @@ def dashboard_legacy():
         copilot_suggestions=copilot_suggestions,
         recent_partner_requests=recent_partner_requests,
         partner_request_stats=partner_request_stats,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 @elena_bp.route("/clients/new", methods=["GET", "POST"])
@@ -577,16 +597,17 @@ def client_new():
         db.session.add(client)
         db.session.commit()
         flash(f"Client '{client.name}' added.", "success")
-        return redirect(url_for("elena.dashboard"))
+        return redirect(url_for("vip.realtor_dashboard"))
 
     return render_template(
         "elena/client_form.html",
         client=None,
         pipeline_stages=PIPELINE_STAGES,
         client_roles=CLIENT_ROLES,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 
@@ -655,7 +676,7 @@ def listing_new():
         db.session.commit()
 
         flash(f"Listing at {listing.address} added and flyer created.", "success")
-        return redirect(url_for("elena.dashboard"))
+        return redirect(url_for("vip.realtor_dashboard"))
 
     listing_seed = {
         "mls_number": (request.args.get("mls_number") or "").strip(),
@@ -671,9 +692,10 @@ def listing_new():
         available_markets=_elena_available_markets(),
         current_market=get_current_market(),
         clients=clients,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 
@@ -847,6 +869,7 @@ def mls_import():
     flyer_id = None
 
     if auto_generate_flyer:
+        listing_data.update(_agent_identity())
         prompt = render_elena_template(TemplateType.JUST_LISTED, **listing_data)
         flyer_output = generate_text(prompt)
 
@@ -920,9 +943,10 @@ def template_studio():
         preview=None,
         output=None,
         saved_interaction_id=None,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 
@@ -958,9 +982,10 @@ def template_studio_preview():
         output=None,
         saved_interaction_id=None,
         saved_flyer_id=None,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 @elena_bp.post("/template-studio/generate")
@@ -995,9 +1020,10 @@ def template_studio_generate():
         output=output,
         saved_interaction_id=None,
         saved_flyer_id=None,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 @elena_bp.post("/template-studio/generate_and_save")
@@ -1061,9 +1087,10 @@ def template_studio_generate_and_save():
         output=output,
         saved_interaction_id=saved_interaction_id,
         saved_flyer_id=saved_flyer_id,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        vip_profile=_elena_profile(),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 
@@ -1085,7 +1112,8 @@ def create_canva_flyer(listing_id):
     if not template_enum:
         return jsonify({"error": "Invalid template_type"}), 400
 
-    variables = {
+    variables = _agent_identity()
+    variables.update({
         "address": listing.address,
         "city": listing.city,
         "state": listing.state,
@@ -1116,7 +1144,7 @@ def create_canva_flyer(listing_id):
         "phone": "",
         "title": "",
         "cta": "",
-    }
+    })
 
     prompt = render_elena_template(template_enum, **variables)
     output = generate_text(prompt)
@@ -1445,7 +1473,7 @@ def switch_market():
     selected_market = (request.form.get("market") or "All Markets").strip()
     set_current_market(selected_market)
 
-    next_url = request.form.get("next") or url_for("elena.dashboard")
+    next_url = request.form.get("next") or url_for("vip.realtor_dashboard")
     return redirect(next_url)
 
 
@@ -1469,9 +1497,9 @@ def copilot():
         suggestions=suggestions,
         current_market=get_current_market(),
         available_markets=_elena_available_markets(),
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
+        portal="vip",
+        portal_name="VIP Workspace",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
 

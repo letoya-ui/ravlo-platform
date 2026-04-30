@@ -29,6 +29,7 @@
 
 {% block content %}
 <div class="pres-edit-layout">
+  {% set cma = view.cma_analysis or {} %}
 
   {# ── Section nav (left rail) ────────────────────────── #}
   <aside class="pres-sidebar">
@@ -36,7 +37,7 @@
       <a href="#sec-cover">Cover</a>
       <a href="#sec-agent">About the Agent</a>
       <a href="#sec-market">Market Snapshot</a>
-      <a href="#sec-cma">CMA Comparables</a>
+      <a href="#sec-cma">CMA Numbers</a>
       <a href="#sec-pricing">Pricing Strategy</a>
       <a href="#sec-marketing">Marketing Plan</a>
       <a href="#sec-testimonials">Testimonials</a>
@@ -181,13 +182,56 @@
     {# CMA ------------------------------------------------- #}
     <section class="pres-card" id="sec-cma">
       <header>
-        <h3>Comparable Sales</h3>
-        <p>Recent nearby sales that support your price.</p>
+        <h3>CMA Numbers</h3>
+        <p>Build a defensible list price from saved Ravlo listings or typed comps.</p>
       </header>
       <label>
         <span>CMA summary</span>
         <textarea name="cma_summary" rows="3">{{ pres.cma_summary or '' }}</textarea>
       </label>
+      <div class="cma-number-panel">
+        <div class="cma-number-main">
+          <span>Ravlo CMA Number</span>
+          <strong>{% if cma.suggested_price %}${{ "{:,.0f}".format(cma.suggested_price) }}{% else %}Needs comps{% endif %}</strong>
+          <small>
+            {% if cma.range_low and cma.range_high %}
+              Range ${{ "{:,.0f}".format(cma.range_low) }} - ${{ "{:,.0f}".format(cma.range_high) }}
+            {% else %}
+              Add comps or pull from saved listings.
+            {% endif %}
+          </small>
+        </div>
+        <div class="cma-number-stats">
+          <div>
+            <span>Comps</span>
+            <strong>{{ cma.comp_count or 0 }}</strong>
+          </div>
+          <div>
+            <span>Avg $/Sqft</span>
+            <strong>{% if cma.average_ppsf %}${{ "{:,.0f}".format(cma.average_ppsf) }}{% else %}-{% endif %}</strong>
+          </div>
+          <div>
+            <span>Confidence</span>
+            <strong>{{ cma.confidence_label or "Needs comps" }}</strong>
+          </div>
+        </div>
+        {% if cma.warnings %}
+          <div class="cma-warning-row">
+            {% for warning in cma.warnings %}
+              <span>{{ warning }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <button
+          type="submit"
+          class="ravlo-btn primary sm"
+          formaction="{{ url_for('vip.listing_presentation_cma_refresh', pres_id=pres.id) }}"
+          formmethod="post"
+        >
+          <i class="lucide lucide-calculator"></i>
+          <span>Build CMA Number</span>
+        </button>
+      </div>
       <div class="repeat-block" data-name="cma">
         <div class="repeat-block-head">
           <span>Comparable properties</span>
@@ -464,6 +508,70 @@
   .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .inline-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 6px; }
 
+  .cma-number-panel {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+    gap: 12px;
+    align-items: stretch;
+    margin: 12px 0 14px;
+    padding: 14px;
+    border: 1px solid rgba(122,184,255,.20);
+    border-radius: 12px;
+    background: rgba(122,184,255,.06);
+  }
+  .cma-number-main,
+  .cma-number-stats div {
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    background: rgba(255,255,255,.04);
+    padding: 12px;
+  }
+  .cma-number-main span,
+  .cma-number-stats span {
+    display: block;
+    color: #9fb3c8;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .cma-number-main strong {
+    display: block;
+    color: #fff;
+    font-size: 1.65rem;
+    line-height: 1.1;
+    margin-top: 5px;
+  }
+  .cma-number-main small {
+    display: block;
+    color: #cfe1f4;
+    margin-top: 6px;
+  }
+  .cma-number-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .cma-number-stats strong {
+    display: block;
+    color: #fff;
+    font-size: 1rem;
+    margin-top: 5px;
+  }
+  .cma-warning-row {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .cma-warning-row span {
+    color: #ffd18a;
+    font-size: 0.84rem;
+  }
+  .cma-number-panel > .ravlo-btn {
+    grid-column: 1 / -1;
+    width: fit-content;
+  }
+
   .repeat-block { margin-top: 10px; }
   .repeat-block-head {
     display: flex; justify-content: space-between; align-items: center;
@@ -523,6 +631,7 @@
   }
   @media (max-width: 760px) {
     .grid-2, .grid-3, .inline-row { grid-template-columns: 1fr; }
+    .cma-number-panel, .cma-number-stats { grid-template-columns: 1fr; }
     .repeat-row, .repeat-row.cma-row { grid-template-columns: 1fr; }
   }
 </style>

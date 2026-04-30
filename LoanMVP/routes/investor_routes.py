@@ -21,7 +21,7 @@ from urllib.parse import urlencode, urlparse, quote_plus
 import requests
 
 from openai import OpenAI
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageStat
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import LETTER
 from sqlalchemy import or_
@@ -144,11 +144,7 @@ from LoanMVP.services.property_tool import (
 from LoanMVP.services.property_service import build_property_card, _build_property_tool_result
 from LoanMVP.services.notification_service import notify_team_on_conversion
 from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
-from LoanMVP.services.prompt_builder import build_blueprint_prompt
-from LoanMVP.services.investor.investor_prompt_helpers import (
-    build_exterior_concept_prompt,
-    build_rehab_concept_prompt,
-)
+from LoanMVP.services.prompt_builder import build_blueprint_prompt  # noqa: F401
 from LoanMVP.services.concept_build_service import run_concept_build
 from LoanMVP.services.renovation_engine_client import (
     generate_concept,
@@ -230,6 +226,7 @@ from LoanMVP.services.investor.investor_media_helpers import (
     _resolve_photo,
     _saved_property_media,
     _try_upload_and_attach_listing_photos,
+    _unwrap_proxy_url,
     _upload_before_image,
     _upload_after_images_from_b64,
     _upload_build_images_from_b64,
@@ -351,17 +348,12 @@ def _saved_property_workspace_seed(saved_property):
         workspace_analysis = {}
 
     media = _saved_property_media(saved_property)
-    listing_photos = _normalize_photo_urls(
-        workspace_analysis.get("listing_photos"),
-        workspace_analysis.get("photos"),
-        property_payload.get("listing_photos"),
-        property_payload.get("photos"),
-        media.get("gallery"),
-    )
+    listing_photos = _collect_property_photo_urls(workspace_analysis, property_payload, media, resolved)
     primary_photo = _resolve_photo(
         workspace_analysis.get("image_url")
         or property_payload.get("image_url")
         or property_payload.get("primary_photo")
+        or property_payload.get("primaryPhoto")
         or media.get("primary_photo"),
         listing_photos,
     )
@@ -376,12 +368,19 @@ def _saved_property_workspace_seed(saved_property):
             "city": property_payload.get("city") or workspace_analysis.get("city") or "",
             "state": property_payload.get("state") or workspace_analysis.get("state") or "",
             "zip_code": property_payload.get("zip_code") or workspace_analysis.get("zip_code") or "",
+            "latitude": property_payload.get("latitude") or workspace_analysis.get("latitude"),
+            "longitude": property_payload.get("longitude") or workspace_analysis.get("longitude"),
         }
         sv_url = _streetview_fallback_url(sv_src)
         if sv_url:
             proxied_sv = url_for("investor.api_property_tool_image", src=sv_url)
             primary_photo = proxied_sv
             listing_photos = [proxied_sv]
+
+    listing_photos = _proxy_unique_photo_urls(listing_photos)
+    primary_photo = _proxy_listing_image_url(primary_photo) or (listing_photos[0] if listing_photos else primary_photo)
+    if primary_photo and primary_photo not in listing_photos:
+        listing_photos.insert(0, primary_photo)
 
     return {
         "resolved": resolved,
@@ -424,20 +423,12 @@ def _resolve_rehab_before_seed(deal):
     property_seed = _saved_property_workspace_seed(saved_property) if saved_property else {}
     property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "gallery": []}
 
-    gallery = _normalize_photo_urls(
-        rehab_before.get("gallery"),
-        workspace_analysis.get("listing_photos"),
-        workspace_analysis.get("photos"),
-        property_payload.get("listing_photos"),
-        property_payload.get("photos"),
-        property_seed.get("listing_photos"),
-        property_media.get("gallery"),
-        rehab_before.get("image_url"),
-        workspace_analysis.get("image_url"),
-        property_payload.get("image_url"),
-        property_payload.get("primary_photo"),
-        property_seed.get("primary_photo"),
-        property_media.get("primary_photo"),
+    gallery = _collect_property_photo_urls(
+        rehab_before,
+        workspace_analysis,
+        property_payload,
+        property_seed,
+        property_media,
     )
     url = _resolve_photo(
         rehab_before.get("image_url")
@@ -447,6 +438,10 @@ def _resolve_rehab_before_seed(deal):
         or property_media.get("primary_photo"),
         gallery,
     )
+    gallery = _proxy_unique_photo_urls(gallery)
+    url = _proxy_listing_image_url(url) or (gallery[0] if gallery else "")
+    if url and url not in gallery:
+        gallery.insert(0, url)
     return {"url": url or "", "gallery": gallery}
 
 
@@ -494,7 +489,95 @@ def _proxy_photo_list(photo_urls):
     return proxied
 
 
+def _proxy_unique_photo_urls(photo_urls):
+    proxied = []
+    for photo in photo_urls or []:
+        proxied_photo = _proxy_listing_image_url(photo)
+        if proxied_photo and proxied_photo not in proxied:
+            proxied.append(proxied_photo)
+    return proxied
+
+
 _STREETVIEW_BASE = "https://maps.googleapis.com/maps/api/streetview"
+
+
+def _download_streetview_image_bytes(source_url: str) -> bytes | None:
+    source_url = safe_str(_unwrap_proxy_url(source_url))
+    if not source_url.startswith(_STREETVIEW_BASE):
+        return None
+
+    google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_PLACES_API_KEY") or ""
+    if not google_key:
+        return None
+
+    sep = "&" if "?" in source_url else "?"
+    try:
+        res = requests.get(
+            f"{source_url}{sep}key={google_key}",
+            timeout=15,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+            },
+        )
+        if not res.ok:
+            return None
+        content_type = res.headers.get("Content-Type", "")
+        if content_type and not content_type.startswith("image/"):
+            return None
+        if len(res.content) < 1000:
+            return None
+        return res.content
+    except Exception:
+        current_app.logger.info("Street View reference download failed", exc_info=True)
+        return None
+
+
+def _engine_ready_reference_image_url(source_url: str, *, prefix: str = "build-reference") -> str:
+    """Return an engine-fetchable URL for listing/site references.
+
+    Build image generation runs on a remote engine, so authenticated proxy URLs
+    and Google Street View URLs without a key need to be resolved server-side
+    and re-uploaded to public storage before they can be used as conditioning.
+    """
+    source_url = safe_str(source_url)
+    if not source_url or source_url.startswith("data:"):
+        return ""
+
+    unwrapped_url = safe_str(_unwrap_proxy_url(source_url))
+    if not unwrapped_url:
+        return ""
+
+    if (SPACES_CDN_BASE and unwrapped_url.startswith(SPACES_CDN_BASE)) or (
+        SPACES_ENDPOINT and unwrapped_url.startswith(SPACES_ENDPOINT)
+    ):
+        return unwrapped_url
+
+    raw = _download_streetview_image_bytes(unwrapped_url)
+    if not raw:
+        raw = download_image_bytes(unwrapped_url)
+
+    if raw:
+        try:
+            uploaded = _upload_before_image(to_png_bytes(raw), prefix=prefix)
+        except Exception:
+            current_app.logger.info("Reference image PNG conversion failed; uploading raw image", exc_info=True)
+            uploaded = _upload_before_image(raw, prefix=prefix)
+        if uploaded:
+            return uploaded
+
+    if unwrapped_url.startswith(("http://", "https://")) and not unwrapped_url.startswith(_STREETVIEW_BASE):
+        return unwrapped_url
+
+    return ""
+
+
+def _streetview_engine_reference_url(source: dict[str, Any], *, prefix: str = "build-site-reference") -> str:
+    streetview_url = _streetview_fallback_url(source)
+    if not streetview_url:
+        return ""
+    return _engine_ready_reference_image_url(streetview_url, prefix=prefix)
 
 
 def _streetview_fallback_url(result):
@@ -502,15 +585,11 @@ def _streetview_fallback_url(result):
 
     The key is injected server-side by :func:`api_property_tool_image`
     so it never appears in client-visible markup.
-    Returns ``None`` when the address is too short or key is missing.
+    Returns ``None`` when the address is too short.
 
     Prefers latitude/longitude coordinates when available because they
     produce more reliable Street View results than text addresses.
     """
-    google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or ""
-    if not google_key:
-        return None
-
     lat = result.get("latitude")
     lon = result.get("longitude")
     if lat is not None and lon is not None:
@@ -534,50 +613,154 @@ def _streetview_fallback_url(result):
     return f"{_STREETVIEW_BASE}?size=600x400&location={quote_plus(location)}"
 
 
+def _collect_property_photo_urls(*payloads):
+    sources = []
+    for payload in payloads:
+        if not payload:
+            continue
+        if not isinstance(payload, dict):
+            sources.append(payload)
+            continue
+
+        sources.extend([
+            payload.get("listing_photos"),
+            payload.get("listingPhotos"),
+            payload.get("listing_images"),
+            payload.get("listingImages"),
+            payload.get("property_photos"),
+            payload.get("propertyPhotos"),
+            payload.get("photos"),
+            payload.get("photo_urls"),
+            payload.get("photoUrls"),
+            payload.get("photo_links"),
+            payload.get("photoLinks"),
+            payload.get("images"),
+            payload.get("image_urls"),
+            payload.get("imageUrls"),
+            payload.get("responsivePhotos"),
+            payload.get("responsive_photos"),
+            payload.get("mixedSources"),
+            payload.get("mixed_sources"),
+            payload.get("imageSources"),
+            payload.get("image_sources"),
+            payload.get("photoSources"),
+            payload.get("photo_sources"),
+            payload.get("media"),
+            payload.get("gallery"),
+            payload.get("galleryUrls"),
+            payload.get("gallery_urls"),
+            payload.get("image_url"),
+            payload.get("imageUrl"),
+            payload.get("hiRes"),
+            payload.get("highRes"),
+            payload.get("sourceUrl"),
+            payload.get("assetUrl"),
+            payload.get("primary_photo"),
+            payload.get("primaryPhoto"),
+            payload.get("primaryPhotoUrl"),
+            payload.get("photo"),
+            payload.get("photo_url"),
+            payload.get("photoUrl"),
+            payload.get("thumbnail"),
+            payload.get("imgSrc"),
+            payload.get("img_src"),
+        ])
+
+        for key in (
+            "raw",
+            "data",
+            "result",
+            "results",
+            "source",
+            "provider_payload",
+            "property",
+            "home",
+            "home_search",
+            "description",
+            "location",
+            "workspace_analysis",
+            "media",
+            "listing",
+            "listings",
+            "realtor",
+            "rentcast",
+            "attom",
+            "mashvisor",
+            "rapidapi_real_estate",
+        ):
+            nested = payload.get(key)
+            if nested:
+                sources.append(nested)
+
+    return _normalize_photo_urls(*sources)
+
+
+def _ensure_property_image_coverage(payload, *extra_payloads):
+    if not isinstance(payload, dict):
+        return payload
+
+    photos = _collect_property_photo_urls(payload, *extra_payloads)
+    primary = _resolve_photo(
+        payload.get("image_url")
+        or payload.get("imageUrl")
+        or payload.get("primary_photo")
+        or payload.get("primaryPhoto")
+        or payload.get("primaryPhotoUrl")
+        or payload.get("imgSrc")
+        or payload.get("photo")
+        or payload.get("photo_url")
+        or payload.get("photoUrl"),
+        photos,
+    )
+
+    if not primary:
+        sv_url = _streetview_fallback_url(payload)
+        if sv_url:
+            primary = url_for("investor.api_property_tool_image", src=sv_url)
+            photos = [primary] + [photo for photo in photos if photo != primary]
+            payload.setdefault("photo_source", "streetview")
+
+    if primary:
+        payload["image_url"] = primary
+        payload["primary_photo"] = primary
+
+    if photos:
+        payload["listing_photos"] = photos
+        payload["photos"] = photos
+
+    return payload
+
+
 def _proxy_search_result_images(result):
     if not isinstance(result, dict):
         return result
 
-    updated = dict(result)
+    updated = _ensure_property_image_coverage(dict(result), result.get("raw"))
+    raw_listing_photos = _collect_property_photo_urls(updated, updated.get("raw"))
+    primary = _resolve_photo(updated.get("image_url") or updated.get("primary_photo"), raw_listing_photos)
     proxied_listing_photos = []
-    raw_listing_photos = updated.get("listing_photos") or updated.get("photos") or []
 
-    for photo in raw_listing_photos:
-        if isinstance(photo, dict):
-            photo_copy = dict(photo)
-            best_url = (
-                photo_copy.get("full")
-                or photo_copy.get("full_url")
-                or photo_copy.get("fullSize")
-                or photo_copy.get("full_size")
-                or photo_copy.get("original")
-                or photo_copy.get("original_url")
-                or photo_copy.get("large")
-                or photo_copy.get("large_url")
-                or photo_copy.get("url")
-                or photo_copy.get("src")
-                or photo_copy.get("href")
-                or photo_copy.get("photo")
-                or photo_copy.get("image")
-                or photo_copy.get("thumbnail")
-            )
-            proxied = _proxy_listing_image_url(best_url)
-            if proxied:
-                photo_copy["url"] = proxied
-                proxied_listing_photos.append(photo_copy)
-        else:
-            proxied = _proxy_listing_image_url(photo)
-            if proxied:
-                proxied_listing_photos.append(proxied)
+    for photo in raw_listing_photos[:12]:
+        proxied = _proxy_listing_image_url(photo)
+        if proxied and proxied not in proxied_listing_photos:
+            proxied_listing_photos.append(proxied)
 
-    updated["listing_photos"] = proxied_listing_photos
-    updated["photos"] = proxied_listing_photos
     for _field in ("primary_photo", "primary_photo_url", "image_url", "photo", "thumbnail"):
         raw_val = updated.get(_field)
         if _is_map_tile_url(raw_val):
             updated[_field] = None
         else:
             updated[_field] = _proxy_listing_image_url(raw_val) or raw_val
+
+    proxied_primary = _proxy_listing_image_url(primary) or updated.get("image_url") or updated.get("primary_photo")
+    if proxied_primary:
+        updated["primary_photo"] = proxied_primary
+        updated["image_url"] = proxied_primary
+        if proxied_primary not in proxied_listing_photos:
+            proxied_listing_photos.insert(0, proxied_primary)
+
+    updated["listing_photos"] = proxied_listing_photos
+    updated["photos"] = proxied_listing_photos
 
     has_photo = bool(
         proxied_listing_photos
@@ -5868,7 +6051,6 @@ def build_studio(deal_id=None):
         build_project=build_project,
         blueprint_result=blueprint_result,
         blueprint_floor2_result=build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {},
-        blueprint_floor3_result=build_project.get("blueprint_floor3", {}) or {},
         exterior_result=exterior_result,
         property_photo_gallery=property_gallery,
         package_result=package_result,
@@ -7334,82 +7516,6 @@ def generate_full_build():
                 blueprint_floor2_job_id = None
 
         # --------------------------------------------------
-        # 2b. GENERATE BLUEPRINT — THIRD FLOOR (when 3+ stories)
-        # --------------------------------------------------
-        blueprint_floor3_urls = []
-        blueprint_floor3_primary_url = ""
-        blueprint_floor3_primary_b64 = ""
-        blueprint_floor3_meta = {"skipped": True, "reason": "fewer_than_3_stories"}
-        blueprint_floor3_seed = None
-        blueprint_floor3_job_id = None
-
-        if number_of_floors and number_of_floors >= 3:
-            try:
-                blueprint_floor3_payload = {
-                    "mode": "blueprint",
-                    "blueprint_floor": "third",
-                    "project_name": project_name,
-                    "property_type": property_type,
-                    "style": style,
-                    "blueprint_style": blueprint_style,
-                    "description": description,
-                    "build_description": description,
-                    "lot_size": lot_size,
-                    "zoning": zoning,
-                    "prompt_notes": (
-                        f"{site_notes}. Generate the third floor / top level plan with bonus rooms, "
-                        "attic bedrooms, loft, flex spaces, or additional bedrooms. Must be a distinct top-level layout."
-                    ),
-                    "special_features": (
-                        "top level bonus rooms, attic bedrooms, loft, flex spaces, additional living areas"
-                    ),
-                    "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
-                    "stories": number_of_floors,
-                    "number_of_floors": number_of_floors,
-                    "floor_count": number_of_floors,
-                    "image_base64": blueprint_primary_b64,
-                    "image_url": "" if blueprint_primary_b64 else blueprint_primary_url,
-                    "width": 1024,
-                    "height": 1024,
-                    "steps": 30,
-                    "guidance": 6.8,
-                    "strength": 0.30,
-                    "count": 1,
-                }
-
-                current_app.logger.warning(f"FULL BUILD BLUEPRINT FLOOR 3 PAYLOAD: {blueprint_floor3_payload}")
-
-                blueprint_floor3_json = _post_renovation_engine_json(
-                    "/v1/build_concept",
-                    blueprint_floor3_payload,
-                    timeout=FULL_BUILD_BLUEPRINT_TIMEOUT,
-                )
-
-                blueprint_floor3_images_b64 = blueprint_floor3_json.get("images_base64") or []
-                if not blueprint_floor3_images_b64:
-                    raise RuntimeError("Third floor blueprint step returned no images.")
-
-                blueprint_floor3_batch_id = uuid.uuid4().hex
-                blueprint_floor3_urls = _upload_after_images_from_b64(blueprint_floor3_images_b64, blueprint_floor3_batch_id)
-
-                if not blueprint_floor3_urls:
-                    raise RuntimeError("Third floor blueprint generated but uploads failed.")
-
-                blueprint_floor3_primary_b64 = blueprint_floor3_images_b64[0]
-                blueprint_floor3_primary_url = blueprint_floor3_urls[0]
-                blueprint_floor3_meta = blueprint_floor3_json.get("meta") or {}
-                blueprint_floor3_seed = blueprint_floor3_json.get("seed")
-                blueprint_floor3_job_id = blueprint_floor3_json.get("job_id")
-            except Exception:
-                current_app.logger.exception("Third floor blueprint generation failed (non-fatal)")
-                blueprint_floor3_urls = []
-                blueprint_floor3_primary_url = ""
-                blueprint_floor3_primary_b64 = ""
-                blueprint_floor3_meta = {"skipped": True, "reason": "floor3_generation_failed"}
-                blueprint_floor3_seed = None
-                blueprint_floor3_job_id = None
-
-        # --------------------------------------------------
         # 3. GENERATE EXTERIOR
         # Real exterior reference = primary source. Generated plans are only
         # fallback inputs when the user has not supplied/select a property photo.
@@ -7658,28 +7764,6 @@ def generate_full_build():
                 "skipped": not bool(blueprint_floor2_primary_url),
             }
 
-            build_project["blueprint_floor3"] = {
-                "project_name": project_name,
-                "property_type": property_type,
-                "description": description,
-                "lot_size": lot_size,
-                "lot_count": lot_count,
-                "zoning": zoning,
-                "location": location,
-                "notes": notes,
-                "style": style,
-                "stories": number_of_floors,
-                "number_of_floors": number_of_floors,
-                "floor_label": "Third Floor",
-                "blueprint_floor": "third",
-                "image_url": blueprint_floor3_primary_url,
-                "images": blueprint_floor3_urls,
-                "meta": blueprint_floor3_meta,
-                "seed": blueprint_floor3_seed,
-                "job_id": blueprint_floor3_job_id,
-                "skipped": not bool(blueprint_floor3_primary_url),
-            }
-
             build_project["exterior"] = {
                 "project_name": project_name,
                 "property_type": property_type,
@@ -7734,7 +7818,6 @@ def generate_full_build():
             "package": {
                 "blueprint": blueprint_primary_url,
                 "blueprint_floor2": blueprint_floor2_primary_url,
-                "blueprint_floor3": blueprint_floor3_primary_url,
                 "exterior": exterior_primary_url,
                 "exterior_back": exterior_back_url,
             },
@@ -7754,14 +7837,6 @@ def generate_full_build():
                 "seed": blueprint_floor2_seed,
                 "job_id": blueprint_floor2_job_id,
                 "skipped": not bool(blueprint_floor2_primary_url),
-            },
-            "blueprint_floor3_result": {
-                "image_url": blueprint_floor3_primary_url,
-                "images": blueprint_floor3_urls,
-                "meta": blueprint_floor3_meta,
-                "seed": blueprint_floor3_seed,
-                "job_id": blueprint_floor3_job_id,
-                "skipped": not bool(blueprint_floor3_primary_url),
             },
             "blueprint_result": {
                 "image_url": blueprint_primary_url,
@@ -8605,14 +8680,6 @@ def deal_architect(deal_id=None):
     build_analysis = {}
     build_preview_url = ""
     build_mockups = []
-    build_project = {}
-    build_blueprint_url = None
-    build_floor2_url = None
-    build_floor3_url = None
-    build_exterior_url = None
-    build_project_name = None
-    build_lot_count = None
-    build_property_type = None
 
     # -------------------------------------------------
     # LOAD DEAL DATA
@@ -8664,7 +8731,6 @@ def deal_architect(deal_id=None):
 
         build_blueprint_url = (build_project.get("blueprint", {}) or {}).get("image_url")
         build_floor2_url = (build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}).get("image_url")
-        build_floor3_url = (build_project.get("blueprint_floor3", {}) or {}).get("image_url")
         build_exterior_url = (build_project.get("exterior", {}) or {}).get("image_url")
 
         build_project_name = build_project.get("project_name")
@@ -8768,7 +8834,6 @@ def deal_architect(deal_id=None):
         build_project=build_project,
         build_blueprint_url=build_blueprint_url,
         build_floor2_url=build_floor2_url,
-        build_floor3_url=build_floor3_url,
         build_exterior_url=build_exterior_url,
         build_project_name=build_project_name,
         build_lot_count=build_lot_count,
@@ -9360,7 +9425,6 @@ def generate_build_costs_from_package():
 
         blueprint = build_project.get("blueprint", {}) or {}
         floor2 = build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}
-        floor3 = build_project.get("blueprint_floor3", {}) or {}
         exterior = build_project.get("exterior", {}) or {}
 
         package = {
@@ -9386,7 +9450,6 @@ def generate_build_costs_from_package():
 
             "blueprint_url": blueprint.get("image_url") or blueprint.get("blueprint_url"),
             "blueprint_floor2_url": floor2.get("image_url"),
-            "blueprint_floor3_url": floor3.get("image_url"),
             "exterior_url": exterior.get("image_url"),
         }
 

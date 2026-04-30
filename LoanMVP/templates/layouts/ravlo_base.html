@@ -1,8 +1,8 @@
 {% set bp = request.blueprint or "" %}
 {% set ep = request.endpoint or "" %}
 {% set active_portal = portal|default(
-  'vip' if bp == 'vip' else
-  ('elena' if bp == 'elena' else ('partner' if bp == 'partners' else 'investor'))
+  'vip' if bp in ('vip', 'elena') else
+  ('partner' if bp == 'partners' else 'investor')
 ) %}
 
 <!doctype html>
@@ -32,8 +32,6 @@
       <div class="ravlo-sidebar-heading">
         {% if active_portal == "vip" %}
           <span class="heading-label">VIP Workspace</span>
-        {% elif active_portal == "elena" %}
-          <span class="heading-label">Elena</span>
         {% elif active_portal == "partner" %}
           <span class="heading-label">Partner Portal</span>
         {% else %}
@@ -43,8 +41,6 @@
 
       {% if active_portal == "vip" %}
         {% include "layouts/_sidebar_vip.html" %}
-      {% elif active_portal == "elena" %}
-        {% include "layouts/_sidebar_elena.html" %}
       {% elif active_portal == "partner" %}
         {% include "layouts/_sidebar_partner.html" %}
       {% else %}
@@ -138,7 +134,7 @@
     });
     </script>
 
-  {% if active_portal == "vip" or active_portal == "elena" %}
+  {% if active_portal == "vip" %}
     {% include "layouts/_ai_pilot_fab.html" %}
   {% endif %}
 

@@ -14,17 +14,20 @@ from flask_login import current_user
 VIP_ACCESS_TIERS = {"premium", "enterprise"}
 from sqlalchemy import or_, func
 
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
 
 # ── VIP models ────────────────────────────────────────────────────────────────
 from LoanMVP.models.vip_models import (
     VIPProfile,
+    VIPContact,
     VIPIncome,
     VIPExpense,
     VIPAssistantSuggestion,
+    VIPNotification,
     VIPDesignProject,
     VIPDesignAnnotation,
     VIPTeamMember,
+    InsuranceQuoteRequest,
 )
 
 # ── Investor / deal models ────────────────────────────────────────────────────
@@ -69,8 +72,11 @@ from LoanMVP.models.elena_models import (
 from LoanMVP.models.admin import Company
 
 # ── Services / utils ─────────────────────────────────────────────────────────
+from LoanMVP.ai.base_ai import AIAssistant
 from LoanMVP.services.vip_ai_pilot import parse_vip_command
-from LoanMVP.utils.decorators import role_required
+from LoanMVP.services.elena_templates import TemplateType
+from LoanMVP.utils.decorators import role_required, has_full_loan_officer_access
+from LoanMVP.routes.loan_officer import build_loan_officer_dashboard_context
 from LoanMVP.utils.company_policy import (
     get_user_lending_policy,
     is_out_of_scope_loan_type,
@@ -129,7 +135,17 @@ MODULE_FIELD_MAP = {
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+FULL_LOAN_OFFICER_MODULES = list(MODULE_FIELD_MAP.values())
+
+
 def get_enabled_modules(profile):
+    if (
+        profile
+        and has_full_loan_officer_access(current_user)
+        and getattr(profile, "user_id", None) == getattr(current_user, "id", None)
+    ):
+        return FULL_LOAN_OFFICER_MODULES
+
     raw = profile.enabled_modules or "[]"
     try:
         value = json.loads(raw)
@@ -150,6 +166,51 @@ def build_enabled_modules_from_form(form):
     return modules
 
 
+def _partner_role_text(partner):
+    if not partner:
+        return ""
+
+    fields = [
+        getattr(partner, "category", ""),
+        getattr(partner, "type", ""),
+    ]
+    return " ".join(str(value or "").strip().lower() for value in fields)
+
+
+def _partner_role_mentions(partner, *terms):
+    role_text = _partner_role_text(partner)
+    return any(term in role_text for term in terms)
+
+
+def _default_vip_role_for_partner(partner):
+    if not partner:
+        return "partner"
+
+    if _partner_role_mentions(partner, "insurance", "insurer"):
+        return "insurance"
+
+    if _partner_role_mentions(partner, "realtor", "real estate", "real-estate", "realty"):
+        return "realtor"
+
+    raw_category = (getattr(partner, "category", "") or "").strip().lower()
+    role_map = {
+        "contractor":       "contractor",
+        "designer":         "designer",
+        "lender":           "loan_officer",
+        "loan_officer":     "loan_officer",
+        "broker":           "partner",
+        "vendor":           "partner",
+        "property_manager": "partner",
+        "attorney":         "partner",
+        "title":            "partner",
+        "inspector":        "partner",
+        "appraiser":        "partner",
+        "cleaner":          "contractor",
+        "janitorial":       "contractor",
+    }
+    return role_map.get(raw_category, "partner")
+
+
 def get_or_create_vip_profile():
     if not getattr(current_user, "is_authenticated", False):
         return None
@@ -159,38 +220,40 @@ def get_or_create_vip_profile():
         return profile
 
     partner = getattr(current_user, "partner_profile", None)
-    default_role_type = "partner"
-
-    if partner and getattr(partner, "category", None):
-        raw_category = (partner.category or "").strip().lower()
-        role_map = {
-            "realtor":          "realtor",
-            "contractor":       "contractor",
-            "designer":         "designer",
-            "lender":           "loan_officer",
-            "loan_officer":     "loan_officer",
-            "broker":           "partner",
-            "vendor":           "partner",
-            "property_manager": "partner",
-            "attorney":         "partner",
-            "insurance":        "partner",
-            "title":            "partner",
-            "inspector":        "partner",
-            "appraiser":        "partner",
-            "cleaner":          "contractor",
-            "janitorial":       "contractor",
-        }
-        default_role_type = role_map.get(raw_category, "partner")
+    default_role_type = _default_vip_role_for_partner(partner)
+    company = None
+    if has_full_loan_officer_access(current_user):
+        default_role_type = "loan_officer"
+        company = Company.query.filter(func.lower(Company.email_domain) == "caughmanmason.com").first()
 
     profile = VIPProfile(
         user_id=current_user.id,
         display_name=(
+            "Caughman Mason VIP Loan Officer"
+            if has_full_loan_officer_access(current_user)
+            else None
+        ) or (
             getattr(current_user, "name", None)
             or getattr(current_user, "email", "VIP User")
         ),
-        business_name=getattr(partner, "company", None) if partner else None,
+        business_name=(
+            getattr(company, "name", None)
+            or (getattr(partner, "company", None) if partner else None)
+        ),
+        dashboard_title=(
+            "Caughman Mason VIP Loan Officer"
+            if has_full_loan_officer_access(current_user)
+            else None
+        ),
         role_type=default_role_type,
         assistant_name="Ravlo",
+        marketplace_enabled="yes" if has_full_loan_officer_access(current_user) else "no",
+        enabled_modules=(
+            json.dumps(FULL_LOAN_OFFICER_MODULES)
+            if has_full_loan_officer_access(current_user)
+            else None
+        ),
+        lo_company_id=getattr(company, "id", None) if company else None,
     )
     db.session.add(profile)
     db.session.commit()
@@ -453,6 +516,9 @@ def partner_has_vip_access(user) -> bool:
     if not getattr(user, "is_authenticated", False):
         return False
 
+    if has_full_loan_officer_access(user):
+        return True
+
     if (getattr(user, "role", "") or "").lower() == "admin":
         return True
 
@@ -525,6 +591,7 @@ def inject_vip_context():
 @role_required("partner_group", "admin")
 def index():
     profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
 
     if profile.role_type in ("loan_officer", "lender"):
         policy = get_user_lending_policy(current_user)
@@ -539,11 +606,16 @@ def index():
         if gate is not None:
             return gate
 
+    if profile.role_type == "realtor" and _partner_role_mentions(partner, "insurance", "insurer"):
+        return redirect(url_for("vip.insurance_dashboard"))
+
     role_map = {
-        "realtor":    "vip.realtor_dashboard",
-        "contractor": "vip.contractor_dashboard",
-        "designer":   "vip.designer_dashboard",
-        "partner":    "vip.partner_dashboard",
+        "realtor":           "vip.realtor_dashboard",
+        "contractor":        "vip.contractor_dashboard",
+        "designer":          "vip.designer_dashboard",
+        "insurance":         "vip.insurance_dashboard",
+        "insurance_realtor": "vip.insurance_dashboard",
+        "partner":           "vip.partner_dashboard",
     }
     return redirect(url_for(role_map.get(profile.role_type, "vip.partner_dashboard")))
 
@@ -603,23 +675,14 @@ def realtor_listing_sync_webhook(profile_id):
     })
 
 
-@vip_bp.get("/realtor")
-@role_required("partner_group", "admin")
-def realtor_dashboard():
-    gate = require_vip_access()
-    if gate is not None:
-        return gate
-
-    profile           = get_or_create_vip_profile()
-    partner           = getattr(current_user, "partner_profile", None)
+def _realtor_context(profile, partner):
+    """Build the full realtor dashboard context dict."""
     now               = datetime.utcnow()
     week_ago          = now - timedelta(days=7)
     available_markets = get_user_markets(profile)
     current_market    = _get_vip_market(profile)
     multi_market      = len(available_markets) >= 2
 
-    # When the profile has exactly one market, auto-scope everything to it so
-    # the dashboard isn't cluttered with a switcher the user doesn't need.
     effective_market = current_market
     if len(available_markets) == 1:
         effective_market = available_markets[0]
@@ -627,10 +690,22 @@ def realtor_dashboard():
     def _scope_listings(q):
         if effective_market != ALL_MARKETS:
             q = q.filter(ElenaListing.market == effective_market)
+        elif available_markets:
+            q = q.filter(ElenaListing.market.in_(available_markets))
         return q
 
-    total_clients = ElenaClient.query.count()
-    new_leads     = ElenaClient.query.filter(ElenaClient.created_at >= week_ago).count()
+    def _scope_clients(q):
+        if effective_market != ALL_MARKETS:
+            q = q.filter(ElenaClient.market == effective_market)
+        elif available_markets:
+            q = q.filter(ElenaClient.market.in_(available_markets))
+        return q
+
+    clients_q     = _scope_clients(ElenaClient.query)
+    total_clients = clients_q.count()
+    new_leads     = _scope_clients(
+        ElenaClient.query.filter(ElenaClient.created_at >= week_ago)
+    ).count()
 
     active_listings = _scope_listings(
         ElenaListing.query.filter_by(status="active")
@@ -646,10 +721,7 @@ def realtor_dashboard():
         "total_clients":   total_clients,
         "new_leads":       new_leads,
         "active_listings": active_listings,
-        # Combined total across every market this realtor operates in. Used
-        # on the "Active Listings" stat card when viewing All Markets so the
-        # number isn't artificially filtered.
-        "total_listings":  ElenaListing.query.filter_by(status="active").count(),
+        "total_listings":  _scope_listings(ElenaListing.query.filter_by(status="active")).count(),
         "followups_due":   followups_due,
     }
 
@@ -657,7 +729,7 @@ def realtor_dashboard():
     canonical_keys  = {s[0] for s in PIPELINE_STAGES}
 
     for stage_key, stage_label in PIPELINE_STAGES:
-        q = ElenaClient.query.filter_by(pipeline_stage=stage_key)
+        q = _scope_clients(ElenaClient.query.filter_by(pipeline_stage=stage_key))
         pipeline_groups.append({
             "key":     stage_key,
             "label":   stage_label,
@@ -669,14 +741,14 @@ def realtor_dashboard():
         ElenaClient.pipeline_stage.is_(None),
         ~ElenaClient.pipeline_stage.in_(canonical_keys),
     )
-    unstaged_total = ElenaClient.query.filter(unstaged_filter).count()
+    unstaged_q = _scope_clients(ElenaClient.query.filter(unstaged_filter))
+    unstaged_total = unstaged_q.count()
     if unstaged_total:
         pipeline_groups.insert(0, {
             "key":     "unstaged",
             "label":   "Unstaged",
             "count":   unstaged_total,
-            "clients": (ElenaClient.query.filter(unstaged_filter)
-                        .order_by(ElenaClient.updated_at.desc()).limit(12).all()),
+            "clients": (unstaged_q.order_by(ElenaClient.updated_at.desc()).limit(12).all()),
         })
 
     status_filter = (request.args.get("listing_status") or "").strip().lower()
@@ -706,9 +778,6 @@ def realtor_dashboard():
     )
     recent_partner_requests, partner_request_stats = _partner_request_snapshot(partner)
 
-    # Per-market breakdowns for the dual-market view. Only populated when
-    # the realtor has 2+ markets. Empty dicts otherwise — the template uses
-    # `multi_market` to decide whether to render these sections.
     market_stats       = {}
     listings_by_market = {}
     flyers_by_market   = {}
@@ -723,9 +792,6 @@ def realtor_dashboard():
                     .filter_by(status="active", market=market)
                     .count()
                 ),
-                # Clients aren't market-scoped today (no column on
-                # ElenaClient), so this mirrors Frank's prior behavior of
-                # showing the combined client total per market card.
                 "clients": total_clients,
             }
 
@@ -747,7 +813,6 @@ def realtor_dashboard():
         all_income   = VIPIncome.query.filter_by(vip_profile_id=profile.id).all()
         all_expenses = VIPExpense.query.filter_by(vip_profile_id=profile.id).all()
 
-        # NULL status is treated as "received" to match the finances page.
         def _is_received(i):
             return (i.status or "received") == "received"
         def _is_pending(i):
@@ -780,39 +845,59 @@ def realtor_dashboard():
                 "net":      m_received - m_expenses,
             }
 
+    return {
+        "summary":               summary,
+        "pipeline_groups":       pipeline_groups,
+        "pipeline_stages":       PIPELINE_STAGES,
+        "realtor_clients":       clients_q.order_by(ElenaClient.updated_at.desc()).limit(8).all(),
+        "recent_interactions":   recent_interactions,
+        "listings":              listings,
+        "listing_statuses":      LISTING_STATUSES,
+        "listing_status_filter": status_filter,
+        "recent_flyers":         recent_flyers,
+        "copilot_suggestions":   copilot_suggestions,
+        "recent_partner_requests": recent_partner_requests,
+        "partner_request_stats": partner_request_stats,
+        "current_market":        effective_market,
+        "available_markets":     available_markets,
+        "multi_market":          multi_market,
+        "market_stats":          market_stats,
+        "listings_by_market":    listings_by_market,
+        "flyers_by_market":      flyers_by_market,
+        "finances_combined":     finances_combined,
+        "finances_by_market":    finances_by_market,
+        "listing_sync_url":      _listing_sync_url(profile),
+        "listing_sync_token":    _listing_sync_token(profile),
+        "listing_sync_prompt":   _listing_sync_prompt(profile),
+        "template_types":        [t.value for t in TemplateType],
+        "client_scope_label": (
+            effective_market
+            if effective_market != ALL_MARKETS
+            else ("Configured markets" if available_markets else "All realtor contacts")
+        ),
+    }
+
+
+@vip_bp.get("/realtor")
+@role_required("partner_group", "admin")
+def realtor_dashboard():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+    ctx = _realtor_context(profile, partner)
+
     return render_template(
-        "vip/realtor/dashboard.html",
-        vip_profile           = profile,
-        modules               = get_enabled_modules(profile),
-        header_name           = get_dashboard_name(profile),
-        summary               = summary,
-        pipeline_groups       = pipeline_groups,
-        pipeline_stages       = PIPELINE_STAGES,
-        recent_interactions   = recent_interactions,
-        listings              = listings,
-        listing_statuses      = LISTING_STATUSES,
-        listing_status_filter = status_filter,
-        recent_flyers         = recent_flyers,
-        copilot_suggestions   = copilot_suggestions,
-        recent_partner_requests = recent_partner_requests,
-        partner_request_stats = partner_request_stats,
-        # `effective_market` reflects what the queries were actually
-        # scoped to — for a single-market realtor this is their one market
-        # even though the session still holds "All Markets".
-        current_market        = effective_market,
-        available_markets     = available_markets,
-        multi_market          = multi_market,
-        market_stats          = market_stats,
-        listings_by_market    = listings_by_market,
-        flyers_by_market      = flyers_by_market,
-        finances_combined     = finances_combined,
-        finances_by_market    = finances_by_market,
-        listing_sync_url      = _listing_sync_url(profile),
-        listing_sync_token    = _listing_sync_token(profile),
-        listing_sync_prompt   = _listing_sync_prompt(profile),
-        portal                = "vip",
-        portal_name           = "Partners",
-        portal_home           = url_for("vip.realtor_dashboard"),
+        "elena/dashboard.html",
+        vip_profile = profile,
+        modules     = get_enabled_modules(profile),
+        header_name = get_dashboard_name(profile),
+        portal      = "vip",
+        portal_name = "VIP Workspace",
+        portal_home = url_for("vip.realtor_dashboard"),
+        **ctx,
     )
 
 
@@ -840,6 +925,91 @@ def frank_dashboard():
 # REALTOR — Investor flow
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _safe_number(value):
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _deal_market_text(sp=None, deal=None, analysis=None):
+    """Collect searchable location text without assuming optional columns exist."""
+    parts = []
+
+    for obj in (sp, deal, analysis):
+        if not obj:
+            continue
+        for attr in (
+            "market", "address", "city", "state", "zip_code", "zipcode",
+            "local_cost_label", "title", "property_name",
+        ):
+            value = getattr(obj, attr, None)
+            if value:
+                parts.append(str(value))
+
+    payload = getattr(sp, "resolved_json", None) if sp else None
+    if payload:
+        if isinstance(payload, str):
+            parts.append(payload)
+        else:
+            try:
+                parts.append(json.dumps(payload))
+            except TypeError:
+                pass
+
+    return " ".join(parts).lower()
+
+
+def _market_text_matches(text, market):
+    tokens = [
+        token.strip().lower()
+        for token in (market or "").replace(",", " ").split()
+        if token.strip()
+    ]
+    if not tokens:
+        return True
+    return all(token in text for token in tokens) or any(token in text for token in tokens)
+
+
+def _build_investor_flow_item(sp):
+    deal = (
+        Deal.query
+        .filter_by(saved_property_id=sp.id)
+        .order_by(Deal.updated_at.desc())
+        .first()
+    )
+    analysis = (
+        PropertyAnalysis.query
+        .filter_by(investor_profile_id=sp.investor_profile_id)
+        .order_by(PropertyAnalysis.created_at.desc())
+        .first()
+    )
+
+    arv = _safe_number(getattr(deal, "arv", None) if deal else getattr(analysis, "arv", None))
+    rehab = _safe_number(getattr(deal, "rehab_cost", None) if deal else getattr(analysis, "rehab_cost", None))
+    purchase = _safe_number(getattr(deal, "purchase_price", None) if deal else getattr(analysis, "purchase_price", None))
+    results = getattr(deal, "results_json", None) or {}
+    feedback = results.get("realtor_market_data") if isinstance(results, dict) else None
+
+    return {
+        "property": sp,
+        "deal": deal,
+        "analysis": analysis,
+        "arv": arv,
+        "rehab": rehab,
+        "purchase": purchase,
+        "strategy": getattr(deal, "strategy", None) if deal else None,
+        "address": (
+            getattr(sp, "address", None)
+            or (getattr(deal, "address", None) if deal else None)
+            or (getattr(analysis, "address", None) if analysis else None)
+            or "Address unavailable"
+        ),
+        "market_text": _deal_market_text(sp, deal, analysis),
+        "feedback": feedback,
+    }
+
+
 @vip_bp.get("/realtor/investor-flow")
 @role_required("partner_group", "admin")
 def realtor_investor_flow():
@@ -862,54 +1032,22 @@ def realtor_investor_flow():
     analyzed_investor_ids = [row[0] for row in analyzed_ids]
 
     if analyzed_investor_ids:
-        sp_query = SavedProperty.query.filter(
-            SavedProperty.investor_profile_id.in_(analyzed_investor_ids)
+        saved_properties = (
+            SavedProperty.query
+            .filter(SavedProperty.investor_profile_id.in_(analyzed_investor_ids))
+            .order_by(SavedProperty.created_at.desc())
+            .limit(60)
+            .all()
         )
+        candidate_items = [_build_investor_flow_item(sp) for sp in saved_properties]
 
-        market_matches = []
-        geo_matches    = []
-
-        if current_market != "All Markets":
-            if hasattr(SavedProperty, "market"):
-                market_matches = sp_query.filter_by(market=current_market).limit(20).all()
-
-            if not market_matches:
-                # Realtors now define their own markets, so we fall back to
-                # fuzzy-matching the market label against the saved property
-                # city/state instead of hard-coding state codes.
-                label_tokens = [
-                    t for t in (current_market or "").lower().split() if t
-                ]
-                if label_tokens:
-                    conditions = []
-                    for token in label_tokens:
-                        like = f"%{token}%"
-                        conditions.append(db.func.lower(SavedProperty.city).like(like))
-                        if hasattr(SavedProperty, "state"):
-                            conditions.append(db.func.lower(SavedProperty.state).like(like))
-                    geo_matches = sp_query.filter(or_(*conditions)).limit(20).all()
+        if current_market == ALL_MARKETS:
+            matched_properties = candidate_items[:30]
         else:
-            market_matches = sp_query.limit(30).all()
-
-        for sp in (market_matches or geo_matches):
-            deal     = Deal.query.filter_by(saved_property_id=sp.id).first()
-            analysis = (
-                PropertyAnalysis.query
-                .filter_by(investor_profile_id=sp.investor_profile_id)
-                .order_by(PropertyAnalysis.created_at.desc())
-                .first()
-            )
-            matched_properties.append({
-                "property": sp,
-                "deal":     deal,
-                "analysis": analysis,
-                "arv":      float(deal.arv or 0) if deal else float(getattr(analysis, "arv", 0) or 0),
-                "rehab":    float(deal.rehab_cost or 0) if deal else float(getattr(analysis, "rehab_cost", 0) or 0),
-                "strategy": deal.strategy if deal else None,
-                "address":  (getattr(sp, "address", None)
-                             or (deal.address if deal else None)
-                             or (analysis.address if analysis else "—")),
-            })
+            matched_properties = [
+                item for item in candidate_items
+                if _market_text_matches(item.get("market_text", ""), current_market)
+            ][:30]
 
     realtor_requests = []
     if partner:
@@ -924,13 +1062,26 @@ def realtor_investor_flow():
             .limit(10).all()
         )
 
+    scored_deals = [
+        item["deal"].deal_score for item in matched_properties
+        if item.get("deal") and item["deal"].deal_score is not None
+    ]
+    flow_summary = {
+        "active_properties": len(matched_properties),
+        "direct_requests": len(realtor_requests),
+        "feedback_attached": sum(1 for item in matched_properties if item.get("feedback")),
+        "average_score": round(sum(scored_deals) / len(scored_deals)) if scored_deals else None,
+        "total_arv": sum(item.get("arv") or 0 for item in matched_properties),
+    }
+
     return render_template(
-        "vip/realtor/investor_flow.html",
+        "vip/investor_flow.html",
         vip_profile        = profile,
         modules            = get_enabled_modules(profile),
         header_name        = get_dashboard_name(profile),
         matched_properties = matched_properties,
         realtor_requests   = realtor_requests,
+        flow_summary       = flow_summary,
         current_market     = current_market,
         available_markets  = available_markets,
         multi_market       = len(available_markets) >= 2,
@@ -1330,6 +1481,1180 @@ def designer_dashboard():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# INSURANCE DASHBOARD
+# ─────────────────────────────────────────────────────────────────────────────
+
+INSURANCE_LINES = [
+    {"key": "auto", "label": "Auto Insurance", "icon": "car"},
+    {"key": "homeowners", "label": "Homeowners Insurance", "icon": "home"},
+    {"key": "renters", "label": "Renters Insurance", "icon": "key"},
+    {"key": "landlord", "label": "Landlord Insurance", "icon": "building"},
+]
+
+INSURANCE_LEAD_SOURCES = [
+    ("instagram", "Instagram"),
+    ("facebook", "Facebook"),
+    ("tiktok", "TikTok"),
+    ("youtube", "YouTube"),
+    ("website", "Website"),
+    ("referral", "Referral"),
+    ("ravlo", "Ravlo"),
+    ("other", "Other"),
+]
+
+INSURANCE_PIPELINE_STAGES = [
+    ("new_lead", "New Lead"),
+    ("quote_needed", "Quote Needed"),
+    ("quote_sent", "Quote Sent"),
+    ("follow_up", "Follow-Up"),
+    ("bound", "Bound Policy"),
+    ("nurture", "Nurture"),
+]
+
+INSURANCE_INCOME_CATEGORIES = [
+    ("insurance_commission", "Commission"),
+    ("insurance_referral", "Referral"),
+    ("insurance_renewal", "Renewal"),
+    ("insurance_bonus", "Bonus"),
+    ("insurance_other", "Other"),
+]
+
+INSURANCE_EXPENSE_CATEGORIES = [
+    ("insurance_marketing", "Marketing / Social Ads"),
+    ("insurance_leads", "Purchased Leads"),
+    ("insurance_licenses", "Licenses / Appointments"),
+    ("insurance_software", "Software"),
+    ("insurance_ce", "Continuing Education"),
+    ("insurance_other", "Other"),
+]
+
+
+def _insurance_social_lead_token(profile):
+    if not profile:
+        return ""
+    secret = (current_app.config.get("SECRET_KEY") or "ravlo-insurance-social").encode("utf-8")
+    msg = f"ravlo-insurance-social:{profile.id}:{profile.user_id}".encode("utf-8")
+    return hmac.new(secret, msg, hashlib.sha256).hexdigest()[:32]
+
+
+def _insurance_social_lead_url(profile):
+    return url_for("vip.insurance_social_lead_webhook", profile_id=profile.id, _external=True)
+
+
+def _insurance_social_lead_prompt(profile):
+    return (
+        "Send new social leads to Ravlo as JSON.\n"
+        f"POST to: {_insurance_social_lead_url(profile)}\n"
+        f"Include header X-Ravlo-Social-Lead-Token: {_insurance_social_lead_token(profile)}\n"
+        "Supported fields: name, phone, email, source, coverage_line, message, campaign, ad_name, form_name."
+    )
+
+
+def _insurance_source_key(value):
+    raw = (value or "").strip().lower().replace(" ", "_").replace("-", "_")
+    aliases = {
+        "ig": "instagram",
+        "instagram": "instagram",
+        "facebook": "facebook",
+        "fb": "facebook",
+        "meta": "facebook",
+        "tiktok": "tiktok",
+        "tik_tok": "tiktok",
+        "youtube": "youtube",
+        "yt": "youtube",
+        "website": "website",
+        "web": "website",
+        "referral": "referral",
+        "ravlo": "ravlo",
+    }
+    return aliases.get(raw, "other")
+
+
+def _insurance_line_key(value):
+    raw = (value or "").strip().lower().replace(" ", "_").replace("-", "_")
+    aliases = {
+        "home": "homeowners",
+        "homeowner": "homeowners",
+        "homeowners": "homeowners",
+        "house": "homeowners",
+        "auto": "auto",
+        "car": "auto",
+        "vehicle": "auto",
+        "renters": "renters",
+        "renter": "renters",
+        "landlord": "landlord",
+        "rental_property": "landlord",
+    }
+    return aliases.get(raw, raw if raw in {line["key"] for line in INSURANCE_LINES} else "")
+
+
+def _social_payload_field(payload, *keys):
+    payload = payload or {}
+    normalized = {key.strip().lower().replace(" ", "_").replace("-", "_") for key in keys}
+    for key, value in payload.items():
+        clean_key = str(key).strip().lower().replace(" ", "_").replace("-", "_")
+        if clean_key in normalized and value not in (None, ""):
+            if isinstance(value, list):
+                return str(value[0]).strip() if value else None
+            return str(value).strip()
+
+    for field in payload.get("field_data") or payload.get("fields") or []:
+        if not isinstance(field, dict):
+            continue
+        clean_key = str(field.get("name") or field.get("key") or "").strip().lower().replace(" ", "_").replace("-", "_")
+        if clean_key not in normalized:
+            continue
+        values = field.get("values")
+        if isinstance(values, list) and values:
+            return str(values[0]).strip()
+        value = field.get("value")
+        if value not in (None, ""):
+            return str(value).strip()
+
+    return None
+
+
+def _upsert_insurance_social_contact(profile, payload):
+    first_name = _social_payload_field(payload, "first_name", "first name")
+    last_name = _social_payload_field(payload, "last_name", "last name")
+    name = (
+        _social_payload_field(payload, "name", "full_name", "full name", "contact_name", "lead_name")
+        or " ".join(part for part in [first_name, last_name] if part).strip()
+    )
+    email = _social_payload_field(payload, "email", "email_address")
+    phone = _social_payload_field(payload, "phone", "phone_number", "mobile", "mobile_phone")
+    source = _insurance_source_key(_social_payload_field(payload, "source", "platform", "lead_source", "social_source"))
+    line = _insurance_line_key(_social_payload_field(payload, "coverage_line", "line", "insurance_type", "product"))
+    stage = (_social_payload_field(payload, "pipeline_stage", "stage") or "new_lead").strip().lower()
+    valid_stages = {key for key, _label in INSURANCE_PIPELINE_STAGES}
+    if stage not in valid_stages:
+        stage = "new_lead"
+
+    campaign = _social_payload_field(payload, "campaign", "campaign_name")
+    ad_name = _social_payload_field(payload, "ad_name", "ad")
+    form_name = _social_payload_field(payload, "form_name", "form")
+    message = _social_payload_field(payload, "message", "notes", "comments", "question", "coverage_notes")
+
+    if not any([name, email, phone]):
+        return None, ["name_or_contact"]
+
+    contact = None
+    if email:
+        contact = (
+            _insurance_contacts_query(profile)
+            .filter(func.lower(func.coalesce(VIPContact.email, "")) == email.lower())
+            .first()
+        )
+    if not contact and phone:
+        contact = (
+            _insurance_contacts_query(profile)
+            .filter(func.lower(func.coalesce(VIPContact.phone, "")) == phone.lower())
+            .first()
+        )
+
+    tags = ["insurance", "social", "source:" + source]
+    if line:
+        tags.append("line:" + line)
+    if campaign:
+        tags.append("campaign:" + campaign)
+    if form_name:
+        tags.append("form:" + form_name)
+
+    notes_parts = []
+    if message:
+        notes_parts.append(message)
+    if ad_name:
+        notes_parts.append("Ad: " + ad_name)
+    if campaign:
+        notes_parts.append("Campaign: " + campaign)
+    if form_name:
+        notes_parts.append("Form: " + form_name)
+    notes = "\n".join(notes_parts) or None
+
+    if contact:
+        contact.name = contact.name or name or "Social media lead"
+        contact.email = contact.email or email
+        contact.phone = contact.phone or phone
+        contact.pipeline_stage = contact.pipeline_stage or stage
+        existing_tags = [tag.strip() for tag in (contact.tags or "").split(",") if tag.strip()]
+        contact.tags = ", ".join(dict.fromkeys(existing_tags + tags))
+        if notes:
+            contact.notes = ((contact.notes + "\n\n") if contact.notes else "") + notes
+        return contact, []
+
+    contact = VIPContact(
+        vip_profile_id=profile.id,
+        name=name or email or phone or "Social media lead",
+        email=email,
+        phone=phone,
+        contact_type="insurance_lead",
+        tags=", ".join(dict.fromkeys(tags)),
+        pipeline_stage=stage,
+        notes=notes,
+    )
+    db.session.add(contact)
+    return contact, []
+
+
+def _insurance_quote_stats(partner, profile=None):
+    """Aggregate insurance quote stats from InsuranceQuoteRequest + partner requests."""
+    stats = {"total_quotes": 0, "pending": 0, "sent": 0, "bound": 0}
+
+    if partner:
+        base = PartnerConnectionRequest.query.filter_by(partner_id=partner.id)
+        stats["total_quotes"] += base.count()
+        stats["pending"] += base.filter_by(status="pending").count()
+        stats["sent"] += base.filter_by(status="accepted").count()
+        stats["bound"] += base.filter_by(status="completed").count()
+
+    if profile:
+        qr_base = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id)
+        stats["total_quotes"] += qr_base.count()
+        stats["pending"] += qr_base.filter_by(status="new").count()
+        stats["sent"] += qr_base.filter_by(status="quoted").count()
+        stats["bound"] += qr_base.filter_by(status="closed").count()
+
+    return stats
+
+
+INSURANCE_CONTACT_TERMS = {
+    "insurance",
+    "insured",
+    "policy",
+    "policyholder",
+    "quote",
+    "coverage",
+    "auto",
+    "homeowners",
+    "renters",
+    "landlord",
+}
+
+
+def _insurance_contact_filter():
+    type_filter = func.lower(func.coalesce(VIPContact.contact_type, "")).in_([
+        "insurance_client",
+        "insurance_lead",
+        "policyholder",
+    ])
+    tag_filters = [
+        func.lower(func.coalesce(VIPContact.tags, "")).like("%" + term + "%")
+        for term in INSURANCE_CONTACT_TERMS
+    ]
+    return or_(type_filter, *tag_filters)
+
+
+def _insurance_contacts_query(profile):
+    return (
+        VIPContact.query
+        .filter(VIPContact.vip_profile_id == profile.id)
+        .filter(_insurance_contact_filter())
+    )
+
+
+def _insurance_crm_snapshot(profile, limit=8):
+    """Return VIP contacts for the insurance side of a combo dashboard."""
+    if not profile:
+        return {
+            "total_contacts": 0,
+            "insurance_contacts": [],
+            "stage_counts": {key: 0 for key, _label in INSURANCE_PIPELINE_STAGES},
+        }
+
+    base = _insurance_contacts_query(profile)
+    contacts = (
+        base
+        .order_by(VIPContact.updated_at.desc())
+        .limit(limit).all()
+    )
+    stage_counts = {
+        key: base.filter(VIPContact.pipeline_stage == key).count()
+        for key, _label in INSURANCE_PIPELINE_STAGES
+    }
+
+    return {
+        "total_contacts": base.count(),
+        "insurance_contacts": contacts,
+        "stage_counts": stage_counts,
+    }
+
+
+def _insurance_finance_query(model, profile):
+    categories = [key for key, _label in (
+        INSURANCE_INCOME_CATEGORIES if model is VIPIncome else INSURANCE_EXPENSE_CATEGORIES
+    )]
+    return model.query.filter(
+        model.vip_profile_id == profile.id,
+        model.category.in_(categories),
+    )
+
+
+def _insurance_finance_summary(profile):
+    incomes = (
+        _insurance_finance_query(VIPIncome, profile)
+        .order_by(VIPIncome.created_at.desc())
+        .limit(50).all()
+    )
+    expenses = (
+        _insurance_finance_query(VIPExpense, profile)
+        .order_by(VIPExpense.created_at.desc())
+        .limit(50).all()
+    )
+
+    total_received = sum((i.amount or 0) for i in incomes if (i.status or "received") == "received")
+    total_pending = sum((i.amount or 0) for i in incomes if (i.status or "received") == "pending")
+    total_expenses = sum((e.amount or 0) for e in expenses)
+
+    return {
+        "incomes": incomes,
+        "expenses": expenses,
+        "total_received": total_received,
+        "total_pending": total_pending,
+        "total_expenses": total_expenses,
+        "net_profit": total_received - total_expenses,
+    }
+
+
+@vip_bp.get("/insurance")
+@role_required("partner_group", "admin")
+def insurance_dashboard():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    insurance_stats = _insurance_quote_stats(partner, profile)
+    insurance_crm = _insurance_crm_snapshot(profile)
+
+    recent_requests = []
+    if partner:
+        recent_requests = (
+            PartnerConnectionRequest.query
+            .filter_by(partner_id=partner.id)
+            .order_by(PartnerConnectionRequest.created_at.desc())
+            .limit(10).all()
+        )
+
+    recent_quote_requests = (
+        InsuranceQuoteRequest.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(InsuranceQuoteRequest.created_at.desc())
+        .limit(10).all()
+    )
+
+    public_form_url = url_for(
+        "vip.insurance_public_quote_form",
+        profile_id=profile.id,
+        _external=True,
+    )
+
+    is_combined = profile.role_type == "insurance_realtor"
+    if is_combined:
+        realtor_ctx = _realtor_context(profile, partner)
+    else:
+        _, pr_stats = _partner_request_snapshot(partner)
+        copilot_suggestions = (
+            VIPAssistantSuggestion.query
+            .filter_by(vip_profile_id=profile.id)
+            .order_by(VIPAssistantSuggestion.created_at.desc())
+            .limit(5).all()
+        )
+        realtor_ctx = {
+            "partner_request_stats": pr_stats,
+            "copilot_suggestions": copilot_suggestions,
+        }
+
+    return render_template(
+        "vip/insurance/dashboard.html",
+        vip_profile         = profile,
+        modules             = get_enabled_modules(profile),
+        header_name         = get_dashboard_name(profile),
+        partner             = partner,
+        insurance_lines     = INSURANCE_LINES,
+        insurance_stats     = insurance_stats,
+        insurance_crm       = insurance_crm,
+        recent_requests        = recent_requests,
+        recent_quote_requests  = recent_quote_requests,
+        public_form_url        = public_form_url,
+        social_lead_url        = _insurance_social_lead_url(profile),
+        social_lead_token      = _insurance_social_lead_token(profile),
+        social_lead_prompt     = _insurance_social_lead_prompt(profile),
+        is_combined            = is_combined,
+        portal              = "vip",
+        portal_name         = "VIP Insurance",
+        portal_home         = url_for("vip.insurance_dashboard"),
+        **realtor_ctx,
+    )
+
+
+@vip_bp.route("/insurance/clients", methods=["GET", "POST"])
+@role_required("partner_group", "admin")
+def insurance_clients():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        if not name:
+            flash("Client name is required.", "warning")
+            return redirect(url_for("vip.insurance_clients"))
+
+        source = (request.form.get("lead_source") or "other").strip().lower()
+        line = (request.form.get("coverage_line") or "").strip().lower()
+        stage = (request.form.get("pipeline_stage") or "new_lead").strip().lower()
+        extra_tags = [
+            tag.strip()
+            for tag in (request.form.get("tags") or "").replace(";", ",").split(",")
+            if tag.strip()
+        ]
+
+        tags = ["insurance"]
+        if source:
+            tags.append("source:" + source)
+        if line:
+            tags.append("line:" + line)
+        tags.extend(extra_tags)
+
+        contact = VIPContact(
+            vip_profile_id=profile.id,
+            name=name,
+            email=(request.form.get("email") or "").strip() or None,
+            phone=(request.form.get("phone") or "").strip() or None,
+            contact_type="insurance_client",
+            tags=", ".join(dict.fromkeys(tags)),
+            pipeline_stage=stage,
+            notes=(request.form.get("notes") or "").strip() or None,
+        )
+        db.session.add(contact)
+        db.session.commit()
+        flash("Insurance client captured.", "success")
+        return redirect(url_for("vip.insurance_clients"))
+
+    selected_stage = (request.args.get("stage") or "").strip().lower()
+    selected_source = (request.args.get("source") or "").strip().lower()
+    contacts_q = _insurance_contacts_query(profile)
+
+    if selected_stage:
+        contacts_q = contacts_q.filter(VIPContact.pipeline_stage == selected_stage)
+    if selected_source:
+        contacts_q = contacts_q.filter(
+            func.lower(func.coalesce(VIPContact.tags, "")).like("%source:" + selected_source + "%")
+        )
+
+    contacts = contacts_q.order_by(VIPContact.updated_at.desc()).limit(80).all()
+    crm_snapshot = _insurance_crm_snapshot(profile, limit=12)
+
+    return render_template(
+        "vip/insurance/clients.html",
+        vip_profile      = profile,
+        modules          = get_enabled_modules(profile),
+        header_name      = get_dashboard_name(profile),
+        partner          = partner,
+        contacts         = contacts,
+        crm_snapshot     = crm_snapshot,
+        lead_sources     = INSURANCE_LEAD_SOURCES,
+        pipeline_stages  = INSURANCE_PIPELINE_STAGES,
+        insurance_lines  = INSURANCE_LINES,
+        selected_stage   = selected_stage,
+        selected_source  = selected_source,
+        social_lead_url  = _insurance_social_lead_url(profile),
+        social_lead_token = _insurance_social_lead_token(profile),
+        social_lead_prompt = _insurance_social_lead_prompt(profile),
+        portal           = "vip",
+        portal_name      = "VIP Insurance",
+        portal_home      = url_for("vip.insurance_dashboard"),
+    )
+
+
+@vip_bp.post("/insurance/<int:profile_id>/social-leads/sync")
+@csrf.exempt
+def insurance_social_lead_webhook(profile_id):
+    profile = VIPProfile.query.get(profile_id)
+    if not profile:
+        return jsonify({"status": "error", "message": "Profile not found."}), 404
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        payload = request.form.to_dict(flat=False)
+
+    submitted_token = (
+        request.headers.get("X-Ravlo-Social-Lead-Token")
+        or request.headers.get("X-Ravlo-Insurance-Lead-Token")
+        or request.args.get("token")
+        or _social_payload_field(payload, "token", "sync_token")
+    )
+    expected_token = _insurance_social_lead_token(profile)
+    if not submitted_token or not hmac.compare_digest(str(submitted_token), expected_token):
+        return jsonify({"status": "error", "message": "Invalid social lead token."}), 403
+
+    contact, missing = _upsert_insurance_social_contact(profile, payload)
+    if missing:
+        return jsonify({
+            "status": "error",
+            "message": "Missing name, phone, or email for social lead import.",
+            "missing": missing,
+        }), 400
+
+    db.session.commit()
+    return jsonify({
+        "status": "ok",
+        "contact_id": contact.id,
+        "name": contact.name,
+        "pipeline_stage": contact.pipeline_stage,
+    })
+
+
+@vip_bp.get("/insurance/finance")
+@role_required("partner_group", "admin")
+def insurance_finance():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+    summary = _insurance_finance_summary(profile)
+    contacts = _insurance_contacts_query(profile).order_by(VIPContact.name.asc()).limit(100).all()
+    tax_rate = _finance_tax_rate(profile)
+    taxable_income = max(summary["total_received"] - summary["total_expenses"], 0)
+
+    return render_template(
+        "vip/insurance/finance.html",
+        vip_profile         = profile,
+        modules             = get_enabled_modules(profile),
+        header_name         = get_dashboard_name(profile),
+        partner             = partner,
+        contacts            = contacts,
+        income_categories   = INSURANCE_INCOME_CATEGORIES,
+        expense_categories  = INSURANCE_EXPENSE_CATEGORIES,
+        total_received      = summary["total_received"],
+        total_pending       = summary["total_pending"],
+        total_expenses      = summary["total_expenses"],
+        net_profit          = summary["net_profit"],
+        tax_rate_pct        = int(round(tax_rate * 100)),
+        tax_set_aside       = int(round(taxable_income * tax_rate)),
+        incomes             = summary["incomes"],
+        expenses            = summary["expenses"],
+        portal              = "vip",
+        portal_name         = "VIP Insurance",
+        portal_home         = url_for("vip.insurance_dashboard"),
+    )
+
+
+@vip_bp.post("/insurance/finance/income/new")
+@role_required("partner_group", "admin")
+def insurance_finance_add_income():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    amount = _parse_money(request.form.get("amount"))
+    if amount is None or amount <= 0:
+        flash("Income amount must be a positive number.", "warning")
+        return redirect(url_for("vip.insurance_finance"))
+
+    category = (request.form.get("category") or "insurance_commission").strip().lower()
+    valid_categories = {key for key, _label in INSURANCE_INCOME_CATEGORIES}
+    if category not in valid_categories:
+        category = "insurance_other"
+
+    contact_id = request.form.get("contact_id", type=int)
+    contact = None
+    if contact_id:
+        contact = _insurance_contacts_query(profile).filter(VIPContact.id == contact_id).first()
+
+    db.session.add(VIPIncome(
+        vip_profile_id = profile.id,
+        contact_id     = contact.id if contact else None,
+        category       = category,
+        description    = (request.form.get("description") or "").strip() or None,
+        amount         = amount,
+        income_date    = _parse_date_input(request.form.get("income_date")) or datetime.utcnow(),
+        status         = (request.form.get("status") or "received").strip().lower(),
+        notes          = (request.form.get("notes") or "").strip() or None,
+    ))
+    db.session.commit()
+    flash("Insurance income added.", "success")
+    return redirect(url_for("vip.insurance_finance"))
+
+
+@vip_bp.post("/insurance/finance/expense/new")
+@role_required("partner_group", "admin")
+def insurance_finance_add_expense():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    amount = _parse_money(request.form.get("amount"))
+    if amount is None or amount <= 0:
+        flash("Expense amount must be a positive number.", "warning")
+        return redirect(url_for("vip.insurance_finance"))
+
+    category = (request.form.get("category") or "insurance_marketing").strip().lower()
+    valid_categories = {key for key, _label in INSURANCE_EXPENSE_CATEGORIES}
+    if category not in valid_categories:
+        category = "insurance_other"
+
+    contact_id = request.form.get("contact_id", type=int)
+    contact = None
+    if contact_id:
+        contact = _insurance_contacts_query(profile).filter(VIPContact.id == contact_id).first()
+
+    db.session.add(VIPExpense(
+        vip_profile_id = profile.id,
+        contact_id     = contact.id if contact else None,
+        category       = category,
+        description    = (request.form.get("description") or "").strip() or None,
+        amount         = amount,
+        expense_date   = _parse_date_input(request.form.get("expense_date")) or datetime.utcnow(),
+        source         = "insurance",
+        notes          = (request.form.get("notes") or "").strip() or None,
+    ))
+    db.session.commit()
+    flash("Insurance expense added.", "success")
+    return redirect(url_for("vip.insurance_finance"))
+
+
+@vip_bp.post("/insurance/finance/income/<int:income_id>/mark-received")
+@role_required("partner_group", "admin")
+def insurance_finance_mark_income_received(income_id):
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    income = (
+        _insurance_finance_query(VIPIncome, profile)
+        .filter(VIPIncome.id == income_id)
+        .first_or_404()
+    )
+    income.status = "received"
+    income.income_date = income.income_date or datetime.utcnow()
+    db.session.commit()
+    flash("Insurance income marked as received.", "success")
+    return redirect(url_for("vip.insurance_finance"))
+
+
+@vip_bp.get("/insurance/new-quote")
+@role_required("partner_group", "admin")
+def insurance_new_quote():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+    line = (request.args.get("line") or "auto").strip().lower()
+
+    return render_template(
+        "vip/insurance/quote_form.html",
+        vip_profile     = profile,
+        modules         = get_enabled_modules(profile),
+        header_name     = get_dashboard_name(profile),
+        partner         = partner,
+        insurance_lines = INSURANCE_LINES,
+        selected_line   = line,
+        portal          = "vip",
+        portal_name     = "VIP Insurance",
+        portal_home     = url_for("vip.insurance_dashboard"),
+    )
+
+
+@vip_bp.post("/insurance/submit-quote-request")
+@role_required("partner_group", "admin")
+def insurance_submit_quote_request():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    line = (request.form.get("line") or "auto").strip().lower()
+    client_name = (request.form.get("client_name") or "").strip()
+    client_email = (request.form.get("client_email") or "").strip()
+    client_phone = (request.form.get("client_phone") or "").strip()
+    client_dob = (request.form.get("client_dob") or "").strip()
+    drivers_license = (request.form.get("drivers_license") or "").strip()
+    client_address = (request.form.get("client_address") or "").strip()
+    current_carrier = (request.form.get("current_carrier") or "").strip()
+
+    details = {}
+    if line == "auto":
+        details = {
+            "vehicle_year": request.form.get("vehicle_year", ""),
+            "vehicle_make": request.form.get("vehicle_make", ""),
+            "vehicle_model": request.form.get("vehicle_model", ""),
+            "driver_age": request.form.get("driver_age", ""),
+            "driving_record": request.form.get("driving_record", "Clean"),
+            "coverage_type": request.form.get("coverage_type", "Full Coverage"),
+        }
+    else:
+        details = {
+            "property_type": line.title(),
+            "property_value": request.form.get("property_value", ""),
+            "square_footage": request.form.get("square_footage", ""),
+            "year_built": request.form.get("year_built", ""),
+            "location": request.form.get("location", ""),
+            "coverage_amount": request.form.get("coverage_amount", ""),
+        }
+
+    declarations_path = _save_declarations_file(request.files.get("declarations_file"))
+
+    qr = InsuranceQuoteRequest(
+        vip_profile_id=profile.id,
+        client_name=client_name,
+        client_email=client_email or None,
+        client_phone=client_phone or None,
+        client_dob=client_dob or None,
+        drivers_license=drivers_license or None,
+        client_address=client_address or None,
+        current_carrier=current_carrier or None,
+        insurance_line=line,
+        details_json=json.dumps({k: v for k, v in details.items() if v}),
+        declarations_file=declarations_path,
+        status="new",
+        source="dashboard",
+    )
+    db.session.add(qr)
+
+    notification = VIPNotification(
+        vip_profile_id=profile.id,
+        notification_type="quote_request",
+        title=f"New quote request from {client_name}",
+        body=f"{line.replace('_', ' ').title()} insurance quote request submitted. {client_phone or client_email or ''}",
+        action_url=url_for("vip.insurance_quote_requests"),
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    flash("Quote request submitted successfully.", "success")
+
+    return render_template(
+        "vip/insurance/quote_result.html",
+        vip_profile     = profile,
+        modules         = get_enabled_modules(profile),
+        header_name     = get_dashboard_name(profile),
+        partner         = partner,
+        insurance_lines = INSURANCE_LINES,
+        selected_line   = line,
+        client_name     = client_name,
+        client_email    = client_email,
+        details         = details,
+        portal          = "vip",
+        portal_name     = "VIP Insurance",
+        portal_home     = url_for("vip.insurance_dashboard"),
+    )
+
+
+def _save_declarations_file(file_storage):
+    if not file_storage or not file_storage.filename:
+        return None
+    import os as _os
+    import uuid as _uuid
+    from werkzeug.utils import secure_filename as _secure_filename
+
+    filename = _secure_filename(file_storage.filename)
+    ext = _os.path.splitext(filename)[1].lower()
+    if ext not in (".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"):
+        return None
+
+    upload_dir = _os.path.join(current_app.static_folder, "uploads", "declarations")
+    _os.makedirs(upload_dir, exist_ok=True)
+
+    saved_name = f"{_uuid.uuid4().hex}{ext}"
+    file_storage.save(_os.path.join(upload_dir, saved_name))
+    return url_for("static", filename=f"uploads/declarations/{saved_name}")
+
+
+# ── Quote Requests list ──────────────────────────────────────────────────────
+@vip_bp.get("/insurance/quote-requests")
+@role_required("partner_group", "admin")
+def insurance_quote_requests():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    status_filter = (request.args.get("status") or "").strip().lower()
+    line_filter = (request.args.get("line") or "").strip().lower()
+
+    q = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id)
+    if status_filter:
+        q = q.filter_by(status=status_filter)
+    if line_filter:
+        q = q.filter_by(insurance_line=line_filter)
+
+    quote_requests = q.order_by(InsuranceQuoteRequest.created_at.desc()).limit(100).all()
+
+    total = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id).count()
+    new_count = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id, status="new").count()
+    reviewed_count = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id, status="reviewed").count()
+    quoted_count = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id, status="quoted").count()
+    closed_count = InsuranceQuoteRequest.query.filter_by(vip_profile_id=profile.id, status="closed").count()
+
+    stats = {
+        "total": total,
+        "new": new_count,
+        "reviewed": reviewed_count,
+        "quoted": quoted_count,
+        "closed": closed_count,
+    }
+
+    public_form_url = url_for("vip.insurance_public_quote_form", profile_id=profile.id, _external=True)
+
+    return render_template(
+        "vip/insurance/quote_requests.html",
+        vip_profile      = profile,
+        modules          = get_enabled_modules(profile),
+        header_name      = get_dashboard_name(profile),
+        partner          = partner,
+        insurance_lines  = INSURANCE_LINES,
+        quote_requests   = quote_requests,
+        stats            = stats,
+        current_status   = status_filter,
+        current_line     = line_filter,
+        public_form_url  = public_form_url,
+        portal           = "vip",
+        portal_name      = "VIP Insurance",
+        portal_home      = url_for("vip.insurance_dashboard"),
+    )
+
+
+# ── Quote Request detail ─────────────────────────────────────────────────────
+@vip_bp.get("/insurance/quote-requests/<int:request_id>")
+@role_required("partner_group", "admin")
+def insurance_quote_request_detail(request_id):
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    qr = InsuranceQuoteRequest.query.filter_by(
+        id=request_id, vip_profile_id=profile.id
+    ).first_or_404()
+
+    details = {}
+    if qr.details_json:
+        try:
+            details = json.loads(qr.details_json)
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    return render_template(
+        "vip/insurance/quote_request_detail.html",
+        vip_profile     = profile,
+        modules         = get_enabled_modules(profile),
+        header_name     = get_dashboard_name(profile),
+        partner         = partner,
+        insurance_lines = INSURANCE_LINES,
+        qr              = qr,
+        details         = details,
+        portal          = "vip",
+        portal_name     = "VIP Insurance",
+        portal_home     = url_for("vip.insurance_dashboard"),
+    )
+
+
+# ── Update quote request (status + follow-up) ───────────────────────────────
+@vip_bp.post("/insurance/quote-requests/<int:request_id>/update")
+@role_required("partner_group", "admin")
+def insurance_update_quote_request(request_id):
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    qr = InsuranceQuoteRequest.query.filter_by(
+        id=request_id, vip_profile_id=profile.id
+    ).first_or_404()
+
+    new_status = (request.form.get("status") or "").strip().lower()
+    if new_status in ("new", "reviewed", "quoted", "closed"):
+        qr.status = new_status
+
+    followup_notes = request.form.get("followup_notes")
+    if followup_notes is not None:
+        qr.followup_notes = followup_notes.strip() or None
+
+    followup_date_str = (request.form.get("followup_date") or "").strip()
+    if followup_date_str:
+        try:
+            qr.followup_date = datetime.strptime(followup_date_str, "%Y-%m-%d")
+        except ValueError:
+            pass
+    elif "followup_date" in request.form:
+        qr.followup_date = None
+
+    db.session.commit()
+    flash("Quote request updated.", "success")
+    return redirect(url_for("vip.insurance_quote_request_detail", request_id=qr.id))
+
+
+# ── Public quote form (no auth) ─────────────────────────────────────────────
+@vip_bp.route("/insurance/<int:profile_id>/get-quote", methods=["GET", "POST"])
+@csrf.exempt
+def insurance_public_quote_form(profile_id):
+    profile = VIPProfile.query.get_or_404(profile_id)
+    partner = None
+    user = None
+    try:
+        from LoanMVP.models.user_model import User
+        user = User.query.get(profile.user_id)
+        partner = getattr(user, "partner_profile", None) if user else None
+    except Exception:
+        pass
+
+    agent_name = ""
+    agency_name = profile.business_name or profile.display_name or "Our Agency"
+    brand_logo = profile.logo_url
+    if partner:
+        agent_name = partner.display_name() if hasattr(partner, "display_name") else ""
+        agency_name = partner.company or agency_name
+        brand_logo = partner.logo_url or brand_logo
+
+    line = (request.args.get("line") or request.form.get("line") or "auto").strip().lower()
+
+    submitted = False
+    client_name = ""
+
+    if request.method == "POST":
+        client_name = (request.form.get("client_name") or "").strip()
+        client_email = (request.form.get("client_email") or "").strip()
+        client_phone = (request.form.get("client_phone") or "").strip()
+        client_dob = (request.form.get("client_dob") or "").strip()
+        drivers_license = (request.form.get("drivers_license") or "").strip()
+        client_address = (request.form.get("client_address") or "").strip()
+        current_carrier = (request.form.get("current_carrier") or "").strip()
+
+        details = {}
+        if line == "auto":
+            details = {
+                "vehicle_year": request.form.get("vehicle_year", ""),
+                "vehicle_make": request.form.get("vehicle_make", ""),
+                "vehicle_model": request.form.get("vehicle_model", ""),
+                "driving_record": request.form.get("driving_record", "Clean"),
+                "coverage_type": request.form.get("coverage_type", "Full Coverage"),
+            }
+        else:
+            details = {
+                "property_type": line.title(),
+                "property_value": request.form.get("property_value", ""),
+                "square_footage": request.form.get("square_footage", ""),
+                "year_built": request.form.get("year_built", ""),
+                "coverage_amount": request.form.get("coverage_amount", ""),
+            }
+
+        declarations_path = _save_declarations_file(request.files.get("declarations_file"))
+
+        if client_name:
+            qr = InsuranceQuoteRequest(
+                vip_profile_id=profile.id,
+                client_name=client_name,
+                client_email=client_email or None,
+                client_phone=client_phone or None,
+                client_dob=client_dob or None,
+                drivers_license=drivers_license or None,
+                client_address=client_address or None,
+                current_carrier=current_carrier or None,
+                insurance_line=line,
+                details_json=json.dumps({k: v for k, v in details.items() if v}),
+                declarations_file=declarations_path,
+                status="new",
+                source="public_form",
+            )
+            db.session.add(qr)
+
+            notification = VIPNotification(
+                vip_profile_id=profile.id,
+                notification_type="quote_request",
+                title=f"New quote request from {client_name}",
+                body=f"{line.replace('_', ' ').title()} insurance quote request via public form. {client_phone or client_email or ''}",
+                action_url=url_for("vip.insurance_quote_requests"),
+            )
+            db.session.add(notification)
+            db.session.commit()
+            submitted = True
+
+    return render_template(
+        "vip/insurance/public_quote_form.html",
+        insurance_lines = INSURANCE_LINES,
+        selected_line   = line,
+        agent_name      = agent_name,
+        agency_name     = agency_name,
+        brand_logo      = brand_logo,
+        submitted       = submitted,
+        client_name     = client_name,
+    )
+
+
+@vip_bp.get("/insurance/compose-email")
+@role_required("partner_group", "admin")
+def insurance_compose_email():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    client_name = request.args.get("client_name", "")
+    client_email = request.args.get("client_email", "")
+    quote_text = request.args.get("quote_text", "")
+    line = request.args.get("line", "auto")
+
+    return render_template(
+        "vip/insurance/email_composer.html",
+        vip_profile     = profile,
+        modules         = get_enabled_modules(profile),
+        header_name     = get_dashboard_name(profile),
+        partner         = partner,
+        insurance_lines = INSURANCE_LINES,
+        client_name     = client_name,
+        client_email    = client_email,
+        quote_text      = quote_text,
+        selected_line   = line,
+        portal          = "vip",
+        portal_name     = "VIP Insurance",
+        portal_home     = url_for("vip.insurance_dashboard"),
+    )
+
+
+@vip_bp.post("/insurance/send-email")
+@role_required("partner_group", "admin")
+def insurance_send_email():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    to_email = (request.form.get("to_email") or "").strip()
+    subject = (request.form.get("subject") or "").strip()
+    body_html = (request.form.get("body_html") or "").strip()
+
+    if not to_email or not subject or not body_html:
+        flash("Please fill in all email fields.", "warning")
+        return redirect(url_for("vip.insurance_compose_email"))
+
+    try:
+        from LoanMVP.utils.emailer import send_email
+        send_email(to_email, subject, body_html)
+        flash(f"Email sent successfully to {to_email}.", "success")
+    except Exception as e:
+        flash(f"Failed to send email: {str(e)}", "danger")
+
+    return redirect(url_for("vip.insurance_dashboard"))
+
+
+@vip_bp.post("/insurance/ai-draft-email")
+@role_required("partner_group", "admin")
+def insurance_ai_draft_email():
+    gate = require_vip_access()
+    if gate is not None:
+        return jsonify({"error": "VIP access required"}), 403
+
+    partner = getattr(current_user, "partner_profile", None)
+    data = request.get_json(silent=True) or {}
+
+    client_name = data.get("client_name", "")
+    line = data.get("line", "auto")
+    quote_text = data.get("quote_text", "")
+    tone = data.get("tone", "professional")
+
+    agent_name = partner.display_name() if partner else ""
+    agency_name = (partner.company or "") if partner else ""
+
+    prompt = (
+        f"You are an AI email assistant for an insurance agent. "
+        f"Draft a professional email to send a {line} insurance quote to a client.\n\n"
+        f"Agent: {agent_name}\n"
+        f"Agency: {agency_name}\n"
+        f"Client: {client_name}\n"
+        f"Tone: {tone}\n\n"
+        f"Quote Summary:\n{quote_text}\n\n"
+        "Write a complete email with:\n"
+        "- A warm, personalized subject line\n"
+        "- Professional greeting\n"
+        "- Brief introduction referencing their insurance needs\n"
+        "- The quote details formatted clearly\n"
+        "- A call to action to schedule a call or reply\n"
+        "- Professional sign-off with agent name and agency\n\n"
+        "Return the email as JSON with keys: subject, body_html (with basic HTML formatting)"
+    )
+
+    ai = AIAssistant()
+    raw = ai.generate_reply(prompt, "insurance")
+
+    try:
+        import re as _re
+        json_match = _re.search(r'\{[\s\S]*\}', raw)
+        if json_match:
+            result = json.loads(json_match.group())
+        else:
+            result = {"subject": f"Your Insurance Quote from {agency_name}", "body_html": raw}
+    except (json.JSONDecodeError, ValueError):
+        result = {"subject": f"Your Insurance Quote from {agency_name}", "body_html": raw}
+
+    return jsonify(result)
+
+
+@vip_bp.post("/insurance/upload-logo")
+@role_required("partner_group", "admin")
+def insurance_upload_logo():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    file = request.files.get("logo")
+    if not file or not file.filename:
+        flash("No file selected.", "warning")
+        return redirect(url_for("vip.insurance_dashboard"))
+
+    from werkzeug.utils import secure_filename as _secure_filename
+    import os as _os
+    import uuid as _uuid
+
+    filename = _secure_filename(file.filename)
+    ext = _os.path.splitext(filename)[1].lower()
+    if ext not in (".png", ".jpg", ".jpeg", ".svg", ".webp"):
+        flash("Please upload an image file (PNG, JPG, SVG, or WebP).", "warning")
+        return redirect(url_for("vip.insurance_dashboard"))
+
+    upload_dir = _os.path.join(current_app.static_folder, "uploads", "logos")
+    _os.makedirs(upload_dir, exist_ok=True)
+
+    saved_name = f"{_uuid.uuid4().hex}{ext}"
+    file.save(_os.path.join(upload_dir, saved_name))
+
+    logo_url = url_for("static", filename=f"uploads/logos/{saved_name}")
+
+    if partner:
+        partner.logo_url = logo_url
+    profile.logo_url = logo_url
+    db.session.commit()
+
+    flash("Logo uploaded successfully.", "success")
+    return redirect(url_for("vip.insurance_dashboard"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # PARTNER DASHBOARD
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1337,10 +2662,15 @@ def designer_dashboard():
 @role_required("partner_group", "admin")
 def partner_dashboard():
     profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+    if (
+        getattr(profile, "role_type", None) in ("insurance", "insurance_realtor")
+        or _partner_role_mentions(partner, "insurance", "insurer")
+    ):
+        return redirect(url_for("vip.insurance_dashboard"))
     if getattr(profile, "role_type", None) == "realtor":
         return redirect(url_for("vip.realtor_dashboard"))
 
-    partner = getattr(current_user, "partner_profile", None)
     recent_requests, stats = _partner_request_snapshot(partner)
 
     copilot_suggestions = (
@@ -1373,7 +2703,8 @@ def partner_dashboard():
 def loan_officer_dashboard():
     profile    = get_or_create_vip_profile()
     policy     = get_user_lending_policy(current_user)
-    lo_profile = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
+    core_dashboard = build_loan_officer_dashboard_context(include_ai_summary=False)
+    lo_profile = core_dashboard["officer"]
 
     if not policy["is_caughman_mason"] and not policy["investment_only"]:
         return redirect(url_for("vip.loan_officer_external_dashboard"))
@@ -1439,7 +2770,7 @@ def loan_officer_dashboard():
     )
 
     return render_template(
-        "vip/loan_officer/dashboard.html",
+        "vip/loan_officer/lo_cm_dashboard.html",
         vip_profile           = profile,
         modules               = get_enabled_modules(profile),
         header_name           = get_dashboard_name(profile),
@@ -1451,6 +2782,12 @@ def loan_officer_dashboard():
         stats                 = stats,
         copilot_suggestions   = copilot_suggestions,
         investment_loan_types = INVESTMENT_LOAN_TYPES,
+        core_dashboard        = core_dashboard,
+        core_stats            = core_dashboard["stats"],
+        core_leads            = core_dashboard["leads"],
+        core_loans            = core_dashboard["loans"],
+        core_pipeline         = core_dashboard["pipeline"],
+        core_pending_intakes  = core_dashboard["pending_intakes"],
         portal                = "vip",
         portal_name           = "VIP",
         portal_home           = url_for("vip.loan_officer_dashboard"),
@@ -1517,7 +2854,7 @@ def loan_officer_external_dashboard():
     )
 
     return render_template(
-        "vip/loan_officer/external_dashboard.html",
+        "vip/loan_officer/dashboard.html",
         vip_profile         = profile,
         modules             = get_enabled_modules(profile),
         header_name         = get_dashboard_name(profile),
@@ -2532,10 +3869,30 @@ def onboarding_save():
     profile.business_name  = (request.form.get("business_name")  or "").strip() or None
     profile.dashboard_title = (request.form.get("dashboard_title") or "").strip() or None
     profile.assistant_name = (request.form.get("assistant_name") or "Ravlo").strip()
-    profile.role_type      = (request.form.get("role_type")      or profile.role_type or "partner").strip()
+    old_role = profile.role_type
+    new_role = (request.form.get("role_type") or old_role or "partner").strip()
+    profile.role_type      = new_role
     profile.service_area   = (request.form.get("service_area")   or "").strip() or None
     profile.headline       = (request.form.get("headline")       or "").strip() or None
     profile.bio            = (request.form.get("bio")            or "").strip() or None
+
+    # Keep partner.category in sync when the user explicitly changes role.
+    # Only update on actual changes to avoid overwriting specific subcategories
+    # (e.g. "attorney", "broker") that all map to the generic "partner" role.
+    if new_role != old_role:
+        partner = getattr(current_user, "partner_profile", None)
+        if partner:
+            role_to_category = {
+                "insurance":         "insurance",
+                "insurance_realtor": "insurance",
+                "realtor":           "realtor",
+                "contractor":        "contractor",
+                "designer":          "designer",
+                "loan_officer":      "lender",
+            }
+            new_cat = role_to_category.get(new_role)
+            if new_cat:
+                partner.category = new_cat
 
     # External LO fields
     if profile.role_type in ("loan_officer", "lender"):
@@ -2694,6 +4051,48 @@ def delete_annotation():
     return jsonify({"status": "deleted"})
 
 
+@vip_bp.post("/design-studio/upload-blueprint")
+@role_required("partner_group", "admin")
+def upload_design_blueprint():
+    profile = get_or_create_vip_profile()
+    project_id = request.form.get("project_id", type=int)
+
+    if not project_id:
+        return jsonify({"error": "Missing project_id"}), 400
+
+    project = VIPDesignProject.query.filter_by(
+        id=project_id, vip_profile_id=profile.id
+    ).first()
+
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    file = request.files.get("blueprint")
+    if not file or not file.filename:
+        return jsonify({"error": "No file selected"}), 400
+
+    from werkzeug.utils import secure_filename as _secure_filename
+    import os as _os
+    import uuid as _uuid
+
+    filename = _secure_filename(file.filename)
+    ext = _os.path.splitext(filename)[1].lower()
+    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".svg", ".pdf"):
+        return jsonify({"error": "Unsupported file format"}), 400
+
+    upload_dir = _os.path.join(current_app.static_folder, "uploads", "blueprints")
+    _os.makedirs(upload_dir, exist_ok=True)
+
+    saved_name = f"{_uuid.uuid4().hex}{ext}"
+    file.save(_os.path.join(upload_dir, saved_name))
+
+    blueprint_url = url_for("static", filename=f"uploads/blueprints/{saved_name}")
+    project.blueprint_url = blueprint_url
+    db.session.commit()
+
+    return jsonify({"status": "ok", "blueprint_url": blueprint_url})
+
+
 # =============================================================================
 # REALTOR • PROPERTY / LISTING HUB + LISTING PRESENTATION BUILDER
 # =============================================================================
@@ -2726,6 +4125,32 @@ def _int(val):
         return int(val) if val not in (None, "") else None
     except (TypeError, ValueError):
         return None
+
+
+def _safe_float(val):
+    if val in (None, ""):
+        return None
+    try:
+        cleaned = str(val).replace(",", "").replace("$", "").replace("%", "").strip()
+        return float(cleaned)
+    except (TypeError, ValueError):
+        return None
+
+
+def _median(values):
+    vals = sorted(v for v in values if v is not None)
+    if not vals:
+        return None
+    mid = len(vals) // 2
+    if len(vals) % 2:
+        return vals[mid]
+    return (vals[mid - 1] + vals[mid]) / 2
+
+
+def _round_listing_number(value, step=5000):
+    if not value:
+        return None
+    return int(round(float(value) / step) * step)
 
 
 def _json_list(raw):
@@ -2765,6 +4190,227 @@ def _new_share_slug():
 def _listing_or_404(listing_id):
     listing = ElenaListing.query.get(listing_id)
     return listing
+
+
+def _presentation_subject_snapshot(pres):
+    listing = getattr(pres, "listing", None)
+    return {
+        "address": (pres.property_address or getattr(listing, "address", "") or "").strip(),
+        "city": (pres.property_city or getattr(listing, "city", "") or "").strip(),
+        "state": (pres.property_state or getattr(listing, "state", "") or "").strip(),
+        "zip": (pres.property_zip or getattr(listing, "zip_code", "") or "").strip(),
+        "market": (getattr(listing, "market", "") or "").strip(),
+        "beds": _int(pres.property_beds or getattr(listing, "beds", None)),
+        "baths": _safe_float(pres.property_baths or getattr(listing, "baths", None)),
+        "sqft": _int(pres.property_sqft or getattr(listing, "sqft", None)),
+    }
+
+
+def _listing_to_cma_row(listing):
+    return {
+        "address": listing.address or "",
+        "status": (listing.status or "active").title(),
+        "price": str(listing.price or ""),
+        "sqft": str(listing.sqft or ""),
+        "beds": str(listing.beds or ""),
+        "baths": str(listing.baths or ""),
+        "adjustments": "",
+    }
+
+
+def _seed_cma_rows_from_saved_listings(profile, pres, limit=6):
+    subject = _presentation_subject_snapshot(pres)
+    base = ElenaListing.query.filter(ElenaListing.price.isnot(None))
+    if pres.listing_id:
+        base = base.filter(ElenaListing.id != pres.listing_id)
+    if subject["address"]:
+        base = base.filter(func.lower(ElenaListing.address) != subject["address"].lower())
+
+    filters = []
+    if subject["zip"]:
+        filters.append(ElenaListing.zip_code == subject["zip"])
+    if subject["city"]:
+        filters.append(func.lower(ElenaListing.city) == subject["city"].lower())
+    if subject["market"]:
+        filters.append(ElenaListing.market == subject["market"])
+    elif profile:
+        markets = get_user_markets(profile)
+        if markets:
+            filters.append(ElenaListing.market.in_(markets))
+
+    candidates = []
+    for clause in filters:
+        for listing in base.filter(clause).order_by(ElenaListing.updated_at.desc()).limit(limit * 2).all():
+            if listing.id not in {getattr(item, "id", None) for item in candidates}:
+                candidates.append(listing)
+            if len(candidates) >= limit:
+                break
+        if len(candidates) >= limit:
+            break
+
+    if not candidates:
+        candidates = base.order_by(ElenaListing.updated_at.desc()).limit(limit).all()
+
+    return [_listing_to_cma_row(listing) for listing in candidates[:limit]]
+
+
+def _score_cma_comp(row, subject):
+    score = 45
+    status = (row.get("status") or "").strip().lower()
+    if status in {"sold", "closed", "settled"}:
+        score += 20
+    elif status in {"pending", "under contract"}:
+        score += 12
+    elif status in {"active", "coming soon"}:
+        score += 6
+
+    if subject.get("sqft") and row.get("sqft"):
+        spread = abs(row["sqft"] - subject["sqft"]) / max(subject["sqft"], 1)
+        if spread <= 0.10:
+            score += 18
+        elif spread <= 0.20:
+            score += 12
+        elif spread <= 0.35:
+            score += 6
+
+    if subject.get("beds") and row.get("beds"):
+        score += 8 if row["beds"] == subject["beds"] else 3
+    if subject.get("baths") and row.get("baths"):
+        score += 7 if abs(row["baths"] - subject["baths"]) <= 0.5 else 2
+    if row.get("price") and row.get("sqft"):
+        score += 5
+    return max(0, min(100, score))
+
+
+def _presentation_cma_analysis(pres):
+    rows = _json_list(pres.cma_rows_json)
+    subject = _presentation_subject_snapshot(pres)
+    normalized = []
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        price = _parse_money(row.get("price"))
+        sqft = _int(row.get("sqft"))
+        beds = _int(row.get("beds"))
+        baths = _safe_float(row.get("baths"))
+        adjustment = _parse_money(row.get("adjustments"))
+        adjusted_price = (price or 0) + (adjustment or 0)
+        price_per_sqft = (adjusted_price / sqft) if adjusted_price and sqft else None
+        item = {
+            "address": (row.get("address") or "").strip(),
+            "status": (row.get("status") or "").strip(),
+            "price": price,
+            "sqft": sqft,
+            "beds": beds,
+            "baths": baths,
+            "adjustment": adjustment or 0,
+            "adjusted_price": adjusted_price if adjusted_price else None,
+            "price_per_sqft": price_per_sqft,
+            "adjustments": (row.get("adjustments") or "").strip(),
+        }
+        item["score"] = _score_cma_comp(item, subject)
+        normalized.append(item)
+
+    usable = [row for row in normalized if row.get("adjusted_price")]
+    prices = [row["adjusted_price"] for row in usable if row.get("adjusted_price")]
+    ppsf_values = [row["price_per_sqft"] for row in usable if row.get("price_per_sqft")]
+    median_price = _median(prices)
+    average_price = (sum(prices) / len(prices)) if prices else None
+    median_ppsf = _median(ppsf_values)
+    average_ppsf = (sum(ppsf_values) / len(ppsf_values)) if ppsf_values else None
+
+    if subject.get("sqft") and median_ppsf:
+        suggested = subject["sqft"] * median_ppsf
+        method = "median_ppsf"
+    else:
+        suggested = median_price
+        method = "median_price"
+
+    suggested_price = _round_listing_number(suggested)
+    if suggested_price:
+        range_low = _round_listing_number(suggested_price * 0.96)
+        range_high = _round_listing_number(suggested_price * 1.04)
+    else:
+        range_low = range_high = None
+
+    comp_count = len(usable)
+    if comp_count >= 5 and subject.get("sqft") and median_ppsf:
+        confidence_label = "High"
+        confidence_score = 85
+    elif comp_count >= 3:
+        confidence_label = "Solid"
+        confidence_score = 68
+    elif comp_count >= 1:
+        confidence_label = "Directional"
+        confidence_score = 42
+    else:
+        confidence_label = "Needs comps"
+        confidence_score = 0
+
+    warnings = []
+    if comp_count == 0:
+        warnings.append("Add at least one priced comparable to calculate a CMA number.")
+    elif comp_count < 3:
+        warnings.append("Use at least three comps before treating this as a client-ready CMA.")
+    if not subject.get("sqft"):
+        warnings.append("Add subject square footage to calculate a stronger price-per-square-foot CMA.")
+
+    current_price = pres.suggested_list_price or None
+    delta = current_price - suggested_price if current_price and suggested_price else None
+    delta_pct = round((delta / suggested_price) * 100, 1) if delta and suggested_price else None
+
+    return {
+        "subject": subject,
+        "rows": normalized,
+        "comp_count": comp_count,
+        "suggested_price": suggested_price,
+        "range_low": range_low,
+        "range_high": range_high,
+        "average_price": _round_listing_number(average_price, step=1000) if average_price else None,
+        "median_price": _round_listing_number(median_price, step=1000) if median_price else None,
+        "average_ppsf": round(average_ppsf, 2) if average_ppsf else None,
+        "median_ppsf": round(median_ppsf, 2) if median_ppsf else None,
+        "confidence_label": confidence_label,
+        "confidence_score": confidence_score,
+        "method": method,
+        "warnings": warnings,
+        "delta": delta,
+        "delta_pct": delta_pct,
+    }
+
+
+def _apply_cma_analysis_to_presentation(pres, analysis, overwrite_numbers=False, overwrite_text=False):
+    if not analysis or not analysis.get("suggested_price"):
+        return False
+
+    if overwrite_numbers or not pres.suggested_list_price:
+        pres.suggested_list_price = analysis["suggested_price"]
+    if overwrite_numbers or not pres.pricing_range_low:
+        pres.pricing_range_low = analysis["range_low"]
+    if overwrite_numbers or not pres.pricing_range_high:
+        pres.pricing_range_high = analysis["range_high"]
+
+    comp_count = analysis.get("comp_count") or 0
+    avg_ppsf = analysis.get("average_ppsf")
+    range_low = analysis.get("range_low")
+    range_high = analysis.get("range_high")
+    suggested = analysis.get("suggested_price")
+
+    if overwrite_text or not pres.cma_summary:
+        pres.cma_summary = (
+            f"Ravlo reviewed {comp_count} comparable listing"
+            f"{'s' if comp_count != 1 else ''}. "
+            f"The in-app CMA indicates a target list price near ${suggested:,.0f}"
+            + (f" and an average comp value of ${avg_ppsf:,.0f}/sqft." if avg_ppsf else ".")
+        )
+    if overwrite_text or not pres.pricing_rationale:
+        pres.pricing_rationale = (
+            f"The recommended range is ${range_low:,.0f} to ${range_high:,.0f}, "
+            f"with ${suggested:,.0f} positioned as the launch price based on the comparable set. "
+            "Final pricing should still account for condition, showing feedback, and seller timing."
+        )
+    return True
 
 
 def _presentation_or_404(pres_id, profile):
@@ -2834,10 +4480,12 @@ def _create_presentation_from_listing(profile, listing, fallback_address=None):
 def _serialize_presentation_view(pres):
     """Shape the DB row into a dict the templates render directly. Keeps
     all JSON decoding in one place."""
+    cma_analysis = _presentation_cma_analysis(pres)
     return {
         "id":   pres.id,
         "row":  pres,
         "cma_rows":        _json_list(pres.cma_rows_json),
+        "cma_analysis":    cma_analysis,
         "marketing_plan":  _json_list(pres.marketing_plan_json),
         "testimonials":    _json_list(pres.testimonials_json),
         "agent_stats":     _json_list(pres.agent_stats_json),
@@ -3176,6 +4824,33 @@ def listing_presentation_edit(pres_id):
         portal_name           = "VIP",
         portal_home           = url_for("vip.realtor_dashboard"),
     )
+
+
+@vip_bp.post("/realtor/presentations/<int:pres_id>/cma/refresh")
+@role_required("partner_group", "admin")
+def listing_presentation_cma_refresh(pres_id):
+    profile = get_or_create_vip_profile()
+    pres = _presentation_or_404(pres_id, profile)
+    if not pres:
+        flash("Presentation not found.", "warning")
+        return redirect(url_for("vip.listing_presentations"))
+
+    _apply_presentation_form(pres, request.form)
+    current_rows = _json_list(pres.cma_rows_json)
+    if not current_rows:
+        seeded_rows = _seed_cma_rows_from_saved_listings(profile, pres)
+        if seeded_rows:
+            pres.cma_rows_json = _dump_list(seeded_rows)
+
+    analysis = _presentation_cma_analysis(pres)
+    applied = _apply_cma_analysis_to_presentation(pres, analysis, overwrite_numbers=True)
+    db.session.commit()
+
+    if applied:
+        flash("CMA numbers refreshed inside the presentation.", "success")
+    else:
+        flash("Add priced comps or saved Ravlo listings before building the CMA number.", "warning")
+    return redirect(url_for("vip.listing_presentation_edit", pres_id=pres.id))
 
 
 @vip_bp.post("/realtor/presentations/<int:pres_id>/delete")

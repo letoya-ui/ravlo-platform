@@ -79,6 +79,9 @@ def run_build_concept(payload):
         "height": payload.get("height", 768),
     }
 
+    if payload.get("negative_prompt"):
+        engine_payload["negative_prompt"] = payload["negative_prompt"]
+
     for source_key in (
         "image_base64",
         "image_url",
@@ -103,6 +106,20 @@ def run_build_concept(payload):
     for list_key in ("outputs", "output_modes"):
         if payload.get(list_key):
             engine_payload[list_key] = payload[list_key]
+
+    for quality_key in (
+        "output_type",
+        "render_type",
+        "camera_view",
+        "composition",
+        "avoid_output_types",
+        "allow_text",
+        "allow_logos",
+        "single_image_output",
+        "avoid_collage",
+    ):
+        if quality_key in payload:
+            engine_payload[quality_key] = payload[quality_key]
 
     # Interior-specific fields
     if payload.get("room_type"):

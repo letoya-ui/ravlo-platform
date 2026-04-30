@@ -1,0 +1,1440 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo - {{ header_name }}{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}
+{% if is_combined %}Insurance, real estate clients, listings, quote requests, and follow-ups in one operating view.{% else %}Insurance quotes, CRM, email composer, and finance tools.{% endif %}
+{% endblock %}
+
+{% block topbar_actions %}
+  {% if is_combined %}
+  {% if multi_market %}
+  <form method="POST" action="{{ url_for('vip.realtor_market_switch') }}" class="combo-topbar-market">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+    <i class="lucide lucide-map-pin"></i>
+    <select name="market" onchange="this.form.submit()" aria-label="Market">
+      <option value="All Markets" {% if current_market == "All Markets" %}selected{% endif %}>All Markets</option>
+      {% for market in available_markets %}
+        <option value="{{ market }}" {% if current_market == market %}selected{% endif %}>{{ market }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  {% elif available_markets|length == 1 %}
+    <span class="combo-topbar-chip"><i class="lucide lucide-map-pin"></i>{{ available_markets[0] }}</span>
+  {% endif %}
+  {% endif %}
+
+  <a href="{{ url_for('vip.insurance_new_quote', line='homeowners') }}" class="ravlo-btn primary sm">
+    <i class="lucide lucide-file-plus"></i>
+    <span>New Quote Request</span>
+  </a>
+  <a href="{{ url_for('vip.insurance_quote_requests') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-inbox"></i>
+    <span>Quote Requests</span>
+  </a>
+  <a href="{{ url_for('vip.insurance_clients') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-users"></i>
+    <span>Insurance CRM</span>
+  </a>
+  <a href="{{ url_for('vip.insurance_finance') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-receipt"></i>
+    <span>Insurance Finance</span>
+  </a>
+  {% if is_combined %}
+  <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-house-plus"></i>
+    <span>Add Listing</span>
+  </a>
+  {% endif %}
+  {% if 'ai_pilot' in modules %}
+  <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-sparkles"></i>
+    <span>Copilot</span>
+  </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% set agency_name = partner.company or vip_profile.business_name or header_name %}
+{% set brand_logo = partner.logo_url or vip_profile.logo_url %}
+{% set visible_requests = recent_requests if recent_requests else (recent_partner_requests if recent_partner_requests is defined else []) %}
+
+<div class="combo-dashboard-page">
+  <section class="combo-hero-panel">
+    <div class="combo-hero-copy">
+      <div class="combo-eyebrow">
+        <i class="lucide lucide-badge-check"></i>
+        <span>Beta workspace</span>
+      </div>
+      <h2>{{ agency_name }}</h2>
+      <p>
+        {% if is_combined %}A dual-licensed workspace for moving a client from first conversation to property decision, coverage quote,
+        follow-up, and closing activity without splitting the work across disconnected dashboards.{% else %}Your insurance workspace — quotes, CRM, email composer, and finance tools in one place.{% endif %}
+      </p>
+      <div class="combo-role-strip" aria-label="Workspace lanes">
+        <span><i class="lucide lucide-shield-check"></i> Insurance</span>
+        {% if is_combined %}<span><i class="lucide lucide-home"></i> Realtor</span>{% endif %}
+        <span><i class="lucide lucide-users"></i> Client pipeline</span>
+      </div>
+      <div class="combo-hero-actions">
+        <a href="{{ url_for('vip.insurance_new_quote', line='homeowners') }}" class="ravlo-btn primary">
+          <i class="lucide lucide-file-plus"></i>
+          <span>New Quote Request</span>
+        </a>
+        <a href="{{ url_for('vip.insurance_quote_requests') }}" class="ravlo-btn ghost">
+          <i class="lucide lucide-inbox"></i>
+          <span>Quote Requests</span>
+        </a>
+        <a href="{{ url_for('vip.insurance_compose_email') }}" class="ravlo-btn ghost">
+          <i class="lucide lucide-mail"></i>
+          <span>Draft Email</span>
+        </a>
+        <a href="{{ url_for('vip.insurance_clients') }}" class="ravlo-btn ghost">
+          <i class="lucide lucide-users"></i>
+          <span>Insurance CRM</span>
+        </a>
+        <a href="{{ url_for('vip.insurance_finance') }}" class="ravlo-btn ghost">
+          <i class="lucide lucide-receipt"></i>
+          <span>Insurance Finance</span>
+        </a>
+        {% if is_combined %}
+        <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn ghost">
+          <i class="lucide lucide-user-plus"></i>
+          <span>Add Realtor Client</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <aside class="combo-brand-card">
+      <div class="combo-brand-top">
+        {% if brand_logo %}
+          <img src="{{ brand_logo }}" alt="{{ agency_name }} logo">
+        {% else %}
+          <div class="combo-logo-placeholder">{{ (agency_name or "R")[:1] }}</div>
+        {% endif %}
+        <div>
+          <strong>{{ agency_name }}</strong>
+          <span>{{ partner.specialty or vip_profile.headline or "Licensed real estate and insurance service" }}</span>
+        </div>
+      </div>
+
+      <form method="POST" action="{{ url_for('vip.insurance_upload_logo') }}" enctype="multipart/form-data" class="combo-logo-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="combo-logo-upload">Brand Logo</label>
+        <div class="combo-logo-row">
+          <input id="combo-logo-upload" type="file" name="logo" accept="image/*">
+          <button type="submit" class="ravlo-btn ghost sm">Update</button>
+        </div>
+      </form>
+    </aside>
+  </section>
+
+  <section class="combo-stat-grid" aria-label="Dashboard summary">
+    {% if is_combined %}
+    <article class="combo-stat-card accent-clients">
+      <span>Realtor CRM</span>
+      <strong>{{ summary.total_clients }}</strong>
+      <small>{{ summary.new_leads }} new this week</small>
+    </article>
+    {% endif %}
+    <article class="combo-stat-card accent-insurance">
+      <span>Insurance CRM</span>
+      <strong>{{ insurance_crm.total_contacts }}</strong>
+      <small>{{ insurance_stats.total_quotes }} quote requests</small>
+    </article>
+    <article class="combo-stat-card accent-requests">
+      <span>Quote Requests</span>
+      <strong>{{ insurance_stats.total_quotes }}</strong>
+      <small>{{ insurance_stats.pending }} pending</small>
+    </article>
+    <article class="combo-stat-card accent-bound">
+      <span>Policies Bound</span>
+      <strong>{{ insurance_stats.bound }}</strong>
+      <small>{{ insurance_stats.sent }} sent</small>
+    </article>
+    {% if is_combined %}
+    <article class="combo-stat-card accent-listings">
+      <span>Active Listings</span>
+      <strong>{{ summary.active_listings }}</strong>
+      <small>{% if current_market != "All Markets" %}{{ current_market }}{% else %}All markets{% endif %}</small>
+    </article>
+    <article class="combo-stat-card accent-followups">
+      <span>Follow-ups Due</span>
+      <strong>{{ summary.followups_due }}</strong>
+      <small>Next 7 days</small>
+    </article>
+    {% endif %}
+  </section>
+
+  <section class="combo-panel">
+    <div class="combo-section-head">
+      <div>
+        <span class="combo-section-kicker">{% if is_combined %}CRM separation{% else %}Client management{% endif %}</span>
+        <h3>{% if is_combined %}Separate Client Workspaces{% else %}Client Workspaces{% endif %}</h3>
+      </div>
+    </div>
+
+    <div class="combo-crm-grid">
+      {% if is_combined %}
+      <article class="combo-crm-card realtor-crm">
+        <div class="combo-crm-head">
+          <i class="lucide lucide-home"></i>
+          <div>
+            <strong>Realtor CRM</strong>
+            <span>{{ client_scope_label }}</span>
+          </div>
+        </div>
+        <p>Buyers, sellers, listing prospects, showings, MLS intake, and real estate follow-ups.</p>
+        <div class="combo-crm-metrics">
+          <span>{{ summary.total_clients }} clients</span>
+          <span>{{ summary.active_listings }} listings</span>
+        </div>
+        {% if realtor_clients %}
+        <div class="combo-crm-list">
+          {% for client in realtor_clients[:4] %}
+          <div>
+            <span>{{ client.name }}</span>
+            <small>{{ client.role or client.pipeline_stage or client.email or client.phone or "Realtor client" }}</small>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="combo-empty">No realtor clients in this CRM scope yet.</div>
+        {% endif %}
+      </article>
+      {% endif %}
+
+      <article class="combo-crm-card insurance-crm">
+        <div class="combo-crm-head">
+          <i class="lucide lucide-shield-check"></i>
+          <div>
+            <strong>Insurance CRM</strong>
+            <span>VIP contacts tagged for coverage</span>
+          </div>
+        </div>
+        <p>Policyholders, coverage prospects, quote contacts, renewal follow-ups, and bound-policy notes.</p>
+        <div class="combo-crm-metrics">
+          <span>{{ insurance_crm.total_contacts }} contacts</span>
+          <span>{{ insurance_stats.bound }} bound</span>
+        </div>
+        {% if insurance_crm.insurance_contacts %}
+        <div class="combo-crm-list">
+          {% for contact in insurance_crm.insurance_contacts[:4] %}
+          <div>
+            <span>{{ contact.name }}</span>
+            <small>{{ contact.contact_type or contact.tags or contact.email or contact.phone or "Insurance contact" }}</small>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="combo-empty">No tagged insurance contacts yet. Quote requests stay separate below until contacts are created.</div>
+        {% endif %}
+        <a href="{{ url_for('vip.insurance_clients') }}" class="ravlo-btn ghost sm combo-crm-link">
+          <i class="lucide lucide-arrow-right"></i>
+          <span>Open Insurance CRM</span>
+        </a>
+      </article>
+
+      <article class="combo-crm-card request-crm">
+        <div class="combo-crm-head">
+          <i class="lucide lucide-inbox"></i>
+          <div>
+            <strong>Request Inbox</strong>
+            <span>Not a CRM record yet</span>
+          </div>
+        </div>
+        <p>Incoming lead and quote requests stay in intake until Keyona accepts, completes, or converts the relationship.</p>
+        <div class="combo-crm-metrics">
+          <span>{{ partner_request_stats.pending }} pending</span>
+          <span>{{ partner_request_stats.accepted }} accepted</span>
+        </div>
+        {% if visible_requests %}
+        <div class="combo-crm-list">
+          {% for req in visible_requests[:4] %}
+          <div>
+            <span>{{ req.requester_name() }}</span>
+            <small>{{ req.title or req.request_type or req.category or "Client request" }}</small>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="combo-empty">No intake requests yet.</div>
+        {% endif %}
+      </article>
+    </div>
+  </section>
+
+  <section class="combo-lane-grid">
+    <article class="combo-lane-panel">
+      <div class="combo-section-head">
+        <div>
+          <span class="combo-section-kicker">Insurance CRM</span>
+          <h3>Quote Desk</h3>
+        </div>
+        <a href="{{ url_for('vip.insurance_compose_email') }}" class="ravlo-btn ghost sm">
+          <i class="lucide lucide-mail"></i>
+          <span>Email</span>
+        </a>
+      </div>
+
+      <div class="combo-line-grid">
+        {% for line in insurance_lines %}
+        <a href="{{ url_for('vip.insurance_new_quote', line=line.key) }}" class="combo-line-card">
+          <i class="lucide lucide-{{ line.icon }}"></i>
+          <span>{{ line.label }}</span>
+          <small>
+            {% if line.key == 'auto' %}
+              Auto
+            {% elif line.key == 'homeowners' %}
+              Home
+            {% elif line.key == 'renters' %}
+              Renters
+            {% elif line.key == 'landlord' %}
+              Landlord
+            {% else %}
+              Quote
+            {% endif %}
+          </small>
+        </a>
+        {% endfor %}
+      </div>
+    </article>
+
+    {% if is_combined %}
+    <article class="combo-lane-panel">
+      <div class="combo-section-head">
+        <div>
+          <span class="combo-section-kicker">Realtor CRM</span>
+          <h3>Pipeline Snapshot</h3>
+        </div>
+        <a href="{{ url_for('elena.import_contacts') }}" class="ravlo-btn ghost sm">
+          <i class="lucide lucide-upload"></i>
+          <span>Import Realtor Clients</span>
+        </a>
+      </div>
+
+      <div class="combo-pipeline-grid">
+        {% for group in pipeline_groups[:4] %}
+        <div class="combo-pipeline-stage">
+          <div class="combo-stage-head">
+            <strong>{{ group.label }}</strong>
+            <span>{{ group.count }}</span>
+          </div>
+          {% if group.clients %}
+            {% for client in group.clients[:2] %}
+              <div class="combo-mini-client">
+                <span>{{ client.name }}</span>
+                <small>{{ client.email or client.phone or "No contact info" }}</small>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p>No clients in this stage.</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+    {% endif %}
+  </section>
+
+  {% if is_combined and multi_market and current_market == "All Markets" %}
+  <section class="combo-panel">
+    <div class="combo-section-head">
+      <div>
+        <span class="combo-section-kicker">Markets</span>
+        <h3>Market View</h3>
+      </div>
+    </div>
+
+    <div class="combo-market-grid">
+      {% for market in available_markets %}
+      <article class="combo-market-card">
+        <div class="combo-market-head">
+          <div>
+            <span>Market</span>
+            <strong>{{ market }}</strong>
+          </div>
+          <form method="POST" action="{{ url_for('vip.realtor_market_switch') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="market" value="{{ market }}">
+            <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+            <button type="submit" class="ravlo-btn ghost sm">Focus</button>
+          </form>
+        </div>
+        <div class="combo-market-metrics">
+          <span>{{ market_stats[market].active_listings }} active listings</span>
+          {% if finances_by_market and finances_by_market[market] is defined %}
+          <span>${{ "{:,.0f}".format(finances_by_market[market].net) }} net</span>
+          {% endif %}
+        </div>
+        {% set market_listings = listings_by_market.get(market, []) %}
+        {% if market_listings %}
+          <div class="combo-market-list">
+            {% for listing in market_listings[:3] %}
+            <div>
+              <span>{{ listing.address }}</span>
+              {% if listing.price %}<small>${{ "{:,}".format(listing.price) }}</small>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="combo-work-grid">
+    <main class="combo-work-main">
+      <section class="combo-panel">
+        <div class="combo-section-head">
+          <div>
+            <span class="combo-section-kicker">Requests</span>
+            <h3>Lead and Quote Requests</h3>
+          </div>
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+            <i class="lucide lucide-inbox"></i>
+            <span>Inbox</span>
+          </a>
+        </div>
+
+        <div class="combo-request-summary">
+          <div><span>Pending</span><strong>{{ partner_request_stats.pending }}</strong></div>
+          <div><span>Accepted</span><strong>{{ partner_request_stats.accepted }}</strong></div>
+          <div><span>Completed</span><strong>{{ partner_request_stats.completed }}</strong></div>
+        </div>
+
+        {% if visible_requests %}
+        <div class="combo-request-list">
+          {% for req in visible_requests[:5] %}
+          <article class="combo-request-item">
+            <div>
+              <strong>{{ req.title or req.request_type or req.category or "Client Request" }}</strong>
+              <span>{{ req.requester_name() }}</span>
+              {% if req.related_address() %}<small>{{ req.related_address() }}</small>{% endif %}
+            </div>
+            <div class="combo-request-meta">
+              <span class="combo-status status-{{ (req.status or 'pending')|lower|replace('_', '-') }}">
+                {{ (req.status or "pending") | replace("_", " ") | title }}
+              </span>
+              {% if req.budget %}<small>${{ "{:,.0f}".format(req.budget) }}</small>{% endif %}
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="combo-empty">No requests yet. New insurance, realtor, and partner requests will appear here.</div>
+        {% endif %}
+      </section>
+
+      <section class="combo-panel">
+        <div class="combo-section-head">
+          <div>
+            <span class="combo-section-kicker">Insurance</span>
+            <h3>Recent Quote Requests</h3>
+          </div>
+          <a href="{{ url_for('vip.insurance_quote_requests') }}" class="ravlo-btn ghost sm">
+            <i class="lucide lucide-inbox"></i>
+            <span>View All</span>
+          </a>
+        </div>
+
+        {% if recent_quote_requests %}
+        <div class="combo-request-list">
+          {% for qr in recent_quote_requests[:5] %}
+          <article class="combo-request-item">
+            <div>
+              <strong>{{ qr.client_name }}</strong>
+              <span>{{ qr.insurance_line|replace('_', ' ')|title }}</span>
+              {% if qr.client_phone %}<small>{{ qr.client_phone }}</small>{% endif %}
+            </div>
+            <div class="combo-request-meta">
+              <span class="combo-status status-{{ qr.status }}">{{ qr.status|replace('_', ' ')|title }}</span>
+              <small>{{ qr.created_at.strftime('%b %d') if qr.created_at else '' }}</small>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="combo-empty">No quote requests yet. New submissions from the form or public link will appear here.</div>
+        {% endif %}
+      </section>
+
+      {% if is_combined %}
+      <section class="combo-panel">
+        <div class="combo-section-head">
+          <div>
+            <span class="combo-section-kicker">Listings</span>
+            <h3>Property Desk</h3>
+          </div>
+          <div class="combo-section-actions">
+            <form method="GET" class="combo-filter-form">
+              <select name="listing_status" onchange="this.form.submit()" aria-label="Listing status">
+                <option value="">All Statuses</option>
+                {% for key, label in listing_statuses %}
+                  <option value="{{ key }}" {% if listing_status_filter == key %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </form>
+            <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn primary sm">
+              <i class="lucide lucide-house-plus"></i>
+              <span>Add</span>
+            </a>
+          </div>
+        </div>
+
+        {% if listings %}
+        <div class="combo-listing-table" role="table">
+          <div class="combo-table-row combo-table-head" role="row">
+            <span>Property</span>
+            <span>Market</span>
+            <span>Price</span>
+            <span>Status</span>
+          </div>
+          {% for listing in listings[:8] %}
+          <div class="combo-table-row" role="row">
+            <span>
+              <strong>{{ listing.address }}</strong>
+              <small>{% if listing.city %}{{ listing.city }}{% if listing.state %}, {{ listing.state }}{% endif %}{% else %}Property{% endif %}</small>
+            </span>
+            <span>{{ listing.market or "Unassigned" }}</span>
+            <span>{% if listing.price %}${{ "{:,}".format(listing.price) }}{% else %}TBD{% endif %}</span>
+            <span><span class="combo-status status-{{ (listing.status or 'active')|lower }}">{{ (listing.status or "active")|title }}</span></span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="combo-empty">No listings found for this market.</div>
+        {% endif %}
+      </section>
+      {% endif %}
+    </main>
+
+    <aside class="combo-work-side">
+      <section class="combo-panel compact">
+        <div class="combo-section-head">
+          <div>
+            <span class="combo-section-kicker">Public Link</span>
+            <h3>Quote Request Form</h3>
+          </div>
+        </div>
+        <p style="color:#94a7bb; font-size:0.85rem; margin-bottom:10px;">Share this link on Facebook or social media so clients can submit quote requests directly.</p>
+        <div class="combo-copy-fields">
+          <label>
+            Public Form URL
+            <input type="text" value="{{ public_form_url }}" readonly id="publicFormUrl">
+          </label>
+        </div>
+        <button type="button" class="ravlo-btn primary sm" style="margin-top:8px; width:100%;"
+                onclick="navigator.clipboard.writeText(document.getElementById('publicFormUrl').value); this.textContent='Link Copied!';">
+          <i class="lucide lucide-copy"></i>
+          <span>Copy Link</span>
+        </button>
+      </section>
+
+      {% if is_combined %}
+      <section class="combo-panel compact">
+        <div class="combo-section-head">
+          <div>
+            <span class="combo-section-kicker">Listing intake</span>
+            <h3>MLS Entry</h3>
+          </div>
+        </div>
+
+        <form method="GET" action="{{ url_for('elena.listing_new') }}" class="combo-stacked-form">
+          <label>
+            MLS Number
+            <input type="text" name="mls_number" required placeholder="e.g. H6312451">
+          </label>
+          <label>
+            Market
+            <select name="market">
+              <option value="">Use current market</option>
+              {% for market in available_markets %}
+                <option value="{{ market }}" {% if current_market == market %}selected{% endif %}>{{ market }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <button type="submit" class="ravlo-btn primary">
+            <i class="lucide lucide-arrow-right"></i>
+            <span>Start Listing</span>
+          </button>
+        </form>
+      </section>
+
+      <section class="combo-panel compact">
+        <div class="combo-section-head">
+          <div>
+            <span class="combo-section-kicker">Automation</span>
+            <h3>Listing Feed</h3>
+          </div>
+          <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Setup</a>
+        </div>
+
+        <div class="combo-copy-fields">
+          <label>
+            Webhook URL
+            <input type="text" value="{{ listing_sync_url }}" readonly>
+          </label>
+          <label>
+            Sync Token
+            <input type="text" value="{{ listing_sync_token }}" readonly>
+          </label>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if 'ai_pilot' in modules %}
+      <section class="combo-panel compact">
+        <div class="combo-section-head">
+          <div>
+            <span class="combo-section-kicker">Copilot</span>
+            <h3>Next Best Actions</h3>
+          </div>
+          <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">Open</a>
+        </div>
+
+        {% if copilot_suggestions %}
+        <div class="combo-activity-list">
+          {% for item in copilot_suggestions[:4] %}
+          <article>
+            <strong>{{ item.title }}</strong>
+            <p>{{ item.body or item.suggestion_type }}</p>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="combo-empty">No Copilot suggestions yet.</div>
+        {% endif %}
+      </section>
+      {% endif %}
+
+      <section class="combo-panel compact">
+        <div class="combo-section-head">
+          <div>
+            <span class="combo-section-kicker">Activity</span>
+            <h3>Recent Work</h3>
+          </div>
+        </div>
+
+        {% if recent_interactions or recent_flyers %}
+        <div class="combo-activity-list">
+          {% for item in recent_interactions[:3] %}
+          <article>
+            <strong>{{ item.interaction_type|replace("_", " ")|title }}</strong>
+            <p>{{ (item.content or "")[:120] }}{% if item.content and item.content|length > 120 %}...{% endif %}</p>
+          </article>
+          {% endfor %}
+          {% for flyer in recent_flyers[:2] %}
+          <article>
+            <strong>{{ flyer.property_address or flyer.flyer_type|replace("_", " ")|title }}</strong>
+            <p>{{ flyer.flyer_type|replace("_", " ")|title }}{% if flyer.canva_status %} - {{ flyer.canva_status|title }}{% endif %}</p>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="combo-empty">No activity yet.</div>
+        {% endif %}
+      </section>
+    </aside>
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .combo-dashboard-page {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .combo-topbar-market,
+  .combo-topbar-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 0 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: #d9e7f6;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .combo-topbar-market select {
+    border: 0;
+    background: transparent;
+    color: #eef6ff;
+    outline: 0;
+    font-size: 0.88rem;
+  }
+
+  .combo-hero-panel,
+  .combo-panel,
+  .combo-lane-panel {
+    border: 1px solid rgba(178, 198, 231, 0.14);
+    border-radius: 8px;
+    background:
+      linear-gradient(135deg, rgba(20, 29, 44, 0.98), rgba(14, 20, 32, 0.96)),
+      #101725;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.24);
+  }
+
+  .combo-hero-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.7fr);
+    gap: 18px;
+    padding: 22px;
+    align-items: stretch;
+  }
+
+  .combo-hero-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .combo-eyebrow,
+  .combo-section-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    width: fit-content;
+    color: #aee6d5;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .combo-hero-copy h2,
+  .combo-section-head h3 {
+    margin: 0;
+    color: #f7fbff;
+    letter-spacing: 0;
+  }
+
+  .combo-hero-copy h2 {
+    font-size: 2rem;
+    line-height: 1.12;
+  }
+
+  .combo-hero-copy p {
+    max-width: 760px;
+    margin: 0;
+    color: #c4d2e2;
+    line-height: 1.65;
+  }
+
+  .combo-role-strip,
+  .combo-hero-actions,
+  .combo-section-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .combo-role-strip span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: #e8f2ff;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    font-size: 0.86rem;
+  }
+
+  .combo-brand-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.045);
+  }
+
+  .combo-brand-top {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .combo-brand-top img,
+  .combo-logo-placeholder {
+    width: 54px;
+    height: 54px;
+    border-radius: 8px;
+    object-fit: contain;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .combo-logo-placeholder {
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1.3rem;
+  }
+
+  .combo-brand-top strong,
+  .combo-brand-top span {
+    display: block;
+  }
+
+  .combo-brand-top strong {
+    color: #ffffff;
+    line-height: 1.25;
+  }
+
+  .combo-brand-top span {
+    margin-top: 4px;
+    color: #a9b9ca;
+    font-size: 0.86rem;
+    line-height: 1.45;
+  }
+
+  .combo-logo-form label,
+  .combo-stacked-form label,
+  .combo-copy-fields label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: #c9d8e8;
+    font-size: 0.84rem;
+    font-weight: 600;
+  }
+
+  .combo-logo-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .combo-logo-row input,
+  .combo-stacked-form input,
+  .combo-stacked-form select,
+  .combo-copy-fields input,
+  .combo-filter-form select {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: #f3f8ff;
+    background: rgba(255, 255, 255, 0.05);
+    outline: 0;
+  }
+
+  .combo-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .combo-stat-card {
+    min-height: 118px;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(16, 23, 36, 0.96);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  }
+
+  .combo-stat-card span,
+  .combo-stat-card small,
+  .combo-market-head span,
+  .combo-table-head,
+  .combo-request-item small {
+    color: #9fb1c5;
+  }
+
+  .combo-stat-card span {
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .combo-stat-card strong {
+    color: #ffffff;
+    font-size: 1.85rem;
+    line-height: 1;
+  }
+
+  .accent-insurance { border-top: 3px solid #63d2ff; }
+  .accent-bound { border-top: 3px solid #74d99f; }
+  .accent-clients { border-top: 3px solid #f2c96d; }
+  .accent-listings { border-top: 3px solid #f08c8c; }
+  .accent-followups { border-top: 3px solid #b79cff; }
+  .accent-requests { border-top: 3px solid #9fd3b8; }
+
+  .combo-crm-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .combo-crm-card {
+    min-height: 280px;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.035);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .combo-crm-card.realtor-crm { border-top: 3px solid #f2c96d; }
+  .combo-crm-card.insurance-crm { border-top: 3px solid #63d2ff; }
+  .combo-crm-card.request-crm { border-top: 3px solid #9fd3b8; }
+
+  .combo-crm-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .combo-crm-head i {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    color: #eff8ff;
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  .combo-crm-head strong,
+  .combo-crm-head span {
+    display: block;
+  }
+
+  .combo-crm-head strong {
+    color: #ffffff;
+    line-height: 1.25;
+  }
+
+  .combo-crm-head span,
+  .combo-crm-card p,
+  .combo-crm-list small {
+    color: #9fb1c5;
+  }
+
+  .combo-crm-card p {
+    margin: 0;
+    line-height: 1.5;
+    font-size: 0.9rem;
+  }
+
+  .combo-crm-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .combo-crm-metrics span {
+    padding: 9px 10px;
+    border-radius: 8px;
+    color: #dcecff;
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 0.84rem;
+  }
+
+  .combo-crm-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .combo-crm-list div {
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .combo-crm-list span,
+  .combo-crm-list small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .combo-crm-list span {
+    color: #edf6ff;
+    font-weight: 700;
+  }
+
+  .combo-crm-link {
+    margin-top: auto;
+    width: fit-content;
+  }
+
+  .combo-lane-grid,
+  .combo-work-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .combo-lane-panel,
+  .combo-panel {
+    padding: 18px;
+  }
+
+  .combo-panel.compact {
+    padding: 16px;
+  }
+
+  .combo-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .combo-section-head h3 {
+    margin-top: 5px;
+    font-size: 1.05rem;
+  }
+
+  .combo-line-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .combo-line-card {
+    display: grid;
+    grid-template-rows: 34px auto auto;
+    gap: 8px;
+    min-height: 126px;
+    padding: 13px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: #f4f8ff;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.045);
+    transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  }
+
+  .combo-line-card:hover {
+    background: rgba(255, 255, 255, 0.075);
+    border-color: rgba(99, 210, 255, 0.35);
+    transform: translateY(-1px);
+  }
+
+  .combo-line-card i {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    color: #dff8ff;
+    background: rgba(99, 210, 255, 0.14);
+  }
+
+  .combo-line-card span {
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .combo-line-card small,
+  .combo-pipeline-stage p,
+  .combo-mini-client small,
+  .combo-activity-list p,
+  .combo-empty {
+    color: #9fb1c5;
+  }
+
+  .combo-pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .combo-pipeline-stage,
+  .combo-market-card,
+  .combo-request-item,
+  .combo-activity-list article {
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .combo-pipeline-stage {
+    min-height: 136px;
+    padding: 12px;
+  }
+
+  .combo-stage-head,
+  .combo-market-head,
+  .combo-market-list div,
+  .combo-request-item,
+  .combo-table-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .combo-stage-head {
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .combo-stage-head strong,
+  .combo-mini-client span {
+    color: #edf6ff;
+  }
+
+  .combo-stage-head span {
+    min-width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    color: #ffffff;
+    background: rgba(242, 201, 109, 0.16);
+  }
+
+  .combo-mini-client {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .combo-market-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .combo-market-card {
+    padding: 14px;
+  }
+
+  .combo-market-head {
+    align-items: flex-start;
+  }
+
+  .combo-market-head strong {
+    display: block;
+    color: #ffffff;
+    margin-top: 3px;
+  }
+
+  .combo-market-metrics,
+  .combo-request-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .combo-market-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 14px;
+  }
+
+  .combo-market-metrics span,
+  .combo-request-summary div {
+    padding: 10px;
+    border-radius: 8px;
+    color: #dcecff;
+    background: rgba(255, 255, 255, 0.045);
+  }
+
+  .combo-market-list {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .combo-market-list span {
+    color: #edf6ff;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .combo-work-grid {
+    grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.75fr);
+  }
+
+  .combo-work-main,
+  .combo-work-side {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .combo-request-summary {
+    margin-bottom: 12px;
+  }
+
+  .combo-request-summary span,
+  .combo-request-summary strong {
+    display: block;
+  }
+
+  .combo-request-summary span {
+    color: #9fb1c5;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .combo-request-summary strong {
+    margin-top: 4px;
+    color: #ffffff;
+    font-size: 1.25rem;
+  }
+
+  .combo-request-list,
+  .combo-activity-list,
+  .combo-stacked-form,
+  .combo-copy-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .combo-request-item {
+    align-items: center;
+    padding: 12px;
+  }
+
+  .combo-request-item strong,
+  .combo-request-item span,
+  .combo-request-item small {
+    display: block;
+  }
+
+  .combo-request-item strong {
+    color: #f5f9ff;
+  }
+
+  .combo-request-item span {
+    color: #b8c8da;
+    margin-top: 3px;
+  }
+
+  .combo-request-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .combo-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+    padding: 4px 9px;
+    border-radius: 8px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #dcecff;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .status-active,
+  .status-accepted,
+  .status-completed {
+    color: #c7f4d5;
+    background: rgba(116, 217, 159, 0.14);
+  }
+
+  .status-pending {
+    color: #ffe8af;
+    background: rgba(242, 201, 109, 0.14);
+  }
+
+  .status-sold,
+  .status-sent {
+    color: #cfe7ff;
+    background: rgba(99, 210, 255, 0.14);
+  }
+
+  .status-new {
+    color: #93c5fd;
+    background: rgba(96, 165, 250, 0.14);
+  }
+
+  .status-reviewed {
+    color: #fde68a;
+    background: rgba(251, 191, 36, 0.14);
+  }
+
+  .status-quoted {
+    color: #c4b5fd;
+    background: rgba(167, 139, 250, 0.14);
+  }
+
+  .status-closed {
+    color: #86efac;
+    background: rgba(74, 222, 128, 0.14);
+  }
+
+  .combo-listing-table {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+  }
+
+  .combo-table-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.6fr) minmax(110px, 0.8fr) minmax(100px, 0.7fr) minmax(92px, 0.6fr);
+    align-items: center;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.035);
+    color: #dce8f6;
+  }
+
+  .combo-table-head {
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.055);
+  }
+
+  .combo-table-row strong,
+  .combo-table-row small {
+    display: block;
+  }
+
+  .combo-table-row strong {
+    color: #ffffff;
+    overflow-wrap: anywhere;
+  }
+
+  .combo-table-row small {
+    margin-top: 3px;
+    color: #99aabd;
+  }
+
+  .combo-stacked-form button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .combo-copy-fields input {
+    font-size: 0.78rem;
+  }
+
+  .combo-activity-list article {
+    padding: 11px;
+  }
+
+  .combo-activity-list strong {
+    display: block;
+    color: #f5f9ff;
+  }
+
+  .combo-activity-list p {
+    margin: 4px 0 0;
+    line-height: 1.45;
+    font-size: 0.86rem;
+    overflow-wrap: anywhere;
+  }
+
+  .combo-empty {
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  @media (max-width: 1180px) {
+    .combo-stat-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .combo-line-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 980px) {
+    .combo-hero-panel,
+    .combo-lane-grid,
+    .combo-work-grid,
+    .combo-market-grid,
+    .combo-crm-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .combo-table-row {
+      grid-template-columns: minmax(180px, 1.4fr) minmax(100px, 0.8fr) minmax(90px, 0.7fr) minmax(86px, 0.6fr);
+      min-width: 650px;
+    }
+
+    .combo-listing-table {
+      overflow-x: auto;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .combo-dashboard-page {
+      gap: 14px;
+    }
+
+    .combo-hero-panel,
+    .combo-panel,
+    .combo-lane-panel {
+      padding: 14px;
+    }
+
+    .combo-hero-copy h2 {
+      font-size: 1.55rem;
+    }
+
+    .combo-stat-grid,
+    .combo-pipeline-grid,
+    .combo-request-summary,
+    .combo-market-metrics,
+    .combo-line-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .combo-section-head,
+    .combo-request-item,
+    .combo-logo-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .combo-logo-row {
+      display: flex;
+    }
+
+    .combo-request-meta {
+      align-items: flex-start;
+    }
+  }
+</style>
+{% endblock %}

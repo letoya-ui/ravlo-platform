@@ -32,9 +32,23 @@ PARTNER_ROLES = {
     "loan_officer_partner",
 }
 
+FULL_LOAN_OFFICER_ACCESS_EMAILS = {
+    "officer@caughmanmason.com",
+}
+
 
 def normalize_role(role):
     return (role or "").strip().lower()
+
+
+def normalize_email(email):
+    return (email or "").strip().lower()
+
+
+def has_full_loan_officer_access(user) -> bool:
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    return normalize_email(getattr(user, "email", None)) in FULL_LOAN_OFFICER_ACCESS_EMAILS
 
 
 def is_admin_role(role: str) -> bool:
@@ -98,6 +112,13 @@ def role_required(*roles):
                     expanded_roles.add(role)
 
             if user_role not in expanded_roles:
+                if has_full_loan_officer_access(current_user) and (
+                    "partner_group" in roles
+                    or "loan_officer" in roles
+                    or bool(expanded_roles & PARTNER_ROLES)
+                ):
+                    return fn(*args, **kwargs)
+
                 flash("Your account doesn’t have access to that page yet.", "warning")
 
                 if user_role == "investor":

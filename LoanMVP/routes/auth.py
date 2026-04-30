@@ -26,6 +26,7 @@ from LoanMVP.models.user_model import User
 from LoanMVP.models.admin import AccessRequest, UserInvite, LicenseApplication, Company
 from LoanMVP.models.investor_models import InvestorProfile
 from LoanMVP.models.crm_models import Partner
+from LoanMVP.models.vip_models import VIPProfile
 from flask_mail import Message as MailMessage
 
 
@@ -239,6 +240,7 @@ def verify_reset_token(token: str, expiration_seconds: int = 3600):
 # mapping here.
 VIP_USER_DASHBOARDS = {
     "nyrealtorelena@gmail.com": "elena.dashboard",
+    "officer@caughmanmason.com": "vip.loan_officer_dashboard",
 }
 
 
@@ -548,6 +550,20 @@ def post_login_redirect():
     vip_endpoint = _vip_dashboard_endpoint(current_user)
     if vip_endpoint:
         return redirect(url_for(vip_endpoint))
+
+    # VIP-eligible realtors go straight to the unified VIP dashboard.
+    if role == "partner":
+        from LoanMVP.routes.vip import partner_has_vip_access
+        from LoanMVP.routes.partners import partner_is_realtor, partner_is_insurance
+        partner = getattr(current_user, "partner_profile", None)
+        if partner_has_vip_access(current_user):
+            vip_profile = VIPProfile.query.filter_by(user_id=current_user.id).first()
+            vip_role = (getattr(vip_profile, "role_type", "") or "").strip().lower()
+
+            if vip_role in ("insurance", "insurance_realtor") or partner_is_insurance(partner):
+                return redirect(url_for("vip.insurance_dashboard"))
+            if vip_role == "realtor" or partner_is_realtor(partner):
+                return redirect(url_for("vip.realtor_dashboard"))
 
     if _is_executive_dashboard_user(current_user):
         return redirect(url_for("executive.dashboard"))

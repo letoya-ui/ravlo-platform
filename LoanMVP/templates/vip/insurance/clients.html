@@ -1,0 +1,414 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo - Insurance CRM{% endblock %}
+{% block page_title %}Insurance CRM{% endblock %}
+{% block page_subline %}Social leads, quote prospects, policyholders, and renewal follow-ups for {{ header_name }}.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.insurance_dashboard') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-layout-dashboard"></i>
+    <span>Dashboard</span>
+  </a>
+  <a href="{{ url_for('vip.insurance_finance') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-receipt"></i>
+    <span>Insurance Finance</span>
+  </a>
+  <a href="{{ url_for('vip.insurance_new_quote', line='homeowners') }}" class="ravlo-btn primary sm">
+    <i class="lucide lucide-file-plus"></i>
+    <span>New Quote</span>
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="insurance-crm-page">
+  <section class="insurance-crm-stats">
+    <article>
+      <span>Total Contacts</span>
+      <strong>{{ crm_snapshot.total_contacts }}</strong>
+      <small>Insurance CRM only</small>
+    </article>
+    <article>
+      <span>New Leads</span>
+      <strong>{{ crm_snapshot.stage_counts.new_lead }}</strong>
+      <small>Social and referral intake</small>
+    </article>
+    <article>
+      <span>Quote Needed</span>
+      <strong>{{ crm_snapshot.stage_counts.quote_needed }}</strong>
+      <small>Needs quote work</small>
+    </article>
+    <article>
+      <span>Bound</span>
+      <strong>{{ crm_snapshot.stage_counts.bound }}</strong>
+      <small>Active policy clients</small>
+    </article>
+  </section>
+
+  <section class="insurance-social-panel">
+    <div class="insurance-section-head">
+      <div>
+        <span>Social auto-capture</span>
+        <h3>Lead Webhook</h3>
+      </div>
+      <div class="insurance-auto-badges">
+        <span>Instagram</span>
+        <span>Facebook</span>
+        <span>TikTok</span>
+      </div>
+    </div>
+    <div class="insurance-webhook-grid">
+      <label>
+        Webhook URL
+        <input type="text" value="{{ social_lead_url }}" readonly>
+      </label>
+      <label>
+        Sync Token
+        <input type="text" value="{{ social_lead_token }}" readonly>
+      </label>
+      <label class="span-2">
+        Automation Prompt
+        <textarea rows="4" readonly>{{ social_lead_prompt }}</textarea>
+      </label>
+    </div>
+  </section>
+
+  <div class="insurance-crm-grid">
+    <section class="insurance-panel">
+      <div class="insurance-section-head">
+        <div>
+          <span>Lead capture</span>
+          <h3>Capture Insurance Client</h3>
+        </div>
+      </div>
+
+      <form method="post" action="{{ url_for('vip.insurance_clients') }}" class="insurance-form-grid">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label>
+          Name
+          <input type="text" name="name" required placeholder="Client name">
+        </label>
+        <label>
+          Phone
+          <input type="tel" name="phone" placeholder="(555) 555-5555">
+        </label>
+        <label>
+          Email
+          <input type="email" name="email" placeholder="client@email.com">
+        </label>
+        <label>
+          Social Source
+          <select name="lead_source">
+            {% for key, label in lead_sources %}
+              <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          Coverage Line
+          <select name="coverage_line">
+            <option value="">Not sure yet</option>
+            {% for line in insurance_lines %}
+              <option value="{{ line.key }}">{{ line.label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          Stage
+          <select name="pipeline_stage">
+            {% for key, label in pipeline_stages %}
+              <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="span-2">
+          Tags
+          <input type="text" name="tags" placeholder="homeowner, landlord, renewal">
+        </label>
+        <label class="span-2">
+          Notes
+          <textarea name="notes" rows="4" placeholder="What did they ask for? What should Keyona do next?"></textarea>
+        </label>
+        <button type="submit" class="ravlo-btn primary">
+          <i class="lucide lucide-user-plus"></i>
+          <span>Capture Client</span>
+        </button>
+      </form>
+    </section>
+
+    <section class="insurance-panel">
+      <div class="insurance-section-head">
+        <div>
+          <span>Filters</span>
+          <h3>Insurance Pipeline</h3>
+        </div>
+      </div>
+
+      <form method="get" class="insurance-filter-row">
+        <label>
+          Stage
+          <select name="stage" onchange="this.form.submit()">
+            <option value="">All stages</option>
+            {% for key, label in pipeline_stages %}
+              <option value="{{ key }}" {% if selected_stage == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          Source
+          <select name="source" onchange="this.form.submit()">
+            <option value="">All sources</option>
+            {% for key, label in lead_sources %}
+              <option value="{{ key }}" {% if selected_source == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </form>
+
+      {% if contacts %}
+      <div class="insurance-contact-list">
+        {% for contact in contacts %}
+        <article>
+          <div>
+            <strong>{{ contact.name }}</strong>
+            <span>{{ contact.email or contact.phone or "No contact info" }}</span>
+            {% if contact.notes %}<p>{{ contact.notes[:130] }}{% if contact.notes|length > 130 %}...{% endif %}</p>{% endif %}
+          </div>
+          <div class="insurance-contact-meta">
+            <span>{{ (contact.pipeline_stage or "new_lead")|replace("_", " ")|title }}</span>
+            {% if contact.tags %}<small>{{ contact.tags }}</small>{% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+      {% else %}
+        <div class="insurance-empty">No insurance clients match this view.</div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .insurance-crm-page {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .insurance-crm-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .insurance-crm-stats article,
+  .insurance-social-panel,
+  .insurance-panel {
+    border: 1px solid rgba(178, 198, 231, 0.14);
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(20, 29, 44, 0.98), rgba(14, 20, 32, 0.96));
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.20);
+  }
+
+  .insurance-crm-stats article {
+    min-height: 118px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-top: 3px solid #63d2ff;
+  }
+
+  .insurance-crm-stats span,
+  .insurance-crm-stats small,
+  .insurance-section-head span,
+  .insurance-auto-badges span,
+  .insurance-contact-list span,
+  .insurance-contact-list small,
+  .insurance-contact-list p {
+    color: #9fb1c5;
+  }
+
+  .insurance-crm-stats span,
+  .insurance-section-head span {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    font-weight: 800;
+  }
+
+  .insurance-crm-stats strong {
+    color: #fff;
+    font-size: 1.9rem;
+    line-height: 1;
+  }
+
+  .insurance-crm-grid {
+    display: grid;
+    grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.15fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .insurance-panel {
+    padding: 18px;
+  }
+
+  .insurance-section-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .insurance-section-head h3 {
+    margin: 5px 0 0;
+    color: #f7fbff;
+    font-size: 1.08rem;
+  }
+
+  .insurance-social-panel {
+    padding: 18px;
+  }
+
+  .insurance-auto-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .insurance-auto-badges span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(99, 210, 255, 0.12);
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .insurance-form-grid,
+  .insurance-filter-row,
+  .insurance-webhook-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .insurance-form-grid label,
+  .insurance-filter-row label,
+  .insurance-webhook-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: #c9d8e8;
+    font-size: 0.84rem;
+    font-weight: 600;
+  }
+
+  .insurance-form-grid input,
+  .insurance-form-grid select,
+  .insurance-form-grid textarea,
+  .insurance-filter-row select,
+  .insurance-webhook-grid input,
+  .insurance-webhook-grid textarea {
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 9px 10px;
+    color: #f3f8ff;
+    background: rgba(255, 255, 255, 0.05);
+    outline: 0;
+  }
+
+  .insurance-webhook-grid textarea {
+    resize: vertical;
+    line-height: 1.45;
+  }
+
+  .span-2 {
+    grid-column: 1 / -1;
+  }
+
+  .insurance-contact-list {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .insurance-contact-list article {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 0.5fr);
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .insurance-contact-list strong,
+  .insurance-contact-list span,
+  .insurance-contact-list small {
+    display: block;
+  }
+
+  .insurance-contact-list strong {
+    color: #fff;
+  }
+
+  .insurance-contact-list p {
+    margin: 6px 0 0;
+    line-height: 1.45;
+  }
+
+  .insurance-contact-meta {
+    text-align: right;
+  }
+
+  .insurance-contact-meta span {
+    display: inline-flex;
+    padding: 5px 9px;
+    border-radius: 8px;
+    color: #dff8ff;
+    background: rgba(99, 210, 255, 0.14);
+  }
+
+  .insurance-empty {
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    color: #9fb1c5;
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  @media (max-width: 980px) {
+    .insurance-crm-stats,
+    .insurance-crm-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .insurance-contact-list article {
+      grid-template-columns: 1fr;
+    }
+
+    .insurance-contact-meta {
+      text-align: left;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .insurance-form-grid,
+    .insurance-filter-row,
+    .insurance-webhook-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}

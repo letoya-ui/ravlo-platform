@@ -17,6 +17,11 @@
       <a href="{{ url_for(companion_endpoint, deal_id=deal.id) }}" class="ravlo-btn ghost">{{ companion_label or "Open Build Studio" }}</a>
       {% endif %}
 
+      {% if deal %}
+      <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn primary">Architect Deal</a>
+      {% else %}
+      <a href="{{ url_for('investor.deal_architect') }}" class="ravlo-btn primary">Architect Deal</a>
+      {% endif %}
       <button type="button" class="ravlo-btn ghost hidden" id="downloadCurrentBtn">Download Image</button>
       <button type="button" class="ravlo-btn ghost hidden" id="downloadAllBtn">Download All Images</button>
       <a href="#" class="ravlo-btn primary hidden" id="continueToDealArchitectBtn">Send to Deal Architect</a>
@@ -57,7 +62,15 @@
           data-has-render="{{ 'true' if ns.slot_concept and ns.slot_concept.get('image_url') else 'false' }}"
           data-render-url="{{ ns.slot_concept.get('image_url', '') if ns.slot_concept else '' }}"
         >
-          <span class="room-slot-icon">{{ slot.icon }}</span>
+          {% set room_icon_class = {
+            "living_room": "lucide-sofa",
+            "kitchen": "lucide-utensils",
+            "primary_bedroom": "lucide-bed-double",
+            "bathroom": "lucide-bath",
+            "dining_room": "lucide-table-2",
+            "office": "lucide-briefcase-business"
+          }.get(slot.key, "lucide-home") %}
+          <i class="lucide {{ room_icon_class }} room-slot-icon" aria-hidden="true"></i>
           <span class="room-slot-label">{{ slot.label }}</span>
           {% if ns.slot_concept and ns.slot_concept.get('image_url') %}
             <span class="room-slot-status done">Done</span>
@@ -137,8 +150,8 @@
           </div>
 
           <div class="field">
-            <label for="blueprint_url">Blueprint URL</label>
-            <input id="blueprint_url" name="blueprint_url" value="{{ blueprint_result.get('blueprint_url') or blueprint_result.get('image_url') or (project.blueprint_url if project else '') }}" placeholder="Paste a saved blueprint URL">
+            <label for="blueprint_url">Reference Image URL</label>
+            <input id="blueprint_url" name="blueprint_url" value="{{ blueprint_result.get('blueprint_url') or blueprint_result.get('image_url') or (project.blueprint_url if project else '') }}" placeholder="Paste a saved room photo or plan URL">
           </div>
         </div>
 
@@ -153,7 +166,7 @@
         </div>
 
         <div class="field">
-          <label for="blueprint_file">Upload Blueprint</label>
+          <label for="blueprint_file">Upload Reference Image</label>
           <input type="file" id="blueprint_file" name="blueprint_file" accept="image/*,.png,.jpg,.jpeg,.webp,.pdf">
         </div>
 
@@ -169,16 +182,16 @@
       <div class="section-head">
         <div>
           <div class="eyebrow">REFERENCE</div>
-          <h2>Blueprint Source</h2>
+          <h2>Reference Image</h2>
         </div>
       </div>
 
       <div class="reference-panel" id="blueprintPreview">
         {% set blueprint_src = blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') or (project.blueprint_url if project else '') %}
         {% if blueprint_src %}
-        <img src="{{ blueprint_src }}" alt="Blueprint reference">
+        <img src="{{ blueprint_src }}" alt="Reference image">
         {% else %}
-        <div class="empty-state-inline">Upload a blueprint or open a saved project with one attached.</div>
+        <div class="empty-state-inline">Upload a room photo, blueprint, or open a saved project with a reference attached.</div>
         {% endif %}
       </div>
 
@@ -273,6 +286,19 @@
       {% endif %}
     </div>
   </section>
+
+  <div class="design-loading-overlay hidden" id="designLoadingOverlay" role="status" aria-live="polite">
+    <div class="design-loading-card">
+      <div class="loader-ring"></div>
+      <h3>Generating design concept...</h3>
+      <p id="designLoadingMessage">Ravlo is preparing the selected room concept.</p>
+      <div class="loading-progress-list">
+        <div class="loading-step">Reading reference image and room inputs...</div>
+        <div class="loading-step">Building interior style direction...</div>
+        <div class="loading-step">Rendering the design concept...</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -284,8 +310,11 @@
 .form-grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .field{display:grid;gap:8px;margin-bottom:14px}
 .field input,.field select,.field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
-.reference-panel,.result-media{border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.03);min-height:320px;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.reference-panel img,.result-media img{width:100%;height:100%;object-fit:cover;display:block}
+.reference-panel,.result-media{border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.03);min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px;aspect-ratio:16/10}
+.reference-panel img,.result-media img{width:100%;height:100%;object-fit:contain;display:block;border-radius:14px}
+.reference-panel{background:rgba(5,10,18,.55)}
+.result-media{background:rgba(5,10,18,.65)}
+.section-head>strong{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:#dbeafe;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
 .result-grid{grid-template-columns:1.2fr .8fr}
 .result-meta{display:grid;gap:12px;align-content:start}
 .result-meta div{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
@@ -307,12 +336,20 @@
 .room-slot{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;border-radius:16px;border:2px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);cursor:pointer;transition:all .2s;color:#eef3ff;font-size:13px}
 .room-slot:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.06)}
 .room-slot.is-active{border-color:#4f8cff;background:rgba(79,140,255,.08)}
-.room-slot-icon{font-size:28px}
+.room-slot-icon{font-size:24px;color:#8dbdff}
 .room-slot-label{font-weight:600;text-align:center}
 .room-slot-status{font-size:11px;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em}
 .room-slot-status.done{background:rgba(34,197,94,.15);color:#22c55e}
 .room-slot-status.pending{background:rgba(255,255,255,.06);color:#9fb0ca}
 .room-slot-status.generating{background:rgba(79,140,255,.15);color:#4f8cff}
+.design-loading-overlay{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(5,8,14,.78);backdrop-filter:blur(10px)}
+.design-loading-card{width:min(100%,480px);padding:28px;border-radius:24px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(180deg,rgba(16,22,34,.98),rgba(10,15,24,.96));box-shadow:0 26px 70px rgba(0,0,0,.35);text-align:center}
+.design-loading-card h3{margin:14px 0 10px;color:#fff;font-size:1.4rem}
+.design-loading-card p{margin:0;color:#b8c5d6;line-height:1.6}
+.loading-progress-list{display:grid;gap:10px;margin-top:20px;text-align:left}
+.loading-step{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);color:#dbe6f5}
+.loader-ring{width:58px;height:58px;border-radius:50%;margin:0 auto;border:4px solid rgba(255,255,255,.12);border-top-color:#7ab8ff;animation:design-spin 1s linear infinite}
+@keyframes design-spin{to{transform:rotate(360deg)}}
 @media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.budget-line-row,.budget-summary>div{flex-direction:column}.room-slot-grid{grid-template-columns:repeat(3,1fr)}}
 </style>
 
@@ -340,6 +377,8 @@
   const continueToDealArchitectBtn = document.getElementById('continueToDealArchitectBtn');
   const continueToBudgetStudioBtn = document.getElementById('continueToBudgetStudioBtn');
   const resultDealArchitectBtn = document.getElementById('resultDealArchitectBtn');
+  const designLoadingOverlay = document.getElementById('designLoadingOverlay');
+  const designLoadingMessage = document.getElementById('designLoadingMessage');
 
   let currentImageUrl = {{ (interior_result.get('image_url') if interior_result else '')|tojson }};
   let nextUrl = '';
@@ -376,7 +415,7 @@
 
   function setBlueprintPreviewFromUrl(url) {
     if (!url) return;
-    blueprintPreview.innerHTML = `<img src="${url}" alt="Blueprint reference">`;
+    blueprintPreview.innerHTML = `<img src="${url}" alt="Reference image">`;
   }
 
   function imageFileName(prefix, url) {
@@ -453,6 +492,29 @@
     }
   }
 
+  function selectedStyleLabel() {
+    const styleSelect = document.getElementById('style');
+    return styleSelect?.selectedOptions?.[0]?.textContent?.trim() || 'selected style';
+  }
+
+  function startDesignLoading(activeSlot) {
+    const roomLabel = activeSlot?.dataset?.roomLabel || document.getElementById('room_type')?.selectedOptions?.[0]?.textContent?.trim() || 'selected room';
+    if (designLoadingMessage) {
+      designLoadingMessage.textContent = `Ravlo is generating a ${selectedStyleLabel()} concept for the ${roomLabel}.`;
+    }
+    designLoadingOverlay?.classList.remove('hidden');
+    button.disabled = true;
+    button.textContent = 'Generating...';
+    if (budgetButton) budgetButton.disabled = true;
+  }
+
+  function stopDesignLoading() {
+    designLoadingOverlay?.classList.add('hidden');
+    button.disabled = false;
+    button.textContent = {{ (submit_label or "Generate Design Concept")|tojson }};
+    if (budgetButton) budgetButton.disabled = false;
+  }
+
   blueprintFile?.addEventListener('change', function () {
     const file = this.files && this.files[0];
     if (!file) return;
@@ -514,11 +576,10 @@
 
   form?.addEventListener('submit', async function (e) {
     e.preventDefault();
-    button.disabled = true;
-    button.textContent = 'Generating...';
     interiorStatus.textContent = 'Generating';
 
     const activeSlot = document.querySelector('.room-slot.is-active');
+    startDesignLoading(activeSlot);
     if (activeSlot) {
       const statusEl = activeSlot.querySelector('.room-slot-status');
       if (statusEl) {
@@ -626,8 +687,7 @@
       }
       alert(error.message || 'Interior generation failed.');
     } finally {
-      button.disabled = false;
-      button.textContent = {{ (submit_label or "Generate Design Concept")|tojson }};
+      stopDesignLoading();
     }
   });
 

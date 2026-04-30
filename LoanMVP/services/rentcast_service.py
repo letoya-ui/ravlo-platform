@@ -122,25 +122,85 @@ def normalize_rentcast_sale_listing(item: Dict[str, Any]) -> Dict[str, Any]:
     # Extract photos from the raw listing data.  RentCast may return photos
     # under several keys; collect them all so the orchestrator can score and
     # rank them later.
-    raw_photos = item.get("photos") or item.get("images") or []
-    if isinstance(raw_photos, str):
-        raw_photos = [raw_photos]
-    elif not isinstance(raw_photos, list):
-        raw_photos = []
     photo_list: List[str] = []
-    for entry in raw_photos:
-        if isinstance(entry, str) and entry.strip():
-            photo_list.append(entry.strip())
-        elif isinstance(entry, dict):
-            url = (
-                entry.get("url")
-                or entry.get("href")
-                or entry.get("src")
-                or entry.get("photo")
-                or entry.get("image")
-            )
-            if isinstance(url, str) and url.strip():
-                photo_list.append(url.strip())
+
+    def collect_photos(value: Any, depth: int = 0) -> None:
+        if not value or depth > 8:
+            return
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped:
+                photo_list.append(stripped)
+            return
+        if isinstance(value, list):
+            for entry in value:
+                collect_photos(entry, depth + 1)
+            return
+        if not isinstance(value, dict):
+            return
+
+        for direct_key in (
+            "full",
+            "full_url",
+            "original",
+            "original_url",
+            "highRes",
+            "hiRes",
+            "large",
+            "large_url",
+            "medium",
+            "medium_url",
+            "imageUrl",
+            "image_url",
+            "photoUrl",
+            "photo_url",
+            "url",
+            "href",
+            "src",
+            "photo",
+            "image",
+        ):
+            direct = value.get(direct_key)
+            if isinstance(direct, str) and direct.strip():
+                photo_list.append(direct.strip())
+            elif isinstance(direct, (list, dict)):
+                collect_photos(direct, depth + 1)
+
+        for nested_key in (
+            "photos",
+            "images",
+            "media",
+            "gallery",
+            "responsivePhotos",
+            "mixedSources",
+            "imageSources",
+            "sources",
+            "jpeg",
+            "jpg",
+            "webp",
+            "data",
+            "result",
+            "results",
+            "home",
+            "home_search",
+            "property",
+            "listing",
+            "listings",
+            "description",
+            "location",
+        ):
+            collect_photos(value.get(nested_key), depth + 1)
+
+    for photo_key in (
+        "photos",
+        "images",
+        "media",
+        "gallery",
+        "responsivePhotos",
+        "mixedSources",
+        "imageSources",
+    ):
+        collect_photos(item.get(photo_key))
 
     primary_photo = (
         item.get("imgSrc")

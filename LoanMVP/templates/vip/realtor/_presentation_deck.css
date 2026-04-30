@@ -101,6 +101,52 @@ body {
   color: #334155;
 }
 
+.deck-cma-band {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+  gap: 12px;
+  margin: 18px 0;
+}
+.deck-cma-number,
+.deck-cma-metrics div {
+  background: #f5f8fc;
+  border: 1px solid #dbe8f6;
+  border-radius: 10px;
+  padding: 14px;
+}
+.deck-cma-number span,
+.deck-cma-metrics span {
+  display: block;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.deck-cma-number strong {
+  display: block;
+  color: #0b6b43;
+  font-size: 1.75rem;
+  line-height: 1.1;
+  margin-top: 5px;
+}
+.deck-cma-number small {
+  display: block;
+  color: #334155;
+  margin-top: 6px;
+}
+.deck-cma-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.deck-cma-metrics strong {
+  display: block;
+  color: #1e3a66;
+  font-size: 1.05rem;
+  margin-top: 5px;
+}
+
 .deck-price-row {
   display: flex;
   gap: 12px;
@@ -174,4 +220,11 @@ body {
   .deck { box-shadow: none; max-width: none; }
   .deck-section { page-break-inside: avoid; }
   .no-print { display: none !important; }
+}
+
+@media (max-width: 720px) {
+  .deck-cma-band,
+  .deck-cma-metrics {
+    grid-template-columns: 1fr;
+  }
 }

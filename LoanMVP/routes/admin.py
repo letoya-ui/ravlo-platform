@@ -24,10 +24,13 @@ from LoanMVP.models.crm_models import Lead, Message, Task
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.processor_model import ProcessorProfile
+from LoanMVP.models.underwriter_model import UnderwriterProfile
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.system_models import SystemLog
 from LoanMVP.models.admin import Company, AccessRequest, UserInvite, LicenseApplication, LicenseInviteEvent
 from LoanMVP.models.ai_models import AIAssistantInteraction
+from LoanMVP.models.payment_models import PaymentRecord
+from LoanMVP.models.vip_models import VIPIncome, VIPProfile
 from LoanMVP.services.notify_service import notify
 
 import io
@@ -37,6 +40,25 @@ import time
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 assistant = AIAssistant()
 FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin"}
+FUNDED_LOAN_STATUSES = {"closed", "funded", "completed", "paid"}
+ACTIVE_LOAN_STATUSES = {
+    "application submitted",
+    "submitted",
+    "capital submitted",
+    "pending",
+    "processing",
+    "in review",
+    "in_review",
+    "under review",
+    "approved",
+    "clear to close",
+    "ctc",
+}
+COMPENSATION_DEFAULTS = {
+    "loan_officer_rate": 0.01,
+    "processor_file_pay": 350,
+    "underwriter_file_pay": 500,
+}
 COMPANY_INVITABLE_ROLES = [
     ("admin", "Admin"),
     ("loan_officer", "Loan Officer"),
@@ -221,6 +243,7 @@ def _company_dashboard_defaults():
         "invites": True,
         "requests": True,
         "messages": True,
+        "compensation": True,
     }
 
 
@@ -251,6 +274,25 @@ def _company_processors(company_id):
     )
 
 
+def _company_underwriters(company_id):
+    return (
+        db.session.query(UnderwriterProfile)
+        .join(User, UnderwriterProfile.user_id == User.id)
+        .filter(User.company_id == company_id)
+        .order_by(func.lower(func.coalesce(UnderwriterProfile.full_name, User.email)))
+        .all()
+    )
+
+
+def _profile_user_company_id(profile):
+    if not profile:
+        return None
+    user = getattr(profile, "user", None)
+    if user is None and getattr(profile, "user_id", None):
+        user = User.query.get(getattr(profile, "user_id"))
+    return getattr(user, "company_id", None) if user else None
+
+
 def _borrower_matches_company(borrower, company):
     if not borrower or not company:
         return False
@@ -273,10 +315,18 @@ def _loan_matches_company(loan, company):
         return True
 
     borrower = getattr(loan, "borrower_profile", None)
-    return _borrower_matches_company(borrower, company)
+    if _borrower_matches_company(borrower, company):
+        return True
+
+    assigned_profiles = [
+        getattr(loan, "loan_officer", None),
+        getattr(loan, "processor", None),
+        getattr(loan, "underwriter", None),
+    ]
+    return any(_profile_user_company_id(profile) == company.id for profile in assigned_profiles)
 
 
-def _company_recent_applicants(company_id, limit=8):
+def _company_loans(company_id, limit=500):
     company = Company.query.get(company_id)
     if not company:
         return []
@@ -284,12 +334,180 @@ def _company_recent_applicants(company_id, limit=8):
     loans = (
         LoanApplication.query
         .order_by(LoanApplication.created_at.desc(), LoanApplication.id.desc())
-        .limit(200)
+        .limit(limit)
         .all()
     )
+    return [loan for loan in loans if _loan_matches_company(loan, company)]
 
-    scoped_loans = [loan for loan in loans if _loan_matches_company(loan, company)]
+
+def _company_recent_applicants(company_id, limit=8):
+    company = Company.query.get(company_id)
+    if not company:
+        return []
+
+    scoped_loans = _company_loans(company.id, limit=200)
     return scoped_loans[:limit]
+
+
+def _loan_status_key(loan):
+    return (getattr(loan, "status", "") or "").strip().lower()
+
+
+def _loan_amount_value(loan):
+    try:
+        return float(getattr(loan, "amount", 0) or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _profile_name(profile, fallback):
+    return (
+        getattr(profile, "name", None)
+        or getattr(profile, "full_name", None)
+        or getattr(profile, "email", None)
+        or fallback
+    )
+
+
+def _compensation_rows_for_profiles(profiles, loans, role_key, display_role):
+    profile_id_attr = f"{role_key}_id"
+    rows = []
+
+    for profile in profiles:
+        assigned = [
+            loan for loan in loans
+            if getattr(loan, profile_id_attr, None) == getattr(profile, "id", None)
+        ]
+        funded = [loan for loan in assigned if _loan_status_key(loan) in FUNDED_LOAN_STATUSES]
+        active = [loan for loan in assigned if _loan_status_key(loan) in ACTIVE_LOAN_STATUSES]
+        funded_volume = sum(_loan_amount_value(loan) for loan in funded)
+
+        if role_key == "loan_officer":
+            pay_basis = f"{COMPENSATION_DEFAULTS['loan_officer_rate'] * 100:.2f}% funded volume"
+            estimated_pay = funded_volume * COMPENSATION_DEFAULTS["loan_officer_rate"]
+        elif role_key == "processor":
+            pay_basis = f"${COMPENSATION_DEFAULTS['processor_file_pay']:,} per funded file"
+            estimated_pay = len(funded) * COMPENSATION_DEFAULTS["processor_file_pay"]
+        else:
+            pay_basis = f"${COMPENSATION_DEFAULTS['underwriter_file_pay']:,} per funded file"
+            estimated_pay = len(funded) * COMPENSATION_DEFAULTS["underwriter_file_pay"]
+
+        rows.append({
+            "profile_id": getattr(profile, "id", None),
+            "name": _profile_name(profile, f"{display_role} #{getattr(profile, 'id', '')}"),
+            "email": getattr(profile, "email", None),
+            "role": display_role,
+            "assigned_count": len(assigned),
+            "active_count": len(active),
+            "funded_count": len(funded),
+            "funded_volume": funded_volume,
+            "estimated_pay": estimated_pay,
+            "pay_basis": pay_basis,
+        })
+
+    return rows
+
+
+def _table_exists(table_name):
+    try:
+        return inspect(db.engine).has_table(table_name)
+    except Exception:
+        return False
+
+
+def _company_pending_compensation_requests(company, loans):
+    pending = []
+    company_user_ids = {user.id for user in User.query.filter_by(company_id=company.id).all()}
+    company_loan_ids = {loan.id for loan in loans}
+
+    payment_rows = (
+        PaymentRecord.query
+        .filter(func.lower(func.coalesce(PaymentRecord.status, "")) != "paid")
+        .order_by(PaymentRecord.timestamp.desc(), PaymentRecord.id.desc())
+        .limit(100)
+        .all()
+    )
+    for row in payment_rows:
+        payment_type = (getattr(row, "payment_type", "") or "").strip().lower()
+        if not any(term in payment_type for term in ("commission", "comp", "pay", "bonus", "origination")):
+            continue
+        if getattr(row, "user_id", None) not in company_user_ids and getattr(row, "loan_id", None) not in company_loan_ids:
+            continue
+        pending.append({
+            "source": "Payment",
+            "person": getattr(getattr(row, "user", None), "full_name", None) or getattr(getattr(row, "user", None), "email", None) or "Unassigned",
+            "type": getattr(row, "payment_type", None) or "Compensation",
+            "amount": float(getattr(row, "amount", 0) or 0),
+            "status": getattr(row, "status", None) or "Pending",
+            "created_at": getattr(row, "timestamp", None),
+        })
+
+    if _table_exists("vip_income") and _table_exists("vip_profiles"):
+        try:
+            vip_rows = (
+                db.session.query(VIPIncome, VIPProfile, User)
+                .join(VIPProfile, VIPIncome.vip_profile_id == VIPProfile.id)
+                .join(User, VIPProfile.user_id == User.id)
+                .filter(User.company_id == company.id)
+                .filter(func.lower(func.coalesce(VIPIncome.status, "")) == "pending")
+                .order_by(VIPIncome.created_at.desc(), VIPIncome.id.desc())
+                .limit(100)
+                .all()
+            )
+            for income, profile, user in vip_rows:
+                pending.append({
+                    "source": "VIP Income",
+                    "person": getattr(user, "full_name", None) or getattr(profile, "display_name", None) or getattr(user, "email", None),
+                    "type": getattr(income, "category", None) or "Commission",
+                    "amount": float(getattr(income, "amount", 0) or 0),
+                    "status": getattr(income, "status", None) or "Pending",
+                    "created_at": getattr(income, "income_date", None) or getattr(income, "created_at", None),
+                })
+        except Exception:
+            current_app.logger.exception("Unable to load company VIP pending income rows")
+
+    return pending[:12]
+
+
+def _company_compensation_summary(company, loans):
+    loan_officer_rows = _compensation_rows_for_profiles(
+        _company_loan_officers(company.id),
+        loans,
+        "loan_officer",
+        "Loan Officer",
+    )
+    processor_rows = _compensation_rows_for_profiles(
+        _company_processors(company.id),
+        loans,
+        "processor",
+        "Processor",
+    )
+    underwriter_rows = _compensation_rows_for_profiles(
+        _company_underwriters(company.id),
+        loans,
+        "underwriter",
+        "Underwriter",
+    )
+
+    rows = loan_officer_rows + processor_rows + underwriter_rows
+    totals = {
+        "team_members": len(rows),
+        "assigned_loans": sum(row["assigned_count"] for row in rows),
+        "active_loans": sum(row["active_count"] for row in rows),
+        "funded_loans": sum(row["funded_count"] for row in rows),
+        "funded_volume": sum(row["funded_volume"] for row in rows),
+        "estimated_pay": sum(row["estimated_pay"] for row in rows),
+    }
+
+    return {
+        "loan_officers": loan_officer_rows,
+        "processors": processor_rows,
+        "underwriters": underwriter_rows,
+        "rows": rows,
+        "totals": totals,
+        "pending_requests": _company_pending_compensation_requests(company, loans),
+        "pay_basis_note": "Estimated from company defaults until a formal commission schedule is configured.",
+    }
 
 
 def _company_dashboard_column_exists():
@@ -1561,10 +1779,15 @@ def company_dashboard(company_id):
     company_loan_officers = _company_loan_officers(company.id)
     company_processors = _company_processors(company.id)
     invites = UserInvite.query.filter_by(company_id=company.id).order_by(UserInvite.created_at.desc()).all()
-    loans = LoanApplication.query.filter_by(company_id=company.id).order_by(LoanApplication.created_at.desc()).all() if hasattr(LoanApplication, "company_id") else []
-    borrowers = BorrowerProfile.query.filter_by(company_id=company.id).all() if hasattr(BorrowerProfile, "company_id") else []
+    loans = _company_loans(company.id)
+    borrowers = list({
+        getattr(loan, "borrower_profile_id", None): getattr(loan, "borrower_profile", None)
+        for loan in loans
+        if getattr(loan, "borrower_profile", None) is not None
+    }.values())
     docs = LoanDocument.query.filter_by(company_id=company.id).all() if hasattr(LoanDocument, "company_id") else []
     applicant_loans = _company_recent_applicants(company.id)
+    compensation_summary = _company_compensation_summary(company, loans)
     access_requests = [
         item for item in (
             AccessRequest.query
@@ -1622,6 +1845,7 @@ def company_dashboard(company_id):
         "loans": len(loans),
         "assigned_loan_officers": len([loan for loan in applicant_loans if getattr(loan, "loan_officer_id", None)]),
         "assigned_processors": len([loan for loan in applicant_loans if getattr(loan, "processor_id", None)]),
+        "assigned_underwriters": len([loan for loan in applicant_loans if getattr(loan, "underwriter_id", None)]),
         "borrowers": len(borrowers),
         "documents": len(docs),
         "requests": len(access_requests),
@@ -1640,6 +1864,7 @@ def company_dashboard(company_id):
         company_processors=company_processors,
         recent_messages=recent_messages,
         access_requests=access_requests[:5],
+        compensation_summary=compensation_summary,
         stats=stats,
         role_labels=list(role_counts.keys()),
         role_values=list(role_counts.values()),

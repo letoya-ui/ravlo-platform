@@ -1,6 +1,6 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Elena — Log Interaction{% endblock %}
+{% block title %}Ravlo • Log Interaction{% endblock %}
 {% block page_title %}Log Interaction{% endblock %}
 {% block page_subline %}Record a call, email, text, meeting, showing, note, or follow‑up.{% endblock %}
 
@@ -12,7 +12,7 @@
         <h3>New Interaction</h3>
         <p>Attach it to a client. Set a due_at to create a follow‑up reminder.</p>
       </div>
-      <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost sm">Back to Dashboard</a>
+      <a href="{{ portal_home|default(url_for('vip.realtor_dashboard')) }}" class="ravlo-btn ghost sm">Back to Dashboard</a>
     </div>
 
     {% if not clients %}
@@ -61,7 +61,7 @@
 
         <div class="elena-form-actions">
           <button type="submit" class="ravlo-btn primary">Save Interaction</button>
-          <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost">Cancel</a>
+          <a href="{{ portal_home|default(url_for('vip.realtor_dashboard')) }}" class="ravlo-btn ghost">Cancel</a>
         </div>
       </form>
     {% endif %}
