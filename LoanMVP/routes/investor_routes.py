@@ -7643,6 +7643,12 @@ def generate_build_interior():
                 rehab_level="full_concept",
             )
 
+        # Combine user's free-text description and notes as the primary
+        # creative direction the AI engine should follow.
+        user_creative_direction = ". ".join(
+            part for part in [description, notes] if part
+        )
+
         payload = {
             "mode": "interior",
             "task": "blueprint_to_interior_room" if source_is_floor_plan else "interior_design",
@@ -7650,8 +7656,9 @@ def generate_build_interior():
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
-            "description": description,
-            "build_description": description,
+            "description": user_creative_direction or description,
+            "build_description": user_creative_direction or description,
+            "design_notes": notes,
             "lot_size": lot_size,
             "zoning": zoning,
             "room_type": room_type,
@@ -7661,8 +7668,8 @@ def generate_build_interior():
             "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
 
             "prompt": interior_prompt_notes,
-            "prompt_notes": interior_prompt_notes,
-            "desired_updates": interior_prompt_notes,
+            "prompt_notes": user_creative_direction or interior_prompt_notes,
+            "desired_updates": user_creative_direction or interior_prompt_notes,
 
             "special_features": (
                 f"{room_type} interior, {_room_program_prompt(room_type)}, high-end furniture, premium finishes, "

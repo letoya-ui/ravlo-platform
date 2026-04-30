@@ -100,13 +100,13 @@
         </div>
 
         <div class="field">
-          <label for="description">Design Notes</label>
-          <textarea id="description" name="description" rows="4" placeholder="Describe finishes, mood, functionality, and target buyer.">{{ project.description if project else '' }}</textarea>
+          <label for="description" style="font-weight:600;">What Do You Want? <span style="font-weight:400;opacity:.6;">(This drives the AI — be specific)</span></label>
+          <textarea id="description" name="description" rows="5" placeholder="Tell Ravlo exactly what you want. Example: 'I want a luxury modern kitchen with white marble waterfall island, matte black fixtures, warm oak floating shelves, and pendant lighting over the island.' The more specific you are, the better the result.">{{ project.description if project else '' }}</textarea>
         </div>
 
         <div class="field">
-          <label for="notes">Interior Notes</label>
-          <textarea id="notes" name="notes" rows="3" placeholder="Cabinet style, materials, lighting, furnishing direction.">{{ interior_result.get('notes') or '' }}</textarea>
+          <label for="notes">Additional Design Details</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Add more details: cabinet style, hardware finish, countertop material, flooring, lighting, furnishing direction, paint colors, accent wall, etc.">{{ interior_result.get('notes') or '' }}</textarea>
         </div>
 
         <div class="field">

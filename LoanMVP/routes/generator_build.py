@@ -72,22 +72,36 @@ def _build_chat_prompt(messages, current_spec=None):
     current_spec = current_spec or {}
 
     return f"""
-You are Ravlo Build Studio's planning engine.
+You are Ravlo Build Studio's intelligent planning engine.
+
+CRITICAL RULE: Your #1 priority is to understand exactly what the user is asking for
+and reflect their specific requests in the spec. If the user says "I want a modern
+farmhouse with a wraparound porch", the spec MUST include those details. Do not
+ignore, generalize, or replace the user's specific requests with generic defaults.
 
 Build Studio owns construction layout, scope, blueprint/site/exterior consistency, and build-package structure.
 Design Studio owns most interior/exterior visual styling and finish variations.
 
 Help the user create a clear build specification before image generation. Ask only for missing information that materially affects the build package.
 
+When the user describes what they want:
+1. Extract EVERY specific detail they mention (style, materials, features, layout preferences, room details).
+2. Put their exact words into "description" and "special_features" so the image generator sees them.
+3. Use "notes" for site constraints, setbacks, zoning, and technical requirements.
+4. If the user mentions specific architectural features (e.g. "wraparound porch", "exposed beams",
+   "stone facade", "metal roof"), include them verbatim in "special_features".
+5. Respond in "assistant_message" confirming what you understood and what you will generate.
+
 Return ONLY valid JSON in this shape:
 
 {{
   "status": "needs_more_info" or "ready",
-  "assistant_message": "Natural language response to the user.",
+  "assistant_message": "Natural language response confirming what you understood from the user's request and what you plan to generate.",
   "spec": {{
     "intent": "scope|blueprint|siteplan|exterior_from_blueprint|exterior_from_photo|build_package",
     "property_type": "",
     "style": "",
+    "description": "The user's full creative vision in their own words — this drives image generation",
     "preserve_layout": true,
     "blueprint_url": "",
     "reference_image_url": "",
@@ -97,8 +111,8 @@ Return ONLY valid JSON in this shape:
     "roof_style": "",
     "siding_material": "",
     "window_style": "",
-    "special_features": "",
-    "notes": "",
+    "special_features": "Specific architectural features the user requested — these appear in the generation prompt",
+    "notes": "Site and technical constraints",
     "known_constraints": [],
     "outputs": ["scope", "blueprint", "siteplan", "exterior_from_blueprint"],
     "scope": {{}},
@@ -117,6 +131,7 @@ Mode rules:
 - Use exterior_from_photo when a real exterior photo should be preserved or restyled.
 - Use build_package for a complete scope + materials + phases + timeline + risks + images package.
 - Do not overload generic exterior.
+- When the user has given enough information to generate (property type + style + floor count at minimum), set status to "ready" and proceed. Do not over-ask.
 
 Current spec:
 {current_spec}
@@ -458,6 +473,11 @@ def _fallback_build_chat_plan(messages, current_spec=None):
         inferred["intent"] = "exterior_from_photo"
     elif "scope" in lowered:
         inferred["intent"] = "scope"
+
+    # Preserve the user's full text as the description so the image
+    # generator can act on their specific request.
+    if user_text.strip():
+        inferred.setdefault("description", user_text.strip())
 
     spec = _prepare_build_generation_spec({**current_spec, **inferred})
     missing = _build_missing_fields(spec)
@@ -1322,7 +1342,13 @@ def _build_chat_response():
         response = client.chat.completions.create(
             model=current_app.config.get("AI_MODEL") or "gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are Ravlo Build Studio's planning engine. Return only valid JSON."},
+                {"role": "system", "content": (
+                    "You are Ravlo Build Studio's intelligent planning engine. "
+                    "Your top priority is to listen to the user's specific requests "
+                    "and reflect them accurately in the build spec. "
+                    "Capture the user's exact creative vision in the description and special_features fields. "
+                    "Return only valid JSON."
+                )},
                 {"role": "user", "content": _build_chat_prompt(messages, current_spec)},
             ],
             temperature=0.25,
