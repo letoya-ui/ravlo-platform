@@ -433,6 +433,7 @@ def _build_intelligence_package(spec, payload=None):
 
 
 def _fallback_build_chat_plan(messages, current_spec=None):
+    import re as _re
     current_spec = copy.deepcopy(_as_dict(current_spec))
     user_text = ""
     if isinstance(messages, list) and messages:
@@ -467,7 +468,6 @@ def _fallback_build_chat_plan(messages, current_spec=None):
             story_match = value
             break
     if not story_match:
-        import re as _re
         digit_match = _re.search(r"(\d)\s*(?:story|stories|floor|floors)", lowered)
         if digit_match:
             story_match = digit_match.group(1)
@@ -483,13 +483,13 @@ def _fallback_build_chat_plan(messages, current_spec=None):
     elif "scope" in lowered:
         inferred["intent"] = "scope"
 
-    # Detect color/material mentions for richer responses
+    # Detect color/material mentions for richer responses (word-boundary matching)
     for color in ("white", "black", "gray", "grey", "red", "blue", "green", "beige", "cream", "brown"):
-        if color in lowered:
+        if _re.search(r"\b" + color + r"\b", lowered):
             inferred.setdefault("siding_material", f"{color} exterior")
             break
     for material in ("brick", "stone", "stucco", "cedar", "vinyl", "wood", "metal", "concrete"):
-        if material in lowered:
+        if _re.search(r"\b" + material + r"\b", lowered):
             inferred["siding_material"] = material
             break
 
