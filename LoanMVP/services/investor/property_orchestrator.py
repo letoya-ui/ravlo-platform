@@ -114,6 +114,12 @@ class CanonicalProperty:
     deal_finder_signal: Optional[str] = None
     next_step: Optional[str] = None
     comp_confidence: Optional[str] = None
+    buyer_demand_score: Optional[int] = None
+    buy_box_fit_score: Optional[int] = None
+    spread_to_arv_pct: Optional[float] = None
+    equity_spread: Optional[float] = None
+    deal_velocity: Optional[str] = None
+    rank_reason: Optional[str] = None
 
     primary_strengths: List[str] = field(default_factory=list)
     primary_risks: List[str] = field(default_factory=list)
@@ -183,6 +189,12 @@ class CanonicalProperty:
             "deal_finder_signal": self.deal_finder_signal,
             "next_step": self.next_step,
             "comp_confidence": self.comp_confidence,
+            "buyer_demand_score": self.buyer_demand_score,
+            "buy_box_fit_score": self.buy_box_fit_score,
+            "spread_to_arv_pct": self.spread_to_arv_pct,
+            "equity_spread": self.equity_spread,
+            "deal_velocity": self.deal_velocity,
+            "rank_reason": self.rank_reason,
             "primary_strengths": self.primary_strengths,
             "primary_risks": self.primary_risks,
             "risk_notes": self.risk_notes,
@@ -758,6 +770,90 @@ class PropertyIntelligenceOrchestrator:
 
         clean_score = int(round(self._clamp(score, 1, 99)))
         return clean_score, why[:4], risks[:3]
+
+    def _apply_marketplace_signals(self, cp: CanonicalProperty) -> CanonicalProperty:
+        """Add deal-marketplace style signals for faster ranking and review."""
+        price = self._as_float(cp.purchase_price or cp.listing_price)
+        value = self._as_float(cp.arv or cp.market_value)
+        rent = self._as_float(cp.monthly_rent_estimate)
+        score = self._as_float(cp.deal_score) or 0.0
+        photo_count = len(self._normalize_photo_candidates(cp.photos, cp.primary_photo))
+
+        equity_spread = None
+        spread_pct = None
+        if price and value:
+            equity_spread = value - price
+            spread_pct = (equity_spread / value) * 100.0 if value > 0 else None
+
+        demand = 40.0
+        if photo_count >= 4:
+            demand += 10
+        elif photo_count:
+            demand += 5
+        if cp.days_on_market is not None:
+            if cp.days_on_market <= 21:
+                demand += 8
+            elif cp.days_on_market <= 90:
+                demand += 12
+            elif cp.days_on_market <= 180:
+                demand += 6
+            else:
+                demand -= 4
+        if rent and price and (rent * 12.0 / price) >= 0.10:
+            demand += 12
+        if spread_pct is not None:
+            if spread_pct >= 20:
+                demand += 16
+            elif spread_pct >= 12:
+                demand += 10
+            elif spread_pct < 0:
+                demand -= 10
+        if cp.best_exit_strategy == self.strategy or self.strategy == "all":
+            demand += 6
+
+        buy_box = score * 0.55
+        if spread_pct is not None:
+            buy_box += self._clamp(spread_pct, -10.0, 30.0) * 0.75
+        if cp.best_exit_strategy == self.strategy or self.strategy == "all":
+            buy_box += 12
+        if cp.property_type:
+            buy_box += 4
+        if cp.square_feet or cp.lot_size_sqft:
+            buy_box += 4
+        if rent:
+            buy_box += 4
+
+        cp.equity_spread = round(equity_spread, 2) if equity_spread is not None else None
+        cp.spread_to_arv_pct = round(spread_pct, 1) if spread_pct is not None else None
+        cp.buyer_demand_score = int(round(self._clamp(demand, 1, 99)))
+        cp.buy_box_fit_score = int(round(self._clamp(buy_box, 1, 99)))
+
+        if cp.deal_score and cp.deal_score >= 78 and (cp.days_on_market is None or cp.days_on_market <= 45):
+            cp.deal_velocity = "Move fast"
+        elif cp.days_on_market is not None and 45 <= cp.days_on_market <= 180:
+            cp.deal_velocity = "Negotiation window"
+        elif cp.deal_score and cp.deal_score >= 60:
+            cp.deal_velocity = "Validate fast"
+        else:
+            cp.deal_velocity = "Watch list"
+
+        reason_parts: List[str] = []
+        if cp.spread_to_arv_pct is not None:
+            reason_parts.append(f"{cp.spread_to_arv_pct:.1f}% spread to value signal")
+        if cp.buy_box_fit_score is not None:
+            reason_parts.append(f"{cp.buy_box_fit_score}/99 buy-box fit")
+        if cp.buyer_demand_score is not None:
+            reason_parts.append(f"{cp.buyer_demand_score}/99 demand proxy")
+        if cp.best_exit_strategy:
+            reason_parts.append(f"best exit: {cp.best_exit_strategy}")
+        cp.rank_reason = "; ".join(reason_parts[:4]) or "Ranked by Ravlo deal score and data completeness."
+
+        existing_why = cp.why_it_made_list or []
+        if cp.rank_reason and cp.rank_reason not in existing_why:
+            cp.why_it_made_list = [cp.rank_reason] + existing_why
+            cp.why_it_made_list = cp.why_it_made_list[:4]
+
+        return cp
 
     def search_candidates(
         self,
@@ -1656,9 +1752,18 @@ class PropertyIntelligenceOrchestrator:
             else:
                 cp = self._annotate_default(cp)
 
+            cp = self._apply_marketplace_signals(cp)
             ranked.append(cp)
 
-        ranked.sort(key=lambda x: (x.deal_score is not None, x.deal_score or 0), reverse=True)
+        ranked.sort(
+            key=lambda x: (
+                x.deal_score is not None,
+                x.buy_box_fit_score or 0,
+                x.buyer_demand_score or 0,
+                x.deal_score or 0,
+            ),
+            reverse=True,
+        )
         return ranked
 
     def _apply_ravlo_opinion(self, cp: CanonicalProperty) -> CanonicalProperty:
@@ -1744,7 +1849,8 @@ class PropertyIntelligenceOrchestrator:
         enriched = self.enrich_top_candidates(candidates, top_n=4)
         ranked = self.rank_candidates(enriched)
 
-        results = [cp.to_result_dict() for cp in ranked[:4]]
+        return_limit = min(max(int(limit or 4), 4), 8)
+        results = [cp.to_result_dict() for cp in ranked[:return_limit]]
 
         # Log photo availability summary for debugging.
         with_photos = sum(1 for r in results if r.get("listing_photos") or r.get("primary_photo") or r.get("image_url"))

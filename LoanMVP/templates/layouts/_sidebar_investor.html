@@ -107,6 +107,12 @@
       <span>Capital Studio</span>
     </a>
 
+    <a href="{{ url_for('investor.refinance_studio') }}"
+       class="ravlo-nav-link {% if ep == 'investor.refinance_studio' %}active{% endif %}">
+      <i class="lucide lucide-refresh-cw"></i>
+      <span>Refinance Studio</span>
+    </a>
+
     <a href="{{ url_for('investor.documents') }}"
        class="ravlo-nav-link {% if ep in ['investor.documents', 'investor.document_requests', 'investor.upload_document', 'investor.upload_request'] %}active{% endif %}">
       <i class="lucide lucide-folder"></i>

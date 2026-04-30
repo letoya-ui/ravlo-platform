@@ -1574,6 +1574,174 @@ def loans():
         title="Loan Center"
     )
 
+
+@investor_bp.route("/deal-studio/refinance", methods=["GET"])
+@investor_bp.route("/deals/<int:deal_id>/refinance", methods=["GET"])
+@login_required
+@role_required("investor")
+def refinance_studio(deal_id=None):
+    investor = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not investor:
+        flash("Please create your investor profile before starting a refinance package.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    def _json_obj(value):
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, str) and value.strip():
+            try:
+                parsed = json.loads(value)
+                return parsed if isinstance(parsed, dict) else {}
+            except Exception:
+                return {}
+        return {}
+
+    def _pick_num(*values):
+        for value in values:
+            num = _safe_float(value)
+            if num is not None and num > 0:
+                return round(float(num), 2)
+        return ""
+
+    def _pick_text(*values):
+        for value in values:
+            if value is None:
+                continue
+            text = str(value).strip()
+            if text:
+                return text
+        return ""
+
+    saved_props = (
+        SavedProperty.query
+        .filter(SavedProperty.investor_profile_id == investor.id)
+        .order_by(SavedProperty.saved_at.desc())
+        .limit(50)
+        .all()
+    )
+
+    deal = None
+    if deal_id:
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+        if not deal:
+            abort(404)
+
+    selected_prop_id = request.args.get("prop_id", type=int) or (deal.saved_property_id if deal else None)
+    selected_prop = None
+    if selected_prop_id:
+        selected_prop = (
+            SavedProperty.query
+            .filter_by(id=selected_prop_id, investor_profile_id=investor.id)
+            .first()
+        )
+        if selected_prop_id and not selected_prop:
+            abort(404)
+
+    if selected_prop and not deal:
+        deal = (
+            Deal.query
+            .filter_by(user_id=current_user.id, saved_property_id=selected_prop.id)
+            .order_by(Deal.updated_at.desc())
+            .first()
+        )
+
+    deal_inputs = _json_obj(deal.inputs_json if deal else {})
+    deal_results = _json_obj(deal.results_json if deal else {})
+    deal_resolved = _json_obj(deal.resolved_json if deal else {})
+    prop_resolved = _json_obj(selected_prop.resolved_json if selected_prop else {})
+    workspace_analysis = (
+        _json_obj(deal_results.get("workspace_analysis"))
+        or _json_obj(deal_results.get("analysis"))
+        or deal_results
+    )
+    rehab_analysis = _json_obj(deal_results.get("rehab_analysis")) or _json_obj(workspace_analysis.get("rehab_analysis"))
+    planning_budget = _json_obj(workspace_analysis.get("planning_budget"))
+
+    address = _pick_text(
+        deal.address if deal else None,
+        deal_inputs.get("address"),
+        selected_prop.address if selected_prop else None,
+    )
+    purchase_price = _pick_num(
+        deal.purchase_price if deal else None,
+        deal_inputs.get("purchase_price"),
+        selected_prop.price if selected_prop else None,
+        workspace_analysis.get("purchase_price"),
+    )
+    current_value = _pick_num(
+        deal_inputs.get("current_value"),
+        workspace_analysis.get("current_value"),
+        workspace_analysis.get("as_is_value"),
+        purchase_price,
+    )
+    rehab_budget = _pick_num(
+        deal.rehab_cost if deal else None,
+        rehab_analysis.get("total"),
+        rehab_analysis.get("total_cost"),
+        planning_budget.get("total"),
+        planning_budget.get("rehab_budget"),
+    )
+    arv_after_rehab = _pick_num(
+        deal.arv if deal else None,
+        workspace_analysis.get("arv"),
+        deal_resolved.get("arv"),
+        prop_resolved.get("arv"),
+        current_value,
+    )
+    monthly_rent = _pick_num(
+        deal.estimated_rent if deal else None,
+        workspace_analysis.get("estimated_rent"),
+        workspace_analysis.get("monthly_rent"),
+        prop_resolved.get("estimated_rent"),
+    )
+    existing_debt = _pick_num(deal_inputs.get("existing_debt"), deal_inputs.get("loan_balance"))
+    value_for_ltv = _safe_float(arv_after_rehab) or _safe_float(current_value) or 0
+    rehab_for_calc = _safe_float(rehab_budget) or 0
+    debt_for_calc = _safe_float(existing_debt) or 0
+    suggested_amount = round(max((value_for_ltv * 0.75), (debt_for_calc + rehab_for_calc)), 2) if value_for_ltv else ""
+
+    refi_seed = {
+        "address": address,
+        "purchase_price": purchase_price,
+        "current_value": current_value,
+        "existing_debt": existing_debt,
+        "rehab_budget": rehab_budget,
+        "arv_after_rehab": arv_after_rehab,
+        "monthly_rent": monthly_rent,
+        "requested_amount": suggested_amount,
+        "loan_type": "Refinance / DSCR",
+        "project_description": _pick_text(
+            deal.notes if deal else None,
+            workspace_analysis.get("summary"),
+            f"Refinance package for {address}" if address else "Refinance package",
+        ),
+    }
+
+    company_id = getattr(current_user, "company_id", None)
+    officers_query = (
+        LoanOfficerProfile.query
+        .join(User, LoanOfficerProfile.user_id == User.id)
+        .order_by(LoanOfficerProfile.name.asc())
+    )
+    if company_id:
+        officers_query = officers_query.filter(User.company_id == company_id)
+
+    return render_template(
+        "investor/refinance_studio.html",
+        investor=investor,
+        saved_props=saved_props,
+        selected_prop=selected_prop,
+        deal=deal,
+        refi_seed=refi_seed,
+        officers=officers_query.all(),
+        loan_submit_url=url_for("investor.submit_capital_application"),
+        property_tool_url=url_for("investor.property_tool"),
+        build_url=url_for("investor.build_studio", deal_id=deal.id) if deal else "",
+        design_url=url_for("investor.design_studio", deal_id=deal.id) if deal else "",
+        title="Refinance Studio",
+    )
+
+
 @investor_bp.route("/loans/<int:loan_id>/summary", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -3605,6 +3773,10 @@ def api_property_tool_search():
 
     latitude = payload.get("latitude")
     longitude = payload.get("longitude")
+    max_price_filter = safe_float(payload.get("max_price") or payload.get("maxPrice"))
+    min_score_filter = safe_float(payload.get("min_score") or payload.get("minScore"))
+    min_discount_filter = safe_float(payload.get("min_discount") or payload.get("minDiscount"))
+    buyer_profile = (payload.get("buyer_profile") or payload.get("buyerProfile") or "").strip()
 
     has_market = bool(zip_code or (city and state))
     has_location = bool(latitude and longitude)
@@ -3636,6 +3808,55 @@ def api_property_tool_search():
             limit=limit,
         )
         results = [_proxy_search_result_images(result) for result in results]
+        unfiltered_count = len(results)
+
+        def passes_deal_finder_filters(item):
+            price = _safe_float(
+                item.get("listing_price")
+                or item.get("purchase_price")
+                or item.get("price")
+            )
+            if max_price_filter and price and price > max_price_filter:
+                return False
+
+            if min_score_filter and safe_float(item.get("deal_score")) < min_score_filter:
+                return False
+
+            if min_discount_filter:
+                spread_pct = _safe_float(item.get("spread_to_arv_pct")) or 0
+                if spread_pct < min_discount_filter:
+                    return False
+
+            return True
+
+        results = [item for item in results if passes_deal_finder_filters(item)]
+
+        def buyer_profile_score(item):
+            base = _safe_float(item.get("buy_box_fit_score")) or _safe_float(item.get("deal_score")) or 0
+            best_exit = (item.get("best_exit_strategy") or item.get("recommended_strategy") or "").lower()
+            property_type = (item.get("property_type") or item.get("asset_type") or "").lower()
+            price = _safe_float(item.get("listing_price") or item.get("purchase_price") or item.get("price")) or 0
+            rent = _safe_float(item.get("monthly_rent_estimate") or item.get("rent_estimate")) or 0
+            spread_pct = _safe_float(item.get("spread_to_arv_pct")) or 0
+            bonus = 0
+
+            if buyer_profile == "fix_flip_operator":
+                bonus += 16 if best_exit in {"flip", "fix_flip"} else 0
+                bonus += min(max(spread_pct, 0), 25) * 0.35
+            elif buyer_profile == "buy_hold_dscr":
+                bonus += 16 if best_exit in {"rental", "brrrr", "hold"} else 0
+                bonus += 12 if price and rent and ((rent * 12) / price) >= 0.10 else 0
+            elif buyer_profile == "str_operator":
+                bonus += 18 if best_exit in {"airbnb", "str", "short_term_rental"} else 0
+                bonus += 6 if item.get("short_term_rental_estimate") or item.get("airbnb_estimate") else 0
+            elif buyer_profile == "builder_developer":
+                bonus += 18 if "land" in property_type or best_exit == "land" else 0
+                bonus += 6 if item.get("lot_size_sqft") or item.get("lot_size") else 0
+
+            return base + bonus
+
+        if buyer_profile:
+            results.sort(key=buyer_profile_score, reverse=True)
 
         return jsonify({
             "status": "ok",
@@ -3645,11 +3866,18 @@ def api_property_tool_search():
                 else None
             ),
             "results": results,
-            "count": meta["count"],
+            "count": len(results),
             "total_matches": meta["total_matches"],
             "strategy": meta["strategy"],
             "asset_type": meta["asset_type"],
             "asset_type_label": meta["asset_type_label"],
+            "buyer_profile": buyer_profile,
+            "filters": {
+                "max_price": max_price_filter,
+                "min_score": min_score_filter,
+                "min_discount": min_discount_filter,
+                "unfiltered_count": unfiltered_count,
+            },
             "zip": meta["zip"],
             "address": meta["address"],
             "engine_ready": meta["engine_ready"],
@@ -6168,6 +6396,7 @@ def build_studio(deal_id=None):
         }
 
     blueprint_result = build_project.get("blueprint", {}) or {}
+    siteplan_result = build_project.get("siteplan", {}) or build_project.get("site_plan", {}) or {}
     exterior_result = _build_project_exterior_result(build_project)
 
     interior_block = build_project.get("interior", {}) or {}
@@ -6194,12 +6423,14 @@ def build_studio(deal_id=None):
 
     package_result = {
         "blueprint": blueprint_result.get("image_url") or blueprint_result.get("blueprint_url") or "",
+        "siteplan": siteplan_result.get("image_url") or siteplan_result.get("site_plan_url") or "",
         "exterior": exterior_result.get("image_url") or "",
         "interior": interior_result.get("image_url") or "",
     }
 
     has_saved_package = any([
         package_result["blueprint"],
+        package_result["siteplan"],
         package_result["exterior"],
         package_result["interior"],
     ])
@@ -6245,8 +6476,9 @@ def build_studio(deal_id=None):
         build_analysis=build_analysis,
         build_project=build_project,
         blueprint_result=blueprint_result,
-        blueprint_floor2_result=build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {},
+        blueprint_floor2_result=build_project.get("blueprint_floor2", {}) or {},
         blueprint_floor3_result=build_project.get("blueprint_floor3", {}) or {},
+        siteplan_result=siteplan_result,
         exterior_result=exterior_result,
         property_photo_gallery=property_gallery,
         package_result=package_result,
@@ -6352,6 +6584,7 @@ def design_studio(deal_id=None):
 
     build_project = results.get("build_project", {}) or {}
     blueprint_result = build_project.get("blueprint", {}) or {}
+    siteplan_result = build_project.get("siteplan", {}) or build_project.get("site_plan", {}) or {}
     exterior_result = _build_project_exterior_result(build_project)
     blueprint_floor2_result = build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}
     blueprint_floor3_result = build_project.get("blueprint_floor3", {}) or {}

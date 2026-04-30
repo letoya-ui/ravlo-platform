@@ -11,6 +11,30 @@ from LoanMVP.services.investor.investor_engine_helpers import (
     UPLOAD_TIMEOUT,
 )
 
+BUILD_MODES = {
+    "scope",
+    "blueprint",
+    "siteplan",
+    "exterior_from_blueprint",
+    "exterior_from_photo",
+    "build_package",
+}
+
+DESIGN_MODES = {
+    "interior_from_photo",
+    "interior_from_prompt",
+    "exterior_style_variation",
+    "room_finish_variation",
+}
+
+DEAL_MODES = {
+    "deal_summary",
+    "investment_thesis",
+    "risk_review",
+    "renovation_strategy",
+    "full_deal_package",
+}
+
 try:
     from LoanMVP.services.cost_index import (
         build_location_cost_context,
@@ -51,8 +75,26 @@ def run_build_concept(payload):
     dict
         The JSON response from the engine (images_base64, job_id, seed, meta, ...).
     """
+    intent = payload.get("intent") or payload.get("build_mode") or payload.get("mode") or "build_package"
+    if intent not in BUILD_MODES:
+        intent = "build_package" if intent in {"build", "build_studio", "package"} else "exterior_from_photo"
+
+    image_outputs = payload.get("output_modes") or payload.get("outputs")
+    if not image_outputs:
+        if intent == "scope":
+            image_outputs = []
+        elif intent == "blueprint":
+            image_outputs = ["blueprint"]
+        elif intent == "siteplan":
+            image_outputs = ["siteplan"]
+        elif intent == "exterior_from_photo":
+            image_outputs = ["exterior_front", "exterior_back"]
+        else:
+            image_outputs = ["blueprint", "siteplan", "exterior_front", "exterior_back"]
+
     engine_payload = {
-        "mode": payload.get("mode", "exterior"),
+        "mode": "build_studio" if intent == "build_package" else intent,
+        "intent": intent,
         "project_name": payload.get("project_name", ""),
         "property_type": payload.get("property_type", "single_family"),
         "style": payload.get("style", "modern_farmhouse"),
@@ -84,6 +126,14 @@ def run_build_concept(payload):
         "strength": payload.get("strength", 0.65),
         "width": payload.get("width", 768),
         "height": payload.get("height", 768),
+        "outputs": image_outputs,
+        "output_modes": image_outputs,
+        "scope": payload.get("scope") or {},
+        "materials": payload.get("materials") or [],
+        "phases": payload.get("phases") or [],
+        "timeline": payload.get("timeline") or {},
+        "risks": payload.get("risks") or [],
+        "images": payload.get("images") or {},
     }
 
     if payload.get("negative_prompt"):

@@ -36,14 +36,48 @@ investor_generator_build_bp = Blueprint(
     url_prefix="/investor/api/generator/build",
 )
 
+BUILD_MODES = {
+    "scope",
+    "blueprint",
+    "siteplan",
+    "exterior_from_blueprint",
+    "exterior_from_photo",
+    "build_package",
+}
+
+DESIGN_MODES = {
+    "interior_from_photo",
+    "interior_from_prompt",
+    "exterior_style_variation",
+    "room_finish_variation",
+}
+
+DEAL_MODES = {
+    "deal_summary",
+    "investment_thesis",
+    "risk_review",
+    "renovation_strategy",
+    "full_deal_package",
+}
+
+BUILD_PACKAGE_IMAGE_OUTPUTS = (
+    "blueprint",
+    "siteplan",
+    "exterior_front",
+    "exterior_back",
+)
+
 
 def _build_chat_prompt(messages, current_spec=None):
     current_spec = current_spec or {}
 
     return f"""
-You are Ravlo Build Studio.
+You are Ravlo Build Studio's planning engine.
 
-Help the user create a clear build specification before generation.
+Build Studio owns construction layout, scope, blueprint/site/exterior consistency, and build-package structure.
+Design Studio owns most interior/exterior visual styling and finish variations.
+
+Help the user create a clear build specification before image generation. Ask only for missing information that materially affects the build package.
 
 Return ONLY valid JSON in this shape:
 
@@ -51,7 +85,7 @@ Return ONLY valid JSON in this shape:
   "status": "needs_more_info" or "ready",
   "assistant_message": "Natural language response to the user.",
   "spec": {{
-    "intent": "",
+    "intent": "scope|blueprint|siteplan|exterior_from_blueprint|exterior_from_photo|build_package",
     "property_type": "",
     "style": "",
     "preserve_layout": true,
@@ -64,11 +98,25 @@ Return ONLY valid JSON in this shape:
     "siding_material": "",
     "window_style": "",
     "special_features": "",
-    "notes": ""
+    "notes": "",
+    "known_constraints": [],
+    "outputs": ["scope", "blueprint", "siteplan", "exterior_from_blueprint"],
+    "scope": {{}},
+    "materials": [],
+    "phases": [],
+    "timeline": {{}},
+    "risks": [],
+    "images": {{}}
   }},
   "missing_fields": [],
   "next_questions": []
 }}
+
+Mode rules:
+- Use exterior_from_blueprint when a blueprint/floor plan must drive exterior massing.
+- Use exterior_from_photo when a real exterior photo should be preserved or restyled.
+- Use build_package for a complete scope + materials + phases + timeline + risks + images package.
+- Do not overload generic exterior.
 
 Current spec:
 {current_spec}
@@ -95,6 +143,347 @@ def _safe_json(text):
             "missing_fields": [],
             "next_questions": [],
         }
+
+
+def _safe_str(value):
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    return str(value).strip()
+
+
+def _merge_unique_list(*values):
+    items = []
+    seen = set()
+    for value in values:
+        if isinstance(value, str):
+            candidates = [value]
+        elif isinstance(value, (list, tuple, set)):
+            candidates = value
+        elif value in (None, "", {}, []):
+            candidates = []
+        else:
+            candidates = [value]
+
+        for item in candidates:
+            if item in (None, "", {}, []):
+                continue
+            key = json.dumps(item, sort_keys=True, default=str) if isinstance(item, (dict, list)) else str(item)
+            if key in seen:
+                continue
+            seen.add(key)
+            items.append(item)
+    return items
+
+
+def _infer_build_intent(spec):
+    raw_intent = _safe_str(
+        spec.get("intent")
+        or spec.get("build_mode")
+        or spec.get("mode")
+        or spec.get("task")
+    ).lower().replace("-", "_").replace(" ", "_")
+
+    if raw_intent in {"exterior", "exterior_front", "front_exterior"}:
+        if spec.get("blueprint_url") or spec.get("blueprint_image_base64") or spec.get("blueprint_image_url"):
+            return "exterior_from_blueprint"
+        if spec.get("reference_image_url") or spec.get("exterior_image_base64") or spec.get("exterior_image_url"):
+            return "exterior_from_photo"
+        return "build_package"
+
+    if raw_intent in BUILD_MODES:
+        return raw_intent
+
+    requested_outputs = " ".join(_safe_str(item).lower() for item in _as_list(spec.get("outputs") or spec.get("output_modes")))
+    if "exterior_from_blueprint" in requested_outputs:
+        return "exterior_from_blueprint"
+    if "exterior_from_photo" in requested_outputs:
+        return "exterior_from_photo"
+    if "scope" in requested_outputs and "blueprint" not in requested_outputs:
+        return "scope"
+
+    return "build_package"
+
+
+def _build_missing_fields(spec):
+    intent = _infer_build_intent(spec)
+    required = ["property_type", "style", "stories"]
+
+    if intent == "exterior_from_blueprint":
+        required.append("blueprint_url")
+    if intent == "exterior_from_photo":
+        required.append("reference_image_url")
+
+    missing = []
+    for field in required:
+        alternatives = {
+            "stories": ("stories", "number_of_floors", "floor_count"),
+            "blueprint_url": ("blueprint_url", "blueprint_image_url", "blueprint_image_base64"),
+            "reference_image_url": ("reference_image_url", "exterior_image_url", "exterior_image_base64"),
+        }.get(field, (field,))
+        if not any(_safe_str(spec.get(name)) for name in alternatives):
+            missing.append(field)
+    return missing
+
+
+def _build_scope_from_spec(spec):
+    stories = _first_nonempty(
+        spec.get("stories"),
+        spec.get("number_of_floors"),
+        spec.get("floor_count"),
+        spec.get("number_of_stories"),
+    )
+    return {
+        "intent": _infer_build_intent(spec),
+        "property_type": _first_nonempty(spec.get("property_type"), "single_family"),
+        "project_name": _first_nonempty(spec.get("project_name"), spec.get("name"), "Generated Build"),
+        "location": _first_nonempty(spec.get("location"), spec.get("address")),
+        "layout_preservation": bool(_truthy(spec.get("preserve_layout"), default=True)),
+        "stories": stories,
+        "target_square_feet": _first_nonempty(spec.get("square_feet_target"), spec.get("square_feet")),
+        "bedrooms": _first_nonempty(spec.get("bedrooms"), spec.get("beds")),
+        "bathrooms": _first_nonempty(spec.get("bathrooms"), spec.get("baths")),
+        "garage": _truthy(spec.get("garage"), default=False),
+        "lot_size": _safe_str(spec.get("lot_size")),
+        "zoning": _safe_str(spec.get("zoning")),
+        "known_constraints": _merge_unique_list(spec.get("known_constraints")),
+        "notes": _first_nonempty(spec.get("notes"), spec.get("special_features"), spec.get("description")),
+    }
+
+
+def _build_materials_from_spec(spec):
+    style = _safe_str(spec.get("style")).replace("_", " ").title() or "Market Ready"
+    finish = _safe_str(spec.get("finish_level")) or "standard"
+    siding = _first_nonempty(spec.get("siding_material"), "fiber cement siding")
+    roof = _first_nonempty(spec.get("roof_style"), "architectural shingle roof")
+    windows = _first_nonempty(spec.get("window_style"), "black framed high-efficiency windows")
+    return [
+        {"category": "exterior_style", "selection": style, "finish_level": finish},
+        {"category": "siding", "selection": siding, "notes": "Coordinate with exterior elevations and local climate."},
+        {"category": "roof", "selection": roof, "notes": "Match roof geometry to floor-plan massing."},
+        {"category": "windows", "selection": windows, "notes": "Keep opening rhythm consistent with blueprint rooms."},
+    ]
+
+
+def _build_phases_from_spec(spec):
+    intent = _infer_build_intent(spec)
+    phases = [
+        {"name": "Planning", "owner": "planning_engine", "status": "draft", "deliverable": "Scope, constraints, missing-field review"},
+        {"name": "Blueprint", "owner": "image_engine", "status": "queued", "deliverable": "Top-down plan or plan refinement"},
+        {"name": "Site Plan", "owner": "image_engine", "status": "queued", "deliverable": "Parcel, access, parking, yards, hardscape"},
+        {"name": "Exterior Consistency", "owner": "planning_engine", "status": "queued", "deliverable": "Massing spec from blueprint"},
+        {"name": "Exterior Render", "owner": "image_engine", "status": "queued", "deliverable": "Front and rear exterior assets"},
+        {"name": "Validation", "owner": "planning_engine", "status": "queued", "deliverable": "Scope/image consistency review"},
+    ]
+    if intent == "scope":
+        return phases[:1]
+    if intent == "blueprint":
+        return phases[:2]
+    if intent == "siteplan":
+        return [phases[0], phases[2]]
+    return phases
+
+
+def _build_timeline_from_spec(spec):
+    floor_count = _normalize_int(
+        spec.get("stories")
+        or spec.get("number_of_floors")
+        or spec.get("floor_count")
+    ) or 1
+    finish = _safe_str(spec.get("finish_level")).lower()
+    base_weeks = 10 + max(floor_count - 1, 0) * 3
+    if finish == "luxury":
+        base_weeks += 4
+    elif finish == "premium":
+        base_weeks += 2
+    return {
+        "planning_days": 3,
+        "design_days": 5,
+        "estimated_build_weeks": base_weeks,
+        "critical_path": ["scope approval", "blueprint validation", "site constraints", "exterior massing", "budget and refinance sizing"],
+    }
+
+
+def _build_risks_from_spec(spec):
+    risks = []
+    missing = _build_missing_fields(spec)
+    if missing:
+        risks.append({
+            "level": "medium",
+            "type": "missing_information",
+            "message": f"Missing fields before full confidence: {', '.join(missing)}.",
+        })
+    if _infer_build_intent(spec) == "exterior_from_blueprint":
+        risks.append({
+            "level": "medium",
+            "type": "blueprint_to_exterior",
+            "message": "Exterior should use the blueprint as control guidance or massing context, not as a direct visual init image.",
+        })
+    if not _safe_str(spec.get("zoning")):
+        risks.append({
+            "level": "medium",
+            "type": "zoning",
+            "message": "Zoning, setbacks, and entitlement assumptions need validation before budgeting.",
+        })
+    return risks
+
+
+def _image_output_modes_for_intent(intent):
+    if intent == "scope":
+        return []
+    if intent == "blueprint":
+        return ["blueprint"]
+    if intent == "siteplan":
+        return ["siteplan"]
+    if intent == "exterior_from_blueprint":
+        return ["blueprint", "siteplan", "exterior_front", "exterior_back"]
+    if intent == "exterior_from_photo":
+        return ["exterior_front", "exterior_back"]
+    return list(BUILD_PACKAGE_IMAGE_OUTPUTS)
+
+
+def _prepare_build_generation_spec(spec):
+    spec = copy.deepcopy(_as_dict(spec))
+    intent = _infer_build_intent(spec)
+    outputs = _merge_unique_list(spec.get("outputs"), _image_output_modes_for_intent(intent))
+    image_output_modes = [mode for mode in outputs if mode in BUILD_PACKAGE_IMAGE_OUTPUTS]
+    if not image_output_modes and intent != "scope":
+        image_output_modes = _image_output_modes_for_intent(intent)
+
+    spec["intent"] = intent
+    spec["mode"] = "build_studio" if intent == "build_package" else intent
+    spec["build_mode"] = intent
+    spec["studio"] = "build"
+    spec["engine_plan"] = {
+        "planning_engine": "ravlo_build_planner",
+        "image_engine": "renovation_engine",
+        "prompt_service": "ravlo_prompt_service",
+        "validation_engine": "ravlo_build_planner",
+    }
+    spec["outputs"] = outputs or ["scope"]
+    spec["output_modes"] = image_output_modes
+    spec["scope"] = {**_build_scope_from_spec(spec), **_as_dict(spec.get("scope"))}
+    spec["materials"] = _merge_unique_list(spec.get("materials"), _build_materials_from_spec(spec))
+    spec["phases"] = _merge_unique_list(spec.get("phases"), _build_phases_from_spec(spec))
+    spec["timeline"] = {**_build_timeline_from_spec(spec), **_as_dict(spec.get("timeline"))}
+    spec["risks"] = _merge_unique_list(spec.get("risks"), _build_risks_from_spec(spec))
+    spec["images"] = _as_dict(spec.get("images"))
+
+    if intent == "exterior_from_blueprint":
+        spec["preserve_layout"] = _truthy(spec.get("preserve_layout"), default=True)
+        spec["exterior_generation_mode"] = "control_guided_blueprint_massing"
+        spec["blueprint_guidance"] = {
+            "use_as": "control_input_or_massing_spec",
+            "conditioning": "low_to_medium",
+            "avoid": "direct_img2img_washed_blueprint_transfer",
+        }
+
+    if intent == "exterior_from_photo":
+        spec["preserve_existing_exterior"] = _truthy(spec.get("preserve_existing_exterior"), default=True)
+
+    return spec
+
+
+def _build_images_from_outputs(outputs):
+    outputs = _as_dict(outputs)
+    return {
+        "blueprint": _find_first_url(outputs.get("blueprint")),
+        "siteplan": _find_first_url(outputs.get("siteplan")),
+        "exterior_front": _find_first_url(outputs.get("exterior")),
+        "exterior_back": _find_first_url(outputs.get("exterior_back")),
+        "interior_reference": _find_first_url(outputs.get("interior")),
+    }
+
+
+def _build_intelligence_package(spec, payload=None):
+    spec = _prepare_build_generation_spec(spec)
+    payload = _as_dict(payload)
+    outputs = _normalize_generator_outputs(payload) if payload else {}
+    image_map = {
+        **_as_dict(spec.get("images")),
+        **{key: value for key, value in _build_images_from_outputs(outputs).items() if value},
+    }
+
+    return {
+        "scope": spec.get("scope") or _build_scope_from_spec(spec),
+        "materials": spec.get("materials") or _build_materials_from_spec(spec),
+        "phases": spec.get("phases") or _build_phases_from_spec(spec),
+        "timeline": spec.get("timeline") or _build_timeline_from_spec(spec),
+        "risks": spec.get("risks") or _build_risks_from_spec(spec),
+        "images": image_map,
+    }
+
+
+def _fallback_build_chat_plan(messages, current_spec=None):
+    current_spec = copy.deepcopy(_as_dict(current_spec))
+    user_text = ""
+    if isinstance(messages, list) and messages:
+        last = messages[-1]
+        if isinstance(last, dict):
+            user_text = _safe_str(last.get("content") or last.get("message") or last.get("text"))
+        else:
+            user_text = _safe_str(last)
+    lowered = user_text.lower()
+
+    inferred = {}
+    for key, label in (
+        ("single_family", "single_family"),
+        ("duplex", "duplex"),
+        ("townhome", "townhome"),
+        ("multifamily", "multifamily"),
+        ("mixed use", "mixed_use"),
+        ("mixed-use", "mixed_use"),
+    ):
+        if key in lowered:
+            inferred["property_type"] = label
+            break
+
+    for style_key in ("modern farmhouse", "modern", "traditional", "contemporary", "luxury", "industrial", "coastal"):
+        if style_key in lowered:
+            inferred["style"] = style_key.replace(" ", "_")
+            break
+
+    story_match = None
+    for token, value in (("one", "1"), ("single", "1"), ("two", "2"), ("three", "3"), ("four", "4"), ("five", "5")):
+        if f"{token} story" in lowered or f"{token} floor" in lowered:
+            story_match = value
+            break
+    if story_match:
+        inferred["stories"] = story_match
+
+    if "blueprint" in lowered or "floor plan" in lowered or "floorplan" in lowered:
+        inferred["intent"] = "exterior_from_blueprint" if "exterior" in lowered else "build_package"
+    elif "photo" in lowered and "exterior" in lowered:
+        inferred["intent"] = "exterior_from_photo"
+    elif "scope" in lowered:
+        inferred["intent"] = "scope"
+
+    spec = _prepare_build_generation_spec({**current_spec, **inferred})
+    missing = _build_missing_fields(spec)
+    status = "ready" if not missing else "needs_more_info"
+    questions = []
+    question_map = {
+        "property_type": "What property type should I plan around?",
+        "style": "What exterior architectural style should guide the massing?",
+        "stories": "How many stories should the plan preserve or create?",
+        "blueprint_url": "Do you have a blueprint or floor plan reference for layout preservation?",
+        "reference_image_url": "Do you have an exterior photo to preserve or restyle?",
+    }
+    for field in missing[:3]:
+        questions.append(question_map.get(field, f"What should I use for {field.replace('_', ' ')}?"))
+
+    return {
+        "status": status,
+        "assistant_message": (
+            "I have enough to draft the build package. Review the spec, then generate."
+            if status == "ready"
+            else "I drafted the build spec and marked the missing pieces that would improve the package."
+        ),
+        "spec": spec,
+        "missing_fields": missing,
+        "next_questions": questions,
+    }
 
 
 def _post_build_generate(engine_url, spec):
@@ -469,7 +858,6 @@ def _normalize_generator_outputs(payload):
             "second_floor_blueprint",
             "floor2_blueprint",
             "second_floor",
-            "site_plan",
         ),
         "blueprint_floor3": (
             "blueprint_floor3_result",
@@ -485,6 +873,8 @@ def _normalize_generator_outputs(payload):
             "front_exterior",
             "concept",
             "render",
+            "exterior_from_blueprint",
+            "exterior_from_photo",
         ),
         "exterior_back": (
             "exterior_back_result",
@@ -492,6 +882,14 @@ def _normalize_generator_outputs(payload):
             "exterior_rear",
             "rear_exterior",
             "back_exterior",
+        ),
+        "siteplan": (
+            "siteplan_result",
+            "siteplan",
+            "site_plan",
+            "site_plan_result",
+            "parcel_plan",
+            "lot_plan",
         ),
         "interior": (
             "interior_result",
@@ -673,13 +1071,16 @@ def _save_investor_generator_build(data, spec, payload):
     blueprint_block = outputs.get("blueprint", {})
     blueprint_floor2_block = outputs.get("blueprint_floor2", {})
     blueprint_floor3_block = outputs.get("blueprint_floor3", {})
+    siteplan_block = outputs.get("siteplan", {})
     exterior_block = outputs.get("exterior", {})
     exterior_back_block = outputs.get("exterior_back", {})
     interior_block = outputs.get("interior", {})
+    build_intelligence = _build_intelligence_package(spec, payload)
 
     primary_url = _first_nonempty(
         _find_first_url(exterior_block),
         _find_first_url(blueprint_block),
+        _find_first_url(siteplan_block),
         output_urls[0] if output_urls else "",
         _find_first_url(payload),
     )
@@ -693,6 +1094,10 @@ def _save_investor_generator_build(data, spec, payload):
     blueprint_floor2_url = _first_nonempty(
         _find_first_url(blueprint_floor2_block),
         _find_first_url(_as_dict(payload).get("blueprint_floor2")),
+    )
+    siteplan_url = _first_nonempty(
+        _find_first_url(siteplan_block),
+        _find_first_url(_as_dict(payload).get("siteplan")),
         _find_first_url(_as_dict(payload).get("site_plan")),
     )
     exterior_url = _first_nonempty(
@@ -722,6 +1127,8 @@ def _save_investor_generator_build(data, spec, payload):
         project.blueprint_url = blueprint_url
     if blueprint_floor2_url:
         project.site_plan_url = blueprint_floor2_url
+    if siteplan_url:
+        project.site_plan_url = siteplan_url
     if exterior_url:
         project.concept_render_url = exterior_url
         project.exterior_url = exterior_url
@@ -746,6 +1153,7 @@ def _save_investor_generator_build(data, spec, payload):
             "image_url": primary_url,
             "images": output_urls,
             "outputs": copy.deepcopy(outputs),
+            "build_intelligence": copy.deepcopy(build_intelligence),
             "spec": copy.deepcopy(spec),
             "engine_response": _compact_engine_response(payload),
             "saved_at": datetime.utcnow().isoformat(),
@@ -764,6 +1172,13 @@ def _save_investor_generator_build(data, spec, payload):
             "zoning": values["zoning"],
             "location": values["location"],
             "notes": values["notes"],
+            "scope": copy.deepcopy(build_intelligence.get("scope") or {}),
+            "materials": copy.deepcopy(build_intelligence.get("materials") or []),
+            "phases": copy.deepcopy(build_intelligence.get("phases") or []),
+            "timeline": copy.deepcopy(build_intelligence.get("timeline") or {}),
+            "risks": copy.deepcopy(build_intelligence.get("risks") or []),
+            "images": copy.deepcopy(build_intelligence.get("images") or {}),
+            "build_intelligence": copy.deepcopy(build_intelligence),
             "latest_generator_build": generator_result,
         })
 
@@ -785,6 +1200,15 @@ def _save_investor_generator_build(data, spec, payload):
                 blueprint_url=blueprint_floor2_url,
                 floor_label="Second Floor",
                 blueprint_floor="second",
+            )
+
+        if siteplan_url:
+            build_project["siteplan"] = _merge_output_record(
+                build_project.get("siteplan") or build_project.get("site_plan"),
+                siteplan_block,
+                values=values,
+                image_url=siteplan_url,
+                site_plan_url=siteplan_url,
             )
 
         if _find_first_url(blueprint_floor3_block):
@@ -865,9 +1289,17 @@ def _save_investor_generator_build(data, spec, payload):
         "blueprint_result": outputs.get("blueprint", {}),
         "blueprint_floor2_result": outputs.get("blueprint_floor2", {}),
         "blueprint_floor3_result": outputs.get("blueprint_floor3", {}),
+        "siteplan_result": outputs.get("siteplan", {}),
         "exterior_result": outputs.get("exterior", {}),
         "exterior_back_result": outputs.get("exterior_back", {}),
         "interior_result": outputs.get("interior", {}),
+        "build_intelligence": build_intelligence,
+        "scope": build_intelligence.get("scope") or {},
+        "materials": build_intelligence.get("materials") or [],
+        "phases": build_intelligence.get("phases") or [],
+        "timeline": build_intelligence.get("timeline") or {},
+        "risks": build_intelligence.get("risks") or [],
+        "images": build_intelligence.get("images") or {},
         "build_studio_url": build_studio_url,
         "deal_architect_url": deal_architect_url,
         "budget_studio_url": budget_studio_url,
@@ -880,22 +1312,33 @@ def _build_chat_response():
     messages = data.get("messages") or []
     current_spec = data.get("spec") or {}
 
-    client = OpenAI(api_key=current_app.config.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY"))
+    api_key = current_app.config.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return jsonify(_fallback_build_chat_plan(messages, current_spec))
 
-    response = client.chat.completions.create(
-        model=current_app.config.get("AI_MODEL") or "gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are Ravlo Build Studio. Return only valid JSON."},
-            {"role": "user", "content": _build_chat_prompt(messages, current_spec)},
-        ],
-        temperature=0.25,
-    )
+    try:
+        client = OpenAI(api_key=api_key)
 
-    return jsonify(_safe_json(response.choices[0].message.content))
+        response = client.chat.completions.create(
+            model=current_app.config.get("AI_MODEL") or "gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are Ravlo Build Studio's planning engine. Return only valid JSON."},
+                {"role": "user", "content": _build_chat_prompt(messages, current_spec)},
+            ],
+            temperature=0.25,
+        )
+    except Exception:
+        current_app.logger.warning("Build chat planning engine fallback used", exc_info=True)
+        return jsonify(_fallback_build_chat_plan(messages, current_spec))
+
+    parsed = _safe_json(response.choices[0].message.content)
+    parsed["spec"] = _prepare_build_generation_spec(parsed.get("spec") or current_spec)
+    return jsonify(parsed)
 
 
 def _build_generate_response(*, persist_to_investor=False):
     data, spec = _request_data_and_spec()
+    spec = _prepare_build_generation_spec(spec)
 
     engine_url = (
         current_app.config.get("RENOVATION_ENGINE_URL")
@@ -942,6 +1385,18 @@ def _build_generate_response(*, persist_to_investor=False):
             "message": response.text,
         }
 
+    if response.ok and _as_dict(payload).get("status") not in ("error", "failed"):
+        payload.setdefault("build_intelligence", _build_intelligence_package(spec, payload))
+        payload.setdefault("scope", payload["build_intelligence"].get("scope"))
+        payload.setdefault("materials", payload["build_intelligence"].get("materials"))
+        payload.setdefault("phases", payload["build_intelligence"].get("phases"))
+        payload.setdefault("timeline", payload["build_intelligence"].get("timeline"))
+        payload.setdefault("risks", payload["build_intelligence"].get("risks"))
+        payload.setdefault("images", payload["build_intelligence"].get("images"))
+        payload.setdefault("build_modes", sorted(BUILD_MODES))
+        payload.setdefault("design_modes", sorted(DESIGN_MODES))
+        payload.setdefault("deal_modes", sorted(DEAL_MODES))
+
     if persist_to_investor and response.ok and _as_dict(payload).get("status") not in ("error", "failed"):
         save_enabled = _truthy(
             data.get("save_to_investor")
@@ -964,9 +1419,17 @@ def _build_generate_response(*, persist_to_investor=False):
                     payload.setdefault("blueprint_result", save_context.get("blueprint_result"))
                     payload.setdefault("blueprint_floor2_result", save_context.get("blueprint_floor2_result"))
                     payload.setdefault("blueprint_floor3_result", save_context.get("blueprint_floor3_result"))
+                    payload.setdefault("siteplan_result", save_context.get("siteplan_result"))
                     payload.setdefault("exterior_result", save_context.get("exterior_result"))
                     payload.setdefault("exterior_back_result", save_context.get("exterior_back_result"))
                     payload.setdefault("interior_result", save_context.get("interior_result"))
+                    payload.setdefault("build_intelligence", save_context.get("build_intelligence"))
+                    payload.setdefault("scope", save_context.get("scope"))
+                    payload.setdefault("materials", save_context.get("materials"))
+                    payload.setdefault("phases", save_context.get("phases"))
+                    payload.setdefault("timeline", save_context.get("timeline"))
+                    payload.setdefault("risks", save_context.get("risks"))
+                    payload.setdefault("images", save_context.get("images"))
             except NotFound as exc:
                 db.session.rollback()
                 return jsonify({"status": "error", "message": exc.description}), 404
