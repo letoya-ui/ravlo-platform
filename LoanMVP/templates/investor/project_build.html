@@ -33,12 +33,12 @@
       <div class="build-chat-thread" id="buildChatThread">
         <div class="build-chat-message assistant">
           <strong>Ravlo</strong>
-          <p>Tell me the property type, layout goal, style, floor count, and any blueprint or site constraints. I will turn it into a build spec before generation.</p>
+          <p>Tell me exactly what you want to build — be as specific as possible. Describe the style, materials, architectural features, floor count, room layout, and any special details. I'll capture your vision and turn it into a build spec. The more detail you give, the closer the result will match what you're imagining.</p>
         </div>
       </div>
 
       <div class="build-chat-composer">
-        <textarea id="buildChatInput" rows="3" placeholder="Example: Use this two-story blueprint to generate a modern farmhouse exterior, site plan, and build scope. Preserve the layout."></textarea>
+        <textarea id="buildChatInput" rows="3" placeholder="Tell Ravlo exactly what you want to build. Be specific about style, materials, features, and layout. Example: 'Build a 3-story luxury modern townhome with a rooftop deck, full-height glass on the front facade, dark brick and cedar siding, and a two-car garage on the ground floor.'"></textarea>
         <div class="cta-row">
           <button type="button" class="ravlo-btn ghost" id="askBuildPlannerBtn">Ask Ravlo</button>
           <button type="button" class="ravlo-btn primary" id="approveBuildSpecBtn">Approve Spec</button>
@@ -181,13 +181,13 @@
         </div>
 
         <div class="field">
-          <label for="description">Project Description</label>
-          <textarea id="description" name="description" rows="4" placeholder="Describe the site program, density, building count, parking, and target product.">{{ build_project.get('description') or (project.description if project else '') }}</textarea>
+          <label for="description" style="font-weight:600;">What Do You Want To Build? <span style="font-weight:400;opacity:.6;">(This drives the AI — be specific)</span></label>
+          <textarea id="description" name="description" rows="5" placeholder="Tell Ravlo exactly what you want. Example: 'I want a two-story modern farmhouse with a wraparound porch, stone accent on the lower facade, standing seam metal roof, 4 bedrooms, 3.5 baths, open-concept first floor, and an attached two-car garage.' The more specific you are, the better.">{{ build_project.get('description') or (project.description if project else '') }}</textarea>
         </div>
 
         <div class="field">
-          <label for="notes">Site Notes</label>
-          <textarea id="notes" name="notes" rows="3" placeholder="Setbacks, parking, amenity courts, road access, grading, utility constraints.">{{ build_project.get('notes') or (project.notes if project else '') }}</textarea>
+          <label for="notes">Site &amp; Technical Notes</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Setbacks, parking, amenity courts, road access, grading, utility constraints, special site conditions.">{{ build_project.get('notes') or (project.notes if project else '') }}</textarea>
         </div>
 
         <div class="form-grid two">

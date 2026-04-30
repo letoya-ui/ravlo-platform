@@ -27,6 +27,31 @@
   </section>
 
   <section class="build-lite-grid">
+    <section class="ravlo-card pad design-chat-panel">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">DESIGN CONVERSATION</div>
+          <h2>Tell Ravlo What You Want</h2>
+        </div>
+        <strong id="designChatStatus">Ready</strong>
+      </div>
+
+      <div class="design-chat-thread" id="designChatThread">
+        <div class="design-chat-message assistant">
+          <strong>Ravlo</strong>
+          <p>Tell me exactly what you want this room to look like — be as specific as possible. Describe the style, materials, colors, furniture, lighting, and any special details. I'll use your vision to generate the design. The more detail you give, the closer the result will be to what you're imagining.</p>
+        </div>
+      </div>
+
+      <div class="design-chat-composer">
+        <textarea id="designChatInput" rows="3" placeholder="Example: 'I want a luxury modern kitchen with a white marble waterfall island, matte black fixtures, warm oak floating shelves, brass pendant lights over the island, and herringbone tile backsplash.' Be specific!"></textarea>
+        <div class="cta-row">
+          <button type="button" class="ravlo-btn ghost" id="askDesignBtn">Ask Ravlo</button>
+          <button type="button" class="ravlo-btn primary" id="applyDesignBtn">Apply & Generate</button>
+        </div>
+      </div>
+    </section>
+
     <section class="ravlo-card pad">
       <div class="section-head">
         <div>
@@ -100,13 +125,13 @@
         </div>
 
         <div class="field">
-          <label for="description">Design Notes</label>
-          <textarea id="description" name="description" rows="4" placeholder="Describe finishes, mood, functionality, and target buyer.">{{ project.description if project else '' }}</textarea>
+          <label for="description" style="font-weight:600;">What Do You Want? <span style="font-weight:400;opacity:.6;">(This drives the AI — be specific)</span></label>
+          <textarea id="description" name="description" rows="5" placeholder="Tell Ravlo exactly what you want. Example: 'I want a luxury modern kitchen with white marble waterfall island, matte black fixtures, warm oak floating shelves, and pendant lighting over the island.' The more specific you are, the better the result.">{{ project.description if project else '' }}</textarea>
         </div>
 
         <div class="field">
-          <label for="notes">Interior Notes</label>
-          <textarea id="notes" name="notes" rows="3" placeholder="Cabinet style, materials, lighting, furnishing direction.">{{ interior_result.get('notes') or '' }}</textarea>
+          <label for="notes">Additional Design Details</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Add more details: cabinet style, hardware finish, countertop material, flooring, lighting, furnishing direction, paint colors, accent wall, etc.">{{ interior_result.get('notes') or '' }}</textarea>
         </div>
 
         <div class="field">
@@ -207,7 +232,17 @@
 .room-card img{width:100%;height:140px;object-fit:cover;border-radius:12px}
 .form-note{margin-top:12px;color:#9fb0ca}
 .hidden{display:none!important}
-@media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}}
+.design-chat-panel{grid-column:1/-1;margin-bottom:4px}
+.design-chat-thread{display:grid;gap:12px;max-height:300px;overflow:auto;padding-right:4px}
+.design-chat-message{padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.035)}
+.design-chat-message.user{margin-left:42px;background:rgba(122,184,255,.08);border-color:rgba(122,184,255,.18)}
+.design-chat-message.assistant{margin-right:42px}
+.design-chat-message strong{display:block;color:#fff;margin-bottom:6px}
+.design-chat-message p{margin:0;color:#c9d5e6;line-height:1.55}
+.design-chat-composer{display:grid;gap:12px;margin-top:14px}
+.design-chat-composer textarea{width:100%;resize:vertical;min-height:80px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap}
+@media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.design-chat-message.user,.design-chat-message.assistant{margin-left:0;margin-right:0}}
 </style>
 
 <script>
@@ -233,6 +268,101 @@
 
   let currentImageUrl = {{ (interior_result.get('image_url') if interior_result else '')|tojson }};
   let nextUrl = '';
+  let designMessages = [];
+
+  // ── Design Chat ───────────────────────────────────
+  const designChatThread = document.getElementById('designChatThread');
+  const designChatInput = document.getElementById('designChatInput');
+  const askDesignBtn = document.getElementById('askDesignBtn');
+  const applyDesignBtn = document.getElementById('applyDesignBtn');
+  const designChatStatus = document.getElementById('designChatStatus');
+  const descriptionField = document.getElementById('description');
+  const notesField = document.getElementById('notes');
+  const styleField = document.getElementById('style');
+  const roomTypeField = document.getElementById('room_type');
+
+  function appendDesignMessage(role, text) {
+    if (!designChatThread || !text) return;
+    const node = document.createElement('div');
+    node.className = `design-chat-message ${role === 'user' ? 'user' : 'assistant'}`;
+    const label = role === 'user' ? 'You' : 'Ravlo';
+    node.innerHTML = `<strong>${label}</strong><p></p>`;
+    node.querySelector('p').textContent = text;
+    designChatThread.appendChild(node);
+    designChatThread.scrollTop = designChatThread.scrollHeight;
+  }
+
+  function gatherDesignConfig() {
+    return {
+      style: styleField?.value || '',
+      room_type: roomTypeField?.value || '',
+      description: descriptionField?.value || '',
+      notes: notesField?.value || '',
+    };
+  }
+
+  function applyDesignConfig(config) {
+    if (!config || typeof config !== 'object') return;
+    if (config.style && styleField) {
+      const opt = styleField.querySelector(`option[value="${config.style}"]`);
+      if (opt) styleField.value = config.style;
+    }
+    if (config.room_type && roomTypeField) {
+      for (const opt of roomTypeField.options) {
+        if (opt.value.toLowerCase() === config.room_type.toLowerCase()) {
+          roomTypeField.value = opt.value;
+          break;
+        }
+      }
+    }
+    if (config.description && descriptionField) descriptionField.value = config.description;
+    if (config.notes && notesField) notesField.value = config.notes;
+  }
+
+  askDesignBtn?.addEventListener('click', async () => {
+    const message = String(designChatInput?.value || '').trim();
+    if (!message) return;
+    appendDesignMessage('user', message);
+    designMessages.push({ role: 'user', content: message });
+    designChatInput.value = '';
+    askDesignBtn.disabled = true;
+    askDesignBtn.textContent = 'Thinking...';
+
+    try {
+      const response = await fetch("{{ url_for('investor.design_studio_chat') }}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token() }}',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ messages: designMessages, config: gatherDesignConfig() })
+      });
+      const data = await response.json();
+      const reply = data.assistant_message || 'I\'ve updated the design configuration.';
+      applyDesignConfig(data.config || {});
+      appendDesignMessage('assistant', reply);
+      designMessages.push({ role: 'assistant', content: reply });
+      if (designChatStatus) designChatStatus.textContent = data.ready ? 'Ready' : 'Refining';
+    } catch (error) {
+      appendDesignMessage('assistant', error.message || 'Something went wrong. Please try again.');
+    } finally {
+      askDesignBtn.disabled = false;
+      askDesignBtn.textContent = 'Ask Ravlo';
+    }
+  });
+
+  applyDesignBtn?.addEventListener('click', () => {
+    if (form) form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit'));
+  });
+
+  designChatInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      askDesignBtn?.click();
+    }
+  });
 
   function setBlueprintPreviewFromUrl(url) {
     if (!url) return;
