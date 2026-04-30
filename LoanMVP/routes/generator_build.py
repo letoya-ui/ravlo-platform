@@ -75,6 +75,18 @@ def _safe_json(text):
         }
 
 
+def _post_build_generate(engine_url, spec):
+    session = requests.Session()
+    session.trust_env = False
+    return session.post(
+        f"{engine_url}/api/generator/build/generate",
+        json={"spec": spec},
+        headers={"ngrok-skip-browser-warning": "true"},
+        timeout=600,
+        verify=False,  # dev/ngrok only
+    )
+
+
 @generator_build_bp.post("/chat")
 @csrf.exempt
 def build_chat():
@@ -132,13 +144,22 @@ def build_generate():
                 }
             ), 500
 
-        response = requests.post(
-            f"{engine_url}/api/generator/build/generate",
-            json={"spec": spec},
-            headers={"ngrok-skip-browser-warning": "true"},
-            timeout=600,
-            verify=False,  # dev/ngrok only
-        )
+        try:
+            response = _post_build_generate(engine_url, spec)
+        except requests.exceptions.SSLError as exc:
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": str(exc),
+                    "detail": (
+                        "The HTTPS request reached the network but TLS failed before "
+                        "certificate verification. For ngrok dev URLs this usually "
+                        "means local network security is blocking the tunnel hostname."
+                    ),
+                }
+            ), 502
+        except requests.exceptions.RequestException as exc:
+            return jsonify({"status": "error", "message": str(exc)}), 502
 
         try:
             payload = response.json()
