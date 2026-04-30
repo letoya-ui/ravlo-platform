@@ -98,12 +98,27 @@ def _safe_json(text):
 def _post_build_generate(engine_url, spec):
     session = requests.Session()
     session.trust_env = False
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+    }
+    api_key = (
+        current_app.config.get("RENOVATION_API_KEY")
+        or current_app.config.get("RENOVATION_ENGINE_API_KEY")
+        or os.getenv("RENOVATION_API_KEY")
+        or os.getenv("RENOVATION_ENGINE_API_KEY")
+        or ""
+    ).strip()
+    if api_key:
+        headers["X-API-Key"] = api_key
+
     return session.post(
         f"{engine_url}/api/generator/build/generate",
         json={"spec": spec},
-        headers={"ngrok-skip-browser-warning": "true"},
+        headers=headers,
         timeout=600,
-        verify=False,  # dev/ngrok only
+        verify=_engine_verify_ssl(),
     )
 
 
@@ -126,6 +141,19 @@ def _truthy(value, default=False):
     if isinstance(value, bool):
         return value
     return str(value).strip().lower() in ("1", "true", "yes", "on", "save")
+
+
+def _engine_verify_ssl():
+    verify_ssl = current_app.config.get("RENOVATION_ENGINE_VERIFY_SSL")
+    if verify_ssl is None:
+        verify_ssl = os.getenv("RENOVATION_ENGINE_VERIFY_SSL")
+    if verify_ssl is not None:
+        return _truthy(verify_ssl, default=True)
+
+    insecure_ssl = current_app.config.get("RENOVATION_ENGINE_INSECURE_SSL")
+    if insecure_ssl is None:
+        insecure_ssl = os.getenv("RENOVATION_ENGINE_INSECURE_SSL")
+    return not _truthy(insecure_ssl, default=False)
 
 
 def _first_nonempty(*values):
