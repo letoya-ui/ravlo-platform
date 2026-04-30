@@ -153,9 +153,9 @@ class Config:
     AI_TIMEOUT = _env_int("AI_TIMEOUT", 30)
     RENOVATION_ENGINE_URL = os.getenv(
         "RENOVATION_ENGINE_URL",
-        "https://nondiscoverable-henry-metempirical.ngrok-free.dev"
+        "https://nondiscoverable-henry-metempirical.ngrok-free.dev",
     ).rstrip("/")
-
+    
     RENOVATION_API_KEY = os.getenv("RENOVATION_API_KEY", "")
 
     GOOGLE_PLACES_API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY", "")
