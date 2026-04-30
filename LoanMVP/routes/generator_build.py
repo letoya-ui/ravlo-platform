@@ -1,4 +1,6 @@
+import base64
 import copy
+import json
 import os
 import traceback
 from datetime import datetime
@@ -124,6 +126,74 @@ def _post_build_generate(engine_url, spec):
 
 def _as_dict(value):
     return value if isinstance(value, dict) else {}
+
+
+def _as_list(value):
+    if isinstance(value, list):
+        return value
+    if value in (None, ""):
+        return []
+    return [value]
+
+
+def _safe_object_json(value):
+    if isinstance(value, dict):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        return {}
+    try:
+        parsed = json.loads(value)
+    except Exception:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _request_data_and_spec():
+    if request.files or request.form:
+        data = request.form.to_dict(flat=True)
+        spec = _safe_object_json(data.get("spec"))
+        if not spec:
+            spec = {}
+
+        for key, value in data.items():
+            if key in {"csrf_token", "spec"}:
+                continue
+            if value not in (None, ""):
+                spec.setdefault(key, value)
+
+        file_key_map = {
+            "blueprint_file": ("blueprint_image_base64", "blueprint_image_filename"),
+            "blueprint_image": ("blueprint_image_base64", "blueprint_image_filename"),
+            "floor_plan_file": ("blueprint_image_base64", "blueprint_image_filename"),
+            "land_image": ("reference_image_base64", "reference_image_filename"),
+            "reference_image": ("reference_image_base64", "reference_image_filename"),
+            "site_image": ("site_image_base64", "site_image_filename"),
+            "exterior_image": ("exterior_image_base64", "exterior_image_filename"),
+        }
+
+        for form_key, (payload_key, filename_key) in file_key_map.items():
+            upload = request.files.get(form_key)
+            if not upload or not getattr(upload, "filename", ""):
+                continue
+            raw = upload.read()
+            if not raw:
+                continue
+
+            encoded = base64.b64encode(raw).decode("utf-8")
+            spec[payload_key] = encoded
+            spec[filename_key] = upload.filename
+
+            if form_key == "land_image":
+                spec.setdefault("site_image_base64", encoded)
+                spec.setdefault("exterior_image_base64", encoded)
+            if form_key in {"reference_image", "site_image", "exterior_image"}:
+                spec.setdefault("reference_image_base64", encoded)
+
+        return data, spec
+
+    data = request.get_json(silent=True) or {}
+    spec = _as_dict(data.get("spec") or data)
+    return data, spec
 
 
 def _normalize_int(value):
@@ -288,6 +358,195 @@ def _ensure_generator_image_urls(payload):
     return []
 
 
+def _candidate_payload_blocks(payload):
+    payload = _as_dict(payload)
+    blocks = []
+    queue = [payload]
+    keys = (
+        "result",
+        "build",
+        "build_project",
+        "outputs",
+        "output",
+        "package",
+        "data",
+        "project",
+    )
+
+    while queue:
+        block = queue.pop(0)
+        if not isinstance(block, dict) or block in blocks:
+            continue
+        blocks.append(block)
+        for key in keys:
+            value = block.get(key)
+            if isinstance(value, dict):
+                queue.append(value)
+    return blocks
+
+
+def _find_named_output(payload, keys):
+    keys = tuple(keys)
+    for block in _candidate_payload_blocks(payload):
+        for key in keys:
+            value = block.get(key)
+            if value not in (None, "", [], {}):
+                return value
+
+    normalized_keys = []
+    for key in keys:
+        words = [
+            word
+            for word in str(key).lower().replace("-", "_").split("_")
+            if word and word != "result"
+        ]
+        if words:
+            normalized_keys.append(words)
+    normalized_keys.sort(key=len, reverse=True)
+    generic_singletons = {"blueprint", "exterior", "interior", "concept", "render", "plan"}
+
+    for block in _candidate_payload_blocks(payload):
+        for collection_key in ("outputs", "images", "image_outputs", "results"):
+            for item in _as_list(block.get(collection_key)):
+                if not isinstance(item, dict):
+                    continue
+                label = " ".join(
+                    str(item.get(label_key) or "")
+                    for label_key in ("type", "mode", "key", "name", "label", "view", "output_type")
+                ).lower()
+                label_key = label.replace("-", "_").replace(" ", "_")
+                if not label_key:
+                    continue
+                for words in normalized_keys:
+                    if len(words) == 1 and words[0] in generic_singletons:
+                        continue
+                    if all(word in label_key for word in words):
+                        return item
+
+    return {}
+
+
+def _coerce_output_block(value):
+    if isinstance(value, str):
+        url = _find_first_url(value)
+        return {"image_url": url, "images": [url]} if url else {}
+
+    if isinstance(value, list):
+        urls = _find_urls(value)
+        if urls:
+            return {"image_url": urls[0], "images": urls}
+        for item in value:
+            block = _coerce_output_block(item)
+            if block:
+                return block
+        return {}
+
+    if isinstance(value, dict):
+        block = _compact_engine_response(value)
+        urls = _find_urls(block)
+        if urls:
+            block.setdefault("image_url", urls[0])
+            block.setdefault("images", urls)
+        return block
+
+    return {}
+
+
+def _normalize_generator_outputs(payload):
+    aliases = {
+        "blueprint": (
+            "blueprint_result",
+            "blueprint",
+            "blueprint_floor1",
+            "first_floor_blueprint",
+            "floor_plan",
+            "floor_plan_result",
+            "plan",
+        ),
+        "blueprint_floor2": (
+            "blueprint_floor2_result",
+            "blueprint_floor2",
+            "second_floor_blueprint",
+            "floor2_blueprint",
+            "second_floor",
+            "site_plan",
+        ),
+        "blueprint_floor3": (
+            "blueprint_floor3_result",
+            "blueprint_floor3",
+            "third_floor_blueprint",
+            "floor3_blueprint",
+            "third_floor",
+        ),
+        "exterior": (
+            "exterior_result",
+            "exterior",
+            "exterior_front",
+            "front_exterior",
+            "concept",
+            "render",
+        ),
+        "exterior_back": (
+            "exterior_back_result",
+            "exterior_back",
+            "exterior_rear",
+            "rear_exterior",
+            "back_exterior",
+        ),
+        "interior": (
+            "interior_result",
+            "interior",
+            "room_result",
+            "design_result",
+        ),
+    }
+
+    outputs = {}
+    for output_key, names in aliases.items():
+        block = _coerce_output_block(_find_named_output(payload, names))
+        if block and _find_first_url(block):
+            outputs[output_key] = block
+
+    if not outputs:
+        urls = _find_urls(payload)
+        if urls:
+            fallback = {"image_url": urls[0], "images": urls}
+            outputs["blueprint"] = fallback
+            outputs["exterior"] = fallback
+
+    return outputs
+
+
+def _merge_output_record(existing, generated, *, values, image_url="", source="generator_build", **extra):
+    record = dict(_as_dict(existing))
+    generated = _as_dict(generated)
+    record.update(_compact_engine_response(generated))
+    record.update({
+        "project_name": values.get("project_name"),
+        "property_type": values.get("property_type"),
+        "development_type": values.get("development_type"),
+        "style": values.get("style"),
+        "stories": values.get("stories"),
+        "description": values.get("description"),
+        "lot_size": values.get("lot_size"),
+        "zoning": values.get("zoning"),
+        "location": values.get("location"),
+        "notes": values.get("notes"),
+        "source": source,
+    })
+    record.update({key: value for key, value in extra.items() if value not in (None, "")})
+
+    resolved_url = _first_nonempty(image_url, _find_first_url(generated), record.get("image_url"))
+    if resolved_url:
+        record["image_url"] = resolved_url
+        urls = _find_urls(generated)
+        if not urls:
+            urls = [resolved_url]
+        record["images"] = urls
+
+    return {key: value for key, value in record.items() if value not in (None, "", [], {})}
+
+
 def _compact_engine_response(payload):
     def scrub(value):
         if isinstance(value, dict):
@@ -409,18 +668,41 @@ def _save_investor_generator_build(data, spec, payload):
 
     deal, project = _investor_context_from_request(data, spec)
     output_urls = _ensure_generator_image_urls(payload)
-    primary_url = output_urls[0] if output_urls else _find_first_url(payload)
+    outputs = _normalize_generator_outputs(payload)
+
+    blueprint_block = outputs.get("blueprint", {})
+    blueprint_floor2_block = outputs.get("blueprint_floor2", {})
+    blueprint_floor3_block = outputs.get("blueprint_floor3", {})
+    exterior_block = outputs.get("exterior", {})
+    exterior_back_block = outputs.get("exterior_back", {})
+    interior_block = outputs.get("interior", {})
+
+    primary_url = _first_nonempty(
+        _find_first_url(exterior_block),
+        _find_first_url(blueprint_block),
+        output_urls[0] if output_urls else "",
+        _find_first_url(payload),
+    )
     blueprint_url = _first_nonempty(
         spec.get("blueprint_url"),
+        _find_first_url(blueprint_block),
         _find_first_url(_as_dict(payload).get("blueprint")),
         _find_first_url(_as_dict(payload).get("floor_plan")),
         primary_url,
     )
+    blueprint_floor2_url = _first_nonempty(
+        _find_first_url(blueprint_floor2_block),
+        _find_first_url(_as_dict(payload).get("blueprint_floor2")),
+        _find_first_url(_as_dict(payload).get("site_plan")),
+    )
     exterior_url = _first_nonempty(
+        _find_first_url(exterior_block),
         _find_first_url(_as_dict(payload).get("exterior")),
         _find_first_url(_as_dict(payload).get("concept")),
         primary_url,
     )
+    exterior_back_url = _find_first_url(exterior_back_block)
+    interior_url = _find_first_url(interior_block)
 
     values = _build_project_values(spec, payload, deal=deal)
 
@@ -438,6 +720,8 @@ def _save_investor_generator_build(data, spec, payload):
     project.notes = values["notes"]
     if blueprint_url:
         project.blueprint_url = blueprint_url
+    if blueprint_floor2_url:
+        project.site_plan_url = blueprint_floor2_url
     if exterior_url:
         project.concept_render_url = exterior_url
         project.exterior_url = exterior_url
@@ -461,6 +745,7 @@ def _save_investor_generator_build(data, spec, payload):
             "notes": values["notes"],
             "image_url": primary_url,
             "images": output_urls,
+            "outputs": copy.deepcopy(outputs),
             "spec": copy.deepcopy(spec),
             "engine_response": _compact_engine_response(payload),
             "saved_at": datetime.utcnow().isoformat(),
@@ -483,31 +768,72 @@ def _save_investor_generator_build(data, spec, payload):
         })
 
         if blueprint_url:
-            blueprint_block = _as_dict(build_project.get("blueprint"))
-            blueprint_block.update({
-                "project_name": values["project_name"],
-                "property_type": values["property_type"],
-                "style": values["style"],
-                "description": values["description"],
-                "image_url": blueprint_url,
-                "blueprint_url": blueprint_url,
-                "images": output_urls,
-                "source": "generator_build",
-            })
-            build_project["blueprint"] = blueprint_block
+            build_project["blueprint"] = _merge_output_record(
+                build_project.get("blueprint"),
+                blueprint_block,
+                values=values,
+                image_url=blueprint_url,
+                blueprint_url=blueprint_url,
+            )
+
+        if blueprint_floor2_url:
+            build_project["blueprint_floor2"] = _merge_output_record(
+                build_project.get("blueprint_floor2") or build_project.get("site_plan"),
+                blueprint_floor2_block,
+                values=values,
+                image_url=blueprint_floor2_url,
+                blueprint_url=blueprint_floor2_url,
+                floor_label="Second Floor",
+                blueprint_floor="second",
+            )
+
+        if _find_first_url(blueprint_floor3_block):
+            build_project["blueprint_floor3"] = _merge_output_record(
+                build_project.get("blueprint_floor3"),
+                blueprint_floor3_block,
+                values=values,
+                image_url=_find_first_url(blueprint_floor3_block),
+                blueprint_url=_find_first_url(blueprint_floor3_block),
+                floor_label="Third Floor",
+                blueprint_floor="third",
+            )
 
         if exterior_url:
-            exterior_block = _as_dict(build_project.get("exterior"))
-            exterior_block.update({
-                "project_name": values["project_name"],
-                "property_type": values["property_type"],
-                "style": values["style"],
-                "description": values["description"],
-                "image_url": exterior_url,
-                "images": output_urls,
-                "source": "generator_build",
-            })
-            build_project["exterior"] = exterior_block
+            build_project["exterior"] = _merge_output_record(
+                build_project.get("exterior"),
+                exterior_block,
+                values=values,
+                image_url=exterior_url,
+                view="front",
+            )
+
+        if exterior_back_url:
+            build_project["exterior_back"] = _merge_output_record(
+                build_project.get("exterior_back"),
+                exterior_back_block,
+                values=values,
+                image_url=exterior_back_url,
+                view="back",
+            )
+
+        if interior_url:
+            existing_interior = _as_dict(build_project.get("interior"))
+            room_entry = _merge_output_record(
+                existing_interior.get("latest"),
+                interior_block,
+                values=values,
+                image_url=interior_url,
+                room_type=spec.get("room_type") or _as_dict(interior_block).get("room_type"),
+                floor=spec.get("floor") or _as_dict(interior_block).get("floor"),
+            )
+            rooms = [
+                room for room in _as_list(existing_interior.get("rooms"))
+                if isinstance(room, dict) and room.get("image_url") != room_entry.get("image_url")
+            ]
+            rooms.append(room_entry)
+            existing_interior["latest"] = room_entry
+            existing_interior["rooms"] = rooms
+            build_project["interior"] = existing_interior
 
         results["build_project"] = build_project
         _set_deal_results(deal, results)
@@ -519,13 +845,32 @@ def _save_investor_generator_build(data, spec, payload):
         if deal is not None
         else url_for("investor.build_studio", project_id=project.id)
     )
+    deal_architect_url = (
+        url_for("investor.deal_architect", deal_id=deal.id, project_id=project.id)
+        if deal is not None
+        else None
+    )
+    budget_studio_url = (
+        url_for("investor.budget_studio", deal_id=deal.id)
+        if deal is not None
+        else None
+    )
 
     return {
         "saved": True,
         "deal_id": deal.id if deal else None,
         "project_id": project.id,
         "image_url": primary_url,
+        "outputs": outputs,
+        "blueprint_result": outputs.get("blueprint", {}),
+        "blueprint_floor2_result": outputs.get("blueprint_floor2", {}),
+        "blueprint_floor3_result": outputs.get("blueprint_floor3", {}),
+        "exterior_result": outputs.get("exterior", {}),
+        "exterior_back_result": outputs.get("exterior_back", {}),
+        "interior_result": outputs.get("interior", {}),
         "build_studio_url": build_studio_url,
+        "deal_architect_url": deal_architect_url,
+        "budget_studio_url": budget_studio_url,
         "next_url": build_studio_url,
     }
 
@@ -550,8 +895,7 @@ def _build_chat_response():
 
 
 def _build_generate_response(*, persist_to_investor=False):
-    data = request.get_json(silent=True) or {}
-    spec = _as_dict(data.get("spec") or data)
+    data, spec = _request_data_and_spec()
 
     engine_url = (
         current_app.config.get("RENOVATION_ENGINE_URL")
@@ -614,6 +958,15 @@ def _build_generate_response(*, persist_to_investor=False):
                     payload.setdefault("deal_id", save_context.get("deal_id"))
                     payload.setdefault("next_url", save_context.get("next_url"))
                     payload.setdefault("build_studio_url", save_context.get("build_studio_url"))
+                    payload.setdefault("deal_architect_url", save_context.get("deal_architect_url"))
+                    payload.setdefault("budget_studio_url", save_context.get("budget_studio_url"))
+                    payload.setdefault("outputs", save_context.get("outputs"))
+                    payload.setdefault("blueprint_result", save_context.get("blueprint_result"))
+                    payload.setdefault("blueprint_floor2_result", save_context.get("blueprint_floor2_result"))
+                    payload.setdefault("blueprint_floor3_result", save_context.get("blueprint_floor3_result"))
+                    payload.setdefault("exterior_result", save_context.get("exterior_result"))
+                    payload.setdefault("exterior_back_result", save_context.get("exterior_back_result"))
+                    payload.setdefault("interior_result", save_context.get("interior_result"))
             except NotFound as exc:
                 db.session.rollback()
                 return jsonify({"status": "error", "message": exc.description}), 404
@@ -625,6 +978,7 @@ def _build_generate_response(*, persist_to_investor=False):
                     "error": str(exc),
                 })
 
+    payload.setdefault("status", "ok")
     return jsonify(payload), response.status_code
 
 

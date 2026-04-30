@@ -340,52 +340,135 @@
     el.innerHTML = url ? `<img src="${url}" alt="${alt}">` : `<div class="empty-state-inline">${fallback}</div>`;
   }
 
+  function firstImage(value) {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = firstImage(item);
+        if (found) return found;
+      }
+      return '';
+    }
+    if (typeof value === 'object') {
+      return value.image_url || value.blueprint_url || value.exterior_url || value.render_url || value.concept_render_url || value.public_url || value.url || value.src || firstImage(value.images) || firstImage(value.image_urls) || '';
+    }
+    return '';
+  }
+
+  function normalizeBlock(value) {
+    if (!value) return {};
+    if (typeof value === 'string') return { image_url: value };
+    if (Array.isArray(value)) {
+      const image = firstImage(value);
+      return image ? { image_url: image, images: value.filter((item) => typeof item === 'string') } : {};
+    }
+    if (typeof value === 'object') {
+      const block = { ...value };
+      const image = firstImage(block);
+      if (image && !block.image_url) block.image_url = image;
+      return block;
+    }
+    return {};
+  }
+
+  function pickBlock(data, keys) {
+    const roots = [
+      data,
+      data?.investor,
+      data?.outputs,
+      data?.investor?.outputs,
+      data?.build_project,
+      data?.result,
+      data?.result?.build_project,
+      data?.result?.outputs,
+      data?.result?.package,
+      data?.data,
+      data?.data?.outputs,
+      data?.data?.package,
+      data?.package,
+      data?.build,
+    ].filter(Boolean);
+
+    for (const root of roots) {
+      for (const key of keys) {
+        const block = normalizeBlock(root[key]);
+        if (firstImage(block)) return block;
+      }
+    }
+    return {};
+  }
+
+  function normalizeGeneratorBuild(data) {
+    const rawNextUrl = data.deal_architect_url || data.investor?.deal_architect_url || data.next_url || data.investor?.next_url || '';
+    return {
+      blueprint_result: pickBlock(data, ['blueprint_result', 'blueprint', 'blueprint_floor1', 'first_floor_blueprint', 'floor_plan']),
+      blueprint_floor2_result: pickBlock(data, ['blueprint_floor2_result', 'blueprint_floor2', 'second_floor_blueprint', 'floor2_blueprint', 'site_plan']),
+      blueprint_floor3_result: pickBlock(data, ['blueprint_floor3_result', 'blueprint_floor3', 'third_floor_blueprint', 'floor3_blueprint']),
+      exterior_result: pickBlock(data, ['exterior_result', 'exterior', 'exterior_front', 'front_exterior', 'concept', 'render']),
+      exterior_back_result: pickBlock(data, ['exterior_back_result', 'exterior_back', 'exterior_rear', 'rear_exterior', 'back_exterior']),
+      project_id: data.project_id || data.investor?.project_id || '',
+      deal_id: data.deal_id || data.investor?.deal_id || '',
+      next_url: rawNextUrl && rawNextUrl.includes('deal-architect') ? rawNextUrl : (data.deal_architect_url || data.investor?.deal_architect_url || ''),
+      budget_studio_url: data.budget_studio_url || data.investor?.budget_studio_url || '',
+      lot_count: data.lot_count || data.investor?.lot_count || lotCountInput?.value || '1',
+    };
+  }
+
   form?.addEventListener('submit', async function (e) {
     e.preventDefault();
     startBuildLoading();
 
     try {
-      const response = await fetch("{{ url_for('investor.generate_full_build') }}", {
+      const response = await fetch("{{ url_for('investor_generator_build.investor_build_generate') }}", {
         method: 'POST',
         body: new FormData(form),
         headers: { 'X-CSRFToken': '{{ csrf_token() }}', 'X-Requested-With': 'XMLHttpRequest' },
         credentials: 'same-origin'
       });
       const data = await response.json();
-      if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Build Studio generation failed.');
+      const status = String(data.status || 'ok').toLowerCase();
+      if (!response.ok || status === 'error' || status === 'failed') throw new Error(data.message || 'Build Studio generation failed.');
 
-      const floor2Ready = Boolean(data.blueprint_floor2_result?.image_url);
-      const floor2Skipped = Boolean(data.blueprint_floor2_result?.skipped);
-      const floor3Ready = Boolean(data.blueprint_floor3_result?.image_url);
-      const floor3Skipped = Boolean(data.blueprint_floor3_result?.skipped);
-      summaryLots.textContent = data.lot_count || lotCountInput?.value || '1';
-      document.getElementById('summaryBlueprint').textContent = data.blueprint_result?.image_url ? 'Ready' : 'Waiting';
+      const build = normalizeGeneratorBuild(data);
+      const blueprintResult = build.blueprint_result || {};
+      const floor2Result = build.blueprint_floor2_result || {};
+      const floor3Result = build.blueprint_floor3_result || {};
+      const exteriorResult = build.exterior_result || {};
+      const exteriorBackResult = build.exterior_back_result || {};
+
+      const floor2Ready = Boolean(firstImage(floor2Result));
+      const floor2Skipped = Boolean(floor2Result.skipped);
+      const floor3Ready = Boolean(firstImage(floor3Result));
+      const floor3Skipped = Boolean(floor3Result.skipped);
+      summaryLots.textContent = build.lot_count || lotCountInput?.value || '1';
+      document.getElementById('summaryBlueprint').textContent = firstImage(blueprintResult) ? 'Ready' : 'Waiting';
       document.getElementById('summaryFloor2').textContent = floor2Ready ? 'Ready' : (floor2Skipped ? 'Skipped' : 'Waiting');
       document.getElementById('summaryFloor3').textContent = floor3Ready ? 'Ready' : (floor3Skipped ? 'Skipped' : 'Waiting');
-      document.getElementById('summaryExterior').textContent = data.exterior_result?.image_url ? 'Ready' : 'Waiting';
-      document.getElementById('blueprintStatus').textContent = data.blueprint_result?.image_url ? 'Generated' : 'Waiting';
+      document.getElementById('summaryExterior').textContent = firstImage(exteriorResult) ? 'Ready' : 'Waiting';
+      document.getElementById('blueprintStatus').textContent = firstImage(blueprintResult) ? 'Generated' : 'Waiting';
       document.getElementById('floor2Status').textContent = floor2Ready ? 'Generated' : (floor2Skipped ? 'Skipped' : 'Waiting');
       document.getElementById('floor3Status').textContent = floor3Ready ? 'Generated' : (floor3Skipped ? 'Skipped' : 'Waiting');
-      document.getElementById('exteriorStatus').textContent = data.exterior_result?.image_url ? 'Generated' : 'Waiting';
-      renderMedia('blueprintMedia', data.blueprint_result?.image_url, 'First floor blueprint', 'First floor blueprint will appear here.');
-      renderMedia('floor2Media', data.blueprint_floor2_result?.image_url, 'Second floor blueprint', floor2Skipped ? 'Single-story project - no second floor blueprint.' : 'Second floor blueprint will appear here.');
-      renderMedia('floor3Media', data.blueprint_floor3_result?.image_url, 'Third floor blueprint', floor3Skipped ? 'Projects under three floors - no third floor blueprint.' : 'Third floor blueprint will appear here.');
-      renderMedia('exteriorMedia', data.exterior_result?.image_url, 'Exterior concept', 'Exterior concept will appear here.');
-      renderMedia('exteriorBackMedia', data.exterior_back_result?.image_url, 'Exterior back', 'Rear exterior concept will appear here.');
-      document.getElementById('exteriorBackStatus').textContent = data.exterior_back_result?.image_url ? 'Generated' : 'Waiting';
-      if (data.project_id) {
+      document.getElementById('exteriorStatus').textContent = firstImage(exteriorResult) ? 'Generated' : 'Waiting';
+      renderMedia('blueprintMedia', firstImage(blueprintResult), 'First floor blueprint', 'First floor blueprint will appear here.');
+      renderMedia('floor2Media', firstImage(floor2Result), 'Second floor blueprint', floor2Skipped ? 'Single-story project - no second floor blueprint.' : 'Second floor blueprint will appear here.');
+      renderMedia('floor3Media', firstImage(floor3Result), 'Third floor blueprint', floor3Skipped ? 'Projects under three floors - no third floor blueprint.' : 'Third floor blueprint will appear here.');
+      renderMedia('exteriorMedia', firstImage(exteriorResult), 'Exterior concept', 'Exterior concept will appear here.');
+      renderMedia('exteriorBackMedia', firstImage(exteriorBackResult), 'Exterior back', 'Rear exterior concept will appear here.');
+      document.getElementById('exteriorBackStatus').textContent = firstImage(exteriorBackResult) ? 'Generated' : 'Waiting';
+      if (build.project_id) {
         const projectField = form.querySelector('input[name="project_id"]');
-        if (projectField) projectField.value = data.project_id;
+        if (projectField) projectField.value = build.project_id;
       }
 
       const dealArchitectBtn = document.getElementById('sendToDealArchitectBtn');
       const budgetStudioBtn = document.getElementById('sendToBudgetStudioBtn');
-      if (data.next_url && dealArchitectBtn) {
-        dealArchitectBtn.href = data.next_url;
+      if (build.next_url && dealArchitectBtn) {
+        dealArchitectBtn.href = build.next_url;
         dealArchitectBtn.classList.remove('hidden');
       }
-      if (data.deal_id && budgetStudioBtn) {
-        budgetStudioBtn.href = `/investor/deal-studio/budget/${data.deal_id}`;
+      if ((build.budget_studio_url || build.deal_id) && budgetStudioBtn) {
+        budgetStudioBtn.href = build.budget_studio_url || `/investor/deal-studio/budget/${build.deal_id}`;
         budgetStudioBtn.classList.remove('hidden');
       }
     } catch (error) {

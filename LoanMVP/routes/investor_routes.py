@@ -6352,8 +6352,27 @@ def design_studio(deal_id=None):
 
     build_project = results.get("build_project", {}) or {}
     blueprint_result = build_project.get("blueprint", {}) or {}
+    exterior_result = _build_project_exterior_result(build_project)
+    blueprint_floor2_result = build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}
+    blueprint_floor3_result = build_project.get("blueprint_floor3", {}) or {}
     interior_block = build_project.get("interior", {}) or {}
-    interior_result = interior_block.get("latest", {}) or {}
+    interior_result = interior_block.get("latest", {}) or rehab_latest or {}
+    interior_rooms = [
+        room for room in (interior_block.get("rooms", []) or [])
+        if isinstance(room, dict)
+    ]
+    seen_interior_urls = {
+        room.get("image_url")
+        for room in interior_rooms
+        if isinstance(room, dict) and room.get("image_url")
+    }
+    for concept in rehab_concepts:
+        if not isinstance(concept, dict):
+            continue
+        concept_url = concept.get("image_url")
+        if concept_url and concept_url not in seen_interior_urls:
+            interior_rooms.append(concept)
+            seen_interior_urls.add(concept_url)
     design_budget = (
         results.get("design_budget")
         or interior_block.get("budget")
@@ -6372,11 +6391,19 @@ def design_studio(deal_id=None):
         property_photo_gallery=property_gallery,
         workspace_images=workspace_images,
         preselected_image_url=preselected_image_url,
+        build_project=build_project,
         blueprint_result=blueprint_result,
+        blueprint_floor2_result=blueprint_floor2_result,
+        blueprint_floor3_result=blueprint_floor3_result,
+        exterior_result=exterior_result,
         interior_result=interior_result,
+        interior_rooms=interior_rooms,
         design_budget=design_budget,
         page_title="Design Studio",
         page_subtitle="Create interior design concepts from blueprints, floor plans, and existing spaces.",
+        companion_endpoint="investor.build_studio",
+        companion_label="Open Build Studio",
+        lot_count=_build_project_lot_count(build_project.get("lot_count"), build_project.get("development_type")),
     )
 
 

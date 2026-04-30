@@ -3,6 +3,16 @@
 
 {% block content %}
 <div class="build-lite-shell">
+  {% set build_project = build_project|default({}, true) %}
+  {% set exterior_result = exterior_result|default({}, true) %}
+  {% set blueprint_floor2_result = blueprint_floor2_result|default({}, true) %}
+  {% set blueprint_floor3_result = blueprint_floor3_result|default({}, true) %}
+  {% set interior_rooms = interior_rooms|default([], true) %}
+  {% set build_blueprint_src = blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') or build_project.get('blueprint_url') or (project.blueprint_url if project else '') %}
+  {% set build_floor2_src = blueprint_floor2_result.get('image_url') or blueprint_floor2_result.get('blueprint_url') or build_project.get('blueprint_floor2_url') or build_project.get('site_plan_url') %}
+  {% set build_floor3_src = blueprint_floor3_result.get('image_url') or blueprint_floor3_result.get('blueprint_url') %}
+  {% set build_exterior_src = exterior_result.get('image_url') or build_project.get('concept_render_url') or build_project.get('exterior_url') %}
+
   <section class="studio-hero-card">
     <div>
       <div class="eyebrow">{{ hero_eyebrow or "RAVLO DESIGN STUDIO" }}</div>
@@ -29,6 +39,31 @@
     </div>
   </section>
 
+  <section class="build-package-strip">
+    <div class="build-package-copy">
+      <div class="eyebrow">BUILD PACKAGE</div>
+      <h2>{{ build_project.get('project_name') or (deal.title if deal else 'Generated build package') }}</h2>
+      <p class="muted">Design Studio is seeded from the latest generated build package when one is available.</p>
+    </div>
+    <div class="build-package-assets">
+      {% for asset in [
+        {"label": "Floor 1", "url": build_blueprint_src},
+        {"label": "Floor 2", "url": build_floor2_src},
+        {"label": "Floor 3", "url": build_floor3_src},
+        {"label": "Exterior", "url": build_exterior_src}
+      ] %}
+      <div class="build-asset-tile">
+        {% if asset.url %}
+          <img src="{{ asset.url }}" alt="{{ asset.label }}">
+        {% else %}
+          <div class="build-asset-empty">{{ asset.label }}</div>
+        {% endif %}
+        <span>{{ asset.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
   <!-- ROOM SLOT TABS -->
   <section class="ravlo-card pad room-slot-section">
     <div class="section-head">
@@ -48,8 +83,8 @@
       ] %}
       {% for slot in room_slots %}
         {% set ns = namespace(slot_concept=None) %}
-        {% if rehab_concepts %}
-          {% for r in rehab_concepts %}
+        {% if interior_rooms %}
+          {% for r in interior_rooms %}
             {% if r.get('room_type', '')|lower|replace(' ', '_') == slot.key %}
               {% set ns.slot_concept = r %}
             {% endif %}
@@ -100,12 +135,12 @@
         <div class="form-grid two">
           <div class="field">
             <label for="project_name">Project Name</label>
-            <input id="project_name" name="project_name" value="{{ project.project_name if project else '' }}" placeholder="Maple Grove Residences">
+            <input id="project_name" name="project_name" value="{{ build_project.get('project_name') or (project.project_name if project else (deal.title if deal else '')) }}" placeholder="Maple Grove Residences">
           </div>
 
           <div class="field">
             <label for="property_type">Property Type</label>
-            {% set property_type_value = project.property_type if project and project.property_type else 'single_family' %}
+            {% set property_type_value = build_project.get('property_type') or (project.property_type if project and project.property_type else 'single_family') %}
             <select id="property_type" name="property_type">
               <option value="single_family" {{ 'selected' if property_type_value == 'single_family' else '' }}>Single Family</option>
               <option value="duplex" {{ 'selected' if property_type_value == 'duplex' else '' }}>Duplex</option>
@@ -117,13 +152,14 @@
 
           <div class="field">
             <label for="style">Interior Style</label>
+            {% set style_value = interior_result.get('style') or build_project.get('style') or 'modern_luxury' %}
             <select id="style" name="style">
-              <option value="modern_luxury">Modern Luxury</option>
-              <option value="modern_farmhouse">Modern Farmhouse</option>
-              <option value="minimal_modern">Minimal Modern</option>
-              <option value="traditional">Traditional</option>
-              <option value="industrial_loft">Industrial Loft</option>
-              <option value="coastal">Coastal</option>
+              <option value="modern_luxury" {{ 'selected' if style_value == 'modern_luxury' else '' }}>Modern Luxury</option>
+              <option value="modern_farmhouse" {{ 'selected' if style_value == 'modern_farmhouse' else '' }}>Modern Farmhouse</option>
+              <option value="minimal_modern" {{ 'selected' if style_value == 'minimal_modern' else '' }}>Minimal Modern</option>
+              <option value="traditional" {{ 'selected' if style_value == 'traditional' else '' }}>Traditional</option>
+              <option value="industrial_loft" {{ 'selected' if style_value == 'industrial_loft' else '' }}>Industrial Loft</option>
+              <option value="coastal" {{ 'selected' if style_value == 'coastal' else '' }}>Coastal</option>
             </select>
           </div>
 
@@ -181,18 +217,18 @@
 
           <div class="field">
             <label for="blueprint_url">Reference Image URL</label>
-            <input id="blueprint_url" name="blueprint_url" value="{{ blueprint_result.get('blueprint_url') or blueprint_result.get('image_url') or (project.blueprint_url if project else '') }}" placeholder="Paste a saved room photo or plan URL">
+            <input id="blueprint_url" name="blueprint_url" value="{{ build_blueprint_src }}" placeholder="Paste a saved room photo or plan URL">
           </div>
         </div>
 
         <div class="field">
           <label for="description">Design Notes</label>
-          <textarea id="description" name="description" rows="4" placeholder="Describe finishes, mood, functionality, and target buyer.">{{ project.description if project else '' }}</textarea>
+          <textarea id="description" name="description" rows="4" placeholder="Describe finishes, mood, functionality, and target buyer.">{{ build_project.get('description') or (project.description if project else '') }}</textarea>
         </div>
 
         <div class="field">
           <label for="notes">Interior Notes</label>
-          <textarea id="notes" name="notes" rows="3" placeholder="Cabinet style, materials, lighting, furnishing direction.">{{ interior_result.get('notes') or '' }}</textarea>
+          <textarea id="notes" name="notes" rows="3" placeholder="Cabinet style, materials, lighting, furnishing direction.">{{ interior_result.get('notes') or build_project.get('notes') or '' }}</textarea>
         </div>
 
         <div class="field">
@@ -222,7 +258,7 @@
       </div>
 
       <div class="reference-panel" id="blueprintPreview">
-        {% set blueprint_src = blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') or (project.blueprint_url if project else '') %}
+        {% set blueprint_src = build_blueprint_src %}
         {% if blueprint_src %}
         <img src="{{ blueprint_src }}" alt="Reference image">
         {% else %}
@@ -266,9 +302,9 @@
       </div>
     </div>
 
-    {% if rehab_concepts %}
+    {% if interior_rooms %}
     <div class="room-gallery" id="roomGallery">
-      {% for room in rehab_concepts %}
+      {% for room in interior_rooms %}
       {% if room.get('image_url') %}
       <a href="{{ room.get('image_url') }}" target="_blank" class="room-card" data-image-url="{{ room.get('image_url') }}">
         <img src="{{ room.get('image_url') }}" alt="{{ room.get('room_type') or 'Interior room' }}">
@@ -341,6 +377,12 @@
 .studio-hero-card,.build-lite-grid,.result-grid{display:grid;gap:18px}
 .studio-hero-card{grid-template-columns:1fr auto;align-items:start}
 .hero-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
+.build-package-strip{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:18px;align-items:center;padding:18px;border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.025)}
+.build-package-copy h2{margin:4px 0 8px;color:#eef3ff;font-size:1.15rem}
+.build-package-assets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.build-asset-tile{display:grid;gap:8px;min-width:0}
+.build-asset-tile img,.build-asset-empty{width:100%;aspect-ratio:4/3;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(5,10,18,.55);object-fit:cover;display:flex;align-items:center;justify-content:center;color:#9fb0ca;font-size:12px}
+.build-asset-tile span{color:#c8d4e6;font-size:12px;font-weight:700}
 .build-lite-grid{grid-template-columns:1.25fr .95fr}
 .form-grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .field{display:grid;gap:8px;margin-bottom:14px}
@@ -385,7 +427,7 @@
 .loading-step{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);color:#dbe6f5}
 .loader-ring{width:58px;height:58px;border-radius:50%;margin:0 auto;border:4px solid rgba(255,255,255,.12);border-top-color:#7ab8ff;animation:design-spin 1s linear infinite}
 @keyframes design-spin{to{transform:rotate(360deg)}}
-@media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.budget-line-row,.budget-summary>div{flex-direction:column}.room-slot-grid{grid-template-columns:repeat(3,1fr)}}
+@media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two,.build-package-strip{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.budget-line-row,.budget-summary>div{flex-direction:column}.room-slot-grid{grid-template-columns:repeat(3,1fr)}.build-package-assets{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 
 <script>
