@@ -305,8 +305,12 @@
   function applyDesignConfig(config) {
     if (!config || typeof config !== 'object') return;
     if (config.style && styleField) {
-      const opt = styleField.querySelector(`option[value="${config.style}"]`);
-      if (opt) styleField.value = config.style;
+      for (const opt of styleField.options) {
+        if (opt.value === config.style) {
+          styleField.value = config.style;
+          break;
+        }
+      }
     }
     if (config.room_type && roomTypeField) {
       for (const opt of roomTypeField.options) {
