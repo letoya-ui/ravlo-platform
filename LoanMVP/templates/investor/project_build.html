@@ -33,12 +33,12 @@
       <div class="build-chat-thread" id="buildChatThread">
         <div class="build-chat-message assistant">
           <strong>Ravlo</strong>
-          <p>Tell me exactly what you want to build — be as specific as possible. Describe the style, materials, architectural features, floor count, room layout, and any special details. I'll capture your vision and turn it into a build spec. The more detail you give, the closer the result will match what you're imagining.</p>
+          <p>What are we building? Just tell me — "Ravlo, white house, 3 stories, modern farmhouse" — and I'll handle the rest. The more detail you give, the closer it gets. Or keep it short and I'll ask what I need.</p>
         </div>
       </div>
 
       <div class="build-chat-composer">
-        <textarea id="buildChatInput" rows="3" placeholder="Tell Ravlo exactly what you want to build. Be specific about style, materials, features, and layout. Example: 'Build a 3-story luxury modern townhome with a rooftop deck, full-height glass on the front facade, dark brick and cedar siding, and a two-car garage on the ground floor.'"></textarea>
+        <textarea id="buildChatInput" rows="3" placeholder="Example: 'Ravlo, 3-story luxury modern townhome, rooftop deck, glass front, dark brick and cedar siding, two-car garage on ground floor'"></textarea>
         <div class="cta-row">
           <button type="button" class="ravlo-btn ghost" id="askBuildPlannerBtn">Ask Ravlo</button>
           <button type="button" class="ravlo-btn primary" id="approveBuildSpecBtn">Approve Spec</button>
@@ -611,6 +611,9 @@
       renderSpecPreview(currentBuildSpec, data.status === 'ready' ? 'Ready' : 'Needs Info', data.missing_fields || []);
       appendChatMessage('assistant', reply);
       buildMessages.push({ role: 'assistant', content: reply });
+      if (data._ai_error) {
+        console.warn('Build chat AI error:', data._ai_error);
+      }
       if (Array.isArray(data.next_questions) && data.next_questions.length) {
         appendChatMessage('assistant', data.next_questions.join(' '));
       }

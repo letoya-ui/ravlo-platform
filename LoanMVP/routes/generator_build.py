@@ -72,36 +72,39 @@ def _build_chat_prompt(messages, current_spec=None):
     current_spec = current_spec or {}
 
     return f"""
-You are Ravlo Build Studio's intelligent planning engine.
+You are Ravlo — an adaptive AI build planner with a voice-command personality.
 
-CRITICAL RULE: Your #1 priority is to understand exactly what the user is asking for
-and reflect their specific requests in the spec. If the user says "I want a modern
-farmhouse with a wraparound porch", the spec MUST include those details. Do not
-ignore, generalize, or replace the user's specific requests with generic defaults.
+Users talk to you like they would Alexa: short commands like "Ravlo, the house white"
+or "make it 3 stories" or "all bedrooms upstairs". You understand instantly and act.
 
-Build Studio owns construction layout, scope, blueprint/site/exterior consistency, and build-package structure.
-Design Studio owns most interior/exterior visual styling and finish variations.
+PERSONALITY:
+- Adaptive: match the user's energy. Short command → short confirmation. Detailed vision → detailed response.
+- Voice-command ready: parse casual shorthand. "the house white" = white exterior. "bedrooms upstairs" = 2+ stories with bedrooms on upper floor.
+- Confident: you're a seasoned architect. You get it on the first try.
+- Concise: "White exterior, 2-story — locked in." not a paragraph.
+- If unclear, ask ONE sharp question. Never over-ask.
 
-Help the user create a clear build specification before image generation. Ask only for missing information that materially affects the build package.
+CRITICAL RULE: Your #1 priority is to understand the user's specific request and
+reflect it accurately in the spec. "Modern farmhouse with wraparound porch" →
+spec MUST include those exact details. Never generalize or replace with defaults.
 
-When the user describes what they want:
-1. Extract EVERY specific detail they mention (style, materials, features, layout preferences, room details).
-2. Put their exact words into "description" and "special_features" so the image generator sees them.
-3. Use "notes" for site constraints, setbacks, zoning, and technical requirements.
-4. If the user mentions specific architectural features (e.g. "wraparound porch", "exposed beams",
-   "stone facade", "metal roof"), include them verbatim in "special_features".
-5. Respond in "assistant_message" confirming what you understood and what you will generate.
+TASK:
+1. Extract EVERY detail (style, materials, features, layout, rooms).
+2. Put their exact words into "description" and "special_features".
+3. Use "notes" for site constraints, setbacks, zoning.
+4. Specific features ("wraparound porch", "stone facade") go verbatim in "special_features".
+5. Respond in "assistant_message" — short, confident, confirming what you understood.
 
-Return ONLY valid JSON in this shape:
+Return ONLY valid JSON:
 
 {{
   "status": "needs_more_info" or "ready",
-  "assistant_message": "Natural language response confirming what you understood from the user's request and what you plan to generate.",
+  "assistant_message": "Short, adaptive confirmation of what you understood and what you're building.",
   "spec": {{
     "intent": "scope|blueprint|siteplan|exterior_from_blueprint|exterior_from_photo|build_package",
     "property_type": "",
     "style": "",
-    "description": "The user's full creative vision in their own words — this drives image generation",
+    "description": "The user's full creative vision — drives image generation",
     "preserve_layout": true,
     "blueprint_url": "",
     "reference_image_url": "",
@@ -111,7 +114,7 @@ Return ONLY valid JSON in this shape:
     "roof_style": "",
     "siding_material": "",
     "window_style": "",
-    "special_features": "Specific architectural features the user requested — these appear in the generation prompt",
+    "special_features": "Architectural features the user requested — verbatim",
     "notes": "Site and technical constraints",
     "known_constraints": [],
     "outputs": ["scope", "blueprint", "siteplan", "exterior_from_blueprint"],
@@ -127,11 +130,10 @@ Return ONLY valid JSON in this shape:
 }}
 
 Mode rules:
-- Use exterior_from_blueprint when a blueprint/floor plan must drive exterior massing.
-- Use exterior_from_photo when a real exterior photo should be preserved or restyled.
-- Use build_package for a complete scope + materials + phases + timeline + risks + images package.
-- Do not overload generic exterior.
-- When the user has given enough information to generate (property type + style + floor count at minimum), set status to "ready" and proceed. Do not over-ask.
+- exterior_from_blueprint: blueprint/floor plan drives exterior massing.
+- exterior_from_photo: real exterior photo to preserve or restyle.
+- build_package: complete scope + materials + phases + timeline + risks + images.
+- When user has given enough info (type + style + floors minimum), set status "ready". Don't over-ask.
 
 Current spec:
 {current_spec}
@@ -523,9 +525,9 @@ def _fallback_build_chat_plan(messages, current_spec=None):
 
 
 def _build_conversational_reply(user_text, inferred, missing, status):
-    """Generate a natural-sounding reply that references details from the user's message."""
+    """Generate an adaptive, voice-command-style reply referencing user's details."""
     if not user_text.strip():
-        return "Tell me what you'd like to build — describe the style, size, materials, and any special features."
+        return "What are we building? Style, size, materials — hit me."
 
     # Collect what we understood
     details = []
@@ -539,45 +541,31 @@ def _build_conversational_reply(user_text, inferred, missing, status):
         "coastal": "coastal",
     }
     prop_labels = {
-        "single_family": "single-family home",
+        "single_family": "single-family",
         "duplex": "duplex",
         "townhome": "townhome",
-        "multifamily": "multifamily building",
-        "mixed_use": "mixed-use building",
+        "multifamily": "multifamily",
+        "mixed_use": "mixed-use",
     }
+    if inferred.get("style"):
+        details.append(style_labels.get(inferred["style"], inferred["style"]))
     if inferred.get("property_type"):
         details.append(prop_labels.get(inferred["property_type"], inferred["property_type"]))
-    if inferred.get("style"):
-        details.append(f"{style_labels.get(inferred['style'], inferred['style'])} style")
     if inferred.get("stories"):
         details.append(f"{inferred['stories']}-story")
     if inferred.get("siding_material"):
-        details.append(f"with {inferred['siding_material']}")
+        details.append(inferred["siding_material"])
 
     if status == "ready":
         if details:
             summary = ", ".join(details)
-            return (
-                f"Got it — I'm setting up a {summary} build based on your description. "
-                f"I've filled in the spec below. Review it and click Generate when you're ready, "
-                f"or tell me if you want to change anything."
-            )
-        return (
-            "I've captured your vision and filled in the build spec below. "
-            "Review the details and click Generate when you're ready, "
-            "or tell me more about what you'd like to adjust."
-        )
+            return f"{summary} — locked in. Spec's ready below. Generate when you're good, or tell me what to change."
+        return "Got your vision — spec's loaded below. Generate when ready, or keep talking."
     else:
         if details:
             summary = ", ".join(details)
-            return (
-                f"I'm putting together a {summary} build from your description. "
-                f"I have a few questions to make sure the result matches your vision:"
-            )
-        return (
-            "I've started drafting the build spec from your description. "
-            "A few more details will help me get it right:"
-        )
+            return f"{summary} — got it. Need a couple things to nail this:"
+        return "Heard you. A few quick details and we're locked:"
 
 
 def _post_build_generate(engine_url, spec):
@@ -1417,19 +1405,30 @@ def _build_chat_response():
             model=current_app.config.get("AI_MODEL") or "gpt-4o-mini",
             messages=[
                 {"role": "system", "content": (
-                    "You are Ravlo Build Studio's intelligent planning engine. "
-                    "Your top priority is to listen to the user's specific requests "
-                    "and reflect them accurately in the build spec. "
-                    "Capture the user's exact creative vision in the description and special_features fields. "
+                    "You are Ravlo — an adaptive AI build assistant with a voice-command personality. "
+                    "Users talk to you like they would Alexa or Siri: short commands like "
+                    "'Ravlo, the house white' or 'make it 3 stories'. You understand instantly.\n\n"
+                    "PERSONALITY RULES:\n"
+                    "- Be adaptive: match the user's energy. Short command → short confirmation. "
+                    "Detailed request → detailed response.\n"
+                    "- Acknowledge fast: 'White exterior — done.' not a paragraph.\n"
+                    "- Be confident: you're a seasoned architect who gets it on the first try.\n"
+                    "- No fluff, no filler. Every word earns its place.\n"
+                    "- If something is unclear, ask ONE sharp question.\n\n"
+                    "TASK: Listen to the user's request, update the build spec to match, "
+                    "and confirm what you did in assistant_message. "
+                    "Capture their exact vision in description and special_features. "
                     "Return only valid JSON."
                 )},
                 {"role": "user", "content": _build_chat_prompt(messages, current_spec)},
             ],
             temperature=0.25,
         )
-    except Exception:
-        current_app.logger.warning("Build chat planning engine fallback used", exc_info=True)
-        return jsonify(_fallback_build_chat_plan(messages, current_spec))
+    except Exception as exc:
+        current_app.logger.warning("Build chat AI error: %s", exc, exc_info=True)
+        fallback = _fallback_build_chat_plan(messages, current_spec)
+        fallback["_ai_error"] = str(exc)
+        return jsonify(fallback)
 
     parsed = _safe_json(response.choices[0].message.content)
     parsed["spec"] = _prepare_build_generation_spec(parsed.get("spec") or current_spec)

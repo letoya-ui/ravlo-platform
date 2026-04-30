@@ -7543,27 +7543,34 @@ def design_studio_chat():
         client = OpenAI(api_key=api_key)
 
         system_prompt = (
-            "You are Ravlo Design Studio's intelligent interior design assistant. "
-            "Your top priority is to understand exactly what the user wants and help them "
-            "create the perfect interior design.\n\n"
-            "When the user describes what they want:\n"
-            "1. Extract EVERY specific detail: style, materials, colors, furniture, lighting, fixtures.\n"
-            "2. Respond conversationally confirming what you understood.\n"
-            "3. If key details are missing, ask targeted follow-up questions.\n"
-            "4. Return structured suggestions for the form fields.\n\n"
+            "You are Ravlo — an adaptive AI interior design assistant with a voice-command personality. "
+            "Users talk to you like they would Alexa: short commands like "
+            "'Ravlo, make the kitchen modern' or 'white marble countertops' or 'farmhouse style'. "
+            "You understand instantly and act.\n\n"
+            "PERSONALITY:\n"
+            "- Adaptive: match the user's energy. Short command → short confirmation. "
+            "Detailed vision → detailed response.\n"
+            "- Voice-command ready: parse casual shorthand. 'kitchen modern' = modern kitchen design.\n"
+            "- Confident: you're a seasoned designer. You get it on the first try.\n"
+            "- Concise: 'Modern kitchen, marble island — locked in.' not a paragraph.\n"
+            "- If unclear, ask ONE sharp question. Never over-ask.\n\n"
+            "TASK:\n"
+            "1. Extract EVERY detail: style, materials, colors, furniture, lighting, fixtures.\n"
+            "2. Confirm what you understood in assistant_message — short, confident.\n"
+            "3. If key details are missing, ask ONE targeted follow-up.\n"
+            "4. Return structured suggestions for form fields.\n\n"
             "Return ONLY valid JSON:\n"
             '{\n'
-            '  "assistant_message": "Your conversational response to the user",\n'
+            '  "assistant_message": "Short, adaptive confirmation",\n'
             '  "config": {\n'
             '    "style": "modern_luxury|modern_farmhouse|minimal_modern|traditional|industrial_loft|coastal",\n'
             '    "room_type": "living room|kitchen|primary bedroom|bathroom|dining room|office",\n'
-            '    "description": "The user\'s full creative vision — this drives image generation",\n'
-            '    "notes": "Additional technical details about materials, finishes, etc."\n'
+            '    "description": "The user\'s full creative vision — drives image generation",\n'
+            '    "notes": "Technical details about materials, finishes, etc."\n'
             '  },\n'
             '  "ready": true or false\n'
             '}\n\n'
-            "Set ready=true when you have enough information to generate a great design. "
-            "Don't over-ask — if the user gave a clear description, you're ready."
+            "Set ready=true when you have enough info for a great design. Don't over-ask."
         )
 
         user_prompt = (
@@ -7596,11 +7603,13 @@ def design_studio_chat():
         return jsonify(parsed)
 
     except Exception as exc:
-        current_app.logger.warning("Design studio chat error", exc_info=True)
-        return jsonify(_design_studio_fallback_chat(
+        current_app.logger.warning("Design studio chat AI error: %s", exc, exc_info=True)
+        fallback = _design_studio_fallback_chat(
             data.get("messages") if "data" in dir() else [],
             data.get("config") if "data" in dir() else {},
-        ))
+        )
+        fallback["_ai_error"] = str(exc)
+        return jsonify(fallback)
 
 
 def _design_studio_fallback_chat(messages, current_config):
@@ -7666,9 +7675,9 @@ def _design_studio_fallback_chat(messages, current_config):
 
 
 def _design_conversational_reply(user_text, config):
-    """Generate a natural-sounding reply that references details from the user's design request."""
+    """Generate an adaptive, voice-command-style reply referencing user's design request."""
     if not user_text.strip():
-        return "Tell me what you want this room to look like — describe the style, materials, colors, and furniture."
+        return "What room are we designing? Style, colors, materials — hit me."
 
     details = []
     style_labels = {
@@ -7687,23 +7696,15 @@ def _design_conversational_reply(user_text, config):
         "dining room": "dining room",
         "office": "office",
     }
+    if config.get("style"):
+        details.append(style_labels.get(config["style"], config["style"]))
     if config.get("room_type"):
         details.append(room_labels.get(config["room_type"], config["room_type"]))
-    if config.get("style"):
-        details.append(f"{style_labels.get(config['style'], config['style'])} style")
 
     if details:
         summary = ", ".join(details)
-        return (
-            f"Got it — I'm setting up a {summary} design based on your description. "
-            f"I've filled in the form fields below. You can tweak anything, "
-            f"then click Generate to see the result."
-        )
-    return (
-        "I've captured your design vision and filled in the details below. "
-        "Review the form, adjust anything you'd like, "
-        "then click Generate to bring it to life."
-    )
+        return f"{summary} — locked in. Form's updated below. Generate when ready, or tell me more."
+    return "Got your vision — form's loaded below. Generate when ready, or keep talking."
 
 
 @investor_bp.route("/deal-studio/build-studio/generate-interior", methods=["POST"])
