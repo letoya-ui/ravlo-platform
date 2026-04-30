@@ -134,6 +134,7 @@ def build_generate():
         response = requests.post(
             f"{engine_url}/api/generator/build/generate",
             json={"spec": spec},
+            headers={"ngrok-skip-browser-warning": "true"},
             timeout=600,
         )
 
