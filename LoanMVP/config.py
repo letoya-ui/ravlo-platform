@@ -17,7 +17,11 @@ DEFAULT_SQLITE_URI = "sqlite:///" + DEFAULT_SQLITE_PATH.replace("\\", "/")
 for path in (INSTANCE_PATH, UPLOAD_FOLDER, LOG_FOLDER):
     os.makedirs(path, exist_ok=True)
 
-load_dotenv()
+LOCAL_DOTENV_PATH = os.path.join(BASE_DIR, ".env")
+if os.path.exists(LOCAL_DOTENV_PATH):
+    load_dotenv(LOCAL_DOTENV_PATH)
+else:
+    load_dotenv()
 
 TRUE_VALUES = {"1", "true", "yes", "on"}
 
@@ -57,6 +61,21 @@ def _env_list(name: str, default: str = ""):
     if not raw:
         return []
     return [item.strip().rstrip("/") for item in raw.split(",") if item.strip()]
+
+
+def _normalize_engine_url(raw_url: str) -> str:
+    url = (raw_url or "").strip().rstrip("/")
+    if url.startswith("http://") and ".ngrok-free.dev" in url:
+        return "https://" + url[len("http://"):]
+    return url
+
+
+def _engine_url_from_env(default: str) -> str:
+    env_url = os.getenv("RENOVATION_ENGINE_URL")
+    url = _normalize_engine_url(env_url or default)
+    if env_url and url != env_url.strip().rstrip("/"):
+        os.environ["RENOVATION_ENGINE_URL"] = url
+    return url
 
 
 def _env_origin_list(name: str, *fallback_env_names: str, default: str = ""):
@@ -151,10 +170,9 @@ class Config:
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
     AI_MODEL = os.environ.get("AI_MODEL", "gpt-4-turbo-preview")
     AI_TIMEOUT = _env_int("AI_TIMEOUT", 30)
-    RENOVATION_ENGINE_URL = os.getenv(
-        "RENOVATION_ENGINE_URL",
+    RENOVATION_ENGINE_URL = _engine_url_from_env(
         "https://nondiscoverable-henry-metempirical.ngrok-free.dev",
-    ).rstrip("/")
+    )
     
     RENOVATION_API_KEY = os.getenv("RENOVATION_API_KEY", "")
 
