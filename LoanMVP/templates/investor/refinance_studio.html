@@ -1,0 +1,253 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo | Refinance Studio{% endblock %}
+{% block page_title %}Refinance Studio{% endblock %}
+{% block page_subline %}Package an existing property, rehab plan, and refinance request for lender review.{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ property_tool_url }}" class="ravlo-btn ghost sm">Add Property</a>
+{% if build_url %}
+<a href="{{ build_url }}" class="ravlo-btn ghost sm">Build Scope</a>
+{% endif %}
+{% if design_url %}
+<a href="{{ design_url }}" class="ravlo-btn ghost sm">Design Rehab</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% set seed = refi_seed or {} %}
+
+<div class="refi-shell">
+  <section class="refi-hero ravlo-card pad">
+    <div>
+      <div class="eyebrow">REFINANCE ROUTE</div>
+      <h2>{{ seed.address or "Existing Property Refinance" }}</h2>
+      <p class="muted">Tie the existing asset, rehab budget, new value, rent, and payoff into a clean refinance request.</p>
+    </div>
+    <div class="refi-hero-actions">
+      {% if deal %}
+      <a href="{{ url_for('investor.deal_workspace', prop_id=deal.saved_property_id) if deal.saved_property_id else url_for('investor.deal_workspace') }}" class="ravlo-btn ghost">Deal Workspace</a>
+      {% endif %}
+      <a href="{{ url_for('investor.loans') }}" class="ravlo-btn ghost">Capital Studio</a>
+    </div>
+  </section>
+
+  <section class="refi-grid">
+    <aside class="ravlo-card pad refi-context">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">PROPERTY</div>
+          <h3>Existing Asset</h3>
+        </div>
+      </div>
+
+      <form method="GET" class="selector-form">
+        <select name="prop_id" class="ravlo-input" onchange="this.form.submit()">
+          <option value="">Manual property</option>
+          {% for prop in saved_props %}
+          <option value="{{ prop.id }}" {% if selected_prop and selected_prop.id == prop.id %}selected{% endif %}>
+            {{ prop.address or ("Saved Property #" ~ prop.id) }}
+          </option>
+          {% endfor %}
+        </select>
+      </form>
+
+      <div class="refi-metrics">
+        <div><span>Current Value</span><strong id="metricCurrentValue">${{ "{:,.0f}".format(seed.current_value or 0) if seed.current_value else "0" }}</strong></div>
+        <div><span>After Rehab Value</span><strong id="metricArv">${{ "{:,.0f}".format(seed.arv_after_rehab or 0) if seed.arv_after_rehab else "0" }}</strong></div>
+        <div><span>Rehab Budget</span><strong id="metricRehab">${{ "{:,.0f}".format(seed.rehab_budget or 0) if seed.rehab_budget else "0" }}</strong></div>
+        <div><span>Monthly Rent</span><strong id="metricRent">${{ "{:,.0f}".format(seed.monthly_rent or 0) if seed.monthly_rent else "0" }}</strong></div>
+      </div>
+
+      <div class="refi-note">
+        <strong id="refiLtvLabel">0% LTV</strong>
+        <span id="refiCashLabel">$0 estimated cash after payoff and rehab.</span>
+      </div>
+    </aside>
+
+    <form id="refiForm" class="ravlo-card pad refi-form" method="POST" action="{{ loan_submit_url }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if deal %}
+      <input type="hidden" name="deal_id" value="{{ deal.id }}">
+      {% endif %}
+
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">LOAN PACKAGE</div>
+          <h3>Rehab + Refinance Request</h3>
+        </div>
+      </div>
+
+      <div class="form-grid two">
+        <div class="field">
+          <label>Full Name</label>
+          <input class="ravlo-input" name="full_name" value="{{ investor.full_name or '' }}">
+        </div>
+        <div class="field">
+          <label>Loan Type</label>
+          <select class="ravlo-input" name="loan_type" id="loanType">
+            <option value="Refinance / DSCR" selected>Refinance / DSCR</option>
+            <option value="Cash-Out Refinance">Cash-Out Refinance</option>
+            <option value="Bridge to Refinance">Bridge to Refinance</option>
+            <option value="Renovation Refinance">Renovation Refinance</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>Property Address</label>
+          <input class="ravlo-input" name="project_address" id="projectAddress" value="{{ seed.address or '' }}" placeholder="123 Oakwood Dr Tampa FL">
+        </div>
+        <div class="field">
+          <label>Current Value</label>
+          <input class="ravlo-input refi-number" id="currentValue" name="current_value" type="number" step="1000" value="{{ seed.current_value or '' }}">
+        </div>
+        <div class="field">
+          <label>Existing Debt / Payoff</label>
+          <input class="ravlo-input refi-number" id="existingDebt" name="existing_debt" type="number" step="1000" value="{{ seed.existing_debt or '' }}">
+        </div>
+        <div class="field">
+          <label>Rehab Budget</label>
+          <input class="ravlo-input refi-number" id="rehabBudget" name="rehab_budget" type="number" step="1000" value="{{ seed.rehab_budget or '' }}">
+        </div>
+        <div class="field">
+          <label>After Rehab Value</label>
+          <input class="ravlo-input refi-number" id="propertyValue" name="property_value" type="number" step="1000" value="{{ seed.arv_after_rehab or seed.current_value or '' }}">
+        </div>
+        <div class="field">
+          <label>Monthly Rent</label>
+          <input class="ravlo-input refi-number" id="monthlyRent" name="monthly_rent" type="number" step="100" value="{{ seed.monthly_rent or '' }}">
+        </div>
+        <div class="field">
+          <label>Requested Amount</label>
+          <input class="ravlo-input refi-number" id="requestedAmount" name="amount" type="number" step="1000" value="{{ seed.requested_amount or '' }}">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Preferred Loan Officer</label>
+        <select class="ravlo-input" name="preferred_loan_officer_id">
+          <option value="">No preference</option>
+          {% for officer in officers %}
+          <option value="{{ officer.id }}">{{ officer.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Project Description</label>
+        <textarea class="ravlo-input" id="projectDescription" name="project_description" rows="5">{{ seed.project_description or '' }}</textarea>
+      </div>
+
+      <div class="refi-summary-grid">
+        <div><span>Target LTV</span><strong id="summaryLtv">0%</strong></div>
+        <div><span>Cash After Rehab</span><strong id="summaryCash">$0</strong></div>
+        <div><span>Rent Coverage</span><strong id="summaryDscr">0.00x</strong></div>
+      </div>
+
+      <div class="cta-row">
+        {% if design_url %}
+        <a href="{{ design_url }}" class="ravlo-btn ghost">Open Design Studio</a>
+        {% endif %}
+        <button id="refiSubmitBtn" class="ravlo-btn primary" type="submit">Submit Refinance Request</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<style>
+.refi-shell{display:grid;gap:20px}
+.refi-hero{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:start}
+.refi-hero h2{margin:0 0 8px}
+.refi-hero-actions,.cta-row{display:flex;gap:12px;flex-wrap:wrap}
+.refi-grid{display:grid;grid-template-columns:360px minmax(0,1fr);gap:20px;align-items:start}
+.refi-context{position:sticky;top:16px}
+.selector-form{margin-bottom:16px}
+.form-grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.field{display:grid;gap:7px;margin-bottom:14px}
+.field.full{grid-column:1/-1}
+.field label{color:var(--muted);font-size:.88rem;font-weight:700}
+.ravlo-input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.035);color:var(--text)}
+textarea.ravlo-input{resize:vertical;min-height:120px}
+.refi-metrics,.refi-summary-grid{display:grid;gap:12px}
+.refi-metrics div,.refi-summary-grid div{display:flex;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.035)}
+.refi-metrics span,.refi-summary-grid span{color:var(--muted)}
+.refi-note{display:grid;gap:6px;margin-top:16px;padding:14px;border:1px solid rgba(122,184,255,.18);border-radius:10px;background:rgba(122,184,255,.08)}
+.refi-note strong{color:#eaf4ff}
+.refi-note span{color:#c7d4e5}
+.refi-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin:16px 0}
+@media (max-width: 960px){.refi-hero,.refi-grid,.form-grid.two,.refi-summary-grid{grid-template-columns:1fr}.refi-context{position:static}}
+</style>
+
+<script>
+(() => {
+  const form = document.getElementById('refiForm');
+  const submitBtn = document.getElementById('refiSubmitBtn');
+  const csrfToken = form?.querySelector('input[name="csrf_token"]')?.value || '';
+  const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+  function num(id) {
+    const value = Number(document.getElementById(id)?.value || 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function refreshRefiSummary() {
+    const currentValue = num('currentValue');
+    const propertyValue = num('propertyValue') || currentValue;
+    const rehabBudget = num('rehabBudget');
+    const existingDebt = num('existingDebt');
+    const requestedAmount = num('requestedAmount');
+    const monthlyRent = num('monthlyRent');
+    const ltv = propertyValue > 0 ? requestedAmount / propertyValue : 0;
+    const cashAfterRehab = requestedAmount - existingDebt - rehabBudget;
+    const monthlyDebtEstimate = requestedAmount > 0 ? (requestedAmount * 0.078 / 12) : 0;
+    const dscr = monthlyDebtEstimate > 0 ? monthlyRent / monthlyDebtEstimate : 0;
+
+    setText('metricCurrentValue', money.format(currentValue));
+    setText('metricArv', money.format(propertyValue));
+    setText('metricRehab', money.format(rehabBudget));
+    setText('metricRent', money.format(monthlyRent));
+    setText('summaryLtv', `${Math.round(ltv * 100)}%`);
+    setText('summaryCash', money.format(cashAfterRehab));
+    setText('summaryDscr', `${dscr.toFixed(2)}x`);
+    setText('refiLtvLabel', `${Math.round(ltv * 100)}% LTV`);
+    setText('refiCashLabel', `${money.format(cashAfterRehab)} estimated cash after payoff and rehab.`);
+
+    const description = document.getElementById('projectDescription');
+    if (description && !description.dataset.touched) {
+      const address = document.getElementById('projectAddress')?.value || 'the property';
+      description.value = `Refinance request for ${address}. Existing payoff ${money.format(existingDebt)}, rehab budget ${money.format(rehabBudget)}, after rehab value ${money.format(propertyValue)}, monthly rent ${money.format(monthlyRent)}, requested loan ${money.format(requestedAmount)}.`;
+    }
+  }
+
+  document.querySelectorAll('.refi-number').forEach((input) => input.addEventListener('input', refreshRefiSummary));
+  document.getElementById('projectDescription')?.addEventListener('input', function () { this.dataset.touched = 'true'; });
+  refreshRefiSummary();
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    refreshRefiSummary();
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken },
+        body: new FormData(form),
+        credentials: 'same-origin'
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Submission failed.');
+      window.location.href = data.redirect_url;
+    } catch (error) {
+      alert(error.message || 'Something went wrong submitting the request.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Refinance Request';
+    }
+  });
+})();
+</script>
+{% endblock %}

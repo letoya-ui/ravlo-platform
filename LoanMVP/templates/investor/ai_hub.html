@@ -43,6 +43,8 @@ Ask Ravlo AI for capital guidance, deal strategy, underwriting clarity, or portf
       </div>
     </div>
 
+    {% include "investor/_ai_accuracy_notice.html" %}
+
     <form method="POST" action="{{ url_for('investor.ask_ai_post') }}" class="aihub-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -71,6 +73,8 @@ Ask Ravlo AI for capital guidance, deal strategy, underwriting clarity, or portf
         <h3>Ravlo AI Output</h3>
       </div>
     </div>
+
+    {% include "investor/_ai_accuracy_notice.html" %}
 
     <div class="aihub-reply">
       {{ ai_reply }}

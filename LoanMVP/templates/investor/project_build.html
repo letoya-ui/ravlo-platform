@@ -6,8 +6,8 @@
   <section class="studio-hero-card">
       <div>
       <div class="eyebrow">{{ hero_eyebrow or "RAVLO BUILD STUDIO" }}</div>
-      <h1>{{ hero_title or "Plan the site, blueprint, and exterior package." }}</h1>
-      <p class="muted">{{ page_subtitle or "Build Studio owns lot planning, site development plans, blueprint generation, and exterior concepts." }}</p>
+      <h1>{{ hero_title or "Tell Ravlo what to build. AI handles the rest." }}</h1>
+      <p class="muted">{{ page_subtitle or "Describe your vision in plain language — Ravlo's AI turns it into blueprints, site plans, and exterior concepts." }}</p>
     </div>
     <div class="hero-actions">
       {% if project and companion_endpoint %}
@@ -21,11 +21,48 @@
   </section>
 
   <section class="project-build-grid">
-    <section class="ravlo-card pad">
+    <section class="ravlo-card pad build-chat-panel">
       <div class="section-head">
         <div>
-          <div class="eyebrow">SETUP</div>
-          <h2>Build Planning Inputs</h2>
+          <div class="eyebrow">BUILD CONVERSATION</div>
+          <h2>Tell Ravlo What To Build</h2>
+        </div>
+        <strong id="buildSpecStatus">Draft</strong>
+      </div>
+
+      <div class="build-chat-thread" id="buildChatThread">
+        <div class="build-chat-message assistant">
+          <strong>Ravlo</strong>
+          <p>What are we building? Just tell me — "Ravlo, white house, 3 stories, modern farmhouse" — and I'll handle the rest. The more detail you give, the closer it gets. Or keep it short and I'll ask what I need.</p>
+        </div>
+      </div>
+
+      <div class="build-chat-composer">
+        <textarea id="buildChatInput" rows="3" placeholder="Example: 'Ravlo, 3-story luxury modern townhome, rooftop deck, glass front, dark brick and cedar siding, two-car garage on ground floor'"></textarea>
+        <div class="cta-row">
+          <button type="button" class="ravlo-btn ghost" id="askBuildPlannerBtn">Ask Ravlo</button>
+          <button type="button" class="ravlo-btn primary" id="approveBuildSpecBtn">Approve Spec</button>
+        </div>
+      </div>
+
+      <div class="build-spec-preview">
+        <div class="section-head compact">
+          <div>
+            <div class="eyebrow">STRUCTURED SPEC</div>
+            <h3>Build Intelligence</h3>
+          </div>
+        </div>
+        <div class="spec-chip-row" id="buildSpecChips"></div>
+        <pre id="buildSpecJson" class="build-spec-json">{}</pre>
+      </div>
+    </section>
+
+    <section class="ravlo-card pad build-context-panel">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">AI CONTEXT</div>
+          <h2>Build Inputs</h2>
+          <p class="muted" style="margin-top:4px;font-size:.85rem;">The AI chat fills these automatically — or edit them directly.</p>
         </div>
       </div>
 
@@ -34,9 +71,22 @@
         <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
         <input type="hidden" name="project_id" value="{{ project.id if project else '' }}">
         <input type="hidden" name="save_to_deal" value="true">
+        <input type="hidden" id="structuredBuildSpec" name="spec" value="">
 
 
         <div class="form-grid two">
+          <div class="field">
+            <label for="intent">Build Mode</label>
+            {% set intent_value = build_project.get('intent') or build_project.get('build_mode') or 'build_package' %}
+            <select id="intent" name="intent">
+              <option value="build_package" {{ 'selected' if intent_value == 'build_package' else '' }}>Build Package</option>
+              <option value="scope" {{ 'selected' if intent_value == 'scope' else '' }}>Scope</option>
+              <option value="blueprint" {{ 'selected' if intent_value == 'blueprint' else '' }}>Blueprint</option>
+              <option value="siteplan" {{ 'selected' if intent_value == 'siteplan' else '' }}>Site Plan</option>
+              <option value="exterior_from_blueprint" {{ 'selected' if intent_value == 'exterior_from_blueprint' else '' }}>Exterior From Blueprint</option>
+              <option value="exterior_from_photo" {{ 'selected' if intent_value == 'exterior_from_photo' else '' }}>Exterior From Photo</option>
+            </select>
+          </div>
           <div class="field">
             <label for="project_name">Project Name</label>
             <input id="project_name" name="project_name" value="{{ build_project.get('project_name') or (project.project_name if project else '') }}" placeholder="Maple Grove Townhomes">
@@ -89,8 +139,42 @@
             <input id="number_of_floors" name="number_of_floors" type="number" min="1" max="5" step="1" value="{{ number_of_floors_value or '' }}" placeholder="2">
           </div>
           <div class="field">
+            <label for="square_feet_target">Target Sq Ft</label>
+            <input id="square_feet_target" name="square_feet_target" type="number" min="300" step="50" value="{{ build_project.get('square_feet_target') or build_project.get('project_size') or '' }}" placeholder="2400">
+          </div>
+          <div class="field">
+            <label for="bedrooms">Bedrooms</label>
+            <input id="bedrooms" name="bedrooms" type="number" min="0" max="20" step="1" value="{{ build_project.get('bedrooms') or '' }}" placeholder="4">
+          </div>
+          <div class="field">
+            <label for="bathrooms">Bathrooms</label>
+            <input id="bathrooms" name="bathrooms" type="number" min="0" max="20" step="0.5" value="{{ build_project.get('bathrooms') or '' }}" placeholder="3">
+          </div>
+          <div class="field">
+            <label for="finish_level">Finish Level</label>
+            {% set finish_level_value = build_project.get('finish_level') or 'standard' %}
+            <select id="finish_level" name="finish_level">
+              <option value="standard" {{ 'selected' if finish_level_value == 'standard' else '' }}>Standard</option>
+              <option value="premium" {{ 'selected' if finish_level_value == 'premium' else '' }}>Premium</option>
+              <option value="luxury" {{ 'selected' if finish_level_value == 'luxury' else '' }}>Luxury</option>
+              <option value="builder grade" {{ 'selected' if finish_level_value == 'builder grade' else '' }}>Builder Grade</option>
+            </select>
+          </div>
+          <div class="field">
             <label for="zoning">Zoning</label>
             <input id="zoning" name="zoning" value="{{ build_project.get('zoning') or (project.zoning if project else '') }}" placeholder="R-3">
+          </div>
+          <div class="field">
+            <label class="check-field">
+              <input type="checkbox" id="garage" name="garage" value="true" autocomplete="off" {% if build_project.get('garage') %}checked{% endif %}>
+              <span>Garage Included</span>
+            </label>
+          </div>
+          <div class="field">
+            <label class="check-field">
+              <input type="checkbox" id="preserve_layout" name="preserve_layout" value="true" autocomplete="off" {% if build_project.get('preserve_layout', true) %}checked{% endif %}>
+              <span>Preserve blueprint layout</span>
+            </label>
           </div>
           <div class="field full">
             <label for="location">Location</label>
@@ -99,13 +183,13 @@
         </div>
 
         <div class="field">
-          <label for="description">Project Description</label>
-          <textarea id="description" name="description" rows="4" placeholder="Describe the site program, density, building count, parking, and target product.">{{ build_project.get('description') or (project.description if project else '') }}</textarea>
+          <label for="description" style="font-weight:600;">What Do You Want To Build? <span style="font-weight:400;opacity:.6;">(This drives the AI — be specific)</span></label>
+          <textarea id="description" name="description" rows="5" placeholder="Tell Ravlo exactly what you want. Example: 'I want a two-story modern farmhouse with a wraparound porch, stone accent on the lower facade, standing seam metal roof, 4 bedrooms, 3.5 baths, open-concept first floor, and an attached two-car garage.' The more specific you are, the better.">{{ build_project.get('description') or (project.description if project else '') }}</textarea>
         </div>
 
         <div class="field">
-          <label for="notes">Site Notes</label>
-          <textarea id="notes" name="notes" rows="3" placeholder="Setbacks, parking, amenity courts, road access, grading, utility constraints.">{{ build_project.get('notes') or (project.notes if project else '') }}</textarea>
+          <label for="notes">Site &amp; Technical Notes</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Setbacks, parking, amenity courts, road access, grading, utility constraints, special site conditions.">{{ build_project.get('notes') or (project.notes if project else '') }}</textarea>
         </div>
 
         <div class="form-grid two">
@@ -147,7 +231,7 @@
       </form>
     </section>
 
-    <section class="ravlo-card pad">
+    <section class="ravlo-card pad planning-summary-card">
       <div class="section-head">
         <div>
           <div class="eyebrow">SNAPSHOT</div>
@@ -159,6 +243,7 @@
         <div><span>Floor 1</span><strong id="summaryBlueprint">{{ 'Ready' if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) else 'Waiting' }}</strong></div>
         <div><span>Floor 2</span><strong id="summaryFloor2">{{ 'Ready' if blueprint_floor2_result and blueprint_floor2_result.get('image_url') else ('Skipped' if blueprint_floor2_result and blueprint_floor2_result.get('skipped') else 'Waiting') }}</strong></div>
         <div><span>Floor 3</span><strong id="summaryFloor3">{{ 'Ready' if blueprint_floor3_result and blueprint_floor3_result.get('image_url') else ('Skipped' if blueprint_floor3_result and blueprint_floor3_result.get('skipped') else 'Waiting') }}</strong></div>
+        <div><span>Site Plan</span><strong id="summarySiteplan">{{ 'Ready' if siteplan_result and siteplan_result.get('image_url') else 'Waiting' }}</strong></div>
         <div><span>Exterior</span><strong id="summaryExterior">{{ 'Ready' if exterior_result and exterior_result.get('image_url') else 'Waiting' }}</strong></div>
       </div>
       {% if build_analysis %}
@@ -192,6 +277,11 @@
     </article>
 
     <article class="ravlo-card pad">
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Site Plan</h2></div><strong id="siteplanStatus">{{ 'Generated' if siteplan_result and siteplan_result.get('image_url') else 'Waiting' }}</strong></div>
+      <div class="result-media plan-media" id="siteplanMedia">{% if siteplan_result and siteplan_result.get('image_url') %}<img src="{{ siteplan_result.get('image_url') }}" alt="Site plan">{% else %}<div class="empty-state-inline">Site plan will appear here.</div>{% endif %}</div>
+    </article>
+
+    <article class="ravlo-card pad">
       <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Exterior - Front</h2></div><strong id="exteriorStatus">{{ 'Generated' if exterior_result and exterior_result.get('image_url') else 'Waiting' }}</strong></div>
       <div class="result-media photo-media" id="exteriorMedia">{% if exterior_result and exterior_result.get('image_url') %}<img src="{{ exterior_result.get('image_url') }}" alt="Exterior front">{% else %}<div class="empty-state-inline">Front exterior concept will appear here.</div>{% endif %}</div>
     </article>
@@ -206,10 +296,10 @@
   <div class="loading-overlay hidden" id="buildLoadingOverlay">
     <div class="loading-card">
       <div class="loader-ring"></div>
-      <h3 id="buildLoadingTitle">Generating Build Studio Package...</h3>
-      <p id="buildLoadingMessage">Ravlo is building the floor plans and exterior package now.</p>
+      <h3 id="buildLoadingTitle">AI is Generating Your Build Package...</h3>
+      <p id="buildLoadingMessage">Ravlo's AI is composing prompts from your description and generating the full package.</p>
       <div class="loading-progress-list">
-        <div class="loading-step" id="buildLoadingStep1">Preparing project inputs...</div>
+        <div class="loading-step" id="buildLoadingStep1">AI is composing prompts from your description...</div>
         <div class="loading-step" id="buildLoadingStep2">Generating first floor blueprint...</div>
         <div class="loading-step" id="buildLoadingStep3">Generating additional floor blueprints...</div>
         <div class="loading-step" id="buildLoadingStep4">Generating exterior concepts...</div>
@@ -222,11 +312,26 @@
 <style>
 .project-build-shell,.project-build-grid,.result-stack{display:grid;gap:20px}
 .studio-hero-card{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:start}
-.project-build-grid{grid-template-columns:1.3fr .7fr}
+.project-build-grid{grid-template-columns:minmax(0,1fr) 380px;align-items:start}
+.build-chat-panel{min-height:100%}
+.build-context-panel{position:sticky;top:16px;align-self:start}
+.planning-summary-card{grid-column:1/-1}
 .form-grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .field{display:grid;gap:8px;margin-bottom:14px}.field.full{grid-column:1/-1}
 .field input,.field select,.field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
 .check-field{display:flex!important;align-items:center;gap:10px;margin-top:2px;color:#dbe6f5;font-weight:700}.check-field input{width:18px!important;height:18px;padding:0!important}
+.section-head.compact{align-items:start;margin-top:16px}
+.build-chat-thread{display:grid;gap:12px;max-height:360px;overflow:auto;padding-right:4px}
+.build-chat-message{padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.035)}
+.build-chat-message.user{margin-left:42px;background:rgba(122,184,255,.08);border-color:rgba(122,184,255,.18)}
+.build-chat-message.assistant{margin-right:42px}
+.build-chat-message strong{display:block;color:#fff;margin-bottom:6px}
+.build-chat-message p{margin:0;color:#c9d5e6;line-height:1.55}
+.build-chat-composer{display:grid;gap:12px;margin-top:14px}
+.build-chat-composer textarea{width:100%;resize:vertical;min-height:92px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
+.spec-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.spec-chip-row span{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(122,184,255,.18);background:rgba(122,184,255,.08);color:#dbeafe;font-size:.78rem;font-weight:800}
+.build-spec-json{max-height:260px;overflow:auto;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(4,8,14,.72);color:#dce8f7;font-size:.82rem;line-height:1.5;white-space:pre-wrap}
 .result-meta{display:grid;gap:12px}.result-meta div{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
 .result-media{border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.03);min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px;aspect-ratio:16/10}.result-media.plan-media{aspect-ratio:1/1;background:rgba(242,246,250,.92)}.result-media.photo-media{aspect-ratio:16/10;background:rgba(5,10,18,.65)}.result-media img{width:100%;height:100%;object-fit:contain;display:block;border-radius:14px}.plan-media .empty-state-inline{color:#233044}
 .section-head>strong{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:#dbeafe;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
@@ -245,7 +350,7 @@
 .loading-step{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);color:#dbe6f5}
 .loader-ring{width:58px;height:58px;border-radius:50%;margin:0 auto;border:4px solid rgba(255,255,255,.12);border-top-color:#7ab8ff;animation:build-spin 1s linear infinite}
 @keyframes build-spin{to{transform:rotate(360deg)}}
-@media (max-width: 900px){.studio-hero-card,.project-build-grid,.form-grid.two{grid-template-columns:1fr}}
+@media (max-width: 900px){.studio-hero-card,.project-build-grid,.form-grid.two{grid-template-columns:1fr}.build-context-panel{position:static}.build-chat-message.user,.build-chat-message.assistant{margin-left:0;margin-right:0}}
 </style>
 
 <script>
@@ -261,9 +366,174 @@
   const preserveExistingExteriorField = document.getElementById('preserve_existing_exterior');
   const buildLoadingOverlay = document.getElementById('buildLoadingOverlay');
   const buildLoadingMessage = document.getElementById('buildLoadingMessage');
+  const structuredBuildSpecField = document.getElementById('structuredBuildSpec');
+  const buildChatThread = document.getElementById('buildChatThread');
+  const buildChatInput = document.getElementById('buildChatInput');
+  const askBuildPlannerBtn = document.getElementById('askBuildPlannerBtn');
+  const approveBuildSpecBtn = document.getElementById('approveBuildSpecBtn');
+  const buildSpecStatus = document.getElementById('buildSpecStatus');
+  const buildSpecChips = document.getElementById('buildSpecChips');
+  const buildSpecJson = document.getElementById('buildSpecJson');
+  const initialBuildSpec = {{ ((build_project.get('latest_generator_build', {}) or {}).get('spec') or build_project.get('build_intelligence') or {})|tojson }};
+  let currentBuildSpec = (initialBuildSpec && typeof initialBuildSpec === 'object') ? initialBuildSpec : {};
+  let buildMessages = [];
 
   if (preserveExistingExteriorField) {
     preserveExistingExteriorField.checked = false;
+  }
+
+  function fieldValue(id) {
+    const el = document.getElementById(id);
+    return el ? String(el.value || '').trim() : '';
+  }
+
+  function numericValue(id) {
+    const raw = fieldValue(id);
+    if (!raw) return '';
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : raw;
+  }
+
+  function checkboxValue(id) {
+    return Boolean(document.getElementById(id)?.checked);
+  }
+
+  function outputsForIntent(intent) {
+    if (intent === 'scope') return ['scope'];
+    if (intent === 'blueprint') return ['blueprint'];
+    if (intent === 'siteplan') return ['siteplan'];
+    if (intent === 'exterior_from_blueprint') return ['exterior_from_blueprint'];
+    if (intent === 'exterior_from_photo') return ['exterior_from_photo'];
+    return ['scope', 'blueprint', 'siteplan', 'exterior_from_blueprint'];
+  }
+
+  function cleanSpec(value) {
+    if (Array.isArray(value)) {
+      return value.map(cleanSpec).filter((item) => {
+        if (item === '' || item === null || item === undefined) return false;
+        if (Array.isArray(item)) return item.length > 0;
+        if (typeof item === 'object') return Object.keys(item).length > 0;
+        return true;
+      });
+    }
+    if (value && typeof value === 'object') {
+      return Object.entries(value).reduce((acc, [key, item]) => {
+        const cleaned = cleanSpec(item);
+        const isEmptyObject = cleaned && typeof cleaned === 'object' && !Array.isArray(cleaned) && Object.keys(cleaned).length === 0;
+        if (cleaned !== '' && cleaned !== null && cleaned !== undefined && !isEmptyObject) acc[key] = cleaned;
+        return acc;
+      }, {});
+    }
+    return value;
+  }
+
+  function mergeSpec(base, next) {
+    return cleanSpec({ ...(base || {}), ...(next || {}) });
+  }
+
+  function gatherFormSpec() {
+    const intent = fieldValue('intent') || 'build_package';
+    const floors = currentFloorCount();
+    return cleanSpec({
+      intent,
+      build_mode: intent,
+      project_name: fieldValue('project_name'),
+      property_type: fieldValue('property_type'),
+      style: fieldValue('style'),
+      blueprint_style: fieldValue('blueprint_style'),
+      lot_size: fieldValue('lot_size'),
+      lot_count: numericValue('lot_count'),
+      number_of_floors: floors,
+      stories: floors,
+      square_feet_target: numericValue('square_feet_target'),
+      bedrooms: numericValue('bedrooms'),
+      bathrooms: numericValue('bathrooms'),
+      finish_level: fieldValue('finish_level'),
+      zoning: fieldValue('zoning'),
+      garage: checkboxValue('garage'),
+      preserve_layout: checkboxValue('preserve_layout'),
+      location: fieldValue('location'),
+      description: fieldValue('description'),
+      notes: fieldValue('notes'),
+      blueprint_url: fieldValue('blueprint_url'),
+      reference_image_url: fieldValue('reference_image_url'),
+      preserve_existing_exterior: checkboxValue('preserve_existing_exterior'),
+      outputs: outputsForIntent(intent),
+      output_modes: outputsForIntent(intent)
+    });
+  }
+
+  function setFieldValue(id, value) {
+    const el = document.getElementById(id);
+    if (!el || value === undefined || value === null || value === '') return;
+    el.value = value;
+  }
+
+  function syncSpecToForm(spec) {
+    if (!spec || typeof spec !== 'object') return;
+    const map = {
+      intent: 'intent',
+      build_mode: 'intent',
+      project_name: 'project_name',
+      property_type: 'property_type',
+      style: 'style',
+      blueprint_style: 'blueprint_style',
+      lot_size: 'lot_size',
+      lot_count: 'lot_count',
+      number_of_floors: 'number_of_floors',
+      stories: 'number_of_floors',
+      square_feet_target: 'square_feet_target',
+      bedrooms: 'bedrooms',
+      bathrooms: 'bathrooms',
+      finish_level: 'finish_level',
+      zoning: 'zoning',
+      location: 'location',
+      description: 'description',
+      notes: 'notes',
+      blueprint_url: 'blueprint_url',
+      reference_image_url: 'reference_image_url'
+    };
+    Object.entries(map).forEach(([specKey, fieldId]) => setFieldValue(fieldId, spec[specKey]));
+    if (spec.garage !== undefined) document.getElementById('garage').checked = Boolean(spec.garage);
+    if (spec.preserve_layout !== undefined) document.getElementById('preserve_layout').checked = Boolean(spec.preserve_layout);
+    if (spec.preserve_existing_exterior !== undefined && preserveExistingExteriorField) {
+      preserveExistingExteriorField.checked = Boolean(spec.preserve_existing_exterior);
+    }
+  }
+
+  function renderSpecPreview(spec, status, missingFields) {
+    const normalized = cleanSpec(spec || {});
+    const missing = Array.isArray(missingFields) ? missingFields : (normalized.missing_fields || []);
+    if (buildSpecStatus) buildSpecStatus.textContent = status || (missing.length ? 'Needs Info' : 'Draft');
+    if (buildSpecJson) buildSpecJson.textContent = JSON.stringify(normalized, null, 2);
+    if (buildSpecChips) {
+      const chips = [
+        normalized.intent || normalized.build_mode || 'build_package',
+        normalized.property_type,
+        normalized.style,
+        normalized.stories ? `${normalized.stories} stories` : '',
+        normalized.preserve_layout ? 'preserve layout' : ''
+      ].filter(Boolean);
+      buildSpecChips.innerHTML = chips.map((item) => `<span>${String(item).replace(/_/g, ' ')}</span>`).join('');
+    }
+  }
+
+  function updateStructuredSpecInput() {
+    currentBuildSpec = mergeSpec(currentBuildSpec, gatherFormSpec());
+    if (structuredBuildSpecField) structuredBuildSpecField.value = JSON.stringify(currentBuildSpec);
+    renderSpecPreview(currentBuildSpec);
+    return currentBuildSpec;
+  }
+
+  function appendChatMessage(role, text) {
+    if (!buildChatThread || !text) return;
+    const node = document.createElement('div');
+    node.className = `build-chat-message ${role === 'user' ? 'user' : 'assistant'}`;
+    const label = role === 'user' ? 'You' : 'Ravlo';
+    node.innerHTML = `<strong>${label}</strong><p></p>`;
+    node.querySelector('p').textContent = text;
+    buildChatThread.appendChild(node);
+    buildChatThread.scrollTop = buildChatThread.scrollHeight;
   }
 
   function inferFloorCountFromText(text) {
@@ -291,7 +561,7 @@
     const floors = currentFloorCount();
     if (floorCountInput && floors && floorCountInput.value !== String(floors)) floorCountInput.value = String(floors);
     if (buildLoadingMessage) {
-      buildLoadingMessage.textContent = `Ravlo is generating ${floors} floor plan${floors === 1 ? '' : 's'} and front/back exterior concepts.`;
+      buildLoadingMessage.textContent = `Ravlo's AI is composing prompts from your description and generating ${floors} floor plan${floors === 1 ? '' : 's'} plus front/back exterior concepts.`;
     }
     buildLoadingOverlay?.classList.remove('hidden');
     button.disabled = true;
@@ -311,8 +581,65 @@
       if (referenceImageField) referenceImageField.value = nextUrl;
       document.querySelectorAll('[data-site-url]').forEach((node) => node.classList.remove('is-active'));
       this.classList.add('is-active');
+      updateStructuredSpecInput();
     });
   });
+
+  form?.addEventListener('input', updateStructuredSpecInput);
+  form?.addEventListener('change', updateStructuredSpecInput);
+
+  askBuildPlannerBtn?.addEventListener('click', async () => {
+    const message = String(buildChatInput?.value || '').trim();
+    if (!message) return;
+    appendChatMessage('user', message);
+    buildMessages.push({ role: 'user', content: message });
+    buildChatInput.value = '';
+    askBuildPlannerBtn.disabled = true;
+    askBuildPlannerBtn.textContent = 'Thinking...';
+
+    try {
+      const response = await fetch("{{ url_for('investor_generator_build.investor_build_chat') }}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token() }}',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ messages: buildMessages, spec: updateStructuredSpecInput() })
+      });
+      const data = await response.json();
+      if (!response.ok || String(data.status || '').toLowerCase() === 'error') {
+        throw new Error(data.assistant_message || data.message || 'Build planning failed.');
+      }
+      const reply = data.assistant_message || 'I updated the build spec. Review it, then generate when ready.';
+      currentBuildSpec = mergeSpec(currentBuildSpec, data.spec || {});
+      syncSpecToForm(currentBuildSpec);
+      if (structuredBuildSpecField) structuredBuildSpecField.value = JSON.stringify(currentBuildSpec);
+      renderSpecPreview(currentBuildSpec, data.status === 'ready' ? 'Ready' : 'Needs Info', data.missing_fields || []);
+      appendChatMessage('assistant', reply);
+      buildMessages.push({ role: 'assistant', content: reply });
+      if (data._ai_error) {
+        console.warn('Build chat AI error:', data._ai_error);
+      }
+      if (Array.isArray(data.next_questions) && data.next_questions.length) {
+        appendChatMessage('assistant', data.next_questions.join(' '));
+      }
+    } catch (error) {
+      appendChatMessage('assistant', error.message || 'I could not update the build spec yet.');
+    } finally {
+      askBuildPlannerBtn.disabled = false;
+      askBuildPlannerBtn.textContent = 'Ask Ravlo';
+    }
+  });
+
+  approveBuildSpecBtn?.addEventListener('click', () => {
+    updateStructuredSpecInput();
+    renderSpecPreview(currentBuildSpec, 'Approved');
+  });
+
+  syncSpecToForm(currentBuildSpec);
+  updateStructuredSpecInput();
 
   function renderMedia(id, url, alt, fallback) {
     const el = document.getElementById(id);
@@ -320,30 +647,118 @@
     el.innerHTML = url ? `<img src="${url}" alt="${alt}">` : `<div class="empty-state-inline">${fallback}</div>`;
   }
 
+  function firstImage(value) {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = firstImage(item);
+        if (found) return found;
+      }
+      return '';
+    }
+    if (typeof value === 'object') {
+      return value.image_url || value.blueprint_url || value.exterior_url || value.render_url || value.concept_render_url || value.public_url || value.url || value.src || firstImage(value.images) || firstImage(value.image_urls) || '';
+    }
+    return '';
+  }
+
+  function normalizeBlock(value) {
+    if (!value) return {};
+    if (typeof value === 'string') return { image_url: value };
+    if (Array.isArray(value)) {
+      const image = firstImage(value);
+      return image ? { image_url: image, images: value.filter((item) => typeof item === 'string') } : {};
+    }
+    if (typeof value === 'object') {
+      const block = { ...value };
+      const image = firstImage(block);
+      if (image && !block.image_url) block.image_url = image;
+      return block;
+    }
+    return {};
+  }
+
+  function pickBlock(data, keys) {
+    const roots = [
+      data,
+      data?.investor,
+      data?.outputs,
+      data?.investor?.outputs,
+      data?.build_project,
+      data?.result,
+      data?.result?.build_project,
+      data?.result?.outputs,
+      data?.result?.package,
+      data?.data,
+      data?.data?.outputs,
+      data?.data?.package,
+      data?.package,
+      data?.build,
+    ].filter(Boolean);
+
+    for (const root of roots) {
+      for (const key of keys) {
+        const block = normalizeBlock(root[key]);
+        if (firstImage(block)) return block;
+      }
+    }
+    return {};
+  }
+
+  function normalizeGeneratorBuild(data) {
+    const rawNextUrl = data.deal_architect_url || data.investor?.deal_architect_url || data.next_url || data.investor?.next_url || '';
+    return {
+      blueprint_result: pickBlock(data, ['blueprint_result', 'blueprint', 'blueprint_floor1', 'first_floor_blueprint', 'floor_plan']),
+      blueprint_floor2_result: pickBlock(data, ['blueprint_floor2_result', 'blueprint_floor2', 'second_floor_blueprint', 'floor2_blueprint']),
+      blueprint_floor3_result: pickBlock(data, ['blueprint_floor3_result', 'blueprint_floor3', 'third_floor_blueprint', 'floor3_blueprint']),
+      siteplan_result: pickBlock(data, ['siteplan_result', 'siteplan', 'site_plan_result', 'site_plan', 'parcel_plan', 'lot_plan']),
+      exterior_result: pickBlock(data, ['exterior_result', 'exterior', 'exterior_front', 'front_exterior', 'concept', 'render']),
+      exterior_back_result: pickBlock(data, ['exterior_back_result', 'exterior_back', 'exterior_rear', 'rear_exterior', 'back_exterior']),
+      build_intelligence: data.build_intelligence || data.investor?.build_intelligence || data.result?.build_intelligence || {},
+      project_id: data.project_id || data.investor?.project_id || '',
+      deal_id: data.deal_id || data.investor?.deal_id || '',
+      next_url: rawNextUrl && rawNextUrl.includes('deal-architect') ? rawNextUrl : (data.deal_architect_url || data.investor?.deal_architect_url || ''),
+      budget_studio_url: data.budget_studio_url || data.investor?.budget_studio_url || '',
+      lot_count: data.lot_count || data.investor?.lot_count || lotCountInput?.value || '1',
+    };
+  }
+
   form?.addEventListener('submit', async function (e) {
     e.preventDefault();
+    updateStructuredSpecInput();
     startBuildLoading();
 
     try {
-      const response = await fetch("{{ url_for('investor.generate_full_build') }}", {
+      const response = await fetch("{{ url_for('investor_generator_build.investor_build_generate') }}", {
         method: 'POST',
         body: new FormData(form),
         headers: { 'X-CSRFToken': '{{ csrf_token() }}', 'X-Requested-With': 'XMLHttpRequest' },
         credentials: 'same-origin'
       });
       const data = await response.json();
-      if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Build Studio generation failed.');
+      const status = String(data.status || 'ok').toLowerCase();
+      if (!response.ok || status === 'error' || status === 'failed') throw new Error(data.message || 'Build Studio generation failed.');
 
-      const floor2Ready = Boolean(data.blueprint_floor2_result?.image_url);
-      const floor2Skipped = Boolean(data.blueprint_floor2_result?.skipped);
-      const floor3Ready = Boolean(data.blueprint_floor3_result?.image_url);
-      const floor3Skipped = Boolean(data.blueprint_floor3_result?.skipped);
-      summaryLots.textContent = data.lot_count || lotCountInput?.value || '1';
-      document.getElementById('summaryBlueprint').textContent = data.blueprint_result?.image_url ? 'Ready' : 'Waiting';
+      const build = normalizeGeneratorBuild(data);
+      const blueprintResult = build.blueprint_result || {};
+      const floor2Result = build.blueprint_floor2_result || {};
+      const floor3Result = build.blueprint_floor3_result || {};
+      const siteplanResult = build.siteplan_result || {};
+      const exteriorResult = build.exterior_result || {};
+      const exteriorBackResult = build.exterior_back_result || {};
+
+      const floor2Ready = Boolean(firstImage(floor2Result));
+      const floor2Skipped = Boolean(floor2Result.skipped);
+      const floor3Ready = Boolean(firstImage(floor3Result));
+      const floor3Skipped = Boolean(floor3Result.skipped);
+      summaryLots.textContent = build.lot_count || lotCountInput?.value || '1';
+      document.getElementById('summaryBlueprint').textContent = firstImage(blueprintResult) ? 'Ready' : 'Waiting';
       document.getElementById('summaryFloor2').textContent = floor2Ready ? 'Ready' : (floor2Skipped ? 'Skipped' : 'Waiting');
       document.getElementById('summaryFloor3').textContent = floor3Ready ? 'Ready' : (floor3Skipped ? 'Skipped' : 'Waiting');
-      document.getElementById('summaryExterior').textContent = data.exterior_result?.image_url ? 'Ready' : 'Waiting';
-      document.getElementById('blueprintStatus').textContent = data.blueprint_result?.image_url ? 'Generated' : 'Waiting';
+      document.getElementById('summarySiteplan').textContent = firstImage(siteplanResult) ? 'Ready' : 'Waiting';
+      document.getElementById('summaryExterior').textContent = firstImage(exteriorResult) ? 'Ready' : 'Waiting';
+      document.getElementById('blueprintStatus').textContent = firstImage(blueprintResult) ? 'Generated' : 'Waiting';
       document.getElementById('floor2Status').textContent = floor2Ready ? 'Generated' : (floor2Skipped ? 'Skipped' : 'Waiting');
       document.getElementById('floor3Status').textContent = floor3Ready ? 'Generated' : (floor3Skipped ? 'Skipped' : 'Waiting');
       document.getElementById('exteriorStatus').textContent = data.exterior_result?.image_url ? 'Generated' : 'Waiting';
@@ -356,18 +771,33 @@
       renderMedia('exteriorBackMedia', data.exterior_back_result?.image_url, 'Exterior back', 'Rear exterior concept will appear here.');
       document.getElementById('exteriorBackStatus').textContent = data.exterior_back_result?.image_url ? 'Generated' : 'Waiting';
       if (data.project_id) {
+      document.getElementById('siteplanStatus').textContent = firstImage(siteplanResult) ? 'Generated' : 'Waiting';
+      document.getElementById('exteriorStatus').textContent = firstImage(exteriorResult) ? 'Generated' : 'Waiting';
+      renderMedia('blueprintMedia', firstImage(blueprintResult), 'First floor blueprint', 'First floor blueprint will appear here.');
+      renderMedia('floor2Media', firstImage(floor2Result), 'Second floor blueprint', floor2Skipped ? 'Single-story project - no second floor blueprint.' : 'Second floor blueprint will appear here.');
+      renderMedia('floor3Media', firstImage(floor3Result), 'Third floor blueprint', floor3Skipped ? 'Projects under three floors - no third floor blueprint.' : 'Third floor blueprint will appear here.');
+      renderMedia('siteplanMedia', firstImage(siteplanResult), 'Site plan', 'Site plan will appear here.');
+      renderMedia('exteriorMedia', firstImage(exteriorResult), 'Exterior concept', 'Exterior concept will appear here.');
+      renderMedia('exteriorBackMedia', firstImage(exteriorBackResult), 'Exterior back', 'Rear exterior concept will appear here.');
+      document.getElementById('exteriorBackStatus').textContent = firstImage(exteriorBackResult) ? 'Generated' : 'Waiting';
+      if (build.build_intelligence && Object.keys(build.build_intelligence).length) {
+        currentBuildSpec = mergeSpec(currentBuildSpec, build.build_intelligence);
+        if (structuredBuildSpecField) structuredBuildSpecField.value = JSON.stringify(currentBuildSpec);
+        renderSpecPreview(currentBuildSpec, 'Generated');
+      }
+      if (build.project_id) {
         const projectField = form.querySelector('input[name="project_id"]');
-        if (projectField) projectField.value = data.project_id;
+        if (projectField) projectField.value = build.project_id;
       }
 
       const dealArchitectBtn = document.getElementById('sendToDealArchitectBtn');
       const budgetStudioBtn = document.getElementById('sendToBudgetStudioBtn');
-      if (data.next_url && dealArchitectBtn) {
-        dealArchitectBtn.href = data.next_url;
+      if (build.next_url && dealArchitectBtn) {
+        dealArchitectBtn.href = build.next_url;
         dealArchitectBtn.classList.remove('hidden');
       }
-      if (data.deal_id && budgetStudioBtn) {
-        budgetStudioBtn.href = `/investor/deal-studio/budget/${data.deal_id}`;
+      if ((build.budget_studio_url || build.deal_id) && budgetStudioBtn) {
+        budgetStudioBtn.href = build.budget_studio_url || `/investor/deal-studio/budget/${build.deal_id}`;
         budgetStudioBtn.classList.remove('hidden');
       }
     } catch (error) {

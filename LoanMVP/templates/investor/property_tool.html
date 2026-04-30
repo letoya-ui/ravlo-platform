@@ -80,6 +80,34 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
       <option value="all">All</option>
     </select>
 
+    <div class="dfv4-form-grid mt-12">
+      <div>
+        <label class="ravlo-label">Max Price</label>
+        <input id="maxPrice" class="ravlo-input" type="number" min="0" step="5000" placeholder="450000" />
+      </div>
+      <div>
+        <label class="ravlo-label">Min Score</label>
+        <input id="minScore" class="ravlo-input" type="number" min="0" max="99" step="1" placeholder="60" />
+      </div>
+    </div>
+
+    <div class="dfv4-form-grid mt-12">
+      <div>
+        <label class="ravlo-label">Min Spread %</label>
+        <input id="minDiscount" class="ravlo-input" type="number" min="-50" max="80" step="1" placeholder="12" />
+      </div>
+      <div>
+        <label class="ravlo-label">Buy Box</label>
+        <select id="buyerProfile" class="ravlo-input">
+          <option value="">Any Buyer</option>
+          <option value="fix_flip_operator">Fix & Flip Operator</option>
+          <option value="buy_hold_dscr">Buy & Hold / DSCR</option>
+          <option value="str_operator">STR Operator</option>
+          <option value="builder_developer">Builder / Developer</option>
+        </select>
+      </div>
+    </div>
+
     <button class="ravlo-btn primary w-full mt-16" type="button" onclick="runSearch()">
       Find Deals
     </button>
@@ -90,6 +118,7 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
       <strong>Deal Finder now returns:</strong>
       <ul>
         <li>Top ranked opportunities</li>
+        <li>Buy-box fit and demand proxy scores</li>
         <li>Property classification: land, fixer upper, rental, or STR</li>
         <li>Best exit strategy + AI recommendation</li>
         <li>Exit strategy comparison cards</li>
@@ -540,6 +569,12 @@ function buildPropertyPayload(r, analyzeId, saveId){
     deal_score: numOrNull(r.deal_score),
     opportunity_tier: r.opportunity_tier || null,
     deal_finder_signal: r.deal_finder_signal || null,
+    buyer_demand_score: numOrNull(r.buyer_demand_score),
+    buy_box_fit_score: numOrNull(r.buy_box_fit_score),
+    spread_to_arv_pct: numOrNull(r.spread_to_arv_pct),
+    equity_spread: numOrNull(r.equity_spread),
+    deal_velocity: r.deal_velocity || null,
+    rank_reason: r.rank_reason || null,
     next_step: r.next_step_engine || r.next_step || null,
     comp_confidence: r.comp_confidence || null,
 
@@ -705,12 +740,21 @@ function renderCards(results){
     const bestUse = safeText(r.estimated_best_use || r.best_use || "Review the highest and best use in Deal Workspace.");
     const roughUpside = safeText(r.rough_upside || "Upside depends on deeper review.");
     const classification = classificationLabel(r.property_classification);
+    const buyBoxFit = numOrNull(r.buy_box_fit_score);
+    const demandScore = numOrNull(r.buyer_demand_score);
+    const spreadPct = numOrNull(r.spread_to_arv_pct);
+    const equitySpread = numOrNull(r.equity_spread);
+    const velocity = safeText(r.deal_velocity || "Review");
     const galleryPhotos = resolveGalleryImages(r, 4);
     const photoCount = normalizePhotoArray(r.listing_photos || r.photos).length;
 
     const facts = [
       {label: "Classification", value: classification},
       {label: "Strategy Tag", value: strategyTag},
+      {label: "Buy Box Fit", value: buyBoxFit !== null ? `${buyBoxFit}/99` : "—"},
+      {label: "Demand Proxy", value: demandScore !== null ? `${demandScore}/99` : "—"},
+      {label: "Spread", value: spreadPct !== null ? `${spreadPct.toFixed(1)}%${equitySpread !== null ? ` / ${money(equitySpread)}` : ""}` : "—"},
+      {label: "Velocity", value: velocity},
       {label: "Rough Upside", value: roughUpside},
       {label: "Best Use", value: bestUse},
       {label: "Type", value: safeText(r.property_type || "Property")},
@@ -790,6 +834,9 @@ function renderCards(results){
 
           <div class="dfv4-engine-grid">
             <div><span>Opportunity Tier</span><strong>${escapeHtml(tier)}</strong></div>
+            <div><span>Buy Box Fit</span><strong>${escapeHtml(buyBoxFit !== null ? `${buyBoxFit}/99` : "—")}</strong></div>
+            <div><span>Demand Proxy</span><strong>${escapeHtml(demandScore !== null ? `${demandScore}/99` : "—")}</strong></div>
+            <div><span>Spread to Value</span><strong>${escapeHtml(spreadPct !== null ? `${spreadPct.toFixed(1)}%` : "—")}</strong></div>
             <div><span>Estimated Best Use</span><strong>${escapeHtml(bestUse)}</strong></div>
             <div><span>Rent Est.</span><strong>${escapeHtml(money(r.monthly_rent_estimate || r.traditional_rent))}${numOrNull(r.monthly_rent_estimate || r.traditional_rent) !== null ? "/mo" : ""}</strong></div>
             <div><span>Days on Market</span><strong>${escapeHtml(safeText(r.days_on_market))}</strong></div>
@@ -1042,6 +1089,10 @@ async function runSearch(){
   const zip = document.getElementById("zip")?.value?.trim() || "";
   const assetType = document.getElementById("assetType")?.value || "any";
   const strategy = document.getElementById("strategy")?.value || "all";
+  const maxPrice = document.getElementById("maxPrice")?.value || "";
+  const minScore = document.getElementById("minScore")?.value || "";
+  const minDiscount = document.getElementById("minDiscount")?.value || "";
+  const buyerProfile = document.getElementById("buyerProfile")?.value || "";
   const latitude = document.getElementById("latitude")?.value || "";
   const longitude = document.getElementById("longitude")?.value || "";
 
@@ -1062,6 +1113,10 @@ async function runSearch(){
     zip_code: zip,
     asset_type: assetType,
     strategy,
+    max_price: maxPrice,
+    min_score: minScore,
+    min_discount: minDiscount,
+    buyer_profile: buyerProfile,
     latitude,
     longitude
   };

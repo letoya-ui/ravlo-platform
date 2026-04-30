@@ -383,6 +383,7 @@ Guides, support, capital updates, trusted connections, and investor tools — al
         <div class="rc-card">
           <div class="rc-eyebrow">AI Support</div>
           <h3>Ask Ravlo AI</h3>
+          {% include "investor/_ai_accuracy_notice.html" %}
           <form method="GET" action="{{ url_for('investor.ask_ai_page') }}" class="ai-box">
             <textarea name="prefill" placeholder="Ask about capital requests, conditions, deal strategy, or next steps..."></textarea>
             <div>
