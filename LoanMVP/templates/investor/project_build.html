@@ -88,8 +88,36 @@
             <input id="number_of_floors" name="number_of_floors" type="number" min="1" max="5" step="1" value="{{ number_of_floors_value or '' }}" placeholder="2">
           </div>
           <div class="field">
+            <label for="square_feet_target">Target Sq Ft</label>
+            <input id="square_feet_target" name="square_feet_target" type="number" min="300" step="50" value="{{ build_project.get('square_feet_target') or build_project.get('project_size') or '' }}" placeholder="2400">
+          </div>
+          <div class="field">
+            <label for="bedrooms">Bedrooms</label>
+            <input id="bedrooms" name="bedrooms" type="number" min="0" max="20" step="1" value="{{ build_project.get('bedrooms') or '' }}" placeholder="4">
+          </div>
+          <div class="field">
+            <label for="bathrooms">Bathrooms</label>
+            <input id="bathrooms" name="bathrooms" type="number" min="0" max="20" step="0.5" value="{{ build_project.get('bathrooms') or '' }}" placeholder="3">
+          </div>
+          <div class="field">
+            <label for="finish_level">Finish Level</label>
+            {% set finish_level_value = build_project.get('finish_level') or 'standard' %}
+            <select id="finish_level" name="finish_level">
+              <option value="standard" {{ 'selected' if finish_level_value == 'standard' else '' }}>Standard</option>
+              <option value="premium" {{ 'selected' if finish_level_value == 'premium' else '' }}>Premium</option>
+              <option value="luxury" {{ 'selected' if finish_level_value == 'luxury' else '' }}>Luxury</option>
+              <option value="builder grade" {{ 'selected' if finish_level_value == 'builder grade' else '' }}>Builder Grade</option>
+            </select>
+          </div>
+          <div class="field">
             <label for="zoning">Zoning</label>
             <input id="zoning" name="zoning" value="{{ build_project.get('zoning') or (project.zoning if project else '') }}" placeholder="R-3">
+          </div>
+          <div class="field">
+            <label class="check-field">
+              <input type="checkbox" id="garage" name="garage" value="true" autocomplete="off" {% if build_project.get('garage') %}checked{% endif %}>
+              <span>Garage Included</span>
+            </label>
           </div>
           <div class="field full">
             <label for="location">Location</label>

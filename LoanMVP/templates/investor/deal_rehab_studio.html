@@ -150,6 +150,36 @@
           </div>
 
           <div class="field">
+            <label for="rehab_level">Scope Level</label>
+            <select id="rehab_level" name="rehab_level">
+              <option value="light">Light</option>
+              <option value="medium" selected>Medium</option>
+              <option value="heavy">Heavy</option>
+              <option value="luxury">Luxury</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="finish_level">Finish Level</label>
+            <select id="finish_level" name="finish_level">
+              <option value="standard" selected>Standard</option>
+              <option value="premium">Premium</option>
+              <option value="luxury">Luxury</option>
+              <option value="builder grade">Builder Grade</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="room_square_feet">Room Sq Ft</label>
+            <input id="room_square_feet" name="room_square_feet" type="number" min="20" step="5" placeholder="180">
+          </div>
+
+          <div class="field">
+            <label for="room_count">Room Count</label>
+            <input id="room_count" name="room_count" type="number" min="1" max="12" step="1" placeholder="1">
+          </div>
+
+          <div class="field">
             <label for="blueprint_url">Reference Image URL</label>
             <input id="blueprint_url" name="blueprint_url" value="{{ blueprint_result.get('blueprint_url') or blueprint_result.get('image_url') or (project.blueprint_url if project else '') }}" placeholder="Paste a saved room photo or plan URL">
           </div>
@@ -163,6 +193,11 @@
         <div class="field">
           <label for="notes">Interior Notes</label>
           <textarea id="notes" name="notes" rows="3" placeholder="Cabinet style, materials, lighting, furnishing direction.">{{ interior_result.get('notes') or '' }}</textarea>
+        </div>
+
+        <div class="field">
+          <label for="target_materials">Target Materials</label>
+          <input id="target_materials" name="target_materials" placeholder="Quartz counters, oak floors, brass fixtures">
         </div>
 
         <div class="field">

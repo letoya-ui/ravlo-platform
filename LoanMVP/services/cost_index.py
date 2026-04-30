@@ -547,6 +547,13 @@ def _should_apply_multiplier(response: Any, factor: float) -> bool:
     ctx = response.get("location_cost_context")
     if isinstance(ctx, dict) and _truthy(ctx.get("costs_localized")):
         return False
+    meta = response.get("meta")
+    if isinstance(meta, dict):
+        if _truthy(meta.get("costs_localized")):
+            return False
+        meta_ctx = meta.get("location_cost_context")
+        if isinstance(meta_ctx, dict) and _truthy(meta_ctx.get("costs_localized")):
+            return False
     return True
 
 

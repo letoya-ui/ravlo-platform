@@ -6071,6 +6071,11 @@ def _build_project_from_request_args() -> dict[str, Any]:
         request.args.get("description"),
         request.args.get("notes"),
     )
+    square_feet_target = _normalize_int(request.args.get("square_feet_target") or request.args.get("square_feet"))
+    bedrooms = _normalize_int(request.args.get("bedrooms") or request.args.get("beds"))
+    bathrooms = _safe_float(request.args.get("bathrooms") or request.args.get("baths"))
+    finish_level = _clean_str(request.args.get("finish_level"))
+    garage = str(request.args.get("garage") or "").lower() in ("1", "true", "yes", "on")
 
     if not any([
         _clean_str(request.args.get("project_name")),
@@ -6082,6 +6087,11 @@ def _build_project_from_request_args() -> dict[str, Any]:
         _clean_str(request.args.get("notes")),
         lot_count,
         floor_count,
+        square_feet_target,
+        bedrooms,
+        bathrooms,
+        finish_level,
+        garage,
     ]):
         return {}
 
@@ -6095,6 +6105,12 @@ def _build_project_from_request_args() -> dict[str, Any]:
         "lot_count": lot_count,
         "stories": floor_count,
         "number_of_floors": floor_count,
+        "square_feet_target": square_feet_target,
+        "project_size": square_feet_target,
+        "bedrooms": bedrooms,
+        "bathrooms": bathrooms,
+        "finish_level": finish_level,
+        "garage": garage,
         "lot_size": _clean_str(request.args.get("lot_size")),
         "zoning": _clean_str(request.args.get("zoning")),
         "location": _clean_str(request.args.get("location")),
@@ -6398,6 +6414,7 @@ def design_studio_generate_budget():
         notes = (data.get("notes") or "").strip()
         room_type = (data.get("room_type") or "living room").strip()
         rehab_level = (data.get("rehab_level") or "medium").strip().lower()
+        finish_level = (data.get("finish_level") or "standard").strip()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
 
         if project:
@@ -6422,6 +6439,9 @@ def design_studio_generate_budget():
             "room_focus": room_type,
             "desired_updates": notes or description,
             "prompt_notes": notes,
+            "design_notes": description,
+            "target_materials": data.get("target_materials") or "",
+            "finish_level": finish_level,
             "location_cost_context": location_context if isinstance(location_context, dict) else None,
         }
 
@@ -6430,6 +6450,9 @@ def design_studio_generate_budget():
             ("budget_max", "budget_max"),
             ("room_square_feet", "room_square_feet"),
             ("square_feet", "square_feet"),
+            ("room_count", "room_count"),
+            ("bedrooms", "bedrooms"),
+            ("bathrooms", "bathrooms"),
             ("market_cost_multiplier", "market_cost_multiplier"),
         ):
             value = data.get(source_key)
@@ -6438,6 +6461,19 @@ def design_studio_generate_budget():
                     payload[payload_key] = float(value)
                 except (TypeError, ValueError):
                     pass
+
+        if deal is not None and "square_feet" not in payload and "room_square_feet" not in payload:
+            resolved_property = (getattr(deal, "resolved_json", {}) or {}).get("property", {}) or {}
+            fallback_sqft = (
+                getattr(deal, "square_feet", None)
+                or resolved_property.get("square_feet")
+                or resolved_property.get("sqft")
+            )
+            try:
+                if fallback_sqft:
+                    payload["square_feet"] = float(fallback_sqft)
+            except (TypeError, ValueError):
+                pass
 
         if "market_cost_multiplier" not in payload and isinstance(location_context, dict):
             try:
@@ -7953,10 +7989,45 @@ def generate_full_build():
         location = (data.get("location") or "").strip()
         notes = (data.get("notes") or "").strip()
         development_type = _build_project_development_label(property_type, lot_count)
+        square_feet_target = _normalize_int(data.get("square_feet") or data.get("square_feet_target"))
+        bedrooms = _normalize_int(data.get("bedrooms") or data.get("beds"))
+        bathrooms = _safe_float(data.get("bathrooms") or data.get("baths"))
+        finish_level = (data.get("finish_level") or "standard").strip()
+        garage = str(data.get("garage") or "").lower() in ("1", "true", "yes", "on")
+
+        program_parts = []
+        if square_feet_target:
+            program_parts.append(f"{square_feet_target:,} sq ft target")
+        if bedrooms:
+            program_parts.append(f"{bedrooms} bedrooms")
+        if bathrooms:
+            program_parts.append(f"{bathrooms:g} baths")
+        if finish_level:
+            program_parts.append(f"{finish_level} finish")
+        if garage:
+            program_parts.append("garage included")
 
         site_notes = notes
+        if program_parts:
+            site_notes = f"{site_notes}. Program: {', '.join(program_parts)}.".strip(". ").strip()
         if lot_count and lot_count > 1:
             site_notes = f"{notes}. Plan for {lot_count} buildable lots across the site.".strip(". ").strip()
+            if program_parts:
+                site_notes = f"{site_notes}. Program: {', '.join(program_parts)}."
+
+        build_program_context = {
+            key: value
+            for key, value in {
+                "square_feet_target": square_feet_target,
+                "project_size": square_feet_target,
+                "bedrooms": bedrooms,
+                "bathrooms": bathrooms,
+                "finish_level": finish_level,
+                "garage": garage,
+                "lot_count": lot_count,
+            }.items()
+            if value not in (None, "")
+        }
 
         base_build_prompt_notes = _compose_build_studio_prompt(
             notes=site_notes,
@@ -7984,6 +8055,13 @@ def generate_full_build():
                         "property_type": property_type or None,
                         "lot_size": lot_size or None,
                         "zoning": zoning or None,
+                        "square_feet_target": square_feet_target,
+                        "stories": number_of_floors,
+                        "bedrooms": bedrooms,
+                        "bathrooms": bathrooms,
+                        "finish_level": finish_level,
+                        "garage": garage,
+                        "unit_count": lot_count,
                     },
                     timeout=60,
                 ) or {}
@@ -8137,7 +8215,7 @@ def generate_full_build():
             "prompt": base_build_prompt_notes,
             "prompt_notes": base_build_prompt_notes,
             "special_features": f"{lot_count} total lots" if lot_count and lot_count > 1 else notes,
-            "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+            "square_feet_target": square_feet_target,
             "stories": number_of_floors,
             "number_of_floors": number_of_floors,
             "floor_count": number_of_floors,
@@ -8149,6 +8227,7 @@ def generate_full_build():
             "count": 1,
             "negative_prompt": _build_studio_negative_prompt("blueprint_first_floor"),
         }
+        blueprint_payload.update(build_program_context)
         blueprint_payload.update(_build_studio_quality_controls("blueprint_first_floor"))
 
         if blueprint_image_base64:
@@ -8236,7 +8315,7 @@ def generate_full_build():
                     "prompt": blueprint_floor2_prompt_notes,
                     "prompt_notes": blueprint_floor2_prompt_notes,
                     "special_features": "upper level bedrooms, bathrooms, laundry, hallway, secondary living spaces",
-                    "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+                    "square_feet_target": square_feet_target,
                     "stories": number_of_floors,
                     "number_of_floors": number_of_floors,
                     "floor_count": number_of_floors,
@@ -8251,6 +8330,7 @@ def generate_full_build():
                     "count": 1,
                     "negative_prompt": _build_studio_negative_prompt("blueprint_second_floor"),
                 }
+                blueprint_floor2_payload.update(build_program_context)
                 blueprint_floor2_payload.update(_build_studio_quality_controls("blueprint_second_floor"))
 
                 current_app.logger.warning(f"FULL BUILD BLUEPRINT FLOOR 2 PAYLOAD: {blueprint_floor2_payload}")
@@ -8335,7 +8415,7 @@ def generate_full_build():
                     "prompt": blueprint_floor3_prompt_notes,
                     "prompt_notes": blueprint_floor3_prompt_notes,
                     "special_features": "third floor top level bedrooms bathrooms flex loft storage stair continuation",
-                    "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+                    "square_feet_target": square_feet_target,
                     "stories": number_of_floors,
                     "number_of_floors": number_of_floors,
                     "floor_count": number_of_floors,
@@ -8347,6 +8427,7 @@ def generate_full_build():
                     "count": 1,
                     "negative_prompt": _build_studio_negative_prompt("blueprint_third_floor"),
                 }
+                blueprint_floor3_payload.update(build_program_context)
 
                 if floor3_reference_b64:
                     blueprint_floor3_payload["blueprint_image_base64"] = floor3_reference_b64
@@ -8468,6 +8549,7 @@ def generate_full_build():
                   "text, watermark, blurry, low resolution, cropped building"
             ),
         }
+        exterior_payload.update(build_program_context)
 
         if exterior_ref_b64:
             exterior_payload.update({
@@ -8578,6 +8660,7 @@ def generate_full_build():
                   "text, watermark, blurry, low resolution, cropped building"
             ),
         }
+        exterior_back_payload.update(build_program_context)
 
         if exterior_ref_b64:
             exterior_back_payload.update({
@@ -8659,6 +8742,12 @@ def generate_full_build():
             build_project["lot_count"] = lot_count
             build_project["stories"] = number_of_floors
             build_project["number_of_floors"] = number_of_floors
+            build_project["square_feet_target"] = square_feet_target
+            build_project["project_size"] = square_feet_target
+            build_project["bedrooms"] = bedrooms
+            build_project["bathrooms"] = bathrooms
+            build_project["finish_level"] = finish_level
+            build_project["garage"] = garage
             build_project["description"] = description
             build_project["lot_size"] = lot_size
             build_project["zoning"] = zoning
@@ -8677,6 +8766,7 @@ def generate_full_build():
                 "style": style,
                 "stories": number_of_floors,
                 "number_of_floors": number_of_floors,
+                **build_program_context,
                 "image_url": blueprint_primary_url,
                 "images": blueprint_urls,
                 "blueprint_url": blueprint_primary_url,
@@ -8697,6 +8787,7 @@ def generate_full_build():
                 "style": style,
                 "stories": number_of_floors,
                 "number_of_floors": number_of_floors,
+                **build_program_context,
                 "floor_label": "Second Floor",
                 "blueprint_floor": "second",
                 "image_url": blueprint_floor2_primary_url,
@@ -8719,6 +8810,7 @@ def generate_full_build():
                 "style": style,
                 "stories": number_of_floors,
                 "number_of_floors": number_of_floors,
+                **build_program_context,
                 "floor_label": "Third Floor",
                 "blueprint_floor": "third",
                 "image_url": blueprint_floor3_primary_url,
@@ -8741,6 +8833,7 @@ def generate_full_build():
                 "style": style,
                 "stories": number_of_floors,
                 "number_of_floors": number_of_floors,
+                **build_program_context,
                 "image_url": exterior_primary_url,
                 "images": exterior_urls,
                 "meta": exterior_meta,
@@ -8768,6 +8861,7 @@ def generate_full_build():
                     "style": style,
                     "stories": number_of_floors,
                     "number_of_floors": number_of_floors,
+                    **build_program_context,
                     "image_url": exterior_back_url,
                     "meta": exterior_back_meta,
                     "seed": exterior_back_seed,
@@ -10759,6 +10853,8 @@ def design_studio_generate():
         floor = (data.get("floor") or "main").strip()
         notes = (data.get("notes") or "").strip()
         rehab_level = (data.get("rehab_level") or "medium").strip().lower()
+        finish_level = (data.get("finish_level") or "standard").strip()
+        target_materials = (data.get("target_materials") or "").strip()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
         source_results = _deal_results(deal) if deal is not None else {}
         source_build_project = source_results.get("build_project", {}) or {}
@@ -10874,6 +10970,8 @@ def design_studio_generate():
                 "prompt": design_prompt_notes,
                 "prompt_notes": design_prompt_notes,
                 "desired_updates": design_prompt_notes,
+                "target_materials": target_materials,
+                "finish_level": finish_level,
                 "concept_intensity": "blueprint_to_photoreal_room",
                 "reference_role": "floor_plan_context_only_not_init_image",
                 "keep_layout": False,
@@ -10928,6 +11026,8 @@ def design_studio_generate():
                 "prompt": design_prompt_notes,
                 "desired_updates": design_prompt_notes,
                 "prompt_notes": design_prompt_notes,
+                "target_materials": target_materials,
+                "finish_level": finish_level,
                 "keep_layout": True,
                 "preserve_structure": True,
                 "concept_intensity": "full_concept",
@@ -10971,6 +11071,8 @@ def design_studio_generate():
             "floor": floor,
             "result_key": "|".join(_design_room_result_key(room_type, floor, preset)),
             "rehab_level": rehab_level,
+            "finish_level": finish_level,
+            "target_materials": target_materials,
             "notes": notes,
             "seed": engine_json.get("seed") or unique_seed,
             "job_id": engine_json.get("job_id"),
