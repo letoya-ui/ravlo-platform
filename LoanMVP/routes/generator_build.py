@@ -71,6 +71,8 @@ def build_generate():
             or ""
         ).rstrip("/")
 
+        print("FORWARDING TO RENOVATION_ENGINE_URL =", engine_url)
+
         if engine_url:
             response = requests.post(
                 f"{engine_url}/api/generator/build/generate",
