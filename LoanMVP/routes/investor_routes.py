@@ -7655,14 +7655,55 @@ def _design_studio_fallback_chat(messages, current_config):
     if user_text.strip():
         config["description"] = user_text.strip()
 
+    # Build a conversational response that references the user's request
+    assistant_message = _design_conversational_reply(user_text, config)
+
     return {
-        "assistant_message": (
-            "I've captured your design preferences. "
-            "You can add more details or click Generate to see the result."
-        ),
+        "assistant_message": assistant_message,
         "config": config,
         "ready": True,
     }
+
+
+def _design_conversational_reply(user_text, config):
+    """Generate a natural-sounding reply that references details from the user's design request."""
+    if not user_text.strip():
+        return "Tell me what you want this room to look like — describe the style, materials, colors, and furniture."
+
+    details = []
+    style_labels = {
+        "modern_luxury": "modern luxury",
+        "modern_farmhouse": "modern farmhouse",
+        "minimal_modern": "minimal modern",
+        "traditional": "traditional",
+        "industrial_loft": "industrial loft",
+        "coastal": "coastal",
+    }
+    room_labels = {
+        "living room": "living room",
+        "kitchen": "kitchen",
+        "primary bedroom": "primary bedroom",
+        "bathroom": "bathroom",
+        "dining room": "dining room",
+        "office": "office",
+    }
+    if config.get("room_type"):
+        details.append(room_labels.get(config["room_type"], config["room_type"]))
+    if config.get("style"):
+        details.append(f"{style_labels.get(config['style'], config['style'])} style")
+
+    if details:
+        summary = ", ".join(details)
+        return (
+            f"Got it — I'm setting up a {summary} design based on your description. "
+            f"I've filled in the form fields below. You can tweak anything, "
+            f"then click Generate to see the result."
+        )
+    return (
+        "I've captured your design vision and filled in the details below. "
+        "Review the form, adjust anything you'd like, "
+        "then click Generate to bring it to life."
+    )
 
 
 @investor_bp.route("/deal-studio/build-studio/generate-interior", methods=["POST"])

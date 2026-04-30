@@ -464,6 +464,13 @@ def _fallback_build_chat_plan(messages, current_spec=None):
         if f"{token} story" in lowered or f"{token} floor" in lowered:
             story_match = value
             break
+    if not story_match:
+        import re as _re
+        digit_match = _re.search(r"(\d)\s*(?:story|stories|floor|floors)", lowered)
+        if digit_match:
+            story_match = digit_match.group(1)
+    if not story_match and ("upstairs" in lowered or "second floor" in lowered or "2nd floor" in lowered):
+        story_match = "2"
     if story_match:
         inferred["stories"] = story_match
 
@@ -473,6 +480,16 @@ def _fallback_build_chat_plan(messages, current_spec=None):
         inferred["intent"] = "exterior_from_photo"
     elif "scope" in lowered:
         inferred["intent"] = "scope"
+
+    # Detect color/material mentions for richer responses
+    for color in ("white", "black", "gray", "grey", "red", "blue", "green", "beige", "cream", "brown"):
+        if color in lowered:
+            inferred.setdefault("siding_material", f"{color} exterior")
+            break
+    for material in ("brick", "stone", "stucco", "cedar", "vinyl", "wood", "metal", "concrete"):
+        if material in lowered:
+            inferred["siding_material"] = material
+            break
 
     # Preserve the user's full text as the description so the image
     # generator can act on their specific request.
@@ -493,17 +510,74 @@ def _fallback_build_chat_plan(messages, current_spec=None):
     for field in missing[:3]:
         questions.append(question_map.get(field, f"What should I use for {field.replace('_', ' ')}?"))
 
+    # Build a conversational response that references the user's request
+    assistant_message = _build_conversational_reply(user_text, inferred, missing, status)
+
     return {
         "status": status,
-        "assistant_message": (
-            "I have enough to draft the build package. Review the spec, then generate."
-            if status == "ready"
-            else "I drafted the build spec and marked the missing pieces that would improve the package."
-        ),
+        "assistant_message": assistant_message,
         "spec": spec,
         "missing_fields": missing,
         "next_questions": questions,
     }
+
+
+def _build_conversational_reply(user_text, inferred, missing, status):
+    """Generate a natural-sounding reply that references details from the user's message."""
+    if not user_text.strip():
+        return "Tell me what you'd like to build — describe the style, size, materials, and any special features."
+
+    # Collect what we understood
+    details = []
+    style_labels = {
+        "modern_farmhouse": "modern farmhouse",
+        "modern": "modern",
+        "traditional": "traditional",
+        "contemporary": "contemporary",
+        "luxury": "luxury",
+        "industrial": "industrial",
+        "coastal": "coastal",
+    }
+    prop_labels = {
+        "single_family": "single-family home",
+        "duplex": "duplex",
+        "townhome": "townhome",
+        "multifamily": "multifamily building",
+        "mixed_use": "mixed-use building",
+    }
+    if inferred.get("property_type"):
+        details.append(prop_labels.get(inferred["property_type"], inferred["property_type"]))
+    if inferred.get("style"):
+        details.append(f"{style_labels.get(inferred['style'], inferred['style'])} style")
+    if inferred.get("stories"):
+        details.append(f"{inferred['stories']}-story")
+    if inferred.get("siding_material"):
+        details.append(f"with {inferred['siding_material']}")
+
+    if status == "ready":
+        if details:
+            summary = ", ".join(details)
+            return (
+                f"Got it — I'm setting up a {summary} build based on your description. "
+                f"I've filled in the spec below. Review it and click Generate when you're ready, "
+                f"or tell me if you want to change anything."
+            )
+        return (
+            "I've captured your vision and filled in the build spec below. "
+            "Review the details and click Generate when you're ready, "
+            "or tell me more about what you'd like to adjust."
+        )
+    else:
+        if details:
+            summary = ", ".join(details)
+            return (
+                f"I'm putting together a {summary} build from your description. "
+                f"I have a few questions to make sure the result matches your vision:"
+            )
+        return (
+            "I've started drafting the build spec from your description. "
+            "A few more details will help me get it right:"
+        )
 
 
 def _post_build_generate(engine_url, spec):
