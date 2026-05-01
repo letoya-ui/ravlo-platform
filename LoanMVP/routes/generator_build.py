@@ -78,10 +78,13 @@ Users talk to you like they would Alexa: short commands like "Ravlo, the house w
 or "make it 3 stories" or "all bedrooms upstairs". You understand instantly and act.
 
 PERSONALITY:
+- Talk like a real project partner, not a help desk. Natural, direct, warm, and practical.
+- Use the user's language when it helps. If they say "white house, 3 stories", you can say "white 3-story, locked in."
 - Adaptive: match the user's energy. Short command → short confirmation. Detailed vision → detailed response.
 - Voice-command ready: parse casual shorthand. "the house white" = white exterior. "bedrooms upstairs" = 2+ stories with bedrooms on upper floor.
 - Confident: you're a seasoned architect. You get it on the first try.
-- Concise: "White exterior, 2-story — locked in." not a paragraph.
+- Concise: one or two sentences unless you need one sharp follow-up.
+- Talk about the result you are creating, not about form fields.
 - If unclear, ask ONE sharp question. Never over-ask.
 
 CRITICAL RULE: Your #1 priority is to understand the user's specific request and
@@ -168,6 +171,24 @@ def _safe_str(value):
     if isinstance(value, str):
         return value.strip()
     return str(value).strip()
+
+
+def _join_prompt_parts(*parts):
+    cleaned = []
+    seen = set()
+    for part in parts:
+        if isinstance(part, (list, tuple, set)):
+            text = ", ".join(_safe_str(item) for item in part if _safe_str(item))
+        else:
+            text = _safe_str(part)
+        if not text:
+            continue
+        key = text.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(text.rstrip("."))
+    return ". ".join(cleaned).strip() + ("." if cleaned else "")
 
 
 def _merge_unique_list(*values):
@@ -360,6 +381,63 @@ def _image_output_modes_for_intent(intent):
     return list(BUILD_PACKAGE_IMAGE_OUTPUTS)
 
 
+def _build_engine_prompt_from_spec(spec, image_output_modes=None):
+    image_output_modes = image_output_modes or []
+    project_name = _first_nonempty(spec.get("project_name"), spec.get("name"))
+    stories = _first_nonempty(
+        spec.get("stories"),
+        spec.get("number_of_floors"),
+        spec.get("floor_count"),
+        spec.get("number_of_stories"),
+    )
+    target_square_feet = _first_nonempty(
+        spec.get("square_feet_target"),
+        spec.get("square_feet"),
+    )
+    description = _first_nonempty(
+        spec.get("build_description"),
+        spec.get("description"),
+    )
+    location = _first_nonempty(spec.get("location"), spec.get("address"))
+    materials = []
+    for item in _as_list(spec.get("materials")):
+        if isinstance(item, dict):
+            materials.append(
+                _join_prompt_parts(
+                    item.get("category"),
+                    item.get("selection"),
+                    item.get("notes"),
+                )
+            )
+        else:
+            materials.append(_safe_str(item))
+
+    return _join_prompt_parts(
+        spec.get("chat_engine_prompt"),
+        spec.get("ai_engine_prompt"),
+        spec.get("model_engine_prompt"),
+        "Ravlo Build Studio generation brief",
+        f"Project: {project_name}" if project_name else "",
+        f"Property type: {spec.get('property_type')}" if spec.get("property_type") else "",
+        f"Architectural style: {spec.get('style')}" if spec.get("style") else "",
+        f"Stories/floors: {stories}" if stories else "",
+        f"Bedrooms: {spec.get('bedrooms')}" if spec.get("bedrooms") else "",
+        f"Bathrooms: {spec.get('bathrooms')}" if spec.get("bathrooms") else "",
+        f"Target square feet: {target_square_feet}" if target_square_feet else "",
+        f"Exact user request: {description}" if description else "",
+        f"Special features to preserve exactly: {spec.get('special_features')}" if spec.get("special_features") else "",
+        f"Materials/finishes: {', '.join(materials)}" if materials else "",
+        f"Site and technical notes: {spec.get('notes')}" if spec.get("notes") else "",
+        f"Location/site context: {location}" if location else "",
+        f"Required outputs: {', '.join(image_output_modes)}" if image_output_modes else "",
+        (
+            "Keep the blueprint, site plan, front exterior, and rear exterior "
+            "visually consistent with the same massing, floor count, material "
+            "palette, and user-requested features"
+        ),
+    )
+
+
 def _prepare_build_generation_spec(spec):
     spec = copy.deepcopy(_as_dict(spec))
     intent = _infer_build_intent(spec)
@@ -386,6 +464,19 @@ def _prepare_build_generation_spec(spec):
     spec["timeline"] = {**_build_timeline_from_spec(spec), **_as_dict(spec.get("timeline"))}
     spec["risks"] = _merge_unique_list(spec.get("risks"), _build_risks_from_spec(spec))
     spec["images"] = _as_dict(spec.get("images"))
+    description = _first_nonempty(spec.get("build_description"), spec.get("description"))
+    if description:
+        spec["build_description"] = description
+        spec["description"] = description
+    if spec.get("engine_prompt") and not spec.get("_engine_prompt_generated"):
+        spec.setdefault("chat_engine_prompt", spec.get("engine_prompt"))
+    engine_prompt = _build_engine_prompt_from_spec(spec, image_output_modes)
+    if engine_prompt:
+        spec["engine_prompt"] = engine_prompt
+        spec["prompt"] = engine_prompt
+        spec["prompt_notes"] = engine_prompt
+        spec["creative_brief"] = engine_prompt
+        spec["_engine_prompt_generated"] = True
 
     if intent == "exterior_from_blueprint":
         spec["preserve_layout"] = _truthy(spec.get("preserve_layout"), default=True)
@@ -497,6 +588,7 @@ def _fallback_build_chat_plan(messages, current_spec=None):
     # generator can act on their specific request.
     if user_text.strip():
         inferred.setdefault("description", user_text.strip())
+        inferred.setdefault("special_features", user_text.strip())
 
     spec = _prepare_build_generation_spec({**current_spec, **inferred})
     missing = _build_missing_fields(spec)
@@ -1409,10 +1501,13 @@ def _build_chat_response():
                     "Users talk to you like they would Alexa or Siri: short commands like "
                     "'Ravlo, the house white' or 'make it 3 stories'. You understand instantly.\n\n"
                     "PERSONALITY RULES:\n"
+                    "- Talk like a real project partner, not a help desk. "
+                    "Natural, direct, warm, and practical.\n"
                     "- Be adaptive: match the user's energy. Short command → short confirmation. "
                     "Detailed request → detailed response.\n"
                     "- Acknowledge fast: 'White exterior — done.' not a paragraph.\n"
                     "- Be confident: you're a seasoned architect who gets it on the first try.\n"
+                    "- Talk about the result you're building, not about form fields.\n"
                     "- No fluff, no filler. Every word earns its place.\n"
                     "- If something is unclear, ask ONE sharp question.\n\n"
                     "TASK: Listen to the user's request, update the build spec to match, "
@@ -1431,7 +1526,11 @@ def _build_chat_response():
         return jsonify(fallback)
 
     parsed = _safe_json(response.choices[0].message.content)
-    parsed["spec"] = _prepare_build_generation_spec(parsed.get("spec") or current_spec)
+    parsed_spec = _as_dict(parsed.get("spec"))
+    parsed["spec"] = _prepare_build_generation_spec({
+        **_as_dict(current_spec),
+        **parsed_spec,
+    })
     return jsonify(parsed)
 
 
