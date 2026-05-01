@@ -157,6 +157,7 @@
         <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
         <input type="hidden" name="project_id" value="{{ project.id if project else '' }}">
         <input type="hidden" name="save_to_deal" value="true">
+        <input type="hidden" id="aiEngineIntent" name="ai_engine_intent" value="">
 
         <div class="form-grid two">
           <div class="field">
@@ -460,6 +461,10 @@
 .design-chat-message.assistant{margin-right:42px}
 .design-chat-message strong{display:block;color:#fff;margin-bottom:6px}
 .design-chat-message p{margin:0;color:#c9d5e6;line-height:1.55}
+.design-chat-result{display:grid;gap:10px;margin-top:12px}
+.design-chat-result a{display:block;color:#dbeafe;text-decoration:none}
+.design-chat-result img{width:100%;max-height:240px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04)}
+.design-chat-result span{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(122,184,255,.2);background:rgba(122,184,255,.08);font-size:.78rem;font-weight:800}
 .design-chat-composer{display:grid;gap:12px;margin-top:14px}
 .design-chat-composer textarea{width:100%;resize:vertical;min-height:80px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
 .cta-row{display:flex;gap:12px;flex-wrap:wrap}
@@ -497,6 +502,7 @@
   let nextUrl = '';
   let budgetStudioUrl = '';
   let designMessages = [];
+  let currentDesignEngineIntent = {};
 
   // ── Design Chat ───────────────────────────────────
   const designChatThread = document.getElementById('designChatThread');
@@ -508,6 +514,8 @@
   const notesField = document.getElementById('notes');
   const styleField = document.getElementById('style');
   const roomTypeField = document.getElementById('room_type');
+  const targetMaterialsField = document.getElementById('target_materials');
+  const aiEngineIntentField = document.getElementById('aiEngineIntent');
 
   function appendDesignMessage(role, text) {
     if (!designChatThread || !text) return;
@@ -520,13 +528,66 @@
     designChatThread.scrollTop = designChatThread.scrollHeight;
   }
 
+  function appendDesignResultMessage(concept, imageUrl) {
+    if (!designChatThread || !imageUrl) return;
+    const roomLabel = concept?.room_type || roomTypeField?.selectedOptions?.[0]?.textContent?.trim() || 'room';
+    const styleLabel = styleField?.selectedOptions?.[0]?.textContent?.trim() || 'design';
+    const node = document.createElement('div');
+    node.className = 'design-chat-message assistant';
+
+    const label = document.createElement('strong');
+    label.textContent = 'Ravlo';
+    const copy = document.createElement('p');
+    copy.textContent = `${styleLabel} ${roomLabel} is ready. I put the result below.`;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'design-chat-result';
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.alt = `${roomLabel} design result`;
+    const chip = document.createElement('span');
+    chip.textContent = 'Open full result';
+
+    link.appendChild(img);
+    wrap.appendChild(link);
+    wrap.appendChild(chip);
+    node.appendChild(label);
+    node.appendChild(copy);
+    node.appendChild(wrap);
+    designChatThread.appendChild(node);
+    designChatThread.scrollTop = designChatThread.scrollHeight;
+  }
+
   function gatherDesignConfig() {
     return {
       style: styleField?.value || '',
       room_type: roomTypeField?.value || '',
       description: descriptionField?.value || '',
       notes: notesField?.value || '',
+      target_materials: targetMaterialsField?.value || '',
     };
+  }
+
+  function syncDesignEngineIntent(intent, fallbackConfig) {
+    const config = fallbackConfig || gatherDesignConfig();
+    currentDesignEngineIntent = {
+      ...(currentDesignEngineIntent || {}),
+      ...(intent || {}),
+      studio: 'design',
+      style: config.style || intent?.style || '',
+      room_type: config.room_type || intent?.room_type || '',
+      description: config.description || intent?.description || '',
+      notes: config.notes || intent?.notes || '',
+      target_materials: config.target_materials || intent?.target_materials || '',
+    };
+    if (aiEngineIntentField) {
+      aiEngineIntentField.value = JSON.stringify(currentDesignEngineIntent);
+    }
+    return currentDesignEngineIntent;
   }
 
   function applyDesignConfig(config) {
@@ -549,16 +610,20 @@
     }
     if (config.description && descriptionField) descriptionField.value = config.description;
     if (config.notes && notesField) notesField.value = config.notes;
+    if (config.target_materials && targetMaterialsField) targetMaterialsField.value = config.target_materials;
   }
 
-  askDesignBtn?.addEventListener('click', async () => {
+  async function sendDesignChatMessage() {
     const message = String(designChatInput?.value || '').trim();
-    if (!message) return;
+    if (!message) return null;
     appendDesignMessage('user', message);
     designMessages.push({ role: 'user', content: message });
     designChatInput.value = '';
-    askDesignBtn.disabled = true;
-    askDesignBtn.textContent = 'Thinking...';
+    if (askDesignBtn) {
+      askDesignBtn.disabled = true;
+      askDesignBtn.textContent = 'Thinking...';
+    }
+    if (applyDesignBtn) applyDesignBtn.disabled = true;
 
     try {
       const response = await fetch("{{ url_for('investor.design_studio_chat') }}", {
@@ -574,18 +639,36 @@
       const data = await response.json();
       const reply = data.assistant_message || 'I\'ve updated the design configuration.';
       applyDesignConfig(data.config || {});
+      syncDesignEngineIntent(data.engine_intent || {}, data.config || {});
       appendDesignMessage('assistant', reply);
       designMessages.push({ role: 'assistant', content: reply });
       if (designChatStatus) designChatStatus.textContent = data.ready ? 'Ready' : 'Refining';
+      return data;
     } catch (error) {
       appendDesignMessage('assistant', error.message || 'Something went wrong. Please try again.');
+      throw error;
     } finally {
-      askDesignBtn.disabled = false;
-      askDesignBtn.textContent = 'Ask Ravlo';
+      if (askDesignBtn) {
+        askDesignBtn.disabled = false;
+        askDesignBtn.textContent = 'Ask Ravlo';
+      }
+      if (applyDesignBtn) applyDesignBtn.disabled = false;
     }
+  }
+
+  askDesignBtn?.addEventListener('click', () => {
+    sendDesignChatMessage().catch(() => {});
   });
 
-  applyDesignBtn?.addEventListener('click', () => {
+  applyDesignBtn?.addEventListener('click', async () => {
+    if (String(designChatInput?.value || '').trim()) {
+      try {
+        await sendDesignChatMessage();
+      } catch (_) {
+        return;
+      }
+    }
+    syncDesignEngineIntent(currentDesignEngineIntent, gatherDesignConfig());
     if (form) form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit'));
   });
 
@@ -801,6 +884,7 @@
     }
 
     try {
+      syncDesignEngineIntent(currentDesignEngineIntent, gatherDesignConfig());
       const fd = new FormData(form);
       if (activeSlot) {
         fd.set('room_type', activeSlot.dataset.roomLabel);
@@ -887,9 +971,11 @@
         roomGallery.prepend(card);
       }
 
+      appendDesignResultMessage(concept, imgUrl);
       refreshActionButtons();
     } catch (error) {
       interiorStatus.textContent = 'Error';
+      appendDesignMessage('assistant', error.message || 'I could not generate that design yet.');
       if (activeSlot) {
         const statusEl = activeSlot.querySelector('.room-slot-status');
         if (statusEl && activeSlot.dataset.hasRender !== 'true') {

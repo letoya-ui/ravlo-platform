@@ -327,6 +327,9 @@
 .build-chat-message.assistant{margin-right:42px}
 .build-chat-message strong{display:block;color:#fff;margin-bottom:6px}
 .build-chat-message p{margin:0;color:#c9d5e6;line-height:1.55}
+.build-chat-result-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.build-chat-result-grid a{display:grid;gap:6px;color:#dbeafe;text-decoration:none;font-size:.78rem;font-weight:800}
+.build-chat-result-grid img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04)}
 .build-chat-composer{display:grid;gap:12px;margin-top:14px}
 .build-chat-composer textarea{width:100%;resize:vertical;min-height:92px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
 .spec-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
@@ -350,7 +353,7 @@
 .loading-step{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);color:#dbe6f5}
 .loader-ring{width:58px;height:58px;border-radius:50%;margin:0 auto;border:4px solid rgba(255,255,255,.12);border-top-color:#7ab8ff;animation:build-spin 1s linear infinite}
 @keyframes build-spin{to{transform:rotate(360deg)}}
-@media (max-width: 900px){.studio-hero-card,.project-build-grid,.form-grid.two{grid-template-columns:1fr}.build-context-panel{position:static}.build-chat-message.user,.build-chat-message.assistant{margin-left:0;margin-right:0}}
+@media (max-width: 900px){.studio-hero-card,.project-build-grid,.form-grid.two{grid-template-columns:1fr}.build-context-panel{position:static}.build-chat-message.user,.build-chat-message.assistant{margin-left:0;margin-right:0}.build-chat-result-grid{grid-template-columns:1fr}}
 </style>
 
 <script>
@@ -536,6 +539,45 @@
     buildChatThread.scrollTop = buildChatThread.scrollHeight;
   }
 
+  function appendBuildResultMessage(items) {
+    if (!buildChatThread) return;
+    const visibleItems = (items || []).filter((item) => item.url);
+    if (!visibleItems.length) {
+      appendChatMessage('assistant', 'Build package finished, but I did not get image links back yet.');
+      return;
+    }
+
+    const node = document.createElement('div');
+    node.className = 'build-chat-message assistant';
+    const label = document.createElement('strong');
+    label.textContent = 'Ravlo';
+    const copy = document.createElement('p');
+    copy.textContent = 'Built it. The package is ready below.';
+
+    const grid = document.createElement('div');
+    grid.className = 'build-chat-result-grid';
+    visibleItems.forEach((item) => {
+      const link = document.createElement('a');
+      link.href = item.url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      const img = document.createElement('img');
+      img.src = item.url;
+      img.alt = item.label;
+      const caption = document.createElement('span');
+      caption.textContent = item.label;
+      link.appendChild(img);
+      link.appendChild(caption);
+      grid.appendChild(link);
+    });
+
+    node.appendChild(label);
+    node.appendChild(copy);
+    node.appendChild(grid);
+    buildChatThread.appendChild(node);
+    buildChatThread.scrollTop = buildChatThread.scrollHeight;
+  }
+
   function inferFloorCountFromText(text) {
     const normalized = String(text || '').toLowerCase().replace(/-/g, ' ');
     const words = { one: 1, single: 1, two: 2, three: 3, four: 4, five: 5 };
@@ -588,14 +630,17 @@
   form?.addEventListener('input', updateStructuredSpecInput);
   form?.addEventListener('change', updateStructuredSpecInput);
 
-  askBuildPlannerBtn?.addEventListener('click', async () => {
+  async function sendBuildChatMessage() {
     const message = String(buildChatInput?.value || '').trim();
-    if (!message) return;
+    if (!message) return null;
     appendChatMessage('user', message);
     buildMessages.push({ role: 'user', content: message });
     buildChatInput.value = '';
-    askBuildPlannerBtn.disabled = true;
-    askBuildPlannerBtn.textContent = 'Thinking...';
+    if (askBuildPlannerBtn) {
+      askBuildPlannerBtn.disabled = true;
+      askBuildPlannerBtn.textContent = 'Thinking...';
+    }
+    if (approveBuildSpecBtn) approveBuildSpecBtn.disabled = true;
 
     try {
       const response = await fetch("{{ url_for('investor_generator_build.investor_build_chat') }}", {
@@ -625,15 +670,31 @@
       if (Array.isArray(data.next_questions) && data.next_questions.length) {
         appendChatMessage('assistant', data.next_questions.join(' '));
       }
+      return data;
     } catch (error) {
       appendChatMessage('assistant', error.message || 'I could not update the build spec yet.');
+      throw error;
     } finally {
-      askBuildPlannerBtn.disabled = false;
-      askBuildPlannerBtn.textContent = 'Ask Ravlo';
+      if (askBuildPlannerBtn) {
+        askBuildPlannerBtn.disabled = false;
+        askBuildPlannerBtn.textContent = 'Ask Ravlo';
+      }
+      if (approveBuildSpecBtn) approveBuildSpecBtn.disabled = false;
     }
+  }
+
+  askBuildPlannerBtn?.addEventListener('click', () => {
+    sendBuildChatMessage().catch(() => {});
   });
 
-  approveBuildSpecBtn?.addEventListener('click', () => {
+  approveBuildSpecBtn?.addEventListener('click', async () => {
+    if (String(buildChatInput?.value || '').trim()) {
+      try {
+        await sendBuildChatMessage();
+      } catch (_) {
+        return;
+      }
+    }
     updateStructuredSpecInput();
     renderSpecPreview(currentBuildSpec, 'Approved');
   });
@@ -726,6 +787,13 @@
 
   form?.addEventListener('submit', async function (e) {
     e.preventDefault();
+    if (String(buildChatInput?.value || '').trim()) {
+      try {
+        await sendBuildChatMessage();
+      } catch (_) {
+        return;
+      }
+    }
     updateStructuredSpecInput();
     startBuildLoading();
 
@@ -780,6 +848,14 @@
       renderMedia('exteriorMedia', firstImage(exteriorResult), 'Exterior concept', 'Exterior concept will appear here.');
       renderMedia('exteriorBackMedia', firstImage(exteriorBackResult), 'Exterior back', 'Rear exterior concept will appear here.');
       document.getElementById('exteriorBackStatus').textContent = firstImage(exteriorBackResult) ? 'Generated' : 'Waiting';
+      appendBuildResultMessage([
+        { label: 'Floor 1 Blueprint', url: firstImage(blueprintResult) },
+        { label: 'Floor 2 Blueprint', url: firstImage(floor2Result) },
+        { label: 'Floor 3 Blueprint', url: firstImage(floor3Result) },
+        { label: 'Site Plan', url: firstImage(siteplanResult) },
+        { label: 'Front Exterior', url: firstImage(exteriorResult) },
+        { label: 'Rear Exterior', url: firstImage(exteriorBackResult) },
+      ]);
       if (build.build_intelligence && Object.keys(build.build_intelligence).length) {
         currentBuildSpec = mergeSpec(currentBuildSpec, build.build_intelligence);
         if (structuredBuildSpecField) structuredBuildSpecField.value = JSON.stringify(currentBuildSpec);
@@ -801,6 +877,7 @@
         budgetStudioBtn.classList.remove('hidden');
       }
     } catch (error) {
+      appendChatMessage('assistant', error.message || 'I could not generate that build package yet.');
       alert(error.message || 'Build Studio generation failed.');
     } finally {
       stopBuildLoading();

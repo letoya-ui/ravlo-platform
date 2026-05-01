@@ -6239,6 +6239,11 @@ def _build_project_from_request_args() -> dict[str, Any]:
         request.args.get("description"),
         request.args.get("notes"),
     )
+    square_feet_target = _normalize_int(request.args.get("square_feet_target") or request.args.get("square_feet"))
+    bedrooms = _normalize_int(request.args.get("bedrooms") or request.args.get("beds"))
+    bathrooms = _safe_float(request.args.get("bathrooms") or request.args.get("baths"))
+    finish_level = _clean_str(request.args.get("finish_level"))
+    garage = str(request.args.get("garage") or "").lower() in ("1", "true", "yes", "on")
 
     if not any([
         _clean_str(request.args.get("project_name")),
@@ -6250,6 +6255,11 @@ def _build_project_from_request_args() -> dict[str, Any]:
         _clean_str(request.args.get("notes")),
         lot_count,
         floor_count,
+        square_feet_target,
+        bedrooms,
+        bathrooms,
+        finish_level,
+        garage,
     ]):
         return {}
 
@@ -6263,6 +6273,12 @@ def _build_project_from_request_args() -> dict[str, Any]:
         "lot_count": lot_count,
         "stories": floor_count,
         "number_of_floors": floor_count,
+        "square_feet_target": square_feet_target,
+        "project_size": square_feet_target,
+        "bedrooms": bedrooms,
+        "bathrooms": bathrooms,
+        "finish_level": finish_level,
+        "garage": garage,
         "lot_size": _clean_str(request.args.get("lot_size")),
         "zoning": _clean_str(request.args.get("zoning")),
         "location": _clean_str(request.args.get("location")),
@@ -6320,6 +6336,7 @@ def build_studio(deal_id=None):
         }
 
     blueprint_result = build_project.get("blueprint", {}) or {}
+    siteplan_result = build_project.get("siteplan", {}) or build_project.get("site_plan", {}) or {}
     exterior_result = _build_project_exterior_result(build_project)
 
     interior_block = build_project.get("interior", {}) or {}
@@ -6346,12 +6363,14 @@ def build_studio(deal_id=None):
 
     package_result = {
         "blueprint": blueprint_result.get("image_url") or blueprint_result.get("blueprint_url") or "",
+        "siteplan": siteplan_result.get("image_url") or siteplan_result.get("site_plan_url") or "",
         "exterior": exterior_result.get("image_url") or "",
         "interior": interior_result.get("image_url") or "",
     }
 
     has_saved_package = any([
         package_result["blueprint"],
+        package_result["siteplan"],
         package_result["exterior"],
         package_result["interior"],
     ])
@@ -6397,17 +6416,18 @@ def build_studio(deal_id=None):
         build_analysis=build_analysis,
         build_project=build_project,
         blueprint_result=blueprint_result,
-        blueprint_floor2_result=build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {},
+        blueprint_floor2_result=build_project.get("blueprint_floor2", {}) or {},
         blueprint_floor3_result=build_project.get("blueprint_floor3", {}) or {},
+        siteplan_result=siteplan_result,
         exterior_result=exterior_result,
         property_photo_gallery=property_gallery,
         package_result=package_result,
         has_saved_package=has_saved_package,
         page_title="Build Studio",
-        page_subtitle="Exterior design and multi-floor blueprint development for new builds, renovations, and property transformations.",
+        page_subtitle="Describe your vision in plain language \u2014 Ravlo\u2019s AI turns it into blueprints, site plans, and exterior concepts.",
         lot_count=lot_count,
         floor_count=floor_count,
-        hero_title="Multi-floor blueprints and exterior concepts.",
+        hero_title="Tell Ravlo what to build. AI handles the rest.",
         hero_eyebrow="RAVLO BUILD STUDIO",
         companion_endpoint="investor.design_studio",
         companion_label="Open Design Studio",
@@ -6504,8 +6524,28 @@ def design_studio(deal_id=None):
 
     build_project = results.get("build_project", {}) or {}
     blueprint_result = build_project.get("blueprint", {}) or {}
+    siteplan_result = build_project.get("siteplan", {}) or build_project.get("site_plan", {}) or {}
+    exterior_result = _build_project_exterior_result(build_project)
+    blueprint_floor2_result = build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}
+    blueprint_floor3_result = build_project.get("blueprint_floor3", {}) or {}
     interior_block = build_project.get("interior", {}) or {}
-    interior_result = interior_block.get("latest", {}) or {}
+    interior_result = interior_block.get("latest", {}) or rehab_latest or {}
+    interior_rooms = [
+        room for room in (interior_block.get("rooms", []) or [])
+        if isinstance(room, dict)
+    ]
+    seen_interior_urls = {
+        room.get("image_url")
+        for room in interior_rooms
+        if isinstance(room, dict) and room.get("image_url")
+    }
+    for concept in rehab_concepts:
+        if not isinstance(concept, dict):
+            continue
+        concept_url = concept.get("image_url")
+        if concept_url and concept_url not in seen_interior_urls:
+            interior_rooms.append(concept)
+            seen_interior_urls.add(concept_url)
     design_budget = (
         results.get("design_budget")
         or interior_block.get("budget")
@@ -6524,11 +6564,19 @@ def design_studio(deal_id=None):
         property_photo_gallery=property_gallery,
         workspace_images=workspace_images,
         preselected_image_url=preselected_image_url,
+        build_project=build_project,
         blueprint_result=blueprint_result,
+        blueprint_floor2_result=blueprint_floor2_result,
+        blueprint_floor3_result=blueprint_floor3_result,
+        exterior_result=exterior_result,
         interior_result=interior_result,
+        interior_rooms=interior_rooms,
         design_budget=design_budget,
         page_title="Design Studio",
-        page_subtitle="Create interior design concepts from blueprints, floor plans, and existing spaces.",
+        page_subtitle="Describe your dream interior in plain language \u2014 Ravlo\u2019s AI turns it into a photorealistic room design.",
+        companion_endpoint="investor.build_studio",
+        companion_label="Open Build Studio",
+        lot_count=_build_project_lot_count(build_project.get("lot_count"), build_project.get("development_type")),
     )
 
 
@@ -6566,6 +6614,7 @@ def design_studio_generate_budget():
         notes = (data.get("notes") or "").strip()
         room_type = (data.get("room_type") or "living room").strip()
         rehab_level = (data.get("rehab_level") or "medium").strip().lower()
+        finish_level = (data.get("finish_level") or "standard").strip()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
 
         if project:
@@ -6590,6 +6639,9 @@ def design_studio_generate_budget():
             "room_focus": room_type,
             "desired_updates": notes or description,
             "prompt_notes": notes,
+            "design_notes": description,
+            "target_materials": data.get("target_materials") or "",
+            "finish_level": finish_level,
             "location_cost_context": location_context if isinstance(location_context, dict) else None,
         }
 
@@ -6598,6 +6650,9 @@ def design_studio_generate_budget():
             ("budget_max", "budget_max"),
             ("room_square_feet", "room_square_feet"),
             ("square_feet", "square_feet"),
+            ("room_count", "room_count"),
+            ("bedrooms", "bedrooms"),
+            ("bathrooms", "bathrooms"),
             ("market_cost_multiplier", "market_cost_multiplier"),
         ):
             value = data.get(source_key)
@@ -6606,6 +6661,19 @@ def design_studio_generate_budget():
                     payload[payload_key] = float(value)
                 except (TypeError, ValueError):
                     pass
+
+        if deal is not None and "square_feet" not in payload and "room_square_feet" not in payload:
+            resolved_property = (getattr(deal, "resolved_json", {}) or {}).get("property", {}) or {}
+            fallback_sqft = (
+                getattr(deal, "square_feet", None)
+                or resolved_property.get("square_feet")
+                or resolved_property.get("sqft")
+            )
+            try:
+                if fallback_sqft:
+                    payload["square_feet"] = float(fallback_sqft)
+            except (TypeError, ValueError):
+                pass
 
         if "market_cost_multiplier" not in payload and isinstance(location_context, dict):
             try:
@@ -7397,6 +7465,188 @@ def generate_build_exterior():
 
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@investor_bp.route("/deal-studio/design-studio/chat", methods=["POST"])
+@login_required
+@role_required("investor")
+def design_studio_chat():
+    """AI chat endpoint for Design Studio. Understands user's design request
+    and responds with structured design guidance + form field suggestions."""
+    try:
+        data = request.get_json(silent=True) or {}
+        messages = data.get("messages") or []
+        current_config = data.get("config") or {}
+
+        api_key = current_app.config.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return jsonify(_design_studio_fallback_chat(messages, current_config))
+
+        client = OpenAI(api_key=api_key)
+
+        system_prompt = (
+            "You are Ravlo — an adaptive AI interior design assistant with a voice-command personality. "
+            "Users talk to you like they would Alexa: short commands like "
+            "'Ravlo, make the kitchen modern' or 'white marble countertops' or 'farmhouse style'. "
+            "You understand instantly and act.\n\n"
+            "PERSONALITY:\n"
+            "- Adaptive: match the user's energy. Short command → short confirmation. "
+            "Detailed vision → detailed response.\n"
+            "- Voice-command ready: parse casual shorthand. 'kitchen modern' = modern kitchen design.\n"
+            "- Confident: you're a seasoned designer. You get it on the first try.\n"
+            "- Concise: 'Modern kitchen, marble island — locked in.' not a paragraph.\n"
+            "- If unclear, ask ONE sharp question. Never over-ask.\n\n"
+            "TASK:\n"
+            "1. Extract EVERY detail: style, materials, colors, furniture, lighting, fixtures.\n"
+            "2. Confirm what you understood in assistant_message — short, confident.\n"
+            "3. If key details are missing, ask ONE targeted follow-up.\n"
+            "4. Return structured suggestions for form fields.\n\n"
+            "Return ONLY valid JSON:\n"
+            '{\n'
+            '  "assistant_message": "Short, adaptive confirmation",\n'
+            '  "config": {\n'
+            '    "style": "modern_luxury|modern_farmhouse|minimal_modern|traditional|industrial_loft|coastal",\n'
+            '    "room_type": "living room|kitchen|primary bedroom|bathroom|dining room|office",\n'
+            '    "description": "The user\'s full creative vision — drives image generation",\n'
+            '    "notes": "Technical details about materials, finishes, etc."\n'
+            '  },\n'
+            '  "ready": true or false\n'
+            '}\n\n'
+            "Set ready=true when you have enough info for a great design. Don't over-ask."
+        )
+
+        user_prompt = (
+            f"Current config: {json.dumps(current_config)}\n\n"
+            f"Conversation:\n{json.dumps(messages)}"
+        )
+
+        response = client.chat.completions.create(
+            model=current_app.config.get("AI_MODEL") or "gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.3,
+        )
+
+        text = (response.choices[0].message.content or "").strip()
+        # Strip markdown fences if present
+        text = re.sub(r"^```(?:json)?\s*", "", text)
+        text = re.sub(r"\s*```$", "", text)
+        try:
+            parsed = json.loads(text)
+        except (json.JSONDecodeError, ValueError):
+            parsed = {
+                "assistant_message": text or "I understand your design vision. Let me help you refine it.",
+                "config": current_config,
+                "ready": False,
+            }
+
+        return jsonify(parsed)
+
+    except Exception as exc:
+        current_app.logger.warning("Design studio chat AI error: %s", exc, exc_info=True)
+        fallback = _design_studio_fallback_chat(
+            data.get("messages") if "data" in dir() else [],
+            data.get("config") if "data" in dir() else {},
+        )
+        fallback["_ai_error"] = str(exc)
+        return jsonify(fallback)
+
+
+def _design_studio_fallback_chat(messages, current_config):
+    """Keyword-based fallback when OpenAI is unavailable."""
+    user_text = ""
+    if isinstance(messages, list) and messages:
+        last = messages[-1]
+        if isinstance(last, dict):
+            user_text = str(last.get("content") or last.get("message") or last.get("text") or "")
+        else:
+            user_text = str(last)
+    lowered = user_text.lower()
+
+    config = dict(current_config or {})
+
+    style_keywords = {
+        "modern luxury": "modern_luxury",
+        "luxury modern": "modern_luxury",
+        "modern farmhouse": "modern_farmhouse",
+        "farmhouse": "modern_farmhouse",
+        "minimal": "minimal_modern",
+        "minimalist": "minimal_modern",
+        "traditional": "traditional",
+        "industrial": "industrial_loft",
+        "loft": "industrial_loft",
+        "coastal": "coastal",
+        "beach": "coastal",
+    }
+    for keyword, style_val in style_keywords.items():
+        if keyword in lowered:
+            config["style"] = style_val
+            break
+
+    room_keywords = {
+        "kitchen": "kitchen",
+        "living room": "living room",
+        "living area": "living room",
+        "bedroom": "primary bedroom",
+        "master bedroom": "primary bedroom",
+        "primary bedroom": "primary bedroom",
+        "bathroom": "bathroom",
+        "bath": "bathroom",
+        "dining": "dining room",
+        "office": "office",
+        "study": "office",
+    }
+    for keyword, room_val in room_keywords.items():
+        if keyword in lowered:
+            config["room_type"] = room_val
+            break
+
+    if user_text.strip():
+        config["description"] = user_text.strip()
+
+    # Build a conversational response that references the user's request
+    assistant_message = _design_conversational_reply(user_text, config)
+
+    return {
+        "assistant_message": assistant_message,
+        "config": config,
+        "ready": True,
+    }
+
+
+def _design_conversational_reply(user_text, config):
+    """Generate an adaptive, voice-command-style reply referencing user's design request."""
+    if not user_text.strip():
+        return "What room are we designing? Style, colors, materials — hit me."
+
+    details = []
+    style_labels = {
+        "modern_luxury": "modern luxury",
+        "modern_farmhouse": "modern farmhouse",
+        "minimal_modern": "minimal modern",
+        "traditional": "traditional",
+        "industrial_loft": "industrial loft",
+        "coastal": "coastal",
+    }
+    room_labels = {
+        "living room": "living room",
+        "kitchen": "kitchen",
+        "primary bedroom": "primary bedroom",
+        "bathroom": "bathroom",
+        "dining room": "dining room",
+        "office": "office",
+    }
+    if config.get("style"):
+        details.append(style_labels.get(config["style"], config["style"]))
+    if config.get("room_type"):
+        details.append(room_labels.get(config["room_type"], config["room_type"]))
+
+    if details:
+        summary = ", ".join(details)
+        return f"{summary} — locked in. Form's updated below. Generate when ready, or tell me more."
+    return "Got your vision — form's loaded below. Generate when ready, or keep talking."
+
+
 @investor_bp.route("/deal-studio/build-studio/generate-interior", methods=["POST"])
 @login_required
 @role_required("investor")
@@ -7515,6 +7765,12 @@ def generate_build_interior():
                 rehab_level="full_concept",
             )
 
+        # Combine user's free-text description and notes as the primary
+        # creative direction the AI engine should follow.
+        user_creative_direction = ". ".join(
+            part for part in [description, notes] if part
+        )
+
         payload = {
             "mode": "interior",
             "task": "blueprint_to_interior_room" if source_is_floor_plan else "interior_design",
@@ -7522,8 +7778,9 @@ def generate_build_interior():
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
-            "description": description,
-            "build_description": description,
+            "description": user_creative_direction or description,
+            "build_description": user_creative_direction or description,
+            "design_notes": notes,
             "lot_size": lot_size,
             "zoning": zoning,
             "room_type": room_type,
@@ -7533,8 +7790,8 @@ def generate_build_interior():
             "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
 
             "prompt": interior_prompt_notes,
-            "prompt_notes": interior_prompt_notes,
-            "desired_updates": interior_prompt_notes,
+            "prompt_notes": user_creative_direction or interior_prompt_notes,
+            "desired_updates": user_creative_direction or interior_prompt_notes,
 
             "special_features": (
                 f"{room_type} interior, {_room_program_prompt(room_type)}, high-end furniture, premium finishes, "
@@ -8121,10 +8378,45 @@ def generate_full_build():
         location = (data.get("location") or "").strip()
         notes = (data.get("notes") or "").strip()
         development_type = _build_project_development_label(property_type, lot_count)
+        square_feet_target = _normalize_int(data.get("square_feet") or data.get("square_feet_target"))
+        bedrooms = _normalize_int(data.get("bedrooms") or data.get("beds"))
+        bathrooms = _safe_float(data.get("bathrooms") or data.get("baths"))
+        finish_level = (data.get("finish_level") or "standard").strip()
+        garage = str(data.get("garage") or "").lower() in ("1", "true", "yes", "on")
+
+        program_parts = []
+        if square_feet_target:
+            program_parts.append(f"{square_feet_target:,} sq ft target")
+        if bedrooms:
+            program_parts.append(f"{bedrooms} bedrooms")
+        if bathrooms:
+            program_parts.append(f"{bathrooms:g} baths")
+        if finish_level:
+            program_parts.append(f"{finish_level} finish")
+        if garage:
+            program_parts.append("garage included")
 
         site_notes = notes
+        if program_parts:
+            site_notes = f"{site_notes}. Program: {', '.join(program_parts)}.".strip(". ").strip()
         if lot_count and lot_count > 1:
             site_notes = f"{notes}. Plan for {lot_count} buildable lots across the site.".strip(". ").strip()
+            if program_parts:
+                site_notes = f"{site_notes}. Program: {', '.join(program_parts)}."
+
+        build_program_context = {
+            key: value
+            for key, value in {
+                "square_feet_target": square_feet_target,
+                "project_size": square_feet_target,
+                "bedrooms": bedrooms,
+                "bathrooms": bathrooms,
+                "finish_level": finish_level,
+                "garage": garage,
+                "lot_count": lot_count,
+            }.items()
+            if value not in (None, "")
+        }
 
         base_build_prompt_notes = _compose_build_studio_prompt(
             notes=site_notes,
@@ -8152,6 +8444,13 @@ def generate_full_build():
                         "property_type": property_type or None,
                         "lot_size": lot_size or None,
                         "zoning": zoning or None,
+                        "square_feet_target": square_feet_target,
+                        "stories": number_of_floors,
+                        "bedrooms": bedrooms,
+                        "bathrooms": bathrooms,
+                        "finish_level": finish_level,
+                        "garage": garage,
+                        "unit_count": lot_count,
                     },
                     timeout=60,
                 ) or {}
@@ -8305,7 +8604,7 @@ def generate_full_build():
             "prompt": base_build_prompt_notes,
             "prompt_notes": base_build_prompt_notes,
             "special_features": f"{lot_count} total lots" if lot_count and lot_count > 1 else notes,
-            "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+            "square_feet_target": square_feet_target,
             "stories": number_of_floors,
             "number_of_floors": number_of_floors,
             "floor_count": number_of_floors,
@@ -8317,6 +8616,7 @@ def generate_full_build():
             "count": 1,
             "negative_prompt": _build_studio_negative_prompt("blueprint_first_floor"),
         }
+        blueprint_payload.update(build_program_context)
         blueprint_payload.update(_build_studio_quality_controls("blueprint_first_floor"))
 
         if blueprint_image_base64:
@@ -8404,7 +8704,7 @@ def generate_full_build():
                     "prompt": blueprint_floor2_prompt_notes,
                     "prompt_notes": blueprint_floor2_prompt_notes,
                     "special_features": "upper level bedrooms, bathrooms, laundry, hallway, secondary living spaces",
-                    "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+                    "square_feet_target": square_feet_target,
                     "stories": number_of_floors,
                     "number_of_floors": number_of_floors,
                     "floor_count": number_of_floors,
@@ -8419,6 +8719,7 @@ def generate_full_build():
                     "count": 1,
                     "negative_prompt": _build_studio_negative_prompt("blueprint_second_floor"),
                 }
+                blueprint_floor2_payload.update(build_program_context)
                 blueprint_floor2_payload.update(_build_studio_quality_controls("blueprint_second_floor"))
 
                 current_app.logger.warning(f"FULL BUILD BLUEPRINT FLOOR 2 PAYLOAD: {blueprint_floor2_payload}")
@@ -8503,7 +8804,7 @@ def generate_full_build():
                     "prompt": blueprint_floor3_prompt_notes,
                     "prompt_notes": blueprint_floor3_prompt_notes,
                     "special_features": "third floor top level bedrooms bathrooms flex loft storage stair continuation",
-                    "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+                    "square_feet_target": square_feet_target,
                     "stories": number_of_floors,
                     "number_of_floors": number_of_floors,
                     "floor_count": number_of_floors,
@@ -8515,6 +8816,7 @@ def generate_full_build():
                     "count": 1,
                     "negative_prompt": _build_studio_negative_prompt("blueprint_third_floor"),
                 }
+                blueprint_floor3_payload.update(build_program_context)
 
                 if floor3_reference_b64:
                     blueprint_floor3_payload["blueprint_image_base64"] = floor3_reference_b64
@@ -8636,6 +8938,7 @@ def generate_full_build():
                   "text, watermark, blurry, low resolution, cropped building"
             ),
         }
+        exterior_payload.update(build_program_context)
 
         if exterior_ref_b64:
             exterior_payload.update({
@@ -8746,6 +9049,7 @@ def generate_full_build():
                   "text, watermark, blurry, low resolution, cropped building"
             ),
         }
+        exterior_back_payload.update(build_program_context)
 
         if exterior_ref_b64:
             exterior_back_payload.update({
@@ -8827,6 +9131,12 @@ def generate_full_build():
             build_project["lot_count"] = lot_count
             build_project["stories"] = number_of_floors
             build_project["number_of_floors"] = number_of_floors
+            build_project["square_feet_target"] = square_feet_target
+            build_project["project_size"] = square_feet_target
+            build_project["bedrooms"] = bedrooms
+            build_project["bathrooms"] = bathrooms
+            build_project["finish_level"] = finish_level
+            build_project["garage"] = garage
             build_project["description"] = description
             build_project["lot_size"] = lot_size
             build_project["zoning"] = zoning
@@ -8845,6 +9155,7 @@ def generate_full_build():
                 "style": style,
                 "stories": number_of_floors,
                 "number_of_floors": number_of_floors,
+                **build_program_context,
                 "image_url": blueprint_primary_url,
                 "images": blueprint_urls,
                 "blueprint_url": blueprint_primary_url,
@@ -8865,6 +9176,7 @@ def generate_full_build():
                 "style": style,
                 "stories": number_of_floors,
                 "number_of_floors": number_of_floors,
+                **build_program_context,
                 "floor_label": "Second Floor",
                 "blueprint_floor": "second",
                 "image_url": blueprint_floor2_primary_url,
@@ -8887,6 +9199,7 @@ def generate_full_build():
                 "style": style,
                 "stories": number_of_floors,
                 "number_of_floors": number_of_floors,
+                **build_program_context,
                 "floor_label": "Third Floor",
                 "blueprint_floor": "third",
                 "image_url": blueprint_floor3_primary_url,
@@ -8909,6 +9222,7 @@ def generate_full_build():
                 "style": style,
                 "stories": number_of_floors,
                 "number_of_floors": number_of_floors,
+                **build_program_context,
                 "image_url": exterior_primary_url,
                 "images": exterior_urls,
                 "meta": exterior_meta,
@@ -8936,6 +9250,7 @@ def generate_full_build():
                     "style": style,
                     "stories": number_of_floors,
                     "number_of_floors": number_of_floors,
+                    **build_program_context,
                     "image_url": exterior_back_url,
                     "meta": exterior_back_meta,
                     "seed": exterior_back_seed,
@@ -10927,6 +11242,8 @@ def design_studio_generate():
         floor = (data.get("floor") or "main").strip()
         notes = (data.get("notes") or "").strip()
         rehab_level = (data.get("rehab_level") or "medium").strip().lower()
+        finish_level = (data.get("finish_level") or "standard").strip()
+        target_materials = (data.get("target_materials") or "").strip()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
         source_results = _deal_results(deal) if deal is not None else {}
         source_build_project = source_results.get("build_project", {}) or {}
@@ -11042,6 +11359,8 @@ def design_studio_generate():
                 "prompt": design_prompt_notes,
                 "prompt_notes": design_prompt_notes,
                 "desired_updates": design_prompt_notes,
+                "target_materials": target_materials,
+                "finish_level": finish_level,
                 "concept_intensity": "blueprint_to_photoreal_room",
                 "reference_role": "floor_plan_context_only_not_init_image",
                 "keep_layout": False,
@@ -11096,6 +11415,8 @@ def design_studio_generate():
                 "prompt": design_prompt_notes,
                 "desired_updates": design_prompt_notes,
                 "prompt_notes": design_prompt_notes,
+                "target_materials": target_materials,
+                "finish_level": finish_level,
                 "keep_layout": True,
                 "preserve_structure": True,
                 "concept_intensity": "full_concept",
@@ -11139,6 +11460,8 @@ def design_studio_generate():
             "floor": floor,
             "result_key": "|".join(_design_room_result_key(room_type, floor, preset)),
             "rehab_level": rehab_level,
+            "finish_level": finish_level,
+            "target_materials": target_materials,
             "notes": notes,
             "seed": engine_json.get("seed") or unique_seed,
             "job_id": engine_json.get("job_id"),
