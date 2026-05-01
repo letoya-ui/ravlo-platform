@@ -3773,10 +3773,6 @@ def api_property_tool_search():
 
     latitude = payload.get("latitude")
     longitude = payload.get("longitude")
-    max_price_filter = safe_float(payload.get("max_price") or payload.get("maxPrice"))
-    min_score_filter = safe_float(payload.get("min_score") or payload.get("minScore"))
-    min_discount_filter = safe_float(payload.get("min_discount") or payload.get("minDiscount"))
-    buyer_profile = (payload.get("buyer_profile") or payload.get("buyerProfile") or "").strip()
 
     has_market = bool(zip_code or (city and state))
     has_location = bool(latitude and longitude)
@@ -3790,9 +3786,9 @@ def api_property_tool_search():
 
     raw_limit = payload.get("limit")
     try:
-        limit = max(1, min(int(raw_limit or 20), 25))
+        limit = max(1, min(int(raw_limit or 12), 12))
     except (TypeError, ValueError):
-        limit = 20
+        limit = 12
 
     try:
         orchestrator = PropertyIntelligenceOrchestrator(
@@ -3808,55 +3804,6 @@ def api_property_tool_search():
             limit=limit,
         )
         results = [_proxy_search_result_images(result) for result in results]
-        unfiltered_count = len(results)
-
-        def passes_deal_finder_filters(item):
-            price = _safe_float(
-                item.get("listing_price")
-                or item.get("purchase_price")
-                or item.get("price")
-            )
-            if max_price_filter and price and price > max_price_filter:
-                return False
-
-            if min_score_filter and safe_float(item.get("deal_score")) < min_score_filter:
-                return False
-
-            if min_discount_filter:
-                spread_pct = _safe_float(item.get("spread_to_arv_pct")) or 0
-                if spread_pct < min_discount_filter:
-                    return False
-
-            return True
-
-        results = [item for item in results if passes_deal_finder_filters(item)]
-
-        def buyer_profile_score(item):
-            base = _safe_float(item.get("buy_box_fit_score")) or _safe_float(item.get("deal_score")) or 0
-            best_exit = (item.get("best_exit_strategy") or item.get("recommended_strategy") or "").lower()
-            property_type = (item.get("property_type") or item.get("asset_type") or "").lower()
-            price = _safe_float(item.get("listing_price") or item.get("purchase_price") or item.get("price")) or 0
-            rent = _safe_float(item.get("monthly_rent_estimate") or item.get("rent_estimate")) or 0
-            spread_pct = _safe_float(item.get("spread_to_arv_pct")) or 0
-            bonus = 0
-
-            if buyer_profile == "fix_flip_operator":
-                bonus += 16 if best_exit in {"flip", "fix_flip"} else 0
-                bonus += min(max(spread_pct, 0), 25) * 0.35
-            elif buyer_profile == "buy_hold_dscr":
-                bonus += 16 if best_exit in {"rental", "brrrr", "hold"} else 0
-                bonus += 12 if price and rent and ((rent * 12) / price) >= 0.10 else 0
-            elif buyer_profile == "str_operator":
-                bonus += 18 if best_exit in {"airbnb", "str", "short_term_rental"} else 0
-                bonus += 6 if item.get("short_term_rental_estimate") or item.get("airbnb_estimate") else 0
-            elif buyer_profile == "builder_developer":
-                bonus += 18 if "land" in property_type or best_exit == "land" else 0
-                bonus += 6 if item.get("lot_size_sqft") or item.get("lot_size") else 0
-
-            return base + bonus
-
-        if buyer_profile:
-            results.sort(key=buyer_profile_score, reverse=True)
 
         return jsonify({
             "status": "ok",
@@ -3866,18 +3813,11 @@ def api_property_tool_search():
                 else None
             ),
             "results": results,
-            "count": len(results),
+            "count": meta["count"],
             "total_matches": meta["total_matches"],
             "strategy": meta["strategy"],
             "asset_type": meta["asset_type"],
             "asset_type_label": meta["asset_type_label"],
-            "buyer_profile": buyer_profile,
-            "filters": {
-                "max_price": max_price_filter,
-                "min_score": min_score_filter,
-                "min_discount": min_discount_filter,
-                "unfiltered_count": unfiltered_count,
-            },
             "zip": meta["zip"],
             "address": meta["address"],
             "engine_ready": meta["engine_ready"],
@@ -7040,9 +6980,6 @@ def _compose_photo_to_interior_prompt(
     room_type="",
     property_type="",
     rehab_level="",
-    description="",
-    target_materials="",
-    engine_prompt="",
 ):
     return _prompt_join(
         f"Photorealistic eye-level {safe_str(room_type).strip().lower() or 'room'} interior redesign",
@@ -7056,9 +6993,6 @@ def _compose_photo_to_interior_prompt(
             room_type=room_type,
             property_type=property_type,
             rehab_level=rehab_level,
-            description=description,
-            target_materials=target_materials,
-            engine_prompt=engine_prompt,
         ),
     )
 
@@ -7111,121 +7045,7 @@ def _design_room_result_key(room_type="", floor="", style=""):
     )
 
 
-def _safe_json_object(value):
-    if isinstance(value, dict):
-        return value
-    if not isinstance(value, str) or not value.strip():
-        return {}
-    try:
-        parsed = json.loads(value)
-    except (TypeError, ValueError, json.JSONDecodeError):
-        return {}
-    return parsed if isinstance(parsed, dict) else {}
-
-
-def _last_chat_user_text(messages):
-    if not isinstance(messages, list):
-        return ""
-    for item in reversed(messages):
-        if isinstance(item, dict):
-            role = safe_str(item.get("role")).lower()
-            if role and role != "user":
-                continue
-            text = safe_str(item.get("content") or item.get("message") or item.get("text"))
-        else:
-            text = safe_str(item)
-        if text:
-            return text
-    return ""
-
-
-def _design_engine_intent_from_config(config=None, messages=None, existing=None):
-    config = dict(config or {})
-    existing = dict(existing or {})
-    user_text = _last_chat_user_text(messages)
-    room_type = safe_str(config.get("room_type") or existing.get("room_type"))
-    style = safe_str(config.get("style") or existing.get("style"))
-    description = safe_str(
-        config.get("description")
-        or existing.get("description")
-        or existing.get("creative_brief")
-        or user_text
-    )
-    notes = safe_str(config.get("notes") or existing.get("notes"))
-    target_materials = safe_str(
-        config.get("target_materials")
-        or existing.get("target_materials")
-        or existing.get("materials")
-    )
-    existing_prompt = safe_str(
-        existing.get("engine_prompt")
-        or existing.get("prompt")
-        or existing.get("prompt_notes")
-        or existing.get("creative_brief")
-    )
-    locked_details = existing.get("locked_details")
-    if isinstance(locked_details, str):
-        locked_details_text = locked_details
-    elif isinstance(locked_details, (list, tuple)):
-        locked_details_text = ", ".join(safe_str(item) for item in locked_details if safe_str(item))
-    else:
-        locked_details_text = ""
-
-    engine_prompt = _prompt_join(
-        existing_prompt,
-        f"Exact user request: {description}" if description else "",
-        f"Room: {room_type}" if room_type else "",
-        f"Style: {style}" if style else "",
-        f"Target materials/finishes: {target_materials}" if target_materials else "",
-        f"Locked design details: {locked_details_text}" if locked_details_text else "",
-        f"Additional design notes: {notes}" if notes else "",
-        "The generated room must visibly honor the exact requested materials, colors, fixtures, lighting, furniture, and mood from the chat",
-    )
-
-    return {
-        **existing,
-        "studio": "design",
-        "room_type": room_type,
-        "style": style,
-        "description": description,
-        "notes": notes,
-        "target_materials": target_materials,
-        "engine_prompt": engine_prompt,
-        "prompt_notes": engine_prompt,
-        "desired_updates": engine_prompt,
-    }
-
-
-def _normalize_design_chat_payload(parsed, current_config=None, messages=None):
-    parsed = dict(parsed or {})
-    current_config = dict(current_config or {})
-    next_config = dict(current_config)
-    next_config.update(_safe_json_object(parsed.get("config")))
-
-    engine_intent = _design_engine_intent_from_config(
-        next_config,
-        messages,
-        existing=_safe_json_object(parsed.get("engine_intent")),
-    )
-
-    parsed["config"] = next_config
-    parsed["engine_intent"] = engine_intent
-    parsed["ready"] = bool(parsed.get("ready", True))
-    return parsed
-
-
-def _compose_design_studio_prompt(
-    *,
-    notes="",
-    preset="",
-    mode="",
-    room_type="",
-    property_type="",
-    rehab_level="",
-    description="",
-    target_materials="",
-    engine_prompt="",
-):
+def _compose_design_studio_prompt(*, notes="", preset="", mode="", room_type="", property_type="", rehab_level=""):
     return _prompt_join(
         "Professional investor-grade full-concept interior redesign for a real estate presentation",
         f"Room focus: {room_type}" if room_type else "",
@@ -7233,9 +7053,6 @@ def _compose_design_studio_prompt(
         f"Presentation mode: {mode}" if mode else "",
         f"Property type: {property_type}" if property_type else "",
         f"Rehab level: {rehab_level}" if rehab_level else "",
-        f"Exact user vision: {description}" if description else "",
-        f"Target materials and finishes: {target_materials}" if target_materials else "",
-        engine_prompt,
         "Output must be one photorealistic interior room image, not a collage, split-screen, blueprint, mood board, or render sheet",
         "Keep the source room recognizable through its camera angle, wall/window/door placement, ceiling height, and main structural envelope",
         "Make the design visibly new: update finishes, cabinetry, counters, backsplash, flooring, fixtures, lighting, paint, hardware, furnishings, styling, and staging",
@@ -7671,14 +7488,11 @@ def design_studio_chat():
             "'Ravlo, make the kitchen modern' or 'white marble countertops' or 'farmhouse style'. "
             "You understand instantly and act.\n\n"
             "PERSONALITY:\n"
-            "- Talk like a real project partner, not a help desk. Natural, direct, warm, and a little human.\n"
-            "- Use the user's language when it helps. If they say 'make it clean and expensive', you can say 'clean, expensive, locked in.'\n"
             "- Adaptive: match the user's energy. Short command → short confirmation. "
             "Detailed vision → detailed response.\n"
             "- Voice-command ready: parse casual shorthand. 'kitchen modern' = modern kitchen design.\n"
             "- Confident: you're a seasoned designer. You get it on the first try.\n"
-            "- Concise: one or two sentences unless you need one sharp follow-up.\n"
-            "- Talk about the result you are creating, not about form fields.\n"
+            "- Concise: 'Modern kitchen, marble island — locked in.' not a paragraph.\n"
             "- If unclear, ask ONE sharp question. Never over-ask.\n\n"
             "TASK:\n"
             "1. Extract EVERY detail: style, materials, colors, furniture, lighting, fixtures.\n"
@@ -7692,18 +7506,11 @@ def design_studio_chat():
             '    "style": "modern_luxury|modern_farmhouse|minimal_modern|traditional|industrial_loft|coastal",\n'
             '    "room_type": "living room|kitchen|primary bedroom|bathroom|dining room|office",\n'
             '    "description": "The user\'s full creative vision — drives image generation",\n'
-            '    "notes": "Technical details about materials, finishes, etc.",\n'
-            '    "target_materials": "Specific materials and fixtures when mentioned"\n'
-            '  },\n'
-            '  "engine_intent": {\n'
-            '    "engine_prompt": "Image-engine-ready prompt preserving every exact user detail",\n'
-            '    "locked_details": ["verbatim materials, colors, fixtures, layout requests"],\n'
-            '    "negative_constraints": ["things the user explicitly does not want"]\n'
+            '    "notes": "Technical details about materials, finishes, etc."\n'
             '  },\n'
             '  "ready": true or false\n'
             '}\n\n'
-            "Set ready=true when you have enough info for a great design. "
-            "The engine_intent.engine_prompt is what the image engine will receive, so make it exact and visual."
+            "Set ready=true when you have enough info for a great design. Don't over-ask."
         )
 
         user_prompt = (
@@ -7733,7 +7540,7 @@ def design_studio_chat():
                 "ready": False,
             }
 
-        return jsonify(_normalize_design_chat_payload(parsed, current_config, messages))
+        return jsonify(parsed)
 
     except Exception as exc:
         current_app.logger.warning("Design studio chat AI error: %s", exc, exc_info=True)
@@ -7800,15 +7607,11 @@ def _design_studio_fallback_chat(messages, current_config):
     # Build a conversational response that references the user's request
     assistant_message = _design_conversational_reply(user_text, config)
 
-    return _normalize_design_chat_payload(
-        {
-            "assistant_message": assistant_message,
-            "config": config,
-            "ready": True,
-        },
-        current_config,
-        messages,
-    )
+    return {
+        "assistant_message": assistant_message,
+        "config": config,
+        "ready": True,
+    }
 
 
 def _design_conversational_reply(user_text, config):
@@ -7960,7 +7763,6 @@ def generate_build_interior():
                 room_type=room_type,
                 property_type=property_type,
                 rehab_level="full_concept",
-                description=description,
             )
 
         # Combine user's free-text description and notes as the primary
@@ -11438,29 +11240,10 @@ def design_studio_generate():
         mode = (data.get("mode") or "hgtv").strip()
         room_type = (data.get("room_type") or "living room").strip()
         floor = (data.get("floor") or "main").strip()
-        description = (data.get("description") or "").strip()
         notes = (data.get("notes") or "").strip()
         rehab_level = (data.get("rehab_level") or "medium").strip().lower()
         finish_level = (data.get("finish_level") or "standard").strip()
         target_materials = (data.get("target_materials") or "").strip()
-        ai_engine_intent = _design_engine_intent_from_config(
-            {
-                "style": preset,
-                "room_type": room_type,
-                "description": description,
-                "notes": notes,
-                "target_materials": target_materials,
-            },
-            [],
-            existing=_safe_json_object(data.get("ai_engine_intent") or data.get("engine_intent")),
-        )
-        chat_engine_prompt = safe_str(ai_engine_intent.get("engine_prompt"))
-        design_creative_brief = _prompt_join(
-            description,
-            notes,
-            f"Target materials and finishes: {target_materials}" if target_materials else "",
-            chat_engine_prompt,
-        )
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
         source_results = _deal_results(deal) if deal is not None else {}
         source_build_project = source_results.get("build_project", {}) or {}
@@ -11553,13 +11336,13 @@ def design_studio_generate():
         unique_seed = random.randint(1, 2_147_483_647)
         if source_is_floor_plan:
             design_prompt_notes = _compose_blueprint_to_interior_prompt(
-                notes=design_creative_brief or notes,
+                notes=notes,
                 preset=preset,
                 room_type=room_type,
                 property_type=property_type,
                 floor=floor,
                 project_name=data.get("project_name") or (getattr(deal, "title", "") if deal else ""),
-                description=description,
+                description=data.get("description") or "",
             )
             payload = {
                 "mode": "interior",
@@ -11568,17 +11351,14 @@ def design_studio_generate():
                 "property_type": property_type,
                 "style": preset,
                 "design_style": preset,
-                "description": description,
-                "build_description": design_creative_brief or description,
-                "creative_brief": design_creative_brief,
-                "ai_engine_intent": ai_engine_intent,
-                "chat_engine_prompt": chat_engine_prompt,
+                "description": data.get("description") or "",
+                "build_description": data.get("description") or "",
                 "room_type": room_type,
                 "room_focus": room_type,
                 "floor": floor,
                 "prompt": design_prompt_notes,
                 "prompt_notes": design_prompt_notes,
-                "desired_updates": design_creative_brief or design_prompt_notes,
+                "desired_updates": design_prompt_notes,
                 "target_materials": target_materials,
                 "finish_level": finish_level,
                 "concept_intensity": "blueprint_to_photoreal_room",
@@ -11615,15 +11395,12 @@ def design_studio_generate():
             )
         else:
             design_prompt_notes = _compose_photo_to_interior_prompt(
-                notes=design_creative_brief or notes,
+                notes=notes,
                 preset=preset,
                 mode=mode,
                 room_type=room_type,
                 property_type=property_type,
                 rehab_level=rehab_level,
-                description=description,
-                target_materials=target_materials,
-                engine_prompt=chat_engine_prompt,
             )
 
             payload = {
@@ -11635,14 +11412,8 @@ def design_studio_generate():
                 "rehab_level": rehab_level,
                 "property_type": property_type,
                 "design_style": preset,
-                "description": description,
-                "build_description": design_creative_brief or description,
-                "creative_brief": design_creative_brief,
-                "design_notes": notes,
-                "ai_engine_intent": ai_engine_intent,
-                "chat_engine_prompt": chat_engine_prompt,
                 "prompt": design_prompt_notes,
-                "desired_updates": design_creative_brief or design_prompt_notes,
+                "desired_updates": design_prompt_notes,
                 "prompt_notes": design_prompt_notes,
                 "target_materials": target_materials,
                 "finish_level": finish_level,
@@ -11691,10 +11462,7 @@ def design_studio_generate():
             "rehab_level": rehab_level,
             "finish_level": finish_level,
             "target_materials": target_materials,
-            "description": description,
             "notes": notes,
-            "creative_brief": design_creative_brief,
-            "ai_engine_intent": ai_engine_intent,
             "seed": engine_json.get("seed") or unique_seed,
             "job_id": engine_json.get("job_id"),
             "meta": {

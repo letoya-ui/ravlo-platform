@@ -122,6 +122,7 @@
               <option value="builder_plan" {{ 'selected' if blueprint_style_value == 'builder_plan' else '' }}>Builder Plan</option>
               <option value="schematic_plan" {{ 'selected' if blueprint_style_value == 'schematic_plan' else '' }}>Schematic Plan</option>
               <option value="monochrome_minimal" {{ 'selected' if blueprint_style_value == 'monochrome_minimal' else '' }}>Monochrome Minimal</option>
+              <option value="annotated_presentation" {{ 'selected' if blueprint_style_value == 'annotated_presentation' else '' }}>Annotated Presentation</option>
             </select>
           </div>
           <div class="field">
@@ -271,6 +272,11 @@
     </article>
 
     <article class="ravlo-card pad">
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint — Third Floor</h2></div><strong id="floor3Status">{{ 'Generated' if blueprint_floor3_result and blueprint_floor3_result.get('image_url') else ('Skipped' if blueprint_floor3_result and blueprint_floor3_result.get('skipped') else 'Waiting') }}</strong></div>
+      <div class="result-media" id="floor3Media">{% if blueprint_floor3_result and blueprint_floor3_result.get('image_url') %}<img src="{{ blueprint_floor3_result.get('image_url') }}" alt="Third floor blueprint">{% elif blueprint_floor3_result and blueprint_floor3_result.get('skipped') %}<div class="empty-state-inline">Project has fewer than 3 floors — no third floor blueprint.</div>{% else %}<div class="empty-state-inline">Third floor blueprint will appear here.</div>{% endif %}</div>
+    </article>
+
+    <article class="ravlo-card pad">
       <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Site Plan</h2></div><strong id="siteplanStatus">{{ 'Generated' if siteplan_result and siteplan_result.get('image_url') else 'Waiting' }}</strong></div>
       <div class="result-media plan-media" id="siteplanMedia">{% if siteplan_result and siteplan_result.get('image_url') %}<img src="{{ siteplan_result.get('image_url') }}" alt="Site plan">{% else %}<div class="empty-state-inline">Site plan will appear here.</div>{% endif %}</div>
     </article>
@@ -295,6 +301,8 @@
       <div class="loading-progress-list">
         <div class="loading-step" id="buildLoadingStep1">AI is composing prompts from your description...</div>
         <div class="loading-step" id="buildLoadingStep2">Generating first floor blueprint...</div>
+        <div class="loading-step" id="buildLoadingStep3">Generating additional floor blueprints...</div>
+        <div class="loading-step" id="buildLoadingStep4">Generating exterior concepts...</div>
         <div class="loading-step" id="buildLoadingStep3">Generating upper floor blueprints &amp; exterior concepts...</div>
       </div>
     </div>
@@ -821,6 +829,16 @@
       document.getElementById('blueprintStatus').textContent = firstImage(blueprintResult) ? 'Generated' : 'Waiting';
       document.getElementById('floor2Status').textContent = floor2Ready ? 'Generated' : (floor2Skipped ? 'Skipped' : 'Waiting');
       document.getElementById('floor3Status').textContent = floor3Ready ? 'Generated' : (floor3Skipped ? 'Skipped' : 'Waiting');
+      document.getElementById('exteriorStatus').textContent = data.exterior_result?.image_url ? 'Generated' : 'Waiting';
+      renderMedia('blueprintMedia', data.blueprint_result?.image_url, 'First floor blueprint', 'First floor blueprint will appear here.');
+      renderMedia('floor2Media', data.blueprint_floor2_result?.image_url, 'Second floor blueprint', floor2Skipped ? 'Single-story project - no second floor blueprint.' : 'Second floor blueprint will appear here.');
+      renderMedia('floor3Media', data.blueprint_floor3_result?.image_url, 'Third floor blueprint', floor3Skipped ? 'Projects under three floors - no third floor blueprint.' : 'Third floor blueprint will appear here.');
+      renderMedia('floor2Media', data.blueprint_floor2_result?.image_url, 'Second floor blueprint', floor2Skipped ? 'Single-story project — no second floor blueprint.' : 'Second floor blueprint will appear here.');
+      renderMedia('floor3Media', data.blueprint_floor3_result?.image_url, 'Third floor blueprint', floor3Skipped ? 'Project has fewer than 3 floors — no third floor blueprint.' : 'Third floor blueprint will appear here.');
+      renderMedia('exteriorMedia', data.exterior_result?.image_url, 'Exterior concept', 'Exterior concept will appear here.');
+      renderMedia('exteriorBackMedia', data.exterior_back_result?.image_url, 'Exterior back', 'Rear exterior concept will appear here.');
+      document.getElementById('exteriorBackStatus').textContent = data.exterior_back_result?.image_url ? 'Generated' : 'Waiting';
+      if (data.project_id) {
       document.getElementById('siteplanStatus').textContent = firstImage(siteplanResult) ? 'Generated' : 'Waiting';
       document.getElementById('exteriorStatus').textContent = firstImage(exteriorResult) ? 'Generated' : 'Waiting';
       renderMedia('blueprintMedia', firstImage(blueprintResult), 'First floor blueprint', 'First floor blueprint will appear here.');

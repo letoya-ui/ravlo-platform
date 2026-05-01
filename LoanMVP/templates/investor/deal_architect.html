@@ -189,6 +189,13 @@
       </a>
       {% endif %}
 
+      {% if build_floor3_url %}
+      <a href="{{ build_floor3_url }}" target="_blank" class="build-preview-card" data-build-image="{{ build_floor3_url }}">
+        <img src="{{ build_floor3_url }}" alt="Third floor blueprint">
+        <strong>Floor 3</strong>
+      </a>
+      {% endif %}
+
       {% if build_exterior_url %}
       <a href="{{ build_exterior_url }}" target="_blank" class="build-preview-card" data-build-image="{{ build_exterior_url }}">
         <img src="{{ build_exterior_url }}" alt="Build exterior rendering">
