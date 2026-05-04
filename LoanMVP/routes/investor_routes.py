@@ -7078,14 +7078,10 @@ def _compose_photo_to_interior_prompt(
     room_type="",
     property_type="",
     rehab_level="",
-<<<<<<< Updated upstream
     description="",
-    target_materials="",
-    engine_prompt="",
-=======
     finish_level="",
     target_materials="",
->>>>>>> Stashed changes
+    engine_prompt="",
 ):
     return _prompt_join(
         f"Photorealistic eye-level {safe_str(room_type).strip().lower() or 'room'} interior redesign",
@@ -7100,14 +7096,10 @@ def _compose_photo_to_interior_prompt(
             room_type=room_type,
             property_type=property_type,
             rehab_level=rehab_level,
-<<<<<<< Updated upstream
             description=description,
-            target_materials=target_materials,
-            engine_prompt=engine_prompt,
-=======
             finish_level=finish_level,
             target_materials=target_materials,
->>>>>>> Stashed changes
+            engine_prompt=engine_prompt,
         ),
     )
 
@@ -7160,7 +7152,6 @@ def _design_room_result_key(room_type="", floor="", style=""):
     )
 
 
-<<<<<<< Updated upstream
 def _safe_json_object(value):
     if isinstance(value, dict):
         return value
@@ -7264,8 +7255,6 @@ def _normalize_design_chat_payload(parsed, current_config=None, messages=None):
     return parsed
 
 
-=======
->>>>>>> Stashed changes
 def _compose_design_studio_prompt(
     *,
     notes="",
@@ -7274,14 +7263,10 @@ def _compose_design_studio_prompt(
     room_type="",
     property_type="",
     rehab_level="",
-<<<<<<< Updated upstream
     description="",
-    target_materials="",
-    engine_prompt="",
-=======
     finish_level="",
     target_materials="",
->>>>>>> Stashed changes
+    engine_prompt="",
 ):
     return _prompt_join(
         "Professional investor-grade full-concept interior redesign for a real estate presentation",
@@ -7290,14 +7275,10 @@ def _compose_design_studio_prompt(
         f"Presentation mode: {mode}" if mode else "",
         f"Property type: {property_type}" if property_type else "",
         f"Rehab level: {rehab_level}" if rehab_level else "",
-<<<<<<< Updated upstream
         f"Exact user vision: {description}" if description else "",
-        f"Target materials and finishes: {target_materials}" if target_materials else "",
-        engine_prompt,
-=======
         f"Finish level: {finish_level}" if finish_level else "",
         f"Target materials and finishes: {target_materials}" if target_materials else "",
->>>>>>> Stashed changes
+        engine_prompt,
         "Output must be one photorealistic interior room image, not a collage, split-screen, blueprint, mood board, or render sheet",
         "Keep the source room recognizable through its camera angle, wall/window/door placement, ceiling height, and main structural envelope",
         "Make the design visibly new: update finishes, cabinetry, counters, backsplash, flooring, fixtures, lighting, paint, hardware, furnishings, styling, and staging",
@@ -8032,12 +8013,9 @@ def generate_build_interior():
                 room_type=room_type,
                 property_type=property_type,
                 rehab_level="full_concept",
-<<<<<<< Updated upstream
                 description=description,
-=======
                 finish_level=finish_level,
                 target_materials=target_materials,
->>>>>>> Stashed changes
             )
 
         # Combine user's free-text description and notes as the primary
@@ -11651,13 +11629,9 @@ def design_studio_generate():
                 property_type=property_type,
                 floor=floor,
                 project_name=data.get("project_name") or (getattr(deal, "title", "") if deal else ""),
-<<<<<<< Updated upstream
                 description=description,
-=======
-                description=data.get("description") or "",
                 finish_level=finish_level,
                 target_materials=target_materials,
->>>>>>> Stashed changes
             )
             payload = {
                 "mode": "interior",
@@ -11719,14 +11693,10 @@ def design_studio_generate():
                 room_type=room_type,
                 property_type=property_type,
                 rehab_level=rehab_level,
-<<<<<<< Updated upstream
                 description=description,
-                target_materials=target_materials,
-                engine_prompt=chat_engine_prompt,
-=======
                 finish_level=finish_level,
                 target_materials=target_materials,
->>>>>>> Stashed changes
+                engine_prompt=chat_engine_prompt,
             )
 
             payload = {
