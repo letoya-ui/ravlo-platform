@@ -64,6 +64,8 @@
     </div>
   </section>
 
+  {% set room_type_value = (interior_result.get('room_type') or '')|lower %}
+
   <!-- ROOM SLOT TABS -->
   <section class="ravlo-card pad room-slot-section">
     <div class="section-head">
@@ -90,8 +92,9 @@
             {% endif %}
           {% endfor %}
         {% endif %}
+        {% set active_room_key = room_type_value|replace(' ', '_') or 'living_room' %}
         <button type="button"
-          class="room-slot{% if loop.first %} is-active{% endif %}"
+          class="room-slot{% if slot.key == active_room_key %} is-active{% elif not active_room_key and loop.first %} is-active{% endif %}"
           data-room-key="{{ slot.key }}"
           data-room-label="{{ slot.label }}"
           data-has-render="{{ 'true' if ns.slot_concept and ns.slot_concept.get('image_url') else 'false' }}"
@@ -193,12 +196,12 @@
           <div class="field">
             <label for="room_type">Room Type</label>
             <select id="room_type" name="room_type">
-              <option value="living room">Living Room</option>
-              <option value="kitchen">Kitchen</option>
-              <option value="primary bedroom">Primary Bedroom</option>
-              <option value="bathroom">Bathroom</option>
-              <option value="dining room">Dining Room</option>
-              <option value="office">Office</option>
+              <option value="living room" {{ 'selected' if room_type_value in ('living room', 'living_room', '') else '' }}>Living Room</option>
+              <option value="kitchen" {{ 'selected' if room_type_value == 'kitchen' else '' }}>Kitchen</option>
+              <option value="primary bedroom" {{ 'selected' if room_type_value in ('primary bedroom', 'primary_bedroom', 'bedroom') else '' }}>Primary Bedroom</option>
+              <option value="bathroom" {{ 'selected' if room_type_value == 'bathroom' else '' }}>Bathroom</option>
+              <option value="dining room" {{ 'selected' if room_type_value in ('dining room', 'dining_room') else '' }}>Dining Room</option>
+              <option value="office" {{ 'selected' if room_type_value == 'office' else '' }}>Office</option>
             </select>
           </div>
 
@@ -590,6 +593,19 @@
     return currentDesignEngineIntent;
   }
 
+  function syncRoomSlotFromDropdown() {
+    if (!roomTypeField) return;
+    const val = roomTypeField.value;
+    const slots = document.querySelectorAll('.room-slot');
+    slots.forEach((s) => {
+      const key = s.dataset.roomKey;
+      if (key && roomSlotMap[key] === val) {
+        slots.forEach((x) => x.classList.remove('is-active'));
+        s.classList.add('is-active');
+      }
+    });
+  }
+
   function applyDesignConfig(config) {
     if (!config || typeof config !== 'object') return;
     if (config.style && styleField) {
@@ -607,6 +623,7 @@
           break;
         }
       }
+      syncRoomSlotFromDropdown();
     }
     if (config.description && descriptionField) descriptionField.value = config.description;
     if (config.notes && notesField) notesField.value = config.notes;
@@ -988,6 +1005,9 @@
       stopDesignLoading();
     }
   });
+
+  // Keep room slot and dropdown in sync when dropdown changes directly
+  roomTypeField?.addEventListener('change', () => syncRoomSlotFromDropdown());
 
   // Room slot click handlers
   const roomSlotMap = {
