@@ -160,7 +160,7 @@
         <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
         <input type="hidden" name="project_id" value="{{ project.id if project else '' }}">
         <input type="hidden" name="save_to_deal" value="true">
-        <input type="hidden" id="aiEngineIntent" name="ai_engine_intent" value="">
+        <input type="hidden" id="aiEngineIntent" name="engine_intent" value="">
 
         <div class="form-grid two">
           <div class="field">
@@ -901,13 +901,28 @@
     }
 
     try {
-      syncDesignEngineIntent(currentDesignEngineIntent, gatherDesignConfig());
+      const syncedIntent = syncDesignEngineIntent(currentDesignEngineIntent, gatherDesignConfig());
       const fd = new FormData(form);
+
       if (activeSlot) {
         fd.set('room_type', activeSlot.dataset.roomLabel);
       }
 
-      const bpFile = fd.get('blueprint_file');
+      fd.set('engine_intent', JSON.stringify(syncedIntent || {}));
+      fd.set('engine_prompt', syncedIntent?.engine_prompt || '');
+      fd.set('prompt_notes', syncedIntent?.prompt_notes || syncedIntent?.engine_prompt || '');
+      fd.set('desired_updates', syncedIntent?.desired_updates || syncedIntent?.engine_prompt || '');
+
+      if (Array.isArray(syncedIntent?.locked_details)) {
+        fd.set('locked_details', syncedIntent.locked_details.join(', '));
+     }
+
+     if (Array.isArray(syncedIntent?.negative_constraints)) {
+       fd.set('negative_constraints', syncedIntent.negative_constraints.join(', '));
+     }
+
+     const bpFile = fd.get('blueprint_file');
+  
       if (bpFile && bpFile.size) {
         fd.set('before_image', bpFile);
       }
@@ -923,7 +938,15 @@
       if (styleVal) {
         fd.set('preset', styleVal);
       }
-
+  
+      console.log('DESIGN GENERATE ENGINE INTENT', {
+        engine_intent: fd.get('engine_intent'),
+        engine_prompt: fd.get('engine_prompt'),
+        prompt_notes: fd.get('prompt_notes'),
+        desired_updates: fd.get('desired_updates'),
+        room_type: fd.get('room_type'),
+        target_materials: fd.get('target_materials'),
+      });
       const response = await fetch("{{ url_for('investor.design_studio_generate') }}", {
         method: 'POST',
         body: fd,

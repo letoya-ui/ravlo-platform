@@ -7940,6 +7940,24 @@ def generate_build_interior():
         floor = (data.get("floor") or "main").strip()
         finish_level = (data.get("finish_level") or "standard").strip()
         target_materials = (data.get("target_materials") or "").strip()
+        engine_intent = _safe_json_object(data.get("engine_intent"))
+        chat_engine_prompt = _first_nonempty(
+            data.get("engine_prompt"),
+            data.get("prompt_notes"),
+            data.get("desired_updates"),
+            engine_intent.get("engine_prompt"),
+        )
+        locked_details = engine_intent.get("locked_details") or []
+        if isinstance(locked_details, list):
+            locked_details_text = ", ".join(safe_str(item) for item in locked_details if safe_str(item))
+        else:
+            locked_details_text = safe_str(locked_details)
+
+        negative_constraints = engine_intent.get("negative_constraints") or []
+        if isinstance(negative_constraints, list):
+            negative_constraints_text = ", ".join(safe_str(item) for item in negative_constraints if safe_str(item))
+        else:
+            negative_constraints_text = safe_str(negative_constraints)
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
         source_results = _deal_results(deal) if deal is not None else {}
         source_build_project = source_results.get("build_project", {}) or {}
@@ -8017,7 +8035,14 @@ def generate_build_interior():
                 finish_level=finish_level,
                 target_materials=target_materials,
             )
-
+        interior_prompt_notes = _prompt_join(
+            chat_engine_prompt,
+            f"Locked user-requested design details: {locked_details_text}" if locked_details_text else "",
+            "CRITICAL: The final image must visibly apply the requested colors, materials, cabinetry, countertops, fixtures, lighting, and styling from the user's chat.",
+            "If a reference photo is provided, preserve only the camera angle, room shell, wall/window/door placement, and basic geometry.",
+            "Do not preserve the existing cabinet color, countertop, backsplash, appliances, lighting, or furniture unless the user explicitly asked to keep them.",
+            interior_prompt_notes,
+        )
         # Combine user's free-text description and notes as the primary
         # creative direction the AI engine should follow.
         user_creative_direction = ". ".join(
@@ -8045,8 +8070,15 @@ def generate_build_interior():
             "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
 
             "prompt": interior_prompt_notes,
-            "prompt_notes": user_creative_direction or interior_prompt_notes,
-            "desired_updates": user_creative_direction or interior_prompt_notes,
+            "prompt_notes": interior_prompt_notes,
+            "desired_updates": _prompt_join(
+                user_creative_direction,
+                chat_engine_prompt,
+                target_materials,
+                locked_details_text,
+            ),
+            "engine_prompt": interior_prompt_notes,
+            "locked_details": locked_details,
 
             "special_features": (
                 f"{room_type} interior, {_room_program_prompt(room_type)}, high-end furniture, premium finishes, "
@@ -8055,8 +8087,8 @@ def generate_build_interior():
 
             "count": 1,
             "steps": 36,
-            "guidance": 9.2,
-            "strength": 1.0 if source_is_floor_plan else 0.70,
+            "guidance": 9.6,
+            "strength": 1.0 if source_is_floor_plan else 0.82,
             "width": 1024,
             "height": 1024,
 
@@ -8072,6 +8104,7 @@ def generate_build_interior():
                 _build_studio_negative_prompt("interior_room")
                 + ", same cabinets, same cabinet doors, same countertop, same backsplash, same appliances, same sink, "
                 "same kitchen, unchanged kitchen, builder grade cabinets, dated cabinets, old countertops, cluttered counter, "
+                "white cabinets, all white kitchen, unchanged white kitchen, unchanged cabinetry, unchanged finishes, "
                 "same sofa, same chair, same ottoman, same lamp, same blinds, same curtains, wrong room type, "
                 "cheap materials, dark room, gloomy room, blurry, low quality, distorted walls, warped windows, extra windows, "
                 "top down view, overhead view, floor plan, blueprint, plan sheet, text, watermark"
