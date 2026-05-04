@@ -104,6 +104,7 @@ Return ONLY valid JSON:
   "status": "needs_more_info" or "ready",
   "assistant_message": "Short, adaptive confirmation of what you understood and what you're building.",
   "spec": {{
+    "studio": "build_studio|design_studio|deal_architect",
     "intent": "scope|blueprint|siteplan|exterior_from_blueprint|exterior_from_photo|build_package",
     "property_type": "",
     "style": "",
@@ -127,6 +128,18 @@ Return ONLY valid JSON:
     "timeline": {{}},
     "risks": [],
     "images": {{}}
+    "mode": "",
+    "output_mode": "",
+    "room_type": "",
+    "room_sqft": "",
+    "interior_style": "",
+    "design_style": "",
+    "target_materials": "",
+    "design_notes": "",
+    "interior_notes": "",
+    "desired_updates": "",
+    "budget_min": "",
+    "budget_max": ""
   }},
   "missing_fields": [],
   "next_questions": []
@@ -145,6 +158,106 @@ Conversation:
 {messages}
 """.strip()
 
+def _infer_studio(spec):
+    raw = _safe_str(
+        spec.get("studio")
+        or spec.get("intent")
+        or spec.get("mode")
+        or spec.get("task")
+        or spec.get("description")
+    ).lower()
+
+    room_words = (
+        "kitchen",
+        "bathroom",
+        "bedroom",
+        "living room",
+        "dining room",
+        "office",
+        "basement",
+        "laundry room",
+    )
+
+    design_words = (
+        "interior",
+        "design",
+        "remodel",
+        "renovate",
+        "makeover",
+        "cabinets",
+        "countertops",
+        "backsplash",
+        "vanity",
+        "tile",
+    )
+
+    deal_words = (
+        "cost",
+        "budget",
+        "estimate",
+        "how much",
+        "deal",
+        "roi",
+        "arv",
+        "rent",
+    )
+
+    if any(word in raw for word in deal_words):
+        return "deal_architect"
+
+    if any(word in raw for word in room_words) or any(word in raw for word in design_words):
+        return "design_studio"
+
+    return "build_studio"
+
+def _prepare_design_generation_spec(spec):
+    spec = copy.deepcopy(_as_dict(spec))
+
+    room_type = _first_nonempty(
+        spec.get("room_type"),
+        spec.get("room_focus"),
+        spec.get("target_room"),
+        "Kitchen" if "kitchen" in _safe_str(spec.get("description")).lower() else "",
+    )
+
+    style = _first_nonempty(
+        spec.get("interior_style"),
+        spec.get("design_style"),
+        spec.get("style"),
+        "modern",
+    )
+
+    description = _first_nonempty(
+        spec.get("design_notes"),
+        spec.get("description"),
+        spec.get("prompt"),
+    )
+
+    spec["studio"] = "design_studio"
+    spec["task"] = "design_studio"
+    spec["mode"] = "interior"
+    spec["output_mode"] = "interior"
+    spec["room_type"] = room_type
+    spec["interior_style"] = style
+    spec["design_style"] = style
+    spec["design_notes"] = description
+    spec["target_materials"] = _first_nonempty(
+        spec.get("target_materials"),
+        spec.get("materials"),
+        description,
+    )
+    spec["room_sqft"] = spec.get("room_sqft") or spec.get("room_square_feet") or 180
+    spec["finish_level"] = spec.get("finish_level") or "standard"
+
+    spec["engine_prompt"] = _join_prompt_parts(
+        f"Photorealistic {room_type} interior renovation",
+        f"Style: {style}",
+        f"User request: {description}",
+        f"Target materials: {spec.get('target_materials')}",
+        "Realistic residential scale, practical layout, natural lighting, detailed finishes",
+    )
+
+    return spec
 
 def _safe_json(text):
     import json
@@ -1527,9 +1640,20 @@ def _build_chat_response():
 
     parsed = _safe_json(response.choices[0].message.content)
     parsed_spec = _as_dict(parsed.get("spec"))
-    parsed["spec"] = _prepare_build_generation_spec({
+    merged_spec = {
         **_as_dict(current_spec),
         **parsed_spec,
+    }
+
+    studio = _infer_studio(merged_spec)
+
+    if studio == "design_studio":
+        parsed["spec"] = _prepare_design_generation_spec(merged_spec)
+    elif studio == "deal_architect":
+        parsed["spec"] = _prepare_design_generation_spec(merged_spec)
+        parsed["spec"]["send_to_deal_architect"] = True
+    else:
+        parsed["spec"] = _prepare_build_generation_spec(merged_spec)
     })
     return jsonify(parsed)
 
