@@ -108,3 +108,48 @@ def test_pre_rank_prefers_discounted_price_per_square_foot():
 
     assert ranked[0].address == "2 Opportunity Ln"
     assert ranked[0].raw["deal_finder"]["pre_rank_score"] > ranked[1].raw["deal_finder"]["pre_rank_score"]
+
+
+class CoverageOrchestrator(NoMashvisorOrchestrator):
+    def __init__(self):
+        super().__init__(strategy="all", asset_type="any", budget=ProviderBudget())
+        self.enrich_top_n = None
+
+    def search_candidates(self, **kwargs):
+        return [
+            CanonicalProperty(
+                address=f"{idx} Coverage Ave",
+                city="Goshen",
+                state="NY",
+                zip_code="10924",
+                listing_price=200000 + (idx * 10000),
+                purchase_price=200000 + (idx * 10000),
+                market_value=245000 + (idx * 12000),
+                square_feet=1400 + (idx * 50),
+                property_type="Single Family",
+            )
+            for idx in range(6)
+        ]
+
+    def enrich_top_candidates(self, results, top_n=4):
+        self.enrich_top_n = top_n
+        for idx, prop in enumerate(results):
+            if idx < top_n:
+                prop.monthly_rent_estimate = 1900 + (idx * 50)
+                prop.airbnb_rent_estimate = 3200 + (idx * 75)
+                prop.occupancy_rate = 58
+                prop.photos = [f"https://example.com/property-{idx}.jpg"]
+                prop.primary_photo = prop.photos[0]
+        return results
+
+
+def test_run_search_enriches_every_returned_top_pick_for_rent_str_and_photos():
+    orchestrator = CoverageOrchestrator()
+
+    results, meta = orchestrator.run_search(zip_code="10924", limit=6)
+
+    assert orchestrator.enrich_top_n == 6
+    assert meta["count"] == 6
+    assert all(result["monthly_rent_estimate"] for result in results)
+    assert all(result["airbnb_rent_estimate"] for result in results)
+    assert all(result["listing_photos"] for result in results)

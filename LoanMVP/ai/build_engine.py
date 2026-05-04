@@ -92,6 +92,23 @@ def run_build_concept(payload):
         else:
             image_outputs = ["blueprint", "siteplan", "exterior_front", "exterior_back"]
 
+    if intent in {"blueprint", "siteplan"}:
+        default_steps, default_guidance, default_strength = 30, 6.8, 0.30
+    elif intent == "exterior_from_photo":
+        default_steps, default_guidance, default_strength = 34, 8.2, 0.42
+    else:
+        default_steps, default_guidance, default_strength = 34, 8.4, 0.55
+
+    prompt_notes = payload.get("prompt_notes", payload.get("notes", ""))
+    quality_notes = (
+        "Generate presentation-ready, high-resolution Ravlo Build Studio outputs. "
+        "Keep each requested output separate, coherent, buildable, realistic, and free of text, labels, watermarks, collage layouts, or mixed media sheets."
+    )
+    if prompt_notes:
+        prompt_notes = f"{prompt_notes}. {quality_notes}"
+    else:
+        prompt_notes = quality_notes
+
     engine_payload = {
         "mode": "build_studio" if intent == "build_package" else intent,
         "intent": intent,
@@ -104,7 +121,7 @@ def run_build_concept(payload):
         "lot_size": payload.get("lot_size", ""),
         "zoning": payload.get("zoning", ""),
         "location": payload.get("location", ""),
-        "prompt_notes": payload.get("prompt_notes", payload.get("notes", "")),
+        "prompt_notes": prompt_notes,
         "special_features": payload.get("special_features", ""),
         "stories": payload.get("stories"),
         "number_of_stories": payload.get("number_of_stories"),
@@ -121,11 +138,14 @@ def run_build_concept(payload):
         "preserve_existing_exterior": payload.get("preserve_existing_exterior"),
         "preserve_structure": payload.get("preserve_structure"),
         "count": 1,
-        "steps": payload.get("steps", 20),
-        "guidance": payload.get("guidance", 7.5),
-        "strength": payload.get("strength", 0.65),
-        "width": payload.get("width", 768),
-        "height": payload.get("height", 768),
+        "steps": payload.get("steps", default_steps),
+        "guidance": payload.get("guidance", default_guidance),
+        "strength": payload.get("strength", default_strength),
+        "width": payload.get("width", 1024),
+        "height": payload.get("height", 1024),
+        "quality": payload.get("quality", "high"),
+        "detail_level": payload.get("detail_level", "presentation_ready"),
+        "artifact_control": payload.get("artifact_control", "strict"),
         "outputs": image_outputs,
         "output_modes": image_outputs,
         "scope": payload.get("scope") or {},

@@ -51,12 +51,12 @@ except Exception:
 @dataclass
 class ProviderBudget:
     rentcast_search: int = 1
-    attom_detail: int = 4
-    rentcast_detail: int = 4
-    mashvisor_detail: int = 4
-    realtor_detail: int = 4
-    rapidapi_real_estate_detail: int = 4
-    deal_architect: int = 4
+    attom_detail: int = 8
+    rentcast_detail: int = 8
+    mashvisor_detail: int = 8
+    realtor_detail: int = 8
+    rapidapi_real_estate_detail: int = 8
+    deal_architect: int = 8
 
     def use(self, key: str, amount: int = 1) -> bool:
         current = getattr(self, key, 0)
@@ -972,6 +972,8 @@ class PropertyIntelligenceOrchestrator:
             if not cp.photos and not cp.primary_photo:
                 cp = self._recover_photos(cp)
 
+            cp.raw.setdefault("deal_finder", {})
+            cp.raw["deal_finder"]["enriched"] = True
             enriched.append(cp)
 
         return enriched
@@ -1757,6 +1759,7 @@ class PropertyIntelligenceOrchestrator:
 
         ranked.sort(
             key=lambda x: (
+                bool((x.raw.get("deal_finder") or {}).get("enriched")),
                 x.deal_score is not None,
                 x.buy_box_fit_score or 0,
                 x.buyer_demand_score or 0,
@@ -1838,6 +1841,7 @@ class PropertyIntelligenceOrchestrator:
         zip_code: str = "",
         limit: int = 12,
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        return_limit = min(max(int(limit or 4), 4), 8)
         candidates = self.search_candidates(
             address=address,
             city=city,
@@ -1846,10 +1850,9 @@ class PropertyIntelligenceOrchestrator:
             limit=limit,
         )
         candidates = self._pre_rank_candidates(candidates)
-        enriched = self.enrich_top_candidates(candidates, top_n=4)
+        enriched = self.enrich_top_candidates(candidates, top_n=return_limit)
         ranked = self.rank_candidates(enriched)
 
-        return_limit = min(max(int(limit or 4), 4), 8)
         results = [cp.to_result_dict() for cp in ranked[:return_limit]]
 
         # Log photo availability summary for debugging.
@@ -1881,6 +1884,7 @@ class PropertyIntelligenceOrchestrator:
                 "rentcast_detail": self.budget.rentcast_detail,
                 "mashvisor_detail": self.budget.mashvisor_detail,
                 "realtor_detail": self.budget.realtor_detail,
+                "rapidapi_real_estate_detail": self.budget.rapidapi_real_estate_detail,
                 "deal_architect": self.budget.deal_architect,
             },
         }

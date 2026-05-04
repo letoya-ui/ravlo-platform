@@ -76,7 +76,7 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
     <select id="strategy" class="ravlo-input">
       <option value="flip">Fix & Flip</option>
       <option value="rental">Rental</option>
-      <option value="airbnb">Airbnb</option>
+      <option value="airbnb">Airbnb / STR</option>
       <option value="all">All</option>
     </select>
 
@@ -118,6 +118,7 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
       <strong>Deal Finder now returns:</strong>
       <ul>
         <li>Top ranked opportunities</li>
+        <li>Rent, STR, and photo coverage on every returned top pick</li>
         <li>Buy-box fit and demand proxy scores</li>
         <li>Property classification: land, fixer upper, rental, or STR</li>
         <li>Best exit strategy + AI recommendation</li>
@@ -235,6 +236,12 @@ function compactNumberText(value, suffix){
   return `${n.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${suffix}`;
 }
 
+function formatPercent(value){
+  const n = numOrNull(value);
+  if (n === null) return "—";
+  return `${n.toLocaleString(undefined, { maximumFractionDigits: 1 })}%`;
+}
+
 function shortText(value, max = 140){
   const text = String(value || "").trim();
   if (!text) return "";
@@ -253,7 +260,7 @@ function escapeHtml(str){
 function strategyLabel(v){
   if (v === "flip") return "Fix & Flip";
   if (v === "rental") return "Rental";
-  if (v === "airbnb") return "Airbnb";
+  if (v === "airbnb") return "Airbnb / STR";
   return "All";
 }
 
@@ -522,11 +529,12 @@ function buildPropertyPayload(r, analyzeId, saveId){
     ?? null;
 
   const listingPhotos = normalizePhotoArray(r.listing_photos || r.photos);
-  const primaryPhoto = resolveImage({
+  const resolvedPrimaryPhoto = resolveImage({
     ...r,
     listing_photos: listingPhotos,
     photos: listingPhotos
   });
+  const primaryPhoto = resolvedPrimaryPhoto === PLACEHOLDER_IMAGE ? null : resolvedPrimaryPhoto;
 
   return {
     address: r.address || r.address_line1 || "",
@@ -599,6 +607,8 @@ function buildPropertyPayload(r, analyzeId, saveId){
     airbnb_cash_on_cash: numOrNull(r.airbnb_cash_on_cash),
 
     image_url: primaryPhoto,
+    primary_photo: primaryPhoto,
+    primary_photo_url: primaryPhoto,
     listing_photos: listingPhotos,
     photos: listingPhotos,
 
@@ -747,12 +757,21 @@ function renderCards(results){
     const velocity = safeText(r.deal_velocity || "Review");
     const galleryPhotos = resolveGalleryImages(r, 4);
     const photoCount = normalizePhotoArray(r.listing_photos || r.photos).length;
+    const rentEstimate = numOrNull(r.monthly_rent_estimate) ?? numOrNull(r.traditional_rent);
+    const strRevenue = numOrNull(r.airbnb_revenue) ?? numOrNull(r.airbnb_rent_estimate);
+    const strOccupancy = numOrNull(r.occupancy_rate);
+    const strNightly = numOrNull(r.daily_rate) ?? numOrNull(r.airbnb_nightly_rate);
+    const strCashFlow = numOrNull(r.cash_flow) ?? numOrNull(r.airbnb_cash_flow);
 
     const facts = [
       {label: "Classification", value: classification},
       {label: "Strategy Tag", value: strategyTag},
       {label: "Buy Box Fit", value: buyBoxFit !== null ? `${buyBoxFit}/99` : "—"},
       {label: "Demand Proxy", value: demandScore !== null ? `${demandScore}/99` : "—"},
+      {label: "Rent Est.", value: rentEstimate !== null ? `${money(rentEstimate)}/mo` : "—"},
+      {label: "STR Revenue", value: strRevenue !== null ? `${money(strRevenue)}/mo` : "—"},
+      {label: "STR Occupancy", value: strOccupancy !== null ? formatPercent(strOccupancy) : "—"},
+      {label: "Nightly Rate", value: strNightly !== null ? money(strNightly) : "—"},
       {label: "Spread", value: spreadPct !== null ? `${spreadPct.toFixed(1)}%${equitySpread !== null ? ` / ${money(equitySpread)}` : ""}` : "—"},
       {label: "Velocity", value: velocity},
       {label: "Rough Upside", value: roughUpside},
@@ -838,7 +857,11 @@ function renderCards(results){
             <div><span>Demand Proxy</span><strong>${escapeHtml(demandScore !== null ? `${demandScore}/99` : "—")}</strong></div>
             <div><span>Spread to Value</span><strong>${escapeHtml(spreadPct !== null ? `${spreadPct.toFixed(1)}%` : "—")}</strong></div>
             <div><span>Estimated Best Use</span><strong>${escapeHtml(bestUse)}</strong></div>
-            <div><span>Rent Est.</span><strong>${escapeHtml(money(r.monthly_rent_estimate || r.traditional_rent))}${numOrNull(r.monthly_rent_estimate || r.traditional_rent) !== null ? "/mo" : ""}</strong></div>
+            <div><span>Rent Est.</span><strong>${escapeHtml(rentEstimate !== null ? `${money(rentEstimate)}/mo` : "—")}</strong></div>
+            <div><span>STR Revenue</span><strong>${escapeHtml(strRevenue !== null ? `${money(strRevenue)}/mo` : "—")}</strong></div>
+            <div><span>STR Occupancy</span><strong>${escapeHtml(strOccupancy !== null ? formatPercent(strOccupancy) : "—")}</strong></div>
+            <div><span>Nightly Rate</span><strong>${escapeHtml(strNightly !== null ? money(strNightly) : "—")}</strong></div>
+            <div><span>STR Cash Flow</span><strong>${escapeHtml(strCashFlow !== null ? `${money(strCashFlow)}/mo` : "—")}</strong></div>
             <div><span>Days on Market</span><strong>${escapeHtml(safeText(r.days_on_market))}</strong></div>
             <div><span>Comp Confidence</span><strong>${escapeHtml(safeText(r.comp_confidence))}</strong></div>
             <div><span>Next Move</span><strong>${escapeHtml(safeText(r.next_step_engine || r.next_step || "Analyze in Deal Workspace"))}</strong></div>

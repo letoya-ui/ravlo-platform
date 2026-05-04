@@ -6028,12 +6028,16 @@ def design_studio_generate_variant():
         room_type = (data.get("room_type") or "living room").strip()
         floor = (data.get("floor") or "main").strip()
         notes = (data.get("notes") or "").strip()
+        finish_level = (data.get("finish_level") or "").strip()
+        target_materials = (data.get("target_materials") or "").strip()
         design_prompt_notes = _compose_design_studio_prompt(
             notes=notes,
             preset=preset,
             mode=mode,
             room_type=room_type,
             property_type=(getattr(deal, "property_type", "") or "residential property") if deal else "residential property",
+            finish_level=finish_level,
+            target_materials=target_materials,
         )
 
         payload = {
@@ -6041,11 +6045,13 @@ def design_studio_generate_variant():
             "mode": mode,
             "room_type": room_type,
             "room_focus": room_type,
+            "finish_level": finish_level,
+            "target_materials": target_materials,
             "image_base64": image_base64,
             "image_url": "",
             "count": 1,
-            "steps": 26,
-            "guidance": 7.8,
+            "steps": 32,
+            "guidance": 8.5,
             "strength": 0.74,
             "width": 1024,
             "height": 1024,
@@ -7004,6 +7010,33 @@ def _room_program_prompt(room_type: str = "") -> str:
     )
 
 
+def _studio_quality_directives(mode=""):
+    mode_key = safe_str(mode).strip().lower()
+    directives = [
+        "Use a sharp high-resolution presentation-ready result with realistic scale, clean composition, and no visual artifacts",
+        "Return one coherent finished concept, not a collage, mood board, split-screen, process sheet, or mixed media panel",
+        "Keep materials, lighting, camera perspective, and construction logic consistent across the entire image",
+    ]
+
+    if "blueprint" in mode_key or "floor_plan" in mode_key:
+        directives.extend([
+            "Make the plan legible as architecture: consistent wall weights, clear door swings, realistic fixture blocks, aligned stairs, and a buildable room layout",
+            "Use the requested program and floor count; avoid duplicate rooms, impossible circulation, decorative labels, and unreadable text",
+        ])
+    elif "interior" in mode_key or "room" in mode_key:
+        directives.extend([
+            "Design every visible surface intentionally: flooring, wall finish, trim, lighting, fixtures, cabinetry, hardware, furniture, decor, and staging",
+            "Preserve believable room geometry while making the renovation visibly new, marketable, and investor-grade",
+        ])
+    elif "exterior" in mode_key or "facade" in mode_key or "front" in mode_key or "rear" in mode_key:
+        directives.extend([
+            "Show the complete building with grounded foundation, coherent roof geometry, realistic window rhythm, entry logic, grading, driveway, landscaping, and material transitions",
+            "Keep the exterior buildable for a U.S. residential investor project; avoid fantasy massing, cropped facades, and showroom backdrops",
+        ])
+
+    return directives
+
+
 def _compose_blueprint_to_interior_prompt(
     *,
     notes="",
@@ -7013,6 +7046,8 @@ def _compose_blueprint_to_interior_prompt(
     floor="",
     project_name="",
     description="",
+    finish_level="",
+    target_materials="",
 ):
     room_label = safe_str(room_type).strip().lower() or "living room"
     return _prompt_join(
@@ -7022,10 +7057,13 @@ def _compose_blueprint_to_interior_prompt(
         f"Project: {project_name}" if project_name else "",
         f"Property type: {property_type}" if property_type else "",
         f"Interior style: {preset}" if preset else "",
+        f"Finish level: {finish_level}" if finish_level else "",
+        f"Target materials and finishes: {target_materials}" if target_materials else "",
         f"Project description: {description}" if description else "",
         "Camera must be inside the room at normal standing height with walls, ceiling, floor, doors, windows, and architectural openings visible",
         "Infer a believable room volume from the plan: wall positions, circulation, openings, adjacency, daylight direction, and ceiling height",
         _room_program_prompt(room_label),
+        *_studio_quality_directives("interior_room"),
         "Use market-ready residential staging, realistic materials, correct scale, natural lighting, clean construction logic, and buildable finish transitions",
         "Do not output a top-down view, diagram, CAD drawing, plan sheet, labels, text, exterior, cutaway, collage, or mood board",
         notes,
@@ -7040,15 +7078,21 @@ def _compose_photo_to_interior_prompt(
     room_type="",
     property_type="",
     rehab_level="",
+<<<<<<< Updated upstream
     description="",
     target_materials="",
     engine_prompt="",
+=======
+    finish_level="",
+    target_materials="",
+>>>>>>> Stashed changes
 ):
     return _prompt_join(
         f"Photorealistic eye-level {safe_str(room_type).strip().lower() or 'room'} interior redesign",
         "Preserve the source room shell, camera angle, structural openings, and believable room geometry",
         "Replace finishes, fixtures, furniture, lighting, cabinetry where relevant, styling, and staging so the result is visibly redesigned",
         _room_program_prompt(room_type),
+        *_studio_quality_directives("interior_room"),
         _compose_design_studio_prompt(
             notes=notes,
             preset=preset,
@@ -7056,9 +7100,14 @@ def _compose_photo_to_interior_prompt(
             room_type=room_type,
             property_type=property_type,
             rehab_level=rehab_level,
+<<<<<<< Updated upstream
             description=description,
             target_materials=target_materials,
             engine_prompt=engine_prompt,
+=======
+            finish_level=finish_level,
+            target_materials=target_materials,
+>>>>>>> Stashed changes
         ),
     )
 
@@ -7111,6 +7160,7 @@ def _design_room_result_key(room_type="", floor="", style=""):
     )
 
 
+<<<<<<< Updated upstream
 def _safe_json_object(value):
     if isinstance(value, dict):
         return value
@@ -7214,6 +7264,8 @@ def _normalize_design_chat_payload(parsed, current_config=None, messages=None):
     return parsed
 
 
+=======
+>>>>>>> Stashed changes
 def _compose_design_studio_prompt(
     *,
     notes="",
@@ -7222,9 +7274,14 @@ def _compose_design_studio_prompt(
     room_type="",
     property_type="",
     rehab_level="",
+<<<<<<< Updated upstream
     description="",
     target_materials="",
     engine_prompt="",
+=======
+    finish_level="",
+    target_materials="",
+>>>>>>> Stashed changes
 ):
     return _prompt_join(
         "Professional investor-grade full-concept interior redesign for a real estate presentation",
@@ -7233,15 +7290,22 @@ def _compose_design_studio_prompt(
         f"Presentation mode: {mode}" if mode else "",
         f"Property type: {property_type}" if property_type else "",
         f"Rehab level: {rehab_level}" if rehab_level else "",
+<<<<<<< Updated upstream
         f"Exact user vision: {description}" if description else "",
         f"Target materials and finishes: {target_materials}" if target_materials else "",
         engine_prompt,
+=======
+        f"Finish level: {finish_level}" if finish_level else "",
+        f"Target materials and finishes: {target_materials}" if target_materials else "",
+>>>>>>> Stashed changes
         "Output must be one photorealistic interior room image, not a collage, split-screen, blueprint, mood board, or render sheet",
         "Keep the source room recognizable through its camera angle, wall/window/door placement, ceiling height, and main structural envelope",
         "Make the design visibly new: update finishes, cabinetry, counters, backsplash, flooring, fixtures, lighting, paint, hardware, furnishings, styling, and staging",
+        "Use a cohesive finish palette instead of isolated upgrades; every visible surface should feel intentionally designed",
         "Do not simply clean up, sharpen, or reproduce the reference photo; the buyer should immediately see a professionally redesigned concept",
         "Use realistic materials, correct scale, clean lighting, functional circulation, and marketable staging",
         "Use believable real-estate photography, accurate shadows, natural material transitions, and furniture sized for the room",
+        *_studio_quality_directives("interior_room"),
         "Keep the result photorealistic, buildable, current, and appropriate for a lender/investor presentation",
         "Do not add people, text, labels, logos, fake views, impossible openings, fake appliances, or major structural changes unless requested",
         notes,
@@ -7266,6 +7330,9 @@ def _build_studio_quality_controls(mode=""):
         "allow_logos": False,
         "single_image_output": True,
         "avoid_collage": True,
+        "quality": "high",
+        "detail_level": "presentation_ready",
+        "artifact_control": "strict",
     }
 
     if "blueprint" in mode_key or "floor_plan" in mode_key:
@@ -7390,6 +7457,7 @@ def _compose_build_studio_prompt(
         f"Room focus: {room_type}" if room_type else "",
         f"Floor: {floor}" if floor else "",
         "Use realistic U.S. residential construction, correct proportions, grounded foundation, believable roof geometry, window rhythm, entry placement, grading, driveway, and material transitions",
+        *_studio_quality_directives(mode_key),
         *mode_specific,
         "Preserve the supplied reference massing, roofline, floor count, openings, entry or garage placement, proportions, and camera relationship" if preserve_reference else "",
         "Treat the blueprint as a binding architectural constraint for footprint, massing, floor count, stair placement, and circulation, but never as a visual style for photorealistic exterior or interior outputs" if blueprint_constrained else "",
@@ -7549,10 +7617,10 @@ def generate_build_exterior():
             "preserve_existing_exterior": has_real_exterior_reference,
             "preserve_structure": has_real_exterior_reference,
             "count": 1,
-            "steps": 22,
-            "guidance": 7.5,
-            "width": 768,
-            "height": 768,
+            "steps": 32,
+            "guidance": 8.2,
+            "width": 1024,
+            "height": 1024,
             "negative_prompt": _build_studio_negative_prompt("exterior_front"),
         }
         payload.update(_build_studio_quality_controls("exterior_front"))
@@ -7889,6 +7957,8 @@ def generate_build_interior():
         notes = (data.get("notes") or "").strip()
         room_type = (data.get("room_type") or "living room").strip()
         floor = (data.get("floor") or "main").strip()
+        finish_level = (data.get("finish_level") or "standard").strip()
+        target_materials = (data.get("target_materials") or "").strip()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
         source_results = _deal_results(deal) if deal is not None else {}
         source_build_project = source_results.get("build_project", {}) or {}
@@ -7951,6 +8021,8 @@ def generate_build_interior():
                 floor=floor,
                 project_name=project_name,
                 description=description,
+                finish_level=finish_level,
+                target_materials=target_materials,
             )
         else:
             interior_prompt_notes = _compose_photo_to_interior_prompt(
@@ -7960,7 +8032,12 @@ def generate_build_interior():
                 room_type=room_type,
                 property_type=property_type,
                 rehab_level="full_concept",
+<<<<<<< Updated upstream
                 description=description,
+=======
+                finish_level=finish_level,
+                target_materials=target_materials,
+>>>>>>> Stashed changes
             )
 
         # Combine user's free-text description and notes as the primary
@@ -7985,6 +8062,8 @@ def generate_build_interior():
             "room_focus": room_type,
             "floor": floor,
             "style": style,
+            "finish_level": finish_level,
+            "target_materials": target_materials,
             "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
 
             "prompt": interior_prompt_notes,
@@ -8344,11 +8423,11 @@ def generate_build_blueprint():
             "number_of_floors": number_of_floors,
             "floor_count": number_of_floors,
             "count": 1,
-            "steps": 20,
+            "steps": 30,
             "strength": 0.28,
-            "guidance": 6.0,
-            "width": 768,
-            "height": 768,
+            "guidance": 6.8,
+            "width": 1024,
+            "height": 1024,
             "negative_prompt": _build_studio_negative_prompt("blueprint"),
         }
         payload.update(_build_studio_quality_controls("blueprint"))
@@ -9750,6 +9829,13 @@ def generate_build_room():
         notes = _clean_str(data.get("notes"))
         room_type = _clean_str(data.get("room_type")) or "kitchen"
         floor = _clean_str(data.get("floor")) or "main"
+        finish_level = _clean_str(data.get("finish_level")) or _first_nonempty(
+            interior_latest.get("finish_level"),
+            "standard",
+        )
+        target_materials = _clean_str(data.get("target_materials")) or _first_nonempty(
+            interior_latest.get("target_materials"),
+        )
         room_prompt_notes = _compose_blueprint_to_interior_prompt(
             notes=notes,
             preset=style,
@@ -9758,6 +9844,8 @@ def generate_build_room():
             floor=floor,
             project_name=project_name,
             description=description,
+            finish_level=finish_level,
+            target_materials=target_materials,
         )
 
         payload = {
@@ -9772,6 +9860,8 @@ def generate_build_room():
             "zoning": zoning,
             "room_type": room_type,
             "floor": floor,
+            "finish_level": finish_level,
+            "target_materials": target_materials,
             "prompt": room_prompt_notes,
             "prompt_notes": room_prompt_notes,
             "desired_updates": room_prompt_notes,
@@ -9828,6 +9918,8 @@ def generate_build_room():
             "notes": notes,
             "room_type": room_type,
             "floor": floor,
+            "finish_level": finish_level,
+            "target_materials": target_materials,
             "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
             "image_url": room_urls[0],
             "images": room_urls,
@@ -11559,7 +11651,13 @@ def design_studio_generate():
                 property_type=property_type,
                 floor=floor,
                 project_name=data.get("project_name") or (getattr(deal, "title", "") if deal else ""),
+<<<<<<< Updated upstream
                 description=description,
+=======
+                description=data.get("description") or "",
+                finish_level=finish_level,
+                target_materials=target_materials,
+>>>>>>> Stashed changes
             )
             payload = {
                 "mode": "interior",
@@ -11621,9 +11719,14 @@ def design_studio_generate():
                 room_type=room_type,
                 property_type=property_type,
                 rehab_level=rehab_level,
+<<<<<<< Updated upstream
                 description=description,
                 target_materials=target_materials,
                 engine_prompt=chat_engine_prompt,
+=======
+                finish_level=finish_level,
+                target_materials=target_materials,
+>>>>>>> Stashed changes
             )
 
             payload = {
