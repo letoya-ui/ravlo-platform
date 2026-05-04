@@ -881,6 +881,8 @@ def ai_leads():
         import os, requests
 
         ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL")
+        api_key = (os.getenv("RENOVATION_API_KEY") or "").strip()
+        headers = {"X-API-Key": api_key} if api_key else {}
 
         payload = {
             "market": market or "United States",
@@ -894,6 +896,7 @@ def ai_leads():
             resp = requests.post(
                 f"{ENGINE_URL}/lead-engine/ai_leads",
                 json=payload,
+                headers=headers,
                 timeout=20
             )
             resp.raise_for_status()
@@ -1086,6 +1089,8 @@ def lead_capture():
     import requests
 
     ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL")
+    api_key = (os.getenv("RENOVATION_API_KEY") or "").strip()
+    headers = {"X-API-Key": api_key} if api_key else {}
 
     incoming = request.get_json(silent=True) or {}
 
@@ -1093,6 +1098,7 @@ def lead_capture():
         resp = requests.post(
             f"{ENGINE_URL}/lead-engine/capture",
             json=incoming,
+            headers=headers,
             timeout=20
         )
         resp.raise_for_status()
