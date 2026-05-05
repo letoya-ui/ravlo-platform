@@ -7892,7 +7892,6 @@ def _design_conversational_reply(user_text, config):
         return f"{summary} — locked in. Form's updated below. Generate when ready, or tell me more."
     return "Got your vision — form's loaded below. Generate when ready, or keep talking."
 
-
 @investor_bp.route("/deal-studio/build-studio/generate-interior", methods=["POST"])
 @login_required
 @role_required("investor")
@@ -7905,6 +7904,7 @@ def generate_build_interior():
         deal_id = _normalize_int(data.get("deal_id"))
         project_id = _normalize_int(data.get("project_id"))
         project = None
+
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
@@ -7916,7 +7916,7 @@ def generate_build_interior():
             if _deal_render_lock_active(deal):
                 return jsonify({
                     "status": "error",
-                    "message": "A build render is already in progress for this deal."
+                    "message": "A render is already in progress for this deal."
                 }), 409
 
             _set_deal_render_processing(deal)
@@ -7928,56 +7928,100 @@ def generate_build_interior():
                 user_id=current_user.id,
             ).first()
 
+        # --------------------------------------------------
+        # Shared form inputs
+        # --------------------------------------------------
         project_name = (data.get("project_name") or "").strip()
         property_type = (data.get("property_type") or "single_family").strip()
-        style = (data.get("style") or "modern_luxury").strip()
+        style = (
+            data.get("style")
+            or data.get("preset")
+            or "modern_luxury"
+        ).strip()
         description = (data.get("description") or "").strip()
         lot_size = (data.get("lot_size") or "").strip()
         zoning = (data.get("zoning") or "").strip()
         location = (data.get("location") or "").strip()
-        notes = (data.get("notes") or "").strip()
+        notes = (data.get("notes") or data.get("design_notes") or "").strip()
         room_type = (data.get("room_type") or "living room").strip()
         floor = (data.get("floor") or "main").strip()
         finish_level = (data.get("finish_level") or "standard").strip()
         target_materials = (data.get("target_materials") or "").strip()
-        engine_intent = _safe_json_object(data.get("engine_intent"))
+        save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
+
+        # --------------------------------------------------
+        # NEW: Design vs Rehab distinction
+        # --------------------------------------------------
+        generation_family = (
+            data.get("generation_family")
+            or data.get("generator_family")
+            or data.get("studio_family")
+            or "design"
+        ).strip().lower()
+
+        if generation_family not in ("design", "rehab"):
+            generation_family = "design"
+
+        is_design_generation = generation_family == "design"
+        is_rehab_generation = generation_family == "rehab"
+
+        # --------------------------------------------------
+        # Chat/AI intent handoff
+        # --------------------------------------------------
+        engine_intent = _safe_json_object(
+            data.get("engine_intent") or data.get("ai_engine_intent")
+        )
+
         chat_engine_prompt = _first_nonempty(
             data.get("engine_prompt"),
             data.get("prompt_notes"),
             data.get("desired_updates"),
             engine_intent.get("engine_prompt"),
         )
-        locked_details = engine_intent.get("locked_details") or []
+
+        locked_details = engine_intent.get("locked_details") or data.get("locked_details") or []
         if isinstance(locked_details, list):
-            locked_details_text = ", ".join(safe_str(item) for item in locked_details if safe_str(item))
+            locked_details_text = ", ".join(
+                safe_str(item) for item in locked_details if safe_str(item)
+            )
         else:
             locked_details_text = safe_str(locked_details)
 
-        negative_constraints = engine_intent.get("negative_constraints") or []
+        negative_constraints = engine_intent.get("negative_constraints") or data.get("negative_constraints") or []
         if isinstance(negative_constraints, list):
-            negative_constraints_text = ", ".join(safe_str(item) for item in negative_constraints if safe_str(item))
+            negative_constraints_text = ", ".join(
+                safe_str(item) for item in negative_constraints if safe_str(item)
+            )
         else:
             negative_constraints_text = safe_str(negative_constraints)
-        save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
-        source_results = _deal_results(deal) if deal is not None else {}
-        source_build_project = source_results.get("build_project", {}) or {}
-        known_plan_urls = _build_project_plan_reference_urls(source_build_project)
 
+        # --------------------------------------------------
+        # Image/reference input
+        # --------------------------------------------------
         interior_image = (
             request.files.get("interior_image")
+            or request.files.get("before_image")
             or request.files.get("blueprint_file")
             or request.files.get("blueprint_image")
         )
 
         image_url = (
-            data.get("blueprint_url")
-            or data.get("image_url")
+            data.get("image_url")
             or data.get("reference_image_url")
+            or data.get("blueprint_url")
             or ""
         ).strip()
 
         image_base64 = (data.get("image_base64") or "").strip()
-        source_filename = safe_str(getattr(interior_image, "filename", "") if interior_image else "")
+
+        source_filename = safe_str(
+            getattr(interior_image, "filename", "") if interior_image else ""
+        )
+
+        source_results = _deal_results(deal) if deal is not None else {}
+        source_build_project = source_results.get("build_project", {}) or {}
+        known_plan_urls = _build_project_plan_reference_urls(source_build_project)
+
         source_is_floor_plan = (
             _reference_looks_like_floor_plan(image_url, source_filename)
             or _reference_matches_known_plan(image_url, known_plan_urls)
@@ -7998,21 +8042,40 @@ def generate_build_interior():
             results = _deal_results(deal)
             build_project = results.get("build_project", {}) or {}
             saved_blueprint = build_project.get("blueprint", {}) or {}
+            saved_interior = build_project.get("interior", {}) or {}
+            latest_interior = saved_interior.get("latest", {}) or {}
+
+            # For Design, prefer room photo/reference when available.
+            # For blueprint-to-room, fall back to blueprint.
             image_url = (
-                saved_blueprint.get("blueprint_url")
+                latest_interior.get("build_reference_image")
+                or latest_interior.get("reference_image_url")
+                or saved_blueprint.get("blueprint_url")
                 or saved_blueprint.get("image_url")
                 or ""
             ).strip()
-            source_is_floor_plan = bool(image_url)
 
-        if not image_url and not image_base64:
+            source_is_floor_plan = _reference_looks_like_floor_plan(image_url)
+
+        # Rehab should always have an image.
+        if is_rehab_generation and not image_url and not image_base64:
             return jsonify({
                 "status": "error",
-                "message": "Upload a blueprint or use a saved project blueprint before generating interiors."
+                "message": "Rehab generation requires a reference photo."
             }), 400
 
+        # Design can be text-only.
+        has_reference = bool(image_url or image_base64)
+
+        # --------------------------------------------------
+        # Prompt construction
+        # --------------------------------------------------
+        user_creative_direction = ". ".join(
+            part for part in [description, notes, target_materials] if part
+        )
+
         if source_is_floor_plan:
-            interior_prompt_notes = _compose_blueprint_to_interior_prompt(
+            base_prompt = _compose_blueprint_to_interior_prompt(
                 notes=notes,
                 preset=style,
                 room_type=room_type,
@@ -8024,122 +8087,207 @@ def generate_build_interior():
                 target_materials=target_materials,
             )
         else:
-            interior_prompt_notes = _compose_photo_to_interior_prompt(
+            base_prompt = _compose_photo_to_interior_prompt(
                 notes=notes,
                 preset=style,
                 mode="interior",
                 room_type=room_type,
                 property_type=property_type,
-                rehab_level="full_concept",
+                rehab_level="full_concept" if is_design_generation else "rehab",
                 description=description,
                 finish_level=finish_level,
                 target_materials=target_materials,
+                engine_prompt=chat_engine_prompt,
             )
-        interior_prompt_notes = _prompt_join(
-            chat_engine_prompt,
-            f"Locked user-requested design details: {locked_details_text}" if locked_details_text else "",
-            "CRITICAL: The final image must visibly apply the requested colors, materials, cabinetry, countertops, fixtures, lighting, and styling from the user's chat.",
-            "If a reference photo is provided, preserve only the camera angle, room shell, wall/window/door placement, and basic geometry.",
-            "Do not preserve the existing cabinet color, countertop, backsplash, appliances, lighting, or furniture unless the user explicitly asked to keep them.",
-            interior_prompt_notes,
-        )
-        # Combine user's free-text description and notes as the primary
-        # creative direction the AI engine should follow.
-        user_creative_direction = ". ".join(
-            part for part in [description, notes] if part
-        )
 
-        payload = {
-            "mode": "interior",
-            "task": "blueprint_to_interior_room" if source_is_floor_plan else "interior_design",
-
-            "project_name": project_name,
-            "property_type": property_type,
-            "style": style,
-            "description": user_creative_direction or description,
-            "build_description": user_creative_direction or description,
-            "design_notes": notes,
-            "lot_size": lot_size,
-            "zoning": zoning,
-            "room_type": room_type,
-            "room_focus": room_type,
-            "floor": floor,
-            "style": style,
-            "finish_level": finish_level,
-            "target_materials": target_materials,
-            "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
-
-            "prompt": interior_prompt_notes,
-            "prompt_notes": interior_prompt_notes,
-            "desired_updates": _prompt_join(
-                user_creative_direction,
+        if is_design_generation:
+            interior_prompt_notes = _prompt_join(
                 chat_engine_prompt,
-                target_materials,
-                locked_details_text,
-            ),
-            "engine_prompt": interior_prompt_notes,
-            "locked_details": locked_details,
+                f"MANDATORY DESIGN REDESIGN: Replace the existing visible finishes with {target_materials}."
+                if target_materials else
+                "MANDATORY DESIGN REDESIGN: Create the user's requested interior design concept.",
+                f"Locked user-requested design details: {locked_details_text}" if locked_details_text else "",
+                "Preserve only the room shell, camera angle, wall/window/door placement, and believable room geometry.",
+                "Do not preserve the existing cabinet color, countertop, backsplash, appliances, lighting, furniture, or styling unless explicitly requested.",
+                "The final image must visibly apply the requested colors, materials, cabinetry, countertops, fixtures, lighting, furniture, and mood from the user's chat.",
+                base_prompt,
+            )
+            task = "interior_design"
+            reference_role = "layout_context_only"
+            strength = float(data.get("strength") or 0.86)
+            guidance = float(data.get("guidance") or 9.6)
+            steps = int(data.get("steps") or 34)
 
-            "special_features": (
-                f"{room_type} interior, {_room_program_prompt(room_type)}, high-end furniture, premium finishes, "
-                "layered lighting, designer decor, luxury staging"
-            ),
+        else:
+            interior_prompt_notes = _prompt_join(
+                chat_engine_prompt,
+                f"REHAB SCOPE: {user_creative_direction}" if user_creative_direction else "",
+                "Preserve the existing property, camera angle, structure, and layout unless the user explicitly requested construction changes.",
+                "Apply realistic rehab improvements and material replacements based on the requested scope.",
+                base_prompt,
+            )
+            task = "photo_rehab"
+            reference_role = "preserve_existing_photo"
+            strength = float(data.get("strength") or 0.62)
+            guidance = float(data.get("guidance") or 8.5)
+            steps = int(data.get("steps") or 32)
 
-            "count": 1,
-            "steps": 36,
-            "guidance": 9.6,
-            "strength": 1.0 if source_is_floor_plan else 0.82,
-            "width": 1024,
-            "height": 1024,
+        negative_prompt = (
+            _build_studio_negative_prompt("interior_room")
+            + ", same cabinets, same cabinet doors, same countertop, same backsplash, same appliances, same sink, "
+              "same kitchen, unchanged kitchen, white cabinets, white cabinetry, white shaker cabinets, "
+              "white cabinet doors, white kitchen island, unchanged white kitchen, unchanged island, "
+              "unchanged cabinetry, unchanged finishes, builder grade cabinets, dated cabinets, old countertops, "
+              "cluttered counter, wrong room type, cheap materials, dark room, gloomy room, blurry, low quality, "
+              "distorted walls, warped windows, extra windows, top down view, overhead view, floor plan, blueprint, "
+              "plan sheet, text, watermark"
+        )
 
-            "concept_intensity": "blueprint_to_photoreal_room" if source_is_floor_plan else "full_concept",
-            "reference_role": "floor_plan_context_only_not_init_image" if source_is_floor_plan else "preserve_architecture_replace_contents",
-            "keep_layout": False if source_is_floor_plan else True,
-            "preserve_structure": False if source_is_floor_plan else True,
-            "preserve_room_shell": False if source_is_floor_plan else True,
-            "redesign_contents": True,
-            "force_image_guided": False if source_is_floor_plan else True,
+        if negative_constraints_text:
+            negative_prompt = f"{negative_prompt}, {negative_constraints_text}"
 
-            "negative_prompt": (
-                _build_studio_negative_prompt("interior_room")
-                + ", same cabinets, same cabinet doors, same countertop, same backsplash, same appliances, same sink, "
-                "same kitchen, unchanged kitchen, builder grade cabinets, dated cabinets, old countertops, cluttered counter, "
-                "white cabinets, all white kitchen, unchanged white kitchen, unchanged cabinetry, unchanged finishes, "
-                "same sofa, same chair, same ottoman, same lamp, same blinds, same curtains, wrong room type, "
-                "cheap materials, dark room, gloomy room, blurry, low quality, distorted walls, warped windows, extra windows, "
-                "top down view, overhead view, floor plan, blueprint, plan sheet, text, watermark"
-        ),
-        }
-        payload.update(_build_studio_quality_controls("interior_room"))
+        # --------------------------------------------------
+        # Payload routing
+        # --------------------------------------------------
+        if is_design_generation:
+            endpoint = "/v1/build_concept"
 
-        if source_is_floor_plan:
-            if image_base64:
+            payload = {
+                "generation_family": "design",
+                "generator_family": "design",
+                "generator_type": "design",
+                "studio": "design_studio",
+                "studio_type": "design_studio",
+
+                "mode": "interior",
+                "output_mode": "interior",
+                "task": task,
+                "generation_mode": "image_guided_design" if has_reference else "text_to_image",
+                "allow_text_only": not has_reference,
+                "requires_reference_image": False,
+
+                "project_name": project_name,
+                "property_type": property_type,
+                "style": style,
+                "preset": style,
+                "description": description,
+                "build_description": description,
+                "design_notes": notes,
+                "interior_notes": notes,
+                "target_materials": target_materials,
+                "finish_level": finish_level,
+                "lot_size": lot_size,
+                "zoning": zoning,
+                "location": location,
+                "room_type": room_type,
+                "room_focus": room_type,
+                "floor": floor,
+
+                "prompt": interior_prompt_notes,
+                "prompt_notes": interior_prompt_notes,
+                "desired_updates": interior_prompt_notes,
+                "engine_prompt": interior_prompt_notes,
+                "locked_details": locked_details_text,
+
+                "reference_role": reference_role,
+                "preserve_room_shell": True,
+                "preserve_structure": True,
+                "preserve_layout": True,
+                "preserve_finishes": False,
+                "redesign_contents": True,
+                "prompt_priority": "high",
+
+                "count": 1,
+                "steps": steps,
+                "guidance": guidance,
+                "strength": strength,
+                "width": 1024,
+                "height": 1024,
+                "negative_prompt": negative_prompt,
+            }
+
+            if source_is_floor_plan:
+                payload["task"] = "blueprint_to_interior_room"
+                payload["reference_role"] = "floor_plan_context_only_not_init_image"
                 payload["blueprint_image_base64"] = image_base64
-                payload["reference_image_base64"] = image_base64
-            elif image_url:
                 payload["blueprint_image_url"] = image_url
                 payload["reference_image_url"] = image_url
-        elif image_base64:
-            payload["image_base64"] = image_base64
-            payload["image_url"] = ""
-        else:
-            payload["image_url"] = image_url
+            elif image_base64:
+                payload["image_base64"] = image_base64
+            elif image_url:
+                payload["image_url"] = image_url
 
-        current_app.logger.warning(f"BUILD INTERIOR ENGINE PAYLOAD: {payload}")
+        else:
+            endpoint = "/v1/renovate"
+
+            payload = {
+                "generation_family": "rehab",
+                "generator_family": "rehab",
+                "studio": "rehab_studio",
+                "studio_type": "rehab_studio",
+
+                "mode": "hgtv",
+                "task": task,
+                "preset": style,
+                "style": style,
+                "room_type": room_type,
+                "room_focus": room_type,
+                "floor": floor,
+                "description": description,
+                "design_notes": notes,
+                "interior_notes": notes,
+                "target_materials": target_materials,
+                "finish_level": finish_level,
+
+                "prompt": interior_prompt_notes,
+                "prompt_notes": interior_prompt_notes,
+                "desired_updates": interior_prompt_notes,
+                "engine_prompt": interior_prompt_notes,
+                "reference_role": reference_role,
+                "preserve_structure": True,
+                "preserve_layout": True,
+                "preserve_finishes": False,
+                "redesign_contents": True,
+
+                "count": 1,
+                "steps": steps,
+                "guidance": guidance,
+                "strength": strength,
+                "width": 1024,
+                "height": 1024,
+                "negative_prompt": negative_prompt,
+            }
+
+            if image_base64:
+                payload["image_base64"] = image_base64
+            elif image_url:
+                payload["image_url"] = image_url
+
+        current_app.logger.warning(
+            "INTERIOR GENERATION ROUTE family=%s endpoint=%s payload=%s",
+            generation_family,
+            endpoint,
+            payload,
+        )
 
         engine_json = _post_renovation_engine_json(
-            "/v1/build_concept",
+            endpoint,
             payload,
             timeout=BLUEPRINT_RENDER_TIMEOUT,
         )
 
-        current_app.logger.warning(f"BUILD INTERIOR ENGINE JSON: {engine_json}")
+        current_app.logger.warning(
+            "INTERIOR GENERATION ENGINE JSON family=%s endpoint=%s engine_json=%s",
+            generation_family,
+            endpoint,
+            engine_json,
+        )
 
         images_b64 = engine_json.get("images_base64", []) or []
         if not images_b64:
             return jsonify({
                 "status": "error",
-                "message": "Build engine returned no images."
+                "message": "Engine returned no images."
             }), 502
 
         render_batch_id = uuid.uuid4().hex
@@ -8148,26 +8296,28 @@ def generate_build_interior():
         if not build_urls:
             return jsonify({
                 "status": "error",
-                "message": "Build render completed but uploads failed."
+                "message": "Render completed but uploads failed."
             }), 500
 
         meta = {
             **(engine_json.get("meta") or {}),
-            "reference_source": "floor_plan" if source_is_floor_plan else "room_photo",
+            "generation_family": generation_family,
+            "reference_source": (
+                "floor_plan" if source_is_floor_plan else
+                "room_photo" if has_reference else
+                "text_prompt"
+            ),
         }
+
         seed = engine_json.get("seed")
         job_id = engine_json.get("job_id")
 
+        # --------------------------------------------------
+        # Save to deal/project
+        # --------------------------------------------------
         if save_to_deal and deal is not None:
             results = _deal_results(deal)
             build_project = results.get("build_project", {}) or {}
-
-            blueprint_block = build_project.get("blueprint", {}) or {}
-            if image_url:
-                blueprint_block["image_url"] = blueprint_block.get("image_url") or image_url
-                blueprint_block["blueprint_url"] = blueprint_block.get("blueprint_url") or image_url
-            if blueprint_block:
-                build_project["blueprint"] = blueprint_block
 
             interior_block = build_project.get("interior", {}) or {}
             rooms = interior_block.get("rooms", []) or []
@@ -8185,6 +8335,11 @@ def generate_build_interior():
                 "room_type": room_type,
                 "room_focus": room_type,
                 "floor": floor,
+                "finish_level": finish_level,
+                "target_materials": target_materials,
+                "generation_family": generation_family,
+                "studio": "design_studio" if is_design_generation else "rehab_studio",
+                "task": task,
                 "result_key": "|".join(result_key),
                 "image_url": build_urls[0] if build_urls else "",
                 "images": build_urls,
@@ -8203,10 +8358,17 @@ def generate_build_interior():
                 ) != result_key
             ]
             rooms.append(room_entry)
+
             interior_block["rooms"] = rooms
             interior_block["latest"] = room_entry
-
             build_project["interior"] = interior_block
+
+            if source_is_floor_plan and image_url:
+                blueprint_block = build_project.get("blueprint", {}) or {}
+                blueprint_block["image_url"] = blueprint_block.get("image_url") or image_url
+                blueprint_block["blueprint_url"] = blueprint_block.get("blueprint_url") or image_url
+                build_project["blueprint"] = blueprint_block
+
             results["build_project"] = build_project
             results["build_reference_image"] = image_url
             _set_deal_results(deal, results)
@@ -8216,11 +8378,29 @@ def generate_build_interior():
 
         db.session.commit()
 
+        next_url = (
+            url_for("investor.deal_architect", deal_id=deal.id, project_id=project.id if project else None)
+            if deal else ""
+        )
+
         return jsonify({
             "status": "ok",
             "mode": "interior",
+            "generation_family": generation_family,
+            "endpoint": endpoint,
             "images": build_urls,
             "image_url": build_urls[0] if build_urls else "",
+            "concept_result": {
+                "image_url": build_urls[0] if build_urls else "",
+                "images": build_urls,
+                "room_type": room_type,
+                "floor": floor,
+                "style": style,
+                "generation_family": generation_family,
+                "meta": meta,
+                "seed": seed,
+                "job_id": job_id,
+            },
             "meta": meta,
             "seed": seed,
             "job_id": job_id,
@@ -8230,10 +8410,11 @@ def generate_build_interior():
             "deal_id": deal.id if deal else None,
             "project_id": project.id if project else project_id,
             "saved_to_deal": bool(save_to_deal and deal is not None),
+            "next_url": next_url,
         })
 
     except Exception as e:
-        current_app.logger.exception("Build interior generation error")
+        current_app.logger.exception("Interior generation error")
 
         if deal is not None:
             try:
