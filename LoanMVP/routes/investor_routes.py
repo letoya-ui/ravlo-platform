@@ -8173,11 +8173,20 @@ def generate_build_interior():
             guidance = float(data.get("guidance") or 9.6)
             steps = int(data.get("steps") or 34)
 
+            layout_lock_prompt = (
+                "STRICT LAYOUT LOCK: Keep the same camera viewpoint, same room footprint, same island position, "
+                "same sink wall, same appliance wall, same window and door locations, same walkway/circulation, "
+                "same cabinet run positions, and same major object placement. Only change colors, finishes, materials, "
+                "cabinet faces, countertops, backsplash, lighting style, hardware, and decor."
+                if layout_lock_requested else
+                "LAYOUT LOCK: Preserve the original camera angle, room footprint, wall positions, ceiling height, "
+                "window placement, door placement, appliance wall location, island location, and main circulation path."
+            )
         else:
             interior_prompt_notes = _prompt_join(
                 chat_engine_prompt,
                 f"REHAB SCOPE: {user_creative_direction}" if user_creative_direction else "",
-                "Preserve the existing property, camera angle, structure, and layout unless the user explicitly requested construction changes.",
+                layout_lock_prompt,
                 "Apply realistic rehab improvements and material replacements based on the requested scope.",
                 base_prompt,
             )
@@ -8208,6 +8217,37 @@ def generate_build_interior():
 
         if negative_constraints_text:
             negative_prompt = f"{negative_prompt}, {negative_constraints_text}"
+    
+        layout_lock_requested = any(
+            phrase in design_text
+            for phrase in (
+                "preserve layout",
+                "preserve the layout",
+                "keep the layout",
+                "same layout",
+                "same room layout",
+                "preserve original layout",
+                "keep original layout",
+                "keep room layout",
+                "do not change the layout",
+                "don't change the layout",
+            )
+        )
+
+        if layout_lock_requested:
+            strength = float(data.get("strength") or 0.68)
+            guidance = float(data.get("guidance") or 9.4)
+            use_depth = True
+            use_canny = True
+            controlnet_scale = 0.72
+        else:
+            strength = float(data.get("strength") or 0.76)
+            guidance = float(data.get("guidance") or 9.6)
+            use_depth = True
+            use_canny = False
+            controlnet_scale = 0.80
+
+        steps = int(data.get("steps") or 34)
 
         # --------------------------------------------------
         # Payload routing
@@ -8253,12 +8293,17 @@ def generate_build_interior():
                 "locked_details": locked_details_text,
 
                 "reference_role": reference_role,
+                "layout_lock": layout_lock_requested,
                 "preserve_room_shell": True,
                 "preserve_structure": True,
                 "preserve_layout": True,
                 "preserve_finishes": False,
                 "redesign_contents": True,
                 "prompt_priority": "high",
+
+                "use_depth": use_depth,
+                "use_canny": use_canny,
+                "controlnet_scale": controlnet_scale,
 
                 "count": 1,
                 "steps": steps,
