@@ -8157,7 +8157,11 @@ def generate_build_interior():
                 "MANDATORY DESIGN REDESIGN: Create the user's requested interior design concept.",
                 *required_material_directives,
                 f"Locked user-requested design details: {locked_details_text}" if locked_details_text else "",
-                "Preserve only the room shell, camera angle, wall/window/door placement, and believable room geometry.",
+
+                "LAYOUT LOCK: Preserve the original camera angle, room footprint, wall positions, ceiling height, window placement, door placement, appliance wall location, island location, and main circulation path.",
+                "Do not move the kitchen island, sink wall, appliance wall, major windows, doors, or room openings unless the user explicitly asks for a layout change.",
+                "Only redesign the visible finishes, colors, cabinetry material, countertop material, backsplash, lighting style, hardware, furniture, decor, and styling.",
+
                 "Do not preserve the existing cabinet color, countertop, backsplash, appliances, lighting, furniture, paint colors, decor, or styling unless explicitly requested.",
                 "If the source image has white cabinets, white countertops, or an all-white kitchen, replace them with the requested design materials.",
                 "The final image must visibly apply the requested colors, materials, cabinetry, countertops, fixtures, lighting, furniture, and mood from the user's chat.",
@@ -8165,7 +8169,7 @@ def generate_build_interior():
             )
             task = "interior_design"
             reference_role = "layout_context_only"
-            strength = float(data.get("strength") or 0.86)
+            strength = float(data.get("strength") or 0.76)
             guidance = float(data.get("guidance") or 9.6)
             steps = int(data.get("steps") or 34)
 
