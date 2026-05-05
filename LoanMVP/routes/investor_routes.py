@@ -6681,6 +6681,26 @@ def design_studio_generate_budget():
         room_type = (data.get("room_type") or "living room").strip()
         rehab_level = (data.get("rehab_level") or "medium").strip().lower()
         finish_level = (data.get("finish_level") or "standard").strip()
+        generation_family = (
+            data.get("generation_family")
+            or data.get("generator_family")
+            or "design"
+        ).strip().lower()
+
+        if generation_family not in ("design", "rehab"):
+            generation_family = "design"
+
+        engine_intent = _safe_json_object(
+            data.get("engine_intent") or data.get("ai_engine_intent")
+        )
+
+        chat_engine_prompt = _first_nonempty(
+            data.get("engine_prompt"),
+            data.get("prompt_notes"),
+            data.get("desired_updates"),
+            engine_intent.get("engine_prompt"),
+        )
+
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
 
         if project:
@@ -6696,6 +6716,12 @@ def design_studio_generate_budget():
         )
 
         payload = {
+            "generation_family": generation_family,
+            "generator_family": generation_family,
+            "studio": "design_studio" if generation_family == "design" else "rehab_studio",
+            "studio_type": "design_studio" if generation_family == "design" else "rehab_studio",
+            "task": "interior_design" if generation_family == "design" else "photo_rehab",
+            
             "project_name": project_name or (getattr(deal, "title", "") if deal else ""),
             "property_type": property_type,
             "style": style,
@@ -6703,9 +6729,10 @@ def design_studio_generate_budget():
             "rehab_level": rehab_level,
             "room_type": room_type,
             "room_focus": room_type,
-            "desired_updates": notes or description,
-            "prompt_notes": notes,
+            "desired_updates": chat_engine_prompt or notes or description,
+            "prompt_notes": chat_engine_prompt or notes,
             "design_notes": description,
+            "engine_prompt": chat_engine_prompt or "",
             "target_materials": data.get("target_materials") or "",
             "finish_level": finish_level,
             "location_cost_context": location_context if isinstance(location_context, dict) else None,
@@ -8101,14 +8128,38 @@ def generate_build_interior():
             )
 
         if is_design_generation:
+            required_material_directives = []
+            target_materials_lower = (target_materials or "").lower()
+            chat_prompt_lower = (chat_engine_prompt or "").lower()
+            locked_details_lower = (locked_details_text or "").lower()
+            design_text = " ".join([
+                target_materials_lower,
+                chat_prompt_lower,
+                locked_details_lower,
+                (description or "").lower(),
+                (notes or "").lower(),
+            ])
+
+            if "dark brown" in design_text or "espresso" in design_text or "walnut" in design_text:
+                required_material_directives.append(
+                    "MANDATORY: All visible kitchen cabinets, lower cabinets, upper cabinets, and island base cabinets must be dark brown wood, espresso brown, or deep walnut. They must not be white."
+                )
+
+            if "white countertop" in design_text or "white countertops" in design_text or "veining" in design_text:
+                required_material_directives.append(
+                    "MANDATORY: Countertops must be white stone with visible brown and gold veining."
+                )
+
             interior_prompt_notes = _prompt_join(
-                chat_engine_prompt,
+                "MANDATORY DESIGN REDESIGN: This is a prompt-led Design Studio concept, not a light rehab, cleanup, or refresh.",
                 f"MANDATORY DESIGN REDESIGN: Replace the existing visible finishes with {target_materials}."
                 if target_materials else
                 "MANDATORY DESIGN REDESIGN: Create the user's requested interior design concept.",
+                *required_material_directives,
                 f"Locked user-requested design details: {locked_details_text}" if locked_details_text else "",
                 "Preserve only the room shell, camera angle, wall/window/door placement, and believable room geometry.",
-                "Do not preserve the existing cabinet color, countertop, backsplash, appliances, lighting, furniture, or styling unless explicitly requested.",
+                "Do not preserve the existing cabinet color, countertop, backsplash, appliances, lighting, furniture, paint colors, decor, or styling unless explicitly requested.",
+                "If the source image has white cabinets, white countertops, or an all-white kitchen, replace them with the requested design materials.",
                 "The final image must visibly apply the requested colors, materials, cabinetry, countertops, fixtures, lighting, furniture, and mood from the user's chat.",
                 base_prompt,
             )
@@ -8135,13 +8186,19 @@ def generate_build_interior():
         negative_prompt = (
             _build_studio_negative_prompt("interior_room")
             + ", same cabinets, same cabinet doors, same countertop, same backsplash, same appliances, same sink, "
-              "same kitchen, unchanged kitchen, white cabinets, white cabinetry, white shaker cabinets, "
-              "white cabinet doors, white kitchen island, unchanged white kitchen, unchanged island, "
-              "unchanged cabinetry, unchanged finishes, builder grade cabinets, dated cabinets, old countertops, "
-              "cluttered counter, wrong room type, cheap materials, dark room, gloomy room, blurry, low quality, "
-              "distorted walls, warped windows, extra windows, top down view, overhead view, floor plan, blueprint, "
-              "plan sheet, text, watermark"
+              "same kitchen, unchanged kitchen, unchanged island, unchanged cabinetry, unchanged finishes, "
+              "builder grade cabinets, dated cabinets, old countertops, cluttered counter, wrong room type, "
+              "cheap materials, dark room, gloomy room, blurry, low quality, distorted walls, warped windows, "
+              "extra windows, top down view, overhead view, floor plan, blueprint, plan sheet, text, watermark"
         )
+
+        if is_design_generation:
+            negative_prompt += (
+                ", white cabinets, white cabinetry, white shaker cabinets, white cabinet doors, "
+                "white kitchen island, all white kitchen, unchanged white kitchen, same white cabinets, "
+                "same cabinet color, same countertops, same island, existing white cabinetry, "
+                "builder grade white cabinets, old white kitchen"
+            )
 
         if negative_constraints_text:
             negative_prompt = f"{negative_prompt}, {negative_constraints_text}"
@@ -11894,6 +11951,20 @@ def design_studio_generate():
                 payload["reference_image_url"] = before_uploaded_url or image_url
             payload.update(_build_studio_quality_controls("interior_room"))
 
+            current_app.logger.warning(
+                "DESIGN_STUDIO_GENERATE family=%s endpoint=%s mode=%s task=%s ref_role=%s steps=%s guidance=%s strength=%s has_image_url=%s has_image_base64=%s prompt=%s",
+                generation_family,
+                endpoint,
+                payload.get("mode"),
+                payload.get("task"),
+                payload.get("reference_role"),
+                payload.get("steps"),
+                payload.get("guidance"),
+                payload.get("strength"),
+                bool(payload.get("image_url")),
+                bool(payload.get("image_base64")),
+                (payload.get("prompt") or payload.get("engine_prompt") or "")[:500],
+            )
             engine_json = _post_renovation_engine_json(
                 "/v1/build_concept",
                 payload,
