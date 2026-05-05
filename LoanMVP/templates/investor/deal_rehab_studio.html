@@ -501,7 +501,13 @@
 .design-chat-message p{margin:0;color:#c9d5e6;line-height:1.55}
 .design-chat-result{display:grid;gap:10px;margin-top:12px}
 .design-chat-result a{display:block;color:#dbeafe;text-decoration:none}
-.design-chat-result img{width:100%;max-height:240px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04)}
+.design-chat-result img{
+  width:100%;
+  max-height:320px;
+  object-fit:contain;
+  object-position:center;
+}
+border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04)}
 .design-chat-result span{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(122,184,255,.2);background:rgba(122,184,255,.08);font-size:.78rem;font-weight:800}
 .design-chat-composer{display:grid;gap:12px;margin-top:14px}
 .design-chat-composer textarea{width:100%;resize:vertical;min-height:80px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
@@ -1217,12 +1223,20 @@
       if (imgUrl && roomGallery) {
         const roomLabel = concept.room_type || fd.get('room_type') || 'Room';
         const floorLabel = fd.get('floor') || 'Floor';
+        const resultKey = `${roomLabel.toLowerCase()}|${floorLabel.toLowerCase()}`;
+
+        roomGallery.querySelectorAll('.room-card').forEach((card) => {
+          if (card.dataset.resultKey === resultKey) {
+            card.remove();
+          }
+        });
 
         const card = document.createElement('a');
         card.className = 'room-card';
         card.href = imgUrl;
         card.target = '_blank';
         card.setAttribute('data-image-url', imgUrl);
+        card.dataset.resultKey = resultKey;
         card.innerHTML = `<img src="${imgUrl}" alt="${roomLabel}"><div><strong>${roomLabel}</strong><span>${floorLabel}</span></div>`;
 
         if (roomGallery.classList.contains('empty-state-inline')) {
