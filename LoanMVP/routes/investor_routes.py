@@ -8188,6 +8188,7 @@ def generate_build_interior():
             + ", same cabinets, same cabinet doors, same countertop, same backsplash, same appliances, same sink, "
               "same kitchen, unchanged kitchen, unchanged island, unchanged cabinetry, unchanged finishes, "
               "builder grade cabinets, dated cabinets, old countertops, cluttered counter, wrong room type, "
+              "white island base, white lower cabinets, white upper cabinets, white cabinet faces, two-tone white and brown cabinets"
               "cheap materials, dark room, gloomy room, blurry, low quality, distorted walls, warped windows, "
               "extra windows, top down view, overhead view, floor plan, blueprint, plan sheet, text, watermark"
         )
@@ -8195,9 +8196,10 @@ def generate_build_interior():
         if is_design_generation:
             negative_prompt += (
                 ", white cabinets, white cabinetry, white shaker cabinets, white cabinet doors, "
-                "white kitchen island, all white kitchen, unchanged white kitchen, same white cabinets, "
-                "same cabinet color, same countertops, same island, existing white cabinetry, "
-                "builder grade white cabinets, old white kitchen"
+                "white kitchen island, white island base, white lower cabinets, white upper cabinets, "
+                "white cabinet faces, two-tone white and brown cabinets, all white kitchen, "
+                "unchanged white kitchen, same white cabinets, same cabinet color, same countertops, "
+                "same island, existing white cabinetry, builder grade white cabinets, old white kitchen"
             )
 
         if negative_constraints_text:
