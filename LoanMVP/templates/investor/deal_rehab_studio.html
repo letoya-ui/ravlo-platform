@@ -701,6 +701,7 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       descriptionField?.value,
       notesField?.value,
       targetMaterialsField?.value,
+      aiEngineIntentField?.value,
     ].filter(Boolean).join(' ').toLowerCase();
 
     const rehabSignals = [
@@ -731,6 +732,7 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       descriptionField?.value,
       notesField?.value,
       targetMaterialsField?.value,
+      aiEngineIntentField?.value,
     ].filter(Boolean).join(' ').toLowerCase();
 
     return [
@@ -744,6 +746,24 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       'keep room layout',
       'do not change the layout',
       "don't change the layout",
+      'preserve exact layout',
+      'preserve the exact layout',
+      'preserve the exact kitchen layout',
+      'keep exact layout',
+      'keep the exact layout',
+      'same kitchen layout',
+      'keep the camera angle',
+      'preserve camera angle',
+      'same camera angle',
+      'keep the island',
+      'same island position',
+      'keep the island in the same place',
+      'same sink wall',
+      'same appliance wall',
+      'same window placement',
+      'same door placement',
+      'same walkway',
+      'same circulation',
     ].some((phrase) => text.includes(phrase));
   }
 
@@ -1186,9 +1206,7 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
 
     try {
       const syncedIntent = syncDesignEngineIntent(currentDesignEngineIntent, gatherDesignConfig());
-      const fd = new FormData(form);
-
-      
+            
       if (activeSlot) {
         fd.set('room_type', activeSlot.dataset.roomLabel);
       }
