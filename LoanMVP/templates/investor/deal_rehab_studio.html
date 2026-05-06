@@ -758,6 +758,15 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       Boolean(fd.get('blueprint_file') && fd.get('blueprint_file').size);
 
     const isDesignOverlay = !isRehab && hasReference && userRequestedLayoutLock();
+     
+    console.log('DESIGN MODE DECISION', {
+      family,
+      hasReference,
+      layoutTextDetected: userRequestedLayoutLock(),
+      isDesignOverlay,
+      taskBefore: fd.get('task'),
+      designModeBefore: fd.get('design_mode'),
+    });
 
     fd.set('generation_family', family);
     fd.set('generator_family', family);
@@ -1197,9 +1206,15 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       if (Array.isArray(syncedIntent?.negative_constraints)) {
         fd.set('negative_constraints', syncedIntent.negative_constraints.join(', '));
       }
+       
+      const fd = new FormData(form);
+
+      if (activeSlot) {
+        fd.set('room_type', activeSlot.dataset.roomLabel);
+      }
+
 
       const bpFile = fd.get('blueprint_file');
-
       if (bpFile && bpFile.size) {
         fd.set('before_image', bpFile);
       }
@@ -1213,6 +1228,8 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       }
 
       fd.delete('blueprint_url');
+      
+      applyGenerationFamilyToFormData(fd, family);
 
       const styleVal = fd.get('style');
 
