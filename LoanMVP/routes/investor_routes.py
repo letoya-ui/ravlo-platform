@@ -8004,7 +8004,7 @@ def generate_build_interior():
             data.get("engine_intent") or data.get("ai_engine_intent")
         )
 
-        chat_engine_prompt = _first_nonempty(
+        chat_engine_prompt = _first_non_empty(
             data.get("engine_prompt"),
             data.get("prompt_notes"),
             data.get("desired_updates"),
