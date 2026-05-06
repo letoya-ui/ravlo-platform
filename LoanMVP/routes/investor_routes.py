@@ -8182,8 +8182,9 @@ def generate_build_interior():
                 "same appliance wall",
             )
         )  
-
-        is_design_overlay = bool(is_design_generation and has_reference and layout_lock_requested)
+     
+        force_overlay_test = str(data.get("design_mode") or "").lower() == "overlay"
+        is_design_overlay = bool(is_design_generation and has_reference and layout_lock_requested or force_overlay_test)
 
         design_task = "design_overlay" if is_design_overlay else "interior_design"
         design_mode = "overlay" if is_design_overlay else "concept"
@@ -8229,8 +8230,8 @@ def generate_build_interior():
                 base_prompt,
             )
 
-            task = "interior_design"
-            reference_role = "layout_context_only"
+            task = design_task
+            reference_role = design_reference_role
 
         else:
             use_depth = True
