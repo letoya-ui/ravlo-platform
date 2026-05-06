@@ -7252,7 +7252,12 @@ def _design_engine_intent_from_config(config=None, messages=None, existing=None)
 
     return {
         **existing,
-        "studio": "design",
+        "studio": "design_studio",
+        "studio_type": "design_studio",
+        "generation_family": "design",
+        "generator_family": "design",
+        "generator_type": "design",
+        "task": "interior_design",
         "room_type": room_type,
         "style": style,
         "description": description,
