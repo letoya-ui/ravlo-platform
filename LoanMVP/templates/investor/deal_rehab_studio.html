@@ -1206,7 +1206,8 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
 
     try {
       const syncedIntent = syncDesignEngineIntent(currentDesignEngineIntent, gatherDesignConfig());
-            
+      const fd = new FormData(form);
+
       if (activeSlot) {
         fd.set('room_type', activeSlot.dataset.roomLabel);
       }
@@ -1223,13 +1224,6 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       if (Array.isArray(syncedIntent?.negative_constraints)) {
         fd.set('negative_constraints', syncedIntent.negative_constraints.join(', '));
       }
-       
-      const fd = new FormData(form);
-
-      if (activeSlot) {
-        fd.set('room_type', activeSlot.dataset.roomLabel);
-      }
-
 
       const bpFile = fd.get('blueprint_file');
       if (bpFile && bpFile.size) {
@@ -1239,33 +1233,48 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       fd.delete('blueprint_file');
 
       const bpUrl = fd.get('blueprint_url');
-
       if (bpUrl) {
         fd.set('image_url', bpUrl);
       }
 
       fd.delete('blueprint_url');
-      
+
       applyGenerationFamilyToFormData(fd, family);
 
       const styleVal = fd.get('style');
-
       if (styleVal) {
         fd.set('preset', styleVal);
       }
 
       console.log('RAVLO GENERATION FAMILY', {
         generation_family: fd.get('generation_family'),
+        generator_family: fd.get('generator_family'),
+        generator_type: fd.get('generator_type'),
         studio: fd.get('studio'),
+        studio_type: fd.get('studio_type'),
         task: fd.get('task'),
+        design_mode: fd.get('design_mode'),
+        layout_lock: fd.get('layout_lock'),
         mode: fd.get('mode'),
         reference_role: fd.get('reference_role'),
+        image_url: fd.get('image_url'),
+        has_before_image: Boolean(fd.get('before_image') && fd.get('before_image').size),
         strength: fd.get('strength'),
         guidance: fd.get('guidance'),
         steps: fd.get('steps'),
         engine_prompt: fd.get('engine_prompt'),
         room_type: fd.get('room_type'),
         target_materials: fd.get('target_materials'),
+      });
+
+      const response = await fetch("{{ url_for('investor.generate_build_interior') }}", {
+        method: 'POST',
+        body: fd,
+        headers: {
+          'X-CSRFToken': '{{ csrf_token() }}',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
       });
 
       const response = await fetch("{{ url_for('investor.generate_build_interior') }}", {
