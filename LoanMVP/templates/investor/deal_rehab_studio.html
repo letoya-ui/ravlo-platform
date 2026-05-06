@@ -725,8 +725,39 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
     return rehabSignals.some((word) => text.includes(word)) ? 'rehab' : 'design';
   }
 
+  function userRequestedLayoutLock() {
+    const text = [
+      designMessages.map((m) => m.content).join(' '),
+      descriptionField?.value,
+      notesField?.value,
+      targetMaterialsField?.value,
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    return [
+      'preserve layout',
+      'preserve the layout',
+      'keep the layout',
+      'same layout',
+      'same room layout',
+      'preserve original layout',
+      'keep original layout',
+      'keep room layout',
+      'do not change the layout',
+      "don't change the layout",
+    ].some((phrase) => text.includes(phrase));
+  }
+
   function applyGenerationFamilyToFormData(fd, family) {
     const isRehab = family === 'rehab';
+
+    const hasReference =
+      Boolean(fd.get('image_url')) ||
+      Boolean(fd.get('blueprint_url')) ||
+      Boolean(fd.get('image_base64')) ||
+      Boolean(fd.get('before_image') && fd.get('before_image').size) ||
+      Boolean(fd.get('blueprint_file') && fd.get('blueprint_file').size);
+
+    const isDesignOverlay = !isRehab && hasReference && userRequestedLayoutLock();
 
     fd.set('generation_family', family);
     fd.set('generator_family', family);
@@ -734,24 +765,50 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
 
     fd.set('studio', isRehab ? 'rehab_studio' : 'design_studio');
     fd.set('studio_type', isRehab ? 'rehab_studio' : 'design_studio');
-    fd.set('task', isRehab ? 'photo_rehab' : 'interior_design');
     fd.set('mode', isRehab ? 'hgtv' : 'interior');
     fd.set('output_mode', 'interior');
 
-    fd.set('reference_role', isRehab ? 'preserve_existing_photo' : 'layout_context_only');
     fd.set('preserve_structure', 'true');
     fd.set('preserve_layout', 'true');
     fd.set('preserve_room_shell', 'true');
     fd.set('preserve_finishes', 'false');
     fd.set('redesign_contents', 'true');
-    fd.set('prompt_priority', isRehab ? 'medium' : 'high');
 
-    fd.set('steps', isRehab ? '32' : '34');
-    fd.set('guidance', isRehab ? '8.5' : '9.6');
-    fd.set('strength', isRehab ? '0.62' : '0.86');
+    if (isRehab) {
+      fd.set('task', 'photo_rehab');
+      fd.set('design_mode', 'rehab');
+      fd.set('reference_role', 'preserve_existing_photo');
+      fd.set('layout_lock', 'false');
+      fd.set('prompt_priority', 'medium');
+      fd.set('steps', '32');
+      fd.set('guidance', '8.5');
+      fd.set('strength', '0.62');
+    } else if (isDesignOverlay) {
+      fd.set('task', 'design_overlay');
+      fd.set('design_mode', 'overlay');
+      fd.set('reference_role', 'layout_locked_reference');
+      fd.set('layout_lock', 'true');
+      fd.set('prompt_priority', 'high');
+      fd.set('steps', '34');
+      fd.set('guidance', '9.6');
+      fd.set('strength', '0.72');
+    } else {
+      fd.set('task', 'interior_design');
+      fd.set('design_mode', 'concept');
+      fd.set('reference_role', 'layout_context_only');
+      fd.set('layout_lock', 'false');
+      fd.set('prompt_priority', 'high');
+      fd.set('steps', '34');
+      fd.set('guidance', '9.6');
+      fd.set('strength', '0.76');
+    }
 
     if (button) {
-      button.textContent = isRehab ? 'Generate Rehab Mockup' : 'Generate Design Concept';
+      button.textContent = isRehab
+        ? 'Generate Rehab Mockup'
+        : isDesignOverlay
+          ? 'Generate Design Overlay'
+          : 'Generate Design Concept';
     }
   }
 
@@ -764,6 +821,11 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
     document.getElementById('studioName').value = isRehab ? 'rehab_studio' : 'design_studio';
     document.getElementById('designTask').value = isRehab ? 'photo_rehab' : 'interior_design';
     document.getElementById('referenceRole').value = isRehab ? 'preserve_existing_photo' : 'layout_context_only';
+
+      const designModeInput = document.getElementById('designMode');
+    if (designModeInput) {
+      designModeInput.value = isRehab ? 'rehab' : 'concept';
+    }
 
     if (button) {
       button.textContent = isRehab ? 'Generate Rehab Mockup' : 'Generate Design Concept';
@@ -1172,7 +1234,7 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
         target_materials: fd.get('target_materials'),
       });
 
-      const response = await fetch("{{ url_for('investor.design_studio_generate') }}", {
+      const response = await fetch("{{ url_for('investor.generate_build_interior') }}", {
         method: 'POST',
         body: fd,
         headers: {
