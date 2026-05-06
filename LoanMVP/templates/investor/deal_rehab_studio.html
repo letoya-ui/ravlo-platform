@@ -1188,8 +1188,7 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       const syncedIntent = syncDesignEngineIntent(currentDesignEngineIntent, gatherDesignConfig());
       const fd = new FormData(form);
 
-      applyGenerationFamilyToFormData(fd, family);
-
+      
       if (activeSlot) {
         fd.set('room_type', activeSlot.dataset.roomLabel);
       }
