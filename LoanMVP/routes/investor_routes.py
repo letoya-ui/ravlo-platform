@@ -9104,6 +9104,24 @@ def generate_full_build():
         bathrooms = (request.form.get("bathrooms") or "").strip()
         square_feet = (request.form.get("square_feet") or "").strip()
 
+        bedrooms_value = _normalize_int(bedrooms)
+
+        try:
+            bathrooms_value = float(bathrooms) if bathrooms else None
+        except Exception:
+            bathrooms_value = None
+
+        square_feet_value = _normalize_int(square_feet)
+
+        number_of_floors = _build_project_floor_count(
+            request.form.get("number_of_floors")
+            or request.form.get("floor_count"),
+            request.form.get("stories"),
+            request.form.get("number_of_stories"),
+            description,
+            notes,
+        )
+
         number_of_floors = _build_project_floor_count(
             request.form.get("number_of_floors")
             or request.form.get("floor_count"),
