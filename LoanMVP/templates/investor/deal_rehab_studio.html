@@ -1157,8 +1157,7 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
     if (budgetStatus) budgetStatus.textContent = 'Generating';
 
     try {
-      const fd = new FormData(form);
-      fd.set('generation_family', 'design');
+       fd.set('generation_family', 'design');
 
       const response = await fetch("{{ url_for('investor.design_studio_generate_budget') }}", {
         method: 'POST',
