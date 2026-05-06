@@ -10128,7 +10128,13 @@ def generate_build_room():
         )
 
         payload = {
+            "generation_family": "design",
+            "generator_family": "design",
+            "generator_type": "design",
+            "studio": "design_studio",
+            "studio_type": "design_studio",
             "mode": "interior",
+            "output_mode": "interior",
             "task": "blueprint_to_interior_room",
             "project_name": project_name,
             "property_type": property_type,
@@ -10158,8 +10164,17 @@ def generate_build_room():
             "height": 1024,
             "concept_intensity": "blueprint_to_photoreal_room",
             "reference_role": "floor_plan_context_only_not_init_image",
-            "keep_layout": False,
-            "preserve_structure": False,
+            "keep_layout": True,
+            "layout_lock": False,
+            "preserve_structure": True,
+            "preserve_layout": True,
+            "preserve_room_shell": True,
+            "preserve_finishes": False,
+            "redesign_contents": True,
+
+            "use_depth": False,
+            "use_canny": False,
+            "controlnet_scale": 0.0,
             "negative_prompt": (
                 _build_studio_negative_prompt("interior_room")
                 + ", top down view, overhead view, floor plan, blueprint, plan sheet, text, labels, watermark"
