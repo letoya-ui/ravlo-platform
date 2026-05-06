@@ -8746,7 +8746,7 @@ def generate_build_blueprint():
                 or ""
             ).strip()
 
-            if prior_blueprint_url and not _reference_looks_like_floor_plan(prior_blueprint_url, "blueprint")
+            if prior_blueprint_url and not _reference_looks_like_floor_plan(prior_blueprint_url, "blueprint"):
                 prior_blueprint_url = ""
                     
 
