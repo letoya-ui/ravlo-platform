@@ -8232,7 +8232,11 @@ def generate_build_interior():
             strength = float(data.get("strength") or 0.62)
             guidance = float(data.get("guidance") or 8.5)
             steps = int(data.get("steps") or 32)
+            is_design_overlay = bool(is_design_generation and has_reference and layout_lock_requested)
 
+            design_task = "design_overlay" if is_design_overlay else task
+            design_mode = "overlay" if is_design_overlay else "concept"
+            design_reference_role = "layout_locked_reference" if is_design_overlay else reference_role
         # --------------------------------------------------
         # Payload routing
         # --------------------------------------------------
@@ -8248,7 +8252,8 @@ def generate_build_interior():
 
                 "mode": "interior",
                 "output_mode": "interior",
-                "task": task,
+                "task": design_task,
+                "design_mode": design_mode,
                 "generation_mode": "image_guided_design" if has_reference else "text_to_image",
                 "allow_text_only": not has_reference,
                 "requires_reference_image": False,
@@ -8276,7 +8281,7 @@ def generate_build_interior():
                 "engine_prompt": interior_prompt_notes,
                 "locked_details": locked_details_text,
 
-                "reference_role": reference_role,
+                "reference_role": design_reference_role,
                 "layout_lock": layout_lock_requested,
                 "preserve_room_shell": True,
                 "preserve_structure": True,
@@ -8300,7 +8305,12 @@ def generate_build_interior():
 
             if source_is_floor_plan:
                 payload["task"] = "blueprint_to_interior_room"
+                payload["design_mode"] = "blueprint_to_room"
                 payload["reference_role"] = "floor_plan_context_only_not_init_image"
+                payload["layout_lock"] = False
+                payload["use_depth"] = False
+                payload["use_canny"] = False
+                payload["controlnet_scale"] = 0.0
                 payload["blueprint_image_base64"] = image_base64
                 payload["blueprint_image_url"] = image_url
                 payload["reference_image_url"] = image_url
