@@ -8705,10 +8705,25 @@ def generate_build_blueprint():
                 raw = None
 
         elif reference_image_url:
-            try:
-                raw = download_image_bytes(reference_image_url)
-                stored_blueprint_url = reference_image_url
-            except Exception:
+            reference_is_plan = _reference_looks_like_floor_plan(
+                reference_image_url,
+                request.form.get("reference_role"),
+                request.form.get("source_role"),
+                request.form.get("mode"),
+                request.form.get("output_mode"),
+            ) 
+
+            if reference_is_plan:
+                try:
+                    raw = download_image_bytes(reference_image_url)
+                    if _image_bytes_look_like_floor_plan(raw):
+                        stored_blueprint_url = reference_image_url
+                    else:
+                        raw = None
+                        stored_blueprint_url = ""
+                except Exception:
+                    raw = None
+            else:
                 raw = None
 
         elif project:
@@ -8728,16 +8743,12 @@ def generate_build_blueprint():
             prior_blueprint_url = (
                 blueprint_block.get("image_url")
                 or blueprint_block.get("blueprint_url")
-                or results.get("build_reference_image")
                 or ""
             ).strip()
 
-            if prior_blueprint_url:
-                try:
-                    raw = download_image_bytes(prior_blueprint_url)
-                    stored_blueprint_url = prior_blueprint_url
-                except Exception:
-                    raw = None
+            if prior_blueprint_url and not _reference_looks_like_floor_plan(prior_blueprint_url, "blueprint")
+                prior_blueprint_url = ""
+                    
 
         if raw:
             blueprint_image_base64 = base64.b64encode(raw).decode("utf-8")
@@ -8806,9 +8817,9 @@ def generate_build_blueprint():
         }
         payload.update(_build_studio_quality_controls("blueprint"))
 
-        if blueprint_image_base64:
+        if blueprint_image_base64 and _image_bytes_look_like_floor_plan(raw):
             payload["image_base64"] = blueprint_image_base64
-        elif stored_blueprint_url:
+        elif stored_blueprint_url and _reference_looks_like_floor_plan(stored_blueprint_url, "blueprint"):
             payload["image_url"] = stored_blueprint_url
 
         current_app.logger.warning(
