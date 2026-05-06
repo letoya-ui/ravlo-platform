@@ -10158,7 +10158,7 @@ def generate_build_room():
             "image_url": "",
             "count": 1,
             "steps": 32,
-            "guidance": 8.6,
+            "guidance": 9.2,
             "strength": 1.0,
             "width": 1024,
             "height": 1024,
