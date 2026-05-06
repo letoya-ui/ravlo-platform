@@ -647,6 +647,7 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       studio_type: 'design_studio',
       generation_family: 'design',
       generator_family: 'design',
+      generator_type: 'design',
       task: 'interior_design',
       style: config.style || intent?.style || '',
       room_type: config.room_type || intent?.room_type || '',
@@ -705,21 +706,14 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
     ].filter(Boolean).join(' ').toLowerCase();
 
     const rehabSignals = [
-      'replace',
-      'remove',
-      'install',
       'repair',
       'move plumbing',
       'move electrical',
       'take down',
       'knock down',
-      'open up',
+      'open up wall',
       'gut',
       'demo',
-      'new flooring',
-      'new cabinets',
-      'wall',
-      'layout',
       'structural',
     ];
 
@@ -770,19 +764,23 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
   function applyGenerationFamilyToFormData(fd, family) {
     const isRehab = family === 'rehab';
 
+    const beforeImage = fd.get('before_image');
+    const blueprintFileValue = fd.get('blueprint_file');
+
     const hasReference =
       Boolean(fd.get('image_url')) ||
       Boolean(fd.get('blueprint_url')) ||
       Boolean(fd.get('image_base64')) ||
-      Boolean(fd.get('before_image') && fd.get('before_image').size) ||
-      Boolean(fd.get('blueprint_file') && fd.get('blueprint_file').size);
+      Boolean(beforeImage && beforeImage.size) ||
+      Boolean(blueprintFileValue && blueprintFileValue.size);
 
-    const isDesignOverlay = !isRehab && hasReference && userRequestedLayoutLock();
-     
+    const layoutTextDetected = userRequestedLayoutLock();
+    const isDesignOverlay = !isRehab && hasReference && layoutTextDetected;
+
     console.log('DESIGN MODE DECISION', {
       family,
       hasReference,
-      layoutTextDetected: userRequestedLayoutLock(),
+      layoutTextDetected,
       isDesignOverlay,
       taskBefore: fd.get('task'),
       designModeBefore: fd.get('design_mode'),
@@ -844,17 +842,21 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
   function syncFamilyHiddenFields(family) {
     const isRehab = family === 'rehab';
 
-    document.getElementById('generationFamily').value = family;
-    document.getElementById('generatorFamily').value = family;
-    document.getElementById('studioType').value = isRehab ? 'rehab_studio' : 'design_studio';
-    document.getElementById('studioName').value = isRehab ? 'rehab_studio' : 'design_studio';
-    document.getElementById('designTask').value = isRehab ? 'photo_rehab' : 'interior_design';
-    document.getElementById('referenceRole').value = isRehab ? 'preserve_existing_photo' : 'layout_context_only';
+    const generationFamilyInput = document.getElementById('generationFamily');
+    const generatorFamilyInput = document.getElementById('generatorFamily');
+    const studioTypeInput = document.getElementById('studioType');
+    const studioNameInput = document.getElementById('studioName');
+    const designTaskInput = document.getElementById('designTask');
+    const referenceRoleInput = document.getElementById('referenceRole');
+    const designModeInput = document.getElementById('designMode');
 
-      const designModeInput = document.getElementById('designMode');
-    if (designModeInput) {
-      designModeInput.value = isRehab ? 'rehab' : 'concept';
-    }
+    if (generationFamilyInput) generationFamilyInput.value = family;
+    if (generatorFamilyInput) generatorFamilyInput.value = family;
+    if (studioTypeInput) studioTypeInput.value = isRehab ? 'rehab_studio' : 'design_studio';
+    if (studioNameInput) studioNameInput.value = isRehab ? 'rehab_studio' : 'design_studio';
+    if (designTaskInput) designTaskInput.value = isRehab ? 'photo_rehab' : 'interior_design';
+    if (referenceRoleInput) referenceRoleInput.value = isRehab ? 'preserve_existing_photo' : 'layout_context_only';
+    if (designModeInput) designModeInput.value = isRehab ? 'rehab' : 'concept';
 
     if (button) {
       button.textContent = isRehab ? 'Generate Rehab Mockup' : 'Generate Design Concept';
@@ -1157,7 +1159,11 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
     if (budgetStatus) budgetStatus.textContent = 'Generating';
 
     try {
-       fd.set('generation_family', 'design');
+      const fd = new FormData(form);
+      fd.set('generation_family', 'design');
+      fd.set('generator_family', 'design');
+      fd.set('studio', 'design_studio');
+      fd.set('studio_type', 'design_studio');
 
       const response = await fetch("{{ url_for('investor.design_studio_generate_budget') }}", {
         method: 'POST',
@@ -1228,14 +1234,12 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       if (bpFile && bpFile.size) {
         fd.set('before_image', bpFile);
       }
-
       fd.delete('blueprint_file');
 
       const bpUrl = fd.get('blueprint_url');
       if (bpUrl) {
         fd.set('image_url', bpUrl);
       }
-
       fd.delete('blueprint_url');
 
       applyGenerationFamilyToFormData(fd, family);
@@ -1264,16 +1268,6 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
         engine_prompt: fd.get('engine_prompt'),
         room_type: fd.get('room_type'),
         target_materials: fd.get('target_materials'),
-      });
-
-      const response = await fetch("{{ url_for('investor.generate_build_interior') }}", {
-        method: 'POST',
-        body: fd,
-        headers: {
-          'X-CSRFToken': '{{ csrf_token() }}',
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin'
       });
 
       const response = await fetch("{{ url_for('investor.generate_build_interior') }}", {
