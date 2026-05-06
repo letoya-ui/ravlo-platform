@@ -8127,19 +8127,19 @@ def generate_build_interior():
                 engine_prompt=chat_engine_prompt,
             )
 
-        if is_design_generation:
-            required_material_directives = []
-            target_materials_lower = (target_materials or "").lower()
-            chat_prompt_lower = (chat_engine_prompt or "").lower()
-            locked_details_lower = (locked_details_text or "").lower()
-            design_text = " ".join([
-                target_materials_lower,
-                chat_prompt_lower,
-                locked_details_lower,
-                (description or "").lower(),
-                (notes or "").lower(),
-            ])
+        required_material_directives = []
+        target_materials_lower = (target_materials or "").lower()
+        chat_prompt_lower = (chat_engine_prompt or "").lower()
+        locked_details_lower = (locked_details_text or "").lower()
+        design_text = " ".join([
+            target_materials_lower,
+            chat_prompt_lower,
+            locked_details_lower,
+            (description or "").lower(),
+            (notes or "").lower(),
+        ])
 
+        if is_design_generation:
             if "dark brown" in design_text or "espresso" in design_text or "walnut" in design_text:
                 required_material_directives.append(
                     "MANDATORY: All visible kitchen cabinets, lower cabinets, upper cabinets, and island base cabinets must be dark brown wood, espresso brown, or deep walnut. They must not be white."
@@ -8150,74 +8150,6 @@ def generate_build_interior():
                     "MANDATORY: Countertops must be white stone with visible brown and gold veining."
                 )
 
-            interior_prompt_notes = _prompt_join(
-                "MANDATORY DESIGN REDESIGN: This is a prompt-led Design Studio concept, not a light rehab, cleanup, or refresh.",
-                f"MANDATORY DESIGN REDESIGN: Replace the existing visible finishes with {target_materials}."
-                if target_materials else
-                "MANDATORY DESIGN REDESIGN: Create the user's requested interior design concept.",
-                *required_material_directives,
-                f"Locked user-requested design details: {locked_details_text}" if locked_details_text else "",
-
-                "LAYOUT LOCK: Preserve the original camera angle, room footprint, wall positions, ceiling height, window placement, door placement, appliance wall location, island location, and main circulation path.",
-                "Do not move the kitchen island, sink wall, appliance wall, major windows, doors, or room openings unless the user explicitly asks for a layout change.",
-                "Only redesign the visible finishes, colors, cabinetry material, countertop material, backsplash, lighting style, hardware, furniture, decor, and styling.",
-
-                "Do not preserve the existing cabinet color, countertop, backsplash, appliances, lighting, furniture, paint colors, decor, or styling unless explicitly requested.",
-                "If the source image has white cabinets, white countertops, or an all-white kitchen, replace them with the requested design materials.",
-                "The final image must visibly apply the requested colors, materials, cabinetry, countertops, fixtures, lighting, furniture, and mood from the user's chat.",
-                base_prompt,
-            )
-            task = "interior_design"
-            reference_role = "layout_context_only"
-            strength = float(data.get("strength") or 0.76)
-            guidance = float(data.get("guidance") or 9.6)
-            steps = int(data.get("steps") or 34)
-
-            layout_lock_prompt = (
-                "STRICT LAYOUT LOCK: Keep the same camera viewpoint, same room footprint, same island position, "
-                "same sink wall, same appliance wall, same window and door locations, same walkway/circulation, "
-                "same cabinet run positions, and same major object placement. Only change colors, finishes, materials, "
-                "cabinet faces, countertops, backsplash, lighting style, hardware, and decor."
-                if layout_lock_requested else
-                "LAYOUT LOCK: Preserve the original camera angle, room footprint, wall positions, ceiling height, "
-                "window placement, door placement, appliance wall location, island location, and main circulation path."
-            )
-        else:
-            interior_prompt_notes = _prompt_join(
-                chat_engine_prompt,
-                f"REHAB SCOPE: {user_creative_direction}" if user_creative_direction else "",
-                layout_lock_prompt,
-                "Apply realistic rehab improvements and material replacements based on the requested scope.",
-                base_prompt,
-            )
-            task = "photo_rehab"
-            reference_role = "preserve_existing_photo"
-            strength = float(data.get("strength") or 0.62)
-            guidance = float(data.get("guidance") or 8.5)
-            steps = int(data.get("steps") or 32)
-
-        negative_prompt = (
-            _build_studio_negative_prompt("interior_room")
-            + ", same cabinets, same cabinet doors, same countertop, same backsplash, same appliances, same sink, "
-              "same kitchen, unchanged kitchen, unchanged island, unchanged cabinetry, unchanged finishes, "
-              "builder grade cabinets, dated cabinets, old countertops, cluttered counter, wrong room type, "
-              "white island base, white lower cabinets, white upper cabinets, white cabinet faces, two-tone white and brown cabinets"
-              "cheap materials, dark room, gloomy room, blurry, low quality, distorted walls, warped windows, "
-              "extra windows, top down view, overhead view, floor plan, blueprint, plan sheet, text, watermark"
-        )
-
-        if is_design_generation:
-            negative_prompt += (
-                ", white cabinets, white cabinetry, white shaker cabinets, white cabinet doors, "
-                "white kitchen island, white island base, white lower cabinets, white upper cabinets, "
-                "white cabinet faces, two-tone white and brown cabinets, all white kitchen, "
-                "unchanged white kitchen, same white cabinets, same cabinet color, same countertops, "
-                "same island, existing white cabinetry, builder grade white cabinets, old white kitchen"
-            )
-
-        if negative_constraints_text:
-            negative_prompt = f"{negative_prompt}, {negative_constraints_text}"
-    
         layout_lock_requested = any(
             phrase in design_text
             for phrase in (
@@ -8234,20 +8166,67 @@ def generate_build_interior():
             )
         )
 
-        if layout_lock_requested:
-            strength = float(data.get("strength") or 0.68)
-            guidance = float(data.get("guidance") or 9.4)
+        layout_lock_prompt = (
+            "STRICT LAYOUT LOCK: Keep the same camera viewpoint, same room footprint, same island position, "
+            "same sink wall, same appliance wall, same window and door locations, same walkway/circulation, "
+            "same cabinet run positions, and same major object placement. Only change colors, finishes, materials, "
+            "cabinet faces, countertops, backsplash, lighting style, hardware, and decor."
+    if layout_lock_requested else
+            "LAYOUT LOCK: Preserve the original camera angle, room footprint, wall positions, ceiling height, "
+            "window placement, door placement, appliance wall location, island location, and main circulation path."
+        )
+
+        if is_design_generation:
+            if layout_lock_requested:
+                strength = 0.68
+                guidance = 9.4
+                use_depth = True
+                use_canny = True
+                controlnet_scale = 0.72
+            else:
+                strength = float(data.get("strength") or 0.76)
+                guidance = float(data.get("guidance") or 9.6)
+                use_depth = True
+                use_canny = False
+                controlnet_scale = 0.80
+
+            steps = int(data.get("steps") or 34)
+
+            interior_prompt_notes = _prompt_join(
+                "MANDATORY DESIGN REDESIGN: This is a prompt-led Design Studio concept, not a light rehab, cleanup, or refresh.",
+                f"MANDATORY DESIGN REDESIGN: Replace the existing visible finishes with {target_materials}."
+                if target_materials else
+                "MANDATORY DESIGN REDESIGN: Create the user's requested interior design concept.",
+                *required_material_directives,
+                f"Locked user-requested design details: {locked_details_text}" if locked_details_text else "",
+                layout_lock_prompt,
+                "Do not preserve the existing cabinet color, countertop, backsplash, appliances, lighting, furniture, paint colors, decor, or styling unless explicitly requested.",
+                "If the source image has white cabinets, white countertops, or an all-white kitchen, replace them with the requested design materials.",
+                "The final image must visibly apply the requested colors, materials, cabinetry, countertops, fixtures, lighting, furniture, and mood from the user's chat.",
+                base_prompt,
+            )
+
+            task = "interior_design"
+            reference_role = "layout_context_only"
+
+        else:
             use_depth = True
             use_canny = True
             controlnet_scale = 0.72
-        else:
-            strength = float(data.get("strength") or 0.76)
-            guidance = float(data.get("guidance") or 9.6)
-            use_depth = True
-            use_canny = False
-            controlnet_scale = 0.80
 
-        steps = int(data.get("steps") or 34)
+            interior_prompt_notes = _prompt_join(
+                chat_engine_prompt,
+                f"REHAB SCOPE: {user_creative_direction}" if user_creative_direction else "",
+                layout_lock_prompt,
+                "Apply realistic rehab improvements and material replacements based on the requested scope.",
+                base_prompt,
+            )
+
+            task = "photo_rehab"
+            reference_role = "preserve_existing_photo"
+            strength = float(data.get("strength") or 0.62)
+            guidance = float(data.get("guidance") or 8.5)
+            steps = int(data.get("steps") or 32)
 
         # --------------------------------------------------
         # Payload routing
