@@ -8661,9 +8661,8 @@ def generate_build_blueprint():
         project = None
         raw = None
         blueprint_image_base64 = ""
-
-        # Keep defined so nothing blows up later
         stored_blueprint_url = ""
+        rejected_reference_url = ""
 
         # ---------------- DEAL ----------------
         if deal_id:
@@ -8694,13 +8693,32 @@ def generate_build_blueprint():
             ).first()
 
         # ---------------- IMAGE INPUT ----------------
+        # Only use images that are actually floor plans / blueprints.
         if blueprint_file:
-            raw = blueprint_file.read()
+            candidate_raw = blueprint_file.read()
+            if _image_bytes_look_like_floor_plan(candidate_raw):
+                raw = candidate_raw
+            else:
+                rejected_reference_url = "uploaded_blueprint_file_rejected_not_floor_plan"
+                raw = None
 
         elif blueprint_url:
             try:
-                raw = download_image_bytes(blueprint_url)
-                stored_blueprint_url = blueprint_url
+                candidate_raw = download_image_bytes(blueprint_url)
+                if (
+                    _reference_looks_like_floor_plan(
+                        blueprint_url,
+                        "blueprint",
+                        request.form.get("reference_role"),
+                        request.form.get("source_role"),
+                    )
+                    or _image_bytes_look_like_floor_plan(candidate_raw)
+                ):
+                    raw = candidate_raw
+                    stored_blueprint_url = blueprint_url
+                else:
+                    rejected_reference_url = blueprint_url
+                    raw = None
             except Exception:
                 raw = None
 
@@ -8711,27 +8729,38 @@ def generate_build_blueprint():
                 request.form.get("source_role"),
                 request.form.get("mode"),
                 request.form.get("output_mode"),
-            ) 
+            )
 
             if reference_is_plan:
                 try:
-                    raw = download_image_bytes(reference_image_url)
-                    if _image_bytes_look_like_floor_plan(raw):
+                    candidate_raw = download_image_bytes(reference_image_url)
+                    if _image_bytes_look_like_floor_plan(candidate_raw):
+                        raw = candidate_raw
                         stored_blueprint_url = reference_image_url
                     else:
+                        rejected_reference_url = reference_image_url
                         raw = None
                         stored_blueprint_url = ""
                 except Exception:
                     raw = None
             else:
+                rejected_reference_url = reference_image_url
                 raw = None
 
         elif project:
             project_blueprint_url = (getattr(project, "blueprint_url", None) or "").strip()
             if project_blueprint_url:
                 try:
-                    raw = download_image_bytes(project_blueprint_url)
-                    stored_blueprint_url = project_blueprint_url
+                    candidate_raw = download_image_bytes(project_blueprint_url)
+                    if (
+                        _reference_looks_like_floor_plan(project_blueprint_url, "blueprint")
+                        or _image_bytes_look_like_floor_plan(candidate_raw)
+                    ):
+                        raw = candidate_raw
+                        stored_blueprint_url = project_blueprint_url
+                    else:
+                        rejected_reference_url = project_blueprint_url
+                        raw = None
                 except Exception:
                     raw = None
 
@@ -8740,20 +8769,35 @@ def generate_build_blueprint():
             build_project = results.get("build_project", {}) or {}
             blueprint_block = build_project.get("blueprint", {}) or {}
 
+            # Important: do NOT fall back to results["build_reference_image"] here.
+            # That may be a satellite/lot image and should not become a blueprint input.
             prior_blueprint_url = (
-                blueprint_block.get("image_url")
-                or blueprint_block.get("blueprint_url")
+                blueprint_block.get("blueprint_url")
+                or blueprint_block.get("image_url")
                 or ""
             ).strip()
 
-            if prior_blueprint_url and not _reference_looks_like_floor_plan(prior_blueprint_url, "blueprint"):
-                prior_blueprint_url = ""
-                    
+            if prior_blueprint_url:
+                try:
+                    candidate_raw = download_image_bytes(prior_blueprint_url)
+                    if (
+                        _reference_looks_like_floor_plan(prior_blueprint_url, "blueprint")
+                        or _image_bytes_look_like_floor_plan(candidate_raw)
+                    ):
+                        raw = candidate_raw
+                        stored_blueprint_url = prior_blueprint_url
+                    else:
+                        rejected_reference_url = prior_blueprint_url
+                        raw = None
+                except Exception:
+                    raw = None
 
         if raw:
             blueprint_image_base64 = base64.b64encode(raw).decode("utf-8")
 
         # ---------------- VALIDATION ----------------
+        # If we rejected a satellite/lot image, still allow text-only blueprint generation
+        # as long as the user supplied enough project details.
         has_text_seed = any([
             project_name,
             property_type,
@@ -8763,18 +8807,24 @@ def generate_build_blueprint():
             bedrooms,
             bathrooms,
             square_feet,
+            number_of_floors,
         ])
 
         if not blueprint_image_base64 and not has_text_seed:
+            if deal is not None:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+
             return jsonify({
                 "status": "error",
-                "message": "Provide blueprint or enough details."
+                "message": "Provide a floor plan/blueprint image or enough build details to generate one."
             }), 400
 
         # ---------------- ENGINE ----------------
         style_preset = _normalize_style_preset(requested_style_preset)
         render_batch_id = uuid.uuid4().hex
         style_prompt = ""
+
         blueprint_prompt_notes = _compose_build_studio_prompt(
             notes=notes,
             mode="blueprint",
@@ -8784,32 +8834,55 @@ def generate_build_blueprint():
             description=description,
             lot_size=lot_size,
             zoning=zoning,
+            location=location,
             floors=number_of_floors,
             floor="first",
             blueprint_constrained=bool(blueprint_image_base64 or stored_blueprint_url),
         )
 
         payload = {
+            "generation_family": "build",
+            "generator_family": "build",
+            "generator_type": "build",
+            "studio": "build_studio",
+            "studio_type": "build_studio",
+
             "mode": "blueprint",
+            "output_mode": "blueprint",
+            "task": "build_blueprint",
             "blueprint_floor": "first",
             "floor": "first",
+
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
+            "preset": style,
             "blueprint_style": blueprint_style,
             "description": description,
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": blueprint_prompt_notes,
-            "special_features": notes,
+            "location": location,
+            "bedrooms": bedrooms,
+            "bathrooms": bathrooms,
+            "square_feet": square_feet,
             "square_feet_target": _normalize_int(square_feet),
             "stories": number_of_floors,
             "number_of_floors": number_of_floors,
             "floor_count": number_of_floors,
+
+            "prompt": blueprint_prompt_notes,
+            "prompt_notes": blueprint_prompt_notes,
+            "special_features": notes,
+
+            "reference_role": "blueprint_reference" if blueprint_image_base64 else "text_program_only",
+            "source_role": "blueprint" if blueprint_image_base64 else "text_program_only",
+            "blueprint_constrained": bool(blueprint_image_base64),
+            "site_context_url": rejected_reference_url,
+
             "count": 1,
             "steps": 30,
-            "strength": 0.28,
+            "strength": 0.28 if blueprint_image_base64 else 0.0,
             "guidance": 6.8,
             "width": 1024,
             "height": 1024,
@@ -8817,15 +8890,18 @@ def generate_build_blueprint():
         }
         payload.update(_build_studio_quality_controls("blueprint"))
 
-        if blueprint_image_base64 and _image_bytes_look_like_floor_plan(raw):
+        # Only attach the image if it passed floor-plan validation.
+        if blueprint_image_base64:
             payload["image_base64"] = blueprint_image_base64
-        elif stored_blueprint_url and _reference_looks_like_floor_plan(stored_blueprint_url, "blueprint"):
+        elif stored_blueprint_url:
             payload["image_url"] = stored_blueprint_url
 
         current_app.logger.warning(
-            "BUILD BLUEPRINT ENGINE PAYLOAD deal_id=%s payload=%s",
+            "BUILD BLUEPRINT ENGINE PAYLOAD deal_id=%s has_blueprint_image=%s rejected_reference=%s payload_keys=%s",
             deal.id if deal else None,
-            payload,
+            bool(blueprint_image_base64 or stored_blueprint_url),
+            rejected_reference_url,
+            sorted(payload.keys()),
         )
 
         engine_json = _post_renovation_engine_json(
@@ -8835,9 +8911,10 @@ def generate_build_blueprint():
         )
 
         current_app.logger.warning(
-            "BUILD BLUEPRINT ENGINE JSON deal_id=%s engine_json=%s",
+            "BUILD BLUEPRINT ENGINE JSON deal_id=%s job_id=%s has_images=%s",
             deal.id if deal else None,
-            engine_json,
+            engine_json.get("job_id"),
+            bool(engine_json.get("images_base64")),
         )
 
         images_b64 = engine_json.get("images_base64") or []
@@ -8917,6 +8994,8 @@ def generate_build_blueprint():
                 "job_id": engine_json.get("job_id"),
                 "saved_count": saved_count,
                 "source_reference_image": stored_blueprint_url,
+                "rejected_reference_image": rejected_reference_url,
+                "source_role": "blueprint" if stored_blueprint_url else "text_program_only",
             }
 
             results["build_project"] = build_project
@@ -8958,6 +9037,7 @@ def generate_build_blueprint():
             "job_id": engine_json.get("job_id"),
             "deal_id": deal.id if deal else None,
             "saved_to_deal": bool(deal is not None),
+            "rejected_reference_image": rejected_reference_url,
         })
 
     except Exception as e:
@@ -8979,202 +9059,168 @@ def generate_build_blueprint():
             "message": error_message,
         }), status_code
 
-@investor_bp.route("/deal-studio/build-studio/generate-full", methods=["POST"])
+@investor_bp.route("/deal-studio/build-studio/generate-full-build", methods=["POST"])
+@investor_bp.route("/api/generator/build/generate", methods=["POST"])
 @login_required
 @role_required("investor")
 def generate_full_build():
     deal = None
-    build_analysis = {}
 
     try:
-        data = request.form.to_dict() or {}
-
-        deal_id = _normalize_int(data.get("deal_id"))
-        project_id = _normalize_int(data.get("project_id"))
-        save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
-        preserve_existing_exterior = str(data.get("preserve_existing_exterior") or "").lower() in ("1", "true", "yes", "on")
+        deal_id = _normalize_int(request.form.get("deal_id"))
+        project_id = _normalize_int(request.form.get("project_id"))
+        saved_property_id = _normalize_int(request.form.get("saved_property_id"))
 
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
-                return jsonify({
-                    "status": "error",
-                    "message": "Deal not found or not authorized."
-                }), 404
+                return jsonify({"status": "error", "message": "Deal not found."}), 404
 
             if _deal_render_lock_active(deal):
-                return jsonify({
-                    "status": "error",
-                    "message": "A build render is already in progress for this deal."
-                }), 409
+                return jsonify({"status": "error", "message": "Build render in progress."}), 409
 
             _set_deal_render_processing(deal)
             db.session.commit()
 
+            if saved_property_id is None and getattr(deal, "saved_property_id", None):
+                saved_property_id = deal.saved_property_id
+
         project = None
         if project_id:
-            project = BuildProject.query.filter_by(
-                id=project_id,
-                user_id=current_user.id
-            ).first()
+            project = BuildProject.query.filter_by(id=project_id, user_id=current_user.id).first()
 
-        # --------------------------------------------------
-        # SHARED INPUTS
-        # --------------------------------------------------
-        project_name = (data.get("project_name") or "").strip()
-        property_type = (data.get("property_type") or "single_family").strip()
-        style = (data.get("style") or "modern_farmhouse").strip()
-        blueprint_style = _normalize_build_blueprint_style(data.get("blueprint_style"))
-        description = (data.get("description") or "").strip()
-        lot_size = (data.get("lot_size") or "").strip()
-        lot_count = _normalize_int(data.get("lot_count"))
+        # ---------------- FORM DATA ----------------
+        project_name = (request.form.get("project_name") or "").strip()
+        property_type = (request.form.get("property_type") or "single_family").strip()
+        style = (request.form.get("style") or "modern_luxury").strip()
+        blueprint_style = _normalize_build_blueprint_style(request.form.get("blueprint_style"))
+        description = (request.form.get("description") or "").strip()
+        lot_size = (request.form.get("lot_size") or "").strip()
+        zoning = (request.form.get("zoning") or "").strip()
+        location = (request.form.get("location") or "").strip()
+        notes = (request.form.get("notes") or "").strip()
+
+        bedrooms = (request.form.get("bedrooms") or "").strip()
+        bathrooms = (request.form.get("bathrooms") or "").strip()
+        square_feet = (request.form.get("square_feet") or "").strip()
+
         number_of_floors = _build_project_floor_count(
-            data.get("number_of_floors")
-            or data.get("floor_count"),
-            data.get("stories"),
-            data.get("number_of_stories"),
-            data.get("description"),
-            data.get("notes"),
-        )
-        zoning = (data.get("zoning") or "").strip()
-        location = (data.get("location") or "").strip()
-        notes = (data.get("notes") or "").strip()
-        development_type = _build_project_development_label(property_type, lot_count)
-        square_feet_target = _normalize_int(data.get("square_feet") or data.get("square_feet_target"))
-        bedrooms = _normalize_int(data.get("bedrooms") or data.get("beds"))
-        bathrooms = _safe_float(data.get("bathrooms") or data.get("baths"))
-        finish_level = (data.get("finish_level") or "standard").strip()
-        garage = str(data.get("garage") or "").lower() in ("1", "true", "yes", "on")
-
-        program_parts = []
-        if square_feet_target:
-            program_parts.append(f"{square_feet_target:,} sq ft target")
-        if bedrooms:
-            program_parts.append(f"{bedrooms} bedrooms")
-        if bathrooms:
-            program_parts.append(f"{bathrooms:g} baths")
-        if finish_level:
-            program_parts.append(f"{finish_level} finish")
-        if garage:
-            program_parts.append("garage included")
-
-        site_notes = notes
-        if program_parts:
-            site_notes = f"{site_notes}. Program: {', '.join(program_parts)}.".strip(". ").strip()
-        if lot_count and lot_count > 1:
-            site_notes = f"{notes}. Plan for {lot_count} buildable lots across the site.".strip(". ").strip()
-            if program_parts:
-                site_notes = f"{site_notes}. Program: {', '.join(program_parts)}."
-
-        build_program_context = {
-            key: value
-            for key, value in {
-                "square_feet_target": square_feet_target,
-                "project_size": square_feet_target,
-                "bedrooms": bedrooms,
-                "bathrooms": bathrooms,
-                "finish_level": finish_level,
-                "garage": garage,
-                "lot_count": lot_count,
-            }.items()
-            if value not in (None, "")
-        }
-
-        base_build_prompt_notes = _compose_build_studio_prompt(
-            notes=site_notes,
-            mode="blueprint_first_floor",
-            project_name=project_name,
-            property_type=property_type,
-            style=style,
-            description=description,
-            lot_size=lot_size,
-            zoning=zoning,
-            location=location,
-            floors=number_of_floors,
-            floor="first",
-            lot_count=lot_count,
-            blueprint_constrained=bool(data.get("blueprint_url") or data.get("site_plan_url")),
+            request.form.get("number_of_floors")
+            or request.form.get("floor_count"),
+            request.form.get("stories"),
+            request.form.get("number_of_stories"),
+            description,
+            notes,
         )
 
-        if SCOPE_ENGINE_URL and description:
-            try:
-                build_analysis = _post_scope_engine_json(
-                    "/v1/build_scope",
-                    {
-                        "project_name": project_name or None,
-                        "description": description,
-                        "property_type": property_type or None,
-                        "lot_size": lot_size or None,
-                        "zoning": zoning or None,
-                        "square_feet_target": square_feet_target,
-                        "stories": number_of_floors,
-                        "bedrooms": bedrooms,
-                        "bathrooms": bathrooms,
-                        "finish_level": finish_level,
-                        "garage": garage,
-                        "unit_count": lot_count,
-                    },
-                    timeout=60,
-                ) or {}
-            except Exception:
-                current_app.logger.exception("Full build scope analysis failed")
-                build_analysis = {}
+        save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
 
-        blueprint_file = request.files.get("blueprint_file")
+        # ---------------- SOURCE IMAGES ----------------
         land_image = request.files.get("land_image")
+        blueprint_file = request.files.get("blueprint_file")
 
-        blueprint_url = (data.get("blueprint_url") or "").strip()
-        reference_image_url = (data.get("reference_image_url") or "").strip()
-
+        land_image_base64 = ""
+        land_image_url = ""
         blueprint_image_base64 = ""
-        exterior_image_base64 = ""
-        raw_blueprint = None
-        raw_land = None
-        site_reference_source = ""
+        blueprint_source_url = ""
 
-        # --------------------------------------------------
-        # BLUEPRINT SOURCE RESOLUTION
-        # --------------------------------------------------
-        if blueprint_file:
-            raw_blueprint = blueprint_file.read()
-            if raw_blueprint:
-                blueprint_image_base64 = base64.b64encode(raw_blueprint).decode("utf-8")
+        reference_image_url = (request.form.get("reference_image_url") or "").strip()
+        image_url = (request.form.get("image_url") or "").strip()
+        blueprint_url = (request.form.get("blueprint_url") or "").strip()
+        site_plan_url = (request.form.get("site_plan_url") or "").strip()
 
-        elif blueprint_url:
-            try:
-                raw_blueprint = download_image_bytes(blueprint_url)
-                if raw_blueprint:
-                    blueprint_image_base64 = base64.b64encode(raw_blueprint).decode("utf-8")
-            except Exception:
-                raw_blueprint = None
+        rejected_blueprint_reference = ""
 
-        elif project and getattr(project, "blueprint_url", None):
-            blueprint_url = (project.blueprint_url or "").strip()
-            try:
-                raw_blueprint = download_image_bytes(blueprint_url)
-                if raw_blueprint:
-                    blueprint_image_base64 = base64.b64encode(raw_blueprint).decode("utf-8")
-            except Exception:
-                raw_blueprint = None
-
-        elif deal is not None:
-            results = deal.results_json or {}
-            build_project = results.get("build_project", {}) or {}
-            saved_blueprint = build_project.get("blueprint", {}) or {}
-            blueprint_url = (
-                saved_blueprint.get("blueprint_url")
-                or saved_blueprint.get("image_url")
+        # Land/site/satellite source. This is allowed for siteplan only.
+        if land_image:
+            land_raw = land_image.read()
+            land_image_base64 = base64.b64encode(land_raw).decode("utf-8")
+            land_image_url = _upload_before_image(land_raw)
+        else:
+            land_image_url = (
+                site_plan_url
+                or image_url
+                or reference_image_url
                 or ""
             ).strip()
 
-            if blueprint_url:
-                try:
-                    raw_blueprint = download_image_bytes(blueprint_url)
-                    if raw_blueprint:
-                        blueprint_image_base64 = base64.b64encode(raw_blueprint).decode("utf-8")
-                except Exception:
-                    raw_blueprint = None
+        if land_image_url:
+            prepared_land_url = _engine_ready_reference_image_url(
+                land_image_url,
+                prefix="build-site-reference",
+            )
+            if prepared_land_url:
+                land_image_url = prepared_land_url
 
+        # Blueprint/floor-plan source. This must pass plan detection.
+        blueprint_raw = None
+
+        if blueprint_file:
+            candidate_raw = blueprint_file.read()
+            if _image_bytes_look_like_floor_plan(candidate_raw):
+                blueprint_raw = candidate_raw
+            else:
+                rejected_blueprint_reference = "uploaded_blueprint_file_rejected_not_floor_plan"
+
+        elif blueprint_url:
+            try:
+                candidate_raw = download_image_bytes(blueprint_url)
+                if (
+                    _reference_looks_like_floor_plan(blueprint_url, "blueprint")
+                    or _image_bytes_look_like_floor_plan(candidate_raw)
+                ):
+                    blueprint_raw = candidate_raw
+                    blueprint_source_url = blueprint_url
+                else:
+                    rejected_blueprint_reference = blueprint_url
+            except Exception:
+                blueprint_raw = None
+
+        elif project:
+            project_blueprint_url = (getattr(project, "blueprint_url", None) or "").strip()
+            if project_blueprint_url:
+                try:
+                    candidate_raw = download_image_bytes(project_blueprint_url)
+                    if (
+                        _reference_looks_like_floor_plan(project_blueprint_url, "blueprint")
+                        or _image_bytes_look_like_floor_plan(candidate_raw)
+                    ):
+                        blueprint_raw = candidate_raw
+                        blueprint_source_url = project_blueprint_url
+                    else:
+                        rejected_blueprint_reference = project_blueprint_url
+                except Exception:
+                    blueprint_raw = None
+
+        elif deal is not None:
+            results = _deal_results(deal)
+            build_project = results.get("build_project", {}) or {}
+            blueprint_block = build_project.get("blueprint", {}) or {}
+
+            prior_blueprint_url = (
+                blueprint_block.get("blueprint_url")
+                or blueprint_block.get("image_url")
+                or ""
+            ).strip()
+
+            if prior_blueprint_url:
+                try:
+                    candidate_raw = download_image_bytes(prior_blueprint_url)
+                    if (
+                        _reference_looks_like_floor_plan(prior_blueprint_url, "blueprint")
+                        or _image_bytes_look_like_floor_plan(candidate_raw)
+                    ):
+                        blueprint_raw = candidate_raw
+                        blueprint_source_url = prior_blueprint_url
+                    else:
+                        rejected_blueprint_reference = prior_blueprint_url
+                except Exception:
+                    blueprint_raw = None
+
+        if blueprint_raw:
+            blueprint_image_base64 = base64.b64encode(blueprint_raw).decode("utf-8")
+
+        # ---------------- VALIDATION ----------------
         has_text_seed = any([
             project_name,
             property_type,
@@ -9182,753 +9228,274 @@ def generate_full_build():
             lot_size,
             zoning,
             location,
-            notes,
+            bedrooms,
+            bathrooms,
+            square_feet,
+            number_of_floors,
         ])
 
-        if not blueprint_image_base64 and not has_text_seed:
+        if not has_text_seed and not land_image_base64 and not land_image_url and not blueprint_image_base64:
+            if deal is not None:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+
             return jsonify({
                 "status": "error",
-                "message": "Provide a blueprint file, saved blueprint, or enough project details to generate a blueprint."
+                "message": "Provide a site image, blueprint, or enough build details."
             }), 400
 
-        # --------------------------------------------------
-        # EXTERIOR / SITE SOURCE RESOLUTION
-        # This is only for real site/reference images.
-        # Generated blueprint images must not become exterior image inputs.
-        # --------------------------------------------------
-        if land_image:
-            raw_land = land_image.read()
-            if raw_land:
-                exterior_image_base64 = base64.b64encode(raw_land).decode("utf-8")
-                site_reference_source = "uploaded_site_photo"
-                if not reference_image_url:
-                    try:
-                        reference_image_url = _upload_before_image(raw_land)
-                    except Exception:
-                        reference_image_url = ""
+        render_batch_id = uuid.uuid4().hex
+        bundle_job_id = uuid.uuid4().hex
 
-        if not exterior_image_base64 and not reference_image_url and deal is not None:
-            results = deal.results_json or {}
-            build_project = results.get("build_project", {}) or {}
-            saved_exterior = build_project.get("exterior", {}) or {}
+        outputs = [
+            ("siteplan", "siteplan"),
+            ("blueprint", "blueprint"),
+            ("exterior", "exterior_front"),
+            ("exterior", "exterior_back"),
+        ]
 
-            candidate_reference = (
-                saved_exterior.get("build_reference_image")
-                or saved_exterior.get("site_reference_image")
-                or saved_exterior.get("reference_image_url")
-                or ""
-            ).strip()
-
-            if candidate_reference:
-                reference_image_url = candidate_reference
-                site_reference_source = "saved_site_reference"
-
-        if reference_image_url:
-            prepared_reference_url = _engine_ready_reference_image_url(
-                reference_image_url,
-                prefix="build-site-reference",
-            )
-            if prepared_reference_url:
-                reference_image_url = prepared_reference_url
-                site_reference_source = site_reference_source or "site_context_image"
-            elif not reference_image_url.startswith(("http://", "https://")):
-                reference_image_url = ""
-
-        if not exterior_image_base64 and not reference_image_url and location:
-            try:
-                streetview_reference_url = _streetview_engine_reference_url(
-                    {"address": location},
-                    prefix="build-site-reference",
-                )
-                if streetview_reference_url:
-                    reference_image_url = streetview_reference_url
-                    site_reference_source = "streetview_site_context"
-            except Exception:
-                current_app.logger.exception("Streetview reference lookup failed")
-                reference_image_url = ""
-
-        # --------------------------------------------------
-        # 1. GENERATE BLUEPRINT - FIRST FLOOR
-        # --------------------------------------------------
-        blueprint_payload = {
-            "mode": "blueprint",
-            "blueprint_floor": "first",
-            "floor": "first",
+        all_results = {}
+        build_project_payload = {
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
             "blueprint_style": blueprint_style,
             "description": description,
-            "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
             "location": location,
-            "prompt": base_build_prompt_notes,
-            "prompt_notes": base_build_prompt_notes,
-            "special_features": f"{lot_count} total lots" if lot_count and lot_count > 1 else notes,
-            "square_feet_target": square_feet_target,
+            "notes": notes,
+            "bedrooms": bedrooms,
+            "bathrooms": bathrooms,
+            "square_feet": square_feet,
             "stories": number_of_floors,
             "number_of_floors": number_of_floors,
-            "floor_count": number_of_floors,
-            "width": 1024,
-            "height": 1024,
-            "steps": 30,
-            "guidance": 6.8,
-            "strength": 0.30,
-            "count": 1,
-            "negative_prompt": _build_studio_negative_prompt("blueprint_first_floor"),
+            "bundle_job_id": bundle_job_id,
         }
-        blueprint_payload.update(build_program_context)
-        blueprint_payload.update(_build_studio_quality_controls("blueprint_first_floor"))
 
-        if blueprint_image_base64:
-            blueprint_payload["image_base64"] = blueprint_image_base64
-        elif blueprint_url:
-            blueprint_payload["image_url"] = blueprint_url
-
-        current_app.logger.warning(f"FULL BUILD BLUEPRINT PAYLOAD: {blueprint_payload}")
-
-        blueprint_json = _post_renovation_engine_json(
-            "/v1/build_concept",
-            blueprint_payload,
-            timeout=FULL_BUILD_BLUEPRINT_TIMEOUT,
-        )
-
-        current_app.logger.warning(f"FULL BUILD BLUEPRINT JSON: {blueprint_json}")
-
-        blueprint_images_b64 = blueprint_json.get("images_base64") or []
-        if not blueprint_images_b64:
-            return jsonify({
-                "status": "error",
-                "message": "Blueprint step returned no images."
-            }), 502
-
-        blueprint_batch_id = uuid.uuid4().hex
-        blueprint_urls = _upload_after_images_from_b64(blueprint_images_b64, blueprint_batch_id)
-
-        if not blueprint_urls:
-            return jsonify({
-                "status": "error",
-                "message": "Blueprint generated but uploads failed."
-            }), 500
-
-        blueprint_primary_url = blueprint_urls[0]
-        blueprint_primary_b64 = blueprint_images_b64[0]
-
-        blueprint_meta = blueprint_json.get("meta") or {}
-        blueprint_seed = blueprint_json.get("seed")
-        blueprint_job_id = blueprint_json.get("job_id")
-
-        # --------------------------------------------------
-        # 2. GENERATE BLUEPRINT - SECOND FLOOR
-        # --------------------------------------------------
-        blueprint_floor2_urls = []
-        blueprint_floor2_primary_url = ""
-        blueprint_floor2_primary_b64 = ""
-        blueprint_floor2_meta = {"skipped": True, "reason": "single_story"}
-        blueprint_floor2_seed = None
-        blueprint_floor2_job_id = None
-
-        if number_of_floors and number_of_floors >= 2:
-            try:
-                blueprint_floor2_prompt_notes = _compose_build_studio_prompt(
-                    notes=(
-                        f"{site_notes}. Generate the second floor / upper level plan with bedrooms, bathrooms, "
-                        "laundry, and hallway circulation. Use the first floor only for stair and bearing-wall alignment. "
-                        "Must be a distinct upper-level layout, not a copy of the first floor."
-                    ),
-                    mode="blueprint_second_floor",
-                    project_name=project_name,
-                    property_type=property_type,
-                    style=style,
-                    description=description,
-                    lot_size=lot_size,
-                    zoning=zoning,
-                    location=location,
-                    floors=number_of_floors,
-                    floor="second",
-                    lot_count=lot_count,
-                    blueprint_constrained=True,
-                )
-                blueprint_floor2_payload = {
-                    "mode": "blueprint",
-                    "blueprint_floor": "second",
-                    "floor": "second",
-                    "project_name": project_name,
-                    "property_type": property_type,
-                    "style": style,
-                    "blueprint_style": blueprint_style,
-                    "description": description,
-                    "build_description": description,
-                    "lot_size": lot_size,
-                    "zoning": zoning,
-                    "location": location,
-                    "prompt": blueprint_floor2_prompt_notes,
-                    "prompt_notes": blueprint_floor2_prompt_notes,
-                    "special_features": "upper level bedrooms, bathrooms, laundry, hallway, secondary living spaces",
-                    "square_feet_target": square_feet_target,
-                    "stories": number_of_floors,
-                    "number_of_floors": number_of_floors,
-                    "floor_count": number_of_floors,
-                    "blueprint_image_base64": blueprint_primary_b64,
-                    "reference_image_base64": blueprint_primary_b64,
-                    "lower_floor_reference_image_base64": blueprint_primary_b64,
-                    "width": 1024,
-                    "height": 1024,
-                    "steps": 30,
-                    "guidance": 6.8,
-                    "strength": 0.24,
-                    "count": 1,
-                    "negative_prompt": _build_studio_negative_prompt("blueprint_second_floor"),
-                }
-                blueprint_floor2_payload.update(build_program_context)
-                blueprint_floor2_payload.update(_build_studio_quality_controls("blueprint_second_floor"))
-
-                current_app.logger.warning(f"FULL BUILD BLUEPRINT FLOOR 2 PAYLOAD: {blueprint_floor2_payload}")
-
-                blueprint_floor2_json = _post_renovation_engine_json(
-                    "/v1/build_concept",
-                    blueprint_floor2_payload,
-                    timeout=FULL_BUILD_BLUEPRINT_TIMEOUT,
-                )
-
-                blueprint_floor2_images_b64 = blueprint_floor2_json.get("images_base64") or []
-                if not blueprint_floor2_images_b64:
-                    raise RuntimeError("Second floor blueprint step returned no images.")
-
-                blueprint_floor2_batch_id = uuid.uuid4().hex
-                blueprint_floor2_urls = _upload_after_images_from_b64(blueprint_floor2_images_b64, blueprint_floor2_batch_id)
-
-                if not blueprint_floor2_urls:
-                    raise RuntimeError("Second floor blueprint generated but uploads failed.")
-
-                blueprint_floor2_primary_b64 = blueprint_floor2_images_b64[0]
-                blueprint_floor2_primary_url = blueprint_floor2_urls[0]
-                blueprint_floor2_meta = blueprint_floor2_json.get("meta") or {}
-                blueprint_floor2_seed = blueprint_floor2_json.get("seed")
-                blueprint_floor2_job_id = blueprint_floor2_json.get("job_id")
-            except Exception:
-                current_app.logger.exception("Second floor blueprint generation failed (non-fatal)")
-                blueprint_floor2_urls = []
-                blueprint_floor2_primary_url = ""
-                blueprint_floor2_primary_b64 = ""
-                blueprint_floor2_meta = {"skipped": True, "reason": "floor2_generation_failed"}
-                blueprint_floor2_seed = None
-                blueprint_floor2_job_id = None
-
-        # --------------------------------------------------
-        # 2B. GENERATE BLUEPRINT - THIRD FLOOR
-        # --------------------------------------------------
-        blueprint_floor3_urls = []
-        blueprint_floor3_primary_url = ""
-        blueprint_floor3_primary_b64 = ""
-        blueprint_floor3_meta = {"skipped": True, "reason": "under_three_stories"}
-        blueprint_floor3_seed = None
-        blueprint_floor3_job_id = None
-
-        if number_of_floors and number_of_floors >= 3:
-            try:
-                floor3_reference_b64 = blueprint_floor2_primary_b64 or blueprint_primary_b64
-                floor3_reference_url = "" if floor3_reference_b64 else (blueprint_floor2_primary_url or blueprint_primary_url)
-                blueprint_floor3_prompt_notes = _compose_build_studio_prompt(
-                    notes=(
-                        f"{site_notes}. Generate the third floor / top level plan. "
-                        "Must be a distinct upper-level layout that aligns stairs and stacked walls "
-                        "with the lower floors, not a copy of the first or second floor."
-                    ),
-                    mode="blueprint_third_floor",
-                    project_name=project_name,
-                    property_type=property_type,
-                    style=style,
-                    description=description,
-                    lot_size=lot_size,
-                    zoning=zoning,
-                    location=location,
-                    floors=number_of_floors,
-                    floor="third",
-                    lot_count=lot_count,
-                    blueprint_constrained=True,
-                )
-
-                blueprint_floor3_payload = {
-                    "mode": "blueprint",
-                    "blueprint_floor": "third",
-                    "floor": "third",
-                    "project_name": project_name,
-                    "property_type": property_type,
-                    "style": style,
-                    "blueprint_style": blueprint_style,
-                    "description": description,
-                    "build_description": description,
-                    "lot_size": lot_size,
-                    "zoning": zoning,
-                    "location": location,
-                    "prompt": blueprint_floor3_prompt_notes,
-                    "prompt_notes": blueprint_floor3_prompt_notes,
-                    "special_features": "third floor top level bedrooms bathrooms flex loft storage stair continuation",
-                    "square_feet_target": square_feet_target,
-                    "stories": number_of_floors,
-                    "number_of_floors": number_of_floors,
-                    "floor_count": number_of_floors,
-                    "width": 1024,
-                    "height": 1024,
-                    "steps": 30,
-                    "guidance": 6.8,
-                    "strength": 0.24,
-                    "count": 1,
-                    "negative_prompt": _build_studio_negative_prompt("blueprint_third_floor"),
-                }
-                blueprint_floor3_payload.update(build_program_context)
-
-                if floor3_reference_b64:
-                    blueprint_floor3_payload["blueprint_image_base64"] = floor3_reference_b64
-                    blueprint_floor3_payload["reference_image_base64"] = floor3_reference_b64
-                    blueprint_floor3_payload["lower_floor_reference_image_base64"] = floor3_reference_b64
-                elif floor3_reference_url:
-                    blueprint_floor3_payload["blueprint_image_url"] = floor3_reference_url
-                    blueprint_floor3_payload["reference_image_url"] = floor3_reference_url
-                    blueprint_floor3_payload["lower_floor_reference_image_url"] = floor3_reference_url
-
-                blueprint_floor3_payload.update(_build_studio_quality_controls("blueprint_third_floor"))
-
-                current_app.logger.warning(f"FULL BUILD BLUEPRINT FLOOR 3 PAYLOAD: {blueprint_floor3_payload}")
-
-                blueprint_floor3_json = _post_renovation_engine_json(
-                    "/v1/build_concept",
-                    blueprint_floor3_payload,
-                    timeout=FULL_BUILD_BLUEPRINT_TIMEOUT,
-                )
-
-                blueprint_floor3_images_b64 = blueprint_floor3_json.get("images_base64") or []
-                if not blueprint_floor3_images_b64:
-                    raise RuntimeError("Third floor blueprint step returned no images.")
-
-                blueprint_floor3_batch_id = uuid.uuid4().hex
-                blueprint_floor3_urls = _upload_after_images_from_b64(blueprint_floor3_images_b64, blueprint_floor3_batch_id)
-
-                if not blueprint_floor3_urls:
-                    raise RuntimeError("Third floor blueprint generated but uploads failed.")
-
-                blueprint_floor3_primary_b64 = blueprint_floor3_images_b64[0]
-                blueprint_floor3_primary_url = blueprint_floor3_urls[0]
-                blueprint_floor3_meta = blueprint_floor3_json.get("meta") or {}
-                blueprint_floor3_seed = blueprint_floor3_json.get("seed")
-                blueprint_floor3_job_id = blueprint_floor3_json.get("job_id")
-            except Exception:
-                current_app.logger.exception("Third floor blueprint generation failed (non-fatal)")
-                blueprint_floor3_urls = []
-                blueprint_floor3_primary_url = ""
-                blueprint_floor3_primary_b64 = ""
-                blueprint_floor3_meta = {"skipped": True, "reason": "floor3_generation_failed"}
-                blueprint_floor3_seed = None
-                blueprint_floor3_job_id = None
-
-        # --------------------------------------------------
-        # 3. GENERATE EXTERIOR - FRONT
-        # --------------------------------------------------
-        has_site_context_reference = bool(exterior_image_base64 or reference_image_url)
-        has_real_exterior_reference = bool(preserve_existing_exterior and has_site_context_reference)
-
-        exterior_ref_b64 = exterior_image_base64 if has_site_context_reference else ""
-        exterior_ref_url = "" if exterior_ref_b64 else (reference_image_url if has_site_context_reference else "")
-
-        if has_real_exterior_reference:
-            exterior_source_kind = "existing_house_reference"
-        elif has_site_context_reference:
-            exterior_source_kind = site_reference_source or "site_context_image"
-        else:
-            exterior_source_kind = "text_prompt"
-
-        exterior_prompt_notes = _compose_build_studio_prompt(
-            notes=(
-                f"{site_notes}. Generate a brand-new photorealistic front exterior concept from the project details. "
-                "Do not require a site photo. Do not render a floor plan, blueprint, collage, diagram, document frame, "
-                "white border, top-down layout, or interior plan. Show only the finished building exterior. "
-                "Use the blueprint only as general planning context, not as an image input."
-            ),
-            mode="exterior_front",
-            project_name=project_name,
-            property_type=property_type,
-            style=style,
-            description=description,
-            lot_size=lot_size,
-            zoning=zoning,
-            location=location,
-            floors=number_of_floors,
-            lot_count=lot_count,
-            preserve_reference=has_real_exterior_reference,
-            blueprint_constrained=False,
-        )
-
-        exterior_payload = {
-            "mode": "exterior_front",
-            "generation_mode": "image_guided_exterior" if has_site_context_reference else "text_to_image",
-            "task": "exterior_front",
-            "exterior_view": "front",
-            "project_name": project_name,
-            "property_type": property_type,
-            "style": style,
-            "description": description,
-            "build_description": description,
-            "lot_size": lot_size,
-            "zoning": zoning,
-            "location": location,
-            "prompt": exterior_prompt_notes,
-            "prompt_notes": exterior_prompt_notes,
-            "special_features": (
-                f"{lot_count} lots, cohesive streetscape, developer-ready massing"
-                if lot_count and lot_count > 1
-                else notes
-            ),
-            "stories": number_of_floors,
-            "number_of_floors": number_of_floors,
-            "floor_count": number_of_floors,
-            "preserve_existing_exterior": has_real_exterior_reference,
-            "preserve_structure": has_real_exterior_reference,
-            "requires_reference_image": False,
-            "allow_text_only": True,
-            "width": 1024,
-            "height": 1024,
-            "steps": 35,
-            "guidance": 9.0 if not has_site_context_reference else 7.5,
-            "strength": 0.34 if has_real_exterior_reference else (0.42 if has_site_context_reference else 1.0),
-            "count": 1,
-            "negative_prompt": (
-                _build_studio_negative_prompt("exterior_front")
-                + ", floor plan, blueprint, top down plan, interior layout, architectural diagram, "
-                  "site map, document border, white border, framed image, collage, multiple images, "
-                  "text, watermark, blurry, low resolution, cropped building"
-            ),
-        }
-        exterior_payload.update(build_program_context)
-
-        if exterior_ref_b64:
-            exterior_payload.update({
-                "image_base64": exterior_ref_b64,
-                "exterior_image_base64": exterior_ref_b64,
-                "reference_image_base64": exterior_ref_b64,
-                "site_image_base64": exterior_ref_b64,
-            })
-        elif exterior_ref_url:
-            exterior_payload.update({
-                "image_url": exterior_ref_url,
-                "exterior_image_url": exterior_ref_url,
-                "reference_image_url": exterior_ref_url,
-                "site_reference_image": exterior_ref_url,
-                "site_image_url": exterior_ref_url,
-            })
-
-        exterior_payload.update(_build_studio_quality_controls("exterior_front"))
-
-        current_app.logger.warning(f"FULL BUILD EXTERIOR PAYLOAD: {exterior_payload}")
-
-        exterior_json = _post_renovation_engine_json(
-            "/v1/build_concept",
-            exterior_payload,
-            timeout=UPLOAD_TIMEOUT,
-        )
-
-        current_app.logger.warning(f"FULL BUILD EXTERIOR JSON: {exterior_json}")
-
-        exterior_images_b64 = exterior_json.get("images_base64") or []
-        if not exterior_images_b64:
-            return jsonify({
-                "status": "error",
-                "message": "Exterior step returned no images."
-            }), 502
-
-        exterior_batch_id = uuid.uuid4().hex
-        exterior_urls = _upload_after_images_from_b64(exterior_images_b64, exterior_batch_id)
-
-        if not exterior_urls:
-            return jsonify({
-                "status": "error",
-                "message": "Exterior generated but uploads failed."
-            }), 500
-
-        exterior_primary_url = exterior_urls[0]
-        exterior_meta = exterior_json.get("meta") or {}
-        exterior_seed = exterior_json.get("seed")
-        exterior_job_id = exterior_json.get("job_id")
-
-        # --------------------------------------------------
-        # 4. GENERATE EXTERIOR - BACK
-        # --------------------------------------------------
-        exterior_back_prompt_notes = _compose_build_studio_prompt(
-            notes=(
-                f"{site_notes}. Generate a brand-new photorealistic rear exterior rendering from the project details. "
-                "Show the back of the building with backyard, patio, deck, outdoor living space, rear windows, "
-                "landscaping, and full roofline. Do not require a site photo. Do not render a floor plan, blueprint, "
-                "top-down layout, document frame, collage, or interior plan."
-            ),
-            mode="exterior_rear",
-            project_name=project_name,
-            property_type=property_type,
-            style=style,
-            description=description,
-            lot_size=lot_size,
-            zoning=zoning,
-            location=location,
-            floors=number_of_floors,
-            lot_count=lot_count,
-            preserve_reference=has_real_exterior_reference,
-            blueprint_constrained=False,
-        )
-
-        exterior_back_payload = {
-            "mode": "exterior_back",
-            "generation_mode": "image_guided_exterior" if has_site_context_reference else "text_to_image",
-            "task": "exterior_back",
-            "exterior_view": "back",
-            "project_name": project_name,
-            "property_type": property_type,
-            "style": style,
-            "description": description,
-            "build_description": description,
-            "lot_size": lot_size,
-            "zoning": zoning,
-            "location": location,
-            "prompt": exterior_back_prompt_notes,
-            "prompt_notes": exterior_back_prompt_notes,
-            "special_features": "rear view, backyard, patio, deck, outdoor living space",
-            "stories": number_of_floors,
-            "number_of_floors": number_of_floors,
-            "floor_count": number_of_floors,
-            "preserve_existing_exterior": has_real_exterior_reference,
-            "preserve_structure": has_real_exterior_reference,
-            "requires_reference_image": False,
-            "allow_text_only": True,
-            "width": 1024,
-            "height": 1024,
-            "steps": 35,
-            "guidance": 9.0 if not has_site_context_reference else 7.5,
-            "strength": 0.34 if has_real_exterior_reference else (0.42 if has_site_context_reference else 1.0),
-            "count": 1,
-            "negative_prompt": (
-                _build_studio_negative_prompt("exterior_rear")
-                + ", floor plan, blueprint, top down plan, interior layout, architectural diagram, "
-                  "site map, document border, white border, framed image, collage, multiple images, "
-                  "text, watermark, blurry, low resolution, cropped building"
-            ),
-        }
-        exterior_back_payload.update(build_program_context)
-
-        if exterior_ref_b64:
-            exterior_back_payload.update({
-                "image_base64": exterior_ref_b64,
-                "exterior_image_base64": exterior_ref_b64,
-                "reference_image_base64": exterior_ref_b64,
-                "site_image_base64": exterior_ref_b64,
-            })
-        elif exterior_ref_url:
-            exterior_back_payload.update({
-                "image_url": exterior_ref_url,
-                "exterior_image_url": exterior_ref_url,
-                "reference_image_url": exterior_ref_url,
-                "site_reference_image": exterior_ref_url,
-                "site_image_url": exterior_ref_url,
-            })
-
-        exterior_back_payload.update(_build_studio_quality_controls("exterior_rear"))
-
-        exterior_back_url = ""
-        exterior_back_meta = {}
-        exterior_back_seed = None
-        exterior_back_job_id = None
-
-        try:
-            current_app.logger.warning(f"FULL BUILD EXTERIOR BACK PAYLOAD: {exterior_back_payload}")
-
-            exterior_back_json = _post_renovation_engine_json(
-                "/v1/build_concept",
-                exterior_back_payload,
-                timeout=UPLOAD_TIMEOUT,
+        # ---------------- GENERATION LOOP ----------------
+        for mode, output_mode in outputs:
+            current_app.logger.warning(
+                "[build-studio] generating mode=%s output=%s bundle_job_id=%s",
+                mode,
+                output_mode,
+                bundle_job_id,
             )
 
-            exterior_back_images_b64 = exterior_back_json.get("images_base64") or []
-            if exterior_back_images_b64:
-                exterior_back_batch_id = uuid.uuid4().hex
-                exterior_back_urls = _upload_after_images_from_b64(
-                    exterior_back_images_b64,
-                    exterior_back_batch_id
-                )
-                if exterior_back_urls:
-                    exterior_back_url = exterior_back_urls[0]
-                    exterior_back_meta = exterior_back_json.get("meta") or {}
-                    exterior_back_seed = exterior_back_json.get("seed")
-                    exterior_back_job_id = exterior_back_json.get("job_id")
-        except Exception:
-            current_app.logger.exception("Exterior back generation failed (non-fatal)")
+            is_siteplan = output_mode == "siteplan"
+            is_blueprint = output_mode == "blueprint"
+            is_exterior_front = output_mode == "exterior_front"
+            is_exterior_back = output_mode == "exterior_back"
+            is_exterior = is_exterior_front or is_exterior_back
 
-        # --------------------------------------------------
-        # SAVE PROJECT + DEAL
-        # --------------------------------------------------
-        if project is None:
-            project = BuildProject(user_id=current_user.id)
-            db.session.add(project)
+            prompt_mode = output_mode
+            if is_blueprint:
+                prompt_mode = "blueprint"
+            elif is_siteplan:
+                prompt_mode = "siteplan"
 
-        project.project_name = project_name
-        project.property_type = property_type
-        project.development_type = development_type
-        project.description = description
-        project.lot_size = lot_size
-        project.zoning = zoning
-        project.location = location
-        project.notes = notes
-        project.blueprint_url = blueprint_primary_url
-        project.site_plan_url = blueprint_floor2_primary_url
-        project.concept_render_url = exterior_primary_url
+            prompt_notes = _compose_build_studio_prompt(
+                notes=notes,
+                mode=prompt_mode,
+                project_name=project_name,
+                property_type=property_type,
+                style=style,
+                description=description,
+                lot_size=lot_size,
+                zoning=zoning,
+                location=location,
+                floors=number_of_floors,
+                floor="first" if is_blueprint else "",
+                lot_count=None,
+                preserve_reference=False,
+                blueprint_constrained=bool(blueprint_image_base64 and is_exterior),
+            )
 
-        db.session.flush()
+            payload = {
+                "generation_family": "build",
+                "generator_family": "build",
+                "generator_type": "build",
+                "studio": "build_studio",
+                "studio_type": "build_studio",
 
-        if save_to_deal and deal is not None:
-            results = _deal_results(deal)
-            build_project = results.get("build_project", {}) or {}
+                "mode": mode,
+                "output_mode": output_mode,
+                "task": f"build_{output_mode}",
 
-            build_project["project_id"] = project.id
-            build_project["project_name"] = project_name
-            build_project["property_type"] = property_type
-            build_project["development_type"] = development_type
-            build_project["blueprint_style"] = blueprint_style
-            build_project["lot_count"] = lot_count
-            build_project["stories"] = number_of_floors
-            build_project["number_of_floors"] = number_of_floors
-            build_project["square_feet_target"] = square_feet_target
-            build_project["project_size"] = square_feet_target
-            build_project["bedrooms"] = bedrooms
-            build_project["bathrooms"] = bathrooms
-            build_project["finish_level"] = finish_level
-            build_project["garage"] = garage
-            build_project["description"] = description
-            build_project["lot_size"] = lot_size
-            build_project["zoning"] = zoning
-            build_project["location"] = location
-            build_project["notes"] = notes
-
-            build_project["blueprint"] = {
                 "project_name": project_name,
                 "property_type": property_type,
+                "style": style,
+                "preset": style,
                 "blueprint_style": blueprint_style,
                 "description": description,
+                "build_description": description,
                 "lot_size": lot_size,
                 "zoning": zoning,
                 "location": location,
                 "notes": notes,
-                "style": style,
+                "special_features": notes,
+
+                "bedrooms": bedrooms,
+                "bathrooms": bathrooms,
+                "square_feet": square_feet,
+                "square_feet_target": _normalize_int(square_feet),
                 "stories": number_of_floors,
                 "number_of_floors": number_of_floors,
-                **build_program_context,
-                "image_url": blueprint_primary_url,
-                "images": blueprint_urls,
-                "blueprint_url": blueprint_primary_url,
-                "meta": blueprint_meta,
-                "seed": blueprint_seed,
-                "job_id": blueprint_job_id,
+                "floor_count": number_of_floors,
+
+                "prompt": prompt_notes,
+                "prompt_notes": prompt_notes,
+
+                "count": 1,
+                "width": 1024,
+                "height": 1024,
+                "negative_prompt": _build_studio_negative_prompt(output_mode),
+            }
+            payload.update(_build_studio_quality_controls(output_mode))
+
+            # ---------------- MODE-SPECIFIC IMAGE ROUTING ----------------
+
+            if is_siteplan:
+                # Siteplan may use lot/satellite/site image as init/reference.
+                payload["reference_role"] = "site_context_reference"
+                payload["source_role"] = "site_context"
+                payload["steps"] = 32
+                payload["guidance"] = 7.0
+                payload["strength"] = 0.58
+
+                if land_image_base64:
+                    payload["image_base64"] = land_image_base64
+                    payload["site_image_base64"] = land_image_base64
+                elif land_image_url:
+                    payload["image_url"] = land_image_url
+                    payload["site_image_url"] = land_image_url
+                    payload["reference_image_url"] = land_image_url
+
+            elif is_blueprint:
+                # Blueprint may only use real blueprint/floor-plan references.
+                # Satellite/lot image is preserved only as context metadata, not init image.
+                payload["reference_role"] = "blueprint_reference" if blueprint_image_base64 else "text_program_only"
+                payload["source_role"] = "blueprint" if blueprint_image_base64 else "text_program_only"
+                payload["blueprint_constrained"] = bool(blueprint_image_base64)
+                payload["site_context_url"] = land_image_url
+                payload["steps"] = 30
+                payload["guidance"] = 6.8
+                payload["strength"] = 0.28 if blueprint_image_base64 else 0.0
+
+                if blueprint_image_base64:
+                    payload["image_base64"] = blueprint_image_base64
+                    payload["blueprint_image_base64"] = blueprint_image_base64
+                elif blueprint_source_url:
+                    payload["image_url"] = blueprint_source_url
+                    payload["blueprint_image_url"] = blueprint_source_url
+
+            elif is_exterior:
+                # Exterior should not use satellite/lot as visual init image.
+                # It can receive site/blueprint URLs only as context fields.
+                payload["mode"] = "exterior"
+                payload["exterior_view"] = "back" if is_exterior_back else "front"
+                payload["reference_role"] = "text_architectural_context"
+                payload["source_role"] = "text_plus_site_context"
+                payload["site_context_url"] = land_image_url
+                payload["blueprint_reference_url"] = blueprint_source_url
+                payload["preserve_existing_exterior"] = False
+                payload["preserve_structure"] = False
+                payload["steps"] = 35
+                payload["guidance"] = 8.5
+                payload["strength"] = 0.78
+
+                # Do not set image_url/image_base64 here unless the user explicitly
+                # uploaded an exterior reference photo in a separate field later.
+
+            current_app.logger.warning(
+                "FULL BUILD ENGINE PAYLOAD mode=%s output=%s has_image_base64=%s has_image_url=%s source_role=%s reference_role=%s keys=%s",
+                mode,
+                output_mode,
+                bool(payload.get("image_base64")),
+                bool(payload.get("image_url")),
+                payload.get("source_role"),
+                payload.get("reference_role"),
+                sorted(payload.keys()),
+            )
+
+            engine_json = _post_renovation_engine_json(
+                "/v1/build_concept",
+                payload,
+                timeout=RENDER_TIMEOUT,
+            )
+
+            images_b64 = engine_json.get("images_base64") or []
+            if not images_b64:
+                raise RuntimeError(f"No images returned for {output_mode}")
+
+            urls = _upload_after_images_from_b64(images_b64, render_batch_id)
+            if not urls:
+                raise RuntimeError(f"Upload failed for {output_mode}")
+
+            block = {
+                "mode": mode,
+                "output_mode": output_mode,
+                "image_url": urls[0],
+                "images": urls,
+                "meta": engine_json.get("meta") or {},
+                "seed": engine_json.get("seed"),
+                "job_id": engine_json.get("job_id"),
+                "source_role": payload.get("source_role"),
+                "reference_role": payload.get("reference_role"),
             }
 
-            build_project["blueprint_floor2"] = {
-                "project_name": project_name,
-                "property_type": property_type,
-                "description": description,
-                "lot_size": lot_size,
-                "lot_count": lot_count,
-                "zoning": zoning,
-                "location": location,
-                "notes": notes,
-                "style": style,
-                "stories": number_of_floors,
-                "number_of_floors": number_of_floors,
-                **build_program_context,
-                "floor_label": "Second Floor",
-                "blueprint_floor": "second",
-                "image_url": blueprint_floor2_primary_url,
-                "images": blueprint_floor2_urls,
-                "meta": blueprint_floor2_meta,
-                "seed": blueprint_floor2_seed,
-                "job_id": blueprint_floor2_job_id,
-                "skipped": not bool(blueprint_floor2_primary_url),
+            if is_siteplan:
+                block.update({
+                    "site_image_url": land_image_url,
+                    "site_context_url": land_image_url,
+                })
+                all_results["siteplan"] = block
+                build_project_payload["siteplan"] = block
+                build_project_payload["site_plan"] = block
+
+            elif is_blueprint:
+                block.update({
+                    "blueprint_url": urls[0],
+                    "source_reference_image": blueprint_source_url,
+                    "rejected_reference_image": rejected_blueprint_reference,
+                    "site_context_url": land_image_url,
+                })
+                all_results["blueprint"] = block
+                build_project_payload["blueprint"] = block
+
+            elif is_exterior_front:
+                block.update({
+                    "exterior_view": "front",
+                    "site_context_url": land_image_url,
+                    "blueprint_reference_url": blueprint_source_url,
+                })
+                all_results["exterior_front"] = block
+                build_project_payload["exterior"] = block
+                build_project_payload["exterior_front"] = block
+
+            elif is_exterior_back:
+                block.update({
+                    "exterior_view": "back",
+                    "site_context_url": land_image_url,
+                    "blueprint_reference_url": blueprint_source_url,
+                })
+                all_results["exterior_back"] = block
+                build_project_payload["exterior_back"] = block
+
+        # ---------------- SAVE TO DEAL ----------------
+        saved_to_deal = False
+        if save_to_deal and deal is not None:
+            results = _deal_results(deal)
+            results["build_project"] = {
+                **(results.get("build_project", {}) or {}),
+                **build_project_payload,
             }
 
-            build_project["blueprint_floor3"] = {
-                "project_name": project_name,
-                "property_type": property_type,
-                "description": description,
-                "lot_size": lot_size,
-                "lot_count": lot_count,
-                "zoning": zoning,
-                "location": location,
-                "notes": notes,
-                "style": style,
-                "stories": number_of_floors,
-                "number_of_floors": number_of_floors,
-                **build_program_context,
-                "floor_label": "Third Floor",
-                "blueprint_floor": "third",
-                "image_url": blueprint_floor3_primary_url,
-                "images": blueprint_floor3_urls,
-                "meta": blueprint_floor3_meta,
-                "seed": blueprint_floor3_seed,
-                "job_id": blueprint_floor3_job_id,
-                "skipped": not bool(blueprint_floor3_primary_url),
-            }
-
-            build_project["exterior"] = {
-                "project_name": project_name,
-                "property_type": property_type,
-                "description": description,
-                "lot_size": lot_size,
-                "lot_count": lot_count,
-                "zoning": zoning,
-                "location": location,
-                "notes": notes,
-                "style": style,
-                "stories": number_of_floors,
-                "number_of_floors": number_of_floors,
-                **build_program_context,
-                "image_url": exterior_primary_url,
-                "images": exterior_urls,
-                "meta": exterior_meta,
-                "seed": exterior_seed,
-                "job_id": exterior_job_id,
-                "build_reference_image": reference_image_url if has_real_exterior_reference else "",
-                "site_reference_image": reference_image_url if has_site_context_reference else "",
-                "reference_source": exterior_source_kind,
-                "preserve_existing_exterior": has_real_exterior_reference,
-                "blueprint_reference_image": blueprint_primary_url,
-                "blueprint_floor2_reference_image": blueprint_floor2_primary_url,
-                "blueprint_floor3_reference_image": blueprint_floor3_primary_url,
-            }
-
-            if exterior_back_url:
-                build_project["exterior_back"] = {
-                    "project_name": project_name,
-                    "property_type": property_type,
-                    "description": description,
-                    "lot_size": lot_size,
-                    "lot_count": lot_count,
-                    "zoning": zoning,
-                    "location": location,
-                    "notes": notes,
-                    "style": style,
-                    "stories": number_of_floors,
-                    "number_of_floors": number_of_floors,
-                    **build_program_context,
-                    "image_url": exterior_back_url,
-                    "meta": exterior_back_meta,
-                    "seed": exterior_back_seed,
-                    "job_id": exterior_back_job_id,
-                    "view": "back",
-                }
-
-            if build_analysis:
-                results["build_analysis"] = build_analysis
-
-            results["build_project"] = build_project
-
-            if reference_image_url and has_real_exterior_reference:
-                results["build_reference_image"] = reference_image_url
+            if land_image_url:
+                results["build_site_context_image"] = land_image_url
 
             _set_deal_results(deal, results)
+            saved_to_deal = True
 
         if deal is not None:
             _clear_deal_render_processing(deal)
@@ -9937,66 +9504,12 @@ def generate_full_build():
 
         return jsonify({
             "status": "ok",
-            "mode": "full",
-            "package": {
-                "blueprint": blueprint_primary_url,
-                "blueprint_floor2": blueprint_floor2_primary_url,
-                "blueprint_floor3": blueprint_floor3_primary_url,
-                "exterior": exterior_primary_url,
-                "exterior_back": exterior_back_url,
-            },
-            "next_url": url_for(
-                "investor.deal_architect",
-                deal_id=deal.id,
-                project_id=project.id
-            ) if deal else None,
-            "project_id": project.id,
-            "lot_count": lot_count,
-            "number_of_floors": number_of_floors,
-            "development_type": development_type,
-            "blueprint_result": {
-                "image_url": blueprint_primary_url,
-                "images": blueprint_urls,
-                "meta": blueprint_meta,
-                "seed": blueprint_seed,
-                "job_id": blueprint_job_id,
-            },
-            "blueprint_floor2_result": {
-                "image_url": blueprint_floor2_primary_url,
-                "images": blueprint_floor2_urls,
-                "meta": blueprint_floor2_meta,
-                "seed": blueprint_floor2_seed,
-                "job_id": blueprint_floor2_job_id,
-                "skipped": not bool(blueprint_floor2_primary_url),
-            },
-            "blueprint_floor3_result": {
-                "image_url": blueprint_floor3_primary_url,
-                "images": blueprint_floor3_urls,
-                "meta": blueprint_floor3_meta,
-                "seed": blueprint_floor3_seed,
-                "job_id": blueprint_floor3_job_id,
-                "skipped": not bool(blueprint_floor3_primary_url),
-            },
-            "exterior_result": {
-                "image_url": exterior_primary_url,
-                "images": exterior_urls,
-                "meta": exterior_meta,
-                "seed": exterior_seed,
-                "job_id": exterior_job_id,
-                "build_reference_image": reference_image_url if has_real_exterior_reference else "",
-                "site_reference_image": reference_image_url if has_site_context_reference else "",
-                "reference_source": exterior_source_kind,
-                "preserve_existing_exterior": has_real_exterior_reference,
-            },
-            "exterior_back_result": {
-                "image_url": exterior_back_url,
-                "meta": exterior_back_meta,
-                "seed": exterior_back_seed,
-                "job_id": exterior_back_job_id,
-            },
-            "build_analysis": build_analysis,
-            "deal_id": deal.id if deal else None,
-            "saved_to_deal": bool(save_to_deal and deal is not None),
+            "mode": "full_build",
+            "bundle_job_id": bundle_job_id,
+            "results": all_results,
+            "build_project": build_project_payload,
+            "saved_to_deal": saved_to_deal,
+            "rejected_blueprint_reference": rejected_blueprint_reference,
         })
 
     except Exception as e:
@@ -10009,13 +9522,12 @@ def generate_full_build():
             except Exception:
                 db.session.rollback()
 
-        error_message = str(e)
         status_code = 504 if _is_engine_timeout_error(e) else 500
 
         return jsonify({
             "status": "error",
             "code": "engine_timeout" if status_code == 504 else "full_build_generation_failed",
-            "message": error_message,
+            "message": str(e),
         }), status_code
 
 @investor_bp.route("/deal-studio/build-studio/generate-room", methods=["POST"])
