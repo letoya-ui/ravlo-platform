@@ -8160,28 +8160,60 @@ def generate_build_interior():
                     "MANDATORY: Countertops must be white stone with visible brown and gold veining."
                 )
 
-        layout_lock_requested = any(
-            phrase in design_text
-            for phrase in (
-                "preserve layout",
-                "preserve the layout",
-                "keep the layout",
-                "same layout",
-                "same room layout",
-                "preserve original layout",
-                "keep original layout",
-                "keep room layout",
-                "do not change the layout",
-                "don't change the layout",
-                "keep the camera angle",
-                "same camera angle",
-                "keep the island",
-                "same island position",
-                "keep the island in the same place",
-                "same sink wall",
-                "same appliance wall",
+        layout_lock_text = " ".join([
+            design_text,
+            safe_str(data.get("task")).lower(),
+            safe_str(data.get("design_mode")).lower(),
+            safe_str(data.get("layout_lock")).lower(),
+            safe_str(data.get("reference_role")).lower(),
+            safe_str(data.get("prompt")).lower(),
+            safe_str(data.get("prompt_notes")).lower(),
+            safe_str(data.get("desired_updates")).lower(),
+            safe_str(data.get("engine_prompt")).lower(),
+        ])
+
+        layout_lock_requested = (
+            safe_str(data.get("layout_lock")).lower() in ("1", "true", "yes", "on")
+            or safe_str(data.get("design_mode")).lower() == "overlay"
+            or safe_str(data.get("task")).lower() == "design_overlay"
+            or safe_str(data.get("reference_role")).lower() == "layout_locked_reference"
+            or any(
+                phrase in layout_lock_text
+                for phrase in (
+                    "preserve layout",
+                    "preserve the layout",
+                    "preserve exact layout",
+                    "preserve the exact layout",
+                    "preserve the exact kitchen layout",
+                    "keep layout",
+                    "keep the layout",
+                    "keep exact layout",
+                    "keep the exact layout",
+                    "same layout",
+                    "same room layout",
+                    "same kitchen layout",
+                    "preserve original layout",
+                    "keep original layout",
+                    "keep room layout",
+                    "do not change layout",
+                    "do not change the layout",
+                    "don't change layout",
+                    "don't change the layout",
+                    "keep the camera angle",
+                    "preserve camera angle",
+                    "same camera angle",
+                    "keep the island",
+                    "same island position",
+                    "keep the island in the same place",
+                    "same sink wall",
+                    "same appliance wall",
+                    "same window placement",
+                    "same door placement",
+                    "same walkway",
+                    "same circulation",
+                )
             )
-        )  
+        )
      
         force_overlay_test = str(data.get("design_mode") or "").lower() == "overlay"
         is_design_overlay = bool(is_design_generation and has_reference and layout_lock_requested or force_overlay_test)
