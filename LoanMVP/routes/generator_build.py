@@ -1654,7 +1654,7 @@ def _build_chat_response():
         parsed["spec"]["send_to_deal_architect"] = True
     else:
         parsed["spec"] = _prepare_build_generation_spec(merged_spec)
-    })
+    
     return jsonify(parsed)
 
 
