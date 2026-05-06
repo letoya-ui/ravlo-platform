@@ -9335,10 +9335,6 @@ def generate_full_build():
                 "notes": notes,
                 "special_features": notes,
 
-                "bedrooms": bedrooms,
-                "bathrooms": bathrooms,
-                "square_feet": square_feet,
-                "square_feet_target": _normalize_int(square_feet),
                 "stories": number_of_floors,
                 "number_of_floors": number_of_floors,
                 "floor_count": number_of_floors,
@@ -9351,6 +9347,17 @@ def generate_full_build():
                 "height": 1024,
                 "negative_prompt": _build_studio_negative_prompt(output_mode),
             }
+ 
+            if bedrooms_value is not None:
+                payload["bedrooms"] = bedrooms_value
+
+            if bathrooms_value is not None:
+                payload["bathrooms"] = bathrooms_value
+
+            if square_feet_value is not None:
+                payload["square_feet"] = square_feet_value
+                payload["square_feet_target"] = square_feet_value
+
             payload.update(_build_studio_quality_controls(output_mode))
 
             # ---------------- MODE-SPECIFIC IMAGE ROUTING ----------------
