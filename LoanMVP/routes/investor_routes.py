@@ -8178,9 +8178,9 @@ def generate_build_interior():
         
         is_design_overlay = bool(is_design_generation and has_reference and layout_lock_requested)
 
-        design_task = "design_overlay" if is_design_overlay else task
+        design_task = "design_overlay" if is_design_overlay else "interior_design"
         design_mode = "overlay" if is_design_overlay else "concept"
-        design_reference_role = "layout_locked_reference" if is_design_overlay else reference_role
+        design_reference_role = "layout_locked_reference" if is_design_overlay else "layout_context_only"
 
         layout_lock_prompt = (
             "STRICT LAYOUT LOCK: Keep the same camera viewpoint, same room footprint, same island position, "
@@ -8222,8 +8222,8 @@ def generate_build_interior():
                 base_prompt,
             )
 
-            task = design_task
-            reference_role = design_reference_role
+            task = "interior_design"
+            reference_role = "layout_context_only"
 
         else:
             use_depth = True
