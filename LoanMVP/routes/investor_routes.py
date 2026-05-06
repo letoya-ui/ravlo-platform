@@ -8173,9 +8173,16 @@ def generate_build_interior():
                 "keep room layout",
                 "do not change the layout",
                 "don't change the layout",
+                "keep the camera angle",
+                "same camera angle",
+                "keep the island",
+                "same island position",
+                "keep the island in the same place",
+                "same sink wall",
+                "same appliance wall",
             )
-        )
-        
+        )  
+
         is_design_overlay = bool(is_design_generation and has_reference and layout_lock_requested)
 
         design_task = "design_overlay" if is_design_overlay else "interior_design"
@@ -8395,10 +8402,21 @@ def generate_build_interior():
                 payload["image_url"] = image_url
 
         current_app.logger.warning(
-            "INTERIOR GENERATION ROUTE family=%s endpoint=%s payload=%s",
+            "INTERIOR MODE CHECK family=%s has_reference=%s layout_lock_requested=%s "
+            "is_design_overlay=%s task=%s design_mode=%s reference_role=%s "
+            "use_depth=%s use_canny=%s steps=%s guidance=%s strength=%s",
             generation_family,
-            endpoint,
-            payload,
+            has_reference,
+            layout_lock_requested,
+            is_design_overlay,
+            payload.get("task"),
+            payload.get("design_mode"),
+            payload.get("reference_role"),
+            payload.get("use_depth"),
+            payload.get("use_canny"),
+            payload.get("steps"),
+            payload.get("guidance"),
+            payload.get("strength"),
         )
 
         engine_json = _post_renovation_engine_json(
