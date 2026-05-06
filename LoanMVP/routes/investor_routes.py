@@ -8170,32 +8170,38 @@ def generate_build_interior():
                 "don't change the layout",
             )
         )
+        
+        is_design_overlay = bool(is_design_generation and has_reference and layout_lock_requested)
+
+        design_task = "design_overlay" if is_design_overlay else task
+        design_mode = "overlay" if is_design_overlay else "concept"
+        design_reference_role = "layout_locked_reference" if is_design_overlay else reference_role
 
         layout_lock_prompt = (
             "STRICT LAYOUT LOCK: Keep the same camera viewpoint, same room footprint, same island position, "
             "same sink wall, same appliance wall, same window and door locations, same walkway/circulation, "
             "same cabinet run positions, and same major object placement. Only change colors, finishes, materials, "
             "cabinet faces, countertops, backsplash, lighting style, hardware, and decor."
-    if layout_lock_requested else
+            if is_design_overlay else
             "LAYOUT LOCK: Preserve the original camera angle, room footprint, wall positions, ceiling height, "
             "window placement, door placement, appliance wall location, island location, and main circulation path."
         )
 
         if is_design_generation:
-            if layout_lock_requested:
-                strength = 0.68
-                guidance = 9.4
+            if is_design_overlay:
+                strength = 0.72
+                guidance = 9.6
+                steps = 34
                 use_depth = True
                 use_canny = True
-                controlnet_scale = 0.72
+                controlnet_scale = 0.55
             else:
-                strength = float(data.get("strength") or 0.76)
-                guidance = float(data.get("guidance") or 9.6)
+                strength =  0.76
+                guidance =  9.6
+                steps = 34
                 use_depth = True
                 use_canny = False
                 controlnet_scale = 0.80
-
-            steps = int(data.get("steps") or 34)
 
             interior_prompt_notes = _prompt_join(
                 "MANDATORY DESIGN REDESIGN: This is a prompt-led Design Studio concept, not a light rehab, cleanup, or refresh.",
@@ -8211,8 +8217,8 @@ def generate_build_interior():
                 base_prompt,
             )
 
-            task = "interior_design"
-            reference_role = "layout_context_only"
+            task = design_task
+            reference_role = design_reference_role
 
         else:
             use_depth = True
@@ -8229,14 +8235,10 @@ def generate_build_interior():
 
             task = "photo_rehab"
             reference_role = "preserve_existing_photo"
-            strength = float(data.get("strength") or 0.62)
-            guidance = float(data.get("guidance") or 8.5)
-            steps = int(data.get("steps") or 32)
-            is_design_overlay = bool(is_design_generation and has_reference and layout_lock_requested)
+            strength =  0.62
+            guidance =  8.5
+            steps =  32
 
-            design_task = "design_overlay" if is_design_overlay else task
-            design_mode = "overlay" if is_design_overlay else "concept"
-            design_reference_role = "layout_locked_reference" if is_design_overlay else reference_role
         # --------------------------------------------------
         # Payload routing
         # --------------------------------------------------
@@ -8252,7 +8254,7 @@ def generate_build_interior():
 
                 "mode": "interior",
                 "output_mode": "interior",
-                "task": design_task,
+                "task": task,
                 "design_mode": design_mode,
                 "generation_mode": "image_guided_design" if has_reference else "text_to_image",
                 "allow_text_only": not has_reference,
@@ -8281,8 +8283,8 @@ def generate_build_interior():
                 "engine_prompt": interior_prompt_notes,
                 "locked_details": locked_details_text,
 
-                "reference_role": design_reference_role,
-                "layout_lock": layout_lock_requested,
+                "reference_role": reference_role,
+                "layout_lock": is_design_overlay,
                 "preserve_room_shell": True,
                 "preserve_structure": True,
                 "preserve_layout": True,
@@ -8329,8 +8331,8 @@ def generate_build_interior():
                 "studio_type": "rehab_studio",
 
                 "mode": "hgtv",
-                "task": task,
-                "preset": style,
+                "task": "photo_rehab",
+                "design_mode": "rehab",
                 "style": style,
                 "room_type": room_type,
                 "room_focus": room_type,
