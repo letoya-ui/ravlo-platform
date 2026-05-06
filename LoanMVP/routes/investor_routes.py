@@ -9122,15 +9122,6 @@ def generate_full_build():
             notes,
         )
 
-        number_of_floors = _build_project_floor_count(
-            request.form.get("number_of_floors")
-            or request.form.get("floor_count"),
-            request.form.get("stories"),
-            request.form.get("number_of_stories"),
-            description,
-            notes,
-        )
-
         save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
 
         # ---------------- SOURCE IMAGES ----------------
