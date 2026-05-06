@@ -405,6 +405,11 @@ def _project_budget_snapshot(budget):
         "remaining_balance": float(getattr(budget, "remaining_balance", 0) or 0),
     }
 
+def _first_nonempty(*values):
+        for value in values:
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return ""
 
 def _resolve_rehab_before_seed(deal):
     if not deal:
@@ -8004,7 +8009,7 @@ def generate_build_interior():
             data.get("engine_intent") or data.get("ai_engine_intent")
         )
 
-        chat_engine_prompt = _first_non_empty(
+        chat_engine_prompt = _first_nonempty(
             data.get("engine_prompt"),
             data.get("prompt_notes"),
             data.get("desired_updates"),
