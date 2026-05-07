@@ -9168,8 +9168,11 @@ def generate_full_build():
 
         # Blueprint/floor-plan source. This must pass plan detection.
         blueprint_raw = None
+        blueprint_image_base64 = ""
+        blueprint_source_url = ""
+        rejected_blueprint_reference = ""
 
-        if blueprint_file:
+        if blueprint_file and getattr(blueprint_file, "filename", ""):
             candidate_raw = blueprint_file.read()
             filename = safe_str(getattr(blueprint_file, "filename", "")).lower()
 
@@ -9186,14 +9189,18 @@ def generate_full_build():
                 candidate_raw = download_image_bytes(blueprint_url)
                 if (
                     _reference_looks_like_floor_plan(blueprint_url, "blueprint")
-                    or _image_bytes_look_like_floor_plan(candidate_raw)
+                    and _image_bytes_look_like_floor_plan(candidate_raw)
                 ):
                     blueprint_raw = candidate_raw
                     blueprint_source_url = blueprint_url
                 else:
                     rejected_blueprint_reference = blueprint_url
+                    blueprint_raw = None
             except Exception:
                 blueprint_raw = None
+
+        if blueprint_raw:
+            blueprint_image_base64 = base64.b64encode(blueprint_raw).decode("utf-8")
 
         elif project:
             project_blueprint_url = (getattr(project, "blueprint_url", None) or "").strip()
@@ -9235,6 +9242,13 @@ def generate_full_build():
                         rejected_blueprint_reference = prior_blueprint_url
                 except Exception:
                     blueprint_raw = None
+
+            if (
+                blueprint_file
+                and land_image
+                and safe_str(getattr(blueprint_file, "filename", "")) == safe_str(getattr(land_image, "filename", ""))
+            ):
+                blueprint_file = None
 
         if blueprint_raw:
             blueprint_image_base64 = base64.b64encode(blueprint_raw).decode("utf-8")
@@ -9408,12 +9422,17 @@ def generate_full_build():
                 payload["guidance"] = 6.8
                 payload["strength"] = 0.28 if blueprint_image_base64 else 0.0
 
-                # Hard clear any accidental site/satellite reference.
-                payload.pop("image_url", None)
-                payload.pop("image_base64", None)
-                payload.pop("reference_image_url", None)
-                payload.pop("site_image_url", None)
-                payload.pop("site_image_base64", None)
+                for key in (
+                    "image_url",
+                    "image_base64",
+                    "reference_image_url",
+                    "reference_image_base64",
+                    "site_image_url",
+                    "site_image_base64",
+                    "blueprint_image_url",
+                    "blueprint_image_base64",
+                ):
+                    payload.pop(key, None)
 
                 if blueprint_image_base64:
                     payload["image_base64"] = blueprint_image_base64
@@ -9422,15 +9441,13 @@ def generate_full_build():
                     payload["image_url"] = blueprint_source_url
                     payload["blueprint_image_url"] = blueprint_source_url
 
-            if is_blueprint:
                 current_app.logger.warning(
-                    "FULL BUILD BLUEPRINT ROUTING has_blueprint_image=%s has_image_base64=%s has_image_url=%s source_role=%s site_context_url=%s blueprint_source_url=%s",
+                    "FULL BUILD BLUEPRINT ROUTING verified_blueprint=%s has_image_base64=%s has_image_url=%s source_role=%s rejected=%s",
                     bool(blueprint_image_base64 or blueprint_source_url),
                     bool(payload.get("image_base64")),
                     bool(payload.get("image_url")),
                     payload.get("source_role"),
-                    bool(payload.get("site_context_url")),
-                    blueprint_source_url,
+                    rejected_blueprint_reference,
                 )
 
             elif is_exterior:
