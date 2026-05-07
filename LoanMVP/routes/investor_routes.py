@@ -9409,7 +9409,6 @@ def generate_full_build():
                 # Exterior should not use satellite/lot as visual init image.
                 # It can receive site/blueprint URLs only as context fields.
                 payload["mode"] = "exterior"
-                payload["exterior_view"] = "back" if is_exterior_back else "front"
                 payload["reference_role"] = "text_architectural_context"
                 payload["source_role"] = "text_plus_site_context"
                 payload["site_context_url"] = land_image_url
@@ -9420,8 +9419,44 @@ def generate_full_build():
                 payload["guidance"] = 8.5
                 payload["strength"] = 0.78
 
-                # Do not set image_url/image_base64 here unless the user explicitly
-                # uploaded an exterior reference photo in a separate field later.
+                if is_exterior_back:
+                    payload["exterior_view"] = "back"
+                    payload["camera_view"] = "rear_yard_view"
+                    payload["task"] = "build_exterior_back"
+                    payload["output_mode"] = "exterior_back"
+
+                    rear_prompt = _prompt_join(
+                        "STRICT REAR EXTERIOR VIEW: Generate the back side of the home only, viewed from the backyard",
+                        "Show the rear facade massing, rear windows, rear doors, patio or deck, backyard lawn, rear landscaping, and private outdoor living space",
+                        "The camera must face the back elevation from the rear yard, not the street",
+                        "Do not show the front entry, front porch, street, curb, sidewalk, mailbox, front driveway, front-facing garage, garage door facing viewer, or front elevation",
+                        "This must clearly be the rear/backyard exterior, not a second front exterior rendering",
+                    )
+
+                    payload["prompt"] = _prompt_join(payload.get("prompt"), rear_prompt)
+                    payload["prompt_notes"] = _prompt_join(payload.get("prompt_notes"), rear_prompt)
+                    payload["negative_prompt"] = _prompt_join(
+                        payload.get("negative_prompt"),
+                        "front exterior, front elevation, front entry, front porch, street view, curb appeal, sidewalk, mailbox, front driveway, front-facing garage, garage door facing viewer"
+                    )
+
+                else:
+                    payload["exterior_view"] = "front"
+                    payload["camera_view"] = "street_view"
+                    payload["task"] = "build_exterior_front"
+                    payload["output_mode"] = "exterior_front"
+
+                    front_prompt = _prompt_join(
+                        "STRICT FRONT EXTERIOR VIEW: Generate the street-facing front side of the home only",
+                        "Show front facade massing, front entry, approach path, driveway or garage where appropriate, front landscaping, and curb appeal",
+                        "Do not create a backyard rear view, patio-only view, rear elevation, or rear facade rendering",
+                    )
+
+                    payload["prompt"] = _prompt_join(payload.get("prompt"), front_prompt)
+                    payload["prompt_notes"] = _prompt_join(payload.get("prompt_notes"), front_prompt)
+
+            # Do not set image_url/image_base64 here unless the user explicitly
+            # uploaded an exterior reference photo in a separate field later.
 
             current_app.logger.warning(
                 "FULL BUILD ENGINE PAYLOAD mode=%s output=%s has_image_base64=%s has_image_url=%s source_role=%s reference_role=%s keys=%s",
