@@ -7145,7 +7145,8 @@ _VISUAL_NEGATIVE_PROMPT = (
 _BLUEPRINT_NEGATIVE_PROMPT = (
     _VISUAL_NEGATIVE_PROMPT
     + ", photorealistic photo, 3D render, exterior elevation, facade rendering, presentation board, collage, "
-      "split panels, mood board, material swatches, title block, dimension strings, fake handwriting, colored blocks"
+      "split panels, mood board, material swatches, title block, "dimension strings, fake handwriting, colored blocks, trees, aerial view, satellite image, grass, roads, driveway photo, landscape photo, terrain texture, photorealistic lot"
+      ", trees, aerial view, satellite image, grass, roads, driveway photo, landscape photo, terrain texture, photorealistic lot"
 )
 
 _EXTERIOR_NEGATIVE_PROMPT = (
@@ -7438,6 +7439,10 @@ def _compose_build_studio_prompt(
             "Do not use room labels, dimensions, notes, title blocks, decorative typography, handwriting, logos, colored blocks, or fake text because generated text becomes unreliable",
             "Do not create an exterior elevation, photorealistic render, perspective view, material board, collage, split panel layout, or mixed architectural presentation sheet",
             "For upper floors, keep the stair position aligned with the lower floor but make the room layout visibly distinct and appropriate for that level",
+            "Generate a clean architectural floor plan from the written project program, not from the satellite/site image",
+            "Use standard residential plan conventions: exterior walls, interior partitions, door swings, windows, stairs, kitchen fixtures, bathroom fixtures, closets, and simple furniture blocks",
+            "Use an orthographic top-down view on a clean white/off-white background",
+            "Do not include trees, aerial imagery, satellite texture, grass, roads, driveways, shadows, photorealistic terrain, or landscape photography",
         ]
     elif is_exterior:
         view_label = "rear/backyard" if is_rear else "front/street"
@@ -9166,10 +9171,15 @@ def generate_full_build():
 
         if blueprint_file:
             candidate_raw = blueprint_file.read()
-            if _image_bytes_look_like_floor_plan(candidate_raw):
+            filename = safe_str(getattr(blueprint_file, "filename", "")).lower()
+
+            filename_says_plan = _reference_looks_like_floor_plan(filename, "blueprint")
+
+            if filename_says_plan and _image_bytes_look_like_floor_plan(candidate_raw):
                 blueprint_raw = candidate_raw
             else:
                 rejected_blueprint_reference = "uploaded_blueprint_file_rejected_not_floor_plan"
+                blueprint_raw = None
 
         elif blueprint_url:
             try:
@@ -9398,12 +9408,30 @@ def generate_full_build():
                 payload["guidance"] = 6.8
                 payload["strength"] = 0.28 if blueprint_image_base64 else 0.0
 
+                # Hard clear any accidental site/satellite reference.
+                payload.pop("image_url", None)
+                payload.pop("image_base64", None)
+                payload.pop("reference_image_url", None)
+                payload.pop("site_image_url", None)
+                payload.pop("site_image_base64", None)
+
                 if blueprint_image_base64:
                     payload["image_base64"] = blueprint_image_base64
                     payload["blueprint_image_base64"] = blueprint_image_base64
                 elif blueprint_source_url:
                     payload["image_url"] = blueprint_source_url
                     payload["blueprint_image_url"] = blueprint_source_url
+
+            if is_blueprint:
+                current_app.logger.warning(
+                    "FULL BUILD BLUEPRINT ROUTING has_blueprint_image=%s has_image_base64=%s has_image_url=%s source_role=%s site_context_url=%s blueprint_source_url=%s",
+                    bool(blueprint_image_base64 or blueprint_source_url),
+                    bool(payload.get("image_base64")),
+                    bool(payload.get("image_url")),
+                    payload.get("source_role"),
+                    bool(payload.get("site_context_url")),
+                    blueprint_source_url,
+                )
 
             elif is_exterior:
                 # Exterior should not use satellite/lot as visual init image.
