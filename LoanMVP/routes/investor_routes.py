@@ -7145,7 +7145,7 @@ _VISUAL_NEGATIVE_PROMPT = (
 _BLUEPRINT_NEGATIVE_PROMPT = (
     _VISUAL_NEGATIVE_PROMPT
     + ", photorealistic photo, 3D render, exterior elevation, facade rendering, presentation board, collage, "
-      "split panels, mood board, material swatches, title block, "dimension strings, fake handwriting, colored blocks, trees, aerial view, satellite image, grass, roads, driveway photo, landscape photo, terrain texture, photorealistic lot"
+      "split panels, mood board, material swatches, title block, dimension strings, fake handwriting, colored blocks, trees, aerial view, satellite image, grass, roads, driveway photo, landscape photo, terrain texture, photorealistic lot"
       ", trees, aerial view, satellite image, grass, roads, driveway photo, landscape photo, terrain texture, photorealistic lot"
 )
 
