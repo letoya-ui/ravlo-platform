@@ -9092,7 +9092,10 @@ def generate_full_build():
 
         project = None
         if project_id:
-            project = BuildProject.query.filter_by(id=project_id, user_id=current_user.id).first()
+            project = BuildProject.query.filter_by(
+                id=project_id,
+                user_id=current_user.id
+            ).first()
 
         # ---------------- FORM DATA ----------------
         project_name = (request.form.get("project_name") or "").strip()
@@ -9127,25 +9130,32 @@ def generate_full_build():
             notes,
         )
 
-        save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
+        save_to_deal = (request.form.get("save_to_deal") or "").lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
 
         # ---------------- SOURCE IMAGES ----------------
         land_image = request.files.get("land_image")
         blueprint_file = request.files.get("blueprint_file")
-
-        land_image_base64 = ""
-        land_image_url = ""
-        blueprint_image_base64 = ""
-        blueprint_source_url = ""
 
         reference_image_url = (request.form.get("reference_image_url") or "").strip()
         image_url = (request.form.get("image_url") or "").strip()
         blueprint_url = (request.form.get("blueprint_url") or "").strip()
         site_plan_url = (request.form.get("site_plan_url") or "").strip()
 
-        rejected_blueprint_reference = ""
+        land_image_base64 = ""
+        land_image_url = ""
 
-        # Land/site/satellite source. This is allowed for siteplan only.
+        # Full-build blueprint is forced text-only for beta.
+        # Keep these variables for response metadata, but do not use them as engine image input.
+        blueprint_image_base64 = ""
+        blueprint_source_url = ""
+        rejected_blueprint_reference = "full_build_blueprint_forced_text_only"
+
+        # Site / lot / satellite source. This is allowed for siteplan only.
         if land_image:
             land_raw = land_image.read()
             land_image_base64 = base64.b64encode(land_raw).decode("utf-8")
@@ -9166,92 +9176,12 @@ def generate_full_build():
             if prepared_land_url:
                 land_image_url = prepared_land_url
 
-        # Blueprint/floor-plan source. This must pass plan detection.
-        blueprint_raw = None
-        blueprint_image_base64 = ""
-        blueprint_source_url = ""
-        rejected_blueprint_reference = ""
-
+        # We intentionally do not use blueprint_file / blueprint_url during full-build.
+        # Individual blueprint generation can still validate and use real floor plans.
         if blueprint_file and getattr(blueprint_file, "filename", ""):
-            candidate_raw = blueprint_file.read()
-            filename = safe_str(getattr(blueprint_file, "filename", "")).lower()
-
-            filename_says_plan = _reference_looks_like_floor_plan(filename, "blueprint")
-
-            if filename_says_plan and _image_bytes_look_like_floor_plan(candidate_raw):
-                blueprint_raw = candidate_raw
-            else:
-                rejected_blueprint_reference = "uploaded_blueprint_file_rejected_not_floor_plan"
-                blueprint_raw = None
-
+            rejected_blueprint_reference = "full_build_ignored_blueprint_file_text_only"
         elif blueprint_url:
-            try:
-                candidate_raw = download_image_bytes(blueprint_url)
-                if (
-                    _reference_looks_like_floor_plan(blueprint_url, "blueprint")
-                    and _image_bytes_look_like_floor_plan(candidate_raw)
-                ):
-                    blueprint_raw = candidate_raw
-                    blueprint_source_url = blueprint_url
-                else:
-                    rejected_blueprint_reference = blueprint_url
-                    blueprint_raw = None
-            except Exception:
-                blueprint_raw = None
-
-        if blueprint_raw:
-            blueprint_image_base64 = base64.b64encode(blueprint_raw).decode("utf-8")
-
-        elif project:
-            project_blueprint_url = (getattr(project, "blueprint_url", None) or "").strip()
-            if project_blueprint_url:
-                try:
-                    candidate_raw = download_image_bytes(project_blueprint_url)
-                    if (
-                        _reference_looks_like_floor_plan(project_blueprint_url, "blueprint")
-                        or _image_bytes_look_like_floor_plan(candidate_raw)
-                    ):
-                        blueprint_raw = candidate_raw
-                        blueprint_source_url = project_blueprint_url
-                    else:
-                        rejected_blueprint_reference = project_blueprint_url
-                except Exception:
-                    blueprint_raw = None
-
-        elif deal is not None:
-            results = _deal_results(deal)
-            build_project = results.get("build_project", {}) or {}
-            blueprint_block = build_project.get("blueprint", {}) or {}
-
-            prior_blueprint_url = (
-                blueprint_block.get("blueprint_url")
-                or blueprint_block.get("image_url")
-                or ""
-            ).strip()
-
-            if prior_blueprint_url:
-                try:
-                    candidate_raw = download_image_bytes(prior_blueprint_url)
-                    if (
-                        _reference_looks_like_floor_plan(prior_blueprint_url, "blueprint")
-                        or _image_bytes_look_like_floor_plan(candidate_raw)
-                    ):
-                        blueprint_raw = candidate_raw
-                        blueprint_source_url = prior_blueprint_url
-                    else:
-                        rejected_blueprint_reference = prior_blueprint_url
-                except Exception:
-                    blueprint_raw = None
-
-            if (
-                blueprint_file
-                and land_image
-                and safe_str(getattr(blueprint_file, "filename", "")) == safe_str(getattr(land_image, "filename", ""))
-            ):
-                blueprint_file = None
-
-        if blueprint_raw:
-            blueprint_image_base64 = base64.b64encode(blueprint_raw).decode("utf-8")
+            rejected_blueprint_reference = blueprint_url
 
         # ---------------- VALIDATION ----------------
         has_text_seed = any([
@@ -9267,14 +9197,14 @@ def generate_full_build():
             number_of_floors,
         ])
 
-        if not has_text_seed and not land_image_base64 and not land_image_url and not blueprint_image_base64:
+        if not has_text_seed and not land_image_base64 and not land_image_url:
             if deal is not None:
                 _clear_deal_render_processing(deal)
                 db.session.commit()
 
             return jsonify({
                 "status": "error",
-                "message": "Provide a site image, blueprint, or enough build details."
+                "message": "Provide a site image or enough build details."
             }), 400
 
         render_batch_id = uuid.uuid4().hex
@@ -9341,7 +9271,7 @@ def generate_full_build():
                 floor="first" if is_blueprint else "",
                 lot_count=None,
                 preserve_reference=False,
-                blueprint_constrained=bool(blueprint_image_base64 and is_exterior),
+                blueprint_constrained=False,
             )
 
             payload = {
@@ -9380,7 +9310,7 @@ def generate_full_build():
                 "height": 1024,
                 "negative_prompt": _build_studio_negative_prompt(output_mode),
             }
- 
+
             if bedrooms_value is not None:
                 payload["bedrooms"] = bedrooms_value
 
@@ -9412,8 +9342,9 @@ def generate_full_build():
                     payload["reference_image_url"] = land_image_url
 
             elif is_blueprint:
-                # Blueprint may only use real blueprint/floor-plan references.
-                # Satellite/lot image is preserved only as context metadata, not init image.
+                # TEMP BETA RULE:
+                # Full-build blueprint is generated from written program only.
+                # Site/satellite/map images and prior generated images must never become blueprint init images.
                 payload["reference_role"] = "text_program_only"
                 payload["source_role"] = "text_program_only"
                 payload["blueprint_constrained"] = False
@@ -9434,19 +9365,12 @@ def generate_full_build():
                 ):
                     payload.pop(key, None)
 
-                if blueprint_image_base64:
-                    payload["image_base64"] = blueprint_image_base64
-                    payload["blueprint_image_base64"] = blueprint_image_base64
-                elif blueprint_source_url:
-                    payload["image_url"] = blueprint_source_url
-                    payload["blueprint_image_url"] = blueprint_source_url
-
                 current_app.logger.warning(
-                    "FULL BUILD BLUEPRINT ROUTING verified_blueprint=%s has_image_base64=%s has_image_url=%s source_role=%s rejected=%s",
-                    bool(blueprint_image_base64 or blueprint_source_url),
+                    "FULL BUILD BLUEPRINT ROUTING forced_text_only=True has_image_base64=%s has_image_url=%s source_role=%s reference_role=%s rejected=%s",
                     bool(payload.get("image_base64")),
                     bool(payload.get("image_url")),
                     payload.get("source_role"),
+                    payload.get("reference_role"),
                     rejected_blueprint_reference,
                 )
 
@@ -9471,11 +9395,12 @@ def generate_full_build():
                     payload["output_mode"] = "exterior_back"
 
                     rear_prompt = _prompt_join(
-                        "STRICT REAR EXTERIOR VIEW: Generate the back side of the home only, viewed from the backyard",
-                        "Show the rear facade massing, rear windows, rear doors, patio or deck, backyard lawn, rear landscaping, and private outdoor living space",
-                        "The camera must face the back elevation from the rear yard, not the street",
-                        "Do not show the front entry, front porch, street, curb, sidewalk, mailbox, front driveway, front-facing garage, garage door facing viewer, or front elevation",
-                        "This must clearly be the rear/backyard exterior, not a second front exterior rendering",
+                        "STRICT REAR EXTERIOR VIEW ONLY",
+                        "This image must show the backyard-facing rear elevation of the house",
+                        "Camera is standing in the backyard looking toward the back of the home",
+                        "Show rear doors, rear windows, patio or deck, backyard lawn, private rear landscaping, and rear facade massing",
+                        "No front entry, no street, no curb, no sidewalk, no driveway, no front-facing garage, no mailbox",
+                        "Do not generate another front exterior; this must be the back side of the house",
                     )
 
                     payload["prompt"] = _prompt_join(payload.get("prompt"), rear_prompt)
@@ -9492,16 +9417,14 @@ def generate_full_build():
                     payload["output_mode"] = "exterior_front"
 
                     front_prompt = _prompt_join(
-                        "STRICT FRONT EXTERIOR VIEW: Generate the street-facing front side of the home only",
+                        "STRICT FRONT EXTERIOR VIEW ONLY",
+                        "Generate the street-facing front side of the home",
                         "Show front facade massing, front entry, approach path, driveway or garage where appropriate, front landscaping, and curb appeal",
                         "Do not create a backyard rear view, patio-only view, rear elevation, or rear facade rendering",
                     )
 
                     payload["prompt"] = _prompt_join(payload.get("prompt"), front_prompt)
                     payload["prompt_notes"] = _prompt_join(payload.get("prompt_notes"), front_prompt)
-
-            # Do not set image_url/image_base64 here unless the user explicitly
-            # uploaded an exterior reference photo in a separate field later.
 
             current_app.logger.warning(
                 "FULL BUILD ENGINE PAYLOAD mode=%s output=%s has_image_base64=%s has_image_url=%s source_role=%s reference_role=%s keys=%s",
@@ -9552,7 +9475,7 @@ def generate_full_build():
             elif is_blueprint:
                 block.update({
                     "blueprint_url": urls[0],
-                    "source_reference_image": blueprint_source_url,
+                    "source_reference_image": "",
                     "rejected_reference_image": rejected_blueprint_reference,
                     "site_context_url": land_image_url,
                 })
