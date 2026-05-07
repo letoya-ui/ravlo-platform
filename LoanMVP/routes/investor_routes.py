@@ -9482,7 +9482,7 @@ def generate_full_build():
                     payload["prompt_notes"] = _prompt_join(payload.get("prompt_notes"), rear_prompt)
                     payload["negative_prompt"] = _prompt_join(
                         payload.get("negative_prompt"),
-                        "front exterior, front elevation, front entry, front porch, street view, curb appeal, sidewalk, mailbox, front driveway, front-facing garage, garage door facing viewer"
+                        "front exterior, street-facing facade, front elevation, front entry, front porch, curb appeal, driveway, sidewalk, mailbox, front-facing garage, garage door facing viewer"
                     )
 
                 else:
