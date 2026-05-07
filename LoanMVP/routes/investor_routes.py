@@ -9414,13 +9414,13 @@ def generate_full_build():
             elif is_blueprint:
                 # Blueprint may only use real blueprint/floor-plan references.
                 # Satellite/lot image is preserved only as context metadata, not init image.
-                payload["reference_role"] = "blueprint_reference" if blueprint_image_base64 else "text_program_only"
-                payload["source_role"] = "blueprint" if blueprint_image_base64 else "text_program_only"
-                payload["blueprint_constrained"] = bool(blueprint_image_base64)
+                payload["reference_role"] = "text_program_only"
+                payload["source_role"] = "text_program_only"
+                payload["blueprint_constrained"] = False
                 payload["site_context_url"] = land_image_url
                 payload["steps"] = 30
                 payload["guidance"] = 6.8
-                payload["strength"] = 0.28 if blueprint_image_base64 else 0.0
+                payload["strength"] = 0.0
 
                 for key in (
                     "image_url",
