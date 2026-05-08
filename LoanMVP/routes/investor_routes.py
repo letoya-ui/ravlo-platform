@@ -7585,31 +7585,28 @@ def generate_exterior_back():
             "source_role": "front_exterior_style_material_anchor" if (prepared_reference_url or reference_image_base64) else "text_architectural_context",
             "reference_role": "front_exterior_style_material_anchor" if (prepared_reference_url or reference_image_base64) else "text_architectural_context",
             "render_family": "rear_exterior",
-            "generation_mode": "rear_from_front_style_anchor" if (prepared_reference_url or reference_image_base64) else "text_to_rear_exterior",
+            "generation_mode": "rear_from_front_style_anchor",
 
             "preserve_style": True,
             "preserve_materials": True,
             "preserve_massing": False,
             "preserve_camera": False,
+            "preserve_composition": False,
             "style_reference_only": True,
             "material_reference_only": True,
             "composition_reference_allowed": False,
 
             "prompt": _prompt_join(
                 "rear elevation",
-                "rear exterior elevation",
                 "backyard-facing facade",
-                style.replace("_", " "),
-                property_type.replace("_", " "),
+                "rear patio doors",
                 "rear windows",
-                "rear patio/deck",
                 "private backyard",
-                "same materials only",
-                "same roof style only",
-                "use front exterior only for style and material reference",
-                "do not copy front facade",
-                "not front facade",
-                "not street view",
+                "patio or deck",
+                "rear landscaping",
+                "same materials and roof style",
+                "different composition from front",
+                "no garage-facing street view",
             ),
             "prompt_notes": _prompt_join(
                 description,
@@ -7617,7 +7614,7 @@ def generate_exterior_back():
                 "Generate the rear/backyard-facing side of the same home concept.",
             ),
             "negative_prompt": _prompt_join(
-                "front exterior",
+                "front elevation",
                 "same image as front",
                 "street-facing facade",
                 "front entry",
@@ -7633,7 +7630,7 @@ def generate_exterior_back():
             "height": 1024,
             "steps": 34,
             "guidance": 8.2,
-            "strength": 0.53,
+            "strength": 0.40,
         }
 
         if reference_image_base64:
@@ -9596,10 +9593,11 @@ def generate_full_build():
                         "preserve_materials": True,
                         "preserve_massing": False,
                         "preserve_camera": False,
+                        "preserve_composition": False,
                         "style_reference_only": True,
                         "material_reference_only": True,
                         "composition_reference_allowed": False,
-                        "strength": 0.53,
+                        "strength": 0.40,
                     })
 
                     if master_exterior_url:
@@ -9608,23 +9606,19 @@ def generate_full_build():
 
                     payload["prompt"] = _prompt_join(
                         "rear elevation",
-                        "rear exterior elevation",
                         "backyard-facing facade",
-                        style.replace("_", " "),
-                        property_type.replace("_", " "),
+                        "rear patio doors",
                         "rear windows",
-                        "rear patio/deck",
                         "private backyard",
-                        "same materials only",
-                        "same roof style only",
-                        "use front exterior only for style and material reference",
-                        "do not copy front facade",
-                        "not front facade",
-                        "not street view",
+                        "patio or deck",
+                        "rear landscaping",
+                        "same materials and roof style",
+                        "different composition from front",
+                        "no garage-facing street view",
                     )
 
                     payload["negative_prompt"] = _prompt_join(
-                        "front exterior",
+                        "front elevation",
                         "same image as front",
                         "street-facing facade",
                         "front entry",
