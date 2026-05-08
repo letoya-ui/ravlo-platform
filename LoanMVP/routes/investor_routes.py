@@ -9379,13 +9379,18 @@ def generate_full_build():
                     })
 
                     front_prompt = _prompt_join(
-                        "MASTER DESIGN ANCHOR: This front exterior defines the architectural identity for the whole build package.",
-                        "STRICT FRONT EXTERIOR VIEW ONLY.",
-                        "Generate the street-facing front side of the home.",
-                        "Show front facade massing, front entry, approach path, driveway or garage where appropriate, front landscaping, and curb appeal.",
-                        "Use a coherent, buildable residential design that later rear, blueprint, and siteplan outputs can match.",
-                        "Do not create a backyard rear view, patio-only view, rear elevation, or rear facade rendering.",
-                    )
+                        "front exterior elevation",
+                        "street-facing facade",
+                        "modern luxury residence",
+                        "front entry",
+                        "driveway and curb appeal",
+                        "front landscaping",
+                        "residential massing",
+                        "buildable architecture",
+                        "same design anchor for full package",
+                        "not rear elevation",
+                        "not backyard view",
+                    )      
 
                     payload["prompt"] = _prompt_join(payload["prompt"], front_prompt)
                     payload["prompt_notes"] = _prompt_join(payload["prompt_notes"], front_prompt)
@@ -9409,13 +9414,16 @@ def generate_full_build():
                         payload["master_exterior_reference_url"] = master_exterior_url
 
                     rear_prompt = _prompt_join(
-                        "STRICT REAR EXTERIOR VIEW ONLY.",
-                        "This image must show the backyard-facing rear elevation of the same house design as the master front exterior.",
-                        "Camera is standing in the backyard looking toward the back of the home.",
-                        "Use the same architectural style, massing logic, roof geometry, window rhythm, material palette, and floor count as the master front exterior.",
-                        "Show rear doors, rear windows, patio or deck, backyard lawn, private rear landscaping, and rear facade massing.",
-                        "No front entry, no street, no curb, no sidewalk, no driveway, no front-facing garage, no mailbox.",
-                        "Do not generate another front exterior.",
+                        "rear exterior elevation",
+                        "backyard-facing facade",
+                        "rear glazing",
+                        "patio or deck",
+                        "private landscaping",
+                        "same roofline and materials",
+                        "same architectural style",
+                        "not front facade",
+                        "not curb-facing",
+                        "not street view",
                     )
 
                     payload["prompt"] = _prompt_join(payload["prompt"], rear_prompt)
@@ -9437,11 +9445,15 @@ def generate_full_build():
                 })
 
                 blueprint_prompt = _prompt_join(
-                    "Generate a clean top-down architectural floor plan for the same home concept as the master exterior.",
-                    "Use the same floor count, residential program, scale, and buildable massing implied by the master exterior.",
-                    "Do not use satellite imagery, trees, grass, site photo texture, aerial map visuals, landscape photography, or exterior rendering style.",
-                    "Output a single legible architectural plan with walls, rooms, doors, windows, stairs, kitchen fixtures, bathroom fixtures, closets, and simple furniture blocks.",
-                    "No photorealism. No perspective camera. No exterior facade."
+                    "top-down floorplan",
+                    "orthographic blueprint",
+                    "2D architectural drafting",
+                    "walls doors windows stairs",
+                    "room layout",
+                    "black and white blueprint",
+                    "not photoreal",
+                    "not interior render",
+                    "not perspective view",
                 )
 
                 payload["prompt"] = _prompt_join(payload["prompt"], blueprint_prompt)
@@ -9468,11 +9480,17 @@ def generate_full_build():
                 payload["strength"] = 0.0
 
                 siteplan_prompt = _prompt_join(
-                    "Create a site development plan for the same home concept as the master exterior.",
-                    "Use the lot/site image only as site context, not as a blueprint or exterior render.",
-                    "Show parcel boundary, building footprint, driveway, parking, walkways, patio or yard zones, hardscape, landscaping zones, setbacks, and orientation.",
-                    "Keep the building footprint consistent with the same home package.",
-                    "Use a clean investor-facing site plan style."
+                    "top-down siteplan",
+                    "parcel layout",
+                    "building footprint",
+                    "setbacks",
+                    "driveway",
+                    "parking",
+                    "walkways",
+                    "landscape zones",
+                    "hardscape",
+                    "not exterior rendering",
+                    "not satellite photo",
                 )
 
                 payload["prompt"] = _prompt_join(payload.get("prompt"), siteplan_prompt)
