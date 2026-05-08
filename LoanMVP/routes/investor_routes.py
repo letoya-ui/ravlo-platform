@@ -9216,8 +9216,11 @@ def generate_full_build():
         outputs = [
             ("exterior", "exterior_front"),
             ("exterior", "exterior_back"),
-            ("blueprint", "blueprint"),
             ("siteplan", "siteplan"),
+
+            ("blueprint", "blueprint_first"),
+            ("blueprint", "blueprint_second"),
+            ("blueprint", "blueprint_third"),
         ]
 
         master_exterior_url = ""
@@ -9255,7 +9258,7 @@ def generate_full_build():
             )
 
             is_siteplan = output_mode == "siteplan"
-            is_blueprint = output_mode == "blueprint"
+            is_blueprint = output_mode.startswith("blueprint")
             is_exterior_front = output_mode == "exterior_front"
             is_exterior_back = output_mode == "exterior_back"
             is_exterior = is_exterior_front or is_exterior_back
@@ -9458,13 +9461,11 @@ def generate_full_build():
                 )
 
             elif is_siteplan:
-                payload.update({
-                    "reference_role": "site_context_reference",
-                    "source_role": "site_context",
-                    "steps": 32,
-                    "guidance": 7.0,
-                    "strength": 0.58,
-                })
+                payload["reference_role"] = "site_context_reference"
+                payload["source_role"] = "site_context"
+                payload["steps"] = 32
+                payload["guidance"] = 7.0
+                payload["strength"] = 0.0
 
                 siteplan_prompt = _prompt_join(
                     "Create a site development plan for the same home concept as the master exterior.",
@@ -9474,16 +9475,17 @@ def generate_full_build():
                     "Use a clean investor-facing site plan style."
                 )
 
-                payload["prompt"] = _prompt_join(payload["prompt"], siteplan_prompt)
-                payload["prompt_notes"] = _prompt_join(payload["prompt_notes"], siteplan_prompt)
+                payload["prompt"] = _prompt_join(payload.get("prompt"), siteplan_prompt)
+                payload["prompt_notes"] = _prompt_join(payload.get("prompt_notes"), siteplan_prompt)
 
-                if land_image_base64:
-                    payload["image_base64"] = land_image_base64
-                    payload["site_image_base64"] = land_image_base64
-                elif land_image_url:
-                    payload["image_url"] = land_image_url
-                    payload["site_image_url"] = land_image_url
+                if land_image_url:
+                    payload["site_context_url"] = land_image_url
                     payload["reference_image_url"] = land_image_url
+
+                payload["negative_prompt"] = _prompt_join(
+                    payload.get("negative_prompt"),
+                    "satellite photo, aerial photo, forest image, raw map tile, trees only, photographic texture"
+                )
 
             current_app.logger.warning(
                 "FULL BUILD ENGINE PAYLOAD mode=%s output=%s has_image_base64=%s has_image_url=%s source_role=%s reference_role=%s master_exterior=%s keys=%s",

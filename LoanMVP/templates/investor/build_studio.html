@@ -448,6 +448,17 @@
       if (renderBatchId) renderBatchId.textContent = data.render_batch_id || '—';
 
       const results = data.results || {};
+
+      outputContainer.innerHTML = [
+        renderOutputCard('exterior_front', 'Exterior — Front', results.exterior_front),
+        renderOutputCard('exterior_back', 'Exterior — Rear', results.exterior_back),
+        renderOutputCard('siteplan', 'Site Plan', results.siteplan),
+        renderOutputCard('blueprint', 'Blueprint', results.blueprint),
+        renderOutputCard('blueprint_first', 'Blueprint — First Floor', results.blueprint_first),
+        renderOutputCard('blueprint_second', 'Blueprint — Second Floor', results.blueprint_second),
+        renderOutputCard('blueprint_third', 'Blueprint — Third Floor', results.blueprint_third),
+      ].join('');
+
       outputKeys.forEach((key) => renderOutput(key, results[key] || data.build_project?.[key]));
 
       nextUrl = data.next_url || data.deal_architect_url || '';
