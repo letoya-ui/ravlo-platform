@@ -11,9 +11,6 @@ def extract_blueprint_structure(blueprint_url: str):
     img = _load_image(blueprint_url)
     h, w = img.shape[:2]
 
-    # Keep investor routes bootable even when OpenCV is unavailable in the
-    # current runtime. We return a lightweight structural shell instead of
-    # failing the entire blueprint import.
     if cv2 is None:
         return {
             "image_w": int(w),
@@ -29,27 +26,47 @@ def extract_blueprint_structure(blueprint_url: str):
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Wall detection
     edges = cv2.Canny(gray, 50, 150, apertureSize=3)
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=80, minLineLength=40, maxLineGap=10)
+    lines = cv2.HoughLinesP(
+        edges,
+        1,
+        np.pi / 180,
+        threshold=80,
+        minLineLength=40,
+        maxLineGap=10,
+    )
 
     walls = []
     if lines is not None:
         for x1, y1, x2, y2 in lines[:, 0]:
-            walls.append({"x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2)})
+            walls.append({
+                "x1": int(x1),
+                "y1": int(y1),
+                "x2": int(x2),
+                "y2": int(y2),
+            })
 
-    # Fixtures (circles)
     circles = cv2.HoughCircles(
-        gray, cv2.HOUGH_GRADIENT,
-        dp=1.2, minDist=40,
-        param1=50, param2=30,
-        minRadius=10, maxRadius=60
+        gray,
+        cv2.HOUGH_GRADIENT,
+        dp=1.2,
+        minDist=40,
+        param1=50,
+        param2=30,
+        minRadius=10,
+        maxRadius=60,
     )
 
     fixtures = []
     if circles is not None:
-        for c in circles[0]:
-            fixtures.append({"type": "circle", "x": int(c[0]), "y": int(c[1]), "r": int(c[2])})
+        circles = np.round(circles[0, :]).astype("int")
+        for x, y, r in circles:
+            fixtures.append({
+                "type": "circle",
+                "x": int(x),
+                "y": int(y),
+                "r": int(r),
+            })
 
     return {
         "image_w": int(w),
@@ -59,7 +76,8 @@ def extract_blueprint_structure(blueprint_url: str):
         "doors": [],
         "windows": [],
         "layout_mask": None,
-        "depth_map": None
+        "depth_map": None,
+        "parser_status": "ok",
     }
 
 def _load_image(url: str):
