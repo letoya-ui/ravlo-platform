@@ -230,6 +230,11 @@
       </form>
     </section>
 
+    {% set floor2_url = (blueprint_floor2_result.get('image_url') or blueprint_floor2_result.get('blueprint_url')) if blueprint_floor2_result else '' %}
+    {% set floor3_url = (blueprint_floor3_result.get('image_url') or blueprint_floor3_result.get('blueprint_url')) if blueprint_floor3_result else '' %}
+    {% set show_floor2_card = floor2_url or (blueprint_floor2_result and blueprint_floor2_result.get('skipped')) %}
+    {% set show_floor3_card = floor3_url or (blueprint_floor3_result and blueprint_floor3_result.get('skipped')) %}
+
     <section class="ravlo-card pad planning-summary-card">
       <div class="section-head">
         <div>
@@ -240,8 +245,8 @@
       <div class="result-meta compact">
         <div><span>Lots</span><strong id="summaryLots">{{ lot_count or '1' }}</strong></div>
         <div><span>Floor 1</span><strong id="summaryBlueprint">{{ 'Ready' if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) else 'Waiting' }}</strong></div>
-        <div><span>Floor 2</span><strong id="summaryFloor2">{{ 'Ready' if blueprint_floor2_result and blueprint_floor2_result.get('image_url') else ('Skipped' if blueprint_floor2_result and blueprint_floor2_result.get('skipped') else 'Waiting') }}</strong></div>
-        <div><span>Floor 3</span><strong id="summaryFloor3">{{ 'Ready' if blueprint_floor3_result and blueprint_floor3_result.get('image_url') else ('Skipped' if blueprint_floor3_result and blueprint_floor3_result.get('skipped') else 'Waiting') }}</strong></div>
+        <div><span>Floor 2</span><strong id="summaryFloor2">{{ 'Ready' if floor2_url else ('Skipped' if blueprint_floor2_result and blueprint_floor2_result.get('skipped') else 'Waiting') }}</strong></div>
+        <div><span>Floor 3</span><strong id="summaryFloor3">{{ 'Ready' if floor3_url else ('Skipped' if blueprint_floor3_result and blueprint_floor3_result.get('skipped') else 'Waiting') }}</strong></div>
         <div><span>Site Plan</span><strong id="summarySiteplan">{{ 'Ready' if siteplan_result and siteplan_result.get('image_url') else 'Waiting' }}</strong></div>
         <div><span>Exterior</span><strong id="summaryExterior">{{ 'Ready' if exterior_result and exterior_result.get('image_url') else 'Waiting' }}</strong></div>
       </div>
@@ -260,14 +265,14 @@
       <div class="result-media plan-media" id="blueprintMedia">{% if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) %}<img src="{{ blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') }}" alt="First floor blueprint">{% else %}<div class="empty-state-inline">First floor blueprint will appear here.</div>{% endif %}</div>
     </article>
 
-    <article class="ravlo-card pad">
-      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint - Second Floor</h2></div><strong id="floor2Status">{{ 'Generated' if blueprint_floor2_result and blueprint_floor2_result.get('image_url') else ('Skipped' if blueprint_floor2_result and blueprint_floor2_result.get('skipped') else 'Waiting') }}</strong></div>
-      <div class="result-media plan-media" id="floor2Media">{% if blueprint_floor2_result and blueprint_floor2_result.get('image_url') %}<img src="{{ blueprint_floor2_result.get('image_url') }}" alt="Second floor blueprint">{% elif blueprint_floor2_result and blueprint_floor2_result.get('skipped') %}<div class="empty-state-inline">Single-story project - no second floor blueprint.</div>{% else %}<div class="empty-state-inline">Second floor blueprint will appear here.</div>{% endif %}</div>
+    <article class="ravlo-card pad {% if not show_floor2_card %}hidden{% endif %}" id="floor2Card">
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint - Second Floor</h2></div><strong id="floor2Status">{{ 'Generated' if floor2_url else ('Skipped' if blueprint_floor2_result and blueprint_floor2_result.get('skipped') else 'Waiting') }}</strong></div>
+      <div class="result-media plan-media" id="floor2Media">{% if floor2_url %}<img src="{{ floor2_url }}" alt="Second floor blueprint">{% elif blueprint_floor2_result and blueprint_floor2_result.get('skipped') %}<div class="empty-state-inline">Single-story project - no second floor blueprint.</div>{% else %}<div class="empty-state-inline">Second floor blueprint will appear here.</div>{% endif %}</div>
     </article>
 
-    <article class="ravlo-card pad">
-      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint - Third Floor</h2></div><strong id="floor3Status">{{ 'Generated' if blueprint_floor3_result and blueprint_floor3_result.get('image_url') else ('Skipped' if blueprint_floor3_result and blueprint_floor3_result.get('skipped') else 'Waiting') }}</strong></div>
-      <div class="result-media plan-media" id="floor3Media">{% if blueprint_floor3_result and blueprint_floor3_result.get('image_url') %}<img src="{{ blueprint_floor3_result.get('image_url') }}" alt="Third floor blueprint">{% elif blueprint_floor3_result and blueprint_floor3_result.get('skipped') %}<div class="empty-state-inline">Projects under three floors - no third floor blueprint.</div>{% else %}<div class="empty-state-inline">Third floor blueprint will appear here.</div>{% endif %}</div>
+    <article class="ravlo-card pad {% if not show_floor3_card %}hidden{% endif %}" id="floor3Card">
+      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint - Third Floor</h2></div><strong id="floor3Status">{{ 'Generated' if floor3_url else ('Skipped' if blueprint_floor3_result and blueprint_floor3_result.get('skipped') else 'Waiting') }}</strong></div>
+      <div class="result-media plan-media" id="floor3Media">{% if floor3_url %}<img src="{{ floor3_url }}" alt="Third floor blueprint">{% elif blueprint_floor3_result and blueprint_floor3_result.get('skipped') %}<div class="empty-state-inline">Projects under three floors - no third floor blueprint.</div>{% else %}<div class="empty-state-inline">Third floor blueprint will appear here.</div>{% endif %}</div>
     </article>
 
     <article class="ravlo-card pad">
@@ -303,6 +308,7 @@
 
 <style>
 .project-build-shell,.project-build-grid,.result-stack{display:grid;gap:20px}
+.hidden{display:none!important}
 .studio-hero-card{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:start}
 .project-build-grid{grid-template-columns:minmax(0,1fr) 380px;align-items:start}
 .build-chat-panel{min-height:100%}
@@ -700,6 +706,10 @@
     el.innerHTML = url ? `<img src="${url}" alt="${alt}">` : `<div class="empty-state-inline">${fallback}</div>`;
   }
 
+  function toggleCard(id, visible) {
+    document.getElementById(id)?.classList.toggle('hidden', !visible);
+  }
+
   function firstImage(value) {
     if (!value) return '';
     if (typeof value === 'string') return value;
@@ -736,6 +746,7 @@
     const roots = [
       data,
       data?.investor,
+      data?.results,
       data?.outputs,
       data?.investor?.outputs,
       data?.build_project,
@@ -762,9 +773,9 @@
   function normalizeGeneratorBuild(data) {
     const rawNextUrl = data.deal_architect_url || data.investor?.deal_architect_url || data.next_url || data.investor?.next_url || '';
     return {
-      blueprint_result: pickBlock(data, ['blueprint_result', 'blueprint', 'blueprint_floor1', 'first_floor_blueprint', 'floor_plan']),
-      blueprint_floor2_result: pickBlock(data, ['blueprint_floor2_result', 'blueprint_floor2', 'second_floor_blueprint', 'floor2_blueprint']),
-      blueprint_floor3_result: pickBlock(data, ['blueprint_floor3_result', 'blueprint_floor3', 'third_floor_blueprint', 'floor3_blueprint']),
+      blueprint_result: pickBlock(data, ['blueprint_first', 'blueprint_result', 'blueprint', 'blueprint_floor1', 'first_floor_blueprint', 'floor_plan']),
+      blueprint_floor2_result: pickBlock(data, ['blueprint_second', 'blueprint_floor2_result', 'blueprint_floor2', 'second_floor_blueprint', 'floor2_blueprint']),
+      blueprint_floor3_result: pickBlock(data, ['blueprint_third', 'blueprint_floor3_result', 'blueprint_floor3', 'third_floor_blueprint', 'floor3_blueprint']),
       siteplan_result: pickBlock(data, ['siteplan_result', 'siteplan', 'site_plan_result', 'site_plan', 'parcel_plan', 'lot_plan']),
       exterior_result: pickBlock(data, ['exterior_result', 'exterior', 'exterior_front', 'front_exterior', 'concept', 'render']),
       exterior_back_result: pickBlock(data, ['exterior_back_result', 'exterior_back', 'exterior_rear', 'rear_exterior', 'back_exterior']),
@@ -812,6 +823,8 @@
       const floor2Skipped = Boolean(floor2Result.skipped);
       const floor3Ready = Boolean(firstImage(floor3Result));
       const floor3Skipped = Boolean(floor3Result.skipped);
+      toggleCard('floor2Card', floor2Ready || floor2Skipped);
+      toggleCard('floor3Card', floor3Ready || floor3Skipped);
       summaryLots.textContent = build.lot_count || lotCountInput?.value || '1';
       document.getElementById('summaryBlueprint').textContent = firstImage(blueprintResult) ? 'Ready' : 'Waiting';
       document.getElementById('summaryFloor2').textContent = floor2Ready ? 'Ready' : (floor2Skipped ? 'Skipped' : 'Waiting');

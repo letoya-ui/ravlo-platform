@@ -6406,7 +6406,7 @@ def build_studio(deal_id=None):
             **{key: value for key, value in request_seed.items() if value not in (None, "")},
         }
 
-    blueprint_result = build_project.get("blueprint", {}) or {}
+    blueprint_result = build_project.get("blueprint_first", {}) or build_project.get("blueprint", {}) or {}
     siteplan_result = build_project.get("siteplan", {}) or build_project.get("site_plan", {}) or {}
     exterior_result = _build_project_exterior_result(build_project)
 
@@ -6487,8 +6487,8 @@ def build_studio(deal_id=None):
         build_analysis=build_analysis,
         build_project=build_project,
         blueprint_result=blueprint_result,
-        blueprint_floor2_result=build_project.get("blueprint_floor2", {}) or {},
-        blueprint_floor3_result=build_project.get("blueprint_floor3", {}) or {},
+        blueprint_floor2_result=build_project.get("blueprint_second", {}) or build_project.get("blueprint_floor2", {}) or {},
+        blueprint_floor3_result=build_project.get("blueprint_third", {}) or build_project.get("blueprint_floor3", {}) or {},
         siteplan_result=siteplan_result,
         exterior_result=exterior_result,
         property_photo_gallery=property_gallery,
@@ -7582,25 +7582,32 @@ def generate_exterior_back():
 
             "exterior_view": "back",
             "camera_view": "rear_yard_view",
-            "source_role": "front_exterior_style_anchor" if (prepared_reference_url or reference_image_base64) else "text_architectural_context",
-            "reference_role": "front_exterior_style_anchor" if (prepared_reference_url or reference_image_base64) else "text_architectural_context",
+            "source_role": "front_exterior_style_material_anchor" if (prepared_reference_url or reference_image_base64) else "text_architectural_context",
+            "reference_role": "front_exterior_style_material_anchor" if (prepared_reference_url or reference_image_base64) else "text_architectural_context",
             "render_family": "rear_exterior",
             "generation_mode": "rear_from_front_style_anchor" if (prepared_reference_url or reference_image_base64) else "text_to_rear_exterior",
 
             "preserve_style": True,
             "preserve_materials": True,
-            "preserve_massing": True,
+            "preserve_massing": False,
             "preserve_camera": False,
+            "style_reference_only": True,
+            "material_reference_only": True,
+            "composition_reference_allowed": False,
 
             "prompt": _prompt_join(
+                "rear elevation",
                 "rear exterior elevation",
                 "backyard-facing facade",
                 style.replace("_", " "),
                 property_type.replace("_", " "),
-                "rear glazing",
-                "patio or deck",
-                "private landscaping",
-                "same roofline and materials",
+                "rear windows",
+                "rear patio/deck",
+                "private backyard",
+                "same materials only",
+                "same roof style only",
+                "use front exterior only for style and material reference",
+                "do not copy front facade",
                 "not front facade",
                 "not street view",
             ),
@@ -7611,11 +7618,14 @@ def generate_exterior_back():
             ),
             "negative_prompt": _prompt_join(
                 "front exterior",
+                "same image as front",
                 "street-facing facade",
                 "front entry",
-                "curb appeal",
                 "driveway",
                 "garage door facing viewer",
+                "curb appeal",
+                "sidewalk",
+                "mailbox",
             ),
 
             "count": 1,
@@ -7623,7 +7633,7 @@ def generate_exterior_back():
             "height": 1024,
             "steps": 34,
             "guidance": 8.2,
-            "strength": 0.72,
+            "strength": 0.53,
         }
 
         if reference_image_base64:
@@ -9403,14 +9413,17 @@ def generate_full_build():
         render_batch_id = uuid.uuid4().hex
         bundle_job_id = uuid.uuid4().hex
 
-        outputs = [
+        floor_count_for_outputs = number_of_floors or 1
+        outputs = [("blueprint", "blueprint_first")]
+        if floor_count_for_outputs >= 2:
+            outputs.append(("blueprint", "blueprint_second"))
+        if floor_count_for_outputs >= 3:
+            outputs.append(("blueprint", "blueprint_third"))
+        outputs.extend([
+            ("siteplan", "siteplan"),
             ("exterior", "exterior_front"),
             ("exterior", "exterior_back"),
-            ("siteplan", "siteplan"),
-            ("blueprint", "blueprint_first"),
-            ("blueprint", "blueprint_second"),
-            ("blueprint", "blueprint_third"),
-        ]
+        ])
 
         master_exterior_url = ""
 
@@ -9575,13 +9588,18 @@ def generate_full_build():
                         "camera_view": "rear_yard_view",
                         "task": "build_exterior_back",
                         "output_mode": "exterior_back",
-                        "reference_role": "front_exterior_style_anchor" if master_exterior_url else "text_architectural_context",
+                        "source_role": "text_plus_front_style_material_anchor",
+                        "reference_role": "front_exterior_style_material_anchor",
                         "render_family": "rear_exterior",
-                        "generation_mode": "rear_from_front_style_anchor" if master_exterior_url else "text_to_rear_exterior",
+                        "generation_mode": "rear_from_front_style_anchor",
                         "preserve_style": True,
                         "preserve_materials": True,
-                        "preserve_massing": True,
+                        "preserve_massing": False,
                         "preserve_camera": False,
+                        "style_reference_only": True,
+                        "material_reference_only": True,
+                        "composition_reference_allowed": False,
+                        "strength": 0.53,
                     })
 
                     if master_exterior_url:
@@ -9589,25 +9607,32 @@ def generate_full_build():
                         payload["master_exterior_reference_url"] = master_exterior_url
 
                     payload["prompt"] = _prompt_join(
+                        "rear elevation",
                         "rear exterior elevation",
                         "backyard-facing facade",
                         style.replace("_", " "),
                         property_type.replace("_", " "),
-                        "rear glazing",
-                        "patio or deck",
-                        "private landscaping",
-                        "same roofline and materials",
+                        "rear windows",
+                        "rear patio/deck",
+                        "private backyard",
+                        "same materials only",
+                        "same roof style only",
+                        "use front exterior only for style and material reference",
+                        "do not copy front facade",
                         "not front facade",
                         "not street view",
                     )
 
                     payload["negative_prompt"] = _prompt_join(
                         "front exterior",
+                        "same image as front",
                         "street-facing facade",
                         "front entry",
-                        "curb appeal",
                         "driveway",
                         "garage door facing viewer",
+                        "curb appeal",
+                        "sidewalk",
+                        "mailbox",
                     )
 
             elif is_blueprint:
@@ -9619,7 +9644,6 @@ def generate_full_build():
                     "render_family": "architectural_blueprint",
                     "generation_mode": "top_down_floorplan",
                     "blueprint_constrained": False,
-                    "site_context_url": land_image_url,
                     "floor": floor_label,
                     "steps": 30,
                     "guidance": 5.4,
@@ -9786,6 +9810,16 @@ def generate_full_build():
                 build_project_payload["siteplan"] = block
                 build_project_payload["site_plan"] = block
 
+        def _without_omitted_blueprints(existing):
+            cleaned = dict(existing or {})
+            if floor_count_for_outputs < 2:
+                cleaned.pop("blueprint_second", None)
+                cleaned.pop("blueprint_floor2", None)
+            if floor_count_for_outputs < 3:
+                cleaned.pop("blueprint_third", None)
+                cleaned.pop("blueprint_floor3", None)
+            return cleaned
+
         if project is not None:
             project.name = project_name or getattr(project, "name", None)
             project.property_type = property_type
@@ -9793,7 +9827,7 @@ def generate_full_build():
             project.description = description
             project.location = location
             project.results = {
-                **(getattr(project, "results", None) or {}),
+                **_without_omitted_blueprints(getattr(project, "results", None) or {}),
                 **build_project_payload,
             }
 
@@ -9802,7 +9836,7 @@ def generate_full_build():
         if save_to_deal and deal is not None:
             results = _deal_results(deal)
             results["build_project"] = {
-                **(results.get("build_project", {}) or {}),
+                **_without_omitted_blueprints(results.get("build_project", {}) or {}),
                 **build_project_payload,
             }
 

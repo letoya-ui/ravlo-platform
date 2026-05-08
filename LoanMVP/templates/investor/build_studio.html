@@ -205,16 +205,21 @@
 
     <div class="build-output-grid" id="buildOutputGrid">
       {% set output_items = [
+        ('blueprint_first', 'Blueprint - First Floor', 'Text-only first floor plan'),
+        ('blueprint_second', 'Blueprint - Second Floor', 'Text-only second floor plan'),
+        ('blueprint_third', 'Blueprint - Third Floor', 'Text-only third floor plan'),
+        ('siteplan', 'Site Plan', 'Lot/site development plan'),
         ('exterior_front', 'Front Exterior', 'Street-facing master design anchor'),
-        ('exterior_back', 'Rear Exterior', 'Backyard-facing rear elevation'),
-        ('blueprint', 'Blueprint', 'Text-only floor plan'),
-        ('siteplan', 'Site Plan', 'Lot/site development plan')
+        ('exterior_back', 'Rear Exterior', 'Backyard-facing rear elevation')
       ] %}
 
       {% for key, label, helper in output_items %}
         {% set item = build_project.get(key) if build_project else None %}
+        {% if key == 'blueprint_first' and not item and build_project %}{% set item = build_project.get('blueprint') %}{% endif %}
         {% set item_url = item.get('image_url') if item else '' %}
-        {% if key == 'blueprint' and item and item.get('blueprint_url') %}{% set item_url = item.get('blueprint_url') %}{% endif %}
+        {% if key in ['blueprint_first', 'blueprint_second', 'blueprint_third'] and item and item.get('blueprint_url') %}{% set item_url = item.get('blueprint_url') %}{% endif %}
+        {% set optional_blueprint = key in ['blueprint_second', 'blueprint_third'] %}
+        {% if not optional_blueprint or item_url %}
         <article class="build-output-card" data-output-key="{{ key }}" {% if item_url %}data-image-url="{{ item_url }}"{% endif %}>
           <div class="output-media" id="media_{{ key }}">
             {% if item_url %}
@@ -238,6 +243,7 @@
             <div><span>Job</span><strong id="job_{{ key }}">{{ item.get('job_id') if item and item.get('job_id') else '—' }}</strong></div>
           </div>
         </article>
+        {% endif %}
       {% endfor %}
     </div>
   </section>
@@ -285,8 +291,17 @@
   const continueToDealArchitectBtn = document.getElementById('continueToDealArchitectBtn');
   const bundleJobId = document.getElementById('bundleJobId');
   const renderBatchId = document.getElementById('renderBatchId');
+  const buildOutputGrid = document.getElementById('buildOutputGrid');
 
-  const outputKeys = ['exterior_front', 'exterior_back', 'blueprint', 'siteplan'];
+  const outputKeys = ['blueprint_first', 'blueprint_second', 'blueprint_third', 'siteplan', 'exterior_front', 'exterior_back'];
+  const outputDefinitions = {
+    blueprint_first: ['Blueprint - First Floor', 'Text-only first floor plan'],
+    blueprint_second: ['Blueprint - Second Floor', 'Text-only second floor plan'],
+    blueprint_third: ['Blueprint - Third Floor', 'Text-only third floor plan'],
+    siteplan: ['Site Plan', 'Lot/site development plan'],
+    exterior_front: ['Exterior - Front', 'Street-facing master design anchor'],
+    exterior_back: ['Exterior - Rear', 'Backyard-facing rear elevation'],
+  };
   const generatedUrls = new Map();
   let nextUrl = '';
 
@@ -354,8 +369,48 @@
 
   function normalizeResultUrl(key, block) {
     if (!block) return '';
-    if (key === 'blueprint') return block.blueprint_url || block.image_url || '';
+    if (key?.startsWith('blueprint')) return block.blueprint_url || block.image_url || '';
     return block.image_url || '';
+  }
+
+  function hasResultBlock(block) {
+    return Boolean(block && typeof block === 'object' && Object.keys(block).length);
+  }
+
+  function renderOutputCard(key, block) {
+    const [label, helper] = outputDefinitions[key] || [key, 'Generated output'];
+    const url = normalizeResultUrl(key, block);
+    const imageMarkup = url
+      ? `<img src="${escapeAttr(url)}" alt="${escapeAttr(label)}">`
+      : `<div class="empty-state-inline">${escapeAttr(label)} will appear here.</div>`;
+    return `
+      <article class="build-output-card" data-output-key="${escapeAttr(key)}"${url ? ` data-image-url="${escapeAttr(url)}"` : ''}>
+        <div class="output-media" id="media_${escapeAttr(key)}">${imageMarkup}</div>
+        <div class="output-info">
+          <div>
+            <strong>${escapeAttr(label)}</strong>
+            <span>${escapeAttr(helper)}</span>
+          </div>
+          <div class="output-actions">
+            <a href="${escapeAttr(url || '#')}" target="_blank" class="ravlo-btn ghost output-open ${url ? '' : 'hidden'}" id="open_${escapeAttr(key)}">Open</a>
+            <button type="button" class="ravlo-btn ghost output-download ${url ? '' : 'hidden'}" data-download-key="${escapeAttr(key)}">Download</button>
+          </div>
+        </div>
+        <div class="output-meta">
+          <div><span>Seed</span><strong id="seed_${escapeAttr(key)}">${escapeAttr(block?.seed || '—')}</strong></div>
+          <div><span>Job</span><strong id="job_${escapeAttr(key)}">${escapeAttr(block?.job_id || '—')}</strong></div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderResults(results) {
+    if (!buildOutputGrid) return;
+    generatedUrls.clear();
+    const resultKeys = outputKeys.filter((key) => hasResultBlock(results?.[key]));
+    buildOutputGrid.innerHTML = resultKeys.map((key) => renderOutputCard(key, results[key])).join('');
+    resultKeys.forEach((key) => renderOutput(key, results[key]));
+    refreshGlobalActions();
   }
 
   function renderOutput(key, block) {
@@ -402,12 +457,12 @@
     if (url) setPreviewFromUrl(url);
   });
 
-  document.querySelectorAll('.output-download').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const key = btn.getAttribute('data-download-key');
-      const url = generatedUrls.get(key);
-      downloadImage(url, fileName(`ravlo-${key}`, url));
-    });
+  buildOutputGrid?.addEventListener('click', (event) => {
+    const btn = event.target?.closest?.('[data-download-key]');
+    if (!btn) return;
+    const key = btn.getAttribute('data-download-key');
+    const url = generatedUrls.get(key);
+    downloadImage(url, fileName(`ravlo-${key}`, url));
   });
 
   downloadAllBtn?.addEventListener('click', async () => {
@@ -448,18 +503,7 @@
       if (renderBatchId) renderBatchId.textContent = data.render_batch_id || '—';
 
       const results = data.results || {};
-
-      outputContainer.innerHTML = [
-        renderOutputCard('exterior_front', 'Exterior — Front', results.exterior_front),
-        renderOutputCard('exterior_back', 'Exterior — Rear', results.exterior_back),
-        renderOutputCard('siteplan', 'Site Plan', results.siteplan),
-        renderOutputCard('blueprint', 'Blueprint', results.blueprint),
-        renderOutputCard('blueprint_first', 'Blueprint — First Floor', results.blueprint_first),
-        renderOutputCard('blueprint_second', 'Blueprint — Second Floor', results.blueprint_second),
-        renderOutputCard('blueprint_third', 'Blueprint — Third Floor', results.blueprint_third),
-      ].join('');
-
-      outputKeys.forEach((key) => renderOutput(key, results[key] || data.build_project?.[key]));
+      renderResults(results);
 
       nextUrl = data.next_url || data.deal_architect_url || '';
       if (!nextUrl) {
