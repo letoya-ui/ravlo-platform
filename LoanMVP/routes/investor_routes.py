@@ -7488,6 +7488,213 @@ def _compose_build_studio_prompt(
         notes,
     )
 
+@investor_bp.route("/deal-studio/build-studio/generate-exterior-back", methods=["POST"])
+@investor_bp.route("/api/generator/build/exterior-back", methods=["POST"])
+@login_required
+@role_required("investor")
+def generate_exterior_back():
+    try:
+        project_name = (request.form.get("project_name") or "").strip()
+        property_type = (request.form.get("property_type") or "single_family").strip()
+        style = (request.form.get("style") or "modern_luxury").strip()
+        description = (request.form.get("description") or "").strip()
+        location = (request.form.get("location") or "").strip()
+        notes = (request.form.get("notes") or "").strip()
+
+        number_of_floors = _build_project_floor_count(
+            request.form.get("number_of_floors") or request.form.get("floor_count"),
+            request.form.get("stories"),
+            request.form.get("number_of_stories"),
+            description,
+            notes,
+        )
+
+        bedrooms = (request.form.get("bedrooms") or "").strip()
+        bathrooms = (request.form.get("bathrooms") or "").strip()
+        square_feet = (request.form.get("square_feet") or "").strip()
+
+        bedrooms_value = _normalize_int(bedrooms)
+        square_feet_value = _normalize_int(square_feet)
+
+        try:
+            bathrooms_value = float(bathrooms) if bathrooms else None
+        except Exception:
+            bathrooms_value = None
+
+        reference_image_url = (
+            request.form.get("master_exterior_reference_url")
+            or request.form.get("exterior_front_url")
+            or request.form.get("reference_image_url")
+            or request.form.get("image_url")
+            or ""
+        ).strip()
+
+        reference_file = (
+            request.files.get("reference_image")
+            or request.files.get("front_exterior_image")
+            or request.files.get("image")
+        )
+
+        reference_image_base64 = ""
+        prepared_reference_url = ""
+
+        if reference_file and getattr(reference_file, "filename", ""):
+            raw = reference_file.read()
+            if raw:
+                reference_image_base64 = base64.b64encode(raw).decode("utf-8")
+                prepared_reference_url = _upload_before_image(raw)
+        elif reference_image_url:
+            prepared_reference_url = _engine_ready_reference_image_url(
+                reference_image_url,
+                prefix="rear-exterior-front-anchor",
+            ) or reference_image_url
+
+        render_batch_id = uuid.uuid4().hex
+        bundle_job_id = (request.form.get("bundle_job_id") or uuid.uuid4().hex).strip()
+
+        payload = {
+            "generation_family": "build",
+            "generator_family": "build",
+            "generator_type": "build",
+            "studio": "build_studio",
+            "studio_type": "build_studio",
+
+            "mode": "exterior",
+            "output_mode": "exterior_back",
+            "task": "build_exterior_back",
+
+            "bundle_job_id": bundle_job_id,
+            "render_batch_id": render_batch_id,
+
+            "project_name": project_name,
+            "property_type": property_type,
+            "style": style,
+            "preset": style,
+            "description": description,
+            "build_description": description,
+            "location": location,
+            "notes": notes,
+            "special_features": notes,
+
+            "stories": number_of_floors,
+            "number_of_floors": number_of_floors,
+            "floor_count": number_of_floors,
+
+            "exterior_view": "back",
+            "camera_view": "rear_yard_view",
+            "source_role": "front_exterior_style_anchor" if (prepared_reference_url or reference_image_base64) else "text_architectural_context",
+            "reference_role": "front_exterior_style_anchor" if (prepared_reference_url or reference_image_base64) else "text_architectural_context",
+            "render_family": "rear_exterior",
+            "generation_mode": "rear_from_front_style_anchor" if (prepared_reference_url or reference_image_base64) else "text_to_rear_exterior",
+
+            "preserve_style": True,
+            "preserve_materials": True,
+            "preserve_massing": True,
+            "preserve_camera": False,
+
+            "prompt": _prompt_join(
+                "rear exterior elevation",
+                "backyard-facing facade",
+                style.replace("_", " "),
+                property_type.replace("_", " "),
+                "rear glazing",
+                "patio or deck",
+                "private landscaping",
+                "same roofline and materials",
+                "not front facade",
+                "not street view",
+            ),
+            "prompt_notes": _prompt_join(
+                description,
+                notes,
+                "Generate the rear/backyard-facing side of the same home concept.",
+            ),
+            "negative_prompt": _prompt_join(
+                "front exterior",
+                "street-facing facade",
+                "front entry",
+                "curb appeal",
+                "driveway",
+                "garage door facing viewer",
+            ),
+
+            "count": 1,
+            "width": 1024,
+            "height": 1024,
+            "steps": 34,
+            "guidance": 8.2,
+            "strength": 0.72,
+        }
+
+        if reference_image_base64:
+            payload["reference_image_base64"] = reference_image_base64
+            payload["master_exterior_reference_url"] = prepared_reference_url
+        elif prepared_reference_url:
+            payload["reference_image_url"] = prepared_reference_url
+            payload["master_exterior_reference_url"] = prepared_reference_url
+
+        if bedrooms_value is not None:
+            payload["bedrooms"] = bedrooms_value
+        if bathrooms_value is not None:
+            payload["bathrooms"] = bathrooms_value
+        if square_feet_value is not None:
+            payload["square_feet"] = square_feet_value
+            payload["square_feet_target"] = square_feet_value
+
+        payload.update(_build_studio_quality_controls("exterior_back"))
+
+        engine_json = _post_renovation_engine_json(
+            "/v1/build_concept",
+            payload,
+            timeout=RENDER_TIMEOUT,
+        )
+
+        images_b64 = engine_json.get("images_base64") or []
+        if not images_b64:
+            raise RuntimeError("No images returned for exterior_back")
+
+        urls = _upload_after_images_from_b64(images_b64, render_batch_id)
+        if not urls:
+            raise RuntimeError("Upload failed for exterior_back")
+
+        block = {
+            "mode": "exterior",
+            "output_mode": "exterior_back",
+            "exterior_view": "back",
+            "image_url": urls[0],
+            "images": urls,
+            "meta": engine_json.get("meta") or {},
+            "seed": engine_json.get("seed"),
+            "job_id": engine_json.get("job_id"),
+            "source_role": payload.get("source_role"),
+            "reference_role": payload.get("reference_role"),
+            "render_family": payload.get("render_family"),
+            "generation_mode": payload.get("generation_mode"),
+            "bundle_job_id": bundle_job_id,
+            "render_batch_id": render_batch_id,
+            "master_exterior_reference_url": payload.get("master_exterior_reference_url"),
+        }
+
+        return jsonify({
+            "status": "ok",
+            "mode": "exterior_back",
+            "result": block,
+            "results": {
+                "exterior_back": block,
+            },
+            "bundle_job_id": bundle_job_id,
+            "render_batch_id": render_batch_id,
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Exterior back generation error")
+        status_code = 504 if _is_engine_timeout_error(e) else 500
+
+        return jsonify({
+            "status": "error",
+            "code": "engine_timeout" if status_code == 504 else "exterior_back_generation_failed",
+            "message": str(e),
+        }), status_code
 
 @investor_bp.route("/deal-studio/build-studio/generate-exterior", methods=["POST"])
 @login_required
@@ -9077,7 +9284,6 @@ def generate_full_build():
         project_id = _normalize_int(request.form.get("project_id"))
         saved_property_id = _normalize_int(request.form.get("saved_property_id"))
 
-        # ---------------- DEAL / PROJECT ----------------
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
@@ -9099,18 +9305,10 @@ def generate_full_build():
 
         project = None
         if project_id:
-            project = BuildProject.query.filter_by(
-                id=project_id,
-                user_id=current_user.id
-            ).first()
-
+            project = BuildProject.query.filter_by(id=project_id, user_id=current_user.id).first()
             if not project:
-                return jsonify({
-                    "status": "error",
-                    "message": "Build project not found."
-                }), 404
+                return jsonify({"status": "error", "message": "Build project not found."}), 404
 
-        # ---------------- FORM DATA ----------------
         project_name = (request.form.get("project_name") or "").strip()
         property_type = (request.form.get("property_type") or "single_family").strip()
         style = (request.form.get("style") or "modern_luxury").strip()
@@ -9135,8 +9333,7 @@ def generate_full_build():
             bathrooms_value = None
 
         number_of_floors = _build_project_floor_count(
-            request.form.get("number_of_floors")
-            or request.form.get("floor_count"),
+            request.form.get("number_of_floors") or request.form.get("floor_count"),
             request.form.get("stories"),
             request.form.get("number_of_stories"),
             description,
@@ -9147,7 +9344,6 @@ def generate_full_build():
             "1", "true", "yes", "on"
         }
 
-        # ---------------- SOURCE IMAGES ----------------
         land_image = request.files.get("land_image")
         blueprint_file = request.files.get("blueprint_file")
 
@@ -9168,12 +9364,7 @@ def generate_full_build():
                 land_image_base64 = base64.b64encode(land_raw).decode("utf-8")
                 land_image_url = _upload_before_image(land_raw)
         else:
-            land_image_url = (
-                site_plan_url
-                or image_url
-                or reference_image_url
-                or ""
-            ).strip()
+            land_image_url = (site_plan_url or image_url or reference_image_url or "").strip()
 
         if land_image_url:
             prepared_land_url = _engine_ready_reference_image_url(
@@ -9188,7 +9379,6 @@ def generate_full_build():
         elif blueprint_url:
             rejected_blueprint_reference = blueprint_url
 
-        # ---------------- VALIDATION ----------------
         has_text_seed = any([
             project_name,
             property_type,
@@ -9217,14 +9407,12 @@ def generate_full_build():
             ("exterior", "exterior_front"),
             ("exterior", "exterior_back"),
             ("siteplan", "siteplan"),
-
             ("blueprint", "blueprint_first"),
             ("blueprint", "blueprint_second"),
             ("blueprint", "blueprint_third"),
         ]
 
         master_exterior_url = ""
-        master_exterior_b64 = ""
 
         all_results = {}
 
@@ -9248,15 +9436,7 @@ def generate_full_build():
             "beta_version": "build_studio_full_build_v1",
         }
 
-        # ---------------- GENERATION LOOP ----------------
         for mode, output_mode in outputs:
-            current_app.logger.warning(
-                "[build-studio] generating mode=%s output=%s bundle_job_id=%s",
-                mode,
-                output_mode,
-                bundle_job_id,
-            )
-
             is_siteplan = output_mode == "siteplan"
             is_blueprint = output_mode.startswith("blueprint")
             is_exterior_front = output_mode == "exterior_front"
@@ -9276,16 +9456,16 @@ def generate_full_build():
                 zoning=zoning,
                 location=location,
                 floors=number_of_floors,
-                floor="first" if is_blueprint else "",
+                floor=output_mode.replace("blueprint_", "") if is_blueprint else "",
                 lot_count=None,
                 preserve_reference=False,
                 blueprint_constrained=False,
             )
 
-            consistency_prompt = _prompt_join(
+            consistency_notes = _prompt_join(
                 f"Build package ID: {bundle_job_id}",
-                "All outputs must represent the same home design, architectural style, floor count, massing logic, material palette, and investor-ready concept.",
                 f"Master exterior reference URL: {master_exterior_url}" if master_exterior_url else "",
+                "Same home concept, same floor count, same architectural direction.",
             )
 
             payload = {
@@ -9321,8 +9501,8 @@ def generate_full_build():
                 "number_of_floors": number_of_floors,
                 "floor_count": number_of_floors,
 
-                "prompt": _prompt_join(prompt_notes, consistency_prompt),
-                "prompt_notes": _prompt_join(prompt_notes, consistency_prompt),
+                "prompt": "",
+                "prompt_notes": _prompt_join(prompt_notes, consistency_notes),
 
                 "count": 1,
                 "width": 1024,
@@ -9332,17 +9512,14 @@ def generate_full_build():
 
             if bedrooms_value is not None:
                 payload["bedrooms"] = bedrooms_value
-
             if bathrooms_value is not None:
                 payload["bathrooms"] = bathrooms_value
-
             if square_feet_value is not None:
                 payload["square_feet"] = square_feet_value
                 payload["square_feet_target"] = square_feet_value
 
             payload.update(_build_studio_quality_controls(output_mode))
 
-            # Hard isolation helper.
             for key in (
                 "image_url",
                 "image_base64",
@@ -9355,7 +9532,6 @@ def generate_full_build():
             ):
                 payload.pop(key, None)
 
-            # ---------------- MODE-SPECIFIC IMAGE ROUTING ----------------
             if is_exterior:
                 payload.update({
                     "mode": "exterior",
@@ -9376,24 +9552,22 @@ def generate_full_build():
                         "task": "build_exterior_front",
                         "output_mode": "exterior_front",
                         "reference_role": "master_front_exterior_generation",
+                        "render_family": "front_exterior",
+                        "generation_mode": "text_to_front_exterior",
                     })
 
-                    front_prompt = _prompt_join(
+                    payload["prompt"] = _prompt_join(
                         "front exterior elevation",
                         "street-facing facade",
-                        "modern luxury residence",
+                        style.replace("_", " "),
+                        property_type.replace("_", " "),
                         "front entry",
-                        "driveway and curb appeal",
+                        "driveway",
+                        "curb appeal",
                         "front landscaping",
                         "residential massing",
-                        "buildable architecture",
-                        "same design anchor for full package",
-                        "not rear elevation",
-                        "not backyard view",
-                    )      
-
-                    payload["prompt"] = _prompt_join(payload["prompt"], front_prompt)
-                    payload["prompt_notes"] = _prompt_join(payload["prompt_notes"], front_prompt)
+                        "not rear view",
+                    )
 
                 elif is_exterior_back:
                     payload.update({
@@ -9402,6 +9576,7 @@ def generate_full_build():
                         "task": "build_exterior_back",
                         "output_mode": "exterior_back",
                         "reference_role": "front_exterior_style_anchor" if master_exterior_url else "text_architectural_context",
+                        "render_family": "rear_exterior",
                         "generation_mode": "rear_from_front_style_anchor" if master_exterior_url else "text_to_rear_exterior",
                         "preserve_style": True,
                         "preserve_materials": True,
@@ -9413,58 +9588,72 @@ def generate_full_build():
                         payload["reference_image_url"] = master_exterior_url
                         payload["master_exterior_reference_url"] = master_exterior_url
 
-                    rear_prompt = _prompt_join(
+                    payload["prompt"] = _prompt_join(
                         "rear exterior elevation",
                         "backyard-facing facade",
+                        style.replace("_", " "),
+                        property_type.replace("_", " "),
                         "rear glazing",
                         "patio or deck",
                         "private landscaping",
                         "same roofline and materials",
-                        "same architectural style",
                         "not front facade",
-                        "not curb-facing",
                         "not street view",
                     )
 
-                    payload["prompt"] = _prompt_join(payload["prompt"], rear_prompt)
-                    payload["prompt_notes"] = _prompt_join(payload["prompt_notes"], rear_prompt)
                     payload["negative_prompt"] = _prompt_join(
-                        payload["negative_prompt"],
-                        "front exterior, street-facing facade, front elevation, front entry, front porch, curb appeal, driveway, sidewalk, mailbox, front-facing garage, garage door facing viewer"
+                        "front exterior",
+                        "street-facing facade",
+                        "front entry",
+                        "curb appeal",
+                        "driveway",
+                        "garage door facing viewer",
                     )
 
             elif is_blueprint:
+                floor_label = output_mode.replace("blueprint_", "")
+
                 payload.update({
                     "reference_role": "text_program_only",
                     "source_role": "text_program_only",
+                    "render_family": "architectural_blueprint",
+                    "generation_mode": "top_down_floorplan",
                     "blueprint_constrained": False,
                     "site_context_url": land_image_url,
+                    "floor": floor_label,
                     "steps": 30,
-                    "guidance": 6.8,
+                    "guidance": 5.4,
                     "strength": 0.0,
                 })
 
-                blueprint_prompt = _prompt_join(
-                    "top-down floorplan",
-                    "orthographic blueprint",
-                    "2D architectural drafting",
+                payload["prompt"] = _prompt_join(
+                    f"{floor_label} floor",
+                    "top-down floor plan",
+                    "2D orthographic layout",
+                    "flat room layout",
                     "walls doors windows stairs",
-                    "room layout",
-                    "black and white blueprint",
-                    "not photoreal",
-                    "not interior render",
-                    "not perspective view",
+                    "kitchen bathroom bedroom labels",
+                    "black and white CAD plan",
+                    "technical floor layout",
+                    "not elevation",
+                    "not facade",
+                    "not exterior view",
                 )
 
-                payload["prompt"] = _prompt_join(payload["prompt"], blueprint_prompt)
-                payload["prompt_notes"] = _prompt_join(payload["prompt_notes"], blueprint_prompt)
                 payload["negative_prompt"] = _prompt_join(
-                    payload["negative_prompt"],
-                    "trees, grass, aerial imagery, satellite image, site photo, landscape photo, photorealistic exterior, facade, street view, perspective rendering"
+                    "house elevation",
+                    "front facade",
+                    "rear facade",
+                    "architectural elevation",
+                    "street-facing house",
+                    "perspective architecture",
+                    "exterior rendering",
+                    "photoreal interior",
                 )
 
                 current_app.logger.warning(
-                    "FULL BUILD BLUEPRINT ROUTING forced_text_only=True has_image_base64=%s has_image_url=%s source_role=%s reference_role=%s rejected=%s",
+                    "FULL BUILD BLUEPRINT ROUTING forced_text_only=True output=%s has_image_base64=%s has_image_url=%s source_role=%s reference_role=%s rejected=%s",
+                    output_mode,
                     bool(payload.get("image_base64")),
                     bool(payload.get("image_url")),
                     payload.get("source_role"),
@@ -9473,36 +9662,38 @@ def generate_full_build():
                 )
 
             elif is_siteplan:
-                payload["reference_role"] = "site_context_reference"
-                payload["source_role"] = "site_context"
-                payload["steps"] = 32
-                payload["guidance"] = 7.0
-                payload["strength"] = 0.0
+                payload.update({
+                    "reference_role": "site_context_metadata",
+                    "source_role": "site_context",
+                    "render_family": "site_development_plan",
+                    "generation_mode": "top_down_siteplan",
+                    "site_context_url": land_image_url,
+                    "steps": 28,
+                    "guidance": 5.0,
+                    "strength": 0.0,
+                })
 
-                siteplan_prompt = _prompt_join(
-                    "top-down siteplan",
-                    "parcel layout",
+                payload["prompt"] = _prompt_join(
+                    "top-down parcel map",
+                    "site layout diagram",
                     "building footprint",
-                    "setbacks",
-                    "driveway",
-                    "parking",
+                    "driveway layout",
                     "walkways",
+                    "setbacks",
                     "landscape zones",
-                    "hardscape",
-                    "not exterior rendering",
-                    "not satellite photo",
+                    "hardscape plan",
+                    "flat zoning diagram",
+                    "2D development layout",
+                    "not street-level house",
                 )
 
-                payload["prompt"] = _prompt_join(payload.get("prompt"), siteplan_prompt)
-                payload["prompt_notes"] = _prompt_join(payload.get("prompt_notes"), siteplan_prompt)
-
-                if land_image_url:
-                    payload["site_context_url"] = land_image_url
-                    payload["reference_image_url"] = land_image_url
-
                 payload["negative_prompt"] = _prompt_join(
-                    payload.get("negative_prompt"),
-                    "satellite photo, aerial photo, forest image, raw map tile, trees only, photographic texture"
+                    "street-level render",
+                    "photoreal house",
+                    "eye-level exterior",
+                    "interior scene",
+                    "architectural visualization",
+                    "luxury house render",
                 )
 
             current_app.logger.warning(
@@ -9533,7 +9724,6 @@ def generate_full_build():
 
             if output_mode == "exterior_front":
                 master_exterior_url = urls[0]
-                master_exterior_b64 = images_b64[0]
 
             block = {
                 "mode": mode,
@@ -9545,6 +9735,8 @@ def generate_full_build():
                 "job_id": engine_json.get("job_id"),
                 "source_role": payload.get("source_role"),
                 "reference_role": payload.get("reference_role"),
+                "render_family": payload.get("render_family"),
+                "generation_mode": payload.get("generation_mode"),
                 "bundle_job_id": bundle_job_id,
                 "render_batch_id": render_batch_id,
                 "master_exterior_reference_url": master_exterior_url,
@@ -9570,14 +9762,20 @@ def generate_full_build():
                 build_project_payload["exterior_back"] = block
 
             elif is_blueprint:
+                floor_label = output_mode.replace("blueprint_", "")
                 block.update({
                     "blueprint_url": urls[0],
+                    "floor_label": floor_label,
                     "source_reference_image": "",
                     "rejected_reference_image": rejected_blueprint_reference,
                     "site_context_url": land_image_url,
                 })
-                all_results["blueprint"] = block
-                build_project_payload["blueprint"] = block
+                all_results[output_mode] = block
+                build_project_payload[output_mode] = block
+
+                if output_mode == "blueprint_first":
+                    all_results["blueprint"] = block
+                    build_project_payload["blueprint"] = block
 
             elif is_siteplan:
                 block.update({
@@ -9588,7 +9786,6 @@ def generate_full_build():
                 build_project_payload["siteplan"] = block
                 build_project_payload["site_plan"] = block
 
-        # ---------------- SAVE PROJECT ----------------
         if project is not None:
             project.name = project_name or getattr(project, "name", None)
             project.property_type = property_type
@@ -9600,7 +9797,6 @@ def generate_full_build():
                 **build_project_payload,
             }
 
-        # ---------------- SAVE TO DEAL ----------------
         saved_to_deal = False
 
         if save_to_deal and deal is not None:
@@ -9635,7 +9831,6 @@ def generate_full_build():
 
     except Exception as e:
         current_app.logger.exception("Full build generation error")
-
         db.session.rollback()
 
         if deal is not None and render_lock_set:
