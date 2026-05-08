@@ -9070,21 +9070,28 @@ def generate_build_blueprint():
 @role_required("investor")
 def generate_full_build():
     deal = None
+    render_lock_set = False
 
     try:
         deal_id = _normalize_int(request.form.get("deal_id"))
         project_id = _normalize_int(request.form.get("project_id"))
         saved_property_id = _normalize_int(request.form.get("saved_property_id"))
 
+        # ---------------- DEAL / PROJECT ----------------
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
                 return jsonify({"status": "error", "message": "Deal not found."}), 404
 
             if _deal_render_lock_active(deal):
-                return jsonify({"status": "error", "message": "Build render in progress."}), 409
+                return jsonify({
+                    "status": "error",
+                    "code": "build_render_in_progress",
+                    "message": "Build render in progress."
+                }), 409
 
             _set_deal_render_processing(deal)
+            render_lock_set = True
             db.session.commit()
 
             if saved_property_id is None and getattr(deal, "saved_property_id", None):
@@ -9097,11 +9104,18 @@ def generate_full_build():
                 user_id=current_user.id
             ).first()
 
+            if not project:
+                return jsonify({
+                    "status": "error",
+                    "message": "Build project not found."
+                }), 404
+
         # ---------------- FORM DATA ----------------
         project_name = (request.form.get("project_name") or "").strip()
         property_type = (request.form.get("property_type") or "single_family").strip()
         style = (request.form.get("style") or "modern_luxury").strip()
         blueprint_style = _normalize_build_blueprint_style(request.form.get("blueprint_style"))
+
         description = (request.form.get("description") or "").strip()
         lot_size = (request.form.get("lot_size") or "").strip()
         zoning = (request.form.get("zoning") or "").strip()
@@ -9113,13 +9127,12 @@ def generate_full_build():
         square_feet = (request.form.get("square_feet") or "").strip()
 
         bedrooms_value = _normalize_int(bedrooms)
+        square_feet_value = _normalize_int(square_feet)
 
         try:
             bathrooms_value = float(bathrooms) if bathrooms else None
         except Exception:
             bathrooms_value = None
-
-        square_feet_value = _normalize_int(square_feet)
 
         number_of_floors = _build_project_floor_count(
             request.form.get("number_of_floors")
@@ -9130,12 +9143,9 @@ def generate_full_build():
             notes,
         )
 
-        save_to_deal = (request.form.get("save_to_deal") or "").lower() in (
-            "1",
-            "true",
-            "yes",
-            "on",
-        )
+        save_to_deal = (request.form.get("save_to_deal") or "").lower() in {
+            "1", "true", "yes", "on"
+        }
 
         # ---------------- SOURCE IMAGES ----------------
         land_image = request.files.get("land_image")
@@ -9149,15 +9159,14 @@ def generate_full_build():
         land_image_base64 = ""
         land_image_url = ""
 
-        # Beta rule: full-build blueprint is text-only.
-        # Individual blueprint generation can still validate and use a true floor plan.
         blueprint_source_url = ""
         rejected_blueprint_reference = "full_build_blueprint_forced_text_only"
 
-        if land_image:
+        if land_image and getattr(land_image, "filename", ""):
             land_raw = land_image.read()
-            land_image_base64 = base64.b64encode(land_raw).decode("utf-8")
-            land_image_url = _upload_before_image(land_raw)
+            if land_raw:
+                land_image_base64 = base64.b64encode(land_raw).decode("utf-8")
+                land_image_url = _upload_before_image(land_raw)
         else:
             land_image_url = (
                 site_plan_url
@@ -9191,22 +9200,19 @@ def generate_full_build():
             bathrooms,
             square_feet,
             number_of_floors,
+            notes,
         ])
 
         if not has_text_seed and not land_image_base64 and not land_image_url:
-            if deal is not None:
-                _clear_deal_render_processing(deal)
-                db.session.commit()
-
             return jsonify({
                 "status": "error",
+                "code": "missing_build_seed",
                 "message": "Provide a site image or enough build details."
             }), 400
 
         render_batch_id = uuid.uuid4().hex
         bundle_job_id = uuid.uuid4().hex
 
-        # Generate the master exterior first so later assets can share one design anchor.
         outputs = [
             ("exterior", "exterior_front"),
             ("exterior", "exterior_back"),
@@ -9218,6 +9224,7 @@ def generate_full_build():
         master_exterior_b64 = ""
 
         all_results = {}
+
         build_project_payload = {
             "project_name": project_name,
             "property_type": property_type,
@@ -9234,6 +9241,8 @@ def generate_full_build():
             "stories": number_of_floors,
             "number_of_floors": number_of_floors,
             "bundle_job_id": bundle_job_id,
+            "render_batch_id": render_batch_id,
+            "beta_version": "build_studio_full_build_v1",
         }
 
         # ---------------- GENERATION LOOP ----------------
@@ -9251,11 +9260,7 @@ def generate_full_build():
             is_exterior_back = output_mode == "exterior_back"
             is_exterior = is_exterior_front or is_exterior_back
 
-            prompt_mode = output_mode
-            if is_blueprint:
-                prompt_mode = "blueprint"
-            elif is_siteplan:
-                prompt_mode = "siteplan"
+            prompt_mode = "blueprint" if is_blueprint else "siteplan" if is_siteplan else output_mode
 
             prompt_notes = _compose_build_studio_prompt(
                 notes=notes,
@@ -9274,11 +9279,10 @@ def generate_full_build():
                 blueprint_constrained=False,
             )
 
-            # Shared package consistency directive.
             consistency_prompt = _prompt_join(
                 f"Build package ID: {bundle_job_id}",
-                "All outputs in this package must describe the same home design, same architectural style, same floor count, same massing logic, same material palette, and same investor-ready concept",
-                f"Master exterior reference URL for consistency: {master_exterior_url}" if master_exterior_url else "",
+                "All outputs must represent the same home design, architectural style, floor count, massing logic, material palette, and investor-ready concept.",
+                f"Master exterior reference URL: {master_exterior_url}" if master_exterior_url else "",
             )
 
             payload = {
@@ -9293,6 +9297,7 @@ def generate_full_build():
                 "task": f"build_{output_mode}",
 
                 "bundle_job_id": bundle_job_id,
+                "render_batch_id": render_batch_id,
                 "design_consistency_anchor": bool(master_exterior_url),
                 "master_exterior_reference_url": master_exterior_url,
 
@@ -9334,120 +9339,113 @@ def generate_full_build():
 
             payload.update(_build_studio_quality_controls(output_mode))
 
+            # Hard isolation helper.
+            for key in (
+                "image_url",
+                "image_base64",
+                "reference_image_url",
+                "reference_image_base64",
+                "site_image_url",
+                "site_image_base64",
+                "blueprint_image_url",
+                "blueprint_image_base64",
+            ):
+                payload.pop(key, None)
+
             # ---------------- MODE-SPECIFIC IMAGE ROUTING ----------------
-
             if is_exterior:
-                payload["mode"] = "exterior"
-                payload["source_role"] = "text_plus_architectural_context"
-                payload["site_context_url"] = land_image_url
-                payload["blueprint_reference_url"] = blueprint_source_url
-                payload["preserve_existing_exterior"] = False
-                payload["preserve_structure"] = False
-                payload["steps"] = 32
-                payload["guidance"] = 9.0
-                payload["strength"] = 0.25
-
-                # Never let satellite/site images become exterior init images.
-                for key in (
-                    "image_url",
-                    "image_base64",
-                    "reference_image_url",
-                    "reference_image_base64",
-                    "site_image_url",
-                    "site_image_base64",
-                    "blueprint_image_url",
-                    "blueprint_image_base64",
-                ):
-                    payload.pop(key, None)
+                payload.update({
+                    "mode": "exterior",
+                    "source_role": "text_plus_architectural_context",
+                    "site_context_url": land_image_url,
+                    "blueprint_reference_url": blueprint_source_url,
+                    "preserve_existing_exterior": False,
+                    "preserve_structure": False,
+                    "steps": 32,
+                    "guidance": 9.0,
+                    "strength": 0.25,
+                })
 
                 if is_exterior_front:
-                    payload["exterior_view"] = "front"
-                    payload["camera_view"] = "street_view"
-                    payload["task"] = "build_exterior_front"
-                    payload["output_mode"] = "exterior_front"
-                    payload["reference_role"] = "master_front_exterior_generation"
+                    payload.update({
+                        "exterior_view": "front",
+                        "camera_view": "street_view",
+                        "task": "build_exterior_front",
+                        "output_mode": "exterior_front",
+                        "reference_role": "master_front_exterior_generation",
+                    })
 
                     front_prompt = _prompt_join(
-                        "MASTER DESIGN ANCHOR: This front exterior defines the architectural identity for the whole build package",
-                        "STRICT FRONT EXTERIOR VIEW ONLY",
-                        "Generate the street-facing front side of the home",
-                        "Show front facade massing, front entry, approach path, driveway or garage where appropriate, front landscaping, and curb appeal",
-                        "Use a coherent, buildable residential design that later rear, blueprint, and siteplan outputs can match",
-                        "Do not create a backyard rear view, patio-only view, rear elevation, or rear facade rendering",
+                        "MASTER DESIGN ANCHOR: This front exterior defines the architectural identity for the whole build package.",
+                        "STRICT FRONT EXTERIOR VIEW ONLY.",
+                        "Generate the street-facing front side of the home.",
+                        "Show front facade massing, front entry, approach path, driveway or garage where appropriate, front landscaping, and curb appeal.",
+                        "Use a coherent, buildable residential design that later rear, blueprint, and siteplan outputs can match.",
+                        "Do not create a backyard rear view, patio-only view, rear elevation, or rear facade rendering.",
                     )
 
-                    payload["prompt"] = _prompt_join(payload.get("prompt"), front_prompt)
-                    payload["prompt_notes"] = _prompt_join(payload.get("prompt_notes"), front_prompt)
+                    payload["prompt"] = _prompt_join(payload["prompt"], front_prompt)
+                    payload["prompt_notes"] = _prompt_join(payload["prompt_notes"], front_prompt)
 
                 elif is_exterior_back:
-                    payload["exterior_view"] = "back"
-                    payload["camera_view"] = "rear_yard_view"
-                    payload["task"] = "build_exterior_back"
-                    payload["output_mode"] = "exterior_back"
-                    payload["reference_role"] = "front_exterior_style_anchor" if master_exterior_url else "text_architectural_context"
-                    payload["generation_mode"] = "rear_from_front_style_anchor" if master_exterior_url else "text_to_rear_exterior"
-                    payload["preserve_style"] = True
-                    payload["preserve_materials"] = True
-                    payload["preserve_massing"] = True
-                    payload["preserve_camera"] = False
+                    payload.update({
+                        "exterior_view": "back",
+                        "camera_view": "rear_yard_view",
+                        "task": "build_exterior_back",
+                        "output_mode": "exterior_back",
+                        "reference_role": "front_exterior_style_anchor" if master_exterior_url else "text_architectural_context",
+                        "generation_mode": "rear_from_front_style_anchor" if master_exterior_url else "text_to_rear_exterior",
+                        "preserve_style": True,
+                        "preserve_materials": True,
+                        "preserve_massing": True,
+                        "preserve_camera": False,
+                    })
 
-                    # IMPORTANT: only use the front exterior as a reference for rear,
-                    # never use satellite/site image.
                     if master_exterior_url:
                         payload["reference_image_url"] = master_exterior_url
                         payload["master_exterior_reference_url"] = master_exterior_url
 
                     rear_prompt = _prompt_join(
-                        "STRICT REAR EXTERIOR VIEW ONLY",
-                        "This image must show the backyard-facing rear elevation of the same house design as the master front exterior",
-                        "Camera is standing in the backyard looking toward the back of the home",
-                        "Use the same architectural style, massing logic, roof geometry, window rhythm, material palette, and floor count as the master front exterior",
-                        "Show rear doors, rear windows, patio or deck, backyard lawn, private rear landscaping, and rear facade massing",
-                        "No front entry, no street, no curb, no sidewalk, no driveway, no front-facing garage, no mailbox",
-                        "Do not generate another front exterior; this must be the back side of the house",
+                        "STRICT REAR EXTERIOR VIEW ONLY.",
+                        "This image must show the backyard-facing rear elevation of the same house design as the master front exterior.",
+                        "Camera is standing in the backyard looking toward the back of the home.",
+                        "Use the same architectural style, massing logic, roof geometry, window rhythm, material palette, and floor count as the master front exterior.",
+                        "Show rear doors, rear windows, patio or deck, backyard lawn, private rear landscaping, and rear facade massing.",
+                        "No front entry, no street, no curb, no sidewalk, no driveway, no front-facing garage, no mailbox.",
+                        "Do not generate another front exterior.",
                     )
 
-                    payload["prompt"] = _prompt_join(payload.get("prompt"), rear_prompt)
-                    payload["prompt_notes"] = _prompt_join(payload.get("prompt_notes"), rear_prompt)
+                    payload["prompt"] = _prompt_join(payload["prompt"], rear_prompt)
+                    payload["prompt_notes"] = _prompt_join(payload["prompt_notes"], rear_prompt)
                     payload["negative_prompt"] = _prompt_join(
-                        payload.get("negative_prompt"),
+                        payload["negative_prompt"],
                         "front exterior, street-facing facade, front elevation, front entry, front porch, curb appeal, driveway, sidewalk, mailbox, front-facing garage, garage door facing viewer"
                     )
 
             elif is_blueprint:
-                # Beta rule: blueprint is text-only so satellite/tree images cannot contaminate it.
-                payload["reference_role"] = "text_program_only"
-                payload["source_role"] = "text_program_only"
-                payload["blueprint_constrained"] = False
-                payload["site_context_url"] = land_image_url
-                payload["steps"] = 30
-                payload["guidance"] = 6.8
-                payload["strength"] = 0.0
-
-                for key in (
-                    "image_url",
-                    "image_base64",
-                    "reference_image_url",
-                    "reference_image_base64",
-                    "site_image_url",
-                    "site_image_base64",
-                    "blueprint_image_url",
-                    "blueprint_image_base64",
-                ):
-                    payload.pop(key, None)
+                payload.update({
+                    "reference_role": "text_program_only",
+                    "source_role": "text_program_only",
+                    "blueprint_constrained": False,
+                    "site_context_url": land_image_url,
+                    "steps": 30,
+                    "guidance": 6.8,
+                    "strength": 0.0,
+                })
 
                 blueprint_prompt = _prompt_join(
-                    "Generate a clean top-down architectural floor plan for the same home concept as the master exterior",
-                    "Use the same floor count, residential program, scale, and buildable massing implied by the master exterior",
-                    "Do not use satellite imagery, trees, grass, site photo texture, aerial map visuals, landscape photography, or exterior rendering style",
-                    "Output a single legible architectural plan with walls, rooms, doors, windows, stairs, kitchen fixtures, bathroom fixtures, closets, and simple furniture blocks",
+                    "Generate a clean top-down architectural floor plan for the same home concept as the master exterior.",
+                    "Use the same floor count, residential program, scale, and buildable massing implied by the master exterior.",
+                    "Do not use satellite imagery, trees, grass, site photo texture, aerial map visuals, landscape photography, or exterior rendering style.",
+                    "Output a single legible architectural plan with walls, rooms, doors, windows, stairs, kitchen fixtures, bathroom fixtures, closets, and simple furniture blocks.",
+                    "No photorealism. No perspective camera. No exterior facade."
                 )
 
-                payload["prompt"] = _prompt_join(payload.get("prompt"), blueprint_prompt)
-                payload["prompt_notes"] = _prompt_join(payload.get("prompt_notes"), blueprint_prompt)
+                payload["prompt"] = _prompt_join(payload["prompt"], blueprint_prompt)
+                payload["prompt_notes"] = _prompt_join(payload["prompt_notes"], blueprint_prompt)
                 payload["negative_prompt"] = _prompt_join(
-                    payload.get("negative_prompt"),
-                    "trees, grass, aerial imagery, satellite image, site photo, landscape photo, photorealistic exterior, facade, street view"
+                    payload["negative_prompt"],
+                    "trees, grass, aerial imagery, satellite image, site photo, landscape photo, photorealistic exterior, facade, street view, perspective rendering"
                 )
 
                 current_app.logger.warning(
@@ -9460,21 +9458,24 @@ def generate_full_build():
                 )
 
             elif is_siteplan:
-                payload["reference_role"] = "site_context_reference"
-                payload["source_role"] = "site_context"
-                payload["steps"] = 32
-                payload["guidance"] = 7.0
-                payload["strength"] = 0.58
+                payload.update({
+                    "reference_role": "site_context_reference",
+                    "source_role": "site_context",
+                    "steps": 32,
+                    "guidance": 7.0,
+                    "strength": 0.58,
+                })
 
                 siteplan_prompt = _prompt_join(
-                    "Create a site development plan for the same home concept as the master exterior",
-                    "Use the lot/site image only as site context, not as a blueprint or exterior render",
-                    "Show parcel boundary, building footprint, driveway, parking, walkways, patio or yard zones, hardscape, landscaping zones, setbacks, and orientation",
-                    "Keep the building footprint consistent with the same home package",
+                    "Create a site development plan for the same home concept as the master exterior.",
+                    "Use the lot/site image only as site context, not as a blueprint or exterior render.",
+                    "Show parcel boundary, building footprint, driveway, parking, walkways, patio or yard zones, hardscape, landscaping zones, setbacks, and orientation.",
+                    "Keep the building footprint consistent with the same home package.",
+                    "Use a clean investor-facing site plan style."
                 )
 
-                payload["prompt"] = _prompt_join(payload.get("prompt"), siteplan_prompt)
-                payload["prompt_notes"] = _prompt_join(payload.get("prompt_notes"), siteplan_prompt)
+                payload["prompt"] = _prompt_join(payload["prompt"], siteplan_prompt)
+                payload["prompt_notes"] = _prompt_join(payload["prompt_notes"], siteplan_prompt)
 
                 if land_image_base64:
                     payload["image_base64"] = land_image_base64
@@ -9525,6 +9526,7 @@ def generate_full_build():
                 "source_role": payload.get("source_role"),
                 "reference_role": payload.get("reference_role"),
                 "bundle_job_id": bundle_job_id,
+                "render_batch_id": render_batch_id,
                 "master_exterior_reference_url": master_exterior_url,
             }
 
@@ -9566,8 +9568,21 @@ def generate_full_build():
                 build_project_payload["siteplan"] = block
                 build_project_payload["site_plan"] = block
 
+        # ---------------- SAVE PROJECT ----------------
+        if project is not None:
+            project.name = project_name or getattr(project, "name", None)
+            project.property_type = property_type
+            project.style = style
+            project.description = description
+            project.location = location
+            project.results = {
+                **(getattr(project, "results", None) or {}),
+                **build_project_payload,
+            }
+
         # ---------------- SAVE TO DEAL ----------------
         saved_to_deal = False
+
         if save_to_deal and deal is not None:
             results = _deal_results(deal)
             results["build_project"] = {
@@ -9581,8 +9596,9 @@ def generate_full_build():
             _set_deal_results(deal, results)
             saved_to_deal = True
 
-        if deal is not None:
+        if deal is not None and render_lock_set:
             _clear_deal_render_processing(deal)
+            render_lock_set = False
 
         db.session.commit()
 
@@ -9590,6 +9606,7 @@ def generate_full_build():
             "status": "ok",
             "mode": "full_build",
             "bundle_job_id": bundle_job_id,
+            "render_batch_id": render_batch_id,
             "results": all_results,
             "build_project": build_project_payload,
             "saved_to_deal": saved_to_deal,
@@ -9599,11 +9616,14 @@ def generate_full_build():
     except Exception as e:
         current_app.logger.exception("Full build generation error")
 
-        if deal is not None:
+        db.session.rollback()
+
+        if deal is not None and render_lock_set:
             try:
                 _clear_deal_render_processing(deal)
                 db.session.commit()
             except Exception:
+                current_app.logger.exception("Failed to clear build render lock")
                 db.session.rollback()
 
         status_code = 504 if _is_engine_timeout_error(e) else 500

@@ -1,67 +1,42 @@
 ﻿{% extends "layouts/ravlo_base.html" %}
-{% block title %}{{ page_title or "Design Studio" }} | Ravlo{% endblock %}
+{% block title %}{{ page_title or "Build Studio" }} | Ravlo{% endblock %}
 
 {% block content %}
-<div class="build-lite-shell">
+<div class="build-studio-shell">
   <section class="studio-hero-card">
     <div>
-      <div class="eyebrow">{{ hero_eyebrow or "RAVLO DESIGN STUDIO" }}</div>
-      <h1>{{ hero_title or "Tell Ravlo what you want. AI designs the room." }}</h1>
-      <p class="muted">{{ page_subtitle or "Describe your dream interior in plain language — Ravlo's AI turns it into a photorealistic room design." }}</p>
+      <div class="eyebrow">{{ hero_eyebrow or "RAVLO BUILD STUDIO" }}</div>
+      <h1>{{ hero_title or "Generate a complete investor-ready build package." }}</h1>
+      <p class="muted">
+        {{ page_subtitle or "Describe the home, upload a site reference if you have one, and Ravlo will generate a front exterior, rear exterior, blueprint, and site plan as one consistent build package." }}
+      </p>
     </div>
+
     <div class="hero-actions">
-      {% if project and companion_endpoint %}
-      <a href="{{ url_for(companion_endpoint, project_id=project.id) }}" class="ravlo-btn ghost">{{ companion_label or "Open Build Studio" }}</a>
-      {% elif deal and companion_endpoint %}
-      <a href="{{ url_for(companion_endpoint, deal_id=deal.id) }}" class="ravlo-btn ghost">{{ companion_label or "Open Build Studio" }}</a>
-      {% endif %}
       {% if deal %}
-      <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn primary">Architect Deal</a>
+      <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost">Back to Deal Architect</a>
       {% else %}
-      <a href="{{ url_for('investor.deal_architect') }}" class="ravlo-btn primary">Architect Deal</a>
+      <a href="{{ url_for('investor.deal_architect') }}" class="ravlo-btn ghost">Deal Architect</a>
       {% endif %}
-      <button type="button" class="ravlo-btn ghost hidden" id="downloadCurrentBtn">Download Image</button>
-      <button type="button" class="ravlo-btn ghost hidden" id="downloadAllBtn">Download All Images</button>
+      <button type="button" class="ravlo-btn ghost hidden" id="downloadAllBtn">Download All</button>
       <a href="#" class="ravlo-btn primary hidden" id="continueToDealArchitectBtn">Continue to Deal Architect</a>
     </div>
   </section>
 
-  <section class="build-lite-grid">
-    <section class="ravlo-card pad design-chat-panel">
+  <section class="build-studio-grid">
+    <section class="ravlo-card pad build-brief-panel">
       <div class="section-head">
         <div>
-          <div class="eyebrow">DESIGN CONVERSATION</div>
-          <h2>Tell Ravlo What You Want</h2>
+          <div class="eyebrow">BUILD BRIEF</div>
+          <h2>Tell Ravlo What to Build</h2>
+          <p class="muted" style="margin-top:4px;font-size:.85rem;">
+            Full Build beta is text-first. Site images are used only for site plan/context. Blueprint uploads are accepted but ignored for full-build floor plan generation.
+          </p>
         </div>
-        <strong id="designChatStatus">Ready</strong>
+        <strong id="buildStatus">Ready</strong>
       </div>
 
-      <div class="design-chat-thread" id="designChatThread">
-        <div class="design-chat-message assistant">
-          <strong>Ravlo</strong>
-          <p>What room are we designing? Just tell me — "Ravlo, modern kitchen, marble island, brass fixtures" — and I'll set it up. More detail = closer result. Or keep it short and I'll ask what I need.</p>
-        </div>
-      </div>
-
-      <div class="design-chat-composer">
-        <textarea id="designChatInput" rows="3" placeholder="Example: 'Ravlo, luxury modern kitchen, white marble waterfall island, matte black fixtures, brass pendant lights, herringbone backsplash'"></textarea>
-        <div class="cta-row">
-          <button type="button" class="ravlo-btn ghost" id="askDesignBtn">Ask Ravlo</button>
-          <button type="button" class="ravlo-btn primary" id="applyDesignBtn">Apply & Generate</button>
-        </div>
-      </div>
-    </section>
-
-    <section class="ravlo-card pad">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">AI DESIGN INPUTS</div>
-          <h2>{{ page_title or "Design Studio" }} Interior Generator</h2>
-          <p class="muted" style="margin-top:4px;font-size:.85rem;">The AI chat fills these automatically — or edit them directly.</p>
-        </div>
-      </div>
-
-      <form id="interiorBuildForm" class="build-form" enctype="multipart/form-data">
+      <form id="buildStudioForm" class="build-form" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
         <input type="hidden" name="project_id" value="{{ project.id if project else '' }}">
@@ -70,7 +45,12 @@
         <div class="form-grid two">
           <div class="field">
             <label for="project_name">Project Name</label>
-            <input id="project_name" name="project_name" value="{{ project.project_name if project else '' }}" placeholder="Maple Grove Residences">
+            <input id="project_name" name="project_name" value="{{ project.project_name if project and project.project_name else project.name if project and project.name else '' }}" placeholder="Maple Grove Build Concept">
+          </div>
+
+          <div class="field">
+            <label for="location">Location</label>
+            <input id="location" name="location" value="{{ project.location if project and project.location else '' }}" placeholder="Atlanta, GA or 123 Main St">
           </div>
 
           <div class="field">
@@ -82,300 +62,255 @@
               <option value="townhome" {{ 'selected' if property_type_value == 'townhome' else '' }}>Townhome</option>
               <option value="multifamily" {{ 'selected' if property_type_value == 'multifamily' else '' }}>Multifamily</option>
               <option value="mixed_use" {{ 'selected' if property_type_value == 'mixed_use' else '' }}>Mixed Use</option>
+              <option value="adu" {{ 'selected' if property_type_value == 'adu' else '' }}>ADU</option>
             </select>
           </div>
 
           <div class="field">
-            <label for="style">Interior Style</label>
+            <label for="style">Exterior Style</label>
+            {% set style_value = project.style if project and project.style else 'modern_luxury' %}
             <select id="style" name="style">
-              <option value="modern_luxury">Modern Luxury</option>
-              <option value="modern_farmhouse">Modern Farmhouse</option>
-              <option value="minimal_modern">Minimal Modern</option>
-              <option value="traditional">Traditional</option>
-              <option value="industrial_loft">Industrial Loft</option>
-              <option value="coastal">Coastal</option>
+              <option value="modern_luxury" {{ 'selected' if style_value == 'modern_luxury' else '' }}>Modern Luxury</option>
+              <option value="modern_farmhouse" {{ 'selected' if style_value == 'modern_farmhouse' else '' }}>Modern Farmhouse</option>
+              <option value="minimal_modern" {{ 'selected' if style_value == 'minimal_modern' else '' }}>Minimal Modern</option>
+              <option value="traditional" {{ 'selected' if style_value == 'traditional' else '' }}>Traditional</option>
+              <option value="craftsman" {{ 'selected' if style_value == 'craftsman' else '' }}>Craftsman</option>
+              <option value="transitional" {{ 'selected' if style_value == 'transitional' else '' }}>Transitional</option>
+              <option value="coastal" {{ 'selected' if style_value == 'coastal' else '' }}>Coastal</option>
+              <option value="industrial_loft" {{ 'selected' if style_value == 'industrial_loft' else '' }}>Industrial Loft</option>
             </select>
           </div>
 
           <div class="field">
-            <label for="room_type">Room Type</label>
-            <select id="room_type" name="room_type">
-              <option value="living room">Living Room</option>
-              <option value="kitchen">Kitchen</option>
-              <option value="primary bedroom">Primary Bedroom</option>
-              <option value="bathroom">Bathroom</option>
-              <option value="dining room">Dining Room</option>
-              <option value="office">Office</option>
+            <label for="blueprint_style">Blueprint Style</label>
+            <select id="blueprint_style" name="blueprint_style">
+              <option value="architectural_floor_plan">Architectural Floor Plan</option>
+              <option value="clean_black_white">Clean Black & White</option>
+              <option value="developer_presentation">Developer Presentation</option>
+              <option value="permit_style">Permit Style</option>
             </select>
           </div>
 
           <div class="field">
-            <label for="floor">Floor</label>
-            <select id="floor" name="floor">
-              <option value="main">Main</option>
-              <option value="upper">Upper</option>
-              <option value="lower">Lower</option>
-              <option value="basement">Basement</option>
+            <label for="number_of_floors">Floors / Stories</label>
+            <select id="number_of_floors" name="number_of_floors">
+              <option value="1">1 Story</option>
+              <option value="2" selected>2 Stories</option>
+              <option value="3">3 Stories</option>
+              <option value="4">4 Stories</option>
             </select>
           </div>
 
           <div class="field">
-            <label for="blueprint_url">Reference Image URL</label>
-            <input id="blueprint_url" name="blueprint_url" value="{{ blueprint_result.get('blueprint_url') or blueprint_result.get('image_url') or (project.blueprint_url if project else '') }}" placeholder="Paste a saved room photo or plan URL">
+            <label for="bedrooms">Bedrooms</label>
+            <input id="bedrooms" name="bedrooms" inputmode="numeric" value="{{ project.bedrooms if project and project.bedrooms else '' }}" placeholder="4">
+          </div>
+
+          <div class="field">
+            <label for="bathrooms">Bathrooms</label>
+            <input id="bathrooms" name="bathrooms" inputmode="decimal" value="{{ project.bathrooms if project and project.bathrooms else '' }}" placeholder="3.5">
+          </div>
+
+          <div class="field">
+            <label for="square_feet">Target Square Feet</label>
+            <input id="square_feet" name="square_feet" inputmode="numeric" value="{{ project.square_feet if project and project.square_feet else '' }}" placeholder="2800">
+          </div>
+
+          <div class="field">
+            <label for="lot_size">Lot Size</label>
+            <input id="lot_size" name="lot_size" value="{{ project.lot_size if project and project.lot_size else '' }}" placeholder="0.25 acre / 7,500 sqft">
           </div>
         </div>
 
         <div class="field">
-          <label for="description" style="font-weight:600;">What Do You Want? <span style="font-weight:400;opacity:.6;">(This drives the AI — be specific)</span></label>
-          <textarea id="description" name="description" rows="5" placeholder="Tell Ravlo exactly what you want. Example: 'I want a luxury modern kitchen with white marble waterfall island, matte black fixtures, warm oak floating shelves, and pendant lighting over the island.' The more specific you are, the better the result.">{{ project.description if project else '' }}</textarea>
+          <label for="zoning">Zoning / Constraints</label>
+          <input id="zoning" name="zoning" value="{{ project.zoning if project and project.zoning else '' }}" placeholder="R-4, setbacks, HOA requirements, infill lot, corner lot, etc.">
         </div>
 
         <div class="field">
-          <label for="notes">Additional Design Details</label>
-          <textarea id="notes" name="notes" rows="3" placeholder="Add more details: cabinet style, hardware finish, countertop material, flooring, lighting, furnishing direction, paint colors, accent wall, etc.">{{ interior_result.get('notes') or '' }}</textarea>
+          <label for="description">Build Description <span style="font-weight:400;opacity:.65;">required unless you upload/provide a site image</span></label>
+          <textarea id="description" name="description" rows="5" placeholder="Example: Build a two-story modern farmhouse with open-concept kitchen, covered rear patio, two-car garage, strong curb appeal, and investor-friendly finishes.">{{ project.description if project and project.description else '' }}</textarea>
         </div>
 
         <div class="field">
-          <label for="blueprint_file">Upload Reference Image</label>
-          <input type="file" id="blueprint_file" name="blueprint_file" accept="image/*,.png,.jpg,.jpeg,.webp,.pdf">
+          <label for="notes">Special Features / Investor Notes</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Garage placement, patio/deck, ADU, rental layout, luxury finishes, budget-conscious exterior, target buyer profile, etc.">{{ project.notes if project and project.notes else '' }}</textarea>
         </div>
 
-        <button type="submit" class="ravlo-btn primary" id="generateInteriorBtn">{{ submit_label or "Generate Design Concept" }}</button>
-        <p class="form-note">The AI composes your prompt from everything above. Use Build Studio for multi-floor blueprints, exterior concepts, and floor plan layouts.</p>
+        <div class="form-grid two">
+          <div class="field">
+            <label for="land_image">Upload Site / Lot Image</label>
+            <input type="file" id="land_image" name="land_image" accept="image/*,.png,.jpg,.jpeg,.webp">
+          </div>
+
+          <div class="field">
+            <label for="site_plan_url">Site / Lot Image URL</label>
+            <input id="site_plan_url" name="site_plan_url" value="{{ build_project.get('site_context_url') if build_project else '' }}" placeholder="Paste lot, parcel, drone, or map image URL">
+          </div>
+
+          <div class="field">
+            <label for="blueprint_file">Optional Blueprint Upload</label>
+            <input type="file" id="blueprint_file" name="blueprint_file" accept="image/*,.png,.jpg,.jpeg,.webp,.pdf">
+            <small>Beta note: full-build blueprint generation is text-only, so this is logged but ignored.</small>
+          </div>
+
+          <div class="field">
+            <label for="blueprint_url">Optional Blueprint URL</label>
+            <input id="blueprint_url" name="blueprint_url" value="{{ build_project.get('blueprint_url') if build_project else '' }}" placeholder="Logged as rejected reference in beta">
+          </div>
+        </div>
+
+        <div class="build-beta-note">
+          <strong>Beta routing:</strong> exterior outputs are text-driven, rear exterior uses the front exterior as style anchor, blueprint is text-only, and site plan can use the site image as context.
+        </div>
+
+        <button type="submit" class="ravlo-btn primary" id="generateFullBuildBtn">{{ submit_label or "Generate Full Build Package" }}</button>
       </form>
     </section>
 
-    <section class="ravlo-card pad">
+    <aside class="ravlo-card pad reference-card">
       <div class="section-head">
         <div>
-          <div class="eyebrow">REFERENCE</div>
-          <h2>Reference Image</h2>
+          <div class="eyebrow">SITE CONTEXT</div>
+          <h2>Lot Reference</h2>
         </div>
       </div>
-      <div class="reference-panel" id="blueprintPreview">
-        {% set blueprint_src = blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') or (project.blueprint_url if project else '') %}
-        {% if blueprint_src %}
-        <img src="{{ blueprint_src }}" alt="Reference image">
+
+      <div class="reference-panel" id="sitePreview">
+        {% set site_src = build_project.get('site_context_url') if build_project else '' %}
+        {% if site_src %}
+        <img src="{{ site_src }}" alt="Site reference">
         {% else %}
-        <div class="empty-state-inline">Upload a room photo, blueprint, or open a saved project with a reference attached.</div>
+        <div class="empty-state-inline">Upload or paste a site image URL to preview it here.</div>
         {% endif %}
       </div>
-      {% if lot_count %}<div class="ravlo-chip-row"><span class="ravlo-chip">{{ lot_count }} Lots Planned</span></div>{% endif %}
-    </section>
+
+      <div class="route-health-list">
+        <div><span>Package ID</span><strong id="bundleJobId">{{ build_project.get('bundle_job_id') if build_project else '—' }}</strong></div>
+        <div><span>Render Batch</span><strong id="renderBatchId">{{ build_project.get('render_batch_id') if build_project else '—' }}</strong></div>
+        <div><span>Blueprint Mode</span><strong>Text Only</strong></div>
+        <div><span>Save to Deal</span><strong>{{ 'Yes' if deal else 'Project Only' }}</strong></div>
+      </div>
+    </aside>
   </section>
 
-  <section class="ravlo-card pad">
+  <section class="ravlo-card pad output-card">
     <div class="section-head">
       <div>
         <div class="eyebrow">OUTPUT</div>
-        <h2>Interior Result</h2>
+        <h2>Full Build Package</h2>
       </div>
-      <strong id="interiorStatus">{{ 'Generated' if interior_result and interior_result.get('image_url') else 'Waiting' }}</strong>
+      <strong id="packageStatus">{{ 'Generated' if build_project and build_project.get('exterior_front') else 'Waiting' }}</strong>
     </div>
 
-    <div class="result-grid">
-      <div class="result-media" id="interiorResultMedia">
-        {% if interior_result and interior_result.get('image_url') %}
-        <img src="{{ interior_result.get('image_url') }}" alt="Interior result">
-        {% else %}
-        <div class="empty-state-inline">Interior output will appear here.</div>
-        {% endif %}
-      </div>
+    <div class="build-output-grid" id="buildOutputGrid">
+      {% set output_items = [
+        ('exterior_front', 'Front Exterior', 'Street-facing master design anchor'),
+        ('exterior_back', 'Rear Exterior', 'Backyard-facing rear elevation'),
+        ('blueprint', 'Blueprint', 'Text-only floor plan'),
+        ('siteplan', 'Site Plan', 'Lot/site development plan')
+      ] %}
 
-      <div class="result-meta">
-        <div><span>Room</span><strong id="resultRoom">{{ interior_result.get('room_type') or '—' }}</strong></div>
-        <div><span>Floor</span><strong id="resultFloor">{{ interior_result.get('floor') or '—' }}</strong></div>
-        <div><span>Seed</span><strong id="resultSeed">{{ interior_result.get('seed') or '—' }}</strong></div>
-        <div><span>Job ID</span><strong id="resultJob">{{ interior_result.get('job_id') or '—' }}</strong></div>
-
-        <a id="resultLink" href="{{ interior_result.get('image_url') or '#' }}" target="_blank" class="ravlo-btn ghost {% if not interior_result or not interior_result.get('image_url') %}hidden{% endif %}">Open Interior</a>
-        <button type="button" id="downloadResultBtn" class="ravlo-btn ghost {% if not interior_result or not interior_result.get('image_url') %}hidden{% endif %}">Download Interior</button>
-        <a href="#" id="resultDealArchitectBtn" class="ravlo-btn primary hidden">Send to Deal Architect</a>
-      </div>
-    </div>
-
-    {% if interior_rooms %}
-    <div class="room-gallery" id="roomGallery">
-      {% for room in interior_rooms %}
-      {% if room.get('image_url') %}
-      <a href="{{ room.get('image_url') }}" target="_blank" class="room-card" data-image-url="{{ room.get('image_url') }}">
-        <img src="{{ room.get('image_url') }}" alt="{{ room.get('room_type') or 'Interior room' }}">
-        <div>
-          <strong>{{ room.get('room_type') or 'Room' }}</strong>
-          <span>{{ room.get('floor') or 'Floor' }}</span>
-        </div>
-      </a>
-      {% endif %}
+      {% for key, label, helper in output_items %}
+        {% set item = build_project.get(key) if build_project else None %}
+        {% set item_url = item.get('image_url') if item else '' %}
+        {% if key == 'blueprint' and item and item.get('blueprint_url') %}{% set item_url = item.get('blueprint_url') %}{% endif %}
+        <article class="build-output-card" data-output-key="{{ key }}" {% if item_url %}data-image-url="{{ item_url }}"{% endif %}>
+          <div class="output-media" id="media_{{ key }}">
+            {% if item_url %}
+            <img src="{{ item_url }}" alt="{{ label }}">
+            {% else %}
+            <div class="empty-state-inline">{{ label }} will appear here.</div>
+            {% endif %}
+          </div>
+          <div class="output-info">
+            <div>
+              <strong>{{ label }}</strong>
+              <span>{{ helper }}</span>
+            </div>
+            <div class="output-actions">
+              <a href="{{ item_url or '#' }}" target="_blank" class="ravlo-btn ghost output-open {% if not item_url %}hidden{% endif %}" id="open_{{ key }}">Open</a>
+              <button type="button" class="ravlo-btn ghost output-download {% if not item_url %}hidden{% endif %}" data-download-key="{{ key }}">Download</button>
+            </div>
+          </div>
+          <div class="output-meta">
+            <div><span>Seed</span><strong id="seed_{{ key }}">{{ item.get('seed') if item and item.get('seed') else '—' }}</strong></div>
+            <div><span>Job</span><strong id="job_{{ key }}">{{ item.get('job_id') if item and item.get('job_id') else '—' }}</strong></div>
+          </div>
+        </article>
       {% endfor %}
     </div>
-    {% else %}
-    <div class="empty-state-inline" id="roomGallery">Generated rooms will stack here.</div>
-    {% endif %}
   </section>
 </div>
 
 <style>
-.build-lite-shell{display:grid;gap:20px}
-.studio-hero-card,.build-lite-grid,.result-grid{display:grid;gap:18px}
+.build-studio-shell{display:grid;gap:20px}
+.studio-hero-card,.build-studio-grid{display:grid;gap:18px}
 .studio-hero-card{grid-template-columns:1fr auto;align-items:start}
 .hero-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
-.build-lite-grid{grid-template-columns:1.25fr .95fr}
+.build-studio-grid{grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);align-items:start}
 .form-grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .field{display:grid;gap:8px;margin-bottom:14px}
-.field input,.field select,.field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
-.reference-panel,.result-media{border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.03);min-height:320px;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.reference-panel img,.result-media img{width:100%;height:100%;object-fit:cover;display:block}
-.result-grid{grid-template-columns:1.2fr .8fr}
-.result-meta{display:grid;gap:12px;align-content:start}
-.result-meta div{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
-.room-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:18px}
-.room-card{display:grid;gap:10px;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);text-decoration:none;color:inherit}
-.room-card img{width:100%;height:140px;object-fit:cover;border-radius:12px}
-.form-note{margin-top:12px;color:#9fb0ca}
-.hidden{display:none!important}
-.design-chat-panel{grid-column:1/-1;margin-bottom:4px}
-.design-chat-thread{display:grid;gap:12px;max-height:300px;overflow:auto;padding-right:4px}
-.design-chat-message{padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.035)}
-.design-chat-message.user{margin-left:42px;background:rgba(122,184,255,.08);border-color:rgba(122,184,255,.18)}
-.design-chat-message.assistant{margin-right:42px}
-.design-chat-message strong{display:block;color:#fff;margin-bottom:6px}
-.design-chat-message p{margin:0;color:#c9d5e6;line-height:1.55}
-.design-chat-composer{display:grid;gap:12px;margin-top:14px}
-.design-chat-composer textarea{width:100%;resize:vertical;min-height:80px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
-.cta-row{display:flex;gap:12px;flex-wrap:wrap}
-@media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.design-chat-message.user,.design-chat-message.assistant{margin-left:0;margin-right:0}}
+.field label{font-weight:700;color:#eef3ff}
+.field small{color:#9fb0ca;font-size:.78rem;line-height:1.35}
+.field input,.field select,.field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:rgba(122,184,255,.55);box-shadow:0 0 0 3px rgba(122,184,255,.12)}
+.reference-panel,.output-media{border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.03);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.reference-panel{min-height:320px}.output-media{aspect-ratio:1/1;min-height:220px}
+.reference-panel img,.output-media img{width:100%;height:100%;object-fit:cover;display:block}
+.empty-state-inline{color:#9fb0ca;text-align:center;padding:22px;line-height:1.45}
+.build-beta-note{padding:12px 14px;margin:4px 0 16px;border:1px solid rgba(122,184,255,.18);background:rgba(122,184,255,.08);border-radius:16px;color:#cfe2ff;line-height:1.5}
+.route-health-list{display:grid;gap:10px;margin-top:16px}
+.route-health-list div,.output-meta div{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
+.route-health-list span,.output-meta span{color:#9fb0ca}.route-health-list strong,.output-meta strong{color:#eef3ff;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.output-card{display:grid;gap:16px}.build-output-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.build-output-card{display:grid;gap:12px;padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.025)}
+.output-info{display:grid;gap:10px}.output-info strong{display:block;color:#fff}.output-info span{display:block;color:#9fb0ca;font-size:.85rem;margin-top:3px;line-height:1.35}
+.output-actions{display:flex;gap:8px;flex-wrap:wrap}.output-actions .ravlo-btn{padding:9px 12px;font-size:.85rem}
+.output-meta{display:grid;gap:8px;font-size:.82rem}.hidden{display:none!important}
+@media (max-width:1200px){.build-output-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){.studio-hero-card,.build-studio-grid,.form-grid.two,.build-output-grid{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.reference-card{order:-1}}
 </style>
 
 <script>
 (() => {
-  const form = document.getElementById('interiorBuildForm');
-  const button = document.getElementById('generateInteriorBtn');
-  const blueprintFile = document.getElementById('blueprint_file');
-  const blueprintUrl = document.getElementById('blueprint_url');
-  const blueprintPreview = document.getElementById('blueprintPreview');
-  const interiorStatus = document.getElementById('interiorStatus');
-  const resultMedia = document.getElementById('interiorResultMedia');
-  const resultRoom = document.getElementById('resultRoom');
-  const resultFloor = document.getElementById('resultFloor');
-  const resultSeed = document.getElementById('resultSeed');
-  const resultJob = document.getElementById('resultJob');
-  const resultLink = document.getElementById('resultLink');
-  const roomGallery = document.getElementById('roomGallery');
-  const downloadCurrentBtn = document.getElementById('downloadCurrentBtn');
+  const form = document.getElementById('buildStudioForm');
+  const button = document.getElementById('generateFullBuildBtn');
+  const buildStatus = document.getElementById('buildStatus');
+  const packageStatus = document.getElementById('packageStatus');
+  const sitePreview = document.getElementById('sitePreview');
+  const landImage = document.getElementById('land_image');
+  const sitePlanUrl = document.getElementById('site_plan_url');
   const downloadAllBtn = document.getElementById('downloadAllBtn');
-  const downloadResultBtn = document.getElementById('downloadResultBtn');
   const continueToDealArchitectBtn = document.getElementById('continueToDealArchitectBtn');
-  const resultDealArchitectBtn = document.getElementById('resultDealArchitectBtn');
+  const bundleJobId = document.getElementById('bundleJobId');
+  const renderBatchId = document.getElementById('renderBatchId');
 
-  let currentImageUrl = {{ (interior_result.get('image_url') if interior_result else '')|tojson }};
+  const outputKeys = ['exterior_front', 'exterior_back', 'blueprint', 'siteplan'];
+  const generatedUrls = new Map();
   let nextUrl = '';
-  let designMessages = [];
 
-  // ── Design Chat ───────────────────────────────────
-  const designChatThread = document.getElementById('designChatThread');
-  const designChatInput = document.getElementById('designChatInput');
-  const askDesignBtn = document.getElementById('askDesignBtn');
-  const applyDesignBtn = document.getElementById('applyDesignBtn');
-  const designChatStatus = document.getElementById('designChatStatus');
-  const descriptionField = document.getElementById('description');
-  const notesField = document.getElementById('notes');
-  const styleField = document.getElementById('style');
-  const roomTypeField = document.getElementById('room_type');
-
-  function appendDesignMessage(role, text) {
-    if (!designChatThread || !text) return;
-    const node = document.createElement('div');
-    node.className = `design-chat-message ${role === 'user' ? 'user' : 'assistant'}`;
-    const label = role === 'user' ? 'You' : 'Ravlo';
-    node.innerHTML = `<strong>${label}</strong><p></p>`;
-    node.querySelector('p').textContent = text;
-    designChatThread.appendChild(node);
-    designChatThread.scrollTop = designChatThread.scrollHeight;
-  }
-
-  function gatherDesignConfig() {
-    return {
-      style: styleField?.value || '',
-      room_type: roomTypeField?.value || '',
-      description: descriptionField?.value || '',
-      notes: notesField?.value || '',
-    };
-  }
-
-  function applyDesignConfig(config) {
-    if (!config || typeof config !== 'object') return;
-    if (config.style && styleField) {
-      for (const opt of styleField.options) {
-        if (opt.value === config.style) {
-          styleField.value = config.style;
-          break;
-        }
-      }
-    }
-    if (config.room_type && roomTypeField) {
-      for (const opt of roomTypeField.options) {
-        if (opt.value.toLowerCase() === config.room_type.toLowerCase()) {
-          roomTypeField.value = opt.value;
-          break;
-        }
-      }
-    }
-    if (config.description && descriptionField) descriptionField.value = config.description;
-    if (config.notes && notesField) notesField.value = config.notes;
-  }
-
-  askDesignBtn?.addEventListener('click', async () => {
-    const message = String(designChatInput?.value || '').trim();
-    if (!message) return;
-    appendDesignMessage('user', message);
-    designMessages.push({ role: 'user', content: message });
-    designChatInput.value = '';
-    askDesignBtn.disabled = true;
-    askDesignBtn.textContent = 'Thinking...';
-
-    try {
-      const response = await fetch("{{ url_for('investor.design_studio_chat') }}", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': '{{ csrf_token() }}',
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify({ messages: designMessages, config: gatherDesignConfig() })
-      });
-      const data = await response.json();
-      const reply = data.assistant_message || 'I\'ve updated the design configuration.';
-      applyDesignConfig(data.config || {});
-      appendDesignMessage('assistant', reply);
-      designMessages.push({ role: 'assistant', content: reply });
-      if (designChatStatus) designChatStatus.textContent = data.ready ? 'Ready' : 'Refining';
-    } catch (error) {
-      appendDesignMessage('assistant', error.message || 'Something went wrong. Please try again.');
-    } finally {
-      askDesignBtn.disabled = false;
-      askDesignBtn.textContent = 'Ask Ravlo';
-    }
+  document.querySelectorAll('[data-output-key][data-image-url]').forEach((node) => {
+    const key = node.getAttribute('data-output-key');
+    const url = node.getAttribute('data-image-url');
+    if (key && url) generatedUrls.set(key, url);
   });
 
-  applyDesignBtn?.addEventListener('click', () => {
-    if (form) form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit'));
-  });
-
-  designChatInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      askDesignBtn?.click();
-    }
-  });
-
-  function setBlueprintPreviewFromUrl(url) {
-    if (!url) return;
-    blueprintPreview.innerHTML = `<img src="${url}" alt="Reference image">`;
+  function setPreviewFromUrl(url) {
+    if (!sitePreview || !url) return;
+    sitePreview.innerHTML = `<img src="${escapeAttr(url)}" alt="Site reference">`;
   }
 
-  function imageFileName(prefix, url) {
-    const cleanPrefix = (prefix || 'ravlo-image').replace(/[^a-z0-9-_]+/gi, '-').toLowerCase();
+  function escapeAttr(value) {
+    return String(value || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('"', '&quot;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+  }
+
+  function fileName(prefix, url) {
+    const cleanPrefix = String(prefix || 'ravlo-build').replace(/[^a-z0-9-_]+/gi, '-').toLowerCase();
     try {
       const pathname = new URL(url, window.location.origin).pathname;
       const ext = pathname.split('.').pop();
@@ -386,7 +321,6 @@
 
   async function downloadImage(url, filename) {
     if (!url || url === '#') return;
-
     try {
       const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
       if (!response.ok) throw new Error('Image download failed.');
@@ -394,7 +328,7 @@
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = objectUrl;
-      link.download = filename || imageFileName('ravlo-design', url);
+      link.download = filename || fileName('ravlo-build', url);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -404,75 +338,92 @@
     }
   }
 
-  function collectImageUrls() {
-    const urls = new Set();
-    if (currentImageUrl) urls.add(currentImageUrl);
-    document.querySelectorAll('[data-image-url]').forEach((node) => {
-      const url = node.getAttribute('data-image-url');
-      if (url) urls.add(url);
-    });
-    return Array.from(urls);
+  function refreshGlobalActions() {
+    const hasOutputs = generatedUrls.size > 0;
+    if (downloadAllBtn) downloadAllBtn.classList.toggle('hidden', !hasOutputs);
+    if (continueToDealArchitectBtn) {
+      if (nextUrl) {
+        continueToDealArchitectBtn.href = nextUrl;
+        continueToDealArchitectBtn.classList.remove('hidden');
+      } else {
+        continueToDealArchitectBtn.href = '#';
+        continueToDealArchitectBtn.classList.add('hidden');
+      }
+    }
   }
 
-  function refreshActionButtons() {
-    const hasImage = Boolean(currentImageUrl);
+  function normalizeResultUrl(key, block) {
+    if (!block) return '';
+    if (key === 'blueprint') return block.blueprint_url || block.image_url || '';
+    return block.image_url || '';
+  }
 
-    [downloadCurrentBtn, downloadResultBtn].forEach((btn) => {
-      if (!btn) return;
-      btn.classList.toggle('hidden', !hasImage);
-    });
+  function renderOutput(key, block) {
+    const url = normalizeResultUrl(key, block);
+    const media = document.getElementById(`media_${key}`);
+    const open = document.getElementById(`open_${key}`);
+    const seed = document.getElementById(`seed_${key}`);
+    const job = document.getElementById(`job_${key}`);
+    const card = document.querySelector(`[data-output-key="${key}"]`);
 
-    if (downloadAllBtn) {
-      downloadAllBtn.classList.toggle('hidden', collectImageUrls().length === 0);
+    if (url) {
+      generatedUrls.set(key, url);
+      if (media) media.innerHTML = `<img src="${escapeAttr(url)}" alt="${escapeAttr(key)}">`;
+      if (open) {
+        open.href = url;
+        open.classList.remove('hidden');
+      }
+      if (card) card.setAttribute('data-image-url', url);
+      document.querySelectorAll(`[data-download-key="${key}"]`).forEach((btn) => btn.classList.remove('hidden'));
     }
 
-    [continueToDealArchitectBtn, resultDealArchitectBtn].forEach((link) => {
-      if (!link) return;
-      if (nextUrl) {
-        link.href = nextUrl;
-        link.classList.remove('hidden');
-      } else {
-        link.href = '#';
-        link.classList.add('hidden');
-      }
-    });
+    if (seed) seed.textContent = block?.seed || '—';
+    if (job) job.textContent = block?.job_id || '—';
   }
 
-  blueprintFile?.addEventListener('change', function () {
+  function setGeneratingState(isGenerating) {
+    if (!button) return;
+    button.disabled = isGenerating;
+    button.textContent = isGenerating ? 'Generating Full Package...' : {{ (submit_label or "Generate Full Build Package")|tojson }};
+    if (buildStatus) buildStatus.textContent = isGenerating ? 'Generating' : 'Ready';
+    if (packageStatus) packageStatus.textContent = isGenerating ? 'Generating' : packageStatus.textContent;
+  }
+
+  landImage?.addEventListener('change', function () {
     const file = this.files && this.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (e) => setBlueprintPreviewFromUrl(e.target?.result || '');
+    reader.onload = (event) => setPreviewFromUrl(event.target?.result || '');
     reader.readAsDataURL(file);
   });
 
-  blueprintUrl?.addEventListener('change', function () {
-    if (this.value.trim()) setBlueprintPreviewFromUrl(this.value.trim());
+  sitePlanUrl?.addEventListener('change', function () {
+    const url = this.value.trim();
+    if (url) setPreviewFromUrl(url);
   });
 
-  downloadCurrentBtn?.addEventListener('click', () => {
-    downloadImage(currentImageUrl, imageFileName('ravlo-current-interior', currentImageUrl));
-  });
-
-  downloadResultBtn?.addEventListener('click', () => {
-    downloadImage(currentImageUrl, imageFileName('ravlo-interior-result', currentImageUrl));
+  document.querySelectorAll('.output-download').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-download-key');
+      const url = generatedUrls.get(key);
+      downloadImage(url, fileName(`ravlo-${key}`, url));
+    });
   });
 
   downloadAllBtn?.addEventListener('click', async () => {
-    const urls = collectImageUrls();
-    for (let i = 0; i < urls.length; i += 1) {
-      await downloadImage(urls[i], imageFileName(`ravlo-design-${i + 1}`, urls[i]));
+    const entries = Array.from(generatedUrls.entries());
+    for (const [key, url] of entries) {
+      await downloadImage(url, fileName(`ravlo-${key}`, url));
     }
   });
 
-  form?.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    button.disabled = true;
-    button.textContent = 'Generating...';
-    interiorStatus.textContent = 'Generating';
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    setGeneratingState(true);
+    if (packageStatus) packageStatus.textContent = 'Generating';
 
     try {
-      const response = await fetch("{{ url_for('investor.generate_build_interior') }}", {
+      const response = await fetch("{{ url_for('investor.generate_full_build') }}", {
         method: 'POST',
         body: new FormData(form),
         headers: {
@@ -482,57 +433,40 @@
         credentials: 'same-origin'
       });
 
-      const data = await response.json();
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (_) {
+        throw new Error('Build generation failed before JSON response was returned.');
+      }
+
       if (!response.ok || data.status !== 'ok') {
-        throw new Error(data.message || 'Interior generation failed.');
+        throw new Error(data.message || 'Full build generation failed.');
       }
 
-      if (data.blueprint_url) setBlueprintPreviewFromUrl(data.blueprint_url);
+      if (bundleJobId) bundleJobId.textContent = data.bundle_job_id || '—';
+      if (renderBatchId) renderBatchId.textContent = data.render_batch_id || '—';
 
-      currentImageUrl = data.image_url || '';
+      const results = data.results || {};
+      outputKeys.forEach((key) => renderOutput(key, results[key] || data.build_project?.[key]));
+
       nextUrl = data.next_url || data.deal_architect_url || '';
-
-      interiorStatus.textContent = 'Generated';
-      resultRoom.textContent = data.room_type || '—';
-      resultFloor.textContent = data.floor || '—';
-      resultSeed.textContent = data.seed || '—';
-      resultJob.textContent = data.job_id || '—';
-
-      resultMedia.innerHTML = data.image_url
-        ? `<img src="${data.image_url}" alt="Interior result">`
-        : '<div class="empty-state-inline">No image returned.</div>';
-
-      if (data.image_url) {
-        resultLink.href = data.image_url;
-        resultLink.classList.remove('hidden');
+      if (!nextUrl) {
+        const dealId = form.querySelector('[name="deal_id"]')?.value;
+        if (dealId) nextUrl = "{{ url_for('investor.deal_architect') }}" + `?deal_id=${encodeURIComponent(dealId)}`;
       }
 
-      if (data.image_url && roomGallery) {
-        const card = document.createElement('a');
-        card.className = 'room-card';
-        card.href = data.image_url;
-        card.target = '_blank';
-        card.setAttribute('data-image-url', data.image_url);
-        card.innerHTML = `<img src="${data.image_url}" alt="${data.room_type || 'Interior room'}"><div><strong>${data.room_type || 'Room'}</strong><span>${data.floor || 'Floor'}</span></div>`;
-
-        if (roomGallery.classList.contains('empty-state-inline')) {
-          roomGallery.className = 'room-gallery';
-          roomGallery.innerHTML = '';
-        }
-        roomGallery.prepend(card);
-      }
-
-      refreshActionButtons();
+      if (packageStatus) packageStatus.textContent = 'Generated';
+      refreshGlobalActions();
     } catch (error) {
-      interiorStatus.textContent = 'Error';
-      alert(error.message || 'Interior generation failed.');
+      if (packageStatus) packageStatus.textContent = 'Error';
+      alert(error.message || 'Full build generation failed.');
     } finally {
-      button.disabled = false;
-      button.textContent = {{ (submit_label or "Generate Design Concept")|tojson }};
+      setGeneratingState(false);
     }
   });
 
-  refreshActionButtons();
+  refreshGlobalActions();
 })();
 </script>
 {% endblock %}
