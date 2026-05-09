@@ -7645,9 +7645,10 @@ def generate_exterior_back():
             "preserve_massing": False,
             "preserve_camera": False,
             "preserve_composition": False,
+            "style_reference_only": True,
 
             "prompt": _prompt_join(
-                "rear elevation",
+                "photorealistic rear exterior view",
                 "backyard-facing facade",
                 "rear patio doors",
                 "rear windows",
@@ -7658,7 +7659,10 @@ def generate_exterior_back():
                 "same roofline",
                 "same window language",
                 "same floor count",
+                "same home as front exterior",
                 "different composition from front",
+                "no driveway view",
+                "no street-facing garage view",
             ),
             "prompt_notes": _prompt_join(
                 description,
@@ -7690,11 +7694,11 @@ def generate_exterior_back():
         }
 
         if reference_image_base64:
-            payload["reference_image_base64"] = reference_image_base64
             payload["master_exterior_reference_url"] = prepared_reference_url
+            payload["front_style_reference_available"] = True
         elif prepared_reference_url:
-            payload["reference_image_url"] = prepared_reference_url
             payload["master_exterior_reference_url"] = prepared_reference_url
+            payload["front_style_reference_url"] = prepared_reference_url
 
         if bedrooms_value is not None:
             payload["bedrooms"] = bedrooms_value
@@ -9672,17 +9676,18 @@ def generate_full_build():
                         "preserve_massing": False,
                         "preserve_camera": False,
                         "preserve_composition": False,
+                        "style_reference_only": True,
                         "steps": 30,
                         "guidance": 7.8,
                         "strength": 0.24,
                     })
 
                     if master_exterior_url:
-                        payload["reference_image_url"] = master_exterior_url
                         payload["master_exterior_reference_url"] = master_exterior_url
+                        payload["front_style_reference_url"] = master_exterior_url
 
                     payload["prompt"] = _prompt_join(
-                        "rear elevation",
+                        "photorealistic rear exterior view",
                         "backyard-facing facade",
                         "rear patio doors",
                         "rear windows",
@@ -9693,7 +9698,10 @@ def generate_full_build():
                         "same roofline",
                         "same window language",
                         "same floor count",
+                        "same home as front exterior",
                         "different composition from front",
+                        "no driveway view",
+                        "no street-facing garage view",
                     )
 
                     payload["negative_prompt"] = _prompt_join(
@@ -9779,6 +9787,9 @@ def generate_full_build():
 
                 payload["prompt"] = _prompt_join(
                     "top-down parcel map",
+                    "single residential parcel only",
+                    "one primary building footprint only",
+                    "not a neighborhood subdivision",
                     "site layout diagram",
                     "building footprint",
                     "driveway layout",
@@ -9797,6 +9808,12 @@ def generate_full_build():
                     "interior scene",
                     "architectural visualization",
                     "luxury house render",
+                    "subdivision",
+                    "neighborhood masterplan",
+                    "multiple houses",
+                    "many lots",
+                    "road network",
+                    "city plan",
                 )
 
             current_app.logger.warning(
