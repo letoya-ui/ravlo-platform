@@ -7177,6 +7177,46 @@ def _prompt_join(*parts):
     return ". ".join(cleaned).strip() + ("." if cleaned else "")
 
 
+def _compose_build_alignment_contract(
+    *,
+    contract_id="",
+    project_name="",
+    property_type="",
+    style="",
+    description="",
+    floors=None,
+    bedrooms=None,
+    bathrooms=None,
+    square_feet=None,
+):
+    floor_count = floors or 1
+    program_parts = []
+    if bedrooms:
+        program_parts.append(f"{bedrooms} bedrooms")
+    if bathrooms:
+        program_parts.append(f"{bathrooms} bathrooms")
+    if square_feet:
+        program_parts.append(f"about {square_feet} square feet")
+
+    return _prompt_join(
+        "SHARED BUILDING ALIGNMENT CONTRACT",
+        f"Contract ID: {contract_id}" if contract_id else "",
+        f"Project: {project_name}" if project_name else "",
+        f"One {floor_count}-story {style.replace('_', ' ')} {property_type.replace('_', ' ')} home on one single parcel; not a subdivision, not multiple houses",
+        ", ".join(program_parts) if program_parts else "",
+        f"Description anchor: {description}" if description else "",
+        "All blueprint floors, site plan, front exterior, and rear exterior must describe the same building",
+        "Use the same rectangular primary footprint and same outside wall outline on every blueprint floor",
+        "Plan orientation is fixed: front/street side at the bottom edge of plans, rear/backyard side at the top edge",
+        "Stack the stair core in the same right-center location on every floor",
+        "Keep kitchen and bath wet-wall/plumbing logic aligned vertically between floors",
+        "Front entry, driveway, and garage or parking logic belong on the front/street side only",
+        "Rear patio or deck, rear patio doors, private yard, and backyard landscaping belong on the rear/backyard side only",
+        "Front and rear exteriors must use the same floor count, roof style, window rhythm, materials, footprint width, and massing volumes",
+        "Site plan must show one matching building footprint on one parcel with driveway, walkways, setbacks, patio or deck, and yard zones",
+    )
+
+
 def _design_room_result_key(room_type="", floor="", style=""):
     return (
         safe_str(room_type).strip().lower(),
@@ -9423,6 +9463,17 @@ def generate_full_build():
         ])
 
         master_exterior_url = ""
+        alignment_contract = _compose_build_alignment_contract(
+            contract_id=bundle_job_id,
+            project_name=project_name,
+            property_type=property_type,
+            style=style,
+            description=description,
+            floors=floor_count_for_outputs,
+            bedrooms=bedrooms,
+            bathrooms=bathrooms,
+            square_feet=square_feet,
+        )
 
         all_results = {}
 
@@ -9441,6 +9492,8 @@ def generate_full_build():
             "square_feet": square_feet,
             "stories": number_of_floors,
             "number_of_floors": number_of_floors,
+            "building_alignment_contract": alignment_contract,
+            "alignment_contract_id": bundle_job_id,
             "bundle_job_id": bundle_job_id,
             "render_batch_id": render_batch_id,
             "beta_version": "build_studio_full_build_v1",
@@ -9474,6 +9527,7 @@ def generate_full_build():
 
             consistency_notes = _prompt_join(
                 f"Build package ID: {bundle_job_id}",
+                alignment_contract,
                 f"Master exterior reference URL: {master_exterior_url}" if master_exterior_url else "",
                 "Same home concept, same floor count, same architectural direction.",
             )
@@ -9491,6 +9545,8 @@ def generate_full_build():
 
                 "bundle_job_id": bundle_job_id,
                 "render_batch_id": render_batch_id,
+                "building_alignment_contract": alignment_contract,
+                "alignment_contract_id": bundle_job_id,
                 "design_consistency_anchor": bool(master_exterior_url),
                 "master_exterior_reference_url": master_exterior_url,
 
@@ -9567,6 +9623,7 @@ def generate_full_build():
                     })
 
                     payload["prompt"] = _prompt_join(
+                        alignment_contract,
                         "front exterior elevation",
                         "street-facing facade",
                         style.replace("_", " "),
@@ -9605,6 +9662,7 @@ def generate_full_build():
                         payload["master_exterior_reference_url"] = master_exterior_url
 
                     payload["prompt"] = _prompt_join(
+                        alignment_contract,
                         "rear elevation",
                         "backyard-facing facade",
                         "rear patio doors",
@@ -9645,8 +9703,12 @@ def generate_full_build():
                 })
 
                 payload["prompt"] = _prompt_join(
+                    alignment_contract,
                     f"{floor_label} floor",
                     "top-down floor plan",
+                    "same outside wall outline as the other blueprint floors",
+                    "stacked stair core aligned to every floor",
+                    "front/street side at bottom, rear/backyard side at top",
                     "2D orthographic layout",
                     "flat room layout",
                     "walls doors windows stairs",
@@ -9667,6 +9729,8 @@ def generate_full_build():
                     "perspective architecture",
                     "exterior rendering",
                     "photoreal interior",
+                    "different footprint from other floors",
+                    "different stair location",
                 )
 
                 current_app.logger.warning(
@@ -9692,7 +9756,11 @@ def generate_full_build():
                 })
 
                 payload["prompt"] = _prompt_join(
+                    alignment_contract,
                     "top-down parcel map",
+                    "single parcel only",
+                    "one primary building footprint only",
+                    "not a neighborhood subdivision",
                     "site layout diagram",
                     "building footprint",
                     "driveway layout",
@@ -9712,6 +9780,10 @@ def generate_full_build():
                     "interior scene",
                     "architectural visualization",
                     "luxury house render",
+                    "subdivision",
+                    "neighborhood masterplan",
+                    "multiple houses",
+                    "many lots",
                 )
 
             current_app.logger.warning(
