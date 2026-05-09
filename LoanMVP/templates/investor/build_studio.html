@@ -218,8 +218,7 @@
         {% if key == 'blueprint_first' and not item and build_project %}{% set item = build_project.get('blueprint') %}{% endif %}
         {% set item_url = item.get('image_url') if item else '' %}
         {% if key in ['blueprint_first', 'blueprint_second', 'blueprint_third'] and item and item.get('blueprint_url') %}{% set item_url = item.get('blueprint_url') %}{% endif %}
-        {% set optional_blueprint = key in ['blueprint_second', 'blueprint_third'] %}
-        {% if not optional_blueprint or item_url %}
+        {% if item_url %}
         <article class="build-output-card" data-output-key="{{ key }}" {% if item_url %}data-image-url="{{ item_url }}"{% endif %}>
           <div class="output-media" id="media_{{ key }}">
             {% if item_url %}
@@ -373,8 +372,8 @@
     return block.image_url || '';
   }
 
-  function hasResultBlock(block) {
-    return Boolean(block && typeof block === 'object' && Object.keys(block).length);
+  function hasResultBlock(key, block) {
+    return Boolean(block && typeof block === 'object' && normalizeResultUrl(key, block));
   }
 
   function renderOutputCard(key, block) {
@@ -407,7 +406,7 @@
   function renderResults(results) {
     if (!buildOutputGrid) return;
     generatedUrls.clear();
-    const resultKeys = outputKeys.filter((key) => hasResultBlock(results?.[key]));
+    const resultKeys = outputKeys.filter((key) => hasResultBlock(key, results?.[key]));
     buildOutputGrid.innerHTML = resultKeys.map((key) => renderOutputCard(key, results[key])).join('');
     resultKeys.forEach((key) => renderOutput(key, results[key]));
     refreshGlobalActions();

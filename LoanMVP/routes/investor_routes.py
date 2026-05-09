@@ -7591,6 +7591,18 @@ def generate_exterior_back():
 
         render_batch_id = uuid.uuid4().hex
         bundle_job_id = (request.form.get("bundle_job_id") or uuid.uuid4().hex).strip()
+        design_anchor = {
+            "style": style,
+            "property_type": property_type,
+            "number_of_floors": number_of_floors,
+            "bedrooms": bedrooms_value,
+            "bathrooms": bathrooms_value,
+            "square_feet": square_feet_value,
+            "material_palette": "warm white stucco, dark trim, black framed windows, natural stone or wood accents",
+            "roof_style": "modern flat or low slope roofline",
+            "window_language": "large black framed modern windows",
+            "massing": "clean modern residential massing, consistent floor count, same architectural language",
+        }
 
         payload = {
             "generation_family": "build",
@@ -7605,6 +7617,7 @@ def generate_exterior_back():
 
             "bundle_job_id": bundle_job_id,
             "render_batch_id": render_batch_id,
+            "design_anchor": design_anchor,
 
             "project_name": project_name,
             "property_type": property_type,
@@ -7632,9 +7645,6 @@ def generate_exterior_back():
             "preserve_massing": False,
             "preserve_camera": False,
             "preserve_composition": False,
-            "style_reference_only": True,
-            "material_reference_only": True,
-            "composition_reference_allowed": False,
 
             "prompt": _prompt_join(
                 "rear elevation",
@@ -7644,9 +7654,11 @@ def generate_exterior_back():
                 "private backyard",
                 "patio or deck",
                 "rear landscaping",
-                "same materials and roof style",
+                "same materials",
+                "same roofline",
+                "same window language",
+                "same floor count",
                 "different composition from front",
-                "no garage-facing street view",
             ),
             "prompt_notes": _prompt_join(
                 description,
@@ -7654,23 +7666,27 @@ def generate_exterior_back():
                 "Generate the rear/backyard-facing side of the same home concept.",
             ),
             "negative_prompt": _prompt_join(
-                "front elevation",
+                "front facade",
+                "street-facing elevation",
+                "driveway-focused composition",
                 "same image as front",
-                "street-facing facade",
-                "front entry",
-                "driveway",
                 "garage door facing viewer",
                 "curb appeal",
                 "sidewalk",
                 "mailbox",
+                "wireframe",
+                "architectural sketch",
+                "line art",
+                "construction drawing",
+                "unfinished structure",
             ),
 
             "count": 1,
             "width": 1024,
             "height": 1024,
-            "steps": 34,
-            "guidance": 8.2,
-            "strength": 0.40,
+            "steps": 30,
+            "guidance": 7.8,
+            "strength": 0.24,
         }
 
         if reference_image_base64:
@@ -9450,11 +9466,12 @@ def generate_full_build():
         render_batch_id = uuid.uuid4().hex
         bundle_job_id = uuid.uuid4().hex
 
-        floor_count_for_outputs = number_of_floors or 1
-        outputs = [("blueprint", "blueprint_first")]
-        if floor_count_for_outputs >= 2:
+        floor_count_for_outputs = int(number_of_floors or 1)
+        outputs = []
+        outputs.append(("blueprint", "blueprint_first"))
+        if number_of_floors and int(number_of_floors) >= 2:
             outputs.append(("blueprint", "blueprint_second"))
-        if floor_count_for_outputs >= 3:
+        if number_of_floors and int(number_of_floors) >= 3:
             outputs.append(("blueprint", "blueprint_third"))
         outputs.extend([
             ("siteplan", "siteplan"),
@@ -9463,16 +9480,23 @@ def generate_full_build():
         ])
 
         master_exterior_url = ""
-        alignment_contract = _compose_build_alignment_contract(
-            contract_id=bundle_job_id,
-            project_name=project_name,
-            property_type=property_type,
-            style=style,
-            description=description,
-            floors=floor_count_for_outputs,
-            bedrooms=bedrooms,
-            bathrooms=bathrooms,
-            square_feet=square_feet,
+        design_anchor = {
+            "style": style,
+            "property_type": property_type,
+            "number_of_floors": number_of_floors,
+            "bedrooms": bedrooms_value,
+            "bathrooms": bathrooms_value,
+            "square_feet": square_feet_value,
+            "material_palette": "warm white stucco, dark trim, black framed windows, natural stone or wood accents",
+            "roof_style": "modern flat or low slope roofline",
+            "window_language": "large black framed modern windows",
+            "massing": "clean modern residential massing, consistent floor count, same architectural language",
+        }
+        design_anchor_prompt = _prompt_join(
+            "same material palette",
+            "same roofline",
+            "same window language",
+            "same floor count",
         )
 
         all_results = {}
@@ -9492,8 +9516,7 @@ def generate_full_build():
             "square_feet": square_feet,
             "stories": number_of_floors,
             "number_of_floors": number_of_floors,
-            "building_alignment_contract": alignment_contract,
-            "alignment_contract_id": bundle_job_id,
+            "design_anchor": design_anchor,
             "bundle_job_id": bundle_job_id,
             "render_batch_id": render_batch_id,
             "beta_version": "build_studio_full_build_v1",
@@ -9527,7 +9550,6 @@ def generate_full_build():
 
             consistency_notes = _prompt_join(
                 f"Build package ID: {bundle_job_id}",
-                alignment_contract,
                 f"Master exterior reference URL: {master_exterior_url}" if master_exterior_url else "",
                 "Same home concept, same floor count, same architectural direction.",
             )
@@ -9545,8 +9567,7 @@ def generate_full_build():
 
                 "bundle_job_id": bundle_job_id,
                 "render_batch_id": render_batch_id,
-                "building_alignment_contract": alignment_contract,
-                "alignment_contract_id": bundle_job_id,
+                "design_anchor": design_anchor,
                 "design_consistency_anchor": bool(master_exterior_url),
                 "master_exterior_reference_url": master_exterior_url,
 
@@ -9623,10 +9644,10 @@ def generate_full_build():
                     })
 
                     payload["prompt"] = _prompt_join(
-                        alignment_contract,
                         "front exterior elevation",
                         "street-facing facade",
                         style.replace("_", " "),
+                        design_anchor_prompt,
                         property_type.replace("_", " "),
                         "front entry",
                         "driveway",
@@ -9651,10 +9672,9 @@ def generate_full_build():
                         "preserve_massing": False,
                         "preserve_camera": False,
                         "preserve_composition": False,
-                        "style_reference_only": True,
-                        "material_reference_only": True,
-                        "composition_reference_allowed": False,
-                        "strength": 0.40,
+                        "steps": 30,
+                        "guidance": 7.8,
+                        "strength": 0.24,
                     })
 
                     if master_exterior_url:
@@ -9662,7 +9682,6 @@ def generate_full_build():
                         payload["master_exterior_reference_url"] = master_exterior_url
 
                     payload["prompt"] = _prompt_join(
-                        alignment_contract,
                         "rear elevation",
                         "backyard-facing facade",
                         "rear patio doors",
@@ -9670,21 +9689,27 @@ def generate_full_build():
                         "private backyard",
                         "patio or deck",
                         "rear landscaping",
-                        "same materials and roof style",
+                        "same materials",
+                        "same roofline",
+                        "same window language",
+                        "same floor count",
                         "different composition from front",
-                        "no garage-facing street view",
                     )
 
                     payload["negative_prompt"] = _prompt_join(
-                        "front elevation",
+                        "front facade",
+                        "street-facing elevation",
+                        "driveway-focused composition",
                         "same image as front",
-                        "street-facing facade",
-                        "front entry",
-                        "driveway",
                         "garage door facing viewer",
                         "curb appeal",
                         "sidewalk",
                         "mailbox",
+                        "wireframe",
+                        "architectural sketch",
+                        "line art",
+                        "construction drawing",
+                        "unfinished structure",
                     )
 
             elif is_blueprint:
@@ -9703,21 +9728,16 @@ def generate_full_build():
                 })
 
                 payload["prompt"] = _prompt_join(
-                    alignment_contract,
                     f"{floor_label} floor",
                     "top-down floor plan",
-                    "same outside wall outline as the other blueprint floors",
-                    "stacked stair core aligned to every floor",
-                    "front/street side at bottom, rear/backyard side at top",
                     "2D orthographic layout",
                     "flat room layout",
                     "walls doors windows stairs",
-                    "kitchen bathroom bedroom labels",
-                    "black and white CAD plan",
+                    "technical line drawing",
+                    "thin black lines",
+                    "minimal shading",
+                    "simple monochrome floorplan",
                     "technical floor layout",
-                    "not elevation",
-                    "not facade",
-                    "not exterior view",
                 )
 
                 payload["negative_prompt"] = _prompt_join(
@@ -9729,8 +9749,10 @@ def generate_full_build():
                     "perspective architecture",
                     "exterior rendering",
                     "photoreal interior",
-                    "different footprint from other floors",
-                    "different stair location",
+                    "furniture rendering",
+                    "interior decoration",
+                    "material textures",
+                    "realistic flooring",
                 )
 
                 current_app.logger.warning(
@@ -9756,11 +9778,7 @@ def generate_full_build():
                 })
 
                 payload["prompt"] = _prompt_join(
-                    alignment_contract,
                     "top-down parcel map",
-                    "single parcel only",
-                    "one primary building footprint only",
-                    "not a neighborhood subdivision",
                     "site layout diagram",
                     "building footprint",
                     "driveway layout",
@@ -9770,7 +9788,6 @@ def generate_full_build():
                     "hardscape plan",
                     "flat zoning diagram",
                     "2D development layout",
-                    "not street-level house",
                 )
 
                 payload["negative_prompt"] = _prompt_join(
@@ -9780,10 +9797,6 @@ def generate_full_build():
                     "interior scene",
                     "architectural visualization",
                     "luxury house render",
-                    "subdivision",
-                    "neighborhood masterplan",
-                    "multiple houses",
-                    "many lots",
                 )
 
             current_app.logger.warning(
