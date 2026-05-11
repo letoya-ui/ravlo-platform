@@ -7647,8 +7647,8 @@ def generate_exterior_back():
             "preserve_composition": False,
             "style_reference_only": False,
             "pipe_mode": "depth",
-            "rear_depth_scale": 0.10,
-            "controlnet_scale": 0.10,
+            "rear_depth_scale": 0.04,
+            "controlnet_scale": 0.04,
 
             "prompt": _prompt_join(
                 "rear elevation of the same home",
