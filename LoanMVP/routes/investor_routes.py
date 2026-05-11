@@ -10119,7 +10119,11 @@ def generate_full_build():
                 floor_label = output_mode.replace("blueprint_", "")
 
                 payload.update({
-                    "reference_role": "text_program_only",
+                    # reference_role signals the engine that the exterior URL
+                    # should be used only as a footprint anchor (layout/proportions),
+                    # not as a photo init — the engine projects it to a blurred
+                    # top-down approximation at very low strength (0.06).
+                    "reference_role": "exterior_footprint_anchor" if master_exterior_url else "text_program_only",
                     "source_role": "text_program_only",
                     "render_family": "architectural_blueprint",
                     "generation_mode": "top_down_floorplan",
@@ -10129,7 +10133,13 @@ def generate_full_build():
                     "guidance": 5.4,
                     "strength": 0.0,
                 })
-                _strip_build_init_images(payload, strip_master=True)
+                # Strip raw photo inputs but KEEP master_exterior_reference_url
+                # so the engine can derive the footprint projection from it.
+                _strip_build_init_images(payload, strip_master=False)
+                # Ensure the exterior anchor URL is in the payload under the
+                # key the engine looks for in run_blueprint_generation.
+                if master_exterior_url:
+                    payload["master_exterior_reference_url"] = master_exterior_url
 
                 blueprint_prompt_parts = [
                     f"{floor_label} floor",
