@@ -9463,6 +9463,8 @@ def generate_full_build():
 
         floor_count_for_outputs = int(number_of_floors or 1)
         outputs = []
+        # exterior_front first so master_exterior_url is set before blueprints run
+        outputs.append(("exterior", "exterior_front"))
         outputs.append(("blueprint", "blueprint_first"))
         if number_of_floors and int(number_of_floors) >= 2:
             outputs.append(("blueprint", "blueprint_second"))
@@ -9470,7 +9472,6 @@ def generate_full_build():
             outputs.append(("blueprint", "blueprint_third"))
         outputs.extend([
             ("siteplan", "siteplan"),
-            ("exterior", "exterior_front"),
             ("exterior", "exterior_back"),
         ])
 
@@ -9728,7 +9729,10 @@ def generate_full_build():
                     "strength": 0.0,
                 })
 
-                payload["prompt"] = _prompt_join(
+                if master_exterior_url:
+                    payload["master_exterior_reference_url"] = master_exterior_url
+
+                blueprint_prompt_parts = [
                     f"{floor_label} floor",
                     "top-down floor plan",
                     "2D orthographic layout",
@@ -9739,7 +9743,25 @@ def generate_full_build():
                     "minimal shading",
                     "simple monochrome floorplan",
                     "technical floor layout",
-                )
+                ]
+
+                # Anchor the floor plan to the specific house design generated above
+                house_descriptor = " ".join(filter(None, [
+                    property_type.replace("_", " ") if property_type else "",
+                    style.replace("_", " ") if style else "",
+                ]))
+                if house_descriptor:
+                    blueprint_prompt_parts.append(f"{house_descriptor} home")
+                if number_of_floors:
+                    blueprint_prompt_parts.append(f"{number_of_floors}-story building")
+                if bedrooms_value:
+                    blueprint_prompt_parts.append(f"{bedrooms_value} bedrooms")
+                if bathrooms_value:
+                    blueprint_prompt_parts.append(f"{bathrooms_value} bathrooms")
+                if square_feet_value:
+                    blueprint_prompt_parts.append(f"approximately {square_feet_value} square feet")
+
+                payload["prompt"] = _prompt_join(*blueprint_prompt_parts)
 
                 payload["negative_prompt"] = _prompt_join(
                     "house elevation",
