@@ -425,12 +425,24 @@
 
       const rehabCostInput = document.getElementById('rehab_cost');
       if (rehabCostInput && data.total_budget) rehabCostInput.value = Math.round(Number(data.total_budget));
+
+      // Auto-redirect to Budget Studio with exact line items populated
+      if (data.budget_url) {
+        buttons.forEach((btn) => {
+          btn.disabled = true;
+          btn.textContent = 'Opening Budget Studio…';
+        });
+        setTimeout(() => { window.location.href = data.budget_url; }, 1800);
+        return;
+      }
     } catch (error) {
       alert(error.message || 'Failed to generate build costs.');
     } finally {
       buttons.forEach((btn) => {
-        btn.disabled = false;
-        btn.textContent = 'Generate Build Costs';
+        if (!btn.disabled) {
+          btn.disabled = false;
+          btn.textContent = 'Generate Build Costs';
+        }
       });
     }
   }

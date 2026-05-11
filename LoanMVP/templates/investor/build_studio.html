@@ -542,11 +542,18 @@ rgba(122,184,255,.18);background:rgba(122,184,255,.08);border-radius:16px;color:
       nextUrl = data.next_url || data.deal_architect_url || '';
       if (!nextUrl) {
         const dealId = form.querySelector('[name="deal_id"]')?.value;
-        if (dealId) nextUrl = "{{ url_for('investor.deal_architect') }}" + `?deal_id=${encodeURIComponent(dealId)}`;
+        if (dealId) nextUrl = "{{ url_for('investor.deal_architect') }}" + `?deal_id=${encodeURIComponent(dealId)}&auto_generate_costs=1`;
       }
 
       if (packageStatus) packageStatus.textContent = 'Generated';
       refreshGlobalActions();
+
+      // Auto-redirect to Deal Architect — it will generate the budget and land on Budget Studio
+      if (nextUrl) {
+        if (packageStatus) packageStatus.textContent = 'Sending to Deal Architect…';
+        if (button) { button.disabled = true; button.textContent = 'Redirecting…'; }
+        setTimeout(() => { window.location.href = nextUrl; }, 2500);
+      }
     } catch (error) {
       if (packageStatus) packageStatus.textContent = 'Error';
       alert(error.message || 'Full build generation failed.');

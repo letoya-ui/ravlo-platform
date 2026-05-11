@@ -9970,6 +9970,14 @@ def generate_full_build():
 
         db.session.commit()
 
+        _da_url = None
+        if deal is not None:
+            _da_url = url_for(
+                "investor.deal_architect",
+                deal_id=deal.id,
+                auto_generate_costs=1,
+            )
+
         return jsonify({
             "status": "ok",
             "mode": "full_build",
@@ -9979,6 +9987,8 @@ def generate_full_build():
             "build_project": build_project_payload,
             "saved_to_deal": saved_to_deal,
             "rejected_blueprint_reference": rejected_blueprint_reference,
+            "deal_architect_url": _da_url,
+            "next_url": _da_url,
         })
 
     except Exception as e:
@@ -10996,6 +11006,33 @@ def deal_architect(deal_id=None):
         flash("Deal Architect inputs updated.", "success")
 
         return redirect(url_for("investor.deal_architect", deal_id=selected_deal.id))
+
+    # -------------------------------------------------
+    # AUTO-GENERATE BUDGET + REDIRECT TO BUDGET STUDIO
+    # when arriving from Build Studio with auto_generate_costs=1
+    # -------------------------------------------------
+    if (
+        request.method == "GET"
+        and request.args.get("auto_generate_costs", type=int) == 1
+        and selected_deal is not None
+    ):
+        _results_check = _deal_results(selected_deal)
+        _bp_check = _results_check.get("build_project", {}) or {}
+        if _bp_check:
+            try:
+                _budget_result = _auto_generate_build_budget_from_deal(selected_deal)
+                if _budget_result and _budget_result.get("budget_id"):
+                    db.session.commit()
+                    return redirect(url_for(
+                        "investor.budget_studio",
+                        deal_id=selected_deal.id,
+                        budget_id=_budget_result["budget_id"],
+                    ))
+            except Exception:
+                current_app.logger.exception(
+                    "Auto generate budget on deal_architect load failed — falling through to render"
+                )
+                db.session.rollback()
 
     # -------------------------------------------------
     # RENDER
