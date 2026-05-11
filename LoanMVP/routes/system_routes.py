@@ -37,7 +37,7 @@ from LoanMVP.models.processor_model import ProcessorProfile
 from LoanMVP.models.underwriter_model import (
     UnderwriterProfile, UnderwriterTask, UnderwritingCondition, ConditionRequest,
 )
-from LoanMVP.models.crm_models import Lead, Message, CRMNote, Task
+from LoanMVP.models.crm_models import Lead, Message, CRMNote, Task, FollowUpItem, FollowUpTask
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.user_model import User
 
@@ -559,6 +559,16 @@ def delete_user(user_id):
                 LoanQuote.assigned_officer_id.in_(lo_ids)
             ).update({"assigned_officer_id": None},
                      synchronize_session="fetch")
+
+        # -- CRM follow-up items & tasks -----------------------------------
+        # created_by is a nullable FK to user.id; nullify so the row is
+        # preserved but the reference to the deleted user is cleared.
+        FollowUpItem.query.filter_by(created_by=user.id).update(
+            {"created_by": None}, synchronize_session="fetch"
+        )
+        FollowUpTask.query.filter_by(created_by=user.id).update(
+            {"created_by": None}, synchronize_session="fetch"
+        )
 
         # Force the ORM to reload all relationship collections from the
         # database so the cascade triggered by db.session.delete(user)
