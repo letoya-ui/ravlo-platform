@@ -1014,8 +1014,70 @@ def _subscription_catalog():
     }
 
 
+def _normalize_investor_plan_name(plan):
+    normalized = (plan or "").strip().lower()
+    for plan_name in _subscription_catalog():
+        if plan_name.lower() == normalized:
+            return plan_name
+    return None
+
+
+def _investor_grandfather_cutoff():
+    raw_cutoff = current_app.config.get("INVESTOR_GRANDFATHERED_CUTOFF", "2026-05-12T00:00:00")
+    if isinstance(raw_cutoff, datetime):
+        cutoff = raw_cutoff
+    else:
+        try:
+            cutoff = datetime.fromisoformat(str(raw_cutoff).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            cutoff = datetime(2026, 5, 12)
+
+    if getattr(cutoff, "tzinfo", None):
+        cutoff = cutoff.replace(tzinfo=None)
+    return cutoff
+
+
+def _is_investor_grandfathered(user):
+    created_at = getattr(user, "created_at", None)
+    if not created_at:
+        return False
+    if getattr(created_at, "tzinfo", None):
+        created_at = created_at.replace(tzinfo=None)
+    return created_at < _investor_grandfather_cutoff()
+
+
+def _investor_grandfather_cutoff_label():
+    return _investor_grandfather_cutoff().strftime("%b %d, %Y")
+
+
+def _investor_effective_subscription_plan(user):
+    if _is_investor_grandfathered(user):
+        return "Enterprise"
+
+    raw_tier = (getattr(user, "subscription", None) or "").strip().lower()
+    plan_aliases = {
+        "free": "Free",
+        "core": "Pro",
+        "explorer": "Pro",
+        "operator": "Pro",
+        "pro": "Pro",
+        "premium": "Pro",
+        "active": "Pro",
+        "enterprise": "Enterprise",
+    }
+    aliased = plan_aliases.get(raw_tier)
+    if aliased:
+        return aliased
+
+    plan_name = _normalize_investor_plan_name(getattr(user, "subscription_plan", "Free"))
+    return plan_name or "Free"
+
+
 def _sync_investor_subscription_record(user, investor_profile=None):
-    plan_name = getattr(user, "subscription_plan", "Free")
+    if _is_investor_grandfathered(user):
+        user.subscription_plan = "Enterprise"
+
+    plan_name = _investor_effective_subscription_plan(user)
     plan_info = _subscription_catalog().get(plan_name, _subscription_catalog()["Free"])
 
     if investor_profile is None:
@@ -1542,7 +1604,7 @@ def dismiss_dashboard_tour():
 def account():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     active_subscription = _sync_investor_subscription_record(current_user, ip)
-    if active_subscription and not isinstance(active_subscription, dict):
+    if active_subscription:
         db.session.commit()
 
     now_str = datetime.now().strftime("%b %d, %Y • %I:%M %p")
@@ -1551,7 +1613,7 @@ def account():
         "investor/account.html",
         investor=current_user,
         investor_profile=ip,
-        current_plan=getattr(current_user, "subscription_plan", "Free"),
+        current_plan=_investor_effective_subscription_plan(current_user),
         active_subscription=active_subscription,
         now_str=now_str,
         active_tab="account",
@@ -14584,6 +14646,66 @@ def _stripe_subscription_price_for_plan(plan: str):
     return normalized, None
 
 
+def _billing_terms_accepted():
+    accepted = (request.form.get("accept_billing_terms") or "").strip().lower()
+    return accepted in {"1", "true", "yes", "on", "accepted"}
+
+
+def _stripe_app_plan_from_slug(plan: str):
+    normalized = (plan or "").strip().lower()
+    mapping = {
+        "core": "Pro",
+        "explorer": "Pro",
+        "operator": "Pro",
+        "pro": "Pro",
+        "enterprise": "Enterprise",
+    }
+    return mapping.get(normalized)
+
+
+def _stripe_subscription_price_for_investor_plan(plan_name: str):
+    app_plan = _normalize_investor_plan_name(plan_name) or "Pro"
+    key = (_subscription_catalog().get(app_plan, {}).get("key") or app_plan).strip().lower()
+    fallback_slugs = {
+        "pro": ["pro", "operator", "explorer"],
+        "enterprise": ["enterprise"],
+    }
+    candidates = fallback_slugs.get(key, [key])
+
+    seen = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        normalized, price_id = _stripe_subscription_price_for_plan(candidate)
+        if price_id:
+            return normalized, price_id
+
+    return candidates[0] if candidates else key, None
+
+
+def _create_investor_subscription_checkout(app_plan_name: str, cancel_endpoint: str = "investor.subscription"):
+    stripe_slug, price_id = _stripe_subscription_price_for_investor_plan(app_plan_name)
+    if not price_id:
+        flash("That paid plan is missing a Stripe price id.", "danger")
+        return redirect(url_for("investor.subscription"))
+
+    session_obj = stripe.checkout.Session.create(
+        mode="subscription",
+        payment_method_types=["card"],
+        line_items=[{"price": price_id, "quantity": 1}],
+        success_url=url_for("investor.subscription_checkout_success", _external=True) + "?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url=url_for(cancel_endpoint, _external=True),
+        customer_email=current_user.email,
+        metadata={
+            "user_id": str(current_user.id),
+            "subscription_plan": app_plan_name.lower(),
+            "stripe_plan": stripe_slug,
+        },
+    )
+    return redirect(session_obj.url, code=303)
+
+
 @investor_bp.route("/billing/subscription/<string:plan>", methods=["POST"])
 @login_required
 @role_required("investor")
@@ -14592,11 +14714,16 @@ def start_subscription_checkout(plan):
         flash("Stripe billing is not enabled yet.", "warning")
         return redirect(url_for("investor.payments"))
 
+    if not _is_investor_grandfathered(current_user) and not _billing_terms_accepted():
+        flash("Please accept the billing and card data terms before checkout.", "warning")
+        return redirect(url_for("investor.payments"))
+
     normalized, price_id = _stripe_subscription_price_for_plan(plan)
     if not price_id:
         flash("Invalid plan or missing Stripe price id.", "danger")
         return redirect(url_for("investor.payments"))
 
+    app_plan = _stripe_app_plan_from_slug(normalized) or "Pro"
     session_obj = stripe.checkout.Session.create(
         mode="subscription",
         payment_method_types=["card"],
@@ -14606,7 +14733,8 @@ def start_subscription_checkout(plan):
         customer_email=current_user.email,
         metadata={
             "user_id": str(current_user.id),
-            "subscription_plan": normalized,
+            "subscription_plan": app_plan.lower(),
+            "stripe_plan": normalized,
         },
     )
     return redirect(session_obj.url, code=303)
@@ -14649,12 +14777,14 @@ def subscription_checkout_success():
         return redirect(url_for("investor.payments"))
 
     plan = (metadata.get("subscription_plan") or "").strip().lower()
+    stripe_plan = (metadata.get("stripe_plan") or "").strip().lower()
     allowed = {item["slug"] for item in _stripe_subscription_catalog() if item["configured"]}
-    if plan in allowed:
-        current_user.subscription = plan
+    app_plan = _normalize_investor_plan_name(plan) or _stripe_app_plan_from_slug(stripe_plan)
+    if app_plan in _subscription_catalog() and (stripe_plan in allowed or plan in {"pro", "enterprise"}):
+        current_user.subscription_plan = app_plan
         _sync_investor_subscription_record(current_user)
         db.session.commit()
-        flash(f"Subscription updated to {plan.title()}.", "success")
+        flash(f"Subscription updated to {app_plan}.", "success")
     else:
         flash("Subscription checkout completed, but plan metadata was missing.", "warning")
 
@@ -14666,7 +14796,11 @@ def subscription_checkout_success():
 @role_required("investor")
 def payments():
     user = current_user
-    subscription_plan = getattr(user, "subscription", "free")
+    active_subscription = _sync_investor_subscription_record(user)
+    if active_subscription:
+        db.session.commit()
+
+    subscription_plan = _investor_effective_subscription_plan(user)
     subscription_catalog = _stripe_subscription_catalog()
     subscription_groups = {
         "LendingOS": [p for p in subscription_catalog if p.get("family") == "LendingOS"],
@@ -14686,6 +14820,8 @@ def payments():
         subscription_plan=subscription_plan,
         subscription_catalog=subscription_catalog,
         subscription_groups=subscription_groups,
+        grandfathered=_is_investor_grandfathered(user),
+        grandfather_cutoff_label=_investor_grandfather_cutoff_label(),
         payments=payments,
         title="Billing",
         active_tab="billing"
@@ -14701,13 +14837,16 @@ def subscription():
     if active_subscription:
         db.session.commit()
 
-    current_plan = getattr(current_user, "subscription_plan", "Free")
+    current_plan = _investor_effective_subscription_plan(current_user)
     return render_template(
         "investor/subscription_v2.html",
         current_plan=current_plan,
         subscription_catalog=_subscription_catalog(),
         active_subscription=active_subscription,
         investor_profile=investor_profile,
+        grandfathered=_is_investor_grandfathered(current_user),
+        grandfather_cutoff_label=_investor_grandfather_cutoff_label(),
+        billing_enabled=current_app.config.get("STRIPE_BILLING_ENABLED", False),
         title="Subscription",
         active_tab="subscription",
     )
@@ -14720,6 +14859,25 @@ def upgrade_plan():
     selected_plan = (request.form.get("plan") or "Pro").strip().title()
     if selected_plan not in _subscription_catalog():
         selected_plan = "Pro"
+
+    if _is_investor_grandfathered(current_user):
+        current_user.subscription_plan = "Enterprise"
+        _sync_investor_subscription_record(current_user)
+        db.session.commit()
+        flash("This account is grandfathered into full investor access at no charge.", "success")
+        return redirect(url_for("investor.subscription"))
+
+    if selected_plan != "Free" and not _billing_terms_accepted():
+        flash("Please accept the billing and card data terms before activating a paid plan.", "warning")
+        return redirect(url_for("investor.subscription"))
+
+    if selected_plan != "Free":
+        if current_app.config.get("STRIPE_BILLING_ENABLED", False):
+            return _create_investor_subscription_checkout(selected_plan)
+
+        if not current_app.config.get("ALLOW_MANUAL_INVESTOR_SUBSCRIPTION_UPGRADES", False):
+            flash("Paid investor plans must be activated through secure checkout.", "warning")
+            return redirect(url_for("investor.subscription"))
 
     current_user.subscription_plan = selected_plan
     _sync_investor_subscription_record(current_user)
@@ -14737,6 +14895,13 @@ def upgrade_plan():
 @login_required
 @role_required("investor")
 def downgrade_plan():
+    if _is_investor_grandfathered(current_user):
+        current_user.subscription_plan = "Enterprise"
+        _sync_investor_subscription_record(current_user)
+        db.session.commit()
+        flash("This account keeps full investor access at no charge.", "success")
+        return redirect(url_for("investor.subscription"))
+
     current_user.subscription_plan = "Free"
     _sync_investor_subscription_record(current_user)
     try:
@@ -14747,6 +14912,20 @@ def downgrade_plan():
     db.session.commit()
     flash("Subscription updated to Free.", "success")
     return redirect(url_for("investor.subscription"))
+
+
+@investor_bp.route("/subscription/terms", methods=["GET"])
+@login_required
+@role_required("investor")
+def subscription_terms():
+    return render_template(
+        "investor/subscription_terms.html",
+        current_plan=_investor_effective_subscription_plan(current_user),
+        grandfathered=_is_investor_grandfathered(current_user),
+        grandfather_cutoff_label=_investor_grandfather_cutoff_label(),
+        title="Billing Terms",
+        active_tab="subscription",
+    )
 
 
 @investor_bp.route("/billing/checkout/<int:payment_id>", methods=["GET"])

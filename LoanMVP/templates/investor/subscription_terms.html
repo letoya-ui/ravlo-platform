@@ -1,0 +1,94 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo - Billing Terms{% endblock %}
+{% block page_title %}Billing & Card Data Terms{% endblock %}
+{% block page_subline %}How subscriptions, grandfathered access, and payment information are handled.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.subscription') }}'">
+    Back to Subscription
+  </button>
+{% endblock %}
+
+{% block content %}
+<style>
+  .terms-stack {
+    display:grid;
+    gap:14px;
+    margin-top:14px;
+  }
+  .terms-stack h2 {
+    margin:.2rem 0 .45rem;
+    font-size:1.05rem;
+  }
+  .terms-stack p,
+  .terms-stack li {
+    color:var(--muted);
+    line-height:1.58;
+  }
+  .terms-stack ul {
+    margin:.4rem 0 0;
+    padding-left:1.1rem;
+  }
+</style>
+
+<section class="terms-stack">
+  <article class="ravlo-card pad">
+    <div class="eyebrow">CURRENT ACCOUNT</div>
+    <h2>{{ current_plan }} access</h2>
+    {% if grandfathered %}
+      <p>
+        This account was created before {{ grandfather_cutoff_label }} and is grandfathered into full
+        investor access at no subscription charge. Grandfathered access applies to the current account
+        and does not automatically transfer to a new account.
+      </p>
+    {% else %}
+      <p>
+        New investor accounts must activate and maintain a paid subscription to keep premium investor
+        tools available. Free access may be limited to basic account features.
+      </p>
+    {% endif %}
+  </article>
+
+  <article class="ravlo-card pad">
+    <div class="eyebrow">SUBSCRIPTION AUTHORIZATION</div>
+    <h2>Paid plans</h2>
+    <p>
+      By selecting a paid plan and completing checkout, you authorize Ravlo and its payment processor
+      to charge the payment method you provide for the subscription price, applicable taxes, and any
+      approved plan changes. Subscriptions renew until canceled, downgraded, or otherwise changed from
+      the subscription or billing screen.
+    </p>
+  </article>
+
+  <article class="ravlo-card pad">
+    <div class="eyebrow">CARD DATA PROTECTION</div>
+    <h2>What Ravlo stores</h2>
+    <p>
+      Ravlo uses a third-party payment processor for card entry and recurring billing. Ravlo does not
+      store full card numbers, CVV codes, magnetic stripe data, or chip data on its servers.
+    </p>
+    <p>
+      Ravlo may receive and retain limited billing records needed to run the account, including card
+      brand, last four digits, expiration month/year, billing contact, receipts, subscription status,
+      Stripe customer or subscription IDs, invoices, charge status, fraud signals, tax records, and
+      support notes.
+    </p>
+  </article>
+
+  <article class="ravlo-card pad">
+    <div class="eyebrow">CONSUMER INFORMATION</div>
+    <h2>How billing data is used</h2>
+    <ul>
+      <li>To process payments, renewals, refunds, receipts, taxes, and account support.</li>
+      <li>To prevent fraud, abuse, unauthorized transactions, and payment disputes.</li>
+      <li>To comply with legal, accounting, tax, banking, and card-network obligations.</li>
+      <li>To limit access to billing records to people and service providers with a business need.</li>
+    </ul>
+    <p>
+      Ravlo does not sell payment card information. Report suspected unauthorized charges or billing
+      security concerns through support so the account and processor records can be reviewed.
+    </p>
+  </article>
+</section>
+{% endblock %}

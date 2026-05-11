@@ -59,11 +59,36 @@
     opacity:.75;
     margin:12px 0 8px;
   }
+  .billing-consent {
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    max-width:360px;
+    margin:0 0 8px;
+    color:var(--muted);
+    font-size:.82rem;
+    line-height:1.35;
+  }
+  .billing-consent a {
+    color:#9ed0ff;
+    font-weight:800;
+  }
+  .billing-consent input {
+    margin-top:3px;
+  }
 </style>
 
 <div class="ravlo-card pad" style="margin-top:14px;">
   <div class="eyebrow">Subscription</div>
   <h3 style="margin:4px 0 6px;">Current Plan: {{ (subscription_plan or "free")|title }}</h3>
+  {% if grandfathered %}
+    <div class="payment-amount">This account was created before {{ grandfather_cutoff_label }} and keeps full investor access at no charge.</div>
+  {% else %}
+    <div class="payment-amount">
+      Paid checkout uses a secure payment processor. Ravlo does not store full card numbers or CVV codes.
+      Review the <a href="{{ url_for('investor.subscription_terms') }}" style="color:#9ed0ff;font-weight:800;">Billing & Card Data Terms</a>.
+    </div>
+  {% endif %}
   {% if config.get("STRIPE_BILLING_ENABLED") %}
     {% set ordered_groups = ["LendingOS", "Investor", "Partner"] %}
     {% for group_name in ordered_groups %}
@@ -73,8 +98,14 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           {% for plan in group_plans %}
             {% if plan.configured %}
-              <form method="POST" action="{{ url_for('investor.start_subscription_checkout', plan=plan.slug) }}" style="display:inline;">
+              <form method="POST" action="{{ url_for('investor.start_subscription_checkout', plan=plan.slug) }}" style="display:inline-grid;gap:6px;align-items:start;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if not grandfathered %}
+                  <label class="billing-consent">
+                    <input type="checkbox" name="accept_billing_terms" value="1" required>
+                    <span>I agree to the <a href="{{ url_for('investor.subscription_terms') }}">Billing & Card Data Terms</a>.</span>
+                  </label>
+                {% endif %}
                 <button type="submit"
                   class="ravlo-btn {% if (subscription_plan or 'free')|lower == plan.slug %}primary{% else %}ghost{% endif %} sm"
                   title="{{ plan.family }} • ${{ plan.monthly_price }}/mo"

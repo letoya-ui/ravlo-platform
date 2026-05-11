@@ -67,7 +67,33 @@
     gap:10px;
     flex-wrap:wrap;
   }
-  .plan-actions form { margin:0; }
+  .plan-actions form {
+    margin:0;
+    display:grid;
+    gap:10px;
+  }
+  .billing-note {
+    margin-top:16px;
+    color:var(--muted);
+    line-height:1.55;
+  }
+  .billing-note a,
+  .billing-consent a {
+    color:#9ed0ff;
+    font-weight:800;
+  }
+  .billing-consent {
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    max-width:430px;
+    color:rgba(230,235,240,.86);
+    font-size:.84rem;
+    line-height:1.35;
+  }
+  .billing-consent input {
+    margin-top:3px;
+  }
   @media (max-width: 900px) {
     .sub-summary { grid-template-columns:1fr; }
   }
@@ -78,7 +104,11 @@
     <div class="eyebrow">ACTIVE INVESTOR ACCESS</div>
     <h2 style="margin:.5rem 0 .45rem;">{{ current_plan }} plan is live for this account.</h2>
     <div style="color:var(--muted);">
-      Subscription controls are now wired to your investor user record, so upgrades and downgrades update a real active plan state instead of a dead-end screen.
+      {% if grandfathered %}
+        This account was created before {{ grandfather_cutoff_label }}, so full investor access stays active at no charge.
+      {% else %}
+        New investor accounts must activate a paid plan before premium tools stay unlocked.
+      {% endif %}
     </div>
   </div>
 
@@ -101,6 +131,17 @@
   </div>
 </section>
 
+<section class="ravlo-card pad" style="margin-top:16px;">
+  <div class="eyebrow">BILLING AND CARD DATA</div>
+  <div class="billing-note">
+    Card entry is handled by our secure payment processor. Ravlo does not store full card numbers,
+    CVV codes, magnetic stripe data, or chip data on our servers. We may receive limited billing
+    details such as card brand, last four digits, expiration month/year, billing contact, receipts,
+    subscription status, and processor IDs for account support, fraud prevention, tax, legal, and
+    accounting needs. See the <a href="{{ url_for('investor.subscription_terms') }}">Billing & Card Data Terms</a>.
+  </div>
+</section>
+
 <section class="sub-grid">
   {% for plan_name, plan in subscription_catalog.items() %}
   <article class="plan-card {% if current_plan == plan_name %}active{% endif %}">
@@ -116,6 +157,8 @@
 
     {% if current_plan == plan_name %}
       <div class="pill">Current Plan</div>
+    {% elif grandfathered %}
+      <div class="pill">Included at no charge</div>
     {% else %}
       <div class="plan-actions">
         {% if plan_name == "Free" %}
@@ -127,7 +170,13 @@
         <form method="POST" action="{{ url_for('investor.upgrade_plan') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="plan" value="{{ plan_name }}">
-          <button class="ravlo-btn primary sm" type="submit">Activate {{ plan_name }}</button>
+          <label class="billing-consent">
+            <input type="checkbox" name="accept_billing_terms" value="1" required>
+            <span>I agree to the <a href="{{ url_for('investor.subscription_terms') }}">Billing & Card Data Terms</a>.</span>
+          </label>
+          <button class="ravlo-btn primary sm" type="submit">
+            {% if billing_enabled %}Continue to Secure Checkout{% else %}Activate {{ plan_name }}{% endif %}
+          </button>
         </form>
         {% endif %}
       </div>
