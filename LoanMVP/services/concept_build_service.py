@@ -287,7 +287,7 @@ def run_concept_build(
         return blueprint
     results["blueprint"] = blueprint
 
-    # 4. Site plan, may use land/site image
+    # 4. Site plan, text-generated with land/site image as metadata only
     siteplan_payload = _base_payload(
         bundle_job_id=bundle_job_id,
         project_name=project_name,
@@ -325,10 +325,6 @@ def run_concept_build(
         "guidance": 7.0,
         "strength": 0.58,
     })
-
-    if land_image_url:
-        siteplan_payload["image_url"] = land_image_url
-        siteplan_payload["site_image_url"] = land_image_url
 
     siteplan = _post_engine("/v1/build_concept", siteplan_payload)
     if siteplan.get("error"):
