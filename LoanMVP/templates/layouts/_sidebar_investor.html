@@ -152,6 +152,12 @@
       <span>Getting Started</span>
     </a>
 
+    <a href="{{ url_for('investor.subscription') }}"
+       class="ravlo-nav-link {% if ep in ['investor.subscription', 'investor.upgrade_plan', 'investor.downgrade_plan', 'investor.payments', 'investor.start_subscription_checkout', 'investor.subscription_checkout_success'] %}active{% endif %}">
+      <i class="lucide lucide-credit-card"></i>
+      <span>Subscription</span>
+    </a>
+
     <a href="{{ url_for('investor.settings') }}"
        class="ravlo-nav-link {% if ep == 'investor.settings' %}active{% endif %}">
       <i class="lucide lucide-settings"></i>

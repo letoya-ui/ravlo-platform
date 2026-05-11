@@ -87,13 +87,13 @@ Manage your identity, security, subscription, and account preferences.
       <h3 class="ravlo-card-title">Subscription</h3>
 
       <p class="muted mt-12">Current Plan</p>
-      <p>{{ investor_profile.plan or "Free" }}</p>
+      <p>{{ current_plan or "Free" }}</p>
 
-      <p class="muted mt-12">Renewal</p>
-      <p>{{ investor_profile.renewal_date or "—" }}</p>
+      <p class="muted mt-12">Status</p>
+      <p>{{ active_subscription.status if active_subscription else "Active" }}</p>
 
       <button class="ravlo-btn primary sm mt-20"
-              onclick="location.href='{{ url_for('investor.payments') }}'">
+              onclick="location.href='{{ url_for('investor.subscription') }}'">
         Manage Subscription
       </button>
     </div>

@@ -1022,7 +1022,14 @@ def _sync_investor_subscription_record(user, investor_profile=None):
         investor_profile = InvestorProfile.query.filter_by(user_id=user.id).first()
 
     if not investor_profile:
-        return None
+        return {
+            "plan_name": plan_name,
+            "price": plan_info["price"],
+            "features": json.dumps(plan_info["features"]),
+            "status": "Active",
+            "start_date": datetime.utcnow(),
+            "end_date": None,
+        }
 
     subscription = (
         SubscriptionPlan.query
@@ -1032,7 +1039,28 @@ def _sync_investor_subscription_record(user, investor_profile=None):
     )
 
     if not subscription:
-        return None
+        borrower_profile = getattr(user, "borrower_profile", None)
+        if isinstance(borrower_profile, list):
+            borrower_profile = borrower_profile[0] if borrower_profile else None
+
+        borrower_profile_id = getattr(borrower_profile, "id", None)
+        borrower_required = not SubscriptionPlan.__table__.c.borrower_profile_id.nullable
+
+        if borrower_profile_id or not borrower_required:
+            subscription = SubscriptionPlan(
+                borrower_profile_id=borrower_profile_id,
+                investor_profile_id=investor_profile.id,
+            )
+            db.session.add(subscription)
+        else:
+            return {
+                "plan_name": plan_name,
+                "price": plan_info["price"],
+                "features": json.dumps(plan_info["features"]),
+                "status": "Active",
+                "start_date": datetime.utcnow(),
+                "end_date": None,
+            }
 
     subscription.plan_name = plan_name
     subscription.price = plan_info["price"]
@@ -1513,6 +1541,9 @@ def dismiss_dashboard_tour():
 @role_required("investor")
 def account():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    active_subscription = _sync_investor_subscription_record(current_user, ip)
+    if active_subscription and not isinstance(active_subscription, dict):
+        db.session.commit()
 
     now_str = datetime.now().strftime("%b %d, %Y • %I:%M %p")
 
@@ -1520,6 +1551,8 @@ def account():
         "investor/account.html",
         investor=current_user,
         investor_profile=ip,
+        current_plan=getattr(current_user, "subscription_plan", "Free"),
+        active_subscription=active_subscription,
         now_str=now_str,
         active_tab="account",
         title="RAVLO • Account"
@@ -14619,12 +14652,13 @@ def subscription_checkout_success():
     allowed = {item["slug"] for item in _stripe_subscription_catalog() if item["configured"]}
     if plan in allowed:
         current_user.subscription = plan
+        _sync_investor_subscription_record(current_user)
         db.session.commit()
         flash(f"Subscription updated to {plan.title()}.", "success")
     else:
         flash("Subscription checkout completed, but plan metadata was missing.", "warning")
 
-    return redirect(url_for("investor.payments"))
+    return redirect(url_for("investor.subscription"))
 
 @investor_bp.route("/billing", methods=["GET"])
 @investor_bp.route("/payments", methods=["GET"])
@@ -14689,6 +14723,11 @@ def upgrade_plan():
 
     current_user.subscription_plan = selected_plan
     _sync_investor_subscription_record(current_user)
+    try:
+        from LoanMVP.services.subscriptions import sync_features_with_subscription
+        sync_features_with_subscription(current_user.id)
+    except Exception:
+        current_app.logger.exception("Investor subscription feature sync failed")
     db.session.commit()
     flash(f"Subscription updated to {selected_plan}.", "success")
     return redirect(url_for("investor.subscription"))
@@ -14700,6 +14739,11 @@ def upgrade_plan():
 def downgrade_plan():
     current_user.subscription_plan = "Free"
     _sync_investor_subscription_record(current_user)
+    try:
+        from LoanMVP.services.subscriptions import sync_features_with_subscription
+        sync_features_with_subscription(current_user.id)
+    except Exception:
+        current_app.logger.exception("Investor subscription feature sync failed")
     db.session.commit()
     flash("Subscription updated to Free.", "success")
     return redirect(url_for("investor.subscription"))
