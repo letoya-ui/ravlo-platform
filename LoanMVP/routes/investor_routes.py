@@ -9642,7 +9642,7 @@ def generate_full_build():
                         "front exterior elevation",
                         "street-facing facade",
                         style.replace("_", " "),
-                        design_anchor_prompt,
+                        "same modern architectural language",
                         property_type.replace("_", " "),
                         "front entry",
                         "driveway",
@@ -9679,6 +9679,10 @@ def generate_full_build():
                     if master_exterior_url:
                         payload["master_exterior_reference_url"] = master_exterior_url
                         payload["front_style_reference_url"] = master_exterior_url
+
+                        # compatibility fields for runtime loaders
+                        payload["reference_image_url"] = master_exterior_url
+                        payload["exterior_front_url"] = master_exterior_url
 
                     payload["prompt"] = _prompt_join(
                         "rear elevation of the same home",
@@ -9737,6 +9741,9 @@ def generate_full_build():
                     "architectural elevation",
                     "street-facing house",
                     "perspective architecture",
+                    "3D render",
+                    "interior lighting",
+                    "photoreal furniture",
                     "exterior rendering",
                     "photoreal interior",
                     "furniture rendering",
@@ -9781,6 +9788,7 @@ def generate_full_build():
                     "hardscape plan",
                     "flat zoning diagram",
                     "2D development layout",
+                    "single luxury home site plan",
                 )
 
                 payload["negative_prompt"] = _prompt_join(
@@ -9791,6 +9799,9 @@ def generate_full_build():
                     "architectural visualization",
                     "luxury house render",
                     "subdivision",
+                    "apartment complex",
+                    "townhome community",
+                    "housing development",
                     "neighborhood masterplan",
                     "multiple houses",
                     "many lots",
