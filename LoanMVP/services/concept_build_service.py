@@ -206,31 +206,30 @@ def run_concept_build(
         "generation_mode": "rear_from_front_style_anchor" if master_exterior_url else "text_to_rear_exterior",
         "site_context_url": land_image_url or "",
         "master_exterior_reference_url": master_exterior_url,
-        "reference_image_url": master_exterior_url or "",
         "preserve_style": True,
         "preserve_materials": True,
-        "preserve_massing": True,
+        "preserve_massing": False,
         "preserve_camera": False,
+        "preserve_composition": False,
+        "style_reference_only": False,
+        "pipe_mode": "depth",
+        "rear_depth_scale": 0.10,
+        "controlnet_scale": 0.10,
         "prompt": (
-            "STRICT REAR EXTERIOR VIEW ONLY. Generate the backyard-facing rear elevation "
-            "of the same house design as the master front exterior. Camera is standing in "
-            "the backyard looking toward the back of the home. Use the same architectural "
-            "style, massing logic, roof geometry, window rhythm, material palette, and floor count. "
-            "Show rear doors, rear windows, patio or deck, backyard lawn, private rear landscaping, "
-            "and rear facade massing. No front entry, no street, no curb, no driveway, "
-            "no front-facing garage, no mailbox."
+            "rear elevation of the same home, backyard-facing facade, rear patio doors, "
+            "rear glazing, backyard landscaping, pool-facing composition, private rear architecture, "
+            "same materials and roofline, different composition from front exterior"
         ),
         "prompt_notes": (
             "This must clearly be the rear/backyard exterior, not a second front exterior rendering."
         ),
         "negative_prompt": (
-            "front exterior, street-facing facade, front elevation, front entry, front porch, "
-            "curb appeal, driveway, sidewalk, mailbox, front-facing garage, garage door facing viewer, "
-            "blueprint, floor plan, CAD drawing, collage, split panel, text, watermark"
+            "front facade, front entry, street-facing elevation, curb appeal composition, "
+            "driveway-focused composition, garage-forward composition, same image as front"
         ),
-        "steps": 32,
-        "guidance": 9.0,
-        "strength": 0.25,
+        "steps": 30,
+        "guidance": 7.8,
+        "strength": 0.18,
     })
 
     rear = _post_engine("/v1/build_concept", rear_payload)
