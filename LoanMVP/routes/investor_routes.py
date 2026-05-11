@@ -541,6 +541,67 @@ def _create_budget_studio_budget_from_lines(
 
     return project_budget
 
+
+def _budget_studio_seed_from_build_costs(build_costs):
+    if not isinstance(build_costs, dict):
+        return {}
+
+    raw_items = build_costs.get("line_items") or []
+    if not isinstance(raw_items, list):
+        return {}
+
+    seeded_items = []
+    contingency_from_lines = 0.0
+
+    for raw_item in raw_items:
+        if not isinstance(raw_item, dict):
+            continue
+
+        category = str(raw_item.get("category") or raw_item.get("section") or "Construction").strip() or "Construction"
+        name = _budget_line_name(raw_item, fallback="Build cost item")
+        amount = _budget_line_full_price(raw_item)
+        label_text = f"{category} {name}".lower()
+
+        if "contingency" in label_text:
+            contingency_from_lines += amount
+            continue
+
+        seeded_items.append({
+            "name": name,
+            "description": name,
+            "category": category,
+            "cost": amount,
+            "estimated_amount": amount,
+            "notes": raw_item.get("notes") or "",
+            "source": "deal_architect_build_costs",
+        })
+
+    if not seeded_items:
+        return {}
+
+    subtotal = _budget_line_full_price({
+        "total": build_costs.get("subtotal"),
+    }) or sum(float(item.get("cost") or 0) for item in seeded_items)
+
+    contingency = _budget_line_full_price({
+        "total": build_costs.get("contingency"),
+    }) or contingency_from_lines
+
+    total_budget = _budget_line_full_price({
+        "total": build_costs.get("total_budget"),
+    }) or (subtotal + contingency)
+
+    return {
+        "suggested_breakdown": seeded_items,
+        "budget_source": build_costs.get("source") or "deal_architect_build_costs",
+        "budget_type": build_costs.get("category") or "build",
+        "subtotal": subtotal,
+        "contingency": contingency,
+        "rehab_cost": total_budget,
+        "total_project_budget": total_budget,
+    }
+
+
 def _first_nonempty(*values):
         for value in values:
             if isinstance(value, str) and value.strip():
@@ -12109,6 +12170,7 @@ def generate_build_costs_from_package():
             return None
 
         line_items = []
+        contingency_from_items = 0.0
         for raw_item in cost_json.get("line_items") or []:
             item = raw_item if isinstance(raw_item, dict) else {"description": str(raw_item)}
             amount = _money_value(_first_present(
@@ -12123,9 +12185,15 @@ def generate_build_costs_from_package():
                 "cost_high",
                 "high",
             ))
+            category = item.get("category") or "Construction"
+            description = item.get("description") or item.get("name") or "Build cost item"
+            if "contingency" in f"{category} {description}".lower():
+                contingency_from_items += amount
+                continue
+
             line_items.append({
-                "category": item.get("category") or "Construction",
-                "description": item.get("description") or item.get("name") or "Build cost item",
+                "category": category,
+                "description": description,
                 "name": item.get("name"),
                 "vendor": item.get("vendor"),
                 "estimated_amount": amount,
@@ -12138,10 +12206,11 @@ def generate_build_costs_from_package():
 
         line_item_subtotal = sum(float(i.get("estimated_amount") or 0) for i in line_items)
         subtotal = _money_value(cost_json.get("subtotal"), line_item_subtotal)
-        contingency = _money_value(cost_json.get("contingency"), round(subtotal * 0.10, 2))
+        contingency = _money_value(cost_json.get("contingency"), contingency_from_items or round(subtotal * 0.10, 2))
         total_budget = _money_value(cost_json.get("total_budget"), subtotal + contingency)
 
-        investor_profile_id = getattr(deal, "investor_profile_id", None)
+        investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+        investor_profile_id = getattr(deal, "investor_profile_id", None) or getattr(investor_profile, "id", None)
 
         budget = ProjectBudget(
             investor_profile_id=investor_profile_id,
@@ -13676,24 +13745,36 @@ def budget_studio(deal_id=None):
         ).first_or_404()
 
         results = copy.deepcopy(deal.results_json or {})
-        results["budget_seed"] = _build_budget_seed_from_results(
+        budget_seed = _build_budget_seed_from_results(
             results,
             zip_code=getattr(deal, "zip_code", None),
             state=getattr(deal, "state", None),
         )
+        build_cost_seed = _budget_studio_seed_from_build_costs(
+            ((results.get("deal_architect") or {}).get("build_costs") or {})
+        )
+        if build_cost_seed.get("suggested_breakdown"):
+            budget_seed.update(build_cost_seed)
+        results["budget_seed"] = budget_seed
 
         ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
         if ip:
             if budget_id:
                 existing_budget = (
                     ProjectBudget.query
-                    .filter_by(
-                        id=budget_id,
-                        deal_id=deal.id,
-                        investor_profile_id=ip.id
+                    .filter(
+                        ProjectBudget.id == budget_id,
+                        ProjectBudget.deal_id == deal.id,
+                        or_(
+                            ProjectBudget.investor_profile_id == ip.id,
+                            ProjectBudget.investor_profile_id.is_(None),
+                        )
                     )
                     .first()
                 )
+                if existing_budget and existing_budget.investor_profile_id is None:
+                    existing_budget.investor_profile_id = ip.id
+                    db.session.commit()
 
             if existing_budget is None:
                 existing_budget = (
@@ -13816,13 +13897,22 @@ def create_budget_from_studio(deal_id):
 
     items = payload.get("items") or []
     strategy = (
-        payload.get("strategy")
+        payload.get("budget_type")
+        or payload.get("strategy")
         or ((deal.results_json or {}).get("workspace_analysis") or {}).get("selected_strategy")
         or ((deal.results_json or {}).get("strategy_analysis") or {}).get("strategy")
         or "rehab"
     )
+    source = str(payload.get("source") or "").strip()
+    contingency = _budget_line_full_price({"total": payload.get("contingency")})
 
-    budget_type = "build" if str(strategy).lower() in {"build_studio", "project_build", "build"} else "rehab"
+    budget_type = (
+        "build"
+        if str(strategy).lower() in {"build_studio", "project_build", "build", "new_build"}
+        or "build" in source.lower()
+        or "deal_architect" in source.lower()
+        else "rehab"
+    )
 
     budget = ProjectBudget(
         borrower_profile_id=None,
@@ -13838,9 +13928,9 @@ def create_budget_from_studio(deal_id):
         total_cost=0.0,
         materials_cost=0.0,
         labor_cost=0.0,
-        contingency=0.0,
+        contingency=contingency,
         paid_amount=0.0,
-        notes="Created from Budget Studio.",
+        notes="Created from Budget Studio build cost architecture." if budget_type == "build" else "Created from Budget Studio.",
     )
     db.session.add(budget)
     db.session.flush()

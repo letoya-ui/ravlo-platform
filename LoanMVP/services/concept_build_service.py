@@ -60,6 +60,52 @@ def _first_image_url(engine_response):
     return None
 
 
+_BUILD_INIT_IMAGE_KEYS = (
+    "image_url",
+    "reference_image_url",
+    "image_base64",
+    "reference_image_base64",
+)
+
+_BUILD_COMPAT_IMAGE_KEYS = (
+    "site_image_url",
+    "site_image_base64",
+    "blueprint_image_url",
+    "blueprint_image_base64",
+    "exterior_image_url",
+    "exterior_image_base64",
+    "front_exterior_image_url",
+    "front_exterior_image_base64",
+    "back_exterior_image_url",
+    "back_exterior_image_base64",
+    "rear_exterior_image_url",
+    "rear_exterior_image_base64",
+)
+
+
+def _strip_init_images(payload, *, strip_master=False):
+    for key in (*_BUILD_INIT_IMAGE_KEYS, *_BUILD_COMPAT_IMAGE_KEYS):
+        payload.pop(key, None)
+    if strip_master:
+        for key in ("master_exterior_reference_url", "front_style_reference_url", "exterior_front_url"):
+            payload.pop(key, None)
+    payload["init_img"] = None
+    payload["use_image"] = False
+    return payload
+
+
+def _log_build_source_state(payload, mode):
+    init_img_loaded = any(bool(payload.get(key)) for key in _BUILD_INIT_IMAGE_KEYS)
+    print(
+        "[build]",
+        "mode=", mode,
+        "init_img_loaded=", init_img_loaded,
+        "image_url=", bool(payload.get("image_url")),
+        "reference_image_url=", bool(payload.get("reference_image_url")),
+        "site_context_url=", bool(payload.get("site_context_url")),
+    )
+
+
 def _base_payload(
     *,
     bundle_job_id,
@@ -171,8 +217,12 @@ def run_concept_build(
         "steps": 32,
         "guidance": 9.0,
         "strength": 0.25,
+        "use_image": False,
+        "init_img": None,
     })
 
+    _strip_init_images(front_payload)
+    _log_build_source_state(front_payload, "exterior_front")
     front = _post_engine("/v1/build_concept", front_payload)
     if front.get("error"):
         return front
@@ -259,8 +309,7 @@ def run_concept_build(
         "reference_role": "text_program_only",
         "source_role": "text_program_only",
         "blueprint_constrained": False,
-        "site_context_url": land_image_url or "",
-        "master_exterior_reference_url": master_exterior_url,
+        "site_context_url": "",
         "prompt": (
             "Generate a clean top-down architectural floor plan for the same home concept "
             "as the master exterior. Use the same floor count, residential program, scale, "
@@ -280,6 +329,8 @@ def run_concept_build(
         "guidance": 6.8,
         "strength": 0.0,
     })
+    _strip_init_images(blueprint_payload, strip_master=True)
+    _log_build_source_state(blueprint_payload, "blueprint")
 
     blueprint = _post_engine("/v1/build_concept", blueprint_payload)
     if blueprint.get("error"):
@@ -308,7 +359,6 @@ def run_concept_build(
         "reference_role": "site_context_reference",
         "source_role": "site_context",
         "site_context_url": land_image_url or "",
-        "master_exterior_reference_url": master_exterior_url,
         "prompt": (
             "Create a site development plan for the same home concept as the master exterior. "
             "Use the lot/site image only as site context, not as a blueprint or exterior render. "
@@ -322,8 +372,12 @@ def run_concept_build(
         ),
         "steps": 32,
         "guidance": 7.0,
-        "strength": 0.58,
+        "strength": 0.0,
     })
+    _strip_init_images(siteplan_payload, strip_master=True)
+    siteplan_payload["site_context_url"] = land_image_url or ""
+    siteplan_payload["reference_role"] = "site_context_metadata"
+    _log_build_source_state(siteplan_payload, "siteplan")
 
     siteplan = _post_engine("/v1/build_concept", siteplan_payload)
     if siteplan.get("error"):

@@ -470,9 +470,21 @@ def _auto_generate_build_budget_from_deal(deal, project_id=None):
             "notes": f"Proportional estimate: {int(est_sqft):,} sq ft {type_label} at ${cost_per_sqft}/sqft.",
         }
 
-    line_items = cost_json.get("line_items") or []
+    line_items = []
+    contingency_from_items = 0.0
+    for raw_item in cost_json.get("line_items") or []:
+        if not isinstance(raw_item, dict):
+            raw_item = {"description": str(raw_item)}
+        amount = float(raw_item.get("estimated_amount") or raw_item.get("amount") or 0)
+        category = raw_item.get("category") or "Construction"
+        description = raw_item.get("description") or raw_item.get("name") or "Build cost item"
+        if "contingency" in f"{category} {description}".lower():
+            contingency_from_items += amount
+            continue
+        line_items.append(raw_item)
+
     subtotal = float(cost_json.get("subtotal") or sum(float(i.get("estimated_amount") or 0) for i in line_items))
-    contingency = float(cost_json.get("contingency") or round(subtotal * 0.10, 2))
+    contingency = float(cost_json.get("contingency") or contingency_from_items or round(subtotal * 0.10, 2))
     total_budget = float(cost_json.get("total_budget") or subtotal + contingency)
 
     budget = ProjectBudget(

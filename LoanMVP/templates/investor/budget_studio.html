@@ -815,6 +815,11 @@ Build the financial operating system for your deal.
   const PURCHASE_PRICE = Number({{ purchase_price|default(0)|tojson }}) || 0;
   const ARV = Number({{ arv|default(0)|tojson }}) || 0;
   const REHAB_COST = Number({{ rehab_cost|default(0)|tojson }}) || 0;
+  const SEEDED_BREAKDOWN = {{ seeded_items|tojson }};
+  const SEED_CONTINGENCY = Number({{ (seed.get('contingency') if seed else 0)|tojson }}) || 0;
+  const SEED_SOURCE = {{ (seed.get('budget_source') if seed else '')|tojson }};
+  const SEED_BUDGET_TYPE = {{ (seed.get('budget_type') if seed else '')|tojson }};
+  let contingencyAmount = SEED_CONTINGENCY;
 
   function formatMoney(value){
     const num = Number(value || 0);
@@ -902,7 +907,8 @@ Build the financial operating system for your deal.
   }
 
   function calculate(){
-    const budgetTotal = items.reduce((sum, item) => sum + normalizeCost(item.cost), 0);
+    const subtotal = items.reduce((sum, item) => sum + normalizeCost(item.cost), 0);
+    const budgetTotal = subtotal + normalizeCost(contingencyAmount);
     const totalProjectCost = PURCHASE_PRICE + budgetTotal;
     const projectedProfit = ARV - totalProjectCost;
     const marginPct = ARV > 0 ? (projectedProfit / ARV) * 100 : 0;
@@ -944,6 +950,9 @@ Build the financial operating system for your deal.
 
   function serializeBudgetPayload(){
     return JSON.stringify({
+      source: SEED_SOURCE || "budget_studio",
+      budget_type: SEED_BUDGET_TYPE || "rehab",
+      contingency: normalizeCost(contingencyAmount),
       items: items.map(item => ({
         name: item.name || "Budget Item",
         cost: normalizeCost(item.cost),
@@ -963,18 +972,15 @@ Build the financial operating system for your deal.
 
   render();
 
-  {% if seeded_items %}
-    const seededBreakdown = {{ seeded_items|tojson }};
-    if (items.length === 0 && Array.isArray(seededBreakdown) && seededBreakdown.length) {
-      seededBreakdown.forEach(item => {
-        addItem(
-          item.name || "Line Item",
-          item.cost || 0,
-          item.category || "General"
-        );
-      });
-    }
-  {% endif %}
+  if (items.length === 0 && Array.isArray(SEEDED_BREAKDOWN) && SEEDED_BREAKDOWN.length) {
+    SEEDED_BREAKDOWN.forEach(item => {
+      addItem(
+        item.name || item.description || "Line Item",
+        item.cost ?? item.estimated_amount ?? item.amount ?? 0,
+        item.category || "General"
+      );
+    });
+  }
 
   if (items.length === 0 && REHAB_COST > 0){
     addItem("Rehab Scope", REHAB_COST, "Rehab");

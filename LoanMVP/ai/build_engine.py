@@ -45,6 +45,52 @@ except Exception:  # pragma: no cover
     apply_multiplier_to_engine_response = None
 
 
+_BUILD_INIT_IMAGE_KEYS = (
+    "image_url",
+    "reference_image_url",
+    "image_base64",
+    "reference_image_base64",
+)
+
+_BUILD_LEGACY_IMAGE_KEYS = (
+    "image_base64",
+    "image_url",
+    "blueprint_image_base64",
+    "blueprint_image_url",
+    "site_image_base64",
+    "site_image_url",
+    "reference_image_base64",
+    "reference_image_url",
+    "exterior_image_base64",
+    "exterior_image_url",
+    "front_exterior_image_base64",
+    "front_exterior_image_url",
+    "back_exterior_image_base64",
+    "back_exterior_image_url",
+    "rear_exterior_image_base64",
+    "rear_exterior_image_url",
+)
+
+
+def _truthy(value, default=False):
+    if value is None or value == "":
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _build_log_sources(payload, mode):
+    print(
+        "[build]",
+        "mode=", mode,
+        "init_img_loaded=", any(bool(payload.get(key)) for key in _BUILD_INIT_IMAGE_KEYS),
+        "image_url=", bool(payload.get("image_url")),
+        "reference_image_url=", bool(payload.get("reference_image_url")),
+        "site_context_url=", bool(payload.get("site_context_url")),
+    )
+
+
 def save_generated_image(image_bytes, folder="uploads/studios"):
     """Persist raw image bytes under static/<folder> and return the relative path."""
     filename = f"{uuid.uuid4().hex}.png"
@@ -159,26 +205,35 @@ def run_build_concept(payload):
     if payload.get("negative_prompt"):
         engine_payload["negative_prompt"] = payload["negative_prompt"]
 
-    for source_key in (
-        "image_base64",
-        "image_url",
-        "blueprint_image_base64",
-        "blueprint_image_url",
-        "site_image_base64",
-        "site_image_url",
-        "reference_image_base64",
-        "reference_image_url",
-        "exterior_image_base64",
-        "exterior_image_url",
-        "front_exterior_image_base64",
-        "front_exterior_image_url",
-        "back_exterior_image_base64",
-        "back_exterior_image_url",
-        "rear_exterior_image_base64",
-        "rear_exterior_image_url",
-    ):
-        if payload.get(source_key):
-            engine_payload[source_key] = payload[source_key]
+    mode_key = str(payload.get("output_mode") or payload.get("mode") or intent or "").lower()
+
+    if payload.get("site_context_url"):
+        engine_payload["site_context_url"] = payload["site_context_url"]
+
+    if payload.get("master_exterior_reference_url"):
+        engine_payload["master_exterior_reference_url"] = payload["master_exterior_reference_url"]
+
+    allow_init_image = True
+    if intent in {"blueprint", "siteplan"} or "blueprint" in mode_key or "siteplan" in mode_key:
+        allow_init_image = False
+        engine_payload["init_img"] = None
+        engine_payload["use_image"] = False
+        engine_payload["strength"] = 0.0
+        engine_payload.pop("master_exterior_reference_url", None)
+    elif "exterior_front" in mode_key or intent == "exterior_from_photo":
+        allow_init_image = _truthy(payload.get("preserve_existing_exterior"), default=False)
+
+    if allow_init_image:
+        source_keys = _BUILD_LEGACY_IMAGE_KEYS if "exterior_back" in mode_key else _BUILD_INIT_IMAGE_KEYS
+        for source_key in source_keys:
+            if payload.get(source_key):
+                engine_payload[source_key] = payload[source_key]
+    elif not allow_init_image:
+        for source_key in _BUILD_INIT_IMAGE_KEYS:
+            engine_payload.pop(source_key, None)
+        engine_payload["init_img"] = None
+        engine_payload["use_image"] = False
+        engine_payload["images"] = {}
 
     for list_key in ("outputs", "output_modes"):
         if payload.get(list_key):
@@ -216,6 +271,8 @@ def run_build_concept(payload):
             engine_payload["location_cost_context"] = cost_ctx
         except Exception:
             cost_ctx = None
+
+    _build_log_sources(engine_payload, mode_key or intent)
 
     response = _post_renovation_engine_json(
         "/v1/build_concept",
