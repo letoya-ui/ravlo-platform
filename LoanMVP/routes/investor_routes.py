@@ -9685,25 +9685,32 @@ def generate_full_build():
                         payload["exterior_front_url"] = master_exterior_url
 
                     payload["prompt"] = _prompt_join(
-                        "rear elevation of the same home",
+                        "true rear elevation",
                         "backyard-facing facade",
                         "rear patio doors",
-                        "rear glazing",
-                        "backyard landscaping",
-                        "pool-facing composition",
-                        "private rear architecture",
-                        "same materials and roofline",
-                        "different composition from front exterior",
+                        "rear windows",
+                        "private backyard",
+                        "patio or deck",
+                        "rear landscaping",
+                        "same materials",
+                        "same roofline",
+                        "same window language",
+                        "different composition from front",
+                        "no front entry",
+                        "no driveway view",
                     )
 
                     payload["negative_prompt"] = _prompt_join(
                         "front facade",
                         "front entry",
                         "street-facing elevation",
+                        "driveway",
                         "curb appeal composition",
                         "driveway-focused composition",
                         "garage-forward composition",
                         "same image as front",
+                        "wireframe",
+                        "architectural sketch",
                     )
 
             elif is_blueprint:
