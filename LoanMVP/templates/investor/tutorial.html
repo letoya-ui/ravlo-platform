@@ -1,0 +1,786 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Getting Started{% endblock %}
+{% block page_title %}Getting Started{% endblock %}
+{% block page_subline %}Learn how to use Ravlo from deal discovery to funding.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.command_center') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-layout-dashboard"></i>
+    <span>Dashboard</span>
+  </a>
+  <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn primary sm">
+    <i class="lucide lucide-search"></i>
+    <span>Find a Deal</span>
+  </a>
+{% endblock %}
+
+{% block head %}
+<style>
+/* ── Reset / Shell ─────────────────────────── */
+.tut-shell{display:flex;flex-direction:column;gap:32px;max-width:1100px;margin:0 auto}
+
+/* ── Hero ──────────────────────────────────── */
+.tut-hero{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:24px;
+  align-items:center;
+  padding:36px 40px;
+  border-radius:24px;
+  background:
+    linear-gradient(135deg,rgba(107,127,200,.18) 0%,rgba(16,36,64,.0) 60%),
+    linear-gradient(180deg,rgba(18,27,44,.98),rgba(9,17,30,.96));
+  border:1px solid rgba(107,127,200,.22);
+  box-shadow:0 22px 56px rgba(0,0,0,.3);
+}
+.tut-hero-kicker{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:#7a9ec6;margin-bottom:12px;
+}
+.tut-hero-kicker i{font-size:14px}
+.tut-hero h1{font-size:2.1rem;font-weight:800;color:#f0f4ff;line-height:1.18;margin:0 0 14px}
+.tut-hero p{color:#8aa4c0;font-size:1.05rem;max-width:600px;line-height:1.65;margin:0 0 24px}
+.tut-hero-btns{display:flex;gap:10px;flex-wrap:wrap}
+.tut-hero-img{
+  display:flex;align-items:center;justify-content:center;
+  width:220px;height:160px;
+  border-radius:18px;
+  background:rgba(107,127,200,.08);
+  border:1px solid rgba(107,127,200,.15);
+  font-size:64px;
+  flex-shrink:0;
+}
+
+/* ── Workflow strip ────────────────────────── */
+.tut-flow{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+}
+.tut-flow-step{
+  display:flex;flex-direction:column;gap:10px;
+  padding:22px 20px;
+  border-radius:18px;
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.07);
+  text-decoration:none;
+  transition:.18s ease;
+  position:relative;
+  overflow:hidden;
+}
+.tut-flow-step:hover{
+  transform:translateY(-3px);
+  border-color:rgba(107,127,200,.35);
+  background:rgba(107,127,200,.07);
+}
+.tut-flow-step::before{
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(107,127,200,.06),transparent 60%);
+  pointer-events:none;
+}
+.tut-step-num{
+  font-size:.72rem;font-weight:700;letter-spacing:.12em;
+  color:#5578a0;text-transform:uppercase;
+}
+.tut-step-icon{
+  font-size:26px;margin-bottom:2px;
+}
+.tut-step-title{font-size:1.05rem;font-weight:700;color:#e8edf8}
+.tut-step-desc{font-size:.88rem;color:#7a96b8;line-height:1.5}
+.tut-step-arrow{
+  margin-top:auto;
+  font-size:.82rem;font-weight:600;color:#5a7aaa;
+  display:flex;align-items:center;gap:5px;
+}
+
+/* ── Section headers ───────────────────────── */
+.tut-section-head{
+  display:flex;align-items:baseline;gap:12px;
+  margin-bottom:4px;
+}
+.tut-section-head h2{font-size:1.25rem;font-weight:700;color:#eef3ff;margin:0}
+.tut-section-head p{font-size:.9rem;color:#6a88a8;margin:0}
+
+/* ── Tool grid ─────────────────────────────── */
+.tut-tool-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+}
+.tut-tool-card{
+  display:flex;flex-direction:column;gap:12px;
+  padding:24px;
+  border-radius:20px;
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.07);
+  text-decoration:none;
+  transition:.18s ease;
+}
+.tut-tool-card:hover{
+  transform:translateY(-2px);
+  border-color:rgba(107,127,200,.3);
+  background:rgba(107,127,200,.05);
+}
+.tut-tool-icon{
+  width:40px;height:40px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+  background:rgba(107,127,200,.12);
+  border:1px solid rgba(107,127,200,.18);
+  color:#7aaeff;
+  flex-shrink:0;
+}
+.tut-tool-card.accent-green .tut-tool-icon{background:rgba(52,199,89,.1);border-color:rgba(52,199,89,.2);color:#34c759}
+.tut-tool-card.accent-purple .tut-tool-icon{background:rgba(175,82,222,.12);border-color:rgba(175,82,222,.22);color:#af52de}
+.tut-tool-card.accent-orange .tut-tool-icon{background:rgba(255,159,10,.1);border-color:rgba(255,159,10,.2);color:#ff9f0a}
+.tut-tool-card.accent-teal .tut-tool-icon{background:rgba(48,209,188,.1);border-color:rgba(48,209,188,.2);color:#30d1bc}
+.tut-tool-card.accent-red .tut-tool-icon{background:rgba(255,69,58,.1);border-color:rgba(255,69,58,.2);color:#ff453a}
+.tut-tool-name{font-size:1rem;font-weight:700;color:#e8edf8}
+.tut-tool-desc{font-size:.87rem;color:#6a88a8;line-height:1.5;flex:1}
+.tut-tool-link{font-size:.82rem;font-weight:600;color:#5a7aaa;display:flex;align-items:center;gap:5px}
+.tut-tool-badge{
+  display:inline-block;
+  font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:2px 8px;border-radius:6px;
+  background:rgba(107,127,200,.15);color:#7aaeff;
+  margin-top:auto;align-self:flex-start;
+}
+.tut-tool-badge.ai{background:rgba(175,82,222,.15);color:#af52de}
+.tut-tool-badge.capital{background:rgba(255,159,10,.12);color:#ff9f0a}
+
+/* ── Checklist ─────────────────────────────── */
+.tut-checklist{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:12px;
+}
+.tut-check-item{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:16px 18px;
+  border-radius:14px;
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.07);
+}
+.tut-check-num{
+  width:26px;height:26px;flex-shrink:0;
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:800;
+  background:rgba(107,127,200,.15);
+  color:#7aaeff;
+  border:1px solid rgba(107,127,200,.2);
+}
+.tut-check-body strong{display:block;font-size:.95rem;color:#dde6f4;margin-bottom:3px}
+.tut-check-body p{font-size:.84rem;color:#6a88a8;margin:0;line-height:1.45}
+
+/* ── Tip banner ────────────────────────────── */
+.tut-tip{
+  display:flex;align-items:flex-start;gap:14px;
+  padding:18px 22px;
+  border-radius:14px;
+  background:rgba(107,127,200,.07);
+  border:1px solid rgba(107,127,200,.18);
+}
+.tut-tip i{font-size:18px;color:#7aaeff;flex-shrink:0;margin-top:1px}
+.tut-tip p{font-size:.9rem;color:#8ab0d0;margin:0;line-height:1.55}
+.tut-tip strong{color:#c8daf0}
+
+/* ── Tour launch strip ─────────────────────── */
+.tut-tour-strip{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:22px 28px;
+  border-radius:18px;
+  background:rgba(107,127,200,.08);
+  border:1px dashed rgba(107,127,200,.3);
+}
+.tut-tour-strip-copy strong{display:block;font-size:1rem;font-weight:700;color:#c8d8f0;margin-bottom:4px}
+.tut-tour-strip-copy p{font-size:.87rem;color:#6a88a8;margin:0}
+
+/* ── Responsive ────────────────────────────── */
+@media(max-width:900px){
+  .tut-hero{grid-template-columns:1fr}
+  .tut-hero-img{display:none}
+  .tut-flow{grid-template-columns:1fr 1fr}
+  .tut-tool-grid{grid-template-columns:1fr 1fr}
+  .tut-checklist{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .tut-hero{padding:24px 20px}
+  .tut-hero h1{font-size:1.6rem}
+  .tut-flow{grid-template-columns:1fr}
+  .tut-tool-grid{grid-template-columns:1fr}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tut-shell">
+
+  <!-- ── HERO ─────────────────────────────────────── -->
+  <section class="tut-hero">
+    <div>
+      <div class="tut-hero-kicker">
+        <i class="lucide lucide-graduation-cap"></i>
+        Investor OS · Getting Started
+      </div>
+      <h1>Welcome to Ravlo.</h1>
+      <p>
+        Ravlo is your end-to-end real estate investment platform — from finding and analyzing deals,
+        to planning construction, generating AI visuals, and requesting capital.
+        This guide walks you through every tool.
+      </p>
+      <div class="tut-hero-btns">
+        <button class="ravlo-btn primary" id="startTourBtn">
+          <i class="lucide lucide-play"></i>
+          Start Interactive Tour
+        </button>
+        <a href="{{ url_for('investor.command_center') }}" class="ravlo-btn ghost">
+          <i class="lucide lucide-layout-dashboard"></i>
+          Go to Dashboard
+        </a>
+      </div>
+    </div>
+    <div class="tut-hero-img">🏗️</div>
+  </section>
+
+  <!-- ── THE WORKFLOW ──────────────────────────────── -->
+  <div>
+    <div class="tut-section-head">
+      <h2>The Ravlo Workflow</h2>
+      <p>Four phases from discovery to funded deal.</p>
+    </div>
+    <div class="tut-flow">
+
+      <a href="{{ url_for('investor.property_tool') }}" class="tut-flow-step">
+        <div class="tut-step-num">Step 01</div>
+        <div class="tut-step-icon">🔍</div>
+        <div class="tut-step-title">Find a Deal</div>
+        <div class="tut-step-desc">
+          Search properties by address or market. Ravlo pulls live data — price, rent estimates,
+          zoning, and neighborhood comps. Save anything worth watching.
+        </div>
+        <div class="tut-step-arrow">Open Deal Finder <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+      <a href="{{ url_for('investor.deal_workspace') }}" class="tut-flow-step">
+        <div class="tut-step-num">Step 02</div>
+        <div class="tut-step-icon">📊</div>
+        <div class="tut-step-title">Underwrite It</div>
+        <div class="tut-step-desc">
+          Open Deal Workspace with any saved property. AI scores the opportunity, runs ARV,
+          compares flip vs. hold vs. build strategies, and surfaces the risk profile.
+        </div>
+        <div class="tut-step-arrow">Open Workspace <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+      <a href="{{ url_for('investor.project_studio') }}" class="tut-flow-step">
+        <div class="tut-step-num">Step 03</div>
+        <div class="tut-step-icon">🏛️</div>
+        <div class="tut-step-title">Plan the Project</div>
+        <div class="tut-step-desc">
+          Generate AI blueprints and exterior renderings in Build Studio. Deal Architect
+          prices everything automatically and sends exact line-item costs to Budget Studio.
+        </div>
+        <div class="tut-step-arrow">Open Project Studio <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+      <a href="{{ url_for('investor.capital_application') }}" class="tut-flow-step">
+        <div class="tut-step-num">Step 04</div>
+        <div class="tut-step-icon">🏦</div>
+        <div class="tut-step-title">Request Capital</div>
+        <div class="tut-step-desc">
+          When your deal package is complete, submit it directly for funding.
+          Track application status, conditions, and documents in Capital Studio.
+        </div>
+        <div class="tut-step-arrow">Apply for Capital <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ── INTERACTIVE TOUR STRIP ──────────────────── -->
+  <div class="tut-tour-strip">
+    <div class="tut-tour-strip-copy">
+      <strong>🗺️ Interactive Spotlight Tour</strong>
+      <p>Walk through every section of the portal with highlighted callouts and guided descriptions.</p>
+    </div>
+    <button class="ravlo-btn primary" id="startTourBtn2">
+      <i class="lucide lucide-play"></i>
+      Launch Tour
+    </button>
+  </div>
+
+  <!-- ── YOUR TOOLS ────────────────────────────────── -->
+  <div>
+    <div class="tut-section-head">
+      <h2>Your Tools</h2>
+      <p>Everything available in your Investor OS.</p>
+    </div>
+    <div class="tut-tool-grid">
+
+      <a href="{{ url_for('investor.property_tool') }}" class="tut-tool-card">
+        <div class="tut-tool-icon"><i class="lucide lucide-search"></i></div>
+        <div>
+          <div class="tut-tool-name">Deal Finder</div>
+          <div class="tut-tool-desc">
+            Search any market by address or city. Ravlo enriches each property with rent estimates,
+            ARV data, zoning info, and comparable sales so you can qualify a deal in seconds.
+          </div>
+        </div>
+        <div class="tut-tool-link">Open <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+      <a href="{{ url_for('investor.deals_list') }}" class="tut-tool-card accent-green">
+        <div class="tut-tool-icon"><i class="lucide lucide-briefcase-business"></i></div>
+        <div>
+          <div class="tut-tool-name">Deal Pipeline</div>
+          <div class="tut-tool-desc">
+            Every deal you've created or saved lives here. Filter by status, strategy, or score.
+            Open any deal to see its full underwriting, projections, and action items.
+          </div>
+        </div>
+        <div class="tut-tool-link">Open <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+      <a href="{{ url_for('investor.deal_workspace') }}" class="tut-tool-card accent-purple">
+        <div class="tut-tool-icon"><i class="lucide lucide-columns-3"></i></div>
+        <div>
+          <div class="tut-tool-name">Deal Workspace</div>
+          <div class="tut-tool-desc">
+            The underwriting command center. Pick any property, choose a strategy (flip, rental,
+            build-to-rent), and get AI-powered projections including cash-on-cash, IRR, and equity build.
+          </div>
+        </div>
+        <div class="tut-tool-badge ai">AI</div>
+        <div class="tut-tool-link">Open <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+      <a href="{{ url_for('investor.ai_hub') }}" class="tut-tool-card accent-purple">
+        <div class="tut-tool-icon"><i class="lucide lucide-sparkles"></i></div>
+        <div>
+          <div class="tut-tool-name">AI + Deal Architect</div>
+          <div class="tut-tool-desc">
+            Deep-dive AI analysis on any deal. Deal Architect scores risk, recommends the
+            best exit strategy, estimates all-in costs, and auto-populates Budget Studio
+            with itemized construction costs.
+          </div>
+        </div>
+        <div class="tut-tool-badge ai">AI Engine</div>
+        <div class="tut-tool-link">Open <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+      <a href="{{ url_for('investor.build_studio') }}" class="tut-tool-card accent-orange">
+        <div class="tut-tool-icon"><i class="lucide lucide-hammer"></i></div>
+        <div>
+          <div class="tut-tool-name">Build Studio</div>
+          <div class="tut-tool-desc">
+            Generate AI blueprints, site plans, and exterior renderings for any new construction
+            project. Hit Generate and Ravlo creates a full visual package — then automatically
+            prices every line item and opens Budget Studio.
+          </div>
+        </div>
+        <div class="tut-tool-badge ai">AI Visuals</div>
+        <div class="tut-tool-link">Open <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+      <a href="{{ url_for('investor.budget_studio') }}" class="tut-tool-card accent-teal">
+        <div class="tut-tool-icon"><i class="lucide lucide-wallet"></i></div>
+        <div>
+          <div class="tut-tool-name">Budget Studio</div>
+          <div class="tut-tool-desc">
+            View, edit, and track every cost line item for your project. Costs flow in
+            automatically from Deal Architect — or create a budget manually with as much
+            detail as you need. Track actuals vs estimates over time.
+          </div>
+        </div>
+        <div class="tut-tool-link">Open <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+      <a href="{{ url_for('investor.loans') }}" class="tut-tool-card accent-orange">
+        <div class="tut-tool-icon"><i class="lucide lucide-landmark"></i></div>
+        <div>
+          <div class="tut-tool-name">Capital Studio</div>
+          <div class="tut-tool-desc">
+            When your deal is ready, request funding directly from the platform.
+            Track your loan status, open conditions, required documents, and disbursements
+            in one place from application to close.
+          </div>
+        </div>
+        <div class="tut-tool-badge capital">Funding</div>
+        <div class="tut-tool-link">Open <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+      <a href="{{ url_for('investor.partners') }}" class="tut-tool-card">
+        <div class="tut-tool-icon"><i class="lucide lucide-users"></i></div>
+        <div>
+          <div class="tut-tool-name">Partner Network</div>
+          <div class="tut-tool-desc">
+            Find and connect with contractors, architects, property managers, title companies,
+            and other investors in your market. Send connection requests and coordinate
+            directly through the platform.
+          </div>
+        </div>
+        <div class="tut-tool-link">Open <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+      <a href="{{ url_for('investor.documents') }}" class="tut-tool-card accent-red">
+        <div class="tut-tool-icon"><i class="lucide lucide-folder"></i></div>
+        <div>
+          <div class="tut-tool-name">Documents</div>
+          <div class="tut-tool-desc">
+            Upload and manage all deal-related documents — purchase agreements, permits,
+            inspection reports, and lender-required packages. Sign documents electronically
+            and track outstanding requests.
+          </div>
+        </div>
+        <div class="tut-tool-link">Open <i class="lucide lucide-arrow-right"></i></div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ── QUICK-START CHECKLIST ────────────────────── -->
+  <div>
+    <div class="tut-section-head">
+      <h2>Quick-Start Checklist</h2>
+      <p>Complete these five steps to get fully set up.</p>
+    </div>
+    <div class="tut-checklist">
+
+      <a href="{{ url_for('investor.settings') }}" class="tut-check-item" style="text-decoration:none">
+        <div class="tut-check-num">1</div>
+        <div class="tut-check-body">
+          <strong>Complete your investor profile</strong>
+          <p>Add your strategy, target markets, and investment criteria so Ravlo can tailor recommendations to you.</p>
+        </div>
+      </a>
+
+      <a href="{{ url_for('investor.property_tool') }}" class="tut-check-item" style="text-decoration:none">
+        <div class="tut-check-num">2</div>
+        <div class="tut-check-body">
+          <strong>Find and save your first deal</strong>
+          <p>Search a market in Deal Finder and save at least one property to start your pipeline.</p>
+        </div>
+      </a>
+
+      <a href="{{ url_for('investor.deal_workspace') }}" class="tut-check-item" style="text-decoration:none">
+        <div class="tut-check-num">3</div>
+        <div class="tut-check-body">
+          <strong>Run underwriting in Deal Workspace</strong>
+          <p>Open your saved property in Deal Workspace and let the AI analyze it — strategy, score, and projected returns.</p>
+        </div>
+      </a>
+
+      <a href="{{ url_for('investor.build_studio') }}" class="tut-check-item" style="text-decoration:none">
+        <div class="tut-check-num">4</div>
+        <div class="tut-check-body">
+          <strong>Generate a build package</strong>
+          <p>Open Build Studio, describe your project, and generate AI blueprints and exterior renderings. Budget costs auto-populate.</p>
+        </div>
+      </a>
+
+      <a href="{{ url_for('investor.capital_application') }}" class="tut-check-item" style="text-decoration:none">
+        <div class="tut-check-num">5</div>
+        <div class="tut-check-body">
+          <strong>Submit to Capital Studio</strong>
+          <p>When your deal package is ready, apply for funding through Capital Studio and track every step to close.</p>
+        </div>
+      </a>
+
+      <a href="{{ url_for('investor.partners') }}" class="tut-check-item" style="text-decoration:none">
+        <div class="tut-check-num">6</div>
+        <div class="tut-check-body">
+          <strong>Build your Partner Network</strong>
+          <p>Connect with contractors, inspectors, and lenders in your market to move faster on every deal.</p>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ── PRO TIP ───────────────────────────────────── -->
+  <div class="tut-tip">
+    <i class="lucide lucide-lightbulb"></i>
+    <p>
+      <strong>Pro tip:</strong> The fastest path is <strong>Deal Finder → Deal Workspace → Build Studio</strong>.
+      Save a property, run the AI analysis, generate a build package, and Ravlo automatically
+      prices every line item and lands you in Budget Studio — ready to present to lenders.
+    </p>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════
+     INTERACTIVE SPOTLIGHT TOUR OVERLAY
+═════════════════════════════════════════════════ -->
+<div id="ravloTour" class="ravlo-tour-overlay hidden" aria-hidden="true" role="dialog" aria-label="Portal Tour">
+  <div class="ravlo-tour-backdrop" id="tourBackdrop"></div>
+  <div class="ravlo-tour-spotlight" id="tourSpotlight"></div>
+  <div class="ravlo-tour-card" id="tourCard">
+    <div class="ravlo-tour-progress">
+      <div class="ravlo-tour-progress-bar" id="tourProgressBar"></div>
+    </div>
+    <div class="ravlo-tour-step-label" id="tourStepLabel">Step 1 of 8</div>
+    <div class="ravlo-tour-card-icon" id="tourIcon"></div>
+    <div class="ravlo-tour-card-title" id="tourTitle"></div>
+    <div class="ravlo-tour-card-desc" id="tourDesc"></div>
+    <div class="ravlo-tour-card-actions">
+      <button class="ravlo-btn ghost sm" id="tourSkip">Skip Tour</button>
+      <div style="display:flex;gap:8px">
+        <button class="ravlo-btn ghost sm" id="tourPrev">← Back</button>
+        <button class="ravlo-btn primary sm" id="tourNext">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* ── Overlay ───────────────────────────────── */
+.ravlo-tour-overlay{position:fixed;inset:0;z-index:9000;pointer-events:none}
+.ravlo-tour-overlay.hidden{display:none}
+.ravlo-tour-backdrop{
+  position:absolute;inset:0;
+  background:rgba(5,10,20,.78);
+  backdrop-filter:blur(2px);
+  pointer-events:auto;
+}
+
+/* ── Spotlight cutout ──────────────────────── */
+.ravlo-tour-spotlight{
+  position:absolute;
+  border-radius:14px;
+  box-shadow:0 0 0 4000px rgba(5,10,20,.78);
+  border:2px solid rgba(107,127,200,.55);
+  pointer-events:none;
+  transition:all .32s cubic-bezier(.4,0,.2,1);
+  background:transparent;
+  z-index:1;
+}
+
+/* ── Card ──────────────────────────────────── */
+.ravlo-tour-card{
+  position:absolute;
+  width:340px;
+  padding:22px 24px;
+  border-radius:20px;
+  background:linear-gradient(160deg,rgba(18,28,48,.98),rgba(10,18,32,.97));
+  border:1px solid rgba(107,127,200,.28);
+  box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 0 1px rgba(107,127,200,.1);
+  pointer-events:auto;
+  z-index:2;
+  transition:all .32s cubic-bezier(.4,0,.2,1);
+}
+.ravlo-tour-progress{
+  height:3px;border-radius:2px;
+  background:rgba(255,255,255,.08);
+  margin-bottom:14px;overflow:hidden;
+}
+.ravlo-tour-progress-bar{
+  height:100%;border-radius:2px;
+  background:linear-gradient(90deg,#4a7aff,#7aaeff);
+  transition:width .35s ease;
+}
+.ravlo-tour-step-label{
+  font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:#5a7aaa;margin-bottom:10px;
+}
+.ravlo-tour-card-icon{font-size:28px;margin-bottom:8px}
+.ravlo-tour-card-title{font-size:1.05rem;font-weight:700;color:#e8edf8;margin-bottom:8px}
+.ravlo-tour-card-desc{font-size:.88rem;color:#7a96b8;line-height:1.55;margin-bottom:18px}
+.ravlo-tour-card-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}
+</style>
+
+<script>
+(() => {
+  // ── Tour steps ─────────────────────────────────────────────────────
+  const steps = [
+    {
+      icon: '👋',
+      title: 'Welcome to Ravlo Investor OS',
+      desc: 'This quick tour walks you through every tool in the platform — from finding deals to requesting capital. You can skip at any time.',
+      target: null, // full-screen intro card
+    },
+    {
+      icon: '🏠',
+      title: 'Dashboard',
+      desc: 'Your command center. See your pipeline at a glance, track capital progress, and let AI tell you the next best move on your most active deal.',
+      target: '[data-tour="dashboard"]',
+    },
+    {
+      icon: '🔍',
+      title: 'Deal Finder',
+      desc: 'Search any address or market. Ravlo pulls live property data, rent estimates, ARV comps, and zoning — qualify a deal in seconds and save it to your pipeline.',
+      target: '[data-tour="deal-finder"]',
+    },
+    {
+      icon: '📊',
+      title: 'Deal Pipeline + Workspace',
+      desc: 'Your pipeline tracks every deal by status and score. Open Deal Workspace on any property to run full AI underwriting — strategy, return projections, and risk score.',
+      target: '[data-tour="deal-pipeline"]',
+    },
+    {
+      icon: '✨',
+      title: 'AI + Deal Architect',
+      desc: 'The AI engine behind Ravlo. Deal Architect analyzes your deal, recommends the best exit strategy, and estimates all-in costs. When you accept, Budget Studio fills in automatically.',
+      target: '[data-tour="ai-architect"]',
+    },
+    {
+      icon: '🏗️',
+      title: 'Build + Design Studio',
+      desc: 'Generate AI blueprints, site plans, and photo-realistic exterior renderings for any new construction project. Hit Generate and costs auto-flow into Budget Studio.',
+      target: '[data-tour="build-design"]',
+    },
+    {
+      icon: '💰',
+      title: 'Budget Studio',
+      desc: 'Every construction cost — itemized, named, and tracked. Costs populate automatically from Build Studio. Add actuals as work progresses and compare against estimates.',
+      target: '[data-tour="budget-studio"]',
+    },
+    {
+      icon: '🏦',
+      title: 'Capital Studio',
+      desc: 'When your deal package is complete, submit it here for funding. Track loan status, open conditions, required documents, and disbursements all the way to close.',
+      target: '[data-tour="capital-studio"]',
+    },
+    {
+      icon: '🤝',
+      title: 'Partner Network + Resources',
+      desc: 'Connect with contractors, architects, and other investors in your market. The Resource Center has guides and templates to help you move faster on every deal.',
+      target: '[data-tour="partner-network"]',
+    },
+  ];
+
+  let current = 0;
+
+  const overlay   = document.getElementById('ravloTour');
+  const spotlight = document.getElementById('tourSpotlight');
+  const card      = document.getElementById('tourCard');
+  const progressBar = document.getElementById('tourProgressBar');
+  const stepLabel = document.getElementById('tourStepLabel');
+  const icon      = document.getElementById('tourIcon');
+  const title     = document.getElementById('tourTitle');
+  const desc      = document.getElementById('tourDesc');
+  const nextBtn   = document.getElementById('tourNext');
+  const prevBtn   = document.getElementById('tourPrev');
+  const skipBtn   = document.getElementById('tourSkip');
+
+  function positionSpotlightOnTarget(selector) {
+    if (!selector) {
+      // No target — hide spotlight, center the card
+      spotlight.style.opacity = '0';
+      const cardW = 340, cardH = 240;
+      card.style.left = `${(window.innerWidth - cardW) / 2}px`;
+      card.style.top  = `${(window.innerHeight - cardH) / 2}px`;
+      return;
+    }
+
+    const el = document.querySelector(selector);
+    if (!el) {
+      spotlight.style.opacity = '0';
+      card.style.left = '50%';
+      card.style.top  = '50%';
+      card.style.transform = 'translate(-50%,-50%)';
+      return;
+    }
+
+    const rect = el.getBoundingClientRect();
+    const PAD  = 8;
+
+    spotlight.style.opacity = '1';
+    spotlight.style.transform = 'none';
+    spotlight.style.left   = `${rect.left - PAD}px`;
+    spotlight.style.top    = `${rect.top  - PAD}px`;
+    spotlight.style.width  = `${rect.width  + PAD * 2}px`;
+    spotlight.style.height = `${rect.height + PAD * 2}px`;
+
+    // Position card to the right of sidebar target, or below if not enough room
+    const cardW = 340, cardH = 260;
+    let cLeft = rect.right + 20;
+    let cTop  = rect.top + rect.height / 2 - cardH / 2;
+
+    if (cLeft + cardW > window.innerWidth - 16) {
+      cLeft = rect.left - cardW - 20;
+    }
+    if (cLeft < 16) cLeft = 16;
+    cTop = Math.max(16, Math.min(cTop, window.innerHeight - cardH - 16));
+
+    card.style.transform = 'none';
+    card.style.left  = `${cLeft}px`;
+    card.style.top   = `${cTop}px`;
+  }
+
+  function renderStep(idx) {
+    const step  = steps[idx];
+    const total = steps.length;
+
+    progressBar.style.width = `${((idx + 1) / total) * 100}%`;
+    stepLabel.textContent   = `Step ${idx + 1} of ${total}`;
+    icon.textContent        = step.icon;
+    title.textContent       = step.title;
+    desc.textContent        = step.desc;
+
+    prevBtn.style.display   = idx === 0 ? 'none' : '';
+    nextBtn.textContent     = idx === total - 1 ? 'Finish ✓' : 'Next →';
+
+    positionSpotlightOnTarget(step.target);
+  }
+
+  function startTour() {
+    current = 0;
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    renderStep(0);
+  }
+
+  function closeTour() {
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    spotlight.style.opacity = '0';
+    localStorage.setItem('ravlo_tour_done', '1');
+  }
+
+  nextBtn.addEventListener('click', () => {
+    if (current >= steps.length - 1) { closeTour(); return; }
+    current++;
+    renderStep(current);
+  });
+
+  prevBtn.addEventListener('click', () => {
+    if (current <= 0) return;
+    current--;
+    renderStep(current);
+  });
+
+  skipBtn.addEventListener('click', closeTour);
+
+  // Launch buttons on this page
+  document.getElementById('startTourBtn')?.addEventListener('click', startTour);
+  document.getElementById('startTourBtn2')?.addEventListener('click', startTour);
+
+  // Auto-launch if flagged
+  if (localStorage.getItem('ravlo_launch_tour') === '1') {
+    localStorage.removeItem('ravlo_launch_tour');
+    setTimeout(startTour, 400);
+  }
+
+  // Reposition on resize
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (!overlay.classList.contains('hidden')) renderStep(current);
+    }, 80);
+  });
+
+  // Keyboard nav
+  document.addEventListener('keydown', (e) => {
+    if (overlay.classList.contains('hidden')) return;
+    if (e.key === 'ArrowRight' || e.key === 'Enter') nextBtn.click();
+    if (e.key === 'ArrowLeft')  prevBtn.click();
+    if (e.key === 'Escape')     closeTour();
+  });
+})();
+</script>
+{% endblock %}

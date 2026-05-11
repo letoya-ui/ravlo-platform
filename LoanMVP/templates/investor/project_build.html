@@ -224,7 +224,7 @@
         <div class="cta-row">
           <button type="submit" class="ravlo-btn primary" id="generateProjectBuildBtn">{{ submit_label or "Generate Build Studio Package" }}</button>
           {% if deal %}
-          <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">Generate Budget</a>
+          <a href="{{ url_for('investor.deal_architect', deal_id=deal.id, auto_generate_costs=1) }}" class="ravlo-btn ghost">Deal Architect</a>
           {% endif %}
         </div>
       </form>

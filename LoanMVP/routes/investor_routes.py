@@ -405,6 +405,142 @@ def _project_budget_snapshot(budget):
         "remaining_balance": float(getattr(budget, "remaining_balance", 0) or 0),
     }
 
+
+def _budget_line_full_price(item):
+    if not isinstance(item, dict):
+        return 0.0
+
+    for key in (
+        "full_price",
+        "price",
+        "estimated_amount",
+        "amount",
+        "cost",
+        "cost_high",
+        "high",
+        "estimated_high",
+        "max",
+        "total",
+    ):
+        value = item.get(key)
+        if value in (None, ""):
+            continue
+        try:
+            return float(str(value).replace("$", "").replace(",", "").strip() or 0)
+        except (TypeError, ValueError):
+            continue
+
+    return 0.0
+
+
+def _budget_line_name(item, fallback="Budget Item"):
+    if not isinstance(item, dict):
+        return fallback
+
+    value = (
+        item.get("name")
+        or item.get("description")
+        or item.get("item_name")
+        or item.get("item")
+        or item.get("category")
+        or fallback
+    )
+    return str(value).strip() or fallback
+
+
+def _create_budget_studio_budget_from_lines(
+    *,
+    deal,
+    project=None,
+    budget,
+    source="design_studio",
+    budget_type="design",
+):
+    if deal is None or not isinstance(budget, dict):
+        return None
+
+    line_items = [item for item in (budget.get("line_items") or []) if isinstance(item, dict)]
+    if not line_items:
+        return None
+
+    investor_profile_id = getattr(deal, "investor_profile_id", None)
+    if not investor_profile_id:
+        profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+        investor_profile_id = getattr(profile, "id", None)
+
+    project_budget = ProjectBudget(
+        borrower_profile_id=None,
+        investor_profile_id=investor_profile_id,
+        loan_app_id=None,
+        deal_id=deal.id,
+        build_project_id=getattr(project, "id", None) if project else None,
+        budget_type=budget_type,
+        name=f"{source.replace('_', ' ').title()} Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
+        project_name=(getattr(project, "project_name", None) if project else None) or deal.title or deal.address,
+        total_amount=0.0,
+        total_budget=0.0,
+        total_cost=0.0,
+        materials_cost=0.0,
+        labor_cost=0.0,
+        contingency=0.0,
+        paid_amount=0.0,
+        notes=f"Created from {source.replace('_', ' ').title()} with exact generated line names and full prices.",
+    )
+    db.session.add(project_budget)
+    db.session.flush()
+
+    total = 0.0
+    normalized_items = []
+
+    for item in line_items:
+        name = _budget_line_name(item)
+        amount = _budget_line_full_price(item)
+        category = str(item.get("category") or item.get("section") or "General").strip() or "General"
+        note = item.get("notes")
+        if not note and item.get("description") and item.get("description") != name:
+            note = item.get("description")
+
+        db.session.add(ProjectExpense(
+            budget_id=project_budget.id,
+            category=category,
+            description=name,
+            vendor=item.get("vendor"),
+            estimated_amount=amount,
+            actual_amount=0.0,
+            paid_amount=0.0,
+            status=item.get("status") or "planned",
+            notes=note,
+        ))
+
+        total += amount
+        normalized_items.append({
+            **item,
+            "name": name,
+            "full_price": amount,
+            "estimated_amount": amount,
+        })
+
+    budget["line_items"] = normalized_items
+    budget["budget_id"] = project_budget.id
+    budget["total_budget"] = total
+    budget["total_amount"] = total
+    budget["source"] = source
+
+    project_budget.total_cost = total
+    project_budget.total_amount = total
+    project_budget.total_budget = total
+
+    db.session.flush()
+
+    if hasattr(project_budget, "recalculate_totals"):
+        project_budget.recalculate_totals()
+        project_budget.total_amount = project_budget.total_budget
+
+    if hasattr(deal, "rehab_cost"):
+        deal.rehab_cost = total
+
+    return project_budget
+
 def _first_nonempty(*values):
         for value in values:
             if isinstance(value, str) and value.strip():
@@ -913,6 +1049,15 @@ def _fmt_money(value):
         return f"${float(value):,.0f}"
     except Exception:
         return "—"
+
+@investor_bp.route("/tutorial", methods=["GET"], endpoint="tutorial")
+@investor_bp.route("/getting-started", methods=["GET"])
+@login_required
+@role_required("investor")
+def tutorial():
+    """Investor onboarding tutorial / getting-started guide."""
+    return render_template("investor/tutorial.html")
+
 
 @investor_bp.route("/", methods=["GET"], endpoint="command_center")
 @investor_bp.route("/index", methods=["GET"])
@@ -6793,7 +6938,16 @@ def design_studio_generate_budget():
             "meta": engine_json.get("meta") or {},
         }
 
+        budget_tracker = None
         if save_to_deal and deal is not None:
+            budget_tracker = _create_budget_studio_budget_from_lines(
+                deal=deal,
+                project=project,
+                budget=budget,
+                source="design_studio",
+                budget_type="design",
+            )
+
             results["design_budget"] = budget
             build_project = results.get("build_project", {}) or {}
             interior_block = build_project.get("interior", {}) or {}
@@ -6803,6 +6957,14 @@ def design_studio_generate_budget():
             _set_deal_results(deal, results)
             db.session.commit()
 
+        budget_url = None
+        if deal is not None and budget_tracker is not None:
+            budget_url = url_for(
+                "investor.budget_detail",
+                budget_id=budget_tracker.id,
+            )
+            budget["budget_url"] = budget_url
+
         return jsonify({
             "status": "ok",
             "budget": budget,
@@ -6810,6 +6972,9 @@ def design_studio_generate_budget():
             "cost_high": budget["cost_high"],
             "summary": budget["summary"],
             "line_items": budget["line_items"],
+            "budget_id": getattr(budget_tracker, "id", None),
+            "budget_url": budget_url,
+            "budget_studio_url": budget_url,
             "saved_to_deal": bool(save_to_deal and deal is not None),
         })
 
@@ -6984,6 +7149,81 @@ def _reference_matches_known_plan(url: str, known_plan_urls: set[str] | None) ->
 def _reference_looks_like_floor_plan(*values) -> bool:
     text = " ".join(safe_str(value).lower() for value in values if value)
     return any(marker in text for marker in _FLOOR_PLAN_REFERENCE_MARKERS)
+
+
+_BUILD_INIT_IMAGE_KEYS = (
+    "image_url",
+    "reference_image_url",
+    "image_base64",
+    "reference_image_base64",
+)
+
+_BUILD_COMPAT_IMAGE_KEYS = (
+    "site_image_url",
+    "site_image_base64",
+    "blueprint_image_url",
+    "blueprint_image_base64",
+    "exterior_image_url",
+    "exterior_image_base64",
+    "front_exterior_image_url",
+    "front_exterior_image_base64",
+    "back_exterior_image_url",
+    "back_exterior_image_base64",
+    "rear_exterior_image_url",
+    "rear_exterior_image_base64",
+)
+
+
+def _build_truthy(value, default=False):
+    if value is None or value == "":
+        return default
+    if isinstance(value, bool):
+        return value
+    return safe_str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _build_payload_has_init_image(payload):
+    return any(bool(payload.get(key)) for key in _BUILD_INIT_IMAGE_KEYS)
+
+
+def _strip_build_init_images(payload, *, strip_master=False):
+    for key in (*_BUILD_INIT_IMAGE_KEYS, *_BUILD_COMPAT_IMAGE_KEYS):
+        payload.pop(key, None)
+    if strip_master:
+        for key in (
+            "master_exterior_reference_url",
+            "front_style_reference_url",
+            "exterior_front_url",
+            "blueprint_reference_url",
+        ):
+            payload.pop(key, None)
+    payload["init_img"] = None
+    payload["use_image"] = False
+    return payload
+
+
+def _log_build_source_state(payload, mode):
+    init_img_loaded = _build_payload_has_init_image(payload)
+    print(
+        "[build]",
+        "mode=", mode,
+        "init_img_loaded=", init_img_loaded,
+        "image_url=", bool(payload.get("image_url")),
+        "reference_image_url=", bool(payload.get("reference_image_url")),
+        "site_context_url=", bool(payload.get("site_context_url")),
+    )
+
+
+def _log_rear_generation_settings(payload):
+    depth_scale = (
+        payload.get("controlnet_conditioning_scale")
+        or payload.get("rear_depth_scale")
+        or payload.get("controlnet_scale")
+    )
+    print(
+        f"[rear] pipe=depth strength={payload.get('strength')} "
+        f"depth_scale={depth_scale} preserve_camera=False preserve_composition=False"
+    )
 
 
 def _image_bytes_look_like_floor_plan(raw: bytes | None) -> bool:
@@ -7561,33 +7801,14 @@ def generate_exterior_back():
         except Exception:
             bathrooms_value = None
 
-        reference_image_url = (
-            request.form.get("master_exterior_reference_url")
-            or request.form.get("exterior_front_url")
-            or request.form.get("reference_image_url")
-            or request.form.get("image_url")
-            or ""
-        ).strip()
-
-        reference_file = (
-            request.files.get("reference_image")
-            or request.files.get("front_exterior_image")
-            or request.files.get("image")
-        )
-
-        reference_image_base64 = ""
+        master_reference_url = (request.form.get("master_exterior_reference_url") or "").strip()
         prepared_reference_url = ""
 
-        if reference_file and getattr(reference_file, "filename", ""):
-            raw = reference_file.read()
-            if raw:
-                reference_image_base64 = base64.b64encode(raw).decode("utf-8")
-                prepared_reference_url = _upload_before_image(raw)
-        elif reference_image_url:
+        if master_reference_url:
             prepared_reference_url = _engine_ready_reference_image_url(
-                reference_image_url,
+                master_reference_url,
                 prefix="rear-exterior-front-anchor",
-            ) or reference_image_url
+            ) or master_reference_url
 
         render_batch_id = uuid.uuid4().hex
         bundle_job_id = (request.form.get("bundle_job_id") or uuid.uuid4().hex).strip()
@@ -7635,8 +7856,8 @@ def generate_exterior_back():
 
             "exterior_view": "back",
             "camera_view": "rear_yard_view",
-            "source_role": "front_exterior_style_material_anchor" if (prepared_reference_url or reference_image_base64) else "text_architectural_context",
-            "reference_role": "front_exterior_style_material_anchor" if (prepared_reference_url or reference_image_base64) else "text_architectural_context",
+            "source_role": "front_exterior_style_material_anchor" if prepared_reference_url else "text_architectural_context",
+            "reference_role": "front_exterior_style_material_anchor" if prepared_reference_url else "text_architectural_context",
             "render_family": "rear_exterior",
             "generation_mode": "rear_from_front_style_anchor",
 
@@ -7647,8 +7868,9 @@ def generate_exterior_back():
             "preserve_composition": False,
             "style_reference_only": False,
             "pipe_mode": "depth",
-            "rear_depth_scale": 0.04,
-            "controlnet_scale": 0.04,
+            "rear_depth_scale": 0.10,
+            "controlnet_scale": 0.10,
+            "controlnet_conditioning_scale": 0.10,
 
             "prompt": _prompt_join(
                 "rear elevation of the same home",
@@ -7684,12 +7906,10 @@ def generate_exterior_back():
             "strength": 0.18,
         }
 
-        if reference_image_base64:
-            payload["master_exterior_reference_url"] = prepared_reference_url
-            payload["front_style_reference_available"] = True
-        elif prepared_reference_url:
+        if prepared_reference_url:
             payload["master_exterior_reference_url"] = prepared_reference_url
             payload["front_style_reference_url"] = prepared_reference_url
+            payload["reference_image_url"] = prepared_reference_url
 
         if bedrooms_value is not None:
             payload["bedrooms"] = bedrooms_value
@@ -7700,6 +7920,8 @@ def generate_exterior_back():
             payload["square_feet_target"] = square_feet_value
 
         payload.update(_build_studio_quality_controls("exterior_back"))
+        _log_build_source_state(payload, "exterior_back")
+        _log_rear_generation_settings(payload)
 
         engine_json = _post_renovation_engine_json(
             "/v1/build_concept",
@@ -7794,9 +8016,14 @@ def generate_build_exterior():
             notes,
         )
         save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
+        preserve_existing_exterior = _build_truthy(
+            request.form.get("preserve_existing_exterior"),
+            default=False,
+        )
 
         land_image = request.files.get("land_image")
         reference_image_url = (request.form.get("reference_image_url") or "").strip()
+        site_context_url = reference_image_url
 
         image_base64 = ""
         raw = None
@@ -7804,12 +8031,16 @@ def generate_build_exterior():
         # ---------------- IMAGE INPUT ----------------
         if land_image:
             raw = land_image.read()
-            image_base64 = base64.b64encode(raw).decode("utf-8")
-            reference_image_url = _upload_before_image(raw)
+            if raw:
+                uploaded_land_url = _upload_before_image(raw)
+                reference_image_url = uploaded_land_url
+                site_context_url = uploaded_land_url
+                if preserve_existing_exterior:
+                    image_base64 = base64.b64encode(raw).decode("utf-8")
 
         # ---------------- FALLBACKS ----------------
         fallback_blueprint_url = ""
-        if not image_base64 and not reference_image_url and deal:
+        if preserve_existing_exterior and not image_base64 and not reference_image_url and deal:
             results = deal.results_json or {}
             build_project = results.get("build_project", {}) or {}
             blueprint = build_project.get("blueprint", {}) or {}
@@ -7836,7 +8067,7 @@ def generate_build_exterior():
                 or ""
             ).strip()
 
-        if not image_base64 and not reference_image_url and project_id:
+        if preserve_existing_exterior and not image_base64 and not reference_image_url and project_id:
             project = BuildProject.query.filter_by(
                 id=project_id,
                 user_id=current_user.id
@@ -7854,19 +8085,26 @@ def generate_build_exterior():
             )
             if prepared_reference_url:
                 reference_image_url = prepared_reference_url
+                site_context_url = prepared_reference_url
             elif "property_tool_image" in reference_image_url or not reference_image_url.startswith(("http://", "https://")):
                 reference_image_url = ""
 
-        if not image_base64 and not reference_image_url and location:
+        if preserve_existing_exterior and not image_base64 and not reference_image_url and location:
             reference_image_url = _streetview_engine_reference_url(
                 {"address": location},
                 prefix="build-site-reference",
             )
+            site_context_url = reference_image_url
 
         # ---------------- CONDITIONING ----------------
-        use_conditioning = True
-        has_real_exterior_reference = bool(image_base64 or reference_image_url)
-        conditioning_url = reference_image_url if has_real_exterior_reference else fallback_blueprint_url
+        use_conditioning = preserve_existing_exterior
+        if not preserve_existing_exterior:
+            image_base64 = ""
+            reference_image_url = ""
+            fallback_blueprint_url = ""
+
+        has_real_exterior_reference = bool(preserve_existing_exterior and (image_base64 or reference_image_url))
+        conditioning_url = reference_image_url if has_real_exterior_reference else ""
 
         # ---------------- PROMPT ----------------
         exterior_prompt_notes = _compose_build_studio_prompt(
@@ -7881,7 +8119,7 @@ def generate_build_exterior():
             location=location,
             floors=number_of_floors,
             preserve_reference=has_real_exterior_reference,
-            blueprint_constrained=bool(conditioning_url and not has_real_exterior_reference),
+            blueprint_constrained=False,
         )
 
         # ---------------- PAYLOAD ----------------
@@ -7904,6 +8142,7 @@ def generate_build_exterior():
             "floor_count": number_of_floors,
             "preserve_existing_exterior": has_real_exterior_reference,
             "preserve_structure": has_real_exterior_reference,
+            "site_context_url": site_context_url or "",
             "count": 1,
             "steps": 32,
             "guidance": 8.2,
@@ -7919,15 +8158,13 @@ def generate_build_exterior():
 
             if image_base64:
                 payload["image_base64"] = image_base64
-                payload["exterior_image_base64"] = image_base64
             else:
-                payload["image_url"] = conditioning_url
-                payload["exterior_image_url"] = reference_image_url
                 payload["reference_image_url"] = reference_image_url
-        elif conditioning_url:
-            payload["blueprint_reference_url"] = conditioning_url
-            payload["strength"] = 0.22
+        else:
+            payload["strength"] = 0.25
+            _strip_build_init_images(payload)
 
+        _log_build_source_state(payload, "exterior_front")
         current_app.logger.warning(f"EXTERIOR FINAL PAYLOAD: {payload}")
 
         result = _post_renovation_engine_json(
@@ -9063,7 +9300,18 @@ def generate_build_blueprint():
                     raw = None
 
         if raw:
-            blueprint_image_base64 = base64.b64encode(raw).decode("utf-8")
+            rejected_reference_url = (
+                stored_blueprint_url
+                or rejected_reference_url
+                or "uploaded_blueprint_file_ignored_text_only"
+            )
+
+        # Blueprint generation is always text-only. Uploaded/saved/reference images are
+        # retained only as rejected metadata so satellite/site/exterior images cannot
+        # leak into img2img.
+        raw = None
+        blueprint_image_base64 = ""
+        stored_blueprint_url = ""
 
         # ---------------- VALIDATION ----------------
         # If we rejected a satellite/lot image, still allow text-only blueprint generation
@@ -9080,14 +9328,14 @@ def generate_build_blueprint():
             number_of_floors,
         ])
 
-        if not blueprint_image_base64 and not has_text_seed:
+        if not has_text_seed:
             if deal is not None:
                 _clear_deal_render_processing(deal)
                 db.session.commit()
 
             return jsonify({
                 "status": "error",
-                "message": "Provide a floor plan/blueprint image or enough build details to generate one."
+                "message": "Provide enough build details to generate a blueprint."
             }), 400
 
         # ---------------- ENGINE ----------------
@@ -9107,7 +9355,7 @@ def generate_build_blueprint():
             location=location,
             floors=number_of_floors,
             floor="first",
-            blueprint_constrained=bool(blueprint_image_base64 or stored_blueprint_url),
+            blueprint_constrained=False,
         )
 
         payload = {
@@ -9145,26 +9393,23 @@ def generate_build_blueprint():
             "prompt_notes": blueprint_prompt_notes,
             "special_features": notes,
 
-            "reference_role": "blueprint_reference" if blueprint_image_base64 else "text_program_only",
-            "source_role": "blueprint" if blueprint_image_base64 else "text_program_only",
-            "blueprint_constrained": bool(blueprint_image_base64),
-            "site_context_url": rejected_reference_url,
+            "reference_role": "text_program_only",
+            "source_role": "text_program_only",
+            "blueprint_constrained": False,
+            "site_context_url": "",
+            "rejected_reference_image": rejected_reference_url,
 
             "count": 1,
             "steps": 30,
-            "strength": 0.28 if blueprint_image_base64 else 0.0,
+            "strength": 0.0,
             "guidance": 6.8,
             "width": 1024,
             "height": 1024,
             "negative_prompt": _build_studio_negative_prompt("blueprint"),
         }
         payload.update(_build_studio_quality_controls("blueprint"))
-
-        # Only attach the image if it passed floor-plan validation.
-        if blueprint_image_base64:
-            payload["image_base64"] = blueprint_image_base64
-        elif stored_blueprint_url:
-            payload["image_url"] = stored_blueprint_url
+        _strip_build_init_images(payload)
+        _log_build_source_state(payload, "blueprint")
 
         current_app.logger.warning(
             "BUILD BLUEPRINT ENGINE PAYLOAD deal_id=%s has_blueprint_image=%s rejected_reference=%s payload_keys=%s",
@@ -9612,6 +9857,14 @@ def generate_full_build():
                 "site_image_base64",
                 "blueprint_image_url",
                 "blueprint_image_base64",
+                "exterior_image_url",
+                "exterior_image_base64",
+                "front_exterior_image_url",
+                "front_exterior_image_base64",
+                "back_exterior_image_url",
+                "back_exterior_image_base64",
+                "rear_exterior_image_url",
+                "rear_exterior_image_base64",
             ):
                 payload.pop(key, None)
 
@@ -9672,6 +9925,7 @@ def generate_full_build():
                         "pipe_mode": "depth",
                         "rear_depth_scale": 0.10,
                         "controlnet_scale": 0.10,
+                        "controlnet_conditioning_scale": 0.10,
                         "steps": 30,
                         "guidance": 7.8,
                         "strength": 0.18,
@@ -9680,25 +9934,18 @@ def generate_full_build():
                     if master_exterior_url:
                         payload["master_exterior_reference_url"] = master_exterior_url
                         payload["front_style_reference_url"] = master_exterior_url
-
-                        # compatibility fields for runtime loaders
                         payload["reference_image_url"] = master_exterior_url
-                        payload["exterior_front_url"] = master_exterior_url
 
                     payload["prompt"] = _prompt_join(
-                        "true rear elevation",
+                        "rear elevation of the same home",
                         "backyard-facing facade",
                         "rear patio doors",
-                        "rear windows",
-                        "private backyard",
-                        "patio or deck",
-                        "rear landscaping",
-                        "same materials",
-                        "same roofline",
-                        "same window language",
-                        "different composition from front",
-                        "no front entry",
-                        "no driveway view",
+                        "rear glazing",
+                        "backyard landscaping",
+                        "pool-facing composition",
+                        "private rear architecture",
+                        "same materials and roofline",
+                        "different composition from front exterior",
                     )
 
                     payload["negative_prompt"] = _prompt_join(
@@ -9710,8 +9957,6 @@ def generate_full_build():
                         "driveway-focused composition",
                         "garage-forward composition",
                         "same image as front",
-                        "wireframe",
-                        "architectural sketch",
                     )
 
             elif is_blueprint:
@@ -9728,9 +9973,7 @@ def generate_full_build():
                     "guidance": 5.4,
                     "strength": 0.0,
                 })
-
-                if master_exterior_url:
-                    payload["master_exterior_reference_url"] = master_exterior_url
+                _strip_build_init_images(payload, strip_master=True)
 
                 blueprint_prompt_parts = [
                     f"{floor_label} floor",
@@ -9802,6 +10045,7 @@ def generate_full_build():
                     "guidance": 5.0,
                     "strength": 0.0,
                 })
+                _strip_build_init_images(payload, strip_master=True)
 
                 payload["prompt"] = _prompt_join(
                     "top-down parcel map",
@@ -9837,6 +10081,13 @@ def generate_full_build():
                     "road network",
                     "city plan",
                 )
+
+            if is_exterior_front:
+                _strip_build_init_images(payload)
+
+            _log_build_source_state(payload, output_mode)
+            if is_exterior_back:
+                _log_rear_generation_settings(payload)
 
             current_app.logger.warning(
                 "FULL BUILD ENGINE PAYLOAD mode=%s output=%s has_image_base64=%s has_image_url=%s source_role=%s reference_role=%s master_exterior=%s keys=%s",
@@ -13411,6 +13662,7 @@ def budget_studio(deal_id=None):
     deal = None
     results = {}
     existing_budget = None
+    budget_id = request.args.get("budget_id", type=int)
 
     if deal_id is None:
         query_deal_id = request.args.get("deal_id", type=int)
@@ -13432,15 +13684,27 @@ def budget_studio(deal_id=None):
 
         ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
         if ip:
-            existing_budget = (
-                ProjectBudget.query
-                .filter_by(
-                    deal_id=deal.id,
-                    investor_profile_id=ip.id
+            if budget_id:
+                existing_budget = (
+                    ProjectBudget.query
+                    .filter_by(
+                        id=budget_id,
+                        deal_id=deal.id,
+                        investor_profile_id=ip.id
+                    )
+                    .first()
                 )
-                .order_by(ProjectBudget.id.desc())
-                .first()
-            )
+
+            if existing_budget is None:
+                existing_budget = (
+                    ProjectBudget.query
+                    .filter_by(
+                        deal_id=deal.id,
+                        investor_profile_id=ip.id
+                    )
+                    .order_by(ProjectBudget.id.desc())
+                    .first()
+                )
 
     purchase_price = float(getattr(deal, "purchase_price", 0) or 0) if deal else 0
     arv = float(getattr(deal, "arv", 0) or 0) if deal else 0
@@ -13696,17 +13960,31 @@ def generate_budget_from_ai(deal_id):
     results = deal.results_json or {}
     rehab_scope = results.get("rehab_scope") or {}
     build_analysis = results.get("build_analysis") or {}
+    build_project = results.get("build_project") or {}
+    design_budget = (
+        results.get("design_budget")
+        or ((build_project.get("interior") or {}).get("budget") if isinstance(build_project, dict) else None)
+        or {}
+    )
+    build_costs = ((results.get("deal_architect") or {}).get("build_costs") or {})
 
     # Try a few likely places for line items
     raw_items = (
-        rehab_scope.get("line_items")
+        design_budget.get("line_items")
+        or build_costs.get("line_items")
+        or rehab_scope.get("line_items")
         or rehab_scope.get("budget_items")
         or rehab_scope.get("items")
         or build_analysis.get("line_items")
         or []
     )
 
-    budget_type = "build" if build_analysis and not rehab_scope else "rehab"
+    if design_budget.get("line_items"):
+        budget_type = "design"
+    elif build_costs.get("line_items") or (build_analysis and not rehab_scope):
+        budget_type = "build"
+    else:
+        budget_type = "rehab"
 
     budget = ProjectBudget(
         borrower_profile_id=None,
@@ -13742,25 +14020,8 @@ def generate_budget_from_ai(deal_id):
             or "General"
         )
 
-        description = (
-            item.get("description")
-            or item.get("name")
-            or item.get("item")
-            or "Budget Item"
-        )
-
-        amount = (
-            item.get("estimated_amount")
-            or item.get("cost")
-            or item.get("amount")
-            or item.get("estimate")
-            or 0
-        )
-
-        try:
-            amount = float(amount or 0)
-        except (TypeError, ValueError):
-            amount = 0.0
+        description = _budget_line_name(item)
+        amount = _budget_line_full_price(item)
 
         expense = ProjectExpense(
             budget_id=budget.id,
@@ -13771,7 +14032,7 @@ def generate_budget_from_ai(deal_id):
             actual_amount=0,
             paid_amount=0,
             status="planned",
-            notes="Imported from AI deal analysis.",
+            notes=item.get("notes") or "Imported from AI deal analysis.",
         )
         db.session.add(expense)
         created_count += 1
@@ -13780,7 +14041,10 @@ def generate_budget_from_ai(deal_id):
     # Fallback: if no line items, try total rehab estimate only
     if created_count == 0:
         fallback_total = (
-            rehab_scope.get("estimated_total")
+            design_budget.get("total_budget")
+            or design_budget.get("cost_high")
+            or build_costs.get("total_budget")
+            or rehab_scope.get("estimated_total")
             or rehab_scope.get("total_estimated_cost")
             or rehab_scope.get("rehab_total")
             or results.get("rehab_cost")

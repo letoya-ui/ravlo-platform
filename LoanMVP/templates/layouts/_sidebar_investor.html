@@ -21,7 +21,8 @@
     <div class="ravlo-nav-section">Overview</div>
 
     <a href="{{ url_for('investor.command_center') }}"
-       class="ravlo-nav-link {% if ep in ['investor.command_center', 'investor.dashboard'] %}active{% endif %}">
+       class="ravlo-nav-link {% if ep in ['investor.command_center', 'investor.dashboard'] %}active{% endif %}"
+       data-tour="dashboard">
       <i class="lucide lucide-layout-dashboard"></i>
       <span>Dashboard</span>
     </a>
@@ -35,7 +36,8 @@
     <div class="ravlo-nav-section">Find</div>
 
     <a href="{{ url_for('investor.property_tool') }}"
-       class="ravlo-nav-link {% if ep in ['investor.property_tool', 'investor.property_search'] %}active{% endif %}">
+       class="ravlo-nav-link {% if ep in ['investor.property_tool', 'investor.property_search'] %}active{% endif %}"
+       data-tour="deal-finder">
       <i class="lucide lucide-search"></i>
       <span>Deal Finder</span>
     </a>
@@ -49,7 +51,8 @@
     <div class="ravlo-nav-section">Underwrite</div>
 
     <a href="{{ url_for('investor.deals_list') }}"
-       class="ravlo-nav-link {% if ep in ['investor.deals_list', 'investor.deal_detail'] %}active{% endif %}">
+       class="ravlo-nav-link {% if ep in ['investor.deals_list', 'investor.deal_detail'] %}active{% endif %}"
+       data-tour="deal-pipeline">
       <i class="lucide lucide-briefcase-business"></i>
       <span>Deal Pipeline</span>
     </a>
@@ -67,7 +70,8 @@
     </a>
 
     <a href="{{ url_for('investor.ai_hub') }}"
-       class="ravlo-nav-link {% if 'ai' in ep or 'architect' in ep %}active{% endif %}">
+       class="ravlo-nav-link {% if 'ai' in ep or 'architect' in ep %}active{% endif %}"
+       data-tour="ai-architect">
       <i class="lucide lucide-sparkles"></i>
       <span>AI + Architect</span>
     </a>
@@ -88,13 +92,15 @@
          'investor.add_budget_expense',
          'investor.rehab_budget_tracker',
          'investor.build_budget_tracker'
-       ] %}active{% endif %}">
+       ] %}active{% endif %}"
+       data-tour="budget-studio">
       <i class="lucide lucide-wallet"></i>
       <span>Budget Studio</span>
     </a>
 
     <a href="{{ url_for('investor.build_projects') }}"
-       class="ravlo-nav-link {% if ep in ['investor.build_projects', 'investor.build_project_detail', 'investor.project_build', 'investor.build_studio', 'investor.design_studio', 'investor.deal_rehab'] %}active{% endif %}">
+       class="ravlo-nav-link {% if ep in ['investor.build_projects', 'investor.build_project_detail', 'investor.project_build', 'investor.build_studio', 'investor.design_studio', 'investor.deal_rehab'] %}active{% endif %}"
+       data-tour="build-design">
       <i class="lucide lucide-hammer"></i>
       <span>Build + Design</span>
     </a>
@@ -102,7 +108,8 @@
     <div class="ravlo-nav-section">Capital</div>
 
     <a href="{{ url_for('investor.loans') }}"
-       class="ravlo-nav-link {% if 'loan' in ep or 'capital' in ep or ep in ['investor.status', 'investor.conditions'] %}active{% endif %}">
+       class="ravlo-nav-link {% if 'loan' in ep or 'capital' in ep or ep in ['investor.status', 'investor.conditions'] %}active{% endif %}"
+       data-tour="capital-studio">
       <i class="lucide lucide-landmark"></i>
       <span>Capital Studio</span>
     </a>
@@ -122,7 +129,8 @@
     <div class="ravlo-nav-section">Network</div>
 
     <a href="{{ url_for('investor.partners') }}"
-       class="ravlo-nav-link {% if 'partner' in ep %}active{% endif %}">
+       class="ravlo-nav-link {% if 'partner' in ep %}active{% endif %}"
+       data-tour="partner-network">
       <i class="lucide lucide-users"></i>
       <span>Partner Network</span>
     </a>
@@ -137,6 +145,12 @@
 
   <div class="ravlo-sidebar-footer-simple">
     <div class="ravlo-nav-section">Account</div>
+
+    <a href="{{ url_for('investor.tutorial') }}"
+       class="ravlo-nav-link {% if ep == 'investor.tutorial' %}active{% endif %}">
+      <i class="lucide lucide-graduation-cap"></i>
+      <span>Getting Started</span>
+    </a>
 
     <a href="{{ url_for('investor.settings') }}"
        class="ravlo-nav-link {% if ep == 'investor.settings' %}active{% endif %}">

@@ -301,7 +301,11 @@
 
         <div class="studio-action-row">
           <button type="submit" class="ravlo-btn primary" id="generateInteriorBtn">{{ submit_label or "Generate Design Concept" }}</button>
-          <button type="button" class="ravlo-btn ghost" id="generateBudgetBtn">Generate Budget</button>
+          {% if deal %}
+          <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost">Deal Architect</a>
+          {% else %}
+          <a href="{{ url_for('investor.deal_architect') }}" class="ravlo-btn ghost">Deal Architect</a>
+          {% endif %}
         </div>
         <p class="form-note">Design is for visual direction. Rehab is for construction scope. Use Build Studio for multi-floor blueprints, exterior concepts, and floor plan layouts.</p>
       </form>
@@ -402,10 +406,10 @@
         {% for item in design_budget.get('line_items') %}
         <div class="budget-line-row">
           <div>
-            <strong>{{ item.get('category') or 'Budget Item' }}</strong>
+            <strong>{{ item.get('name') or item.get('description') or item.get('category') or 'Budget Item' }}</strong>
             <span>{{ item.get('notes') or '' }}</span>
           </div>
-          <b>${{ "{:,.0f}".format(item.get('low', 0)|float) }} - ${{ "{:,.0f}".format(item.get('high', 0)|float) }}</b>
+          <b>${{ "{:,.0f}".format((item.get('full_price') or item.get('estimated_amount') or item.get('price') or item.get('amount') or item.get('cost_high') or item.get('high') or item.get('cost') or 0)|float) }}</b>
         </div>
         {% endfor %}
       </div>
@@ -519,7 +523,6 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
 (() => {
   const form = document.getElementById('interiorBuildForm');
   const button = document.getElementById('generateInteriorBtn');
-  const budgetButton = document.getElementById('generateBudgetBtn');
   const blueprintFile = document.getElementById('blueprint_file');
   const blueprintUrl = document.getElementById('blueprint_url');
   const blueprintPreview = document.getElementById('blueprintPreview');
@@ -940,10 +943,10 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
     const rows = items.map((item) => `
       <div class="budget-line-row">
         <div>
-          <strong>${item.category || 'Budget Item'}</strong>
+          <strong>${item.name || item.description || item.category || 'Budget Item'}</strong>
           <span>${item.notes || ''}</span>
         </div>
-        <b>${money(item.low)} - ${money(item.high)}</b>
+        <b>${money(item.full_price || item.estimated_amount || item.price || item.amount || item.cost_high || item.high || item.cost)}</b>
       </div>
     `).join('');
 
@@ -1067,7 +1070,6 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       button.textContent = 'Generating...';
     }
 
-    if (budgetButton) budgetButton.disabled = true;
   }
 
   function stopDesignLoading() {
@@ -1082,7 +1084,6 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
         : 'Generate Design Concept';
     }
 
-    if (budgetButton) budgetButton.disabled = false;
   }
 
   askDesignBtn?.addEventListener('click', () => {
@@ -1148,47 +1149,6 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
 
     for (let i = 0; i < urls.length; i += 1) {
       await downloadImage(urls[i], imageFileName(`ravlo-design-${i + 1}`, urls[i]));
-    }
-  });
-
-  budgetButton?.addEventListener('click', async () => {
-    if (!form) return;
-
-    budgetButton.disabled = true;
-    budgetButton.textContent = 'Generating Budget...';
-    if (budgetStatus) budgetStatus.textContent = 'Generating';
-
-    try {
-      const fd = new FormData(form);
-      fd.set('generation_family', 'design');
-      fd.set('generator_family', 'design');
-      fd.set('studio', 'design_studio');
-      fd.set('studio_type', 'design_studio');
-
-      const response = await fetch("{{ url_for('investor.design_studio_generate_budget') }}", {
-        method: 'POST',
-        body: fd,
-        headers: {
-          'X-CSRFToken': '{{ csrf_token() }}',
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin'
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || data.status !== 'ok') {
-        throw new Error(data.message || 'Budget generation failed.');
-      }
-
-      renderBudget(data.budget || data);
-      if (budgetStatus) budgetStatus.textContent = 'Generated';
-    } catch (error) {
-      if (budgetStatus) budgetStatus.textContent = 'Error';
-      alert(error.message || 'Budget generation failed.');
-    } finally {
-      budgetButton.disabled = false;
-      budgetButton.textContent = 'Generate Budget';
     }
   });
 
