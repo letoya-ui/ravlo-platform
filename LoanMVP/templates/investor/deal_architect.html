@@ -146,9 +146,9 @@
 
       <div class="result-meta">
         <div><span>Recommended Strategy</span><strong id="recommendedStrategy">{{ strategy_analysis.get('recommended_type') or deal.recommended_strategy or '—' }}</strong></div>
-        <div><span>Cost Low</span><strong id="costLow">{{ strategy_analysis.get('cost_low') or '—' }}</strong></div>
-        <div><span>Cost High</span><strong id="costHigh">{{ strategy_analysis.get('cost_high') or '—' }}</strong></div>
-        <div><span>Estimated Value</span><strong id="estimatedValue">{{ strategy_analysis.get('estimated_value') or arv or '—' }}</strong></div>
+        <div><span>Cost Low</span><strong id="costLow">{% set _cl = strategy_analysis.get('total_cost_low') %}{% if _cl %}${{ '{:,.0f}'.format(_cl) }}{% else %}—{% endif %}</strong></div>
+        <div><span>Cost High</span><strong id="costHigh">{% set _ch = strategy_analysis.get('total_cost_high') %}{% if _ch %}${{ '{:,.0f}'.format(_ch) }}{% else %}—{% endif %}</strong></div>
+        <div><span>Estimated Value</span><strong id="estimatedValue">{% set _ev = strategy_analysis.get('estimated_value') or arv %}{% if _ev %}${{ '{:,.0f}'.format(_ev) }}{% else %}—{% endif %}</strong></div>
       </div>
 
       <div class="analysis-summary" id="analysisSummary">
@@ -478,9 +478,12 @@
       if (analysisStatus) analysisStatus.textContent = 'Analyzed';
       if (dealScore) dealScore.textContent = data.deal_score || '—';
       if (recommendedStrategy) recommendedStrategy.textContent = data.recommended_type || data.recommended_strategy || '—';
-      if (costLow) costLow.textContent = data.cost_low ? formatMoney(data.cost_low) : '—';
-      if (costHigh) costHigh.textContent = data.cost_high ? formatMoney(data.cost_high) : '—';
-      if (estimatedValue) estimatedValue.textContent = data.estimated_value ? formatMoney(data.estimated_value) : '—';
+      const _costLow = data.total_cost_low ?? data.cost_low;
+      const _costHigh = data.total_cost_high ?? data.cost_high;
+      const _estValue = data.estimated_value;
+      if (costLow) costLow.textContent = _costLow ? formatMoney(_costLow) : '—';
+      if (costHigh) costHigh.textContent = _costHigh ? formatMoney(_costHigh) : '—';
+      if (estimatedValue) estimatedValue.textContent = _estValue ? formatMoney(_estValue) : '—';
       if (analysisSummary) analysisSummary.textContent = data.summary || data.next_step || 'Analysis complete.';
     } catch (error) {
       if (analysisStatus) analysisStatus.textContent = 'Error';

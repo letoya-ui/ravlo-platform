@@ -11625,6 +11625,32 @@ def generate_build_costs_from_package():
         floor2 = build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}
         exterior = build_project.get("exterior", {}) or {}
 
+        # Collect as much property detail as possible from build_project + deal
+        bp_sqft = _normalize_int(
+            build_project.get("square_feet_target")
+            or build_project.get("square_feet")
+            or data.get("square_feet_target")
+        )
+        bp_bedrooms = _normalize_int(
+            build_project.get("bedrooms")
+            or getattr(deal, "bedrooms", None)
+        )
+        bp_bathrooms = build_project.get("bathrooms") or getattr(deal, "bathrooms", None)
+        try:
+            bp_bathrooms = float(bp_bathrooms) if bp_bathrooms not in (None, "") else None
+        except (TypeError, ValueError):
+            bp_bathrooms = None
+        bp_stories = _normalize_int(
+            build_project.get("number_of_floors")
+            or build_project.get("stories")
+            or build_project.get("floor_count")
+        )
+        bp_description = (
+            build_project.get("description")
+            or build_project.get("notes")
+            or f"{build_project.get('property_type') or 'single family'} new construction build"
+        )
+
         package = {
             "deal_id": deal.id,
             "project_id": project_id or build_project.get("project_id"),
@@ -11640,7 +11666,7 @@ def generate_build_costs_from_package():
             "property_type": build_project.get("property_type"),
             "development_type": build_project.get("development_type"),
             "lot_count": build_project.get("lot_count") or 1,
-            "description": build_project.get("description"),
+            "description": bp_description,
             "lot_size": build_project.get("lot_size"),
             "zoning": build_project.get("zoning"),
             "location": build_project.get("location"),
@@ -11651,44 +11677,132 @@ def generate_build_costs_from_package():
             "exterior_url": exterior.get("image_url"),
         }
 
-        # Prefer your RunPod / scope engine if available.
+        # Build the scope-engine payload — /v1/build_scope takes individual fields
+        scope_payload = {
+            "description": bp_description,
+            "property_type": build_project.get("property_type") or "single_family",
+            "lot_size": build_project.get("lot_size") or "",
+            "zoning": build_project.get("zoning") or "",
+            "asking_price": float(deal.purchase_price) if deal.purchase_price else None,
+            "finish_level": build_project.get("style") or "",
+        }
+        if bp_sqft:
+            scope_payload["square_feet_target"] = bp_sqft
+        if bp_bedrooms is not None:
+            scope_payload["bedrooms"] = float(bp_bedrooms)
+        if bp_bathrooms is not None:
+            scope_payload["bathrooms"] = bp_bathrooms
+        if bp_stories:
+            scope_payload["stories"] = bp_stories
+
         try:
             cost_json = _post_scope_engine_json(
-                "/v1/build_cost",
-                package,
+                "/v1/build_scope",
+                scope_payload,
                 timeout=90,
             ) or {}
         except Exception:
-            current_app.logger.exception("Deal Architect build-cost engine failed")
+            current_app.logger.exception("Deal Architect build-scope engine failed")
             cost_json = {}
 
-        # Safe fallback so the product still works.
+        # Map /v1/build_scope response into the line_items structure expected downstream.
+        if cost_json and cost_json.get("ok") and cost_json.get("line_items"):
+            meta = cost_json.get("meta") or {}
+            scope_line_items = cost_json["line_items"]
+            contingency_items = [i for i in scope_line_items if "contingency" in (i.get("category") or "").lower()]
+            non_contingency = [i for i in scope_line_items if i not in contingency_items]
+            scope_subtotal = sum(float(i.get("estimated_amount") or 0) for i in non_contingency)
+            scope_contingency = sum(float(i.get("estimated_amount") or 0) for i in contingency_items)
+            scope_total = scope_subtotal + scope_contingency
+            lot_count = int(package.get("lot_count") or 1)
+            # Scale amounts if building multiple lots
+            if lot_count > 1:
+                for item in scope_line_items:
+                    item["estimated_amount"] = round(float(item.get("estimated_amount") or 0) * lot_count)
+                scope_subtotal *= lot_count
+                scope_contingency *= lot_count
+                scope_total *= lot_count
+            cost_json = {
+                "source": "scope_engine",
+                "category": "new_build",
+                "line_items": scope_line_items,
+                "subtotal": round(scope_subtotal),
+                "contingency": round(scope_contingency),
+                "total_budget": round(scope_total),
+                "notes": cost_json.get("summary") or cost_json.get("next_step") or "Generated from build scope analysis.",
+            }
+
+        # Safe fallback — proportional to sqft so the numbers reflect the actual project size.
         if not cost_json or not cost_json.get("line_items"):
             lot_count = int(package.get("lot_count") or 1)
-            property_type = package.get("property_type") or "single_family"
+            property_type = (build_project.get("property_type") or "single_family").replace("_", " ")
             category = "new_build" if deal.strategy in ("build", "new_build", "development") else "rehab"
 
-            fallback_items = [
-                {"category": "Sitework", "description": "Clearing, grading, access, utility prep", "estimated_amount": 35000 * lot_count},
-                {"category": "Foundation", "description": "Foundation and slab / basement allowance", "estimated_amount": 45000 * lot_count},
-                {"category": "Framing", "description": f"{property_type} framing and shell", "estimated_amount": 85000 * lot_count},
-                {"category": "Exterior", "description": "Roofing, siding, windows, doors", "estimated_amount": 65000 * lot_count},
-                {"category": "MEP", "description": "Mechanical, electrical, plumbing rough-ins", "estimated_amount": 70000 * lot_count},
-                {"category": "Interior Finishes", "description": "Drywall, flooring, cabinets, fixtures, paint", "estimated_amount": 95000 * lot_count},
-                {"category": "Soft Costs", "description": "Permits, design, engineering, inspections", "estimated_amount": 30000 * lot_count},
-            ]
+            # Cost per sqft baseline by property type (national average, standard finish)
+            _SQFT_RATES = {
+                "luxury single family": 325, "luxury": 325,
+                "duplex": 227, "triplex": 240, "fourplex": 252,
+                "townhome": 235, "townhouse": 235,
+                "small multifamily": 262, "multifamily": 262,
+            }
+            prop_key = property_type.lower().replace("_", " ")
+            cost_per_sqft = _SQFT_RATES.get(prop_key, 220)
 
-            subtotal = sum(float(i["estimated_amount"]) for i in fallback_items)
-            contingency = round(subtotal * 0.10, 2)
+            # Estimate sqft from beds/baths if not provided
+            est_sqft = bp_sqft
+            if not est_sqft:
+                beds = float(bp_bedrooms or 3)
+                baths = float(bp_bathrooms or 2)
+                est_sqft = max(1200, int(780 + beds * 340 + baths * 125))
+            est_sqft = int(est_sqft)
+
+            hard_total = est_sqft * cost_per_sqft
+            soft_total = round(hard_total * 0.21)
+            contingency_amt = round(hard_total * 0.08)
+
+            # Category splits of hard cost
+            splits = [
+                ("Sitework & Utilities",  "Clearing, grading, excavation, utility connections",   0.08),
+                ("Foundation",            "Foundation, slab, waterproofing",                       0.12),
+                ("Framing & Structural",  f"{property_type.title()} framing, sheathing, roof deck", 0.22),
+                ("Exterior Envelope",     "Roofing, siding or stucco, windows, exterior doors",    0.16),
+                ("MEP Systems",           "HVAC, electrical, plumbing rough-ins and trim",          0.20),
+                ("Interior Finishes",     "Drywall, flooring, cabinets, countertops, fixtures, paint", 0.22),
+            ]
+            fallback_items = [
+                {
+                    "category": cat,
+                    "description": desc,
+                    "estimated_amount": round(hard_total * pct) * lot_count,
+                    "status": "planned",
+                }
+                for cat, desc, pct in splits
+            ]
+            fallback_items.append({
+                "category": "Soft Costs",
+                "description": "Architecture, engineering, permits, inspections, title, legal",
+                "estimated_amount": soft_total * lot_count,
+                "status": "planned",
+            })
+            fallback_items.append({
+                "category": "Contingency Reserve",
+                "description": "Construction contingency for scope changes and unknowns",
+                "estimated_amount": contingency_amt * lot_count,
+                "status": "planned",
+            })
+
+            subtotal_all = sum(float(i["estimated_amount"]) for i in fallback_items)
+            contingency_reserve = contingency_amt * lot_count
+            subtotal_ex_contingency = subtotal_all - contingency_reserve
 
             cost_json = {
-                "source": "fallback_deal_architect",
+                "source": "fallback_proportional",
                 "category": category,
                 "line_items": fallback_items,
-                "subtotal": subtotal,
-                "contingency": contingency,
-                "total_budget": subtotal + contingency,
-                "notes": "Fallback estimate generated from Build Studio package. Replace with RunPod cost engine output when available.",
+                "subtotal": round(subtotal_ex_contingency),
+                "contingency": contingency_reserve,
+                "total_budget": round(subtotal_all),
+                "notes": f"Proportional estimate based on {est_sqft:,} sq ft {property_type} at ${cost_per_sqft}/sqft.",
             }
 
         def _money_value(value, default=0.0):
