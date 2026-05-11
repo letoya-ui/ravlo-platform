@@ -9471,6 +9471,7 @@ def generate_full_build():
         outputs.extend([
             ("siteplan", "siteplan"),
             ("exterior", "exterior_front"),
+            ("exterior", "exterior_back"),
         ])
 
         master_exterior_url = ""
