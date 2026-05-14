@@ -143,6 +143,7 @@ from LoanMVP.services.property_tool import (
 )
 from LoanMVP.services.property_service import build_property_card, _build_property_tool_result
 from LoanMVP.services.notification_service import notify_team_on_conversion
+from LoanMVP.utils.company_policy import get_caughman_mason_company_id
 from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
 from LoanMVP.services.prompt_builder import build_blueprint_prompt  # noqa: F401
 from LoanMVP.services.concept_build_service import run_concept_build
@@ -2024,14 +2025,13 @@ def refinance_studio(deal_id=None):
         ),
     }
 
-    company_id = getattr(current_user, "company_id", None)
+    cm_company_id = get_caughman_mason_company_id()
     officers_query = (
         LoanOfficerProfile.query
         .join(User, LoanOfficerProfile.user_id == User.id)
+        .filter(User.company_id == cm_company_id)
         .order_by(LoanOfficerProfile.name.asc())
     )
-    if company_id:
-        officers_query = officers_query.filter(User.company_id == company_id)
 
     return render_template(
         "investor/refinance_studio.html",
@@ -2135,15 +2135,14 @@ def capital_application():
     if deal_id:
         deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
 
-    company_id = getattr(current_user, "company_id", None)
-    officers_query = (
+    cm_company_id = get_caughman_mason_company_id()
+    officers = (
         LoanOfficerProfile.query
         .join(User, LoanOfficerProfile.user_id == User.id)
+        .filter(User.company_id == cm_company_id)
         .order_by(LoanOfficerProfile.name.asc())
+        .all()
     )
-    if company_id:
-        officers_query = officers_query.filter(User.company_id == company_id)
-    officers = officers_query.all()
     initial_loan_type = (request.args.get("loan_type") or "").strip()
     initial_amount = request.args.get("amount", type=float)
 
@@ -2262,7 +2261,14 @@ def submit_capital_application():
             assigned_officer_id = None
 
     if not assigned_officer_id:
-        auto_officer = LoanOfficerProfile.query.order_by(LoanOfficerProfile.joined_at.asc()).first()
+        cm_company_id = get_caughman_mason_company_id()
+        auto_officer = (
+            LoanOfficerProfile.query
+            .join(User, LoanOfficerProfile.user_id == User.id)
+            .filter(User.company_id == cm_company_id)
+            .order_by(LoanOfficerProfile.joined_at.asc())
+            .first()
+        )
         if auto_officer:
             assigned_officer_id = auto_officer.id
 
