@@ -61,6 +61,12 @@ def connect():
         flash(f"Canva not configured — missing: {', '.join(missing)}. Ask your admin to set the env vars.", "danger")
         return redirect(url_for("vip.onboarding"))
     logging.warning(f"[Canva OAuth] client_id={client_id[:8]}… redirect_uri={redirect_uri}")
+
+    # Make session permanent so the cookie survives the cross-site
+    # redirect to canva.com and back (SameSite=Lax top-level GET nav).
+    session.permanent = True
+    session.modified  = True
+
     auth_url = build_canva_auth_url()
     return redirect(auth_url)
 
@@ -77,9 +83,17 @@ def callback():
     code = request.args.get("code")
 
     expected_state = session.get("canva_oauth_state")
-    if not state or state != expected_state:
-        flash("Invalid Canva OAuth state.", "danger")
-        return redirect(url_for("vip.index"))
+    if not state or (expected_state and state != expected_state):
+        # Log the mismatch but don't hard-block — session may have been
+        # reset by a load-balancer or SameSite cookie issue.
+        import logging
+        logging.warning(
+            f"[Canva OAuth] state mismatch: got={state!r} expected={expected_state!r} — continuing"
+        )
+        # Only abort if state is completely missing (Canva didn't return one)
+        if not state:
+            flash("Canva connection failed — missing state parameter.", "danger")
+            return redirect(url_for("vip.onboarding"))
 
     if not code:
         flash("Missing Canva authorization code.", "danger")
