@@ -31,7 +31,7 @@ def build_canva_auth_url():
     redirect_uri = os.environ.get("CANVA_REDIRECT_URI")
     scopes = os.environ.get(
         "CANVA_SCOPES",
-        "design:meta:read asset:read profile:read",
+        "app:read asset:read asset:write brandtemplate:content:read brandtemplate:meta:read comment:read design:content:read design:content:write design:meta:read design:permission:read folder:read folder:permission:read profile:read",
     )
 
     state = secrets.token_urlsafe(24)
