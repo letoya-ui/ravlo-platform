@@ -34,7 +34,9 @@ def get_valid_access_token():
     if not connection:
         return None
 
-    if connection.expires_at and connection.expires_at <= _utcnow():
+    # expires_at is stored as naive UTC; compare against naive utcnow
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if connection.expires_at and connection.expires_at <= now:
         if not connection.refresh_token:
             return None
 
