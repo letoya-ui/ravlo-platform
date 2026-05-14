@@ -10457,6 +10457,20 @@ def generate_full_build():
             if land_image_url:
                 results["build_site_context_image"] = land_image_url
 
+            # Sync the build project's address to the deal so Deal Workspace
+            # shows the correct property address without a separate lookup.
+            if location:
+                deal.address = location
+                # Parse city/state/zip from "123 Main St, City, ST 12345" if not set
+                if not deal.city or not deal.zip_code:
+                    parts = [p.strip() for p in location.split(",")]
+                    if len(parts) >= 2 and not deal.city:
+                        deal.city = parts[-2].strip() if len(parts) >= 3 else parts[1].strip()
+                    if len(parts) >= 1 and not deal.zip_code:
+                        last = parts[-1].strip().split()
+                        if last and last[-1].isdigit() and len(last[-1]) == 5:
+                            deal.zip_code = last[-1]
+
             _set_deal_results(deal, results)
             saved_to_deal = True
 

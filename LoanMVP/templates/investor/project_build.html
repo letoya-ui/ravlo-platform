@@ -176,10 +176,38 @@
             </label>
           </div>
           <div class="field full">
-            <label for="location">Location</label>
-            <input id="location" name="location" value="{{ build_project.get('location') or (project.location if project else (deal.address if deal else '')) }}" placeholder="158 Whitlock Rd, Otisville, NY">
+            <label for="location">Location <span style="font-weight:400;opacity:.55;font-size:.8rem;">— any address, on or off market</span></label>
+            <div class="location-search-wrap" style="position:relative;">
+              <input id="location" name="location"
+                     value="{{ build_project.get('location') or (project.location if project else (deal.address if deal else '')) }}"
+                     placeholder="Start typing an address…"
+                     autocomplete="off">
+              <ul id="locationSuggestions" class="location-dropdown" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:99;list-style:none;margin:0;padding:4px 0;background:#0d1523;border:1px solid rgba(255,255,255,.13);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.55);max-height:220px;overflow-y:auto;"></ul>
+            </div>
+            <!-- Property info card — filled when an address is resolved -->
+            <div id="locationPropertyCard" style="display:none;margin-top:10px;padding:12px 14px;border-radius:14px;background:rgba(95,160,255,.07);border:1px solid rgba(95,160,255,.18);font-size:.84rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+                <strong id="locationCardAddress" style="color:#dbeafe;"></strong>
+                <span id="locationCardStatus" style="padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:700;"></span>
+              </div>
+              <div style="display:flex;gap:14px;flex-wrap:wrap;color:rgba(200,220,255,.7);">
+                <span id="locationCardBeds"></span>
+                <span id="locationCardBaths"></span>
+                <span id="locationCardSqft"></span>
+                <span id="locationCardPrice"></span>
+              </div>
+            </div>
           </div>
         </div>
+        <!-- Create Deal button — shown in standalone mode after a project is saved -->
+        {% if not deal %}
+        <div id="createDealFromBuildWrap" style="display:none;margin-top:4px;">
+          <button type="button" id="createDealFromBuildBtn" class="ravlo-btn primary">
+            📋 Send to Deal Workspace
+          </button>
+          <span style="margin-left:10px;font-size:.82rem;color:rgba(200,220,255,.6);">Creates a deal from this build project so you can track funding, costs, and partners.</span>
+        </div>
+        {% endif %}
 
         <div class="field">
           <label for="description" style="font-weight:600;">What Do You Want To Build? <span style="font-weight:400;opacity:.6;">(This drives the AI — be specific)</span></label>
@@ -871,6 +899,18 @@
         budgetStudioBtn.href = build.budget_studio_url || `/investor/deal-studio/budget/${build.deal_id}`;
         budgetStudioBtn.classList.remove('hidden');
       }
+
+      // Show "Send to Deal Workspace" in standalone mode once we have a project_id
+      const createDealWrap = document.getElementById('createDealFromBuildWrap');
+      if (createDealWrap) {
+        const projectIdField = form.querySelector('input[name="project_id"]');
+        const projectId = (build.project_id) || (projectIdField && projectIdField.value);
+        if (projectId) {
+          createDealWrap.dataset.projectId = projectId;
+          createDealWrap.style.display = '';
+        }
+      }
+
     } catch (error) {
       appendChatMessage('assistant', error.message || 'I could not generate that build package yet.');
       alert(error.message || 'Build Studio generation failed.');
@@ -878,6 +918,131 @@
       stopBuildLoading();
     }
   });
+
+  // ── Create Deal from standalone Build Project ──────────────────────────────
+  const createDealBtn = document.getElementById('createDealFromBuildBtn');
+  if (createDealBtn) {
+    createDealBtn.addEventListener('click', async () => {
+      const wrap = document.getElementById('createDealFromBuildWrap');
+      const projectId = wrap && wrap.dataset.projectId;
+      if (!projectId) { alert('Generate a build package first.'); return; }
+
+      createDealBtn.textContent = 'Creating deal…';
+      createDealBtn.disabled = true;
+
+      try {
+        const csrf = document.querySelector('input[name="csrf_token"]').value;
+        const res = await fetch(`/investor/build-projects/${projectId}/convert-to-deal`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+        });
+        const data = await res.json();
+        if (data.redirect_url) {
+          window.location.href = data.redirect_url;
+        } else {
+          alert(data.message || 'Deal created.');
+        }
+      } catch (err) {
+        alert('Could not create deal: ' + err.message);
+        createDealBtn.textContent = '📋 Send to Deal Workspace';
+        createDealBtn.disabled = false;
+      }
+    });
+  }
+
+})();
+
+// ── Address autocomplete (Property Tool) ────────────────────────────────────
+(function () {
+  const locationInput = document.getElementById('location');
+  const suggestionsList = document.getElementById('locationSuggestions');
+  const propCard = document.getElementById('locationPropertyCard');
+  if (!locationInput || !suggestionsList) return;
+
+  let debounceTimer = null;
+
+  function showSuggestions(predictions) {
+    suggestionsList.innerHTML = '';
+    if (!predictions || !predictions.length) { suggestionsList.style.display = 'none'; return; }
+    predictions.forEach(p => {
+      const li = document.createElement('li');
+      li.textContent = p.description;
+      li.style.cssText = 'padding:10px 14px;cursor:pointer;color:#dbeafe;font-size:.85rem;border-bottom:1px solid rgba(255,255,255,.06);transition:background .15s;';
+      li.addEventListener('mouseenter', () => li.style.background = 'rgba(95,160,255,.12)');
+      li.addEventListener('mouseleave', () => li.style.background = '');
+      li.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        locationInput.value = p.description;
+        suggestionsList.style.display = 'none';
+        resolveAddress(p.description);
+      });
+      suggestionsList.appendChild(li);
+    });
+    suggestionsList.style.display = 'block';
+  }
+
+  function resolveAddress(address) {
+    if (!propCard) return;
+    fetch('/property/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      const prop = data.property || data.resolved || data;
+      if (!prop || data.status === 'error') { propCard.style.display = 'none'; return; }
+
+      const addr = prop.address || address;
+      const price = prop.price ? '$' + Number(prop.price).toLocaleString() : '';
+      const beds = prop.beds || prop.bedrooms ? (prop.beds || prop.bedrooms) + ' bd' : '';
+      const baths = prop.baths || prop.bathrooms ? (prop.baths || prop.bathrooms) + ' ba' : '';
+      const sqft = prop.sqft || prop.square_feet ? (prop.sqft || prop.square_feet).toLocaleString() + ' sqft' : '';
+      const isListed = prop.status === 'active' || prop.listed || prop.on_market;
+
+      document.getElementById('locationCardAddress').textContent = addr;
+      document.getElementById('locationCardBeds').textContent = beds;
+      document.getElementById('locationCardBaths').textContent = baths;
+      document.getElementById('locationCardSqft').textContent = sqft;
+      document.getElementById('locationCardPrice').textContent = price;
+
+      const statusEl = document.getElementById('locationCardStatus');
+      if (isListed) {
+        statusEl.textContent = 'On Market';
+        statusEl.style.cssText = 'padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:700;background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);';
+      } else {
+        statusEl.textContent = 'Off Market';
+        statusEl.style.cssText = 'padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:700;background:rgba(148,163,184,.1);color:#94a3b8;border:1px solid rgba(148,163,184,.2);';
+      }
+
+      propCard.style.display = '';
+    })
+    .catch(() => { propCard.style.display = 'none'; });
+  }
+
+  locationInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const q = locationInput.value.trim();
+    if (q.length < 3) { suggestionsList.style.display = 'none'; return; }
+    debounceTimer = setTimeout(() => {
+      fetch('/property/autocomplete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q }),
+      })
+      .then(r => r.json())
+      .then(data => showSuggestions(data.predictions || []))
+      .catch(() => suggestionsList.style.display = 'none');
+    }, 280);
+  });
+
+  locationInput.addEventListener('blur', () => {
+    setTimeout(() => { suggestionsList.style.display = 'none'; }, 150);
+  });
+
+  // If a location is already pre-filled (from saved deal/project), resolve it silently
+  const prefilledAddress = locationInput.value.trim();
+  if (prefilledAddress.length > 6) resolveAddress(prefilledAddress);
 })();
 </script>
 {% endblock %}
