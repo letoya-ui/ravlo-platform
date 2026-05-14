@@ -13,7 +13,7 @@ Merges four open heads:
 from alembic import op
 
 revision = '20260513merge01'
-down_revision = ('20260513dfc01', '20260428iq01', '20260420r03', '0002b_deals_funding')
+down_revision = ('20260513dfc01', '20260428iq01', '20260420r03', '0002b_deals_funding', 'ac9d94fc422a')
 branch_labels = None
 depends_on = None
 
