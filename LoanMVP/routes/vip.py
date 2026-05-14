@@ -1345,6 +1345,9 @@ def contractor_dashboard():
         )
 
     realtor_ctx = _realtor_context(profile, partner) if is_hybrid_partner else {}
+    # Always use the contractor-scoped suggestions; prevents duplicate-kwarg
+    # error when realtor_ctx also contains 'copilot_suggestions'.
+    realtor_ctx["copilot_suggestions"] = copilot_suggestions
 
     return render_template(
         "vip/contractor/dashboard.html",
@@ -1360,7 +1363,6 @@ def contractor_dashboard():
         design_annotation_counts = design_annotation_counts,
         stats                 = stats,
         studio_snapshot       = studio_snapshot,
-        copilot_suggestions   = copilot_suggestions,
         portal                = "vip",
         portal_name           = "VIP",
         portal_home           = url_for("vip.contractor_dashboard"),
