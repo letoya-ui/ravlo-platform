@@ -68,7 +68,7 @@ def connect():
     session.modified  = True
 
     auth_url = build_canva_auth_url()
-    logging.warning(f"[Canva OAuth] redirecting to: {auth_url[:120]}")
+    logging.warning(f"[Canva OAuth] FULL redirect URL: {auth_url}")
     return redirect(auth_url)
 
 
