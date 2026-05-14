@@ -31,12 +31,18 @@
     <!-- Step 2: search + selection (shown after type chosen) -->
     <div class="stp-section stp-hidden" id="stpStep2">
       <div class="stp-label" id="stpSearchLabel">Search Partners</div>
+      <div class="stp-location-note stp-hidden" id="stpLocationNote"></div>
       <div class="stp-search-row">
         <input id="stpSearchInput" type="text" class="stp-input" placeholder="Search by name or company…" oninput="debounceSearchPartners(this.value)">
         <svg class="stp-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </div>
 
       <div id="stpResults" class="stp-results"></div>
+
+      <label class="stp-external-toggle stp-hidden" id="stpExternalToggleRow">
+        <input type="checkbox" id="stpExternalToggle" onchange="onExternalToggle(this.checked)">
+        <span>Also search Google (outside Ravlo network)</span>
+      </label>
 
       <div id="stpSelected" class="stp-selected-partner stp-hidden">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -392,72 +398,115 @@
   font-size: 0.82rem;
   color: var(--ravlo-muted, #9ca3af);
 }
+.stp-location-note {
+  font-size: 0.75rem;
+  color: var(--ravlo-muted, #6b7280);
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 7px;
+  padding: 5px 10px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.stp-badge-ravlo {
+  font-size: 0.65rem; font-weight: 800; letter-spacing: 0.05em;
+  padding: 2px 7px; border-radius: 999px;
+  background: rgba(59,130,246,0.12); color: var(--ravlo-blue, #3b82f6);
+  white-space: nowrap; margin-left: auto;
+}
+.stp-badge-google {
+  font-size: 0.65rem; font-weight: 800; letter-spacing: 0.05em;
+  padding: 2px 7px; border-radius: 999px;
+  background: rgba(234,179,8,0.12); color: #b45309;
+  white-space: nowrap; margin-left: auto;
+}
+.stp-external-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.78rem;
+  color: var(--ravlo-muted, #6b7280);
+  cursor: pointer;
+  padding: 6px 2px;
+  margin-top: 2px;
+}
+.stp-external-toggle input { width: 14px; height: 14px; accent-color: var(--ravlo-blue, #3b82f6); }
 </style>
 
 <script>
 (function () {
-  /* ─── state ─────────────────────────────────────────── */
-  var _stpContext = {};
-  var _stpSelectedPartnerId = null;
-  var _stpSelectedPartnerName = null;
-  var _stpSelectedPartnerCompany = null;
-  var _stpSelectedType = null;
-  var _stpDebounceTimer = null;
+  /* ─── state ────────────────────────────────────────── */
+  var _ctx       = {};            // {dealId, savedPropertyId, title, address, zip, city, state}
+  var _partnerId   = null;        // null for external/unmatched
+  var _partnerName = null;
+  var _partnerCo   = null;
+  var _partnerSrc  = 'ravlo';     // 'ravlo' | 'google'
+  var _type        = null;
+  var _debounce    = null;
+  var _wantExternal = false;
 
-  /* ─── open / close ───────────────────────────────────── */
+  /* ─── open / close ─────────────────────────────────── */
   window.openSendPartnerModal = function (ctx) {
-    _stpContext = ctx || {};
-    _stpSelectedPartnerId = null;
-    _stpSelectedType = null;
+    _ctx = ctx || {};
+    _partnerId = null; _partnerName = null; _partnerCo = null;
+    _type = null; _wantExternal = false;
 
-    // reset UI
-    document.querySelectorAll('.stp-chip').forEach(function(c){ c.classList.remove('stp-chip-active'); });
-    document.getElementById('stpStep2').classList.add('stp-hidden');
-    document.getElementById('stpStep3').classList.add('stp-hidden');
-    document.getElementById('stpSuccess').classList.add('stp-hidden');
+    // Reset all UI elements
+    ['stpStep2','stpStep3','stpSuccess','stpExternalToggleRow','stpLocationNote'].forEach(function(id){
+      document.getElementById(id).classList.add('stp-hidden');
+    });
     document.getElementById('stpStep1').classList.remove('stp-hidden');
     document.getElementById('stpFooter').classList.remove('stp-hidden');
     document.getElementById('stpSubmitBtn').classList.add('stp-hidden');
+    document.getElementById('stpSelected').classList.add('stp-hidden');
     document.getElementById('stpSearchInput').value = '';
     document.getElementById('stpMessage').value = '';
     document.getElementById('stpBudget').value = '';
     document.getElementById('stpTimeline').value = '';
     document.getElementById('stpResults').innerHTML = '';
     document.getElementById('stpResults').classList.remove('stp-has-results');
-    document.getElementById('stpSelected').classList.add('stp-hidden');
+    document.getElementById('stpExternalToggle').checked = false;
+    document.querySelectorAll('.stp-chip').forEach(function(c){ c.classList.remove('stp-chip-active'); });
 
-    var contextLine = '';
-    if (ctx.title) contextLine = ctx.title;
-    if (ctx.address && ctx.address !== ctx.title) contextLine += (contextLine ? ' — ' : '') + ctx.address;
-    document.getElementById('stpContextLine').textContent = contextLine || 'Select a partner type to get started.';
+    // Context line
+    var line = _ctx.title || '';
+    if (_ctx.address && _ctx.address !== _ctx.title) line += (line ? ' — ' : '') + _ctx.address;
+    document.getElementById('stpContextLine').textContent = line || 'Select a partner type to get started.';
 
-    var overlay = document.getElementById('sendPartnerModal');
-    overlay.classList.add('stp-open');
-    overlay.setAttribute('aria-hidden', 'false');
+    // Location note
+    var locParts = [];
+    if (_ctx.city)  locParts.push(_ctx.city);
+    if (_ctx.state) locParts.push(_ctx.state);
+    if (_ctx.zip)   locParts.push(_ctx.zip);
+    if (locParts.length) {
+      document.getElementById('stpLocationNote').innerHTML =
+        '📍 Showing partners that serve <strong>' + locParts.join(', ') + '</strong>';
+      document.getElementById('stpLocationNote').classList.remove('stp-hidden');
+    }
+
+    document.getElementById('sendPartnerModal').classList.add('stp-open');
+    document.getElementById('sendPartnerModal').setAttribute('aria-hidden','false');
     document.body.style.overflow = 'hidden';
   };
 
   window.closeSendPartnerModal = function () {
-    var overlay = document.getElementById('sendPartnerModal');
-    overlay.classList.remove('stp-open');
-    overlay.setAttribute('aria-hidden', 'true');
+    document.getElementById('sendPartnerModal').classList.remove('stp-open');
+    document.getElementById('sendPartnerModal').setAttribute('aria-hidden','true');
     document.body.style.overflow = '';
   };
 
-  // close on overlay click
-  document.getElementById('sendPartnerModal').addEventListener('click', function (e) {
+  document.getElementById('sendPartnerModal').addEventListener('click', function(e){
     if (e.target === this) closeSendPartnerModal();
   });
 
-  /* ─── type selection ─────────────────────────────────── */
+  /* ─── type selection ───────────────────────────────── */
   window.selectPartnerType = function (type) {
-    _stpSelectedType = type;
-    _stpSelectedPartnerId = null;
-
+    _type = type; _partnerId = null; _wantExternal = false;
     document.querySelectorAll('.stp-chip').forEach(function(c){
       c.classList.toggle('stp-chip-active', c.dataset.type === type);
     });
-
     document.getElementById('stpSearchLabel').textContent = 'Search ' + type + 's';
     document.getElementById('stpStep2').classList.remove('stp-hidden');
     document.getElementById('stpStep3').classList.remove('stp-hidden');
@@ -465,76 +514,97 @@
     document.getElementById('stpSelected').classList.add('stp-hidden');
     document.getElementById('stpResults').innerHTML = '';
     document.getElementById('stpResults').classList.remove('stp-has-results');
-
-    searchPartners(type, '');
+    document.getElementById('stpExternalToggle').checked = false;
+    searchPartners('');
   };
 
-  /* ─── search ─────────────────────────────────────────── */
+  /* ─── external toggle ──────────────────────────────── */
+  window.onExternalToggle = function (checked) {
+    _wantExternal = checked;
+    searchPartners(document.getElementById('stpSearchInput').value || '');
+  };
+
+  /* ─── search ───────────────────────────────────────── */
   window.debounceSearchPartners = function (q) {
-    clearTimeout(_stpDebounceTimer);
-    _stpDebounceTimer = setTimeout(function () {
-      searchPartners(_stpSelectedType, q);
-    }, 280);
+    clearTimeout(_debounce);
+    _debounce = setTimeout(function(){ searchPartners(q); }, 280);
   };
 
-  window.searchPartners = function (type, q) {
-    if (!type) return;
-    var url = '/investor/partners/search?type=' + encodeURIComponent(type);
-    if (q) url += '&q=' + encodeURIComponent(q);
+  window.searchPartners = function (q) {
+    if (!_type) return;
+    var url = '/investor/partners/search?type=' + encodeURIComponent(_type);
+    if (q)         url += '&q='        + encodeURIComponent(q);
+    if (_ctx.zip)  url += '&zip='      + encodeURIComponent(_ctx.zip);
+    if (_ctx.city) url += '&city='     + encodeURIComponent(_ctx.city);
+    if (_ctx.state)url += '&state='    + encodeURIComponent(_ctx.state);
+    if (_wantExternal) url += '&external=1';
 
-    fetch(url, { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        renderPartnerResults(data);
-      })
-      .catch(function () {
-        renderPartnerResults([]);
-      });
+    fetch(url, {credentials:'same-origin'})
+      .then(function(r){ return r.json(); })
+      .then(function(data){ renderResults(data); })
+      .catch(function(){ renderResults([]); });
   };
 
-  function renderPartnerResults(partners) {
+  function renderResults(list) {
     var el = document.getElementById('stpResults');
-    if (!partners || partners.length === 0) {
-      el.innerHTML = '<div class="stp-empty-state">No partners found. Your request will be matched by the Ravlo team.</div>';
+    var toggleRow = document.getElementById('stpExternalToggleRow');
+
+    // Always show external toggle after first search
+    toggleRow.classList.remove('stp-hidden');
+
+    if (!list || !list.length) {
+      el.innerHTML = '<div class="stp-empty-state">No partners found in this area.<br>Try toggling "Search Google" below or submit without selecting — we\'ll match you.</div>';
       el.classList.add('stp-has-results');
       return;
     }
-    el.innerHTML = partners.map(function (p) {
-      return '<div class="stp-result-item" onclick="selectPartner(' + p.id + ', ' + JSON.stringify(p.name) + ', ' + JSON.stringify(p.company) + ')">' +
-        '<div>' +
-          '<div class="stp-result-name">' + _stpEsc(p.name) + '</div>' +
-          '<div class="stp-result-meta">' + _stpEsc(p.company || '') + (p.service_area ? ' · ' + _stpEsc(p.service_area) : '') + '</div>' +
+
+    el.innerHTML = list.map(function(p) {
+      var isGoogle = p.source === 'google';
+      var badge = isGoogle
+        ? '<span class="stp-badge-google">Google</span>'
+        : '<span class="stp-badge-ravlo">Ravlo</span>';
+      var meta = [p.company, p.city, p.state].filter(Boolean).join(' · ');
+      var rating = p.rating ? ' ★ ' + p.rating : '';
+      return '<div class="stp-result-item" onclick="selectPartner(' +
+        JSON.stringify(p.id) + ',' +
+        JSON.stringify(p.name) + ',' +
+        JSON.stringify(p.company||p.name) + ',' +
+        JSON.stringify(p.source||\'ravlo\') + ')">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="stp-result-name">' + _esc(p.name) + rating + '</div>' +
+          '<div class="stp-result-meta">' + _esc(meta || p.service_area || '') + '</div>' +
         '</div>' +
-        (p.type ? '<span class="stp-result-badge">' + _stpEsc(p.type) + '</span>' : '') +
+        badge +
       '</div>';
     }).join('');
     el.classList.add('stp-has-results');
   }
 
-  function _stpEsc(str) {
-    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  function _esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  /* ─── partner selection ──────────────────────────────── */
-  window.selectPartner = function (id, name, company) {
-    _stpSelectedPartnerId = id;
-    _stpSelectedPartnerName = name;
-    _stpSelectedPartnerCompany = company;
+  /* ─── partner selection ────────────────────────────── */
+  window.selectPartner = function (id, name, company, source) {
+    _partnerId   = id;       // null for Google results
+    _partnerName = name;
+    _partnerCo   = company;
+    _partnerSrc  = source || 'ravlo';
 
     document.getElementById('stpSelectedName').textContent = name;
     document.getElementById('stpSelectedCompany').textContent = company ? '· ' + company : '';
     document.getElementById('stpSelected').classList.remove('stp-hidden');
-    document.getElementById('stpResults').classList.remove('stp-has-results');
     document.getElementById('stpResults').innerHTML = '';
+    document.getElementById('stpResults').classList.remove('stp-has-results');
     document.getElementById('stpSearchInput').value = '';
   };
 
   window.clearPartnerSelection = function () {
-    _stpSelectedPartnerId = null;
+    _partnerId = null; _partnerName = null; _partnerCo = null;
     document.getElementById('stpSelected').classList.add('stp-hidden');
   };
 
-  /* ─── submit ─────────────────────────────────────────── */
+  /* ─── submit ───────────────────────────────────────── */
   window.submitSendToPartner = function () {
     var message = document.getElementById('stpMessage').value.trim();
     if (!message) {
@@ -545,56 +615,58 @@
     document.getElementById('stpMessage').style.borderColor = '';
 
     var btn = document.getElementById('stpSubmitBtn');
-    btn.disabled = true;
-    btn.textContent = 'Sending…';
+    btn.disabled = true; btn.textContent = 'Sending…';
+
+    // For external (Google) partners, embed name in title so Ravlo team knows
+    var title = _ctx.title || null;
+    if (_partnerSrc === 'google' && _partnerName) {
+      title = (title ? title + ' → ' : '') + _partnerName + ' (outside Ravlo network)';
+    }
 
     var payload = {
-      partner_id: _stpSelectedPartnerId || null,
-      partner_type: _stpSelectedType || null,
-      deal_id: _stpContext.dealId || null,
-      saved_property_id: _stpContext.savedPropertyId || null,
-      title: _stpContext.title || null,
-      message: message,
-      budget: document.getElementById('stpBudget').value || null,
-      timeline: document.getElementById('stpTimeline').value.trim() || null,
-      request_type: _stpSelectedType ? _stpSelectedType.toLowerCase() : null,
+      partner_id:       (_partnerSrc === 'ravlo' && _partnerId) ? _partnerId : null,
+      partner_type:     _type,
+      deal_id:          _ctx.dealId || null,
+      saved_property_id:_ctx.savedPropertyId || null,
+      title:            title,
+      message:          message,
+      budget:           document.getElementById('stpBudget').value || null,
+      timeline:         document.getElementById('stpTimeline').value.trim() || null,
+      request_type:     _type ? _type.toLowerCase() : null,
     };
 
     fetch('/investor/send-to-partner', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'same-origin',
       body: JSON.stringify(payload),
     })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (data.status === 'ok') {
-          showStpSuccess();
-        } else {
-          btn.disabled = false;
-          btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Request';
-          alert('Something went wrong. Please try again.');
-        }
-      })
-      .catch(function () {
-        btn.disabled = false;
-        btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Request';
-        alert('Network error. Please try again.');
-      });
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data.status === 'ok') { showSuccess(); }
+      else { _resetBtn(btn); alert('Something went wrong. Please try again.'); }
+    })
+    .catch(function(){ _resetBtn(btn); alert('Network error. Please try again.'); });
   };
 
-  function showStpSuccess() {
-    document.getElementById('stpStep1').classList.add('stp-hidden');
-    document.getElementById('stpStep2').classList.add('stp-hidden');
-    document.getElementById('stpStep3').classList.add('stp-hidden');
-    document.getElementById('stpFooter').classList.add('stp-hidden');
-    var partnerName = _stpSelectedPartnerName;
-    var msg = partnerName
-      ? 'Your request has been sent to ' + partnerName + '. They will see it on their dashboard under Incoming Requests.'
-      : 'Your request has been submitted. The Ravlo team will match you with the best available partner.';
+  function _resetBtn(btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Request';
+  }
+
+  function showSuccess() {
+    ['stpStep1','stpStep2','stpStep3','stpFooter'].forEach(function(id){
+      document.getElementById(id).classList.add('stp-hidden');
+    });
+    var isGoogle = _partnerSrc === 'google';
+    var msg = _partnerName
+      ? (isGoogle
+          ? _partnerName + ' was found outside the Ravlo network. We\'ll help facilitate the connection.'
+          : 'Request sent to ' + _partnerName + '. They\'ll see it on their Ravlo dashboard under Incoming Requests.')
+      : 'Request submitted — the Ravlo team will match you with the best available partner in your area.';
     document.getElementById('stpSuccessMsg').textContent = msg;
     document.getElementById('stpSuccess').classList.remove('stp-hidden');
-    setTimeout(closeSendPartnerModal, 3200);
+    setTimeout(closeSendPartnerModal, 3600);
   }
 })();
 </script>

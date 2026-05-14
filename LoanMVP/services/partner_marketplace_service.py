@@ -67,57 +67,115 @@ def search_google_places(location_text, category, limit=8):
     return sorted(results, key=lambda x: x.get("score", 0), reverse=True)
 
 
-def search_internal_partners(Partner, category=None, city=None, state=None, zip_code=None):
-    query = Partner.query.filter_by(is_active=True)
+def search_internal_partners(Partner, category=None, city=None, state=None,
+                             zip_code=None, name_q=None):
+    """Search Ravlo-network partners with location + category filtering.
+
+    Filters by the correct column names on the Partner model (active/approved,
+    not is_active/is_approved which don't exist).  Location matching uses
+    zip_code → city+state → state fallback, and also searches the free-text
+    service_area field so partners who cover a metro show up correctly.
+    """
+    from sqlalchemy import or_
+
+    query = Partner.query.filter(
+        Partner.active.is_(True),
+        Partner.approved.is_(True),
+    )
 
     if category:
-        query = query.filter(Partner.category.ilike(f"%{category}%"))
+        query = query.filter(
+            or_(
+                Partner.category.ilike(f"%{category}%"),
+                Partner.type.ilike(f"%{category}%"),
+            )
+        )
 
+    if name_q:
+        query = query.filter(
+            or_(
+                Partner.name.ilike(f"%{name_q}%"),
+                Partner.company.ilike(f"%{name_q}%"),
+            )
+        )
+
+    # Location: zip is most precise; fall back to city/state; also search
+    # the free-text service_area field for matches like "Atlanta Metro"
     if zip_code:
-        query = query.filter(Partner.zip_code.ilike(f"%{zip_code}%"))
+        query = query.filter(
+            or_(
+                Partner.zip_code.ilike(f"%{zip_code}%"),
+                Partner.service_area.ilike(f"%{zip_code}%"),
+            )
+        )
+    elif city and state:
+        query = query.filter(
+            or_(
+                (Partner.city.ilike(f"%{city}%") & Partner.state.ilike(f"%{state}%")),
+                Partner.service_area.ilike(f"%{city}%"),
+                Partner.service_area.ilike(f"%{state}%"),
+            )
+        )
     elif city:
-        query = query.filter(Partner.city.ilike(f"%{city}%"))
-        if state:
-            query = query.filter(Partner.state.ilike(f"%{state}%"))
+        query = query.filter(
+            or_(
+                Partner.city.ilike(f"%{city}%"),
+                Partner.service_area.ilike(f"%{city}%"),
+            )
+        )
     elif state:
-        query = query.filter(Partner.state.ilike(f"%{state}%"))
+        query = query.filter(
+            or_(
+                Partner.state.ilike(f"%{state}%"),
+                Partner.service_area.ilike(f"%{state}%"),
+            )
+        )
 
-    partners = query.all()
+    partners = query.order_by(
+        Partner.featured.desc(),
+        Partner.rating.desc().nullslast(),
+    ).limit(30).all()
 
     serialized = []
     for p in partners:
+        # Gracefully handle partners that may be missing newer columns
+        rating      = getattr(p, "rating", None)
+        review_count = getattr(p, "review_count", 0) or 0
+        is_preferred = getattr(p, "is_preferred", False) or False
+        is_verified  = getattr(p, "is_verified", False) or False
+
         serialized.append({
-            "id": p.id,
-            "name": p.business_name or p.name,
-            "business_name": p.business_name,
-            "category": p.category,
-            "address": p.address,
-            "city": p.city,
-            "state": p.state,
-            "zip_code": p.zip_code,
-            "phone": p.phone,
-            "email": p.email,
-            "website": p.website,
-            "bio": p.bio,
-            "rating": p.rating,
-            "review_count": p.review_count,
-            "is_verified": p.is_verified,
-            "is_preferred": p.is_preferred,
-            "source": "ravlo",
-            "score": score_partner(
-                rating=p.rating,
-                review_count=p.review_count,
-                preferred=p.is_preferred,
-                verified=p.is_verified,
+            "id":            p.id,
+            "name":          getattr(p, "business_name", None) or p.name,
+            "business_name": getattr(p, "business_name", None),
+            "category":      p.category,
+            "type":          p.type,
+            "address":       p.address,
+            "city":          p.city,
+            "state":         p.state,
+            "zip_code":      p.zip_code,
+            "service_area":  p.service_area,
+            "phone":         p.phone,
+            "email":         p.email,
+            "website":       p.website,
+            "bio":           p.bio,
+            "rating":        rating,
+            "review_count":  review_count,
+            "is_verified":   is_verified,
+            "is_preferred":  is_preferred,
+            "source":        "ravlo",
+            "score":         score_partner(
+                rating=rating,
+                review_count=review_count,
+                preferred=is_preferred,
+                verified=is_verified,
             ),
-            "is_internal": True,
+            "is_internal":   True,
         })
 
-    serialized.sort(
-        key=lambda x: (
-            0 if x.get("is_preferred") else 1,
-            -(x.get("score") or 0)
-        )
-    )
+    serialized.sort(key=lambda x: (
+        0 if x.get("is_preferred") else 1,
+        -(x.get("score") or 0),
+    ))
 
     return serialized

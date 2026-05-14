@@ -1094,8 +1094,33 @@ def _build_attom_fallback(data: Dict[str, Any] | None = None) -> Dict[str, Any]:
     }
 
 
-def search_external_partners_google(*args, **kwargs):
-    return []
+def search_external_partners_google(category=None, city=None, state=None,
+                                    zip_code=None, limit=8):
+    """Search Google Places for partners outside the Ravlo network.
+
+    Called as a fallback when internal results are sparse or when the user
+    explicitly requests outside-network results.  Returns a list of dicts
+    shaped the same as search_internal_partners so templates can mix them.
+    """
+    try:
+        from LoanMVP.services.partner_marketplace_service import search_google_places
+    except Exception:
+        return []
+
+    # Build a human-readable location string for the Google query
+    location_parts = []
+    if city:
+        location_parts.append(city)
+    if state:
+        location_parts.append(state)
+    if zip_code and not location_parts:
+        location_parts.append(zip_code)
+    location_text = ", ".join(location_parts) if location_parts else None
+
+    if not location_text or not category:
+        return []
+
+    return search_google_places(location_text, category, limit=limit)
 
 
 # -------------------------------------------------------------------

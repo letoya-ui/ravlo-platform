@@ -15911,34 +15911,78 @@ def create_external_partner_request(lead_id):
 @investor_bp.route("/partners/search", methods=["GET"])
 @login_required
 def investor_partner_search():
-    """AJAX: search active/approved partners by type and optional name query."""
-    partner_type = request.args.get("type", "").strip()
-    q = request.args.get("q", "").strip()
+    """AJAX: search partners by type + location for the Send-to-Partner modal.
 
-    filters = [Partner.active == True, Partner.approved == True]
-    if partner_type:
-        filters.append(Partner.type == partner_type)
-    if q:
-        filters.append(
-            or_(
-                Partner.name.ilike(f"%{q}%"),
-                Partner.company.ilike(f"%{q}%"),
+    Query params:
+      type     — partner category (Contractor, Realtor, Inspector, etc.)
+      q        — name/company text search
+      zip      — property ZIP code (most precise location match)
+      city     — property city
+      state    — property state (2-letter)
+      external — "1" to include Google Places fallback results
+
+    Returns combined Ravlo-network + optional external results, location-filtered.
+    External results are only appended when internal results < 3 or explicitly requested.
+    """
+    from LoanMVP.services.partner_marketplace_service import search_internal_partners
+
+    partner_type    = request.args.get("type", "").strip()
+    q               = request.args.get("q", "").strip()
+    zip_code        = request.args.get("zip", "").strip() or None
+    city            = request.args.get("city", "").strip() or None
+    state           = request.args.get("state", "").strip() or None
+    want_external   = request.args.get("external", "0") == "1"
+
+    # ── Internal (Ravlo network) ──────────────────────────────────────────
+    internal = search_internal_partners(
+        Partner,
+        category=partner_type or None,
+        city=city,
+        state=state,
+        zip_code=zip_code,
+        name_q=q or None,
+    )
+
+    # ── External (Google Places) ─────────────────────────────────────────
+    # Always try when explicitly requested OR when internal results are sparse
+    external = []
+    if partner_type and (want_external or len(internal) < 3):
+        try:
+            external = search_external_partners_google(
+                category=partner_type,
+                city=city,
+                state=state,
+                zip_code=zip_code,
+                limit=6,
             )
-        )
+        except Exception:
+            external = []
 
-    partners = Partner.query.filter(*filters).limit(30).all()
+    # Merge: internal first (Ravlo partners get priority), then external
+    # De-duplicate by name to avoid showing same business twice
+    seen_names = {r["name"].lower() for r in internal}
+    for ext in external:
+        if ext.get("name", "").lower() not in seen_names:
+            internal.append(ext)
+            seen_names.add(ext.get("name", "").lower())
 
-    results = [
-        {
-            "id": p.id,
-            "name": p.name,
-            "company": p.company or "",
-            "category": p.category or "",
-            "type": p.type or "",
-            "service_area": p.service_area or "",
-        }
-        for p in partners
-    ]
+    # Normalise shape so the modal JS only has one object format
+    results = []
+    for p in internal:
+        results.append({
+            "id":           p.get("id"),          # None for external partners
+            "name":         p.get("name") or "",
+            "company":      p.get("business_name") or p.get("name") or "",
+            "category":     p.get("category") or "",
+            "type":         p.get("type") or "",
+            "service_area": p.get("service_area") or p.get("address") or "",
+            "city":         p.get("city") or "",
+            "state":        p.get("state") or "",
+            "rating":       p.get("rating"),
+            "source":       p.get("source", "ravlo"),
+            "is_internal":  p.get("is_internal", False),
+        })
+
     return jsonify(results)
 
 
