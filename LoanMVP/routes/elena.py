@@ -360,12 +360,14 @@ def get_or_create_realtor_vip_profile():
 @elena_bp.before_request
 def _gate_elena_on_vip_access():
     """All /elena/* routes require VIP access (Premium+ or admin) AND
-    the user must be a realtor.
+    the user must be a realtor — EXCEPT Content Studio routes, which are
+    open to all VIP partners (contractors, insurance, loan officers, etc.)
+    so they can create marketing content for their business.
 
     Non-upgraded realtors are redirected to the upgrade page. Upgraded
     non-realtor partners (contractor/designer/loan_officer) are bounced
     to the VIP index so they land on their role-appropriate dashboard —
-    Elena is a realtor-only workspace.
+    Elena is a realtor-only workspace, except for Content Studio.
     """
     # Lazy import to keep module-load order flexible.
     from LoanMVP.routes.vip import require_vip_access
@@ -385,8 +387,20 @@ def _gate_elena_on_vip_access():
     if gate is not None:
         return gate
 
-    # Role gate — Elena is realtor-only. Check partner category first
-    # (source of truth), then fall back to VIPProfile.role_type.
+    # Content Studio is open to ALL VIP roles — contractors, insurance agents,
+    # loan officers, and realtors all need to create marketing content.
+    _content_studio_endpoints = {
+        "elena.template_studio",
+        "elena.template_studio_preview",
+        "elena.template_studio_generate",
+        "elena.template_studio_generate_and_save",
+    }
+    from flask import request as _req
+    if _req.endpoint in _content_studio_endpoints:
+        return None
+
+    # Role gate — Elena is realtor-only for all other routes. Check partner
+    # category first (source of truth), then fall back to VIPProfile.role_type.
     partner = getattr(current_user, "partner_profile", None)
     if partner_is_realtor(partner):
         return None
