@@ -14,7 +14,7 @@ def generate_text(prompt: str) -> str:
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
         )
-        return response.choices[0].message["content"]
+        return response.choices[0].message.content
     except Exception as e:
         print("AI Provider Error:", e)
         return "⚠️ AI generation failed."

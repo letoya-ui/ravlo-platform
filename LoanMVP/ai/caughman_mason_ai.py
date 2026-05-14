@@ -60,7 +60,7 @@ Provide an elevated, precise, structured response.
             temperature=0.6,
         )
 
-        return reply.choices[0].message["content"].strip()
+        return reply.choices[0].message.content.strip()
 
 
 # 🔥 GLOBAL SINGLETON INSTANCE
