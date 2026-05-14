@@ -34,6 +34,7 @@ class User(UserMixin, db.Model):
     ica_accepted = db.Column(db.Boolean, default=False)
     onboarding_step = db.Column(db.String(50), default="ica")
     subscription = db.Column(db.String(50), default="free")
+    stripe_customer_id = db.Column(db.String(255), nullable=True)
     is_blocked = db.Column(db.Boolean, default=False, nullable=False)
     blocked_at = db.Column(db.DateTime, nullable=True)
     blocked_reason = db.Column(db.String(100), nullable=True)

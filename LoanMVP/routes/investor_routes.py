@@ -14791,6 +14791,13 @@ def _create_investor_subscription_checkout(app_plan_name: str, cancel_endpoint: 
             "subscription_plan": app_plan_name.lower(),
             "stripe_plan": stripe_slug,
         },
+        subscription_data={
+            "metadata": {
+                "user_id": str(current_user.id),
+                "subscription_plan": app_plan_name.lower(),
+                "stripe_plan": stripe_slug,
+            },
+        },
     )
     return redirect(session_obj.url, code=303)
 
@@ -14824,6 +14831,13 @@ def start_subscription_checkout(plan):
             "user_id": str(current_user.id),
             "subscription_plan": app_plan.lower(),
             "stripe_plan": normalized,
+        },
+        subscription_data={
+            "metadata": {
+                "user_id": str(current_user.id),
+                "subscription_plan": app_plan.lower(),
+                "stripe_plan": normalized,
+            },
         },
     )
     return redirect(session_obj.url, code=303)

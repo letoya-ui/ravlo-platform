@@ -77,6 +77,7 @@ def resource_path(relative_path: str) -> str:
 # Only additive, nullable columns are safe to self-heal here — destructive
 # or type-changing operations must go through Alembic.
 _SCHEMA_COMPAT_COLUMNS = [
+    ("user",                       "stripe_customer_id", "VARCHAR(255)"),
     ("vip_profiles",              "markets_json",       "TEXT"),
     ("deals",                     "local_cost_factor",  "FLOAT"),
     ("deals",                     "local_cost_label",   "VARCHAR(120)"),

@@ -1083,6 +1083,12 @@ def partner_subscription_checkout(tier):
                 "user_id": str(current_user.id),
                 "partner_tier": normalized,
             },
+            subscription_data={
+                "metadata": {
+                    "user_id": str(current_user.id),
+                    "partner_tier": normalized,
+                },
+            },
         )
         return redirect(session_obj.url, code=303)
     except Exception:
