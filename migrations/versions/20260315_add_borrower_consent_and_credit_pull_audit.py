@@ -17,33 +17,38 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        "borrower_consents",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("borrower_id", sa.Integer(), nullable=False),
-        sa.Column("consent_type", sa.String(length=50), nullable=False),
-        sa.Column("timestamp", sa.DateTime(), nullable=False),
-        sa.Column("ip_address", sa.String(length=50), nullable=True),
-        sa.ForeignKeyConstraint(["borrower_id"], ["borrower_profile.id"]),
-        sa.PrimaryKeyConstraint("id")
-    )
-    op.create_index(op.f("ix_borrower_consents_borrower_id"), "borrower_consents", ["borrower_id"], unique=False)
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
 
-    op.create_table(
-        "credit_pull_audits",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("borrower_id", sa.Integer(), nullable=False),
-        sa.Column("loan_officer_id", sa.Integer(), nullable=True),
-        sa.Column("timestamp", sa.DateTime(), nullable=False),
-        sa.Column("permissible_purpose", sa.String(length=255), nullable=True),
-        sa.Column("result_status", sa.String(length=50), nullable=True),
-        sa.Column("raw_response", sa.JSON(), nullable=True),
-        sa.ForeignKeyConstraint(["borrower_id"], ["borrower_profile.id"]),
-        sa.ForeignKeyConstraint(["loan_officer_id"], ["user.id"]),
-        sa.PrimaryKeyConstraint("id")
-    )
-    op.create_index(op.f("ix_credit_pull_audits_borrower_id"), "credit_pull_audits", ["borrower_id"], unique=False)
-    op.create_index(op.f("ix_credit_pull_audits_loan_officer_id"), "credit_pull_audits", ["loan_officer_id"], unique=False)
+    if not inspector.has_table("borrower_consents"):
+        op.create_table(
+            "borrower_consents",
+            sa.Column("id", sa.Integer(), nullable=False),
+            sa.Column("borrower_id", sa.Integer(), nullable=False),
+            sa.Column("consent_type", sa.String(length=50), nullable=False),
+            sa.Column("timestamp", sa.DateTime(), nullable=False),
+            sa.Column("ip_address", sa.String(length=50), nullable=True),
+            sa.ForeignKeyConstraint(["borrower_id"], ["borrower_profile.id"]),
+            sa.PrimaryKeyConstraint("id")
+        )
+        op.create_index(op.f("ix_borrower_consents_borrower_id"), "borrower_consents", ["borrower_id"], unique=False)
+
+    if not inspector.has_table("credit_pull_audits"):
+        op.create_table(
+            "credit_pull_audits",
+            sa.Column("id", sa.Integer(), nullable=False),
+            sa.Column("borrower_id", sa.Integer(), nullable=False),
+            sa.Column("loan_officer_id", sa.Integer(), nullable=True),
+            sa.Column("timestamp", sa.DateTime(), nullable=False),
+            sa.Column("permissible_purpose", sa.String(length=255), nullable=True),
+            sa.Column("result_status", sa.String(length=50), nullable=True),
+            sa.Column("raw_response", sa.JSON(), nullable=True),
+            sa.ForeignKeyConstraint(["borrower_id"], ["borrower_profile.id"]),
+            sa.ForeignKeyConstraint(["loan_officer_id"], ["user.id"]),
+            sa.PrimaryKeyConstraint("id")
+        )
+        op.create_index(op.f("ix_credit_pull_audits_borrower_id"), "credit_pull_audits", ["borrower_id"], unique=False)
+        op.create_index(op.f("ix_credit_pull_audits_loan_officer_id"), "credit_pull_audits", ["loan_officer_id"], unique=False)
 
 
 def downgrade():

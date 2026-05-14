@@ -18,20 +18,20 @@ depends_on = None
 
 
 def upgrade():
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    ip_cols = {c["name"] for c in inspector.get_columns("investor_profile")} if inspector.has_table("investor_profile") else set()
+
     with op.batch_alter_table('investor_profile', schema=None) as batch_op:
-        batch_op.add_column(sa.Column(
-            'deal_finder_search_count', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column(
-            'deal_finder_search_reset_at', sa.DateTime(), nullable=True))
+        if 'deal_finder_search_count' not in ip_cols:
+            batch_op.add_column(sa.Column('deal_finder_search_count', sa.Integer(), nullable=True))
+        if 'deal_finder_search_reset_at' not in ip_cols:
+            batch_op.add_column(sa.Column('deal_finder_search_reset_at', sa.DateTime(), nullable=True))
 
     op.execute("UPDATE investor_profile SET deal_finder_search_count = 0 WHERE deal_finder_search_count IS NULL")
 
     with op.batch_alter_table('investor_profile', schema=None) as batch_op:
-        batch_op.alter_column(
-            'deal_finder_search_count',
-            existing_type=sa.Integer(),
-            nullable=False,
-        )
+        batch_op.alter_column('deal_finder_search_count', existing_type=sa.Integer(), nullable=False)
 
 
 def downgrade():
