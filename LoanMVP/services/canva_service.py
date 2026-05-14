@@ -31,7 +31,7 @@ def build_canva_auth_url():
     redirect_uri = os.environ.get("CANVA_REDIRECT_URI")
     scopes = os.environ.get(
         "CANVA_SCOPES",
-        "design:meta:read asset:read profile:read",
+        "design:meta:read design:meta:write design:content:read design:content:write asset:read asset:write profile:read",
     )
 
     state = secrets.token_urlsafe(24)
@@ -130,13 +130,24 @@ def canva_headers(access_token: str):
     }
 
 
-def create_design(access_token: str, title: str = "Ravlo Design"):
+def create_design(access_token: str, title: str = "Ravlo Design",
+                  design_preset: str = "flyer_a4"):
+    """Create a new Canva design and return the full response including edit URL.
+
+    design_preset options for real estate flyers:
+      "flyer_a4"        — standard portrait flyer (8.27 × 11.69 in)
+      "real_estate_flyer" — if Canva exposes it; falls back gracefully
+      "presentation"    — 16:9 slide (fallback)
+
+    The response includes ``design.urls.edit_url`` — redirect the user there
+    so they open their own Canva editor immediately.
+    """
     url = f"{CANVA_API_BASE}/designs"
 
     payload = {
         "design_type": {
             "type": "preset",
-            "name": "presentation"
+            "name": design_preset,
         },
         "title": title,
     }
@@ -147,6 +158,14 @@ def create_design(access_token: str, title: str = "Ravlo Design"):
         headers=canva_headers(access_token),
         timeout=30,
     )
+
+    # If the preset name isn't supported, fall back to a generic flyer
+    if response.status_code == 400 and design_preset != "flyer_a4":
+        payload["design_type"]["name"] = "flyer_a4"
+        response = requests.post(
+            url, json=payload, headers=canva_headers(access_token), timeout=30,
+        )
+
     response.raise_for_status()
     return response.json()
 

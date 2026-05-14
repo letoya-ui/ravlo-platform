@@ -302,6 +302,24 @@
 
     <div class="ravlo-nav-section">Settings</div>
 
+    {# ── Canva connection status ── #}
+    {% if canva_connected %}
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:0.75rem;border-radius:8px;background:#f0fdf4;border:1px solid #bbf7d0;margin:0 8px 4px;">
+        <span>🎨</span>
+        <span style="flex:1;color:#15803d;font-weight:600;">Canva Connected</span>
+        <a href="{{ url_for('canva.create_flyer') }}?title=Ravlo+Flyer"
+           target="_blank"
+           style="color:#16a34a;font-size:0.7rem;font-weight:700;">New ↗</a>
+      </div>
+    {% else %}
+      <a href="{{ url_for('canva.connect') }}"
+         class="ravlo-nav-link"
+         style="color:#7c3aed;">
+        <i class="lucide lucide-palette"></i>
+        <span>Connect Canva</span>
+      </a>
+    {% endif %}
+
     <a href="{{ url_for('vip.onboarding') }}"
        class="ravlo-nav-link {% if ep in ['vip.onboarding', 'vip.onboarding_save'] %}active{% endif %}">
       <i class="lucide lucide-sliders-horizontal"></i>

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from flask import Blueprint, flash, redirect, request, session, url_for, jsonify
+from flask import Blueprint, flash, redirect, request, session, url_for, jsonify, render_template
 from flask_login import current_user
 
 from LoanMVP.extensions import db
@@ -92,8 +92,12 @@ def callback():
     session.pop("canva_oauth_state", None)
     session.pop("canva_code_verifier", None)
 
-    flash("Canva connected successfully.", "success")
-    return redirect(url_for("vip.index"))
+    flash("Canva connected! You can now create flyers directly in your Canva account.", "success")
+    # Send to onboarding so they see the Connected status; fall back to VIP home
+    try:
+        return redirect(url_for("vip.onboarding"))
+    except Exception:
+        return redirect(url_for("vip.index"))
 
 
 @canva_bp.get("/designs")
@@ -152,3 +156,64 @@ def export_status(job_id):
 
     data = get_export_job(access_token, job_id)
     return jsonify(data)
+
+
+@canva_bp.get("/create-flyer")
+@role_required("partner_group", "admin")
+def create_flyer():
+    """Create a new flyer design and redirect straight to the Canva editor.
+
+    Query params:
+      title  — design title (e.g. "123 Main St Flyer")
+      preset — Canva design preset (default: flyer_a4)
+      next   — where to send the user AFTER they finish in Canva
+               (we can't auto-detect when they save, so we show a
+                "Done in Canva?" return button on the next page)
+    """
+    access_token = get_valid_access_token()
+    if not access_token:
+        flash("Connect your Canva account first.", "warning")
+        return redirect(url_for("canva.connect") + "?next=" + request.url)
+
+    title  = request.args.get("title") or "Ravlo Flyer"
+    preset = request.args.get("preset") or "flyer_a4"
+
+    try:
+        data = create_design(access_token, title=title, design_preset=preset)
+    except Exception as exc:
+        flash(f"Could not create Canva design: {exc}", "danger")
+        return redirect(request.args.get("next") or url_for("vip.index"))
+
+    # Canva returns the editor URL at design.urls.edit_url
+    design   = data.get("design") or data
+    edit_url = (
+        (design.get("urls") or {}).get("edit_url")
+        or design.get("url")
+        or "https://www.canva.com"
+    )
+
+    return redirect(edit_url)
+
+
+@canva_bp.get("/status")
+@role_required("partner_group", "admin")
+def status():
+    """JSON: is the current user connected to Canva?"""
+    connection = get_user_canva_connection()
+    connected  = connection is not None and bool(connection.access_token)
+    return jsonify({"connected": connected})
+
+
+@canva_bp.post("/disconnect")
+@role_required("partner_group", "admin")
+def disconnect():
+    """Remove the user's stored Canva tokens."""
+    from LoanMVP.extensions import csrf
+    # Allow form POST without token (page has csrf_token hidden input)
+    connection = get_user_canva_connection()
+    if connection:
+        db.session.delete(connection)
+        db.session.commit()
+    flash("Canva disconnected.", "info")
+    next_url = request.form.get("next") or request.args.get("next") or url_for("vip.index")
+    return redirect(next_url)

@@ -131,6 +131,7 @@ _SCHEMA_COMPAT_TABLES = [
     "insurance_quote_requests",
     "realtor_listing_presentations",
     "vip_client_sessions",
+    "canva_connections",
 ]
 
 _SCHEMA_COMPAT_INDEXES = [
@@ -447,6 +448,19 @@ def create_app():
             "favicon.ico",
             mimetype="image/vnd.microsoft.icon",
         )
+
+    @app.context_processor
+    def inject_canva_status():
+        """Expose canva_connected to every template."""
+        try:
+            from flask_login import current_user
+            if current_user and current_user.is_authenticated:
+                from LoanMVP.models.canva_models import CanvaConnection
+                conn = CanvaConnection.query.filter_by(user_id=current_user.id).first()
+                return {"canva_connected": conn is not None and bool(conn.access_token)}
+        except Exception:
+            pass
+        return {"canva_connected": False}
 
     @app.errorhandler(CSRFError)
     def handle_csrf_error(error):

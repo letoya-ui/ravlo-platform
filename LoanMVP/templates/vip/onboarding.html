@@ -175,5 +175,31 @@ Tell Ravlo how you work so your dashboard feels personal from day one.
     </form>
   </section>
 
+  {# ── Canva Account Connection ── #}
+  <section class="ravlo-card pad" style="margin-top:1.5rem;">
+    <h2 class="text-base font-semibold mb-3">🎨 Canva Account</h2>
+    {% if canva_connected %}
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:0.85rem;color:#15803d;font-weight:600;">✓ Connected — you can create flyers directly in your Canva account.</span>
+        <a href="{{ url_for('canva.create_flyer') }}?title=Ravlo+Flyer" target="_blank"
+           class="ravlo-btn primary sm">Open Canva →</a>
+        <form method="POST" action="{{ url_for('canva.disconnect') }}" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ url_for('vip.onboarding') }}">
+          <button type="submit" class="ravlo-btn ghost sm"
+                  onclick="return confirm('Disconnect your Canva account?')">Disconnect</button>
+        </form>
+      </div>
+    {% else %}
+      <p style="font-size:0.85rem;color:#64748b;margin-bottom:0.75rem;">
+        Connect your personal Canva account so you can create and edit real listing flyers
+        without leaving Ravlo.
+      </p>
+      <a href="{{ url_for('canva.connect') }}" class="ravlo-btn primary sm">
+        Connect Canva Account →
+      </a>
+    {% endif %}
+  </section>
+
 </div>
 {% endblock %}
