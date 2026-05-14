@@ -51,6 +51,16 @@ def get_valid_access_token():
 @canva_bp.get("/connect")
 @role_required("partner_group", "admin")
 def connect():
+    import os, logging
+    client_id    = os.environ.get("CANVA_CLIENT_ID")
+    redirect_uri = os.environ.get("CANVA_REDIRECT_URI")
+    if not client_id or not redirect_uri:
+        missing = []
+        if not client_id:    missing.append("CANVA_CLIENT_ID")
+        if not redirect_uri: missing.append("CANVA_REDIRECT_URI")
+        flash(f"Canva not configured — missing: {', '.join(missing)}. Ask your admin to set the env vars.", "danger")
+        return redirect(url_for("vip.onboarding"))
+    logging.warning(f"[Canva OAuth] client_id={client_id[:8]}… redirect_uri={redirect_uri}")
     auth_url = build_canva_auth_url()
     return redirect(auth_url)
 
