@@ -11,7 +11,7 @@ from flask_login import current_user
 
 # VIP tiers that unlock the Realtor VIP Workspace.
 # Keep tier comparisons case-insensitive.
-VIP_ACCESS_TIERS = {"premium", "enterprise"}
+VIP_ACCESS_TIERS = {"featured", "premium", "enterprise"}
 from sqlalchemy import or_, func
 
 from LoanMVP.extensions import db, csrf

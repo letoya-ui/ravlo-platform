@@ -122,7 +122,7 @@ def partner_has_premium_access(partner) -> bool:
 
 # Tiers that unlock the VIP Realtor Workspace. Matches
 # LoanMVP.routes.vip.VIP_ACCESS_TIERS (kept local to avoid import cycle).
-_VIP_ACCESS_TIERS = {"premium", "enterprise"}
+_VIP_ACCESS_TIERS = {"featured", "premium", "enterprise"}
 
 
 def _partner_role_text(partner) -> str:
@@ -995,7 +995,7 @@ def billing():
         {
             "name": "Featured",
             "price": "$49/mo",
-            "features": ["Featured listing", "More visibility", "Pro request access"]
+            "features": ["Featured listing", "More visibility", "Pro request access", "VIP Dashboard access"]
         },
         {
             "name": "Premium",

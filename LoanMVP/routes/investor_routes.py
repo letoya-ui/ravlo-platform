@@ -982,33 +982,34 @@ def _proxy_search_result_images(result):
 
 def _subscription_catalog():
     return {
-        "Free": {
-            "key": "free",
+        "Core": {
+            "key": "core",
             "price": 0,
             "features": [
-                "Basic deal workspace",
-                "Save properties",
-                "Document uploads",
+                "✔ Capital access",
+                "✔ Saved properties",
+                "✔ Deal Finder (3 searches/mo)",
+                "✔ Messaging",
             ],
         },
         "Pro": {
             "key": "pro",
             "price": 49,
             "features": [
-                "AI deal insights",
-                "Renovation studio",
-                "Investor exports and reports",
-                "Portfolio intelligence",
+                "✔ Everything in Core",
+                "✔ Deal workspace",
+                "✔ Unlimited property search",
+                "✔ Partner network",
             ],
         },
         "Enterprise": {
             "key": "enterprise",
             "price": 149,
             "features": [
-                "Everything in Pro",
-                "Priority support",
-                "Custom workflows",
-                "White-glove onboarding",
+                "✔ Everything in Core & Pro",
+                "✔ Deal Architect",
+                "✔ Build Studio & Design Studio",
+                "✔ Budget Studio",
             ],
         },
     }
@@ -1056,8 +1057,8 @@ def _investor_effective_subscription_plan(user):
 
     raw_tier = (getattr(user, "subscription", None) or "").strip().lower()
     plan_aliases = {
-        "free": "Free",
-        "core": "Pro",
+        "free": "Core",
+        "core": "Core",
         "explorer": "Pro",
         "operator": "Pro",
         "pro": "Pro",
@@ -1069,8 +1070,8 @@ def _investor_effective_subscription_plan(user):
     if aliased:
         return aliased
 
-    plan_name = _normalize_investor_plan_name(getattr(user, "subscription_plan", "Free"))
-    return plan_name or "Free"
+    plan_name = _normalize_investor_plan_name(getattr(user, "subscription_plan", "Core"))
+    return plan_name or "Core"
 
 
 def _sync_investor_subscription_record(user, investor_profile=None):
@@ -1078,7 +1079,7 @@ def _sync_investor_subscription_record(user, investor_profile=None):
         user.subscription_plan = "Enterprise"
 
     plan_name = _investor_effective_subscription_plan(user)
-    plan_info = _subscription_catalog().get(plan_name, _subscription_catalog()["Free"])
+    plan_info = _subscription_catalog().get(plan_name, _subscription_catalog()["Core"])
 
     if investor_profile is None:
         investor_profile = InvestorProfile.query.filter_by(user_id=user.id).first()
@@ -14912,7 +14913,7 @@ def downgrade_plan():
         flash("This account keeps full investor access at no charge.", "success")
         return redirect(url_for("investor.subscription"))
 
-    current_user.subscription_plan = "Free"
+    current_user.subscription_plan = "Core"
     _sync_investor_subscription_record(current_user)
     try:
         from LoanMVP.services.subscriptions import sync_features_with_subscription
@@ -14920,7 +14921,7 @@ def downgrade_plan():
     except Exception:
         current_app.logger.exception("Investor subscription feature sync failed")
     db.session.commit()
-    flash("Subscription updated to Free.", "success")
+    flash("Subscription updated to Core (Free).", "success")
     return redirect(url_for("investor.subscription"))
 
 

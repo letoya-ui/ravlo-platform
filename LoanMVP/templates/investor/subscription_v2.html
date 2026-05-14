@@ -289,10 +289,10 @@
       <div class="pill">Included at no charge</div>
     {% else %}
       <div class="plan-actions">
-        {% if plan_name == "Free" %}
+        {% if plan_name == "Core" %}
         <form method="POST" action="{{ url_for('investor.downgrade_plan') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="ravlo-btn ghost sm" type="submit">Switch to Free</button>
+          <button class="ravlo-btn ghost sm" type="submit">Switch to Core (Free)</button>
         </form>
         {% else %}
         <form method="POST" action="{{ url_for('investor.upgrade_plan') }}">

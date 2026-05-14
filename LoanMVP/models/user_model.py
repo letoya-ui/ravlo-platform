@@ -152,26 +152,27 @@ class User(UserMixin, db.Model):
 
     @property
     def subscription_plan(self):
-        tier = (self.subscription or "free").strip().lower()
+        tier = (self.subscription or "core").strip().lower()
         labels = {
-            "free": "Free",
+            "free": "Core",
             "core": "Core",
             "pro": "Pro",
             "enterprise": "Enterprise",
         }
-        return labels.get(tier, tier.title() if tier else "Free")
+        return labels.get(tier, tier.title() if tier else "Core")
 
     @subscription_plan.setter
     def subscription_plan(self, value):
-        normalized = (value or "free").strip().lower()
+        normalized = (value or "core").strip().lower()
         alias_map = {
-            "starter": "free",
+            "free": "core",
+            "starter": "core",
             "individual": "core",
             "team": "pro",
             "premium": "pro",
             "active": "pro",
         }
-        self.subscription = alias_map.get(normalized, normalized or "free")
+        self.subscription = alias_map.get(normalized, normalized or "core")
 
     # Full name hybrid property
     @hybrid_property
