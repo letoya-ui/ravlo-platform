@@ -115,6 +115,14 @@
       </a>
     {% endif %}
 
+    <div class="re-nav-section-label">Growth</div>
+
+    <a href="{{ url_for('elena.template_studio') }}"
+       class="re-nav-link {% if ep in ['elena.template_studio', 'elena.template_studio_preview', 'elena.template_studio_generate', 'elena.template_studio_generate_and_save'] %}active{% endif %}">
+      <i class="icon lucide lucide-wand-sparkles"></i>
+      <span>Content Studio</span>
+    </a>
+
     <div class="re-nav-section-label">Linked Systems</div>
 
     {% if not is_company_admin %}
