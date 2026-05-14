@@ -68,7 +68,6 @@ def connect():
     session.modified  = True
 
     auth_url = build_canva_auth_url()
-    logging.warning(f"[Canva OAuth] FULL redirect URL: {auth_url}")
     return redirect(auth_url)
 
 
@@ -225,19 +224,6 @@ def create_flyer():
 
     return redirect(edit_url)
 
-
-@canva_bp.get("/debug-env")
-@login_required
-def debug_env():
-    """Temporary: show what env vars the app sees for Canva config."""
-    import os
-    client_id    = os.environ.get("CANVA_CLIENT_ID", "NOT SET")
-    redirect_uri = os.environ.get("CANVA_REDIRECT_URI", "NOT SET")
-    return jsonify({
-        "CANVA_CLIENT_ID":    client_id[:10] + "…" if len(client_id) > 10 else client_id,
-        "CANVA_REDIRECT_URI": redirect_uri,
-        "has_secret":         bool(os.environ.get("CANVA_CLIENT_SECRET")),
-    })
 
 
 @canva_bp.post("/webhook")
