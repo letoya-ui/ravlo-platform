@@ -1,13 +1,16 @@
 {% set bp = request.blueprint or "" %}
 {% set ep = request.endpoint or "" %}
+{% set _admin_roles = ["admin", "platform_admin", "master_admin", "lending_admin", "executive"] %}
+{% set _is_admin = current_user.is_authenticated and current_user.role in _admin_roles %}
 {#
   Sidebar selection — one unified sidebar for all partner/VIP users:
-  - vip, elena, partners blueprints → always the unified VIP/Partner sidebar
+  - admin roles → always the admin sidebar (regardless of blueprint)
+  - vip, elena, partners blueprints → unified VIP/Partner sidebar
   - everything else (investor, canva, etc.) → investor sidebar
-  No more flipping between "Partner OS" and "VIP Workspace" sidebars.
 #}
 {% set _raw_portal = portal|default(
-  'vip' if bp in ('vip', 'elena', 'partners') else 'investor'
+  'admin' if _is_admin else
+  ('vip' if bp in ('vip', 'elena', 'partners') else 'investor')
 ) %}
 {# Normalize legacy "partner" value — all partner/VIP users share one sidebar now #}
 {% set active_portal = 'vip' if _raw_portal == 'partner' else _raw_portal %}
@@ -26,6 +29,9 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  {% if active_portal == "admin" %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_employee.css') }}">
+  {% endif %}
 
   {% block head %}{% endblock %}
 </head>
@@ -36,6 +42,7 @@
     <div class="ravlo-sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
     <aside class="ravlo-sidebar" id="sidebar">
+      {% if active_portal != "admin" %}
       <div class="ravlo-sidebar-heading">
         {% if active_portal == "vip" %}
           <span class="heading-label">Partner Workspace</span>
@@ -43,8 +50,11 @@
           <span class="heading-label">Investor Portal</span>
         {% endif %}
       </div>
+      {% endif %}
 
-      {% if active_portal == "vip" %}
+      {% if active_portal == "admin" %}
+        {% include "layouts/_sidebar_admin.html" %}
+      {% elif active_portal == "vip" %}
         {% include "layouts/_sidebar_vip.html" %}
       {% else %}
         {% include "layouts/_sidebar_investor.html" %}
