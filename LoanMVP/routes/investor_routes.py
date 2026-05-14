@@ -4266,7 +4266,6 @@ def api_property_tool_search():
             "budget_remaining": meta.get("budget_remaining"),
             "searches_used": searches_used,
             "searches_limit": _SEARCH_LIMIT,
-            "from_cache": _cache_hit,
         })
 
     except Exception as e:
