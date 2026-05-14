@@ -1,405 +1,1178 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • {{ header_name }} — Contractor{% endblock %}
+{% block title %}Ravlo - {{ header_name }} - Contractor Studio{% endblock %}
 {% block page_title %}{{ header_name }}{% endblock %}
-{% block page_subline %}Contractor Workspace — jobs, scopes, and deal context{% endblock %}
+{% block page_subline %}
+  {% if is_hybrid_partner %}
+    Contractor + Realtor workspace for scopes, active builds, listings, and investor deal flow.
+  {% else %}
+    Contractor workspace for jobs, scopes, budgets, and Deal Architect feedback.
+  {% endif %}
+{% endblock %}
 
 {% block topbar_actions %}
+  {% if is_hybrid_partner %}
+    {% if multi_market|default(false) %}
+      <form method="POST" action="{{ url_for('vip.realtor_market_switch') }}" class="contractor-market-switcher">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <select name="market" onchange="this.form.submit()" aria-label="Market">
+          <option value="All Markets" {% if current_market|default('All Markets') == 'All Markets' %}selected{% endif %}>All Markets</option>
+          {% for m in available_markets|default([]) %}
+            <option value="{{ m }}" {% if current_market|default('All Markets') == m %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    {% elif available_markets|default([])|length == 1 %}
+      <span class="contractor-market-pill">Market: {{ available_markets[0] }}</span>
+    {% endif %}
+
+    <a href="{{ url_for('vip.realtor_investor_flow') }}" class="ravlo-btn ghost sm">
+      <i class="lucide lucide-chart-network"></i>
+      <span>Investor Flow</span>
+    </a>
+    <a href="{{ url_for('vip.realtor_listings') }}" class="ravlo-btn ghost sm">
+      <i class="lucide lucide-house"></i>
+      <span>Listings</span>
+    </a>
+  {% endif %}
+
   {% if 'ai_pilot' in modules %}
-    <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">Copilot</a>
+    <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">
+      <i class="lucide lucide-sparkles"></i>
+      <span>Copilot</span>
+    </a>
   {% endif %}
+  <a href="{{ url_for('vip.design_studio') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-pencil-ruler"></i>
+    <span>Design Studio</span>
+  </a>
   {% if 'finances' in modules %}
-    <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">Finances</a>
+    <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">
+      <i class="lucide lucide-receipt"></i>
+      <span>Finances</span>
+    </a>
   {% endif %}
-  <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Settings</a>
+  <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-sliders-horizontal"></i>
+    <span>Setup</span>
+  </a>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto space-y-6">
+{% set realtor_summary = summary|default({}) %}
+{% set focus = studio_snapshot.focus %}
+<div class="partner-dashboard-page contractor-vip-studio-page {% if is_hybrid_partner %}contractor-realtor-page{% endif %}">
 
-  {# ── STATS ROW ── #}
-  <section class="partner-stats-grid">
-    <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Open Requests</div>
-      <div class="partner-stat-value">{{ stats.open_requests }}</div>
-      <div class="partner-stat-note">Awaiting your response</div>
-    </article>
-    <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Active Jobs</div>
-      <div class="partner-stat-value">{{ stats.active_jobs }}</div>
-      <div class="partner-stat-note">In progress</div>
-    </article>
-    <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Completed</div>
-      <div class="partner-stat-value">{{ stats.completed_jobs }}</div>
-      <div class="partner-stat-note">Total volume ${{ '{:,.0f}'.format(stats.total_volume) }}</div>
-    </article>
+  <section class="ravlo-card partner-hero-card contractor-studio-hero">
+    <div class="contractor-hero-content">
+      <div class="contractor-hero-copy">
+        <span class="partner-eyebrow">
+          {% if is_hybrid_partner %}VIP Contractor + Realtor{% else %}VIP Contractor{% endif %}
+        </span>
+        <h2 class="partner-hero-title">
+          Field Build Studio for scopes, budgets, property flow, and execution.
+        </h2>
+        <p class="partner-hero-text">
+          This dashboard turns contractor work into a studio-style command center: incoming
+          job context, Deal Architect estimates, live scope submissions, and the realtor
+          property pipeline when this partner is working both sides of the deal.
+        </p>
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
+            <i class="lucide lucide-inbox"></i>
+            <span>Review Requests</span>
+          </a>
+          {% if is_hybrid_partner %}
+            <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn ghost">
+              <i class="lucide lucide-house-plus"></i>
+              <span>Add Listing</span>
+            </a>
+          {% endif %}
+        </div>
+      </div>
 
-    {# AI accuracy card — only shows once there's data #}
-    {% if stats.ai_estimate_total > 0 and stats.contractor_total > 0 %}
-    {% set accuracy_delta = stats.contractor_total - stats.ai_estimate_total %}
-    {% set accuracy_pct = ((accuracy_delta / stats.ai_estimate_total) * 100) | round(1) if stats.ai_estimate_total > 0 else 0 %}
-    <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Deal Architect Accuracy</div>
-      <div class="partner-stat-value
-        {% if accuracy_pct | abs < 10 %}text-green-400
-        {% elif accuracy_pct | abs < 20 %}text-yellow-400
-        {% else %}text-red-400{% endif %}">
-        {% if accuracy_delta > 0 %}+{% endif %}{{ accuracy_pct }}%
+      <div class="contractor-hero-console" aria-label="Studio focus">
+        <div class="console-topline">
+          <span>Current Build Focus</span>
+          <strong>{{ focus.status }}</strong>
+        </div>
+        <div class="console-address">
+          {{ focus.address or "No project selected yet" }}
+        </div>
+        <div class="console-metrics">
+          <div>
+            <span>AI Estimate</span>
+            <strong>
+              {% if focus.ai_rehab_estimate %}${{ '{:,.0f}'.format(focus.ai_rehab_estimate) }}{% else %}Waiting{% endif %}
+            </strong>
+          </div>
+          <div>
+            <span>ARV</span>
+            <strong>
+              {% if focus.arv %}${{ '{:,.0f}'.format(focus.arv) }}{% else %}Waiting{% endif %}
+            </strong>
+          </div>
+          <div>
+            <span>Target</span>
+            <strong>
+              {% if focus.budget %}${{ '{:,.0f}'.format(focus.budget) }}{% elif focus.timeline %}{{ focus.timeline }}{% else %}Pending{% endif %}
+            </strong>
+          </div>
+        </div>
       </div>
-      <div class="partner-stat-note">
-        AI: ${{ '{:,.0f}'.format(stats.ai_estimate_total) }} vs
-        Your: ${{ '{:,.0f}'.format(stats.contractor_total) }}
-      </div>
-    </article>
-    {% endif %}
+    </div>
   </section>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <section class="partner-stats-grid contractor-studio-stats">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Open Scopes</div>
+      <div class="partner-stat-value">{{ stats.open_requests }}</div>
+      <div class="partner-stat-note">Requests waiting on review or field pricing</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Active Builds</div>
+      <div class="partner-stat-value">{{ stats.active_jobs }}</div>
+      <div class="partner-stat-note">Accepted jobs currently in production</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">{% if is_hybrid_partner %}Active Listings{% else %}Completed{% endif %}</div>
+      <div class="partner-stat-value">
+        {% if is_hybrid_partner %}{{ realtor_summary.active_listings|default(0) }}{% else %}{{ stats.completed_jobs }}{% endif %}
+      </div>
+      <div class="partner-stat-note">
+        {% if is_hybrid_partner %}
+          Market-facing inventory tied to the partner pipeline
+        {% else %}
+          Finished contractor jobs in this workspace
+        {% endif %}
+      </div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Scoped Volume</div>
+      <div class="partner-stat-value">${{ '{:,.0f}'.format(stats.contractor_total or 0) }}</div>
+      <div class="partner-stat-note">
+        {% if studio_snapshot.ai_delta_pct is not none %}
+          {{ '+' if studio_snapshot.ai_delta_pct > 0 else '' }}{{ studio_snapshot.ai_delta_pct }}% vs AI estimate
+        {% else %}
+          Contractor scope dollars submitted to date
+        {% endif %}
+      </div>
+    </article>
+  </section>
 
-    {# LEFT — main content #}
-    <div class="lg:col-span-2 space-y-6">
+  <section class="contractor-studio-grid">
+    <div class="contractor-studio-main">
 
-      {# ── INCOMING REQUESTS WITH DEAL CONTEXT ── #}
-      {% if requests_with_context %}
-      <section class="ravlo-card pad">
-        <h3 class="text-lg font-semibold mb-4">Incoming Requests</h3>
-
-        <div class="space-y-4">
-          {% for item in requests_with_context %}
-          {% set req = item.request %}
-          {% set ctx = item.context %}
-
-          <div class="ravlo-card p-4 border border-white/10">
-            <div class="flex justify-between items-start gap-4 flex-wrap">
-
-              {# Request header #}
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="font-medium text-sm">{{ req.title or req.category or 'Job Request' }}</span>
-                  <span class="text-xs px-2 py-0.5 rounded-full
-                    {% if req.status == 'pending' %}bg-yellow-500/20 text-yellow-400
-                    {% elif req.status == 'accepted' %}bg-blue-500/20 text-blue-400
-                    {% else %}bg-white/10 text-gray-400{% endif %}">
-                    {{ req.status | title }}
-                  </span>
-                </div>
-                <div class="text-xs text-gray-500">
-                  From: {{ ctx.requester }}
-                  {% if ctx.address %} · {{ ctx.address }}{% endif %}
-                  {% if req.created_at %} · {{ req.created_at.strftime('%b %d') }}{% endif %}
-                </div>
-              </div>
-
-              {# Accept button if pending #}
-              {% if req.status == 'pending' %}
-              <form method="POST"
-                    action="{{ url_for('vip.contractor_accept_request', req_id=req.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="ravlo-btn primary sm">Accept</button>
-              </form>
-              {% endif %}
-            </div>
-
-            {# Deal context box — THIS is what makes it feel premium #}
-            {% if ctx.ai_rehab_estimate or ctx.arv or ctx.strategy %}
-            <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 pt-3
-                        border-t border-white/5">
-
-              {% if ctx.ai_rehab_estimate %}
-              <div class="text-center ravlo-card p-2">
-                <div class="text-xs text-gray-500 mb-0.5">AI Rehab Est.</div>
-                <div class="text-sm font-semibold text-blue-400">
-                  ${{ '{:,.0f}'.format(ctx.ai_rehab_estimate) }}
-                </div>
-              </div>
-              {% endif %}
-
-              {% if ctx.arv %}
-              <div class="text-center ravlo-card p-2">
-                <div class="text-xs text-gray-500 mb-0.5">ARV</div>
-                <div class="text-sm font-semibold text-green-400">
-                  ${{ '{:,.0f}'.format(ctx.arv) }}
-                </div>
-              </div>
-              {% endif %}
-
-              {% if ctx.purchase_price %}
-              <div class="text-center ravlo-card p-2">
-                <div class="text-xs text-gray-500 mb-0.5">Purchase</div>
-                <div class="text-sm font-semibold">
-                  ${{ '{:,.0f}'.format(ctx.purchase_price) }}
-                </div>
-              </div>
-              {% endif %}
-
-              {% if ctx.strategy %}
-              <div class="text-center ravlo-card p-2">
-                <div class="text-xs text-gray-500 mb-0.5">Strategy</div>
-                <div class="text-sm font-semibold text-purple-400">
-                  {{ ctx.strategy | upper }}
-                </div>
-              </div>
-              {% endif %}
-
-            </div>
-            {% endif %}
-
-            {# Budget / timeline from request #}
-            {% if ctx.budget or ctx.timeline or req.message %}
-            <div class="mt-2 text-xs text-gray-500 space-y-0.5">
-              {% if ctx.budget %}
-                <div>Investor budget: <strong class="text-gray-300">${{ '{:,.0f}'.format(ctx.budget) }}</strong></div>
-              {% endif %}
-              {% if ctx.timeline %}
-                <div>Timeline: <strong class="text-gray-300">{{ ctx.timeline }}</strong></div>
-              {% endif %}
-              {% if req.message %}
-                <div class="mt-1 text-gray-600 italic truncate">{{ req.message }}</div>
-              {% endif %}
-            </div>
-            {% endif %}
-
+      <article class="ravlo-card partner-section-card contractor-build-console">
+        <div class="section-head">
+          <div>
+            <h3>Contractor Build Studio</h3>
+            <p>Shape a field-ready scope brief from property context, trade notes, market feedback, and budget deltas.</p>
           </div>
-          {% endfor %}
+          <span class="studio-status-pill" id="contractorStudioStatus">Ready</span>
         </div>
-      </section>
-      {% else %}
-      <section class="ravlo-card pad text-center py-10">
-        <p class="text-gray-500 text-sm">No open requests right now.</p>
-        <p class="text-gray-600 text-xs mt-1">New investor requests will appear here with full deal context.</p>
-      </section>
-      {% endif %}
 
-      {# ── ACTIVE JOBS WITH BUDGET COMPARISON ── #}
+        <div class="build-console-layout">
+          <div class="build-chat-surface">
+            <div class="build-chat-message assistant">
+              <strong>Ravlo</strong>
+              <p>{{ focus.address or "Choose the next request" }}{% if focus.ai_rehab_estimate %} has an AI rehab estimate of ${{ '{:,.0f}'.format(focus.ai_rehab_estimate) }}.{% else %} is ready for contractor scope planning.{% endif %}</p>
+            </div>
+            <div class="build-chat-composer">
+              <textarea id="contractorStudioCommand" rows="4" placeholder="Draft field notes, exclusions, schedule assumptions, material concerns, or realtor-side market context."></textarea>
+              <div class="contractor-button-row">
+                <button type="button" class="ravlo-btn ghost" id="draftContractorBriefBtn">
+                  <i class="lucide lucide-file-pen-line"></i>
+                  <span>Draft Brief</span>
+                </button>
+                <a href="{{ url_for('partners.proposals') }}" class="ravlo-btn primary">
+                  <i class="lucide lucide-file-text"></i>
+                  <span>Open Proposals</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="build-spec-panel">
+            <div class="spec-chip-row">
+              <span>Scope Intelligence</span>
+              <span>Field Pricing</span>
+              <span>Timeline Risk</span>
+              {% if is_hybrid_partner %}<span>Market Fit</span>{% endif %}
+            </div>
+            <div class="contractor-brief-preview" id="contractorBriefPreview" data-default="Scope brief will appear here after you draft from the studio note.">
+              Scope brief will appear here after you draft from the studio note.
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card contractor-design-studio-card">
+        <div class="section-head">
+          <div>
+            <h3>Design Studio</h3>
+            <p>Annotate blueprints, capture finish direction, and turn visual decisions into contractor-ready scope notes.</p>
+          </div>
+          <a href="{{ url_for('vip.design_studio') }}" class="ravlo-btn ghost sm">
+            <i class="lucide lucide-pencil-ruler"></i>
+            <span>Open Studio</span>
+          </a>
+        </div>
+
+        <div class="design-studio-layout">
+          <form method="POST" action="{{ url_for('vip.create_design_project') }}" class="design-project-starter">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>
+              Project Title
+              <input name="title" required placeholder="e.g. Whitlock Kitchen + Exterior Notes">
+            </label>
+            <label>
+              Source File / Notes
+              <input name="source_file" placeholder="Blueprint URL, listing link, or plan reference">
+            </label>
+            <button type="submit" class="ravlo-btn primary">
+              <i class="lucide lucide-plus"></i>
+              <span>Start Design Project</span>
+            </button>
+          </form>
+
+          <div class="design-project-list">
+            {% if design_projects|default([]) %}
+              {% for project in design_projects %}
+                <a href="{{ url_for('vip.design_studio', project_id=project.id) }}" class="design-project-card">
+                  <div>
+                    <strong>{{ project.title }}</strong>
+                    <span>
+                      {{ project.status|replace('_', ' ')|title }}
+                      {% if project.updated_at %} - {{ project.updated_at.strftime('%b %d') }}{% endif %}
+                    </span>
+                  </div>
+                  <div class="design-project-meta">
+                    <span>{{ design_annotation_counts.get(project.id, 0) }} notes</span>
+                    {% if project.blueprint_url %}
+                      <em>Blueprint</em>
+                    {% else %}
+                      <em>Needs plan</em>
+                    {% endif %}
+                  </div>
+                </a>
+              {% endfor %}
+            {% else %}
+              <div class="design-studio-empty">
+                <strong>No design projects yet</strong>
+                <span>Start one from a blueprint, listing plan, or remodel idea, then annotate what changes in the field.</span>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Incoming Build Requests</h3>
+            <p>Each request carries property, investor, budget, and Deal Architect context.</p>
+          </div>
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">All Requests</a>
+        </div>
+
+        {% if requests_with_context %}
+          <div class="contractor-request-list">
+            {% for item in requests_with_context %}
+              {% set req = item.request %}
+              {% set ctx = item.context %}
+              {% set status_key = (req.status or 'pending')|lower %}
+              <div class="contractor-request-card">
+                <div class="request-card-head">
+                  <div>
+                    <strong>{{ req.title or req.category or 'Build Request' }}</strong>
+                    <span>{{ ctx.requester }}{% if ctx.address %} - {{ ctx.address }}{% endif %}</span>
+                  </div>
+                  <div class="request-actions">
+                    <span class="status-pill status-{{ status_key }}">{{ (req.status or 'pending')|replace('_', ' ')|title }}</span>
+                    {% if req.status == 'pending' %}
+                      <form method="POST" action="{{ url_for('vip.contractor_accept_request', req_id=req.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="ravlo-btn primary sm">Accept</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="request-metric-row">
+                  <div>
+                    <span>AI Rehab</span>
+                    <strong>{% if ctx.ai_rehab_estimate %}${{ '{:,.0f}'.format(ctx.ai_rehab_estimate) }}{% else %}Pending{% endif %}</strong>
+                  </div>
+                  <div>
+                    <span>ARV</span>
+                    <strong>{% if ctx.arv %}${{ '{:,.0f}'.format(ctx.arv) }}{% else %}Pending{% endif %}</strong>
+                  </div>
+                  <div>
+                    <span>Purchase</span>
+                    <strong>{% if ctx.purchase_price %}${{ '{:,.0f}'.format(ctx.purchase_price) }}{% else %}Pending{% endif %}</strong>
+                  </div>
+                  <div>
+                    <span>Strategy</span>
+                    <strong>{{ ctx.strategy|upper if ctx.strategy else 'Review' }}</strong>
+                  </div>
+                </div>
+
+                {% if ctx.budget or ctx.timeline or req.message %}
+                  <div class="request-note">
+                    {% if ctx.budget %}<span>Budget: ${{ '{:,.0f}'.format(ctx.budget) }}</span>{% endif %}
+                    {% if ctx.timeline %}<span>Timeline: {{ ctx.timeline }}</span>{% endif %}
+                    {% if req.message %}<p>{{ req.message }}</p>{% endif %}
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="partner-empty-state">
+            <h4>No open contractor requests</h4>
+            <p>New investor and borrower scope requests will land here with property context attached.</p>
+          </div>
+        {% endif %}
+      </article>
+
       {% if active_jobs %}
-      <section class="ravlo-card pad">
-        <h3 class="text-lg font-semibold mb-4">Active Jobs</h3>
-
-        <div class="space-y-4">
-          {% for item in active_jobs %}
-          {% set job = item.job %}
-
-          <div class="ravlo-card p-4 border border-white/10">
-            <div class="flex justify-between items-start mb-3">
-              <div>
-                <div class="font-medium text-sm">{{ job.title }}</div>
-                <div class="text-xs text-gray-500">
-                  {{ job.status }}
-                  {% if job.created_at %} · {{ job.created_at.strftime('%b %d') }}{% endif %}
-                </div>
-              </div>
-
-              {# AI vs Contractor delta badge #}
-              {% if item.delta is not none %}
-              <div class="text-xs px-2 py-1 rounded-full
-                {% if item.delta | abs / (item.ai_estimate or 1) < 0.1 %}bg-green-500/20 text-green-400
-                {% elif item.delta | abs / (item.ai_estimate or 1) < 0.2 %}bg-yellow-500/20 text-yellow-400
-                {% else %}bg-red-500/20 text-red-400{% endif %}">
-                {% if item.delta > 0 %}+{% endif %}{{ item.delta_pct }}% vs AI
-              </div>
-              {% endif %}
-            </div>
-
-            {# Numbers comparison #}
-            {% if item.budget or item.ai_estimate %}
-            <div class="grid grid-cols-3 gap-2 text-xs">
-              {% if item.ai_estimate %}
-              <div class="ravlo-card p-2 text-center">
-                <div class="text-gray-500 mb-0.5">AI Estimate</div>
-                <div class="font-semibold text-blue-400">
-                  ${{ '{:,.0f}'.format(item.ai_estimate) }}
-                </div>
-              </div>
-              {% endif %}
-
-              {% if item.budget %}
-              <div class="ravlo-card p-2 text-center">
-                <div class="text-gray-500 mb-0.5">Your Scope</div>
-                <div class="font-semibold text-white">
-                  ${{ '{:,.0f}'.format(item.budget.total_cost or 0) }}
-                </div>
-              </div>
-              {% endif %}
-
-              {% if item.delta is not none %}
-              <div class="ravlo-card p-2 text-center">
-                <div class="text-gray-500 mb-0.5">Delta</div>
-                <div class="font-semibold
-                  {% if item.delta > 0 %}text-red-400{% elif item.delta < 0 %}text-green-400{% else %}text-gray-400{% endif %}">
-                  {% if item.delta > 0 %}+{% endif %}${{ '{:,.0f}'.format(item.delta | abs) }}
-                </div>
-              </div>
-              {% endif %}
-            </div>
-            {% endif %}
-
-            {# Scope submission form — collapsed by default #}
-            {% if job.status in ['Open', 'in_progress'] %}
-            <details class="mt-3">
-              <summary class="text-xs text-blue-400 cursor-pointer hover:text-blue-300">
-                Submit / Update Scope →
-              </summary>
-
-              <form method="POST"
-                    action="{{ url_for('vip.contractor_submit_scope', job_id=job.id) }}"
-                    class="mt-3 space-y-3">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                <div class="grid grid-cols-3 gap-2">
-                  <div>
-                    <label class="text-xs text-gray-500">Labor ($)</label>
-                    <input name="labor_cost" type="number" step="0.01" min="0"
-                           value="{{ item.budget.labor_cost if item.budget else '' }}"
-                           class="design-input text-xs mt-1"
-                           placeholder="0">
-                  </div>
-                  <div>
-                    <label class="text-xs text-gray-500">Materials ($)</label>
-                    <input name="materials_cost" type="number" step="0.01" min="0"
-                           value="{{ item.budget.materials_cost if item.budget else '' }}"
-                           class="design-input text-xs mt-1"
-                           placeholder="0">
-                  </div>
-                  <div>
-                    <label class="text-xs text-gray-500">Other ($)</label>
-                    <input name="other_cost" type="number" step="0.01" min="0"
-                           class="design-input text-xs mt-1"
-                           placeholder="0">
-                  </div>
-                </div>
-
-                <div>
-                  <label class="text-xs text-gray-500">Timeline</label>
-                  <input name="timeline" class="design-input text-xs mt-1"
-                         placeholder="e.g. 3–4 weeks">
-                </div>
-
-                <div>
-                  <label class="text-xs text-gray-500">Scope Notes</label>
-                  <textarea name="scope_notes" class="design-input text-xs mt-1"
-                            placeholder="What's included, exclusions, assumptions…">{{ item.budget.notes if item.budget else '' }}</textarea>
-                </div>
-
-                {# Line items #}
-                <div id="lineItems-{{ job.id }}">
-                  <div class="text-xs text-gray-500 mb-1">Line Items (optional)</div>
-                  <div class="line-item-row grid grid-cols-[120px_1fr_100px] gap-2 mb-1">
-                    <input name="line_category[]" class="design-input text-xs" placeholder="Category">
-                    <input name="line_description[]" class="design-input text-xs" placeholder="Description">
-                    <input name="line_amount[]" type="number" class="design-input text-xs" placeholder="$">
-                  </div>
-                </div>
-
-                <button type="button"
-                        onclick="addLineItem('{{ job.id }}')"
-                        class="text-xs text-blue-400 hover:text-blue-300">
-                  + Add line item
-                </button>
-
-                <button type="submit" class="ravlo-btn primary sm w-full mt-2">
-                  Submit Scope to Deal Architect
-                </button>
-              </form>
-            </details>
-            {% endif %}
-
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Active Build Board</h3>
+            <p>Submit field pricing and keep Deal Architect calibrated to real contractor numbers.</p>
           </div>
+        </div>
+
+        <div class="active-job-list">
+          {% for item in active_jobs %}
+            {% set job = item.job %}
+            <div class="active-job-card">
+              <div class="job-card-head">
+                <div>
+                  <strong>{{ job.title }}</strong>
+                  <span>{{ job.status }}{% if job.created_at %} - {{ job.created_at.strftime('%b %d') }}{% endif %}</span>
+                </div>
+                {% if item.delta is not none %}
+                  <span class="delta-pill {% if item.delta > 0 %}over{% elif item.delta < 0 %}under{% else %}even{% endif %}">
+                    {{ '+' if item.delta > 0 else '' }}{{ item.delta_pct }}% vs AI
+                  </span>
+                {% endif %}
+              </div>
+
+              <div class="request-metric-row compact">
+                <div>
+                  <span>AI Estimate</span>
+                  <strong>{% if item.ai_estimate %}${{ '{:,.0f}'.format(item.ai_estimate) }}{% else %}Pending{% endif %}</strong>
+                </div>
+                <div>
+                  <span>Your Scope</span>
+                  <strong>{% if item.budget %}${{ '{:,.0f}'.format(item.budget.total_cost or 0) }}{% else %}Pending{% endif %}</strong>
+                </div>
+                <div>
+                  <span>Delta</span>
+                  <strong>
+                    {% if item.delta is not none %}
+                      {{ '+' if item.delta > 0 else '' }}${{ '{:,.0f}'.format(item.delta) }}
+                    {% else %}
+                      Waiting
+                    {% endif %}
+                  </strong>
+                </div>
+              </div>
+
+              {% if job.status in ['Open', 'in_progress'] %}
+                <details class="scope-details">
+                  <summary>Submit or update scope</summary>
+                  <form method="POST" action="{{ url_for('vip.contractor_submit_scope', job_id=job.id) }}" class="scope-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="scope-cost-grid">
+                      <label>
+                        Labor
+                        <input name="labor_cost" type="number" step="0.01" min="0" value="{{ item.budget.labor_cost if item.budget else '' }}" placeholder="0">
+                      </label>
+                      <label>
+                        Materials
+                        <input name="materials_cost" type="number" step="0.01" min="0" value="{{ item.budget.materials_cost if item.budget else '' }}" placeholder="0">
+                      </label>
+                      <label>
+                        Other
+                        <input name="other_cost" type="number" step="0.01" min="0" placeholder="0">
+                      </label>
+                    </div>
+                    <label>
+                      Timeline
+                      <input name="timeline" placeholder="3-4 weeks">
+                    </label>
+                    <label>
+                      Scope Notes
+                      <textarea name="scope_notes" rows="4" placeholder="Included work, exclusions, assumptions, and site conditions.">{{ item.budget.notes if item.budget else '' }}</textarea>
+                    </label>
+                    <div id="lineItems-{{ job.id }}" class="line-item-stack">
+                      <span class="line-item-label">Line Items</span>
+                      <div class="line-item-row">
+                        <input name="line_category[]" placeholder="Category">
+                        <input name="line_description[]" placeholder="Description">
+                        <input name="line_amount[]" type="number" placeholder="$">
+                      </div>
+                    </div>
+                    <div class="contractor-button-row">
+                      <button type="button" onclick="addLineItem('{{ job.id }}')" class="ravlo-btn ghost sm">Add Line</button>
+                      <button type="submit" class="ravlo-btn primary sm">Submit Scope</button>
+                    </div>
+                  </form>
+                </details>
+              {% endif %}
+            </div>
           {% endfor %}
         </div>
-      </section>
+      </article>
       {% endif %}
 
+      {% if is_hybrid_partner %}
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Property Pipeline</h3>
+            <p>Realtor-side listings and client movement connected to construction readiness.</p>
+          </div>
+          <a href="{{ url_for('vip.realtor_listings') }}" class="ravlo-btn ghost sm">Open Listings</a>
+        </div>
+
+        <div class="hybrid-property-grid">
+          <form method="GET" action="{{ url_for('elena.listing_new') }}" class="property-intake-panel">
+            <label>
+              MLS Number
+              <input type="text" name="mls_number" required placeholder="H6312451">
+            </label>
+            <label>
+              Market
+              <select name="market">
+                <option value="">Use current market</option>
+                {% for market in available_markets|default([]) %}
+                  <option value="{{ market }}" {% if current_market|default('All Markets') == market %}selected{% endif %}>{{ market }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <button type="submit" class="ravlo-btn primary">Start Listing</button>
+          </form>
+
+          <div class="property-sync-panel">
+            <div>
+              <span>Webhook URL</span>
+              <input value="{{ listing_sync_url|default('') }}" readonly>
+            </div>
+            <div>
+              <span>Sync Token</span>
+              <input value="{{ listing_sync_token|default('') }}" readonly>
+            </div>
+          </div>
+        </div>
+
+        {% if listings|default([]) %}
+          <div class="listing-card-grid">
+            {% for listing in listings[:6] %}
+              <a href="{{ url_for('vip.realtor_listing_detail', listing_id=listing.id) }}" class="listing-mini-card">
+                <strong>{{ listing.address }}</strong>
+                <span>{{ listing.market or "Unassigned" }}{% if listing.price %} - ${{ '{:,}'.format(listing.price) }}{% endif %}</span>
+                <em>{{ listing.status|title }}</em>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="partner-empty-state compact">
+            <h4>No listings in this view</h4>
+            <p>Listings added from MLS intake will appear here with market context.</p>
+          </div>
+        {% endif %}
+      </article>
+      {% endif %}
     </div>
 
-    {# RIGHT SIDEBAR #}
-    <aside class="space-y-5">
+    <aside class="contractor-studio-side">
+      <article class="ravlo-card partner-section-card studio-side-card">
+        <div class="section-head">
+          <div>
+            <h3>Studio Snapshot</h3>
+            <p>Current construction and market workload.</p>
+          </div>
+        </div>
+        <div class="studio-snapshot-list">
+          <div><span>Scope queue</span><strong>{{ studio_snapshot.scope_queue }}</strong></div>
+          <div><span>Active builds</span><strong>{{ studio_snapshot.active_builds }}</strong></div>
+          <div><span>Completed</span><strong>{{ studio_snapshot.completed_builds }}</strong></div>
+          <div><span>Design projects</span><strong>{{ design_project_count|default(0) }}</strong></div>
+          {% if is_hybrid_partner %}
+            <div><span>Listings</span><strong>{{ realtor_summary.active_listings|default(0) }}</strong></div>
+            <div><span>Follow-ups</span><strong>{{ realtor_summary.followups_due|default(0) }}</strong></div>
+          {% endif %}
+        </div>
+      </article>
 
-      {# Copilot #}
       {% if 'ai_pilot' in modules %}
-      <section class="ravlo-card pad">
-        <div class="flex justify-between items-center mb-3">
-          <h3 class="text-base font-semibold">Copilot</h3>
+      <article class="ravlo-card partner-section-card studio-side-card">
+        <div class="section-head">
+          <div>
+            <h3>Copilot</h3>
+            <p>Recent assistant nudges.</p>
+          </div>
           <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">Open</a>
         </div>
         {% if copilot_suggestions %}
-        <div class="space-y-2">
-          {% for s in copilot_suggestions %}
-          <div class="ravlo-card p-2 text-xs">
-            <div class="font-medium truncate">{{ s.title }}</div>
-            {% if s.body %}<div class="text-gray-500 truncate mt-0.5">{{ s.body }}</div>{% endif %}
+          <div class="side-feed">
+            {% for s in copilot_suggestions %}
+              <div class="side-feed-item">
+                <strong>{{ s.title }}</strong>
+                {% if s.body %}<span>{{ s.body }}</span>{% endif %}
+              </div>
+            {% endfor %}
           </div>
-          {% endfor %}
-        </div>
         {% else %}
-        <p class="text-xs text-gray-500 italic">No suggestions yet.</p>
+          <div class="partner-empty-state compact">
+            <h4>No suggestions yet</h4>
+            <p>Copilot suggestions will show here when Ravlo has next steps.</p>
+          </div>
         {% endif %}
-      </section>
+      </article>
       {% endif %}
 
-      {# Recent proposals #}
       {% if recent_proposals %}
-      <section class="ravlo-card pad">
-        <div class="flex justify-between items-center mb-3">
-          <h3 class="text-base font-semibold">Recent Proposals</h3>
+      <article class="ravlo-card partner-section-card studio-side-card">
+        <div class="section-head">
+          <div>
+            <h3>Recent Proposals</h3>
+            <p>Latest submitted or drafted scopes.</p>
+          </div>
           <a href="{{ url_for('partners.proposals') }}" class="ravlo-btn ghost sm">All</a>
         </div>
-        <div class="space-y-2">
+        <div class="side-feed">
           {% for prop in recent_proposals %}
-          <div class="ravlo-card p-2 text-xs">
-            <div class="font-medium truncate">{{ prop.title }}</div>
-            <div class="flex justify-between text-gray-500 mt-0.5">
-              <span>{{ prop.status | title }}</span>
-              <span>${{ '{:,.0f}'.format(prop.total_cost or 0) }}</span>
+            <div class="side-feed-item split">
+              <div>
+                <strong>{{ prop.title }}</strong>
+                <span>{{ prop.status|title }}</span>
+              </div>
+              <b>${{ '{:,.0f}'.format(prop.total_cost or 0) }}</b>
             </div>
-          </div>
           {% endfor %}
         </div>
-      </section>
+      </article>
       {% endif %}
 
-      {# Deal Architect explainer #}
-      <section class="ravlo-card pad">
-        <h3 class="text-base font-semibold mb-2">Deal Architect Loop</h3>
-        <p class="text-xs text-gray-500 leading-relaxed">
-          When you submit scope numbers, they're compared to Ravlo's AI
-          rehab estimate. The delta helps Deal Architect get more accurate
-          over time for your market and property type.
-        </p>
-        <div class="mt-3 space-y-1 text-xs text-gray-600">
-          <div class="flex gap-2 items-center">
-            <span class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>
-            AI estimate — Deal Architect
-          </div>
-          <div class="flex gap-2 items-center">
-            <span class="w-2 h-2 rounded-full bg-white flex-shrink-0"></span>
-            Your scope — actual numbers
-          </div>
-          <div class="flex gap-2 items-center">
-            <span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
-            Delta — trains accuracy
+      {% if is_hybrid_partner and pipeline_groups|default([]) %}
+      <article class="ravlo-card partner-section-card studio-side-card">
+        <div class="section-head">
+          <div>
+            <h3>Client Pipeline</h3>
+            <p>Realtor flow by stage.</p>
           </div>
         </div>
-      </section>
+        <div class="pipeline-mini-list">
+          {% for group in pipeline_groups[:5] %}
+            <div>
+              <span>{{ group.label }}</span>
+              <strong>{{ group.count }}</strong>
+            </div>
+          {% endfor %}
+        </div>
+      </article>
+      {% endif %}
 
+      <article class="ravlo-card partner-section-card studio-side-card">
+        <div class="section-head">
+          <div>
+            <h3>Deal Architect Loop</h3>
+            <p>How field pricing improves investor planning.</p>
+          </div>
+        </div>
+        <div class="partner-checklist">
+          <div class="partner-check-item">Compare AI rehab estimate against contractor scope.</div>
+          <div class="partner-check-item">Capture exclusions, site conditions, and schedule risk.</div>
+          {% if is_hybrid_partner %}
+            <div class="partner-check-item">Tie listing value and market timing back to build scope.</div>
+          {% endif %}
+          <div class="partner-check-item">Send clean proposals back into the Ravlo deal record.</div>
+        </div>
+      </article>
     </aside>
-  </div>
-
+  </section>
 </div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .contractor-market-switcher select,
+  .contractor-market-pill {
+    min-height: 36px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    color: #eaf2ff;
+    padding: 0 12px;
+    font-size: 0.84rem;
+    font-weight: 700;
+  }
+
+  .contractor-market-pill {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .contractor-vip-studio-page {
+    gap: 18px;
+  }
+
+  .contractor-studio-hero {
+    border-color: rgba(235, 180, 83, 0.2);
+    background:
+      linear-gradient(135deg, rgba(31, 42, 54, 0.96), rgba(8, 16, 28, 0.96) 58%, rgba(20, 36, 33, 0.94));
+  }
+
+  .contractor-studio-hero::before {
+    background: radial-gradient(circle, rgba(235, 180, 83, 0.18), transparent 70%);
+  }
+
+  .contractor-hero-content {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  .contractor-hero-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .contractor-hero-console,
+  .build-chat-message,
+  .build-spec-panel,
+  .contractor-request-card,
+  .active-job-card,
+  .design-project-starter,
+  .design-project-card,
+  .design-studio-empty,
+  .property-intake-panel,
+  .property-sync-panel,
+  .listing-mini-card,
+  .side-feed-item {
+    border: 1px solid rgba(255,255,255,0.09);
+    background: rgba(255,255,255,0.035);
+    border-radius: 18px;
+  }
+
+  .contractor-hero-console {
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+    min-height: 100%;
+  }
+
+  .console-topline,
+  .request-card-head,
+  .job-card-head,
+  .contractor-button-row,
+  .side-feed-item.split {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .console-topline span,
+  .console-metrics span,
+  .request-metric-row span,
+  .studio-snapshot-list span,
+  .pipeline-mini-list span,
+  .property-sync-panel span,
+  .line-item-label {
+    color: rgba(207, 222, 245, 0.68);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .console-topline strong,
+  .studio-status-pill,
+  .status-pill,
+  .delta-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.06);
+    padding: 0 10px;
+    color: #f5f8ff;
+    font-size: 0.76rem;
+    font-weight: 800;
+  }
+
+  .console-address {
+    color: #ffffff;
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .console-metrics,
+  .request-metric-row,
+  .scope-cost-grid,
+  .design-studio-layout,
+  .hybrid-property-grid {
+    display: grid;
+    gap: 10px;
+  }
+
+  .console-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .console-metrics div,
+  .request-metric-row div,
+  .studio-snapshot-list div,
+  .pipeline-mini-list div {
+    padding: 12px;
+    border-radius: 15px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.03);
+  }
+
+  .console-metrics strong,
+  .request-metric-row strong,
+  .studio-snapshot-list strong,
+  .pipeline-mini-list strong {
+    display: block;
+    margin-top: 6px;
+    color: #ffffff;
+    font-size: 0.98rem;
+  }
+
+  .contractor-studio-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.78fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .contractor-studio-main,
+  .contractor-studio-side {
+    display: grid;
+    gap: 18px;
+  }
+
+  .build-console-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+    gap: 14px;
+  }
+
+  .build-chat-surface,
+  .build-chat-composer,
+  .scope-form,
+  .line-item-stack,
+  .design-project-starter,
+  .design-project-list,
+  .side-feed,
+  .studio-snapshot-list,
+  .pipeline-mini-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .build-chat-message {
+    padding: 14px 16px;
+  }
+
+  .build-chat-message strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #ffffff;
+  }
+
+  .build-chat-message p {
+    margin: 0;
+    color: rgba(219, 231, 248, 0.82);
+    line-height: 1.55;
+  }
+
+  .build-chat-composer textarea,
+  .scope-form input,
+  .scope-form textarea,
+  .design-project-starter input,
+  .property-intake-panel input,
+  .property-intake-panel select,
+  .property-sync-panel input {
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    background: rgba(6, 12, 22, 0.84);
+    color: #eef5ff;
+    padding: 12px 14px;
+    outline: none;
+  }
+
+  .build-chat-composer textarea:focus,
+  .scope-form input:focus,
+  .scope-form textarea:focus,
+  .design-project-starter input:focus,
+  .property-intake-panel input:focus,
+  .property-intake-panel select:focus {
+    border-color: rgba(235, 180, 83, 0.46);
+    box-shadow: 0 0 0 3px rgba(235, 180, 83, 0.11);
+  }
+
+  .build-spec-panel {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    align-self: stretch;
+  }
+
+  .spec-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .spec-chip-row span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    border-radius: 999px;
+    border: 1px solid rgba(235, 180, 83, 0.22);
+    background: rgba(235, 180, 83, 0.09);
+    color: #ffe4ae;
+    padding: 0 10px;
+    font-size: 0.76rem;
+    font-weight: 800;
+  }
+
+  .contractor-brief-preview {
+    min-height: 150px;
+    padding: 14px;
+    border-radius: 15px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(4, 9, 16, 0.7);
+    color: rgba(225, 235, 249, 0.82);
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+
+  .contractor-request-list,
+  .active-job-list,
+  .design-project-list,
+  .listing-card-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .contractor-request-card,
+  .active-job-card {
+    padding: 16px;
+  }
+
+  .design-studio-layout {
+    grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
+    gap: 14px;
+  }
+
+  .design-project-starter,
+  .design-project-card,
+  .design-studio-empty {
+    padding: 14px;
+  }
+
+  .design-project-starter label {
+    display: grid;
+    gap: 7px;
+    color: rgba(219, 231, 248, 0.82);
+    font-size: 0.84rem;
+    font-weight: 800;
+  }
+
+  .design-project-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+  }
+
+  .design-project-card:hover {
+    border-color: rgba(235, 180, 83, 0.28);
+    background: rgba(235, 180, 83, 0.07);
+    transform: translateY(-1px);
+  }
+
+  .design-project-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    text-align: right;
+    min-width: 94px;
+  }
+
+  .design-project-meta em {
+    color: #ffe4ae;
+    font-size: 0.76rem;
+    font-style: normal;
+    font-weight: 800;
+  }
+
+  .design-studio-empty {
+    display: grid;
+    gap: 6px;
+    min-height: 100%;
+    align-content: center;
+    border-style: dashed;
+  }
+
+  .request-card-head strong,
+  .job-card-head strong,
+  .design-project-card strong,
+  .design-studio-empty strong,
+  .side-feed-item strong,
+  .listing-mini-card strong {
+    display: block;
+    color: #ffffff;
+    font-weight: 800;
+  }
+
+  .request-card-head span,
+  .job-card-head span,
+  .design-project-card span,
+  .design-studio-empty span,
+  .side-feed-item span,
+  .listing-mini-card span {
+    display: block;
+    margin-top: 4px;
+    color: rgba(211, 225, 245, 0.68);
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+
+  .request-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .request-metric-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 14px;
+  }
+
+  .request-metric-row.compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .request-note {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+    color: rgba(220, 231, 247, 0.74);
+    font-size: 0.88rem;
+  }
+
+  .request-note p {
+    flex-basis: 100%;
+    margin: 0;
+    color: rgba(203, 217, 238, 0.68);
+    line-height: 1.55;
+  }
+
+  .status-pending {
+    color: #ffe4ae;
+    background: rgba(235,180,83,0.13);
+    border-color: rgba(235,180,83,0.24);
+  }
+
+  .status-accepted,
+  .delta-pill.under {
+    color: #b7f6d9;
+    background: rgba(82,211,166,0.11);
+    border-color: rgba(82,211,166,0.23);
+  }
+
+  .delta-pill.over {
+    color: #ffc2b8;
+    background: rgba(255,143,143,0.12);
+    border-color: rgba(255,143,143,0.24);
+  }
+
+  .delta-pill.even {
+    color: #dbeafe;
+  }
+
+  .scope-details {
+    margin-top: 14px;
+  }
+
+  .scope-details summary {
+    cursor: pointer;
+    color: #ffe4ae;
+    font-weight: 800;
+  }
+
+  .scope-form {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .scope-cost-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .scope-form label,
+  .property-intake-panel label {
+    display: grid;
+    gap: 7px;
+    color: rgba(219, 231, 248, 0.82);
+    font-size: 0.84rem;
+    font-weight: 800;
+  }
+
+  .line-item-row {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.5fr) minmax(180px, 1fr) minmax(90px, 0.4fr);
+    gap: 8px;
+  }
+
+  .hybrid-property-grid {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    margin-bottom: 14px;
+  }
+
+  .property-intake-panel,
+  .property-sync-panel {
+    padding: 14px;
+  }
+
+  .property-sync-panel {
+    display: grid;
+    gap: 10px;
+  }
+
+  .listing-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .listing-mini-card {
+    display: block;
+    padding: 14px;
+  }
+
+  .listing-mini-card em {
+    display: inline-flex;
+    margin-top: 10px;
+    color: #b7f6d9;
+    font-size: 0.78rem;
+    font-style: normal;
+    font-weight: 800;
+  }
+
+  .studio-side-card {
+    padding: 18px;
+  }
+
+  .side-feed-item {
+    padding: 12px;
+  }
+
+  .side-feed-item b {
+    color: #ffffff;
+  }
+
+  .pipeline-mini-list div,
+  .studio-snapshot-list div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  @media (max-width: 1200px) {
+    .contractor-studio-grid,
+    .contractor-hero-content,
+    .build-console-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .console-metrics,
+    .request-metric-row,
+    .request-metric-row.compact,
+    .scope-cost-grid,
+    .design-studio-layout,
+    .hybrid-property-grid,
+    .listing-card-grid,
+    .line-item-row {
+      grid-template-columns: 1fr;
+    }
+
+    .console-topline,
+    .request-card-head,
+    .job-card-head,
+    .design-project-card,
+    .contractor-button-row,
+    .side-feed-item.split {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .request-actions {
+      justify-content: flex-start;
+    }
+
+    .design-project-meta {
+      align-items: flex-start;
+      text-align: left;
+    }
+  }
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function addLineItem(jobId) {
-  const container = document.getElementById("lineItems-" + jobId);
-  const row = document.createElement("div");
-  row.className = "line-item-row grid grid-cols-[120px_1fr_100px] gap-2 mb-1";
-  row.innerHTML = `
-    <input name="line_category[]" class="design-input text-xs" placeholder="Category">
-    <input name="line_description[]" class="design-input text-xs" placeholder="Description">
-    <input name="line_amount[]" type="number" class="design-input text-xs" placeholder="$">
-  `;
-  container.appendChild(row);
-}
+(() => {
+  const draftButton = document.getElementById("draftContractorBriefBtn");
+  const commandInput = document.getElementById("contractorStudioCommand");
+  const preview = document.getElementById("contractorBriefPreview");
+  const status = document.getElementById("contractorStudioStatus");
+
+  if (draftButton && commandInput && preview) {
+    draftButton.addEventListener("click", () => {
+      const text = commandInput.value.trim();
+      preview.textContent = text || preview.dataset.default;
+      if (status) status.textContent = text ? "Drafted" : "Ready";
+    });
+  }
+
+  window.addLineItem = function(jobId) {
+    const container = document.getElementById("lineItems-" + jobId);
+    if (!container) return;
+
+    const row = document.createElement("div");
+    row.className = "line-item-row";
+    row.innerHTML = `
+      <input name="line_category[]" placeholder="Category">
+      <input name="line_description[]" placeholder="Description">
+      <input name="line_amount[]" type="number" placeholder="$">
+    `;
+    container.appendChild(row);
+  };
+})();
 </script>
 {% endblock %}

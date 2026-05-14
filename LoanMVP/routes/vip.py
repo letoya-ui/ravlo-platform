@@ -189,6 +189,23 @@ def _default_vip_role_for_partner(partner):
     if _partner_role_mentions(partner, "insurance", "insurer"):
         return "insurance"
 
+    is_realtor = _partner_role_mentions(
+        partner,
+        "realtor",
+        "real estate",
+        "real-estate",
+        "realty",
+    )
+    is_contractor = _partner_role_mentions(
+        partner,
+        "contractor",
+        "construction",
+        "builder",
+        "general contractor",
+    )
+    if is_realtor and is_contractor:
+        return "contractor_realtor"
+
     if _partner_role_mentions(partner, "realtor", "real estate", "real-estate", "realty"):
         return "realtor"
 
@@ -612,6 +629,7 @@ def index():
     role_map = {
         "realtor":           "vip.realtor_dashboard",
         "contractor":        "vip.contractor_dashboard",
+        "contractor_realtor": "vip.contractor_dashboard",
         "designer":          "vip.designer_dashboard",
         "insurance":         "vip.insurance_dashboard",
         "insurance_realtor": "vip.insurance_dashboard",
@@ -1146,6 +1164,14 @@ def realtor_attach_market_data(deal_id):
 def contractor_dashboard():
     profile = get_or_create_vip_profile()
     partner = getattr(current_user, "partner_profile", None)
+    role_text = _partner_role_text(partner)
+    is_hybrid_partner = (
+        profile.role_type == "contractor_realtor"
+        or (
+            any(term in role_text for term in ("realtor", "real estate", "real-estate", "realty"))
+            and any(term in role_text for term in ("contractor", "construction", "builder", "general contractor"))
+        )
+    )
 
     requests_with_context = []
     active_jobs = []
@@ -1220,6 +1246,68 @@ def contractor_dashboard():
         stats["ai_estimate_total"] = sum(j["ai_estimate"] for j in active_jobs if j["ai_estimate"])
         stats["contractor_total"]  = sum(float(j["budget"].total_cost or 0) for j in active_jobs if j["budget"])
 
+    studio_focus = {
+        "address": None,
+        "requester": None,
+        "ai_rehab_estimate": None,
+        "arv": None,
+        "strategy": None,
+        "budget": None,
+        "timeline": None,
+        "status": "No active scope",
+    }
+    if requests_with_context:
+        focus_ctx = requests_with_context[0]["context"] or {}
+        focus_req = requests_with_context[0]["request"]
+        studio_focus.update({
+            "address": focus_ctx.get("address"),
+            "requester": focus_ctx.get("requester"),
+            "ai_rehab_estimate": focus_ctx.get("ai_rehab_estimate"),
+            "arv": focus_ctx.get("arv"),
+            "strategy": focus_ctx.get("strategy"),
+            "budget": focus_ctx.get("budget"),
+            "timeline": focus_ctx.get("timeline"),
+            "status": (focus_req.status or "pending").replace("_", " ").title(),
+        })
+    elif active_jobs:
+        focus_job = active_jobs[0]
+        studio_focus.update({
+            "address": (
+                getattr(focus_job["job"].property, "address", None)
+                if getattr(focus_job["job"], "property", None)
+                else None
+            ),
+            "requester": (
+                getattr(focus_job["job"].investor_profile, "full_name", None)
+                if getattr(focus_job["job"], "investor_profile", None)
+                else None
+            ),
+            "ai_rehab_estimate": focus_job.get("ai_estimate"),
+            "budget": float(focus_job["budget"].total_cost or 0) if focus_job.get("budget") else None,
+            "status": (focus_job["job"].status or "Open").replace("_", " ").title(),
+        })
+
+    studio_snapshot = {
+        "scope_queue": stats["open_requests"],
+        "active_builds": stats["active_jobs"],
+        "completed_builds": stats["completed_jobs"],
+        "scope_volume": stats["contractor_total"],
+        "ai_delta": (
+            stats["contractor_total"] - stats["ai_estimate_total"]
+            if stats["ai_estimate_total"] and stats["contractor_total"]
+            else None
+        ),
+        "ai_delta_pct": (
+            round(
+                ((stats["contractor_total"] - stats["ai_estimate_total"]) / stats["ai_estimate_total"]) * 100,
+                1,
+            )
+            if stats["ai_estimate_total"] and stats["contractor_total"]
+            else None
+        ),
+        "focus": studio_focus,
+    }
+
     copilot_suggestions = (
         VIPAssistantSuggestion.query
         .filter_by(vip_profile_id=profile.id)
@@ -1236,19 +1324,47 @@ def contractor_dashboard():
             .limit(5).all()
         )
 
+    design_projects_query = VIPDesignProject.query.filter_by(vip_profile_id=profile.id)
+    design_project_count = design_projects_query.count()
+    design_projects = (
+        design_projects_query
+        .order_by(VIPDesignProject.updated_at.desc())
+        .limit(5).all()
+    )
+    design_annotation_counts = {}
+    design_project_ids = [project.id for project in design_projects]
+    if design_project_ids:
+        design_annotation_counts = dict(
+            db.session.query(
+                VIPDesignAnnotation.project_id,
+                func.count(VIPDesignAnnotation.id),
+            )
+            .filter(VIPDesignAnnotation.project_id.in_(design_project_ids))
+            .group_by(VIPDesignAnnotation.project_id)
+            .all()
+        )
+
+    realtor_ctx = _realtor_context(profile, partner) if is_hybrid_partner else {}
+
     return render_template(
         "vip/contractor/dashboard.html",
         vip_profile           = profile,
         modules               = get_enabled_modules(profile),
         header_name           = get_dashboard_name(profile),
+        is_hybrid_partner     = is_hybrid_partner,
         requests_with_context = requests_with_context,
         active_jobs           = active_jobs,
         recent_proposals      = recent_proposals,
+        design_projects       = design_projects,
+        design_project_count  = design_project_count,
+        design_annotation_counts = design_annotation_counts,
         stats                 = stats,
+        studio_snapshot       = studio_snapshot,
         copilot_suggestions   = copilot_suggestions,
         portal                = "vip",
         portal_name           = "VIP",
         portal_home           = url_for("vip.contractor_dashboard"),
+        **realtor_ctx,
     )
 
 
@@ -3887,6 +4003,7 @@ def onboarding_save():
                 "insurance_realtor": "insurance",
                 "realtor":           "realtor",
                 "contractor":        "contractor",
+                "contractor_realtor": "contractor",
                 "designer":          "designer",
                 "loan_officer":      "lender",
             }

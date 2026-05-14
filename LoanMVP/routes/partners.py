@@ -12,6 +12,7 @@ from LoanMVP.ai.base_ai import AIAssistant
 from LoanMVP.services.partner_search_service import search_external_partners
 
 from LoanMVP.models.crm_models import Partner, Task, CRMNote, Lead
+from LoanMVP.models.vip_models import VIPProfile
 from LoanMVP.models.partner_models import (
     PartnerConnectionRequest,
     PartnerJob,
@@ -142,6 +143,13 @@ def partner_is_realtor(partner) -> bool:
     return any(term in role_text for term in ("realtor", "real estate", "real-estate", "realty"))
 
 
+def partner_is_contractor(partner) -> bool:
+    if not partner:
+        return False
+    role_text = _partner_role_text(partner)
+    return any(term in role_text for term in ("contractor", "construction", "builder", "general contractor"))
+
+
 def partner_is_insurance(partner) -> bool:
     if not partner:
         return False
@@ -175,6 +183,21 @@ def dashboard():
     if not partner:
         flash("Partner profile not found. Please register.", "warning")
         return redirect(url_for("partners.register"))
+
+    vip_profile = VIPProfile.query.filter_by(user_id=current_user.id).first()
+    vip_role = ((getattr(vip_profile, "role_type", "") or "").strip().lower())
+
+    if partner_vip_tier_unlocked(partner) and vip_role in {"contractor", "contractor_realtor"}:
+        return redirect(url_for("vip.contractor_dashboard"))
+
+    # VIP contractor/realtor partners use the Build Studio-style contractor
+    # dashboard so field and property workflows stay together.
+    if (
+        partner_vip_tier_unlocked(partner)
+        and partner_is_realtor(partner)
+        and partner_is_contractor(partner)
+    ):
+        return redirect(url_for("vip.contractor_dashboard"))
 
     # VIP realtors use the unified VIP dashboard — redirect so they never
     # see a separate partner space.
