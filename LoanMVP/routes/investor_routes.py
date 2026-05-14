@@ -995,7 +995,7 @@ def _subscription_catalog():
         },
         "Pro": {
             "key": "pro",
-            "price": 49,
+            "price": 79,
             "features": [
                 "✔ Everything in Core",
                 "✔ Deal workspace",

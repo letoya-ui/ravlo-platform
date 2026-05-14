@@ -9,7 +9,7 @@
   <section class="ravlo-card" style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
     <div>
       <div class="eyebrow">LEAD PRICE</div>
-      <h3 style="margin:6px 0 4px;">${{ '%.2f'|format(partner.lead_price or 25.00) }} per lead</h3>
+      <h3 style="margin:6px 0 4px;">${{ '%.2f'|format(partner.lead_price or 35.00) }} per lead</h3>
       <p class="muted" style="margin:0;">
         Pay-per-lead is <strong>{{ 'enabled' if partner.pay_per_lead_enabled else 'disabled' }}</strong>.
       </p>

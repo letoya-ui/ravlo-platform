@@ -315,7 +315,7 @@ class Partner(db.Model):
 
     # Pay-per-lead billing
     pay_per_lead_enabled = db.Column(db.Boolean, default=False, nullable=False)
-    lead_price = db.Column(db.Float, default=25.00, nullable=True)  # USD charged per delivered lead
+    lead_price = db.Column(db.Float, default=35.00, nullable=True)  # USD charged per delivered lead
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     stripe_payment_method_id = db.Column(db.String(255), nullable=True)  # saved card for lead charges
 

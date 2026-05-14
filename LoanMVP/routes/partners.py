@@ -1133,7 +1133,7 @@ def _charge_partner_for_lead(partner, connection_request=None):
     Returns the PartnerLeadCharge record (status may be 'paid' or 'failed').
     """
     from datetime import datetime as _dt
-    amount = float(partner.lead_price or 25.00)
+    amount = float(partner.lead_price or 35.00)
     charge = PartnerLeadCharge(
         partner_id=partner.id,
         connection_request_id=getattr(connection_request, "id", None),
@@ -1187,7 +1187,7 @@ def update_lead_price():
     pay_per_lead = request.form.get("pay_per_lead_enabled") == "1"
     raw_price = request.form.get("lead_price", "").strip()
     try:
-        price = round(float(raw_price), 2) if raw_price else 25.00
+        price = round(float(raw_price), 2) if raw_price else 35.00
         price = max(1.00, price)
     except ValueError:
         flash("Invalid lead price.", "warning")
