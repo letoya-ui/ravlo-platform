@@ -28,26 +28,39 @@ depends_on = None
 
 
 def upgrade():
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+
+    ec_cols = {c["name"] for c in inspector.get_columns("elena_clients")} if inspector.has_table("elena_clients") else set()
     with op.batch_alter_table("elena_clients") as batch:
-        batch.add_column(sa.Column("role", sa.String(length=50), nullable=True))
-        batch.add_column(sa.Column("tags", sa.String(length=255), nullable=True))
+        if "role" not in ec_cols:
+            batch.add_column(sa.Column("role", sa.String(length=50), nullable=True))
+        if "tags" not in ec_cols:
+            batch.add_column(sa.Column("tags", sa.String(length=255), nullable=True))
 
+    el_cols = {c["name"] for c in inspector.get_columns("elena_listings")} if inspector.has_table("elena_listings") else set()
     with op.batch_alter_table("elena_listings") as batch:
-        batch.add_column(
-            sa.Column(
-                "status",
-                sa.String(length=20),
-                nullable=False,
-                server_default="active",
+        if "status" not in el_cols:
+            batch.add_column(
+                sa.Column(
+                    "status",
+                    sa.String(length=20),
+                    nullable=False,
+                    server_default="active",
+                )
             )
-        )
 
+    ef_cols = {c["name"] for c in inspector.get_columns("elena_flyers")} if inspector.has_table("elena_flyers") else set()
     with op.batch_alter_table("elena_flyers") as batch:
-        batch.add_column(sa.Column("title", sa.String(length=255), nullable=True))
-        batch.add_column(sa.Column("cta", sa.String(length=255), nullable=True))
+        if "title" not in ef_cols:
+            batch.add_column(sa.Column("title", sa.String(length=255), nullable=True))
+        if "cta" not in ef_cols:
+            batch.add_column(sa.Column("cta", sa.String(length=255), nullable=True))
 
+    ei_cols = {c["name"] for c in inspector.get_columns("elena_interactions")} if inspector.has_table("elena_interactions") else set()
     with op.batch_alter_table("elena_interactions") as batch:
-        batch.add_column(sa.Column("due_at", sa.DateTime(), nullable=True))
+        if "due_at" not in ei_cols:
+            batch.add_column(sa.Column("due_at", sa.DateTime(), nullable=True))
 
 
 def downgrade():

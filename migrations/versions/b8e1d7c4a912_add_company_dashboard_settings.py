@@ -16,8 +16,12 @@ depends_on = None
 
 
 def upgrade():
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    cols = {c["name"] for c in inspector.get_columns("companies")}
     with op.batch_alter_table("companies", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("dashboard_settings", sa.Text(), nullable=True))
+        if "dashboard_settings" not in cols:
+            batch_op.add_column(sa.Column("dashboard_settings", sa.Text(), nullable=True))
 
 
 def downgrade():

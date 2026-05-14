@@ -10,32 +10,38 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        "canva_connections",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("user_id", sa.Integer(), nullable=False),
-        sa.Column("access_token", sa.Text(), nullable=False),
-        sa.Column("refresh_token", sa.Text(), nullable=True),
-        sa.Column("scope", sa.String(length=255), nullable=True),
-        sa.Column("expires_at", sa.DateTime(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=True),
-        sa.Column("updated_at", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("user_id"),
-    )
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
 
-    op.create_table(
-        "partner_note",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("partner_id", sa.Integer(), nullable=False),
-        sa.Column("author", sa.String(length=120), nullable=True),
-        sa.Column("content", sa.Text(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["partner_id"], ["partners.id"]),
-        sa.PrimaryKeyConstraint("id"),
-    )
+    if not inspector.has_table("canva_connections"):
+        op.create_table(
+            "canva_connections",
+            sa.Column("id", sa.Integer(), nullable=False),
+            sa.Column("user_id", sa.Integer(), nullable=False),
+            sa.Column("access_token", sa.Text(), nullable=False),
+            sa.Column("refresh_token", sa.Text(), nullable=True),
+            sa.Column("scope", sa.String(length=255), nullable=True),
+            sa.Column("expires_at", sa.DateTime(), nullable=True),
+            sa.Column("created_at", sa.DateTime(), nullable=True),
+            sa.Column("updated_at", sa.DateTime(), nullable=True),
+            sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
+            sa.PrimaryKeyConstraint("id"),
+            sa.UniqueConstraint("user_id"),
+        )
 
+    if not inspector.has_table("partner_note"):
+        op.create_table(
+            "partner_note",
+            sa.Column("id", sa.Integer(), nullable=False),
+            sa.Column("partner_id", sa.Integer(), nullable=False),
+            sa.Column("author", sa.String(length=120), nullable=True),
+            sa.Column("content", sa.Text(), nullable=False),
+            sa.Column("created_at", sa.DateTime(), nullable=True),
+            sa.ForeignKeyConstraint(["partner_id"], ["partners.id"]),
+            sa.PrimaryKeyConstraint("id"),
+        )
+
+    ef_cols = {c["name"] for c in inspector.get_columns("elena_flyers")} if inspector.has_table("elena_flyers") else set()
     with op.batch_alter_table("elena_flyers", schema=None) as batch_op:
         batch_op.alter_column(
             "flyer_type",
@@ -57,9 +63,13 @@ def upgrade():
             existing_type=sa.VARCHAR(),
             nullable=False,
         )
-        batch_op.drop_column("export_url")
-        batch_op.drop_column("created_by")
+        if "export_url" in ef_cols:
+            batch_op.drop_column("export_url")
+        if "created_by" in ef_cols:
+            batch_op.drop_column("created_by")
 
+    el_cols = {c["name"] for c in inspector.get_columns("elena_listings")} if inspector.has_table("elena_listings") else set()
+    el_idxs = {i["name"] for i in inspector.get_indexes("elena_listings")} if inspector.has_table("elena_listings") else set()
     with op.batch_alter_table("elena_listings", schema=None) as batch_op:
         batch_op.alter_column(
             "mls_number",
@@ -104,68 +114,115 @@ def upgrade():
             type_=sa.Integer(),
             existing_nullable=True,
         )
-        batch_op.drop_index(batch_op.f("ix_elena_listings_mls_number"))
-        batch_op.drop_column("lot_size")
-        batch_op.drop_column("property_type")
-        batch_op.drop_column("year_built")
+        if "ix_elena_listings_mls_number" in el_idxs:
+            batch_op.drop_index(batch_op.f("ix_elena_listings_mls_number"))
+        if "lot_size" in el_cols:
+            batch_op.drop_column("lot_size")
+        if "property_type" in el_cols:
+            batch_op.drop_column("property_type")
+        if "year_built" in el_cols:
+            batch_op.drop_column("year_built")
 
+    vaa_cols = {c["name"] for c in inspector.get_columns("vip_assistant_actions")} if inspector.has_table("vip_assistant_actions") else set()
     with op.batch_alter_table("vip_assistant_actions", schema=None) as batch_op:
-        batch_op.drop_constraint(
-            batch_op.f("vip_assistant_actions_listing_id_fkey"),
-            type_="foreignkey",
-        )
-        batch_op.drop_column("listing_id")
+        if "listing_id" in vaa_cols:
+            try:
+                batch_op.drop_constraint(
+                    batch_op.f("vip_assistant_actions_listing_id_fkey"),
+                    type_="foreignkey",
+                )
+            except Exception:
+                pass
+            batch_op.drop_column("listing_id")
 
+    vas_cols = {c["name"] for c in inspector.get_columns("vip_assistant_suggestions")} if inspector.has_table("vip_assistant_suggestions") else set()
     with op.batch_alter_table("vip_assistant_suggestions", schema=None) as batch_op:
-        batch_op.drop_constraint(
-            batch_op.f("vip_assistant_suggestions_listing_id_fkey"),
-            type_="foreignkey",
-        )
-        batch_op.drop_column("listing_id")
+        if "listing_id" in vas_cols:
+            try:
+                batch_op.drop_constraint(
+                    batch_op.f("vip_assistant_suggestions_listing_id_fkey"),
+                    type_="foreignkey",
+                )
+            except Exception:
+                pass
+            batch_op.drop_column("listing_id")
 
+    vb_cols = {c["name"] for c in inspector.get_columns("vip_budgets")} if inspector.has_table("vip_budgets") else set()
     with op.batch_alter_table("vip_budgets", schema=None) as batch_op:
-        batch_op.drop_constraint(
-            batch_op.f("vip_budgets_listing_id_fkey"),
-            type_="foreignkey",
-        )
-        batch_op.drop_column("listing_id")
+        if "listing_id" in vb_cols:
+            try:
+                batch_op.drop_constraint(
+                    batch_op.f("vip_budgets_listing_id_fkey"),
+                    type_="foreignkey",
+                )
+            except Exception:
+                pass
+            batch_op.drop_column("listing_id")
 
+    ve_cols = {c["name"] for c in inspector.get_columns("vip_expenses")} if inspector.has_table("vip_expenses") else set()
     with op.batch_alter_table("vip_expenses", schema=None) as batch_op:
-        batch_op.drop_constraint(
-            batch_op.f("vip_expenses_listing_id_fkey"),
-            type_="foreignkey",
-        )
-        batch_op.drop_column("listing_id")
+        if "listing_id" in ve_cols:
+            try:
+                batch_op.drop_constraint(
+                    batch_op.f("vip_expenses_listing_id_fkey"),
+                    type_="foreignkey",
+                )
+            except Exception:
+                pass
+            batch_op.drop_column("listing_id")
 
+    vi_income_cols = {c["name"] for c in inspector.get_columns("vip_income")} if inspector.has_table("vip_income") else set()
     with op.batch_alter_table("vip_income", schema=None) as batch_op:
-        batch_op.drop_constraint(
-            batch_op.f("vip_income_listing_id_fkey"),
-            type_="foreignkey",
-        )
-        batch_op.drop_column("listing_id")
+        if "listing_id" in vi_income_cols:
+            try:
+                batch_op.drop_constraint(
+                    batch_op.f("vip_income_listing_id_fkey"),
+                    type_="foreignkey",
+                )
+            except Exception:
+                pass
+            batch_op.drop_column("listing_id")
 
+    vi_cols = {c["name"] for c in inspector.get_columns("vip_interactions")} if inspector.has_table("vip_interactions") else set()
     with op.batch_alter_table("vip_interactions", schema=None) as batch_op:
-        batch_op.drop_constraint(
-            batch_op.f("vip_interactions_listing_id_fkey"),
-            type_="foreignkey",
-        )
-        batch_op.drop_column("listing_id")
+        if "listing_id" in vi_cols:
+            try:
+                batch_op.drop_constraint(
+                    batch_op.f("vip_interactions_listing_id_fkey"),
+                    type_="foreignkey",
+                )
+            except Exception:
+                pass
+            batch_op.drop_column("listing_id")
 
+    vp_cols = {c["name"] for c in inspector.get_columns("vip_profiles")} if inspector.has_table("vip_profiles") else set()
     with op.batch_alter_table("vip_profiles", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("dashboard_title", sa.String(length=255), nullable=True))
-        batch_op.add_column(sa.Column("headline", sa.String(length=255), nullable=True))
-        batch_op.add_column(sa.Column("bio", sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column("service_area", sa.String(length=255), nullable=True))
-        batch_op.add_column(sa.Column("specialties", sa.String(length=255), nullable=True))
-        batch_op.add_column(
-            sa.Column("marketplace_enabled", sa.String(length=10), nullable=False, server_default="no")
-        )
-        batch_op.add_column(sa.Column("public_slug", sa.String(length=255), nullable=True))
-        batch_op.add_column(sa.Column("enabled_modules", sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column("brand_color", sa.String(length=50), nullable=True))
-        batch_op.add_column(sa.Column("logo_url", sa.String(length=500), nullable=True))
-        batch_op.add_column(sa.Column("profile_image_url", sa.String(length=500), nullable=True))
-        batch_op.add_column(sa.Column("cover_image_url", sa.String(length=500), nullable=True))
+        if "dashboard_title" not in vp_cols:
+            batch_op.add_column(sa.Column("dashboard_title", sa.String(length=255), nullable=True))
+        if "headline" not in vp_cols:
+            batch_op.add_column(sa.Column("headline", sa.String(length=255), nullable=True))
+        if "bio" not in vp_cols:
+            batch_op.add_column(sa.Column("bio", sa.Text(), nullable=True))
+        if "service_area" not in vp_cols:
+            batch_op.add_column(sa.Column("service_area", sa.String(length=255), nullable=True))
+        if "specialties" not in vp_cols:
+            batch_op.add_column(sa.Column("specialties", sa.String(length=255), nullable=True))
+        if "marketplace_enabled" not in vp_cols:
+            batch_op.add_column(
+                sa.Column("marketplace_enabled", sa.String(length=10), nullable=False, server_default="no")
+            )
+        if "public_slug" not in vp_cols:
+            batch_op.add_column(sa.Column("public_slug", sa.String(length=255), nullable=True))
+        if "enabled_modules" not in vp_cols:
+            batch_op.add_column(sa.Column("enabled_modules", sa.Text(), nullable=True))
+        if "brand_color" not in vp_cols:
+            batch_op.add_column(sa.Column("brand_color", sa.String(length=50), nullable=True))
+        if "logo_url" not in vp_cols:
+            batch_op.add_column(sa.Column("logo_url", sa.String(length=500), nullable=True))
+        if "profile_image_url" not in vp_cols:
+            batch_op.add_column(sa.Column("profile_image_url", sa.String(length=500), nullable=True))
+        if "cover_image_url" not in vp_cols:
+            batch_op.add_column(sa.Column("cover_image_url", sa.String(length=500), nullable=True))
 
     with op.batch_alter_table("vip_profiles", schema=None) as batch_op:
         batch_op.alter_column("marketplace_enabled", server_default=None)

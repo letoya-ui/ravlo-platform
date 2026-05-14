@@ -17,53 +17,49 @@ depends_on = None
 
 
 def upgrade():
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
     # Create elena_listings table
-    op.create_table(
-        'elena_listings',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('mls_number', sa.String(), nullable=False, index=True),
-
-        sa.Column('address', sa.String(), nullable=True),
-        sa.Column('city', sa.String(), nullable=True),
-        sa.Column('state', sa.String(), nullable=True),
-        sa.Column('zip_code', sa.String(), nullable=True),
-
-        sa.Column('price', sa.Float(), nullable=True),
-        sa.Column('beds', sa.Float(), nullable=True),
-        sa.Column('baths', sa.Float(), nullable=True),
-        sa.Column('sqft', sa.Integer(), nullable=True),
-        sa.Column('lot_size', sa.Float(), nullable=True),
-        sa.Column('property_type', sa.String(), nullable=True),
-        sa.Column('year_built', sa.Integer(), nullable=True),
-
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('photos_json', sa.Text(), nullable=True),
-
-        sa.Column('client_id', sa.Integer(), sa.ForeignKey('elena_clients.id'), nullable=True),
-
-        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
-    )
+    if not inspector.has_table('elena_listings'):
+        op.create_table(
+            'elena_listings',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('mls_number', sa.String(), nullable=False, index=True),
+            sa.Column('address', sa.String(), nullable=True),
+            sa.Column('city', sa.String(), nullable=True),
+            sa.Column('state', sa.String(), nullable=True),
+            sa.Column('zip_code', sa.String(), nullable=True),
+            sa.Column('price', sa.Float(), nullable=True),
+            sa.Column('beds', sa.Float(), nullable=True),
+            sa.Column('baths', sa.Float(), nullable=True),
+            sa.Column('sqft', sa.Integer(), nullable=True),
+            sa.Column('lot_size', sa.Float(), nullable=True),
+            sa.Column('property_type', sa.String(), nullable=True),
+            sa.Column('year_built', sa.Integer(), nullable=True),
+            sa.Column('description', sa.Text(), nullable=True),
+            sa.Column('photos_json', sa.Text(), nullable=True),
+            sa.Column('client_id', sa.Integer(), sa.ForeignKey('elena_clients.id'), nullable=True),
+            sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
+        )
 
     # Create elena_flyers table
-    op.create_table(
-        'elena_flyers',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('flyer_type', sa.Enum(
-            'just_listed', 'just_sold', 'open_house', 'coming_soon',
-            'price_drop', 'buyer_need', 'market_update',
-            name='flyertype'
-        ), nullable=False),
-
-        sa.Column('property_address', sa.String(), nullable=True),
-        sa.Column('property_id', sa.String(), nullable=True),
-        sa.Column('body', sa.Text(), nullable=False),
-        sa.Column('export_url', sa.String(), nullable=True),
-
-        sa.Column('listing_id', sa.Integer(), sa.ForeignKey('elena_listings.id'), nullable=True),
-
-        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
-        sa.Column('created_by', sa.String(), server_default='elena'),
-    )
+    if not inspector.has_table('elena_flyers'):
+        op.create_table(
+            'elena_flyers',
+            sa.Column('id', sa.Integer(), primary_key=True),
+            sa.Column('flyer_type', sa.Enum(
+                'just_listed', 'just_sold', 'open_house', 'coming_soon',
+                'price_drop', 'buyer_need', 'market_update',
+                name='flyertype'
+            ), nullable=False),
+            sa.Column('property_address', sa.String(), nullable=True),
+            sa.Column('property_id', sa.String(), nullable=True),
+            sa.Column('body', sa.Text(), nullable=False),
+            sa.Column('export_url', sa.String(), nullable=True),
+            sa.Column('listing_id', sa.Integer(), sa.ForeignKey('elena_listings.id'), nullable=True),
+            sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
+            sa.Column('created_by', sa.String(), server_default='elena'),
+        )
 
 
 def downgrade():

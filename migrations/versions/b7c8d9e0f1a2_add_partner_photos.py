@@ -17,6 +17,10 @@ depends_on = None
 
 
 def upgrade():
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    if inspector.has_table("partner_photos"):
+        return
     op.create_table(
         "partner_photos",
         sa.Column("id", sa.Integer(), nullable=False),

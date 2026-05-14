@@ -8,8 +8,13 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    op.add_column('partners', sa.Column('specialty', sa.String(length=255), nullable=True))
-    op.add_column('partners', sa.Column('bio', sa.Text(), nullable=True))
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    cols = {c["name"] for c in inspector.get_columns("partners")}
+    if "specialty" not in cols:
+        op.add_column('partners', sa.Column('specialty', sa.String(length=255), nullable=True))
+    if "bio" not in cols:
+        op.add_column('partners', sa.Column('bio', sa.Text(), nullable=True))
 
 def downgrade():
     op.drop_column('partners', 'bio')

@@ -15,9 +15,14 @@ depends_on = None
 
 
 def upgrade():
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    bp_cols = {c["name"] for c in inspector.get_columns("build_projects")} if inspector.has_table("build_projects") else set()
     with op.batch_alter_table("build_projects", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("development_type", sa.String(length=64), nullable=True))
-        batch_op.add_column(sa.Column("exterior_url", sa.Text(), nullable=True))
+        if "development_type" not in bp_cols:
+            batch_op.add_column(sa.Column("development_type", sa.String(length=64), nullable=True))
+        if "exterior_url" not in bp_cols:
+            batch_op.add_column(sa.Column("exterior_url", sa.Text(), nullable=True))
         batch_op.alter_column(
             "property_type",
             existing_type=sa.VARCHAR(length=100),

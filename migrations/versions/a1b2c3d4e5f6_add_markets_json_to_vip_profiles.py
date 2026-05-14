@@ -18,8 +18,12 @@ depends_on = None
 
 
 def upgrade():
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    cols = {c["name"] for c in inspector.get_columns("vip_profiles")} if inspector.has_table("vip_profiles") else set()
     with op.batch_alter_table('vip_profiles', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('markets_json', sa.Text(), nullable=True))
+        if "markets_json" not in cols:
+            batch_op.add_column(sa.Column('markets_json', sa.Text(), nullable=True))
 
 
 def downgrade():

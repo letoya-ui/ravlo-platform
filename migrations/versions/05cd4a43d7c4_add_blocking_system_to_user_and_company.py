@@ -16,23 +16,50 @@ depends_on = None
 
 
 def upgrade():
-    with op.batch_alter_table("user", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("is_blocked", sa.Boolean(), nullable=False, server_default=sa.false()))
-        batch_op.add_column(sa.Column("blocked_at", sa.DateTime(), nullable=True))
-        batch_op.add_column(sa.Column("blocked_reason", sa.String(length=100), nullable=True))
-        batch_op.add_column(sa.Column("blocked_note", sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column("blocked_by", sa.Integer(), nullable=True))
-        batch_op.create_foreign_key("fk_user_blocked_by_user", "user", ["blocked_by"], ["id"])
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
 
+    user_cols = {c["name"] for c in inspector.get_columns("user")}
+    user_fks = {fk["name"] for fk in inspector.get_foreign_keys("user")}
+    with op.batch_alter_table("user", schema=None) as batch_op:
+        if "is_blocked" not in user_cols:
+            batch_op.add_column(sa.Column("is_blocked", sa.Boolean(), nullable=False, server_default=sa.false()))
+        if "blocked_at" not in user_cols:
+            batch_op.add_column(sa.Column("blocked_at", sa.DateTime(), nullable=True))
+        if "blocked_reason" not in user_cols:
+            batch_op.add_column(sa.Column("blocked_reason", sa.String(length=100), nullable=True))
+        if "blocked_note" not in user_cols:
+            batch_op.add_column(sa.Column("blocked_note", sa.Text(), nullable=True))
+        if "blocked_by" not in user_cols:
+            batch_op.add_column(sa.Column("blocked_by", sa.Integer(), nullable=True))
+        if "fk_user_blocked_by_user" not in user_fks:
+            try:
+                batch_op.create_foreign_key("fk_user_blocked_by_user", "user", ["blocked_by"], ["id"])
+            except Exception:
+                pass
+
+    co_cols = {c["name"] for c in inspector.get_columns("companies")}
+    co_fks = {fk["name"] for fk in inspector.get_foreign_keys("companies")}
     with op.batch_alter_table("companies", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("is_blocked", sa.Boolean(), nullable=False, server_default=sa.false()))
-        batch_op.add_column(sa.Column("blocked_at", sa.DateTime(), nullable=True))
-        batch_op.add_column(sa.Column("blocked_reason", sa.String(length=100), nullable=True))
-        batch_op.add_column(sa.Column("blocked_note", sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column("blocked_by", sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column("billing_status", sa.String(length=50), nullable=True))
-        batch_op.add_column(sa.Column("grace_period_ends_at", sa.DateTime(), nullable=True))
-        batch_op.create_foreign_key("fk_companies_blocked_by_user", "user", ["blocked_by"], ["id"])
+        if "is_blocked" not in co_cols:
+            batch_op.add_column(sa.Column("is_blocked", sa.Boolean(), nullable=False, server_default=sa.false()))
+        if "blocked_at" not in co_cols:
+            batch_op.add_column(sa.Column("blocked_at", sa.DateTime(), nullable=True))
+        if "blocked_reason" not in co_cols:
+            batch_op.add_column(sa.Column("blocked_reason", sa.String(length=100), nullable=True))
+        if "blocked_note" not in co_cols:
+            batch_op.add_column(sa.Column("blocked_note", sa.Text(), nullable=True))
+        if "blocked_by" not in co_cols:
+            batch_op.add_column(sa.Column("blocked_by", sa.Integer(), nullable=True))
+        if "billing_status" not in co_cols:
+            batch_op.add_column(sa.Column("billing_status", sa.String(length=50), nullable=True))
+        if "grace_period_ends_at" not in co_cols:
+            batch_op.add_column(sa.Column("grace_period_ends_at", sa.DateTime(), nullable=True))
+        if "fk_companies_blocked_by_user" not in co_fks:
+            try:
+                batch_op.create_foreign_key("fk_companies_blocked_by_user", "user", ["blocked_by"], ["id"])
+            except Exception:
+                pass
 
 
 def downgrade():
