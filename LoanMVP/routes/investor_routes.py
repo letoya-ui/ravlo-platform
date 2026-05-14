@@ -98,6 +98,7 @@ from LoanMVP.models.investor_models import (
     DealConversation,
     FundingRequest,
     Project,
+    DealFinderCache,
 )
 try:
     from LoanMVP.models.activity_models import InvestorActivity
@@ -4123,20 +4124,63 @@ def api_property_tool_search():
     except (TypeError, ValueError):
         limit = 20
 
-    try:
-        orchestrator = PropertyIntelligenceOrchestrator(
-            strategy=strategy,
-            asset_type=asset_type,
-        )
+    # ── Zip-code cache ────────────────────────────────────────────
+    _now = datetime.utcnow()
+    _cache_hit = False
+    _cached = None
+    if zip_code:
+        # Purge expired entries for this zip while we're here
+        DealFinderCache.query.filter(
+            DealFinderCache.zip_code == zip_code,
+            DealFinderCache.expires_at < _now,
+        ).delete(synchronize_session=False)
+        db.session.flush()
 
-        results, meta = orchestrator.run_search(
-            address=address,
-            city=city,
-            state=state,
-            zip_code=zip_code,
-            limit=limit,
-        )
-        results = [_proxy_search_result_images(result) for result in results]
+        _cached = DealFinderCache.query.filter(
+            DealFinderCache.zip_code == zip_code,
+            DealFinderCache.strategy == strategy,
+            DealFinderCache.asset_type == asset_type,
+            DealFinderCache.expires_at >= _now,
+        ).first()
+
+    try:
+        if _cached:
+            _cache_hit = True
+            results = json.loads(_cached.results_json)
+            meta = json.loads(_cached.meta_json) if _cached.meta_json else {}
+        else:
+            orchestrator = PropertyIntelligenceOrchestrator(
+                strategy=strategy,
+                asset_type=asset_type,
+            )
+            results, meta = orchestrator.run_search(
+                address=address,
+                city=city,
+                state=state,
+                zip_code=zip_code,
+                limit=limit,
+            )
+            results = [_proxy_search_result_images(result) for result in results]
+
+            # Store in cache if we have a zip code to key on
+            if zip_code and results:
+                from datetime import timedelta
+                try:
+                    _entry = DealFinderCache(
+                        zip_code=zip_code,
+                        city=city or None,
+                        state=state or None,
+                        strategy=strategy,
+                        asset_type=asset_type,
+                        results_json=json.dumps(results),
+                        meta_json=json.dumps(meta),
+                        expires_at=_now + timedelta(hours=DealFinderCache.CACHE_TTL_HOURS),
+                    )
+                    db.session.add(_entry)
+                    db.session.flush()
+                except Exception:
+                    pass  # cache write failure must never break the search
+
         unfiltered_count = len(results)
 
         def passes_deal_finder_filters(item):
@@ -4187,9 +4231,11 @@ def api_property_tool_search():
         if buyer_profile:
             results.sort(key=buyer_profile_score, reverse=True)
 
-        # Increment quota counter on success
-        if _SEARCH_LIMIT is not None and _ip:
+        # Increment quota only for live API calls — cache hits are free
+        if _SEARCH_LIMIT is not None and _ip and not _cache_hit:
             _ip.deal_finder_search_count = (_ip.deal_finder_search_count or 0) + 1
+            db.session.commit()
+        elif not _cache_hit:
             db.session.commit()
 
         searches_used = getattr(_ip, "deal_finder_search_count", None) if _SEARCH_LIMIT is not None else None
@@ -4197,16 +4243,16 @@ def api_property_tool_search():
         return jsonify({
             "status": "ok",
             "message": (
-                f"No {meta['asset_type_label'].lower()} properties matched that search."
-                if not results and meta["asset_type"] != "any"
+                f"No {meta.get('asset_type_label', '').lower()} properties matched that search."
+                if not results and meta.get("asset_type") != "any"
                 else None
             ),
             "results": results,
             "count": len(results),
-            "total_matches": meta["total_matches"],
-            "strategy": meta["strategy"],
-            "asset_type": meta["asset_type"],
-            "asset_type_label": meta["asset_type_label"],
+            "total_matches": meta.get("total_matches"),
+            "strategy": meta.get("strategy"),
+            "asset_type": meta.get("asset_type"),
+            "asset_type_label": meta.get("asset_type_label"),
             "buyer_profile": buyer_profile,
             "filters": {
                 "max_price": max_price_filter,
@@ -4214,12 +4260,13 @@ def api_property_tool_search():
                 "min_discount": min_discount_filter,
                 "unfiltered_count": unfiltered_count,
             },
-            "zip": meta["zip"],
-            "address": meta["address"],
-            "engine_ready": meta["engine_ready"],
-            "budget_remaining": meta["budget_remaining"],
+            "zip": meta.get("zip"),
+            "address": meta.get("address"),
+            "engine_ready": meta.get("engine_ready"),
+            "budget_remaining": meta.get("budget_remaining"),
             "searches_used": searches_used,
             "searches_limit": _SEARCH_LIMIT,
+            "from_cache": _cache_hit,
         })
 
     except Exception as e:

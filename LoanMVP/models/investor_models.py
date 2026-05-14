@@ -176,6 +176,29 @@ class InvestorProfile(db.Model, TimestampMixin):
         return f"<InvestorProfile id={self.id} user_id={self.user_id}>"
 
 
+class DealFinderCache(db.Model):
+    """
+    Shared zip-code level cache for Deal Finder search results.
+    Keyed by zip_code + strategy + asset_type, expires after CACHE_TTL_HOURS.
+    Cached hits are free — no API call made, no quota counted against the user.
+    """
+    __tablename__ = "deal_finder_cache"
+
+    CACHE_TTL_HOURS = 24
+
+    id = db.Column(db.Integer, primary_key=True)
+    zip_code = db.Column(db.String(20), nullable=False, index=True)
+    city = db.Column(db.String(100), nullable=True)
+    state = db.Column(db.String(10), nullable=True)
+    strategy = db.Column(db.String(30), nullable=False, default="all")
+    asset_type = db.Column(db.String(30), nullable=False, default="any")
+    results_json = db.Column(db.Text, nullable=False)
+    meta_json = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+
+    def __repr__(self):
+        return f"<DealFinderCache zip={self.zip_code} strategy={self.strategy} expires={self.expires_at}>"
 
 class Investment(db.Model, TimestampMixin):
     __tablename__ = "investment"
