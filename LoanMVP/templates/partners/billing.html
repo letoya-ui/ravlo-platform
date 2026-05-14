@@ -1,13 +1,13 @@
 {% extends "layouts/ravlo_base.html" %}
 
 {% block title %}Ravlo • Partner Billing{% endblock %}
-
 {% block page_title %}Billing{% endblock %}
-{% block page_subline %}Manage your Ravlo Partner subscription and unlock more tools.{% endblock %}
+{% block page_subline %}Manage your Ravlo Partner subscription and pay-per-lead settings.{% endblock %}
 
 {% block content %}
 <div class="ravlo-shell">
 
+  {# ── Current Plan ──────────────────────────────────────── #}
   <section class="ravlo-card" style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
     <div>
       <div class="eyebrow">CURRENT PLAN</div>
@@ -26,6 +26,7 @@
     </div>
   </section>
 
+  {# ── Subscription Plans ────────────────────────────────── #}
   <section class="ravlo-grid ravlo-grid-3" style="align-items:stretch; margin-top:16px;">
     {% for plan in plans %}
       <article class="ravlo-card" style="display:flex; flex-direction:column; justify-content:space-between; gap:18px;">
@@ -33,38 +34,95 @@
           <div class="eyebrow">{{ plan.name|upper }}</div>
           <h3 style="margin:8px 0 6px;">{{ plan.name }}</h3>
           <div style="font-size:1.4rem; font-weight:800; margin-bottom:12px;">{{ plan.price }}</div>
-
           <ul style="margin:0; padding-left:18px; color:var(--muted, #94a3b8);">
             {% for feature in plan.features %}
               <li style="margin-bottom:8px;">{{ feature }}</li>
             {% endfor %}
           </ul>
         </div>
-
         <div>
           {% if (partner.subscription_tier or 'Free') == plan.name %}
             <button class="ravlo-btn ghost" disabled>Current Plan</button>
           {% elif plan.name == 'Enterprise' %}
-            <a href="mailto:hello@ravlohq.com?subject=Enterprise Partner Inquiry" class="ravlo-btn ghost">
-              Contact Us
-            </a>
+            <a href="mailto:hello@ravlohq.com?subject=Enterprise Partner Inquiry" class="ravlo-btn ghost">Contact Us</a>
           {% else %}
-            <a href="{{ url_for('partners.subscribe', tier=plan.name) }}" class="ravlo-btn">
-              Select {{ plan.name }}
-            </a>
+            <a href="{{ url_for('partners.subscribe', tier=plan.name) }}" class="ravlo-btn">Select {{ plan.name }}</a>
           {% endif %}
         </div>
       </article>
     {% endfor %}
   </section>
 
-  <section class="ravlo-card" style="margin-top:16px;">
-    <div class="eyebrow">BILLING & CARD DATA</div>
-    <p class="muted" style="margin:8px 0 0; line-height:1.55;">
-      Card entry is handled by our secure payment processor. Ravlo does not store full card numbers,
-      CVV codes, or magnetic stripe data on our servers. We may receive limited billing details such as
-      card brand, last four digits, and expiration date for account support and compliance purposes.
+  {# ── Pay-Per-Lead Settings ─────────────────────────────── #}
+  <section class="ravlo-card" style="margin-top:20px;">
+    <div class="eyebrow">PAY-PER-LEAD</div>
+    <p class="muted" style="margin:8px 0 16px; line-height:1.55;">
+      When enabled, you are charged your set lead price each time a new lead is delivered to your inbox.
+      Leads are charged automatically to your saved payment method.
     </p>
+
+    <form method="POST" action="{{ url_for('partners.update_lead_price') }}" style="display:grid; gap:14px; max-width:480px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+        <input type="checkbox" name="pay_per_lead_enabled" value="1"
+               {% if partner.pay_per_lead_enabled %}checked{% endif %}
+               style="width:18px; height:18px; accent-color:#7ab8ff;">
+        <span style="font-weight:700;">Enable pay-per-lead billing</span>
+      </label>
+
+      <div>
+        <label class="eyebrow" style="display:block; margin-bottom:6px;">Lead Price (USD)</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--muted);">$</span>
+          <input type="number" name="lead_price" min="1" step="0.01"
+                 value="{{ '%.2f'|format(partner.lead_price or 25.00) }}"
+                 style="width:120px; padding:8px 10px; background:rgba(255,255,255,.05);
+                        border:1px solid rgba(255,255,255,.12); border-radius:8px;
+                        color:var(--text); font-size:1rem;">
+          <span class="muted">per lead</span>
+        </div>
+      </div>
+
+      <button type="submit" class="ravlo-btn primary sm" style="width:fit-content;">Save Lead Pricing</button>
+    </form>
+
+    {% if partner.pay_per_lead_enabled %}
+      <div style="margin-top:16px;">
+        <a href="{{ url_for('partners.lead_charge_history') }}" class="ravlo-btn ghost sm">
+          View Lead Charge History
+        </a>
+      </div>
+    {% endif %}
+  </section>
+
+  {# ── Payment Method (card on file for lead charges) ────── #}
+  <section class="ravlo-card" style="margin-top:20px;">
+    <div class="eyebrow">CREDIT CARD / PAYMENT METHOD</div>
+    <p class="muted" style="margin:8px 0 0; line-height:1.55;">
+      Your saved card is charged automatically for each lead delivery.
+      Card data is processed securely by Stripe — Ravlo does not store full card numbers or CVV codes.
+    </p>
+
+    {% if partner.stripe_payment_method_id %}
+      <div style="margin-top:12px; display:flex; align-items:center; gap:10px;">
+        <span style="color:#3ce43c; font-weight:700;">✔ Card on file</span>
+        <button id="replace-card-btn" class="ravlo-btn ghost sm" type="button">Replace Card</button>
+      </div>
+      <div id="card-section" style="display:none; margin-top:16px;">
+        {% include 'partners/_card_element.html' %}
+      </div>
+      <script>
+        document.getElementById("replace-card-btn").addEventListener("click", function () {
+          document.getElementById("card-section").style.display = "block";
+          this.style.display = "none";
+        });
+      </script>
+    {% else %}
+      <div style="margin-top:16px;">
+        {% include 'partners/_card_element.html' %}
+      </div>
+    {% endif %}
   </section>
 
 </div>

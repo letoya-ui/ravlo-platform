@@ -1,0 +1,111 @@
+{# Reusable Stripe Card Element for partner billing pages #}
+<div id="partner-card-wrapper" style="max-width:480px;">
+  <div id="partner-card-element" style="
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:10px;
+    padding:14px 16px;
+  "></div>
+  <div id="partner-card-errors" style="color:#ff8080; font-size:.85rem; margin-top:8px; display:none;"></div>
+
+  <label style="display:flex; align-items:flex-start; gap:8px; font-size:.84rem;
+                color:var(--muted); margin:14px 0 14px; max-width:440px;">
+    <input type="checkbox" id="partner-card-consent" required style="margin-top:3px;">
+    <span>I authorise Ravlo to charge this card for lead deliveries and subscription fees in line with my plan settings.</span>
+  </label>
+
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <button id="partner-save-card-btn" class="ravlo-btn primary sm" type="button">Save Card</button>
+    <span id="partner-card-spinner" style="display:none; color:var(--muted); font-size:.9rem;">Processing…</span>
+    <span id="partner-card-ok" style="display:none; color:#3ce43c; font-size:.9rem;">✔ Card saved</span>
+  </div>
+</div>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+(function () {
+  const pubKey = "{{ config.get('STRIPE_PUBLISHABLE_KEY', '') }}";
+  if (!pubKey) return;
+
+  const stripe   = Stripe(pubKey);
+  const elements = stripe.elements();
+  const card     = elements.create("card", {
+    style: {
+      base: {
+        color: "#e6e6e6",
+        fontFamily: "inherit",
+        fontSize: "15px",
+        "::placeholder": { color: "#666" },
+      },
+      invalid: { color: "#ff8080" },
+    },
+    hidePostalCode: false,
+  });
+  card.mount("#partner-card-element");
+
+  card.on("change", function (e) {
+    const el = document.getElementById("partner-card-errors");
+    el.textContent  = e.error ? e.error.message : "";
+    el.style.display = e.error ? "block" : "none";
+  });
+
+  document.getElementById("partner-save-card-btn").addEventListener("click", async function () {
+    const consent = document.getElementById("partner-card-consent");
+    if (!consent.checked) {
+      alert("Please accept the card authorisation before saving.");
+      return;
+    }
+
+    const btn     = this;
+    const spinner = document.getElementById("partner-card-spinner");
+    const okEl    = document.getElementById("partner-card-ok");
+    btn.disabled  = true;
+    spinner.style.display = "inline";
+    okEl.style.display    = "none";
+
+    try {
+      // 1. Create SetupIntent
+      const resp = await fetch("{{ url_for('partners.partner_billing_setup_intent') }}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token() }}",
+        },
+        body: JSON.stringify({}),
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+
+      // 2. Confirm card setup
+      const { setupIntent, error } = await stripe.confirmCardSetup(data.client_secret, {
+        payment_method: { card: card },
+      });
+      if (error) throw new Error(error.message);
+
+      // 3. Save PaymentMethod on backend
+      const saveResp = await fetch("{{ url_for('partners.save_partner_payment_method') }}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token() }}",
+        },
+        body: JSON.stringify({ payment_method_id: setupIntent.payment_method }),
+      });
+      const saveData = await saveResp.json();
+      if (saveData.error) throw new Error(saveData.error);
+
+      spinner.style.display = "none";
+      okEl.style.display    = "inline";
+      btn.textContent       = "Update Card";
+      btn.disabled          = false;
+
+    } catch (err) {
+      const el = document.getElementById("partner-card-errors");
+      el.textContent  = err.message || "Could not save card. Please try again.";
+      el.style.display = "block";
+      btn.disabled     = false;
+      spinner.style.display = "none";
+    }
+  });
+})();
+</script>

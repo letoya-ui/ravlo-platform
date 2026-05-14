@@ -18,6 +18,7 @@ from LoanMVP.models.partner_models import (
     PartnerJob,
     PartnerPhoto,
     PartnerProposal,
+    PartnerLeadCharge,
 )
 
 partners_bp = Blueprint("partners", __name__, url_prefix="/partners")
@@ -1122,6 +1123,142 @@ def partner_subscription_success():
         flash("Subscription checkout completed.", "success")
 
     return redirect(url_for("partners.billing"))
+
+
+# ─── Pay-Per-Lead ─────────────────────────────────────────────────────────────
+
+def _charge_partner_for_lead(partner, connection_request=None):
+    """
+    Attempt a Stripe off-session charge for one lead delivery.
+    Returns the PartnerLeadCharge record (status may be 'paid' or 'failed').
+    """
+    from datetime import datetime as _dt
+    amount = float(partner.lead_price or 25.00)
+    charge = PartnerLeadCharge(
+        partner_id=partner.id,
+        connection_request_id=getattr(connection_request, "id", None),
+        amount=amount,
+        stripe_customer_id=partner.stripe_customer_id,
+    )
+    db.session.add(charge)
+    db.session.flush()  # get charge.id before Stripe call
+
+    if not partner.stripe_customer_id or not partner.stripe_payment_method_id:
+        charge.status = "pending"  # awaiting card on file
+        return charge
+
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=int(amount * 100),
+            currency="usd",
+            customer=partner.stripe_customer_id,
+            payment_method=partner.stripe_payment_method_id,
+            off_session=True,
+            confirm=True,
+            description=f"Lead delivery — partner {partner.id}",
+            metadata={
+                "partner_id": str(partner.id),
+                "lead_charge_id": str(charge.id),
+            },
+        )
+        charge.stripe_payment_intent = intent.id
+        charge.status = "paid"
+        charge.paid_at = _dt.utcnow()
+    except stripe.error.CardError as exc:
+        charge.status = "failed"
+        charge.failure_reason = exc.user_message or str(exc)
+    except Exception as exc:
+        charge.status = "failed"
+        charge.failure_reason = str(exc)
+
+    return charge
+
+
+@partners_bp.route("/billing/lead-price", methods=["POST"])
+@login_required
+@role_required("partner_group")
+def update_lead_price():
+    """Partner sets their per-lead price and toggles pay-per-lead on/off."""
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("partners.billing"))
+
+    pay_per_lead = request.form.get("pay_per_lead_enabled") == "1"
+    raw_price = request.form.get("lead_price", "").strip()
+    try:
+        price = round(float(raw_price), 2) if raw_price else 25.00
+        price = max(1.00, price)
+    except ValueError:
+        flash("Invalid lead price.", "warning")
+        return redirect(url_for("partners.billing"))
+
+    partner.pay_per_lead_enabled = pay_per_lead
+    partner.lead_price = price
+    db.session.commit()
+    flash("Lead pricing updated.", "success")
+    return redirect(url_for("partners.billing"))
+
+
+@partners_bp.route("/billing/save-payment-method", methods=["POST"])
+@login_required
+@role_required("partner_group")
+def save_partner_payment_method():
+    """Store a Stripe PaymentMethod ID on the partner after SetupIntent confirms."""
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner:
+        return jsonify({"error": "Partner not found."}), 404
+
+    pm_id = (request.json or {}).get("payment_method_id") or request.form.get("payment_method_id")
+    if not pm_id:
+        return jsonify({"error": "Missing payment_method_id."}), 400
+
+    try:
+        # Ensure/create Stripe Customer
+        if not partner.stripe_customer_id:
+            customer = stripe.Customer.create(
+                email=current_user.email,
+                metadata={"partner_id": str(partner.id), "user_id": str(current_user.id)},
+            )
+            partner.stripe_customer_id = customer.id
+
+        # Attach the PaymentMethod to the customer
+        stripe.PaymentMethod.attach(pm_id, customer=partner.stripe_customer_id)
+        stripe.Customer.modify(
+            partner.stripe_customer_id,
+            invoice_settings={"default_payment_method": pm_id},
+        )
+        partner.stripe_payment_method_id = pm_id
+        db.session.commit()
+        return jsonify({"ok": True})
+    except Exception as exc:
+        current_app.logger.exception("Failed to save partner payment method")
+        return jsonify({"error": str(exc)}), 500
+
+
+@partners_bp.route("/billing/lead-charges")
+@login_required
+@role_required("partner_group")
+def lead_charge_history():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("partners.billing"))
+
+    charges = (
+        PartnerLeadCharge.query
+        .filter_by(partner_id=partner.id)
+        .order_by(PartnerLeadCharge.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    return render_template(
+        "partners/lead_charges.html",
+        partner=partner,
+        charges=charges,
+        portal="partner",
+        page_title="Lead Charge History",
+    )
 
 
 @partners_bp.route("/profile/edit", methods=["GET", "POST"])

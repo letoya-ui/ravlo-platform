@@ -243,3 +243,34 @@ class PartnerProposal(db.Model):
 
     def __repr__(self):
         return f"<PartnerProposal {self.id} partner={self.partner_id} status={self.status}>"
+
+
+class PartnerLeadCharge(db.Model):
+    """Records a pay-per-lead charge when a lead is delivered to a partner."""
+    __tablename__ = "partner_lead_charges"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=False)
+    connection_request_id = db.Column(
+        db.Integer, db.ForeignKey("partner_connection_requests.id"), nullable=True
+    )
+
+    amount = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String(20), default="pending")
+    # pending | paid | failed | waived
+
+    stripe_payment_intent = db.Column(db.String(255), nullable=True)
+    stripe_customer_id = db.Column(db.String(255), nullable=True)
+    failure_reason = db.Column(db.String(255), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    paid_at = db.Column(db.DateTime, nullable=True)
+
+    partner = db.relationship(
+        "Partner", backref=db.backref("lead_charges", lazy="dynamic")
+    )
+    connection_request = db.relationship("PartnerConnectionRequest", foreign_keys=[connection_request_id])
+
+    def __repr__(self):
+        return f"<PartnerLeadCharge {self.id} partner={self.partner_id} ${self.amount} {self.status}>"

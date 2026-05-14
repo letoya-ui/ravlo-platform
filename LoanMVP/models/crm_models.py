@@ -311,7 +311,13 @@ class Partner(db.Model):
     featured = db.Column(db.Boolean, default=False)
     status = db.Column(db.String(50), default="Active")
     relationship_level = db.Column(db.String(50), nullable=True)   # Gold, Silver, Preferred
-    subscription_tier = db.Column(db.String(50), default="Free")   # Free, Featured, Premium
+    subscription_tier = db.Column(db.String(50), default="Free")   # Free, Featured, Premium, Enterprise
+
+    # Pay-per-lead billing
+    pay_per_lead_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    lead_price = db.Column(db.Float, default=25.00, nullable=True)  # USD charged per delivered lead
+    stripe_customer_id = db.Column(db.String(255), nullable=True)
+    stripe_payment_method_id = db.Column(db.String(255), nullable=True)  # saved card for lead charges
 
     # Feature access
     crm_enabled = db.Column(db.Boolean, default=True)
