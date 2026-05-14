@@ -3,7 +3,7 @@ import hashlib
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 
 import requests
 from flask import session
@@ -40,17 +40,22 @@ def build_canva_auth_url():
     session["canva_oauth_state"] = state
     session["canva_code_verifier"] = verifier
 
-    query = {
-        "code_challenge": challenge,
-        "code_challenge_method": "S256",
-        "scope": scopes,
-        "response_type": "code",
-        "state": state,
-        "client_id": client_id,
-        "redirect_uri": redirect_uri,
-    }
+    # Build query string manually to match Canva's expected encoding:
+    # - scope: colons must be literal (not %3A), spaces must be %20 (not +)
+    # - other params: standard percent-encoding
+    scope_encoded = scopes.replace(" ", "%20")   # spaces → %20, colons stay literal
 
-    return f"{CANVA_AUTH_BASE}?{urlencode(query)}"
+    params = "&".join([
+        f"client_id={quote(client_id or '', safe='')}",
+        f"response_type=code",
+        f"code_challenge_method=S256",
+        f"code_challenge={quote(challenge, safe='')}",
+        f"scope={scope_encoded}",
+        f"state={quote(state, safe='')}",
+        f"redirect_uri={quote(redirect_uri or '', safe='')}",
+    ])
+
+    return f"{CANVA_AUTH_BASE}?{params}"
 
 
 def exchange_code_for_tokens(code: str):
