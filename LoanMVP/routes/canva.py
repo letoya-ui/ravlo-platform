@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from flask import Blueprint, flash, redirect, request, session, url_for, jsonify, render_template
-from flask_login import current_user
+from flask_login import current_user, login_required
 
 from LoanMVP.extensions import db
 from LoanMVP.utils.decorators import role_required
@@ -49,7 +49,7 @@ def get_valid_access_token():
 
 
 @canva_bp.get("/connect")
-@role_required("partner_group", "admin")
+@login_required
 def connect():
     import os, logging
     client_id    = os.environ.get("CANVA_CLIENT_ID")
@@ -72,7 +72,7 @@ def connect():
 
 
 @canva_bp.get("/callback")
-@role_required("partner_group", "admin")
+@login_required
 def callback():
     error = request.args.get("error")
     if error:
@@ -125,7 +125,7 @@ def callback():
 
 
 @canva_bp.get("/designs")
-@role_required("partner_group", "admin")
+@login_required
 def designs():
     access_token = get_valid_access_token()
     if not access_token:
@@ -137,7 +137,7 @@ def designs():
 
 
 @canva_bp.post("/designs/new")
-@role_required("partner_group", "admin")
+@login_required
 def designs_new():
     access_token = get_valid_access_token()
     if not access_token:
@@ -149,7 +149,7 @@ def designs_new():
 
 
 @canva_bp.get("/designs/<design_id>")
-@role_required("partner_group", "admin")
+@login_required
 def design_detail(design_id):
     access_token = get_valid_access_token()
     if not access_token:
@@ -160,7 +160,7 @@ def design_detail(design_id):
 
 
 @canva_bp.post("/designs/<design_id>/export")
-@role_required("partner_group", "admin")
+@login_required
 def design_export(design_id):
     access_token = get_valid_access_token()
     if not access_token:
@@ -172,7 +172,7 @@ def design_export(design_id):
 
 
 @canva_bp.get("/exports/<job_id>")
-@role_required("partner_group", "admin")
+@login_required
 def export_status(job_id):
     access_token = get_valid_access_token()
     if not access_token:
@@ -183,7 +183,7 @@ def export_status(job_id):
 
 
 @canva_bp.get("/create-flyer")
-@role_required("partner_group", "admin")
+@login_required
 def create_flyer():
     """Create a new flyer design and redirect straight to the Canva editor.
 
@@ -220,7 +220,7 @@ def create_flyer():
 
 
 @canva_bp.get("/status")
-@role_required("partner_group", "admin")
+@login_required
 def status():
     """JSON: is the current user connected to Canva?"""
     connection = get_user_canva_connection()
@@ -229,7 +229,7 @@ def status():
 
 
 @canva_bp.post("/disconnect")
-@role_required("partner_group", "admin")
+@login_required
 def disconnect():
     """Remove the user's stored Canva tokens."""
     from LoanMVP.extensions import csrf
