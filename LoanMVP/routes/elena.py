@@ -33,7 +33,7 @@ from LoanMVP.services.elena_templates import (
 )
 from LoanMVP.utils.decorators import role_required
 
-from LoanMVP.routes.canva import get_valid_access_token
+from LoanMVP.routes.canva import get_valid_access_token, get_user_canva_connection
 from LoanMVP.services.canva_service import (
     create_design,
     create_export_job,
@@ -969,6 +969,7 @@ def template_studio():
         is_insurance=is_insurance,
         is_loan_officer=is_loan_officer,
         role_type=role_type,
+        canva_connected=bool(get_user_canva_connection()),
         portal="vip",
         portal_name="VIP Workspace",
         portal_home=_portal_home,
@@ -1024,6 +1025,7 @@ def template_studio_preview():
         is_insurance=is_insurance,
         is_loan_officer=is_loan_officer,
         role_type=role_type,
+        canva_connected=bool(get_user_canva_connection()),
         portal="vip",
         portal_name="VIP Workspace",
         portal_home=_portal_home,
@@ -1078,6 +1080,7 @@ def template_studio_generate():
         is_insurance=is_insurance,
         is_loan_officer=is_loan_officer,
         role_type=role_type,
+        canva_connected=bool(get_user_canva_connection()),
         portal="vip",
         portal_name="VIP Workspace",
         portal_home=_portal_home,
@@ -1161,6 +1164,7 @@ def template_studio_generate_and_save():
         is_insurance=is_insurance,
         is_loan_officer=is_loan_officer,
         role_type=role_type,
+        canva_connected=bool(get_user_canva_connection()),
         portal="vip",
         portal_name="VIP Workspace",
         portal_home=_portal_home,

@@ -1,20 +1,16 @@
 {% set bp = request.blueprint or "" %}
 {% set ep = request.endpoint or "" %}
 {#
-  Sidebar selection:
-  - vip / elena blueprints → always VIP sidebar
-  - partners blueprint + has a vip_profile → VIP sidebar
-    (prevents the sidebar flipping for contractors/realtors who navigate
-     to partners.* routes like requests_inbox, workspace, proposals)
-  - partners blueprint + no vip_profile → Partner OS sidebar
-    (pure partner-only accounts, no VIP workspace)
+  Sidebar selection — one unified sidebar for all partner/VIP users:
+  - vip, elena, partners blueprints → always the unified VIP/Partner sidebar
   - everything else (investor, canva, etc.) → investor sidebar
+  No more flipping between "Partner OS" and "VIP Workspace" sidebars.
 #}
-{% set active_portal = portal|default(
-  'vip' if bp in ('vip', 'elena') else
-  ('vip' if (bp == 'partners' and vip_profile) else
-  ('partner' if bp == 'partners' else 'investor'))
+{% set _raw_portal = portal|default(
+  'vip' if bp in ('vip', 'elena', 'partners') else 'investor'
 ) %}
+{# Normalize legacy "partner" value — all partner/VIP users share one sidebar now #}
+{% set active_portal = 'vip' if _raw_portal == 'partner' else _raw_portal %}
 
 <!doctype html>
 <html lang="en">
@@ -42,9 +38,7 @@
     <aside class="ravlo-sidebar" id="sidebar">
       <div class="ravlo-sidebar-heading">
         {% if active_portal == "vip" %}
-          <span class="heading-label">VIP Workspace</span>
-        {% elif active_portal == "partner" %}
-          <span class="heading-label">Partner Portal</span>
+          <span class="heading-label">Partner Workspace</span>
         {% else %}
           <span class="heading-label">Investor Portal</span>
         {% endif %}
@@ -52,8 +46,6 @@
 
       {% if active_portal == "vip" %}
         {% include "layouts/_sidebar_vip.html" %}
-      {% elif active_portal == "partner" %}
-        {% include "layouts/_sidebar_partner.html" %}
       {% else %}
         {% include "layouts/_sidebar_investor.html" %}
       {% endif %}
