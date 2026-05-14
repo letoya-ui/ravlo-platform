@@ -1,14 +1,19 @@
 {% set bp = request.blueprint or "" %}
 {% set ep = request.endpoint or "" %}
 {#
-  Sidebar selection: VIP users always stay in the VIP sidebar regardless of
-  which blueprint they're on. This prevents the sidebar from flipping between
-  Partner OS and VIP Workspace when a contractor navigates to partner routes.
-  Only pure partner accounts (no vip_profile) see the Partner sidebar.
+  Sidebar selection:
+  - vip / elena blueprints → always VIP sidebar
+  - partners blueprint + has a vip_profile → VIP sidebar
+    (prevents the sidebar flipping for contractors/realtors who navigate
+     to partners.* routes like requests_inbox, workspace, proposals)
+  - partners blueprint + no vip_profile → Partner OS sidebar
+    (pure partner-only accounts, no VIP workspace)
+  - everything else (investor, canva, etc.) → investor sidebar
 #}
 {% set active_portal = portal|default(
-  'vip' if (vip_profile or bp in ('vip', 'elena')) else
-  ('partner' if bp == 'partners' else 'investor')
+  'vip' if bp in ('vip', 'elena') else
+  ('vip' if (bp == 'partners' and vip_profile) else
+  ('partner' if bp == 'partners' else 'investor'))
 ) %}
 
 <!doctype html>
