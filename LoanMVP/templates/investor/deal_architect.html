@@ -14,6 +14,10 @@
       {% if deal %}
         <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">Open Build Studio</a>
         <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">Send to Budget Studio</a>
+        <button type="button" class="ravlo-btn ghost"
+          onclick="openSendPartnerModal({dealId: {{ deal.id }}, title: {{ (property_address or deal.title or 'Deal')|tojson }}, address: {{ (property_address or '')|tojson }}})">
+          <i class="lucide lucide-send"></i> Send to Partner
+        </button>
       {% endif %}
       {% if deal and build_project %}
         <button type="button" class="ravlo-btn primary" id="generateBuildCostsTopBtn">Generate Build Costs</button>
@@ -521,4 +525,6 @@
   });
 })();
 </script>
+
+{% include 'components/send_to_partner_modal.html' %}
 {% endblock %}

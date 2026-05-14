@@ -15902,3 +15902,84 @@ def create_external_partner_request(lead_id):
 
     flash("External partner request created.", "success")
     return redirect(url_for("investor.partner_marketplace"))
+
+
+# -------------------------
+# Send to Partner — investor → partner pipeline
+# -------------------------
+
+@investor_bp.route("/partners/search", methods=["GET"])
+@login_required
+def investor_partner_search():
+    """AJAX: search active/approved partners by type and optional name query."""
+    partner_type = request.args.get("type", "").strip()
+    q = request.args.get("q", "").strip()
+
+    filters = [Partner.active == True, Partner.approved == True]
+    if partner_type:
+        filters.append(Partner.type == partner_type)
+    if q:
+        filters.append(
+            or_(
+                Partner.name.ilike(f"%{q}%"),
+                Partner.company.ilike(f"%{q}%"),
+            )
+        )
+
+    partners = Partner.query.filter(*filters).limit(30).all()
+
+    results = [
+        {
+            "id": p.id,
+            "name": p.name,
+            "company": p.company or "",
+            "category": p.category or "",
+            "type": p.type or "",
+            "service_area": p.service_area or "",
+        }
+        for p in partners
+    ]
+    return jsonify(results)
+
+
+@investor_bp.route("/send-to-partner", methods=["POST"])
+@login_required
+@csrf.exempt
+def investor_send_to_partner():
+    """AJAX: create a PartnerConnectionRequest from investor to a partner."""
+    data = request.get_json(silent=True) or {}
+
+    partner_id = data.get("partner_id") or None
+    partner_type = data.get("partner_type") or None
+    deal_id = data.get("deal_id") or None
+    saved_property_id = data.get("saved_property_id") or None
+    title = data.get("title") or None
+    message = data.get("message") or None
+    budget = data.get("budget") or None
+    timeline = data.get("timeline") or None
+    request_type = data.get("request_type") or None
+
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    status = "pending" if partner_id else "awaiting_match"
+
+    req = PartnerConnectionRequest(
+        investor_user_id=current_user.id,
+        investor_profile_id=ip.id if ip else None,
+        partner_id=int(partner_id) if partner_id else None,
+        category=partner_type,
+        deal_id=int(deal_id) if deal_id else None,
+        saved_property_id=int(saved_property_id) if saved_property_id else None,
+        title=title,
+        message=message,
+        budget=float(budget) if budget else None,
+        timeline=timeline,
+        request_type=request_type,
+        source="internal",
+        status=status,
+    )
+
+    db.session.add(req)
+    db.session.commit()
+
+    return jsonify({"status": "ok", "request_id": req.id})

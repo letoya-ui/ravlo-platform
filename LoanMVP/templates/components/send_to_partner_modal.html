@@ -1,0 +1,600 @@
+{# components/send_to_partner_modal.html
+   Reusable "Send to Partner" slide-in modal.
+   Include at the bottom of {% block content %} on any investor page.
+   Trigger by calling: openSendPartnerModal({dealId, savedPropertyId, title, address})
+#}
+
+<!-- Send to Partner Modal -->
+<div id="sendPartnerModal" class="stp-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="stpModalTitle">
+  <div class="stp-drawer">
+    <header class="stp-header">
+      <div>
+        <div class="stp-eyebrow">RAVLO NETWORK</div>
+        <h2 id="stpModalTitle" class="stp-title">Send to Partner</h2>
+        <p class="stp-subtitle" id="stpContextLine">Select a partner type to get started.</p>
+      </div>
+      <button type="button" class="stp-close" onclick="closeSendPartnerModal()" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </header>
+
+    <!-- Step 1: type chips -->
+    <div class="stp-section" id="stpStep1">
+      <div class="stp-label">Partner Type</div>
+      <div class="stp-chips" id="stpTypeChips">
+        {% for ptype in ["Contractor", "Realtor", "Inspector", "Lender", "Other"] %}
+        <button type="button" class="stp-chip" data-type="{{ ptype }}" onclick="selectPartnerType('{{ ptype }}')">{{ ptype }}</button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Step 2: search + selection (shown after type chosen) -->
+    <div class="stp-section stp-hidden" id="stpStep2">
+      <div class="stp-label" id="stpSearchLabel">Search Partners</div>
+      <div class="stp-search-row">
+        <input id="stpSearchInput" type="text" class="stp-input" placeholder="Search by name or company…" oninput="debounceSearchPartners(this.value)">
+        <svg class="stp-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+
+      <div id="stpResults" class="stp-results"></div>
+
+      <div id="stpSelected" class="stp-selected-partner stp-hidden">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="stpSelectedName"></span>
+        <span id="stpSelectedCompany" class="stp-company"></span>
+        <button type="button" class="stp-clear-partner" onclick="clearPartnerSelection()" title="Clear selection">×</button>
+      </div>
+    </div>
+
+    <!-- Message / details (shown after type chosen) -->
+    <div class="stp-section stp-hidden" id="stpStep3">
+      <label class="stp-label" for="stpMessage">Message <span class="stp-req">*</span></label>
+      <textarea id="stpMessage" class="stp-textarea" rows="3" placeholder="Describe what you need, timeline, questions…"></textarea>
+
+      <div class="stp-row-2">
+        <div>
+          <label class="stp-label" for="stpBudget">Budget (optional)</label>
+          <div class="stp-dollar-wrap">
+            <span class="stp-dollar">$</span>
+            <input id="stpBudget" type="number" min="0" step="1000" class="stp-input stp-budget-input" placeholder="e.g. 50000">
+          </div>
+        </div>
+        <div>
+          <label class="stp-label" for="stpTimeline">Timeline (optional)</label>
+          <input id="stpTimeline" type="text" class="stp-input" placeholder="e.g. 2–3 months">
+        </div>
+      </div>
+    </div>
+
+    <!-- Success state -->
+    <div class="stp-section stp-hidden stp-success" id="stpSuccess">
+      <div class="stp-success-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <h3 class="stp-success-title">Request Sent!</h3>
+      <p class="stp-success-msg" id="stpSuccessMsg">Your request has been sent to the partner.</p>
+    </div>
+
+    <!-- Footer actions -->
+    <footer class="stp-footer" id="stpFooter">
+      <button type="button" class="stp-btn-ghost" onclick="closeSendPartnerModal()">Cancel</button>
+      <button type="button" class="stp-btn-primary stp-hidden" id="stpSubmitBtn" onclick="submitSendToPartner()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Send Request
+      </button>
+    </footer>
+  </div>
+</div>
+
+<style>
+/* ── Send to Partner Modal ─────────────────────────────────── */
+.stp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9900;
+  background: rgba(5, 10, 18, 0.72);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+.stp-overlay.stp-open {
+  opacity: 1;
+  pointer-events: all;
+}
+.stp-drawer {
+  background: var(--ravlo-surface, #fff);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 0 0 8px;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.28);
+  transform: translateY(30px);
+  transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+}
+.stp-overlay.stp-open .stp-drawer {
+  transform: translateY(0);
+}
+@media (min-width: 640px) {
+  .stp-overlay {
+    align-items: center;
+  }
+  .stp-drawer {
+    border-radius: 18px;
+    max-height: 88vh;
+  }
+}
+.stp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+}
+.stp-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ravlo-blue, #3b82f6);
+  margin-bottom: 4px;
+}
+.stp-title {
+  margin: 0 0 2px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ravlo-text, #111827);
+}
+.stp-subtitle {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ravlo-muted, #6b7280);
+}
+.stp-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ravlo-muted, #6b7280);
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.stp-close:hover { color: var(--ravlo-text, #111827); background: rgba(0,0,0,0.06); }
+.stp-section {
+  padding: 18px 24px 4px;
+}
+.stp-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ravlo-muted, #6b7280);
+  margin-bottom: 9px;
+  display: block;
+}
+.stp-req { color: var(--ravlo-blue, #3b82f6); }
+.stp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.stp-chip {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(59,130,246,0.25);
+  background: transparent;
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ravlo-text, #111827);
+  transition: all 0.15s;
+}
+.stp-chip:hover { border-color: var(--ravlo-blue, #3b82f6); color: var(--ravlo-blue, #3b82f6); }
+.stp-chip.stp-chip-active {
+  background: var(--ravlo-blue, #3b82f6);
+  border-color: var(--ravlo-blue, #3b82f6);
+  color: #fff;
+}
+.stp-search-row {
+  position: relative;
+  margin-bottom: 10px;
+}
+.stp-search-icon {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ravlo-muted, #9ca3af);
+  pointer-events: none;
+}
+.stp-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 36px 9px 12px;
+  border: 1.5px solid rgba(0,0,0,0.13);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  background: var(--ravlo-surface, #fff);
+  color: var(--ravlo-text, #111827);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.stp-input:focus { border-color: var(--ravlo-blue, #3b82f6); }
+.stp-budget-input { padding-left: 24px; }
+.stp-results {
+  max-height: 170px;
+  overflow-y: auto;
+  border-radius: 10px;
+  border: 1.5px solid rgba(0,0,0,0.08);
+  margin-bottom: 10px;
+  display: none;
+}
+.stp-results.stp-has-results { display: block; }
+.stp-result-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.stp-result-item:last-child { border-bottom: none; }
+.stp-result-item:hover { background: rgba(59,130,246,0.06); }
+.stp-result-name { font-size: 0.88rem; font-weight: 600; color: var(--ravlo-text, #111827); }
+.stp-result-meta { font-size: 0.78rem; color: var(--ravlo-muted, #6b7280); }
+.stp-result-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(59,130,246,0.10);
+  color: var(--ravlo-blue, #3b82f6);
+  white-space: nowrap;
+  margin-left: auto;
+}
+.stp-selected-partner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  border-radius: 10px;
+  background: rgba(59,130,246,0.07);
+  border: 1.5px solid rgba(59,130,246,0.22);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ravlo-blue, #3b82f6);
+  margin-bottom: 6px;
+}
+.stp-company { color: var(--ravlo-muted, #6b7280); font-weight: 400; }
+.stp-clear-partner {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: var(--ravlo-muted, #9ca3af);
+  padding: 0 2px;
+  line-height: 1;
+}
+.stp-clear-partner:hover { color: #ef4444; }
+.stp-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 13px;
+  border: 1.5px solid rgba(0,0,0,0.13);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  resize: vertical;
+  background: var(--ravlo-surface, #fff);
+  color: var(--ravlo-text, #111827);
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+  margin-bottom: 14px;
+}
+.stp-textarea:focus { border-color: var(--ravlo-blue, #3b82f6); }
+.stp-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.stp-dollar-wrap { position: relative; }
+.stp-dollar {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ravlo-muted, #9ca3af);
+  font-size: 0.88rem;
+  pointer-events: none;
+}
+.stp-success {
+  text-align: center;
+  padding-top: 28px;
+  padding-bottom: 20px;
+}
+.stp-success-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(34,197,94,0.12);
+  color: #22c55e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+.stp-success-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: var(--ravlo-text, #111827);
+}
+.stp-success-msg {
+  font-size: 0.85rem;
+  color: var(--ravlo-muted, #6b7280);
+  margin: 0;
+}
+.stp-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 24px 16px;
+  border-top: 1px solid rgba(0,0,0,0.07);
+  margin-top: 12px;
+}
+.stp-btn-ghost {
+  padding: 9px 18px;
+  border: 1.5px solid rgba(0,0,0,0.13);
+  border-radius: 10px;
+  background: transparent;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ravlo-text, #111827);
+  transition: all 0.15s;
+}
+.stp-btn-ghost:hover { background: rgba(0,0,0,0.05); }
+.stp-btn-primary {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 10px;
+  background: var(--ravlo-blue, #3b82f6);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.stp-btn-primary:hover { opacity: 0.9; }
+.stp-btn-primary:active { transform: scale(0.97); }
+.stp-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.stp-hidden { display: none !important; }
+.stp-empty-state {
+  padding: 18px 14px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--ravlo-muted, #9ca3af);
+}
+</style>
+
+<script>
+(function () {
+  /* ─── state ─────────────────────────────────────────── */
+  var _stpContext = {};
+  var _stpSelectedPartnerId = null;
+  var _stpSelectedPartnerName = null;
+  var _stpSelectedPartnerCompany = null;
+  var _stpSelectedType = null;
+  var _stpDebounceTimer = null;
+
+  /* ─── open / close ───────────────────────────────────── */
+  window.openSendPartnerModal = function (ctx) {
+    _stpContext = ctx || {};
+    _stpSelectedPartnerId = null;
+    _stpSelectedType = null;
+
+    // reset UI
+    document.querySelectorAll('.stp-chip').forEach(function(c){ c.classList.remove('stp-chip-active'); });
+    document.getElementById('stpStep2').classList.add('stp-hidden');
+    document.getElementById('stpStep3').classList.add('stp-hidden');
+    document.getElementById('stpSuccess').classList.add('stp-hidden');
+    document.getElementById('stpStep1').classList.remove('stp-hidden');
+    document.getElementById('stpFooter').classList.remove('stp-hidden');
+    document.getElementById('stpSubmitBtn').classList.add('stp-hidden');
+    document.getElementById('stpSearchInput').value = '';
+    document.getElementById('stpMessage').value = '';
+    document.getElementById('stpBudget').value = '';
+    document.getElementById('stpTimeline').value = '';
+    document.getElementById('stpResults').innerHTML = '';
+    document.getElementById('stpResults').classList.remove('stp-has-results');
+    document.getElementById('stpSelected').classList.add('stp-hidden');
+
+    var contextLine = '';
+    if (ctx.title) contextLine = ctx.title;
+    if (ctx.address && ctx.address !== ctx.title) contextLine += (contextLine ? ' — ' : '') + ctx.address;
+    document.getElementById('stpContextLine').textContent = contextLine || 'Select a partner type to get started.';
+
+    var overlay = document.getElementById('sendPartnerModal');
+    overlay.classList.add('stp-open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.closeSendPartnerModal = function () {
+    var overlay = document.getElementById('sendPartnerModal');
+    overlay.classList.remove('stp-open');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  };
+
+  // close on overlay click
+  document.getElementById('sendPartnerModal').addEventListener('click', function (e) {
+    if (e.target === this) closeSendPartnerModal();
+  });
+
+  /* ─── type selection ─────────────────────────────────── */
+  window.selectPartnerType = function (type) {
+    _stpSelectedType = type;
+    _stpSelectedPartnerId = null;
+
+    document.querySelectorAll('.stp-chip').forEach(function(c){
+      c.classList.toggle('stp-chip-active', c.dataset.type === type);
+    });
+
+    document.getElementById('stpSearchLabel').textContent = 'Search ' + type + 's';
+    document.getElementById('stpStep2').classList.remove('stp-hidden');
+    document.getElementById('stpStep3').classList.remove('stp-hidden');
+    document.getElementById('stpSubmitBtn').classList.remove('stp-hidden');
+    document.getElementById('stpSelected').classList.add('stp-hidden');
+    document.getElementById('stpResults').innerHTML = '';
+    document.getElementById('stpResults').classList.remove('stp-has-results');
+
+    searchPartners(type, '');
+  };
+
+  /* ─── search ─────────────────────────────────────────── */
+  window.debounceSearchPartners = function (q) {
+    clearTimeout(_stpDebounceTimer);
+    _stpDebounceTimer = setTimeout(function () {
+      searchPartners(_stpSelectedType, q);
+    }, 280);
+  };
+
+  window.searchPartners = function (type, q) {
+    if (!type) return;
+    var url = '/investor/partners/search?type=' + encodeURIComponent(type);
+    if (q) url += '&q=' + encodeURIComponent(q);
+
+    fetch(url, { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        renderPartnerResults(data);
+      })
+      .catch(function () {
+        renderPartnerResults([]);
+      });
+  };
+
+  function renderPartnerResults(partners) {
+    var el = document.getElementById('stpResults');
+    if (!partners || partners.length === 0) {
+      el.innerHTML = '<div class="stp-empty-state">No partners found. Your request will be matched by the Ravlo team.</div>';
+      el.classList.add('stp-has-results');
+      return;
+    }
+    el.innerHTML = partners.map(function (p) {
+      return '<div class="stp-result-item" onclick="selectPartner(' + p.id + ', ' + JSON.stringify(p.name) + ', ' + JSON.stringify(p.company) + ')">' +
+        '<div>' +
+          '<div class="stp-result-name">' + _stpEsc(p.name) + '</div>' +
+          '<div class="stp-result-meta">' + _stpEsc(p.company || '') + (p.service_area ? ' · ' + _stpEsc(p.service_area) : '') + '</div>' +
+        '</div>' +
+        (p.type ? '<span class="stp-result-badge">' + _stpEsc(p.type) + '</span>' : '') +
+      '</div>';
+    }).join('');
+    el.classList.add('stp-has-results');
+  }
+
+  function _stpEsc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ─── partner selection ──────────────────────────────── */
+  window.selectPartner = function (id, name, company) {
+    _stpSelectedPartnerId = id;
+    _stpSelectedPartnerName = name;
+    _stpSelectedPartnerCompany = company;
+
+    document.getElementById('stpSelectedName').textContent = name;
+    document.getElementById('stpSelectedCompany').textContent = company ? '· ' + company : '';
+    document.getElementById('stpSelected').classList.remove('stp-hidden');
+    document.getElementById('stpResults').classList.remove('stp-has-results');
+    document.getElementById('stpResults').innerHTML = '';
+    document.getElementById('stpSearchInput').value = '';
+  };
+
+  window.clearPartnerSelection = function () {
+    _stpSelectedPartnerId = null;
+    document.getElementById('stpSelected').classList.add('stp-hidden');
+  };
+
+  /* ─── submit ─────────────────────────────────────────── */
+  window.submitSendToPartner = function () {
+    var message = document.getElementById('stpMessage').value.trim();
+    if (!message) {
+      document.getElementById('stpMessage').focus();
+      document.getElementById('stpMessage').style.borderColor = '#ef4444';
+      return;
+    }
+    document.getElementById('stpMessage').style.borderColor = '';
+
+    var btn = document.getElementById('stpSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    var payload = {
+      partner_id: _stpSelectedPartnerId || null,
+      partner_type: _stpSelectedType || null,
+      deal_id: _stpContext.dealId || null,
+      saved_property_id: _stpContext.savedPropertyId || null,
+      title: _stpContext.title || null,
+      message: message,
+      budget: document.getElementById('stpBudget').value || null,
+      timeline: document.getElementById('stpTimeline').value.trim() || null,
+      request_type: _stpSelectedType ? _stpSelectedType.toLowerCase() : null,
+    };
+
+    fetch('/investor/send-to-partner', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.status === 'ok') {
+          showStpSuccess();
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Request';
+          alert('Something went wrong. Please try again.');
+        }
+      })
+      .catch(function () {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Request';
+        alert('Network error. Please try again.');
+      });
+  };
+
+  function showStpSuccess() {
+    document.getElementById('stpStep1').classList.add('stp-hidden');
+    document.getElementById('stpStep2').classList.add('stp-hidden');
+    document.getElementById('stpStep3').classList.add('stp-hidden');
+    document.getElementById('stpFooter').classList.add('stp-hidden');
+    var partnerName = _stpSelectedPartnerName;
+    var msg = partnerName
+      ? 'Your request has been sent to ' + partnerName + '. They will see it on their dashboard under Incoming Requests.'
+      : 'Your request has been submitted. The Ravlo team will match you with the best available partner.';
+    document.getElementById('stpSuccessMsg').textContent = msg;
+    document.getElementById('stpSuccess').classList.remove('stp-hidden');
+    setTimeout(closeSendPartnerModal, 3200);
+  }
+})();
+</script>

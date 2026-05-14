@@ -96,6 +96,11 @@ Your watchlist of potential deals, ready to move into Deal Workspace.
               <i class="lucide lucide-search-check"></i>
               <span>Explore</span>
             </a>
+            <button type="button" class="ravlo-btn ghost sm"
+              onclick="openSendPartnerModal({savedPropertyId: {{ prop.id }}, title: {{ (prop.address or 'Saved Property')|tojson }}, address: {{ (prop.address or '')|tojson }}})">
+              <i class="lucide lucide-send"></i>
+              <span>Send to Partner</span>
+            </button>
           </div>
 
           <form method="POST" action="{{ url_for('investor.saved_properties_manage') }}" class="saved-note-form">
@@ -141,6 +146,8 @@ Your watchlist of potential deals, ready to move into Deal Workspace.
     </section>
   {% endif %}
 </div>
+
+{% include 'components/send_to_partner_modal.html' %}
 {% endblock %}
 
 {% block head %}

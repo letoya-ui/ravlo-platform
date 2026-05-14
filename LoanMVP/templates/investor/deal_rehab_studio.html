@@ -38,6 +38,12 @@
       <button type="button" class="ravlo-btn ghost hidden" id="downloadAllBtn">Download All Images</button>
       <a href="#" class="ravlo-btn primary hidden" id="continueToDealArchitectBtn">Send to Deal Architect</a>
       <a href="#" class="ravlo-btn ghost hidden" id="continueToBudgetStudioBtn">Send to Budget Studio</a>
+      {% if deal %}
+      <button type="button" class="ravlo-btn ghost"
+        onclick="openSendPartnerModal({dealId: {{ deal.id }}, title: {{ (deal.address or deal.title or 'Rehab Studio')|tojson }}, address: {{ (deal.address or '')|tojson }}})">
+        <i class="lucide lucide-send"></i> Send to Partner
+      </button>
+      {% endif %}
     </div>
   </section>
 
@@ -1361,4 +1367,6 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
   refreshActionButtons();
 })();
 </script>
+
+{% include 'components/send_to_partner_modal.html' %}
 {% endblock %}
