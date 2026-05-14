@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Renovation Proposal — {{ cs.property_address }}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px; color: #1e293b; background: #fff; padding: 0;
+    }
+
+    /* ── Print layout ── */
+    @media print {
+      .no-print { display: none !important; }
+      .page-break { page-break-before: always; }
+      body { padding: 0; }
+    }
+    @media screen {
+      body { max-width: 820px; margin: 0 auto; padding: 2rem 1.5rem; background: #f8f9fb; }
+      .proposal-wrapper { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); overflow: hidden; }
+    }
+
+    /* ── Header ── */
+    .proposal-header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: #fff; padding: 2.5rem 2rem 2rem;
+    }
+    .proposal-header .logo-line { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; margin-bottom: 0.5rem; }
+    .proposal-header h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.25rem; }
+    .proposal-header .subtitle { font-size: 0.88rem; opacity: 0.85; }
+    .header-meta { display: flex; gap: 2rem; margin-top: 1.5rem; flex-wrap: wrap; }
+    .header-meta-item { display: flex; flex-direction: column; gap: 2px; }
+    .header-meta-item .meta-label { font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+    .header-meta-item .meta-val { font-size: 0.88rem; font-weight: 600; }
+
+    /* ── Body ── */
+    .proposal-body { padding: 2rem; }
+
+    /* ── Room scope table ── */
+    .section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; font-weight: 700; margin-bottom: 0.75rem; margin-top: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.4rem; }
+    .section-title:first-of-type { margin-top: 0; }
+
+    .room-block { margin-bottom: 1.25rem; }
+    .room-block-header {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #f1f5f9; border-radius: 8px 8px 0 0; padding: 6px 12px;
+      font-weight: 700; font-size: 0.82rem;
+    }
+    .room-block-header .room-name { display: flex; align-items: center; gap: 6px; }
+    .room-block-header .room-subtotal { color: #2563eb; }
+    table.scope-table { width: 100%; border-collapse: collapse; }
+    table.scope-table td { padding: 5px 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem; }
+    table.scope-table tr:last-child td { border-bottom: none; }
+    table.scope-table .td-name { color: #334155; }
+    table.scope-table .td-cost { text-align: right; font-weight: 600; color: #1e293b; width: 90px; }
+
+    /* ── Totals ── */
+    .totals-section {
+      border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-top: 1.5rem;
+    }
+    .totals-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.65rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem;
+    }
+    .totals-row:last-child { border-bottom: none; }
+    .totals-row .t-label { color: #64748b; }
+    .totals-row .t-val { font-weight: 700; color: #1e293b; }
+    .totals-row.highlight { background: #eff6ff; }
+    .totals-row.highlight .t-label { color: #1d4ed8; font-weight: 700; }
+    .totals-row.highlight .t-val { color: #1d4ed8; font-size: 1rem; }
+
+    /* ── Commission breakdown ── */
+    .commission-banner {
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      color: #fff; border-radius: 12px; padding: 1.25rem 1.5rem; margin-top: 1.5rem;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+    }
+    .commission-banner .cb-label { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+    .commission-banner .cb-val { font-size: 1.5rem; font-weight: 800; }
+    .commission-banner .cb-tier { font-size: 0.8rem; opacity: 0.85; margin-top: 2px; }
+
+    /* ── Notes ── */
+    .notes-box { background: #f8f9fb; border-radius: 8px; padding: 0.85rem 1rem; margin-top: 1.25rem; font-size: 0.8rem; color: #475569; line-height: 1.6; }
+
+    /* ── Footer ── */
+    .proposal-footer {
+      border-top: 1px solid #e2e8f0; padding: 1.25rem 2rem;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+      font-size: 0.72rem; color: #94a3b8;
+    }
+
+    /* ── Print button ── */
+    .print-btn-bar {
+      display: flex; gap: 0.75rem; justify-content: center; margin-bottom: 1.5rem;
+    }
+    .print-btn {
+      padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer;
+      font-size: 0.88rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .print-btn.primary { background: #2563eb; color: #fff; }
+    .print-btn.ghost { background: #f1f5f9; color: #475569; }
+  </style>
+</head>
+<body>
+
+<div class="no-print print-btn-bar">
+  <button class="print-btn primary" onclick="window.print()">🖨 Print / Save PDF</button>
+  <button class="print-btn ghost" onclick="window.close()">Close</button>
+</div>
+
+<div class="proposal-wrapper">
+
+  {# ── Header ── #}
+  <div class="proposal-header">
+    <div class="logo-line">Ravlo · Renovation Proposal</div>
+    <h1>{{ cs.property_address }}</h1>
+    <div class="subtitle">Prepared by {{ vip_profile.display_name }}{% if vip_profile.business_name %} · {{ vip_profile.business_name }}{% endif %}</div>
+    <div class="header-meta">
+      <div class="header-meta-item">
+        <span class="meta-label">Client</span>
+        <span class="meta-val">{{ cs.client_name or '—' }}</span>
+      </div>
+      <div class="header-meta-item">
+        <span class="meta-label">Date</span>
+        <span class="meta-val">{{ cs.created_at.strftime('%B %d, %Y') if cs.created_at else 'Today' }}</span>
+      </div>
+      {% if cs.bedrooms %}<div class="header-meta-item">
+        <span class="meta-label">Beds</span>
+        <span class="meta-val">{{ cs.bedrooms }}</span>
+      </div>{% endif %}
+      {% if cs.bathrooms %}<div class="header-meta-item">
+        <span class="meta-label">Baths</span>
+        <span class="meta-val">{{ cs.bathrooms }}</span>
+      </div>{% endif %}
+      {% if cs.sqft %}<div class="header-meta-item">
+        <span class="meta-label">Sq Ft</span>
+        <span class="meta-val">{{ '{:,}'.format(cs.sqft) }}</span>
+      </div>{% endif %}
+    </div>
+  </div>
+
+  <div class="proposal-body">
+
+    {# ── Scope by room ── #}
+    <div class="section-title">Renovation Scope</div>
+
+    {% if scope %}
+      {% for room in scope %}
+        {% set room_total = namespace(val=0) %}
+        {% for item in room.items %}
+          {% if item.get('included', true) != false %}
+            {% set room_total.val = room_total.val + (item.cost | int) %}
+          {% endif %}
+        {% endfor %}
+        {% if room_total.val > 0 %}
+        <div class="room-block">
+          <div class="room-block-header">
+            <span class="room-name">{{ room.icon or '🔨' }} {{ room.room }}</span>
+            <span class="room-subtotal">${{ '{:,}'.format(room_total.val) }}</span>
+          </div>
+          <table class="scope-table">
+            {% for item in room.items %}
+              {% if item.get('included', true) != false %}
+              <tr>
+                <td class="td-name">{{ item.name }}</td>
+                <td class="td-cost">${{ '{:,}'.format(item.cost | int) }}</td>
+              </tr>
+              {% endif %}
+            {% endfor %}
+          </table>
+        </div>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <p style="color:#94a3b8; font-style:italic;">No scope items added.</p>
+    {% endif %}
+
+    {# ── Totals ── #}
+    <div class="totals-section">
+      <div class="totals-row">
+        <span class="t-label">Total Renovation Cost</span>
+        <span class="t-val">${{ '{:,}'.format(total_reno) }}</span>
+      </div>
+      {% if sale_price %}
+      <div class="totals-row">
+        <span class="t-label">Estimated Sale Price</span>
+        <span class="t-val">${{ '{:,}'.format(sale_price) }}</span>
+      </div>
+      <div class="totals-row">
+        <span class="t-label">Est. Net After Renovation</span>
+        <span class="t-val">${{ '{:,}'.format(sale_price - total_reno) }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    {# ── Commission banner ── #}
+    <div class="commission-banner">
+      <div>
+        <div class="cb-label">Commission</div>
+        <div class="cb-val">${{ '{:,}'.format(commission_amt) }}</div>
+        <div class="cb-tier">{{ cs.commission_label or 'Standard Listing' }} · {{ commission_pct }}%{% if sale_price %} of ${{ '{:,}'.format(sale_price) }}{% endif %}</div>
+      </div>
+      {% if sale_price %}
+      <div style="text-align:right;">
+        <div class="cb-label">Client Proceeds (est.)</div>
+        <div class="cb-val" style="font-size:1.1rem;">${{ '{:,}'.format(sale_price - total_reno - commission_amt) }}</div>
+        <div class="cb-tier">After reno + commission</div>
+      </div>
+      {% endif %}
+    </div>
+
+    {# ── Notes ── #}
+    {% if cs.notes %}
+    <div class="section-title" style="margin-top:1.5rem;">Notes</div>
+    <div class="notes-box">{{ cs.notes }}</div>
+    {% endif %}
+
+    {# ── Signature lines ── #}
+    <div class="section-title" style="margin-top:2rem;">Agreement</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin-top:0.75rem;">
+      <div>
+        <div style="border-bottom:1px solid #cbd5e1; height:40px; margin-bottom:6px;"></div>
+        <div style="font-size:0.72rem; color:#64748b;">Client Signature &amp; Date</div>
+      </div>
+      <div>
+        <div style="border-bottom:1px solid #cbd5e1; height:40px; margin-bottom:6px;"></div>
+        <div style="font-size:0.72rem; color:#64748b;">{{ vip_profile.display_name }} &amp; Date</div>
+      </div>
+    </div>
+
+  </div>{# /proposal-body #}
+
+  <div class="proposal-footer">
+    <span>Ravlo · Renovation Intelligence Platform</span>
+    <span>Prepared {{ cs.created_at.strftime('%B %d, %Y') if cs.created_at else 'Today' }}</span>
+    <span>Estimates based on regional cost index — final costs subject to contractor quotes.</span>
+  </div>
+
+</div>{# /proposal-wrapper #}
+</body>
+</html>

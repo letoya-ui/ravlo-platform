@@ -1,0 +1,695 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Client Session — {{ header_name }}{% endblock %}
+{% block page_title %}Client Session{% endblock %}
+{% block page_subline %}Sit down with a client, build a renovation scope, and close the listing.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.contractor_dashboard') }}" class="ravlo-btn ghost text-sm">
+    ← Dashboard
+  </a>
+  <button id="btnSaveSession" class="ravlo-btn primary text-sm hidden" onclick="saveSession()">
+    Save Session
+  </button>
+  <button id="btnPrintProposal" class="ravlo-btn secondary text-sm hidden"
+          onclick="printProposal()">
+    🖨 Print Proposal
+  </button>
+{% endblock %}
+
+{% block styles %}
+<style>
+  /* ── Layout ── */
+  .cs-grid { display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; align-items: start; }
+  @media(max-width:900px){ .cs-grid { grid-template-columns: 1fr; } }
+
+  /* ── Sidebar ── */
+  .cs-sidebar { position: sticky; top: 80px; }
+  .session-list-item {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 0.6rem 0.75rem; border-radius: 8px; cursor: pointer;
+    border: 1px solid transparent; transition: background 0.15s, border-color 0.15s;
+  }
+  .session-list-item:hover { background: var(--ravlo-surface-2, #f8f9fb); border-color: #e2e8f0; }
+  .session-list-item.active { background: var(--ravlo-blue-light, #eff6ff); border-color: var(--ravlo-blue, #3b82f6); }
+  .session-list-item .addr { font-size: 0.82rem; font-weight: 600; color: var(--ravlo-text); }
+  .session-list-item .meta { font-size: 0.72rem; color: var(--ravlo-muted); }
+  .session-badge {
+    display: inline-block; font-size: 0.65rem; font-weight: 700; padding: 1px 6px;
+    border-radius: 20px; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .badge-draft      { background:#f1f5f9; color:#64748b; }
+  .badge-presented  { background:#fef9c3; color:#854d0e; }
+  .badge-won        { background:#dcfce7; color:#166534; }
+  .badge-closed     { background:#f0fdf4; color:#15803d; }
+  .badge-lost       { background:#fee2e2; color:#991b1b; }
+
+  /* ── Workspace ── */
+  .cs-workspace { display: flex; flex-direction: column; gap: 1.25rem; }
+
+  /* Address / property header */
+  .property-header { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
+  .property-header input {
+    flex: 1; min-width: 220px; font-size: 1rem; font-weight: 600;
+    border: none; border-bottom: 2px solid var(--ravlo-blue, #3b82f6);
+    background: transparent; padding: 4px 0; outline: none; color: var(--ravlo-text);
+  }
+  .property-header input::placeholder { color: var(--ravlo-muted); font-weight: 400; }
+
+  /* Property meta row */
+  .prop-meta { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .prop-meta input {
+    width: 110px; font-size: 0.82rem; border: 1px solid #e2e8f0; border-radius: 6px;
+    padding: 5px 8px; background: var(--ravlo-surface, #fff); color: var(--ravlo-text);
+  }
+
+  /* Index badge */
+  .index-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.75rem; padding: 3px 10px; border-radius: 20px;
+    background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0;
+  }
+  .index-badge.above { background:#fef9c3; color:#854d0e; border-color:#fde68a; }
+  .index-badge.below { background:#f0fdf4; color:#166534; border-color:#bbf7d0; }
+
+  /* Room cards */
+  .rooms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+  .room-card { border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+  .room-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.6rem 0.85rem; background: var(--ravlo-surface-2, #f8f9fb);
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .room-card-header .room-title { font-size: 0.85rem; font-weight: 700; display:flex; align-items:center; gap:6px; }
+  .room-card-header .room-total { font-size: 0.8rem; font-weight: 700; color: var(--ravlo-blue, #3b82f6); }
+  .room-item {
+    display: grid; grid-template-columns: 1fr auto auto;
+    align-items: center; gap: 8px;
+    padding: 6px 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem;
+  }
+  .room-item:last-child { border-bottom: none; }
+  .room-item label { display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--ravlo-text); }
+  .room-item input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--ravlo-blue, #3b82f6); }
+  .room-item .cost-input {
+    width: 88px; text-align: right; font-size: 0.8rem; font-weight: 600;
+    border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px 6px;
+    background: var(--ravlo-surface, #fff); color: var(--ravlo-text);
+  }
+  .room-item .cost-input:focus { border-color: var(--ravlo-blue, #3b82f6); outline: none; }
+  .room-item .item-name { line-height: 1.3; }
+  .room-item.excluded label { opacity: 0.4; }
+  .room-item.excluded .cost-input { opacity: 0.3; }
+
+  /* Add item button */
+  .add-item-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px; font-size: 0.75rem; color: var(--ravlo-blue, #3b82f6);
+    cursor: pointer; border-top: 1px dashed #e2e8f0; background: none; width: 100%;
+    text-align: left; border-left: none; border-right: none; border-bottom: none;
+  }
+  .add-item-btn:hover { background: var(--ravlo-blue-light, #eff6ff); }
+
+  /* Totals bar */
+  .totals-bar {
+    display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
+    background: var(--ravlo-surface-2, #f8f9fb);
+    border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.25rem;
+  }
+  .totals-bar .total-block { display: flex; flex-direction: column; gap: 2px; }
+  .totals-bar .total-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ravlo-muted); }
+  .totals-bar .total-val   { font-size: 1.25rem; font-weight: 800; color: var(--ravlo-text); }
+  .totals-bar .total-val.commission { color: var(--ravlo-blue, #3b82f6); }
+  .totals-bar .divider { width: 1px; height: 40px; background: #e2e8f0; }
+
+  /* Commission panel */
+  .commission-panel { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+  .commission-panel-header {
+    padding: 0.75rem 1rem; background: var(--ravlo-surface-2, #f8f9fb);
+    border-bottom: 1px solid #e2e8f0; font-weight: 700; font-size: 0.88rem;
+  }
+  .commission-tiers { display: flex; flex-direction: column; gap: 0; }
+  .tier-row {
+    display: flex; align-items: center; gap: 12px; padding: 0.7rem 1rem;
+    border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.12s;
+  }
+  .tier-row:last-child { border-bottom: none; }
+  .tier-row:hover { background: var(--ravlo-blue-light, #eff6ff); }
+  .tier-row.selected { background: var(--ravlo-blue-light, #eff6ff); }
+  .tier-radio { width: 16px; height: 16px; accent-color: var(--ravlo-blue, #3b82f6); }
+  .tier-info { flex: 1; }
+  .tier-info .tier-name { font-size: 0.83rem; font-weight: 700; }
+  .tier-info .tier-desc { font-size: 0.73rem; color: var(--ravlo-muted); margin-top: 1px; }
+  .tier-pct { font-size: 1rem; font-weight: 800; color: var(--ravlo-blue, #3b82f6); min-width: 44px; text-align: right; }
+  .custom-pct-row { padding: 0.5rem 1rem 0.75rem; display: none; }
+  .custom-pct-row.visible { display: flex; align-items: center; gap: 8px; }
+  .custom-pct-input {
+    width: 80px; font-size: 0.9rem; font-weight: 700; text-align: center;
+    border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px;
+    background: var(--ravlo-surface, #fff);
+  }
+
+  /* Sale price input */
+  .sale-price-row { display: flex; align-items: center; gap: 10px; padding: 0.75rem 1rem; border-top: 1px solid #e2e8f0; }
+  .sale-price-label { font-size: 0.8rem; font-weight: 600; color: var(--ravlo-muted); white-space: nowrap; }
+  .sale-price-input {
+    flex: 1; font-size: 0.9rem; font-weight: 700; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 5px 10px; background: var(--ravlo-surface, #fff);
+  }
+
+  /* Client info */
+  .client-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  @media(max-width:600px){ .client-info-grid { grid-template-columns: 1fr; } }
+  .field-group { display: flex; flex-direction: column; gap: 3px; }
+  .field-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ravlo-muted); }
+  .field-input {
+    font-size: 0.85rem; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 6px 10px; background: var(--ravlo-surface, #fff); color: var(--ravlo-text);
+  }
+  .field-input:focus { border-color: var(--ravlo-blue, #3b82f6); outline: none; }
+
+  /* Empty state */
+  .cs-empty { text-align: center; padding: 3rem 1rem; color: var(--ravlo-muted); }
+  .cs-empty .big-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+
+  /* Analyze loader */
+  .analyzing-indicator { display: none; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--ravlo-muted); }
+  .analyzing-indicator.visible { display: flex; }
+  .spinner { width: 14px; height: 14px; border: 2px solid #e2e8f0; border-top-color: var(--ravlo-blue, #3b82f6); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cs-grid">
+
+  {# ── Sidebar: session list + new button ── #}
+  <aside class="cs-sidebar ravlo-card pad">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-sm font-semibold">Sessions</h3>
+      <button class="ravlo-btn primary text-xs" onclick="startNewSession()">+ New</button>
+    </div>
+
+    {% if sessions %}
+      <div class="flex flex-col gap-1">
+        {% for s in sessions %}
+          <div class="session-list-item {% if current_session and current_session.id == s.id %}active{% endif %}"
+               onclick="window.location='{{ url_for('vip.client_session_load', session_id=s.id) }}'">
+            <span class="addr">{{ s.property_address|truncate(38) }}</span>
+            <span class="meta">
+              {{ s.client_name or "No client name" }} ·
+              {{ s.created_at.strftime('%b %d') if s.created_at else '—' }}
+            </span>
+            <span class="session-badge badge-{{ s.status }}">{{ s.status }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-xs text-gray-400 text-center py-4">No sessions yet — start a new one.</p>
+    {% endif %}
+  </aside>
+
+  {# ── Main workspace ── #}
+  <div class="cs-workspace">
+
+    {% if current_session or true %}
+    {# ── Property header ── #}
+    <div class="ravlo-card pad">
+      <div class="property-header mb-3">
+        <input id="inpAddress" type="text"
+               value="{{ current_session.property_address if current_session else '' }}"
+               placeholder="Enter property address (e.g. 123 Main St, Atlanta, GA)"
+               onblur="onAddressChange()" onkeydown="if(event.key==='Enter'){event.preventDefault();onAddressChange();}">
+        <button class="ravlo-btn primary text-sm" onclick="analyzeProperty()">
+          Analyze →
+        </button>
+        <div id="analyzingIndicator" class="analyzing-indicator">
+          <div class="spinner"></div> Building scope…
+        </div>
+        <div id="indexBadge" class="index-badge hidden"></div>
+      </div>
+
+      <div class="prop-meta">
+        <div class="field-group">
+          <span class="field-label">ZIP</span>
+          <input id="inpZip" class="prop-meta" type="text"
+                 value="{{ current_session.property_zip or '' }}" placeholder="30301" style="width:80px;">
+        </div>
+        <div class="field-group">
+          <span class="field-label">State</span>
+          <input id="inpState" class="prop-meta" type="text"
+                 value="{{ current_session.property_state or '' }}" placeholder="GA" style="width:55px;">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Beds</span>
+          <input id="inpBeds" class="prop-meta" type="number" min="0" max="20"
+                 value="{{ current_session.bedrooms or '' }}" placeholder="3" style="width:60px;">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Baths</span>
+          <input id="inpBaths" class="prop-meta" type="text"
+                 value="{{ current_session.bathrooms or '' }}" placeholder="2" style="width:60px;">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Sq Ft</span>
+          <input id="inpSqft" class="prop-meta" type="number" min="0"
+                 value="{{ current_session.sqft or '' }}" placeholder="1800" style="width:80px;">
+        </div>
+      </div>
+    </div>
+
+    {# ── Scope builder ── #}
+    <div class="ravlo-card pad">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold">Renovation Scope</h3>
+        <span class="text-xs text-gray-400">Check items to include · Edit costs live</span>
+      </div>
+
+      <div id="scopeEmpty" class="cs-empty {% if current_session and current_session.scope_json and current_session.scope_json != '[]' %}hidden{% endif %}">
+        <div class="big-icon">🏠</div>
+        <p class="font-medium mb-1">Enter an address and click Analyze</p>
+        <p class="text-sm">The engine will build a room-by-room scope with locally-adjusted costs.</p>
+      </div>
+
+      <div id="roomsGrid" class="rooms-grid {% if not current_session or not current_session.scope_json or current_session.scope_json == '[]' %}hidden{% endif %}">
+        {# Populated by JS #}
+      </div>
+    </div>
+
+    {# ── Totals bar ── #}
+    <div id="totalsBar" class="totals-bar {% if not current_session or not current_session.scope_json or current_session.scope_json == '[]' %}hidden{% endif %}">
+      <div class="total-block">
+        <span class="total-label">Renovation Total</span>
+        <span class="total-val" id="totalReno">$0</span>
+      </div>
+      <div class="divider"></div>
+      <div class="total-block">
+        <span class="total-label">Est. Sale Price</span>
+        <span class="total-val" id="totalSale">$0</span>
+      </div>
+      <div class="divider"></div>
+      <div class="total-block">
+        <span class="total-label">Commission ({{ '{}%'.format(current_session.commission_pct) if current_session else '1.5%' }})</span>
+        <span class="total-val commission" id="totalCommission">$0</span>
+      </div>
+      <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+        <select id="statusSelect" class="field-input text-xs"
+                onchange="updateStatus(this.value)" style="width:130px;">
+          <option value="draft" {% if current_session and current_session.status=='draft' %}selected{% endif %}>Draft</option>
+          <option value="presented" {% if current_session and current_session.status=='presented' %}selected{% endif %}>Presented</option>
+          <option value="won" {% if current_session and current_session.status=='won' %}selected{% endif %}>Won 🎉</option>
+          <option value="closed" {% if current_session and current_session.status=='closed' %}selected{% endif %}>Closed</option>
+          <option value="lost" {% if current_session and current_session.status=='lost' %}selected{% endif %}>Lost</option>
+        </select>
+      </div>
+    </div>
+
+    {# ── Commission panel + sale price ── #}
+    <div class="commission-panel {% if not current_session or not current_session.scope_json or current_session.scope_json == '[]' %}hidden{% endif %}" id="commissionPanel">
+      <div class="commission-panel-header">💰 Commission Tier</div>
+      <div class="commission-tiers">
+        {% for tier in tiers %}
+        <div class="tier-row {% if current_session and current_session.commission_tier == tier.id %}selected{% elif not current_session and tier.id == 'standard' %}selected{% endif %}"
+             onclick="selectTier('{{ tier.id }}', {{ tier.pct or 'null' }})">
+          <input type="radio" name="commTier" class="tier-radio"
+                 id="tier_{{ tier.id }}"
+                 value="{{ tier.id }}"
+                 {% if current_session and current_session.commission_tier == tier.id %}checked{% elif not current_session and tier.id == 'standard' %}checked{% endif %}>
+          <div class="tier-info">
+            <div class="tier-name">{{ tier.label }}</div>
+            <div class="tier-desc">{{ tier.description }}</div>
+          </div>
+          <div class="tier-pct">{% if tier.pct %}{{ tier.pct }}%{% else %}—{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div id="customPctRow" class="custom-pct-row">
+        <span class="text-sm font-semibold text-gray-600">Custom %:</span>
+        <input id="customPctInput" type="number" min="0.5" max="10" step="0.1"
+               class="custom-pct-input"
+               value="{{ current_session.commission_pct if current_session and current_session.commission_tier == 'custom' else '3.5' }}"
+               oninput="recalc()">
+      </div>
+      <div class="sale-price-row">
+        <span class="sale-price-label">Est. Sale Price:</span>
+        <input id="inpSalePrice" type="text" class="sale-price-input"
+               placeholder="$450,000"
+               value="{% if current_session and current_session.sale_price %}{{ '$%s'|format('{:,}'.format(current_session.sale_price)) }}{% endif %}"
+               oninput="recalc()">
+      </div>
+    </div>
+
+    {# ── Client info ── #}
+    <div class="ravlo-card pad {% if not current_session or not current_session.scope_json or current_session.scope_json == '[]' %}hidden{% endif %}" id="clientInfoPanel">
+      <h3 class="text-sm font-semibold mb-3">Client Info</h3>
+      <div class="client-info-grid">
+        <div class="field-group">
+          <span class="field-label">Client Name</span>
+          <input id="inpClientName" type="text" class="field-input"
+                 placeholder="Jane Smith"
+                 value="{{ current_session.client_name or '' if current_session else '' }}">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Email</span>
+          <input id="inpClientEmail" type="email" class="field-input"
+                 placeholder="jane@example.com"
+                 value="{{ current_session.client_email or '' if current_session else '' }}">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Phone</span>
+          <input id="inpClientPhone" type="tel" class="field-input"
+                 placeholder="(404) 555-0100"
+                 value="{{ current_session.client_phone or '' if current_session else '' }}">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Notes</span>
+          <input id="inpNotes" type="text" class="field-input"
+                 placeholder="Client preferences, timeline…"
+                 value="{{ current_session.notes or '' if current_session else '' }}">
+        </div>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="cs-empty ravlo-card pad">
+      <div class="big-icon">🏠</div>
+      <p class="font-medium mb-1">No session loaded</p>
+      <button class="ravlo-btn primary mt-3" onclick="startNewSession()">Start a New Session</button>
+    </div>
+    {% endif %}
+
+  </div>{# /cs-workspace #}
+</div>{# /cs-grid #}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const CSRF_TOKEN = "{{ csrf_token() }}";
+let currentSessionId = {{ current_session.id if current_session else 'null' }};
+let scope = {{ scope_json | safe }};  // list of room dicts
+let activeTierId   = "{{ current_session.commission_tier if current_session else 'standard' }}";
+let activeTierPct  = {{ current_session.commission_pct if current_session and current_session.commission_pct else '1.5' }};
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  if (scope && scope.length) {
+    renderRooms(scope);
+    showWorkspace();
+    recalc();
+  }
+  // Show save/print buttons if session exists
+  if (currentSessionId) {
+    document.getElementById("btnSaveSession").classList.remove("hidden");
+    document.getElementById("btnPrintProposal").classList.remove("hidden");
+  }
+  // Show custom pct row if needed
+  if (activeTierId === "custom") {
+    document.getElementById("customPctRow").classList.add("visible");
+  }
+});
+
+// ── New session ────────────────────────────────────────────────────────────
+function startNewSession() {
+  window.location = "{{ url_for('vip.client_session_list') }}";
+}
+
+// ── Address change ─────────────────────────────────────────────────────────
+function onAddressChange() {
+  // Auto-extract ZIP and state from address if present
+  const addr = document.getElementById("inpAddress").value;
+  const stateMatch = addr.match(/,\s*([A-Z]{2})\s*(\d{5})?/);
+  if (stateMatch) {
+    if (!document.getElementById("inpState").value)
+      document.getElementById("inpState").value = stateMatch[1];
+    if (stateMatch[2] && !document.getElementById("inpZip").value)
+      document.getElementById("inpZip").value = stateMatch[2];
+  }
+  const zipMatch = addr.match(/\b(\d{5})\b/);
+  if (zipMatch && !document.getElementById("inpZip").value)
+    document.getElementById("inpZip").value = zipMatch[1];
+}
+
+// ── Analyze ────────────────────────────────────────────────────────────────
+async function analyzeProperty() {
+  const addr    = document.getElementById("inpAddress").value.trim();
+  const zipCode = document.getElementById("inpZip").value.trim();
+  const state   = document.getElementById("inpState").value.trim().toUpperCase();
+
+  if (!addr) { alert("Enter a property address first."); return; }
+
+  // Auto-fill state/zip if blank
+  onAddressChange();
+
+  document.getElementById("analyzingIndicator").classList.add("visible");
+  document.getElementById("indexBadge").classList.add("hidden");
+
+  try {
+    const res  = await fetch("{{ url_for('vip.client_session_analyze') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN },
+      body: JSON.stringify({ zip_code: zipCode, state: state }),
+    });
+    const data = await res.json();
+    if (data.status !== "ok") throw new Error(data.error || "Analyze failed");
+
+    scope = data.scope;
+    renderRooms(scope);
+    showWorkspace();
+    recalc();
+
+    // Show cost index badge
+    const badge = document.getElementById("indexBadge");
+    const delta = data.delta_pct || 0;
+    badge.textContent = `📍 ${data.index_label} · ${delta >= 0 ? '+' : ''}${delta}%`;
+    badge.className = "index-badge " + (delta > 0 ? "above" : delta < 0 ? "below" : "");
+    badge.classList.remove("hidden");
+
+    // Auto-save
+    await saveSession(true);
+  } catch (e) {
+    console.error(e);
+    alert("Could not generate scope. Please try again.");
+  } finally {
+    document.getElementById("analyzingIndicator").classList.remove("visible");
+  }
+}
+
+// ── Render rooms ───────────────────────────────────────────────────────────
+function renderRooms(rooms) {
+  const grid = document.getElementById("roomsGrid");
+  grid.innerHTML = "";
+  rooms.forEach((room, rIdx) => {
+    const card = document.createElement("div");
+    card.className = "room-card";
+    card.innerHTML = `
+      <div class="room-card-header">
+        <div class="room-title">${room.icon || '🔨'} ${room.room}</div>
+        <div class="room-total" id="roomTotal_${rIdx}">$0</div>
+      </div>
+      <div id="items_${rIdx}">
+        ${(room.items || []).map((item, iIdx) => renderItem(rIdx, iIdx, item)).join("")}
+      </div>
+      <button class="add-item-btn" onclick="addItem(${rIdx})">+ Add line item</button>
+    `;
+    grid.appendChild(card);
+    updateRoomTotal(rIdx);
+  });
+}
+
+function renderItem(rIdx, iIdx, item) {
+  const inc = item.included !== false;
+  return `
+    <div class="room-item ${inc ? '' : 'excluded'}" id="item_${rIdx}_${iIdx}">
+      <label>
+        <input type="checkbox" ${inc ? 'checked' : ''}
+               onchange="toggleItem(${rIdx},${iIdx},this.checked)">
+        <span class="item-name">${item.name}</span>
+      </label>
+      <span></span>
+      <input type="text" class="cost-input"
+             value="${fmtCost(item.cost || 0)}"
+             onblur="updateCost(${rIdx},${iIdx},this.value)"
+             onkeydown="if(event.key==='Enter'){this.blur();}">
+    </div>`;
+}
+
+function fmtCost(n) {
+  return "$" + Math.round(n).toLocaleString();
+}
+
+function parseCost(str) {
+  return parseFloat(str.replace(/[$,]/g, "")) || 0;
+}
+
+function toggleItem(rIdx, iIdx, checked) {
+  scope[rIdx].items[iIdx].included = checked;
+  const row = document.getElementById(`item_${rIdx}_${iIdx}`);
+  if (row) row.className = "room-item " + (checked ? "" : "excluded");
+  updateRoomTotal(rIdx);
+  recalc();
+}
+
+function updateCost(rIdx, iIdx, val) {
+  const cost = parseCost(val);
+  scope[rIdx].items[iIdx].cost = cost;
+  // Reformat input
+  const inputs = document.querySelectorAll(`#item_${rIdx}_${iIdx} .cost-input`);
+  if (inputs.length) inputs[0].value = fmtCost(cost);
+  updateRoomTotal(rIdx);
+  recalc();
+}
+
+function updateRoomTotal(rIdx) {
+  const items = scope[rIdx]?.items || [];
+  const total = items.reduce((s, it) => s + (it.included !== false ? (it.cost || 0) : 0), 0);
+  const el = document.getElementById(`roomTotal_${rIdx}`);
+  if (el) el.textContent = fmtCost(total);
+}
+
+function addItem(rIdx) {
+  const name = prompt("Line item name:");
+  if (!name) return;
+  const costStr = prompt("Cost ($):", "1000");
+  const cost = parseCost(costStr || "1000");
+  const item = { name, cost, included: true };
+  scope[rIdx].items.push(item);
+  const iIdx = scope[rIdx].items.length - 1;
+  const container = document.getElementById(`items_${rIdx}`);
+  container.insertAdjacentHTML("beforeend", renderItem(rIdx, iIdx, item));
+  updateRoomTotal(rIdx);
+  recalc();
+}
+
+// ── Totals ─────────────────────────────────────────────────────────────────
+function recalc() {
+  const reno = scope.reduce((s, room) =>
+    s + (room.items || []).reduce((rs, it) =>
+      rs + (it.included !== false ? (it.cost || 0) : 0), 0), 0);
+
+  const salePriceRaw = document.getElementById("inpSalePrice")?.value || "";
+  const salePrice = parseCost(salePriceRaw);
+
+  let pct = activeTierPct;
+  if (activeTierId === "custom") {
+    pct = parseFloat(document.getElementById("customPctInput")?.value) || 1.5;
+  }
+  const commission = salePrice * pct / 100;
+
+  document.getElementById("totalReno").textContent       = fmtCost(reno);
+  document.getElementById("totalSale").textContent       = fmtCost(salePrice);
+  document.getElementById("totalCommission").textContent = fmtCost(commission);
+
+  // Update commission label in totals bar
+  const commLabel = document.querySelector("#totalsBar .total-block:last-of-type .total-label");
+  if (commLabel) commLabel.textContent = `Commission (${pct}%)`;
+}
+
+// ── Tier selection ─────────────────────────────────────────────────────────
+function selectTier(tierId, tierPct) {
+  activeTierId  = tierId;
+  activeTierPct = tierPct ?? parseFloat(document.getElementById("customPctInput")?.value) ?? 1.5;
+
+  // Update UI
+  document.querySelectorAll(".tier-row").forEach(r => r.classList.remove("selected"));
+  document.querySelectorAll("[name='commTier']").forEach(r => r.checked = false);
+
+  const row   = event.currentTarget;
+  const radio = document.getElementById(`tier_${tierId}`);
+  if (row)   row.classList.add("selected");
+  if (radio) radio.checked = true;
+
+  const customRow = document.getElementById("customPctRow");
+  if (tierId === "custom") {
+    customRow.classList.add("visible");
+  } else {
+    customRow.classList.remove("visible");
+  }
+  recalc();
+}
+
+// ── Status ─────────────────────────────────────────────────────────────────
+async function updateStatus(status) {
+  if (!currentSessionId) return;
+  await fetch(`/vip/client-session/${currentSessionId}/status`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN },
+    body: JSON.stringify({ status }),
+  });
+}
+
+// ── Show workspace UI ──────────────────────────────────────────────────────
+function showWorkspace() {
+  document.getElementById("scopeEmpty").classList.add("hidden");
+  document.getElementById("roomsGrid").classList.remove("hidden");
+  document.getElementById("totalsBar").classList.remove("hidden");
+  document.getElementById("commissionPanel").classList.remove("hidden");
+  document.getElementById("clientInfoPanel").classList.remove("hidden");
+  document.getElementById("btnSaveSession").classList.remove("hidden");
+  document.getElementById("btnPrintProposal").classList.remove("hidden");
+}
+
+// ── Save session ───────────────────────────────────────────────────────────
+async function saveSession(silent = false) {
+  const addr = document.getElementById("inpAddress").value.trim();
+  if (!addr) { if (!silent) alert("Enter a property address."); return; }
+
+  let pct = activeTierPct;
+  if (activeTierId === "custom") {
+    pct = parseFloat(document.getElementById("customPctInput")?.value) || 1.5;
+  }
+  const salePriceRaw = document.getElementById("inpSalePrice")?.value || "";
+  const salePrice    = parseCost(salePriceRaw) || null;
+  const tierLabel    = { standard:"Standard Listing", minor_repairs:"Minor Repairs", major_repairs:"Major Repairs / Full Reno", custom:"Custom" }[activeTierId] || activeTierId;
+
+  const payload = {
+    session_id:       currentSessionId,
+    property_address: addr,
+    property_zip:     document.getElementById("inpZip").value.trim() || null,
+    property_state:   document.getElementById("inpState").value.trim().toUpperCase() || null,
+    bedrooms:         document.getElementById("inpBeds").value || null,
+    bathrooms:        document.getElementById("inpBaths").value || null,
+    sqft:             document.getElementById("inpSqft").value || null,
+    client_name:      document.getElementById("inpClientName")?.value.trim() || null,
+    client_email:     document.getElementById("inpClientEmail")?.value.trim() || null,
+    client_phone:     document.getElementById("inpClientPhone")?.value.trim() || null,
+    notes:            document.getElementById("inpNotes")?.value.trim() || null,
+    scope:            scope,
+    commission_tier:  activeTierId,
+    commission_label: tierLabel,
+    commission_pct:   String(pct),
+    sale_price:       salePrice,
+    status:           document.getElementById("statusSelect")?.value || "draft",
+  };
+
+  const res  = await fetch("{{ url_for('vip.client_session_save') }}", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (data.status === "ok") {
+    currentSessionId = data.session_id;
+    document.getElementById("btnPrintProposal").classList.remove("hidden");
+    if (!silent) {
+      // Flash a brief "Saved" indicator
+      const btn = document.getElementById("btnSaveSession");
+      const orig = btn.textContent;
+      btn.textContent = "✓ Saved";
+      btn.disabled = true;
+      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1500);
+    }
+  } else {
+    if (!silent) alert(data.error || "Could not save session.");
+  }
+}
+
+// ── Print proposal ─────────────────────────────────────────────────────────
+async function printProposal() {
+  // Save first so print view has latest data
+  await saveSession(true);
+  if (currentSessionId) {
+    window.open(`/vip/client-session/${currentSessionId}/print`, "_blank");
+  }
+}
+</script>
+{% endblock %}

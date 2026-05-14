@@ -480,6 +480,7 @@
   <div class="ravlo-card pad w-full max-w-md mx-4" onclick="event.stopPropagation()">
     <h3 class="text-lg font-semibold mb-4">New Design Project</h3>
     <form method="POST" action="{{ url_for('vip.create_design_project') }}" class="space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Project Title</label>
         <input name="title" class="design-input" placeholder="e.g. 123 Main St — Kitchen Remodel"

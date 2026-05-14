@@ -79,6 +79,13 @@ class VIPProfile(VIPBaseModel):
         overlaps="vip_profile",
     )
 
+    client_sessions = relationship(
+        "VIPClientSession",
+        back_populates="vip_profile",
+        lazy=True,
+        order_by="VIPClientSession.created_at.desc()",
+    )
+
     def __repr__(self):
         return f"<VIPProfile {self.id} - {self.display_name}>"
 
@@ -349,3 +356,50 @@ class VIPTeamMember(VIPBaseModel):
 
     def __repr__(self):
         return f"<VIPTeamMember {self.id} - {self.name}>"
+
+
+# ---------------------------------------------------------
+# CLIENT SESSION  (Property Brothers — live client meetings)
+# ---------------------------------------------------------
+class VIPClientSession(VIPBaseModel):
+    """Saved client-facing renovation scope + commission session.
+
+    John sits down with a homeowner, pulls up an address, the engine
+    generates room-by-room scope + costs (cost-index adjusted), he tweaks
+    live, the page auto-calculates his tiered commission, then he prints
+    a proposal on the spot.
+    """
+    __tablename__ = "vip_client_sessions"
+
+    vip_profile_id   = Column(Integer, ForeignKey("vip_profiles.id"), nullable=False)
+
+    # Client / property
+    client_name      = Column(String(255), nullable=True)
+    client_email     = Column(String(255), nullable=True)
+    client_phone     = Column(String(50),  nullable=True)
+    property_address = Column(String(500), nullable=False)
+    property_zip     = Column(String(20),  nullable=True)
+    property_state   = Column(String(10),  nullable=True)
+    bedrooms         = Column(Integer,     nullable=True)
+    bathrooms        = Column(String(10),  nullable=True)
+    sqft             = Column(Integer,     nullable=True)
+
+    # Renovation scope — JSON list of room dicts
+    # [ { room: "Kitchen", items: [ {name, cost, included}, … ] }, … ]
+    scope_json       = Column(Text, nullable=True)
+
+    # Commission
+    commission_tier  = Column(String(20),  nullable=True, default="1.5")
+    # "standard" (1.5%), "minor_repairs" (2%), "major_repairs" (3+%), "custom"
+    commission_label = Column(String(80),  nullable=True)
+    commission_pct   = Column(String(20),  nullable=True, default="1.5")
+    sale_price       = Column(Integer,     nullable=True)   # estimated / agreed
+
+    notes            = Column(Text,        nullable=True)
+    status           = Column(String(30),  nullable=False, default="draft")
+    # draft | presented | closed | won | lost
+
+    vip_profile = relationship("VIPProfile", back_populates="client_sessions")
+
+    def __repr__(self):
+        return f"<VIPClientSession {self.id} - {self.property_address}>"

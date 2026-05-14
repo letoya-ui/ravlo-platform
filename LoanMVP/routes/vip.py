@@ -28,6 +28,7 @@ from LoanMVP.models.vip_models import (
     VIPDesignAnnotation,
     VIPTeamMember,
     InsuranceQuoteRequest,
+    VIPClientSession,
 )
 
 # ── Investor / deal models ────────────────────────────────────────────────────
@@ -4073,6 +4074,7 @@ def design_studio():
 
 
 @vip_bp.post("/design-studio/create")
+@csrf.exempt
 @role_required("partner_group", "admin")
 def create_design_project():
     profile     = get_or_create_vip_profile()
@@ -5055,4 +5057,325 @@ def listing_presentation_public(slug):
         pres  = pres,
         view  = view,
         owner = owner,
+    )
+
+
+# =============================================================================
+# CLIENT SESSION — "Property Brothers" live renovation scope + commission tool
+# =============================================================================
+#
+# John opens /vip/client-session, enters a property address, the engine
+# generates a room-by-room renovation scope with locally-adjusted costs,
+# he tweaks line items live in front of the client, selects a commission
+# tier (1.5 % / 2 % / 3 %+), and prints a branded proposal on the spot.
+# No leads leave the platform — John owns every session end-to-end.
+# =============================================================================
+
+import json as _json
+
+# Default room scope — national base costs ($/item).
+# Local cost-index multiplier applied at analyze time.
+_CS_DEFAULT_ROOMS = [
+    {
+        "room": "Kitchen",
+        "icon": "🍳",
+        "items": [
+            {"name": "Cabinet Refresh / Replace",  "base": 8500,  "included": True},
+            {"name": "Countertops (Quartz)",        "base": 4200,  "included": True},
+            {"name": "Appliance Package",           "base": 5500,  "included": True},
+            {"name": "Backsplash & Tile",           "base": 1800,  "included": True},
+            {"name": "Lighting & Fixtures",         "base": 1200,  "included": True},
+        ],
+    },
+    {
+        "room": "Bathrooms",
+        "icon": "🚿",
+        "items": [
+            {"name": "Vanity & Fixtures",           "base": 2800,  "included": True},
+            {"name": "Tile & Flooring",             "base": 3200,  "included": True},
+            {"name": "Shower / Tub Surround",       "base": 4500,  "included": False},
+            {"name": "Lighting & Mirror",           "base": 900,   "included": True},
+        ],
+    },
+    {
+        "room": "Living / Dining",
+        "icon": "🛋️",
+        "items": [
+            {"name": "Flooring (Hardwood or LVP)", "base": 6000,  "included": True},
+            {"name": "Interior Paint",              "base": 2200,  "included": True},
+            {"name": "Trim & Millwork",             "base": 1400,  "included": False},
+        ],
+    },
+    {
+        "room": "Bedrooms",
+        "icon": "🛏️",
+        "items": [
+            {"name": "Flooring",                   "base": 3500,  "included": True},
+            {"name": "Paint & Trim",               "base": 1800,  "included": True},
+            {"name": "Closet Organizers",           "base": 900,   "included": False},
+        ],
+    },
+    {
+        "room": "Exterior & Curb Appeal",
+        "icon": "🏡",
+        "items": [
+            {"name": "Landscaping / Curb Appeal",  "base": 3500,  "included": True},
+            {"name": "Paint or Siding Touch-Up",   "base": 4200,  "included": True},
+            {"name": "Driveway / Walkway",          "base": 2800,  "included": False},
+        ],
+    },
+    {
+        "room": "Mechanicals / Systems",
+        "icon": "⚙️",
+        "items": [
+            {"name": "HVAC Service / Update",      "base": 5500,  "included": False},
+            {"name": "Electrical Panel / Updates", "base": 3000,  "included": False},
+            {"name": "Plumbing Updates",            "base": 2500,  "included": False},
+        ],
+    },
+]
+
+_CS_COMMISSION_TIERS = [
+    {"id": "standard",      "label": "Standard Listing",  "pct": 1.5,
+     "description": "No repairs — list as-is or minor touch-ups only"},
+    {"id": "minor_repairs", "label": "Minor Repairs",     "pct": 2.0,
+     "description": "Paint, fixtures, landscaping — light prep work"},
+    {"id": "major_repairs", "label": "Major Repairs / Full Reno", "pct": 3.0,
+     "description": "Significant renovation — kitchen, baths, systems"},
+    {"id": "custom",        "label": "Custom",            "pct": None,
+     "description": "Set your own commission percentage"},
+]
+
+
+def _cs_build_scope(zip_code=None, state=None, factor=None):
+    """Return default scope list with local cost-index factor applied."""
+    import copy
+    if factor is None:
+        try:
+            from LoanMVP.services.cost_index import get_local_multiplier
+            factor = get_local_multiplier(zip_code=zip_code, state=state)
+        except Exception:
+            factor = 1.0
+
+    rooms = copy.deepcopy(_CS_DEFAULT_ROOMS)
+    for room in rooms:
+        for item in room["items"]:
+            item["cost"] = round(item["base"] * factor / 100) * 100   # round to $100
+    return rooms, factor
+
+
+@vip_bp.get("/client-session")
+@role_required("partner_group", "admin")
+def client_session_list():
+    profile  = get_or_create_vip_profile()
+    sessions = (
+        VIPClientSession.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(VIPClientSession.created_at.desc())
+        .limit(50).all()
+    )
+    return render_template(
+        "vip/contractor/client_session.html",
+        vip_profile    = profile,
+        modules        = get_enabled_modules(profile),
+        header_name    = get_dashboard_name(profile),
+        sessions       = sessions,
+        current_session = None,
+        scope_json     = "[]",
+        tiers          = _CS_COMMISSION_TIERS,
+        portal         = "vip",
+        portal_name    = "VIP",
+        portal_home    = url_for("vip.contractor_dashboard"),
+    )
+
+
+@vip_bp.get("/client-session/<int:session_id>")
+@role_required("partner_group", "admin")
+def client_session_load(session_id):
+    profile  = get_or_create_vip_profile()
+    cs = VIPClientSession.query.filter_by(
+        id=session_id, vip_profile_id=profile.id
+    ).first_or_404()
+    sessions = (
+        VIPClientSession.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(VIPClientSession.created_at.desc())
+        .limit(50).all()
+    )
+    return render_template(
+        "vip/contractor/client_session.html",
+        vip_profile     = profile,
+        modules         = get_enabled_modules(profile),
+        header_name     = get_dashboard_name(profile),
+        sessions        = sessions,
+        current_session = cs,
+        scope_json      = cs.scope_json or "[]",
+        tiers           = _CS_COMMISSION_TIERS,
+        portal          = "vip",
+        portal_name     = "VIP",
+        portal_home     = url_for("vip.contractor_dashboard"),
+    )
+
+
+@vip_bp.post("/client-session/analyze")
+@role_required("partner_group", "admin")
+def client_session_analyze():
+    """AJAX: generate room-by-room scope for a given address."""
+    data     = request.get_json() or {}
+    zip_code = (data.get("zip_code") or "").strip() or None
+    state    = (data.get("state") or "").strip() or None
+
+    try:
+        rooms, factor = _cs_build_scope(zip_code=zip_code, state=state)
+    except Exception as exc:
+        current_app.logger.error("client_session_analyze error: %s", exc)
+        rooms, factor = _cs_build_scope()
+
+    # Describe the local index for the UI badge
+    index_label = "U.S. average"
+    delta_pct   = 0
+    try:
+        from LoanMVP.services.cost_index import describe_learned_index
+        info = describe_learned_index(zip_code=zip_code, state=state,
+                                      category="rehab", scope="medium")
+        index_label = info.get("label", "U.S. average")
+        delta_pct   = info.get("delta_pct", 0)
+    except Exception:
+        pass
+
+    return jsonify({
+        "status":      "ok",
+        "scope":       rooms,
+        "factor":      round(factor, 3),
+        "index_label": index_label,
+        "delta_pct":   delta_pct,
+    })
+
+
+@vip_bp.post("/client-session/save")
+@role_required("partner_group", "admin")
+def client_session_save():
+    """Save or update a client session."""
+    profile = get_or_create_vip_profile()
+    data    = request.get_json() or {}
+
+    session_id = data.get("session_id")
+    cs = None
+    if session_id:
+        cs = VIPClientSession.query.filter_by(
+            id=session_id, vip_profile_id=profile.id
+        ).first()
+
+    if not cs:
+        address = (data.get("property_address") or "").strip()
+        if not address:
+            return jsonify({"error": "Property address required"}), 400
+        cs = VIPClientSession(
+            vip_profile_id   = profile.id,
+            property_address = address,
+        )
+        db.session.add(cs)
+
+    # Update all editable fields
+    if data.get("property_address"):
+        cs.property_address = data["property_address"].strip()
+    if data.get("client_name") is not None:
+        cs.client_name  = data["client_name"].strip() or None
+    if data.get("client_email") is not None:
+        cs.client_email = data["client_email"].strip() or None
+    if data.get("client_phone") is not None:
+        cs.client_phone = data["client_phone"].strip() or None
+    if data.get("property_zip") is not None:
+        cs.property_zip   = data["property_zip"].strip() or None
+    if data.get("property_state") is not None:
+        cs.property_state = data["property_state"].strip() or None
+    if data.get("bedrooms") is not None:
+        try:
+            cs.bedrooms = int(data["bedrooms"])
+        except (TypeError, ValueError):
+            pass
+    if data.get("bathrooms") is not None:
+        cs.bathrooms = str(data["bathrooms"])
+    if data.get("sqft") is not None:
+        try:
+            cs.sqft = int(str(data["sqft"]).replace(",", ""))
+        except (TypeError, ValueError):
+            pass
+    if data.get("scope") is not None:
+        cs.scope_json = _json.dumps(data["scope"])
+    if data.get("commission_tier") is not None:
+        cs.commission_tier  = str(data["commission_tier"])
+    if data.get("commission_label") is not None:
+        cs.commission_label = str(data["commission_label"])
+    if data.get("commission_pct") is not None:
+        cs.commission_pct   = str(data["commission_pct"])
+    if data.get("sale_price") is not None:
+        try:
+            cs.sale_price = int(str(data["sale_price"]).replace(",", "").replace("$", ""))
+        except (TypeError, ValueError):
+            pass
+    if data.get("notes") is not None:
+        cs.notes = data["notes"]
+    if data.get("status") is not None:
+        cs.status = data["status"]
+
+    cs.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({"status": "ok", "session_id": cs.id})
+
+
+@vip_bp.post("/client-session/<int:session_id>/status")
+@role_required("partner_group", "admin")
+def client_session_update_status(session_id):
+    profile = get_or_create_vip_profile()
+    cs = VIPClientSession.query.filter_by(
+        id=session_id, vip_profile_id=profile.id
+    ).first_or_404()
+    data   = request.get_json() or {}
+    status = data.get("status", "draft")
+    if status in ("draft", "presented", "closed", "won", "lost"):
+        cs.status     = status
+        cs.updated_at = datetime.utcnow()
+        db.session.commit()
+    return jsonify({"status": "ok"})
+
+
+@vip_bp.get("/client-session/<int:session_id>/print")
+@role_required("partner_group", "admin")
+def client_session_print(session_id):
+    profile = get_or_create_vip_profile()
+    cs = VIPClientSession.query.filter_by(
+        id=session_id, vip_profile_id=profile.id
+    ).first_or_404()
+
+    # Parse scope JSON for the template
+    try:
+        scope = _json.loads(cs.scope_json or "[]")
+    except Exception:
+        scope = []
+
+    # Compute totals
+    total_reno = sum(
+        item.get("cost", 0)
+        for room in scope
+        for item in room.get("items", [])
+        if item.get("included", True)
+    )
+    try:
+        commission_pct = float(cs.commission_pct or "1.5")
+    except (TypeError, ValueError):
+        commission_pct = 1.5
+    sale_price      = cs.sale_price or 0
+    commission_amt  = round(sale_price * commission_pct / 100)
+
+    return render_template(
+        "vip/contractor/client_session_print.html",
+        cs             = cs,
+        scope          = scope,
+        total_reno     = total_reno,
+        commission_pct = commission_pct,
+        commission_amt = commission_amt,
+        sale_price     = sale_price,
+        vip_profile    = profile,
     )

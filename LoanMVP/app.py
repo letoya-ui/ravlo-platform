@@ -92,6 +92,22 @@ _SCHEMA_COMPAT_COLUMNS = [
     ("vip_assistant_suggestions", "proposed_amount",    "INTEGER"),
     ("vip_assistant_suggestions", "source",             "VARCHAR(50)"),
     ("vip_design_projects",       "blueprint_url",      "TEXT"),
+    # vip_client_sessions columns (migration 20260514cs01)
+    ("vip_client_sessions",       "client_name",        "VARCHAR(255)"),
+    ("vip_client_sessions",       "client_email",       "VARCHAR(255)"),
+    ("vip_client_sessions",       "client_phone",       "VARCHAR(50)"),
+    ("vip_client_sessions",       "property_zip",       "VARCHAR(20)"),
+    ("vip_client_sessions",       "property_state",     "VARCHAR(10)"),
+    ("vip_client_sessions",       "bedrooms",           "INTEGER"),
+    ("vip_client_sessions",       "bathrooms",          "VARCHAR(10)"),
+    ("vip_client_sessions",       "sqft",               "INTEGER"),
+    ("vip_client_sessions",       "scope_json",         "TEXT"),
+    ("vip_client_sessions",       "commission_tier",    "VARCHAR(20)"),
+    ("vip_client_sessions",       "commission_label",   "VARCHAR(80)"),
+    ("vip_client_sessions",       "commission_pct",     "VARCHAR(20)"),
+    ("vip_client_sessions",       "sale_price",         "INTEGER"),
+    ("vip_client_sessions",       "notes",              "TEXT"),
+    ("vip_client_sessions",       "updated_at",         "TIMESTAMP"),
 ]
 
 # Tables that must exist at boot. If missing, we ask SQLAlchemy's metadata
@@ -114,6 +130,7 @@ _SCHEMA_COMPAT_TABLES = [
     "vip_team_members",
     "insurance_quote_requests",
     "realtor_listing_presentations",
+    "vip_client_sessions",
 ]
 
 _SCHEMA_COMPAT_INDEXES = [
