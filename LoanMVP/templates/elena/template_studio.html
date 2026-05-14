@@ -3,8 +3,9 @@
 {% block title %}Ravlo • Content Studio{% endblock %}
 
 {% block page_title %}Create Content{% endblock %}
+{% set _is_contractor = is_contractor|default(false) %}
 {% block page_subline %}
-Build flyers, follow-ups, and social posts with client and listing details filled in for you.
+{% if _is_contractor %}Build project showcases, before &amp; after posts, estimate follow-ups, and social content for your contracting business.{% else %}Build flyers, follow-ups, and social posts with client and listing details filled in for you.{% endif %}
 {% endblock %}
 
 {% block topbar_actions %}
@@ -27,6 +28,7 @@ Build flyers, follow-ups, and social posts with client and listing details fille
 
       <form method="GET" action="{{ url_for('elena.template_studio') }}" class="elena-form">
         <div class="elena-form-grid elena-form-grid-3">
+          {% if not _is_contractor %}
           <label>
             Client ID (optional)
             <input
@@ -44,9 +46,10 @@ Build flyers, follow-ups, and social posts with client and listing details fille
               placeholder="Enter listing ID"
             >
           </label>
+          {% endif %}
 
-          <label>
-            Template Type
+          <label {% if _is_contractor %}style="grid-column:1/-1;"{% endif %}>
+            Content Type
             <select name="template_type">
               <option value="">Select a template</option>
               {% for t in templates %}
@@ -70,8 +73,8 @@ Build flyers, follow-ups, and social posts with client and listing details fille
       <section class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
-            <h3>Template Variables</h3>
-            <p>Review or edit the values below before previewing the prompt.</p>
+            <h3>{% if _is_contractor %}Project &amp; Business Details{% else %}Template Variables{% endif %}</h3>
+            <p>{% if _is_contractor %}Fill in your project and business details — the AI uses these to write the content.{% else %}Review or edit the values below before previewing the prompt.{% endif %}</p>
           </div>
         </div>
 

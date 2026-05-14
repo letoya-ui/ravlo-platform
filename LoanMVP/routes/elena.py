@@ -29,6 +29,7 @@ from LoanMVP.services.ai_service import generate_text
 from LoanMVP.services.elena_templates import (
     render_template as render_elena_template,
     TemplateType,
+    templates_for_role,
 )
 from LoanMVP.utils.decorators import role_required
 
@@ -947,9 +948,21 @@ def template_studio():
                 }
             )
 
+    profile = _elena_profile()
+    role_type = getattr(profile, "role_type", None) or "realtor"
+    is_contractor = role_type in ("contractor", "contractor_realtor")
+
+    # Determine the right dashboard home for the Back button
+    if role_type in ("contractor", "contractor_realtor"):
+        _portal_home = url_for("vip.contractor_dashboard")
+    elif role_type in ("insurance", "insurance_realtor"):
+        _portal_home = url_for("vip.insurance_dashboard")
+    else:
+        _portal_home = url_for("vip.realtor_dashboard")
+
     return render_template(
         "elena/template_studio.html",
-        templates=[t.value for t in TemplateType],
+        templates=templates_for_role(role_type),
         selected_template=template_type,
         variables=variables,
         client_id=client_id,
@@ -957,10 +970,12 @@ def template_studio():
         preview=None,
         output=None,
         saved_interaction_id=None,
-        vip_profile=_elena_profile(),
+        vip_profile=profile,
+        is_contractor=is_contractor,
+        role_type=role_type,
         portal="vip",
         portal_name="VIP Workspace",
-        portal_home=url_for("vip.realtor_dashboard"),
+        portal_home=_portal_home,
     )
 
 
@@ -985,9 +1000,14 @@ def template_studio_preview():
 
     prompt = render_elena_template(template_enum, **variables)
 
+    profile = _elena_profile()
+    role_type = getattr(profile, "role_type", None) or "realtor"
+    is_contractor = role_type in ("contractor", "contractor_realtor")
+    _portal_home = url_for("vip.contractor_dashboard") if is_contractor else url_for("vip.realtor_dashboard")
+
     return render_template(
         "elena/template_studio.html",
-        templates=[t.value for t in TemplateType],
+        templates=templates_for_role(role_type),
         selected_template=template_type_value,
         variables=variables,
         client_id=client_id,
@@ -996,10 +1016,12 @@ def template_studio_preview():
         output=None,
         saved_interaction_id=None,
         saved_flyer_id=None,
-        vip_profile=_elena_profile(),
+        vip_profile=profile,
+        is_contractor=is_contractor,
+        role_type=role_type,
         portal="vip",
         portal_name="VIP Workspace",
-        portal_home=url_for("vip.realtor_dashboard"),
+        portal_home=_portal_home,
     )
 
 @elena_bp.post("/template-studio/generate")
@@ -1023,9 +1045,14 @@ def template_studio_generate():
     prompt = render_elena_template(template_enum, **variables)
     output = generate_text(prompt)
 
+    profile = _elena_profile()
+    role_type = getattr(profile, "role_type", None) or "realtor"
+    is_contractor = role_type in ("contractor", "contractor_realtor")
+    _portal_home = url_for("vip.contractor_dashboard") if is_contractor else url_for("vip.realtor_dashboard")
+
     return render_template(
         "elena/template_studio.html",
-        templates=[t.value for t in TemplateType],
+        templates=templates_for_role(role_type),
         selected_template=template_type,
         variables=variables,
         client_id=client_id,
@@ -1034,10 +1061,12 @@ def template_studio_generate():
         output=output,
         saved_interaction_id=None,
         saved_flyer_id=None,
-        vip_profile=_elena_profile(),
+        vip_profile=profile,
+        is_contractor=is_contractor,
+        role_type=role_type,
         portal="vip",
         portal_name="VIP Workspace",
-        portal_home=url_for("vip.realtor_dashboard"),
+        portal_home=_portal_home,
     )
 
 @elena_bp.post("/template-studio/generate_and_save")
@@ -1090,9 +1119,14 @@ def template_studio_generate_and_save():
             db.session.commit()
             saved_flyer_id = flyer.id
 
+    profile = _elena_profile()
+    role_type = getattr(profile, "role_type", None) or "realtor"
+    is_contractor = role_type in ("contractor", "contractor_realtor")
+    _portal_home = url_for("vip.contractor_dashboard") if is_contractor else url_for("vip.realtor_dashboard")
+
     return render_template(
         "elena/template_studio.html",
-        templates=[t.value for t in TemplateType],
+        templates=templates_for_role(role_type),
         selected_template=template_type,
         variables=variables,
         client_id=client_id,
@@ -1101,10 +1135,12 @@ def template_studio_generate_and_save():
         output=output,
         saved_interaction_id=saved_interaction_id,
         saved_flyer_id=saved_flyer_id,
-        vip_profile=_elena_profile(),
+        vip_profile=profile,
+        is_contractor=is_contractor,
+        role_type=role_type,
         portal="vip",
         portal_name="VIP Workspace",
-        portal_home=url_for("vip.realtor_dashboard"),
+        portal_home=_portal_home,
     )
 
 
