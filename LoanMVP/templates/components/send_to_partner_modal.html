@@ -18,6 +18,15 @@
       </button>
     </header>
 
+    <!-- Package banner (shown when sent from a studio) -->
+    <div class="stp-package-banner stp-hidden" id="stpPackageBanner">
+      <div class="stp-package-heading">
+        <span>📦</span>
+        <span>Package Includes</span>
+      </div>
+      <div class="stp-package-items" id="stpPackageItems"></div>
+    </div>
+
     <!-- Step 1: type chips -->
     <div class="stp-section" id="stpStep1">
       <div class="stp-label">Partner Type</div>
@@ -433,12 +442,51 @@
   margin-top: 2px;
 }
 .stp-external-toggle input { width: 14px; height: 14px; accent-color: var(--ravlo-blue, #3b82f6); }
+
+/* Package banner */
+.stp-package-banner {
+  margin: 0 24px 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.07) 0%, rgba(116,229,186,0.07) 100%);
+  border: 1.5px solid rgba(59,130,246,0.18);
+}
+.stp-package-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ravlo-blue, #3b82f6);
+  margin-bottom: 8px;
+}
+.stp-package-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.stp-package-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.55);
+  border: 1px solid rgba(59,130,246,0.15);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ravlo-text, #111827);
+}
+.stp-package-item-icon { font-size: 0.85rem; }
+.stp-package-item-detail { color: var(--ravlo-muted, #6b7280); font-weight: 400; margin-left: 3px; }
 </style>
 
 <script>
 (function () {
   /* ─── state ────────────────────────────────────────── */
-  var _ctx       = {};            // {dealId, savedPropertyId, title, address, zip, city, state}
+  var _ctx       = {};            // {dealId, savedPropertyId, title, address, zip, city, state, studioType, studioItems}
   var _partnerId   = null;        // null for external/unmatched
   var _partnerName = null;
   var _partnerCo   = null;
@@ -474,6 +522,23 @@
     var line = _ctx.title || '';
     if (_ctx.address && _ctx.address !== _ctx.title) line += (line ? ' — ' : '') + _ctx.address;
     document.getElementById('stpContextLine').textContent = line || 'Select a partner type to get started.';
+
+    // Package banner
+    var banner = document.getElementById('stpPackageBanner');
+    var itemsList = document.getElementById('stpPackageItems');
+    if (_ctx.studioItems && _ctx.studioItems.length) {
+      itemsList.innerHTML = _ctx.studioItems.map(function(item) {
+        return '<div class="stp-package-item">' +
+          (item.icon ? '<span class="stp-package-item-icon">' + item.icon + '</span>' : '') +
+          '<span>' + _esc(item.label) + '</span>' +
+          (item.detail ? '<span class="stp-package-item-detail">· ' + _esc(item.detail) + '</span>' : '') +
+          '</div>';
+      }).join('');
+      banner.classList.remove('stp-hidden');
+    } else {
+      banner.classList.add('stp-hidden');
+      itemsList.innerHTML = '';
+    }
 
     // Location note
     var locParts = [];
@@ -633,6 +698,8 @@
       budget:           document.getElementById('stpBudget').value || null,
       timeline:         document.getElementById('stpTimeline').value.trim() || null,
       request_type:     _type ? _type.toLowerCase() : null,
+      studio_type:      _ctx.studioType || null,
+      studio_ref_id:    _ctx.studioRefId || null,
     };
 
     fetch('/investor/send-to-partner', {

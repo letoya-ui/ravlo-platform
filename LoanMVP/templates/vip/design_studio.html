@@ -214,6 +214,9 @@
 {% block topbar_actions %}
   {% if project %}
     <span class="text-sm text-gray-400">{{ project.title }}</span>
+    <button type="button" class="ravlo-btn ghost sm" onclick="openSendPartnerModal(_designStudioCtx)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Package
+    </button>
   {% endif %}
   <button onclick="document.getElementById('newProjectModal').classList.remove('hidden')"
           class="ravlo-btn primary sm">+ New Project</button>
@@ -873,4 +876,25 @@
   });
 })();
 </script>
+
+{% if project %}
+<script>
+var _annCount = {{ annotations | length }};
+var _removeCount = {{ annotations | selectattr('action_type', 'equalto', 'remove') | list | length }};
+var _redesignCount = {{ annotations | selectattr('action_type', 'equalto', 'redesign') | list | length }};
+var _designStudioCtx = {
+  studioType:  'design',
+  studioRefId: {{ project.id }},
+  title:       {{ project.title | tojson }},
+  studioItems: [
+    {icon: '📐', label: 'Blueprint', detail: {{ project.title | tojson }}},
+    {icon: '✏️', label: 'Annotations', detail: String(_annCount) + ' total'},
+    {icon: '🔴', label: 'Remove', detail: String(_removeCount) + ' items'},
+    {icon: '🔵', label: 'Redesign', detail: String(_redesignCount) + ' items'}
+  ]
+};
+</script>
+{% include 'components/send_to_partner_modal.html' %}
+{% endif %}
+
 {% endblock %}

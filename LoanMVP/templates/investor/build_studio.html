@@ -20,10 +20,9 @@
       {% endif %}
       <button type="button" class="ravlo-btn ghost hidden" id="downloadAllBtn">Download All</button>
       <a href="#" class="ravlo-btn primary hidden" id="continueToDealArchitectBtn">Continue to Deal Architect</a>
-      {% if deal %}
-      <button type="button" class="ravlo-btn ghost"
-        onclick="openSendPartnerModal({dealId: {{ deal.id }}, title: {{ (deal.address or deal.title or 'Build Studio')|tojson }}, address: {{ (deal.address or '')|tojson }}})">
-        <i class="lucide lucide-send"></i> Send to Partner
+      {% if deal or project %}
+      <button type="button" class="ravlo-btn ghost" onclick="openSendPartnerModal(_buildStudioCtx)">
+        <i class="lucide lucide-send"></i> Send Package
       </button>
       {% endif %}
     </div>
@@ -572,5 +571,20 @@ rgba(122,184,255,.18);background:rgba(122,184,255,.08);border-radius:16px;color:
 })();
 </script>
 
+<script>
+var _buildStudioCtx = {
+  dealId:      {{ deal.id if deal else 'null' }},
+  title:       {{ (deal.address or deal.title if deal else (project.project_name or project.name if project else 'Build Studio'))|tojson }},
+  address:     {{ (deal.address if deal else (project.location if project else ''))|tojson }},
+  studioType:  'build',
+  studioRefId: {{ project.id if project else 'null' }},
+  studioItems: [
+    {icon: '🏗', label: 'Build Package',   detail: {{ (project.project_name or project.name if project else 'New Build')|tojson }}},
+    {icon: '📐', label: 'Property Type',   detail: {{ ((project.property_type or 'single_family').replace('_',' ').title() if project else 'Single Family')|tojson }}},
+    {icon: '🎨', label: 'Exterior Style',  detail: {{ ((project.style or 'modern_luxury').replace('_',' ').title() if project else 'Modern Luxury')|tojson }}},
+    {icon: '📍', label: 'Location',        detail: {{ (project.location if project and project.location else (deal.address if deal else ''))|tojson }}}
+  ]
+};
+</script>
 {% include 'components/send_to_partner_modal.html' %}
 {% endblock %}

@@ -6,6 +6,9 @@
 
 {% block topbar_actions %}
   <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost sm">Back to Budget Studio</a>
+  <button type="button" class="ravlo-btn ghost sm" onclick="openSendPartnerModal(_budgetStudioCtx)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Package
+  </button>
 {% endblock %}
 
 {% block content %}
@@ -338,4 +341,20 @@
     </table>
   </section>
 </div>
+
+<script>
+var _budgetStudioCtx = {
+  dealId:      {{ budget.deal_id or 'null' }},
+  title:       {{ (budget.project_name or budget.name) | tojson }},
+  studioType:  'budget',
+  studioRefId: {{ budget.id }},
+  studioItems: [
+    {icon: '💰', label: 'Budget',       detail: {{ (budget.project_name or budget.name) | tojson }}},
+    {icon: '📊', label: 'Estimated',    detail: '$' + {{ (budget.estimated_subtotal or 0)|int }}.toLocaleString()},
+    {icon: '📋', label: 'Type',         detail: {{ ((budget.budget_type or 'budget').replace('_',' ').title()) | tojson }}},
+    {icon: '📈', label: 'Budget Health',detail: {% if actual > total_budget and total_budget > 0 %}'Over Budget'{% elif actual > est and est > 0 %}'Watch Closely'{% else %}'Stable'{% endif %}}
+  ]
+};
+</script>
+{% include 'components/send_to_partner_modal.html' %}
 {% endblock %}
