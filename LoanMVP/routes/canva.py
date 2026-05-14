@@ -213,6 +213,21 @@ def create_flyer():
     try:
         data = create_design(access_token, title=title, design_preset=preset)
     except Exception as exc:
+        import requests as _req
+        # 403 almost always means the stored token is missing design:content:write.
+        # Wipe the token and send the user through OAuth again to get full scopes.
+        if isinstance(exc, _req.exceptions.HTTPError) and getattr(exc.response, "status_code", None) == 403:
+            connection = get_user_canva_connection()
+            if connection:
+                from LoanMVP.extensions import db as _db
+                _db.session.delete(connection)
+                _db.session.commit()
+            flash(
+                "Canva needs permission to create designs. "
+                "Please reconnect your Canva account to grant full access.",
+                "warning",
+            )
+            return redirect(url_for("canva.connect"))
         flash(f"Could not create Canva design: {exc}", "danger")
         return redirect(request.args.get("next") or url_for("vip.index"))
 

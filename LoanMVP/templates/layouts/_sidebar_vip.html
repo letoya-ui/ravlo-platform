@@ -53,6 +53,12 @@
       <span>Deals</span>
     </a>
 
+    <a href="{{ url_for('partners.workspace_home') }}"
+       class="ravlo-nav-link {% if ep in ['partners.workspace_home', 'partners.workspace_job'] %}active{% endif %}">
+      <i class="lucide lucide-briefcase"></i>
+      <span>Workspace</span>
+    </a>
+
     <a href="{{ url_for('vip.design_studio') }}"
        class="ravlo-nav-link {% if ep in ['vip.design_studio', 'vip.create_design_project', 'vip.save_annotation', 'vip.update_annotation', 'vip.delete_annotation', 'vip.upload_design_blueprint'] %}active{% endif %}">
       <i class="lucide lucide-pencil-ruler"></i>

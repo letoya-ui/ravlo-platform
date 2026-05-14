@@ -68,6 +68,17 @@ Manage leads, capital applications, active loans, and pipeline performance.
         <i class="icon lucide lucide-user-round"></i>
         <span>Borrowers</span>
       </a>
+      {% if canva_connected %}
+      <a href="{{ url_for('canva.create_flyer') }}?title=Lending+Flyer&preset=flyer_a4" class="quick-action-btn" target="_blank">
+        <i class="icon lucide lucide-image"></i>
+        <span>Create Flyer</span>
+      </a>
+      {% else %}
+      <a href="{{ url_for('canva.connect') }}" class="quick-action-btn">
+        <i class="icon lucide lucide-image"></i>
+        <span>Connect Canva</span>
+      </a>
+      {% endif %}
     </div>
   </section>
 

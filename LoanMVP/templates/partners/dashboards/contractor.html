@@ -11,6 +11,15 @@ Review job opportunities, manage active work, and keep projects moving with visi
   <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
     View Jobs
   </a>
+  {% if canva_connected %}
+  <a href="{{ url_for('canva.create_flyer') }}?title=Contractor+Flyer&preset=flyer_a4" class="ravlo-btn ghost sm" target="_blank">
+    🎨 Create Flyer
+  </a>
+  {% else %}
+  <a href="{{ url_for('canva.connect') }}" class="ravlo-btn ghost sm">
+    🎨 Connect Canva
+  </a>
+  {% endif %}
   <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
     Open Contractor Workspace
   </a>
