@@ -68,6 +68,7 @@ def connect():
     session.modified  = True
 
     auth_url = build_canva_auth_url()
+    logging.warning(f"[Canva OAuth] redirecting to: {auth_url[:120]}")
     return redirect(auth_url)
 
 
@@ -99,7 +100,13 @@ def callback():
         flash("Missing Canva authorization code.", "danger")
         return redirect(url_for("vip.index"))
 
-    token_data = exchange_code_for_tokens(code)
+    try:
+        token_data = exchange_code_for_tokens(code)
+    except Exception as exc:
+        import logging
+        logging.error(f"[Canva OAuth] token exchange failed: {exc}")
+        flash(f"Canva token exchange failed: {exc}", "danger")
+        return redirect(url_for("vip.onboarding"))
 
     connection = CanvaConnection.query.filter_by(user_id=current_user.id).first()
     if not connection:
