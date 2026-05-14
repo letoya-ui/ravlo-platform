@@ -1,7 +1,8 @@
 """add markets_json to vip_profiles
 
 Revision ID: a1b2c3d4e5f6
-Revises: f80fae86417f
+Revises: 9f3d2c7a4b10
+
 Create Date: 2026-04-19 21:00:00.000000
 """
 from alembic import op
@@ -10,7 +11,8 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'a1b2c3d4e5f6'
-down_revision = 'f80fae86417f'
+down_revision = '9f3d2c7a4b10
+'
 branch_labels = None
 depends_on = None
 
