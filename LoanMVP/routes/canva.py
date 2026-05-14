@@ -240,6 +240,59 @@ def debug_env():
     })
 
 
+@canva_bp.post("/webhook")
+def webhook():
+    """Canva webhook receiver.
+
+    Canva POSTs events here (design exports, asset uploads, etc.).
+    We verify the signature using CANVA_WEBHOOK_SECRET, log the event,
+    and return 200 immediately.
+
+    Webhook URL to register in Canva portal:
+        https://ravlohq.com/canva/webhook
+    """
+    import hashlib
+    import hmac
+    import logging
+    import os
+
+    secret = os.environ.get("CANVA_WEBHOOK_SECRET", "")
+
+    # Verify Canva's HMAC-SHA256 signature if secret is configured
+    sig_header = request.headers.get("X-Canva-Signature", "")
+    if secret and sig_header:
+        expected = hmac.new(
+            key=secret.encode("utf-8"),
+            msg=request.get_data(),
+            digestmod=hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(expected, sig_header):
+            logging.warning("[Canva webhook] signature mismatch — rejected")
+            return jsonify({"error": "invalid signature"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    event_type = payload.get("type") or payload.get("event") or "unknown"
+    logging.info(f"[Canva webhook] received event: {event_type} payload={payload}")
+
+    # Handle specific events as needed
+    if event_type == "export:complete":
+        design_id = (payload.get("data") or {}).get("design_id")
+        export_url = (payload.get("data") or {}).get("url")
+        logging.info(f"[Canva webhook] export complete design_id={design_id} url={export_url}")
+
+    # Always return 200 so Canva doesn't retry
+    return jsonify({"status": "ok"}), 200
+
+
+@canva_bp.get("/webhook")
+def webhook_verify():
+    """GET handler for Canva webhook URL verification challenge."""
+    challenge = request.args.get("challenge")
+    if challenge:
+        return jsonify({"challenge": challenge}), 200
+    return jsonify({"status": "ok"}), 200
+
+
 @canva_bp.get("/status")
 @login_required
 def status():
