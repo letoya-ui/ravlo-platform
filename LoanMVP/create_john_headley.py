@@ -20,7 +20,7 @@ from LoanMVP.models.user_model import User
 from LoanMVP.models.crm_models import Partner
 from LoanMVP.models.vip_models import VIPProfile
 
-EMAIL      = "jsecon1212@gmail.com"
+EMAIL      = "jsecond1212@gmail.com"
 FIRST_NAME = "John"
 LAST_NAME  = "Headley"
 
