@@ -16,61 +16,67 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        "partner_proposals",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("partner_id", sa.Integer(), nullable=False),
-        sa.Column("request_id", sa.Integer(), nullable=True),
-        sa.Column("title", sa.String(length=255), nullable=False),
-        sa.Column("proposal_text", sa.Text(), nullable=True),
-        sa.Column("scope_of_work", sa.Text(), nullable=True),
-        sa.Column("labor_cost", sa.Float(), nullable=True),
-        sa.Column("materials_cost", sa.Float(), nullable=True),
-        sa.Column("other_cost", sa.Float(), nullable=True),
-        sa.Column("total_cost", sa.Float(), nullable=True),
-        sa.Column("estimated_timeline", sa.String(length=120), nullable=True),
-        sa.Column("status", sa.String(length=30), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=True),
-        sa.Column("updated_at", sa.DateTime(), nullable=True),
-        sa.Column("sent_at", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["partner_id"], ["partners.id"]),
-        sa.ForeignKeyConstraint(["request_id"], ["partner_connection_requests.id"]),
-        sa.PrimaryKeyConstraint("id"),
-    )
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
 
-    op.add_column("partners", sa.Column("crm_enabled", sa.Boolean(), nullable=True))
-    op.add_column("partners", sa.Column("deal_visibility_enabled", sa.Boolean(), nullable=True))
-    op.add_column("partners", sa.Column("proposal_builder_enabled", sa.Boolean(), nullable=True))
-    op.add_column("partners", sa.Column("instant_quote_enabled", sa.Boolean(), nullable=True))
-    op.add_column("partners", sa.Column("ai_assist_enabled", sa.Boolean(), nullable=True))
-    op.add_column("partners", sa.Column("priority_placement_enabled", sa.Boolean(), nullable=True))
-    op.add_column("partners", sa.Column("smart_notifications_enabled", sa.Boolean(), nullable=True))
-    op.add_column("partners", sa.Column("portfolio_showcase_enabled", sa.Boolean(), nullable=True))
+    if not inspector.has_table("partner_proposals"):
+        op.create_table(
+            "partner_proposals",
+            sa.Column("id", sa.Integer(), nullable=False),
+            sa.Column("partner_id", sa.Integer(), nullable=False),
+            sa.Column("request_id", sa.Integer(), nullable=True),
+            sa.Column("title", sa.String(length=255), nullable=False),
+            sa.Column("proposal_text", sa.Text(), nullable=True),
+            sa.Column("scope_of_work", sa.Text(), nullable=True),
+            sa.Column("labor_cost", sa.Float(), nullable=True),
+            sa.Column("materials_cost", sa.Float(), nullable=True),
+            sa.Column("other_cost", sa.Float(), nullable=True),
+            sa.Column("total_cost", sa.Float(), nullable=True),
+            sa.Column("estimated_timeline", sa.String(length=120), nullable=True),
+            sa.Column("status", sa.String(length=30), nullable=True),
+            sa.Column("created_at", sa.DateTime(), nullable=True),
+            sa.Column("updated_at", sa.DateTime(), nullable=True),
+            sa.Column("sent_at", sa.DateTime(), nullable=True),
+            sa.ForeignKeyConstraint(["partner_id"], ["partners.id"]),
+            sa.ForeignKeyConstraint(["request_id"], ["partner_connection_requests.id"]),
+            sa.PrimaryKeyConstraint("id"),
+        )
 
-    op.execute("UPDATE partners SET crm_enabled = true WHERE crm_enabled IS NULL")
-    op.execute("UPDATE partners SET deal_visibility_enabled = false WHERE deal_visibility_enabled IS NULL")
-    op.execute("UPDATE partners SET proposal_builder_enabled = false WHERE proposal_builder_enabled IS NULL")
-    op.execute("UPDATE partners SET instant_quote_enabled = false WHERE instant_quote_enabled IS NULL")
-    op.execute("UPDATE partners SET ai_assist_enabled = false WHERE ai_assist_enabled IS NULL")
-    op.execute("UPDATE partners SET priority_placement_enabled = false WHERE priority_placement_enabled IS NULL")
-    op.execute("UPDATE partners SET smart_notifications_enabled = false WHERE smart_notifications_enabled IS NULL")
-    op.execute("UPDATE partners SET portfolio_showcase_enabled = false WHERE portfolio_showcase_enabled IS NULL")
+    partners_cols = {c["name"] for c in inspector.get_columns("partners")}
+    partner_bool_cols = {
+        "crm_enabled": sa.true(),
+        "deal_visibility_enabled": sa.false(),
+        "proposal_builder_enabled": sa.false(),
+        "instant_quote_enabled": sa.false(),
+        "ai_assist_enabled": sa.false(),
+        "priority_placement_enabled": sa.false(),
+        "smart_notifications_enabled": sa.false(),
+        "portfolio_showcase_enabled": sa.false(),
+    }
+    new_partner_cols = [c for c in partner_bool_cols if c not in partners_cols]
+    if new_partner_cols:
+        for col in new_partner_cols:
+            op.add_column("partners", sa.Column(col, sa.Boolean(), nullable=True))
+        for col in new_partner_cols:
+            op.execute(f"UPDATE partners SET {col} = ({str(partner_bool_cols[col].compile(dialect=conn.dialect)).lower()}) WHERE {col} IS NULL")
+        for col, default in partner_bool_cols.items():
+            if col in new_partner_cols:
+                op.alter_column("partners", col, nullable=False, server_default=default)
 
-    op.alter_column("partners", "crm_enabled", nullable=False, server_default=sa.true())
-    op.alter_column("partners", "deal_visibility_enabled", nullable=False, server_default=sa.false())
-    op.alter_column("partners", "proposal_builder_enabled", nullable=False, server_default=sa.false())
-    op.alter_column("partners", "instant_quote_enabled", nullable=False, server_default=sa.false())
-    op.alter_column("partners", "ai_assist_enabled", nullable=False, server_default=sa.false())
-    op.alter_column("partners", "priority_placement_enabled", nullable=False, server_default=sa.false())
-    op.alter_column("partners", "smart_notifications_enabled", nullable=False, server_default=sa.false())
-    op.alter_column("partners", "portfolio_showcase_enabled", nullable=False, server_default=sa.false())
-
-    op.add_column("partner_connection_requests", sa.Column("title", sa.String(length=255), nullable=True))
-    op.add_column("partner_connection_requests", sa.Column("budget", sa.Float(), nullable=True))
-    op.add_column("partner_connection_requests", sa.Column("timeline", sa.String(length=120), nullable=True))
-    op.add_column("partner_connection_requests", sa.Column("priority", sa.String(length=30), nullable=True))
-    op.add_column("partner_connection_requests", sa.Column("request_type", sa.String(length=50), nullable=True))
-    op.add_column("partner_connection_requests", sa.Column("internal_notes", sa.Text(), nullable=True))
+    pcr_cols = {c["name"] for c in inspector.get_columns("partner_connection_requests")}
+    with op.batch_alter_table("partner_connection_requests", schema=None) as batch_op:
+        if "title" not in pcr_cols:
+            batch_op.add_column(sa.Column("title", sa.String(length=255), nullable=True))
+        if "budget" not in pcr_cols:
+            batch_op.add_column(sa.Column("budget", sa.Float(), nullable=True))
+        if "timeline" not in pcr_cols:
+            batch_op.add_column(sa.Column("timeline", sa.String(length=120), nullable=True))
+        if "priority" not in pcr_cols:
+            batch_op.add_column(sa.Column("priority", sa.String(length=30), nullable=True))
+        if "request_type" not in pcr_cols:
+            batch_op.add_column(sa.Column("request_type", sa.String(length=50), nullable=True))
+        if "internal_notes" not in pcr_cols:
+            batch_op.add_column(sa.Column("internal_notes", sa.Text(), nullable=True))
 
 
 def downgrade():

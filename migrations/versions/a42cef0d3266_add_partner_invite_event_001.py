@@ -17,22 +17,26 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        "partner_invite_event",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("partner_id", sa.Integer(), nullable=False),
-        sa.Column("invite_token", sa.String(length=255), nullable=True),
-        sa.Column("request_id", sa.Integer(), nullable=True),
-        sa.Column("event_type", sa.String(length=50), nullable=False),
-        sa.Column("timestamp", sa.DateTime(), nullable=True),
-        sa.Column("user_agent", sa.String(length=300), nullable=True),
-        sa.Column("ip_address", sa.String(length=50), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["partner_id"],
-            ["partners.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+
+    if not inspector.has_table("partner_invite_event"):
+        op.create_table(
+            "partner_invite_event",
+            sa.Column("id", sa.Integer(), nullable=False),
+            sa.Column("partner_id", sa.Integer(), nullable=False),
+            sa.Column("invite_token", sa.String(length=255), nullable=True),
+            sa.Column("request_id", sa.Integer(), nullable=True),
+            sa.Column("event_type", sa.String(length=50), nullable=False),
+            sa.Column("timestamp", sa.DateTime(), nullable=True),
+            sa.Column("user_agent", sa.String(length=300), nullable=True),
+            sa.Column("ip_address", sa.String(length=50), nullable=True),
+            sa.ForeignKeyConstraint(
+                ["partner_id"],
+                ["partners.id"],
+            ),
+            sa.PrimaryKeyConstraint("id"),
+        )
 
 
 def downgrade():

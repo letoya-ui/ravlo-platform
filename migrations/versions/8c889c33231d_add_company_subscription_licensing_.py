@@ -17,36 +17,44 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        'license_applications',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('company_name', sa.String(length=255), nullable=False),
-        sa.Column('contact_name', sa.String(length=255), nullable=False),
-        sa.Column('email', sa.String(length=255), nullable=False),
-        sa.Column('phone', sa.String(length=50), nullable=True),
-        sa.Column('website', sa.String(length=255), nullable=True),
-        sa.Column('business_type', sa.String(length=100), nullable=True),
-        sa.Column('team_size', sa.String(length=50), nullable=True),
-        sa.Column('plan_interest', sa.String(length=100), nullable=True),
-        sa.Column('monthly_loan_volume', sa.String(length=100), nullable=True),
-        sa.Column('current_tools', sa.Text(), nullable=True),
-        sa.Column('goals', sa.Text(), nullable=True),
-        sa.Column('notes', sa.Text(), nullable=True),
-        sa.Column('status', sa.String(length=50), nullable=False, server_default='new'),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.PrimaryKeyConstraint('id')
-    )
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
 
-    with op.batch_alter_table('license_applications', schema=None) as batch_op:
-        batch_op.create_index(
-            batch_op.f('ix_license_applications_email'),
-            ['email'],
-            unique=False
+    if not inspector.has_table("license_applications"):
+        op.create_table(
+            'license_applications',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('company_name', sa.String(length=255), nullable=False),
+            sa.Column('contact_name', sa.String(length=255), nullable=False),
+            sa.Column('email', sa.String(length=255), nullable=False),
+            sa.Column('phone', sa.String(length=50), nullable=True),
+            sa.Column('website', sa.String(length=255), nullable=True),
+            sa.Column('business_type', sa.String(length=100), nullable=True),
+            sa.Column('team_size', sa.String(length=50), nullable=True),
+            sa.Column('plan_interest', sa.String(length=100), nullable=True),
+            sa.Column('monthly_loan_volume', sa.String(length=100), nullable=True),
+            sa.Column('current_tools', sa.Text(), nullable=True),
+            sa.Column('goals', sa.Text(), nullable=True),
+            sa.Column('notes', sa.Text(), nullable=True),
+            sa.Column('status', sa.String(length=50), nullable=False, server_default='new'),
+            sa.Column('created_at', sa.DateTime(), nullable=False),
+            sa.PrimaryKeyConstraint('id')
         )
+        existing_idx = {idx["name"] for idx in inspector.get_indexes("license_applications")} if inspector.has_table("license_applications") else set()
+        if "ix_license_applications_email" not in existing_idx:
+            with op.batch_alter_table('license_applications', schema=None) as batch_op:
+                batch_op.create_index(
+                    batch_op.f('ix_license_applications_email'),
+                    ['email'],
+                    unique=False
+                )
 
+    companies_cols = {c["name"] for c in inspector.get_columns("companies")}
     with op.batch_alter_table('companies', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('subscription_tier', sa.String(length=50), nullable=True))
-        batch_op.add_column(sa.Column('max_users', sa.Integer(), nullable=True))
+        if "subscription_tier" not in companies_cols:
+            batch_op.add_column(sa.Column('subscription_tier', sa.String(length=50), nullable=True))
+        if "max_users" not in companies_cols:
+            batch_op.add_column(sa.Column('max_users', sa.Integer(), nullable=True))
 
 
 def downgrade():

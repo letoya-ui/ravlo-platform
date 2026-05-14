@@ -17,22 +17,26 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        "projects",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("deal_id", sa.Integer(), sa.ForeignKey("deals.id"), nullable=False),
-        sa.Column("name", sa.String(length=255), nullable=False),
-        sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("status", sa.String(length=50), server_default="draft"),
-        sa.Column("arv_estimate", sa.Float(), nullable=True),
-        sa.Column("rehab_budget", sa.Float(), nullable=True),
-        sa.Column("rehab_level", sa.String(length=50), nullable=True),
-        sa.Column("style_preset", sa.String(length=100), nullable=True),
-        sa.Column("ai_plan", sa.Text(), nullable=True),
-        sa.Column("ai_summary", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=True),
-        sa.Column("updated_at", sa.DateTime(), nullable=True),
-    )
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+
+    if not inspector.has_table("projects"):
+        op.create_table(
+            "projects",
+            sa.Column("id", sa.Integer(), primary_key=True),
+            sa.Column("deal_id", sa.Integer(), sa.ForeignKey("deals.id"), nullable=False),
+            sa.Column("name", sa.String(length=255), nullable=False),
+            sa.Column("description", sa.Text(), nullable=True),
+            sa.Column("status", sa.String(length=50), server_default="draft"),
+            sa.Column("arv_estimate", sa.Float(), nullable=True),
+            sa.Column("rehab_budget", sa.Float(), nullable=True),
+            sa.Column("rehab_level", sa.String(length=50), nullable=True),
+            sa.Column("style_preset", sa.String(length=100), nullable=True),
+            sa.Column("ai_plan", sa.Text(), nullable=True),
+            sa.Column("ai_summary", sa.Text(), nullable=True),
+            sa.Column("created_at", sa.DateTime(), nullable=True),
+            sa.Column("updated_at", sa.DateTime(), nullable=True),
+        )
 
 
 def downgrade():

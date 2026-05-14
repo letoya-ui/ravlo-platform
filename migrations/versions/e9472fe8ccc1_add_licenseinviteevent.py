@@ -17,20 +17,28 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        "license_invite_events",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("invite_token", sa.String(length=255), nullable=True),
-        sa.Column("email", sa.String(length=255), nullable=True),
-        sa.Column("event_type", sa.String(length=50), nullable=True),
-        sa.Column("user_agent", sa.String(length=255), nullable=True),
-        sa.Column("ip_address", sa.String(length=50), nullable=True),
-        sa.Column("created_at", sa.DateTime(), server_default=sa.func.now(), nullable=False),
-    )
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
 
-    op.create_index("ix_license_invite_events_email", "license_invite_events", ["email"], unique=False)
-    op.create_index("ix_license_invite_events_invite_token", "license_invite_events", ["invite_token"], unique=False)
-    op.create_index("ix_license_invite_events_event_type", "license_invite_events", ["event_type"], unique=False)
+    if not inspector.has_table("license_invite_events"):
+        op.create_table(
+            "license_invite_events",
+            sa.Column("id", sa.Integer(), primary_key=True),
+            sa.Column("invite_token", sa.String(length=255), nullable=True),
+            sa.Column("email", sa.String(length=255), nullable=True),
+            sa.Column("event_type", sa.String(length=50), nullable=True),
+            sa.Column("user_agent", sa.String(length=255), nullable=True),
+            sa.Column("ip_address", sa.String(length=50), nullable=True),
+            sa.Column("created_at", sa.DateTime(), server_default=sa.func.now(), nullable=False),
+        )
+
+    existing_idx = {idx["name"] for idx in inspector.get_indexes("license_invite_events")} if inspector.has_table("license_invite_events") else set()
+    if "ix_license_invite_events_email" not in existing_idx:
+        op.create_index("ix_license_invite_events_email", "license_invite_events", ["email"], unique=False)
+    if "ix_license_invite_events_invite_token" not in existing_idx:
+        op.create_index("ix_license_invite_events_invite_token", "license_invite_events", ["invite_token"], unique=False)
+    if "ix_license_invite_events_event_type" not in existing_idx:
+        op.create_index("ix_license_invite_events_event_type", "license_invite_events", ["event_type"], unique=False)
 
 def downgrade():
     op.drop_index("ix_license_invite_events_event_type", table_name="license_invite_events")
