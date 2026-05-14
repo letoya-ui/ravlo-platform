@@ -11,6 +11,7 @@ class LoanDocument(db.Model):
     investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
     loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=True)
     processor_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id", name="fk_loandoc_company"), nullable=True, index=True)
     file_name = db.Column(db.String(255))
     file_path = db.Column(db.String(255))
     document_type = db.Column(db.String(100))

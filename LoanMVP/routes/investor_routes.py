@@ -2237,6 +2237,7 @@ def submit_capital_application():
             annual_income=getattr(investor, "annual_income", None),
             employment_status="Investor",
             created_at=datetime.utcnow(),
+            company_id=get_caughman_mason_company_id(),
         )
         db.session.add(borrower)
         db.session.flush()
@@ -2279,6 +2280,7 @@ def submit_capital_application():
         investor_profile_id=investor.id,
         borrower_profile_id=borrower.id,
         loan_officer_id=assigned_officer_id,
+        company_id=get_caughman_mason_company_id(),
         loan_type=loan_type,
         amount=amount,
         property_value=property_value,

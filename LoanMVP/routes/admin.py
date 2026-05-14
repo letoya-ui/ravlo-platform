@@ -327,17 +327,13 @@ def _loan_matches_company(loan, company):
 
 
 def _company_loans(company_id, limit=500):
-    company = Company.query.get(company_id)
-    if not company:
-        return []
-
-    loans = (
+    return (
         LoanApplication.query
+        .filter_by(company_id=company_id)
         .order_by(LoanApplication.created_at.desc(), LoanApplication.id.desc())
         .limit(limit)
         .all()
     )
-    return [loan for loan in loans if _loan_matches_company(loan, company)]
 
 
 def _company_recent_applicants(company_id, limit=8):

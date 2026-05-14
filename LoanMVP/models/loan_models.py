@@ -70,6 +70,7 @@ class BorrowerProfile(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     profile_pic = db.Column(db.String(255), nullable=True)
     company = db.Column(db.String(120), nullable=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id", name="fk_borrower_company"), nullable=True, index=True)
     subscription_plan = db.Column(db.String(20), default="Free")
     has_seen_dashboard_tour = db.Column(db.Boolean, default=False)
     email_notifications = db.Column(db.Boolean, default=True)
@@ -112,6 +113,7 @@ class LoanApplication(db.Model):
     processor_id = db.Column(db.Integer, db.ForeignKey("processor_profile.id", name="fk_loanapp_processor"))
     underwriter_id = db.Column(db.Integer, db.ForeignKey("underwriter_profile.id", name="fk_loanapp_underwriter"))
     property_id = db.Column(db.Integer, db.ForeignKey("property.id", name="fk_loanapp_property"))
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id", name="fk_loanapp_company"), nullable=True, index=True)
 
     # --- Core Loan Data ---
     lender_name = db.Column(db.String(120))

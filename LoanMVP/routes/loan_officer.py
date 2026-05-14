@@ -837,7 +837,8 @@ def new_application():
             ai_summary=ai_summary,
             status="Pending",
             created_at=datetime.utcnow(),
-            loan_officer_id=officer.id if officer else None
+            loan_officer_id=officer.id if officer else None,
+            company_id=current_user.company_id,
         )
 
         db.session.add(new_loan)
@@ -885,7 +886,8 @@ def create_loan():
             amount=float(amount or 0),
             loan_type=loan_type,
             property_value=float(property_value or 0),
-            status="Pending"
+            status="Pending",
+            company_id=current_user.company_id,
         )
 
         db.session.add(loan)
@@ -922,6 +924,7 @@ def quick_1003():
             state=request.form.get("state"),
             zip=request.form.get("zip"),
             assigned_officer_id=officer.id if officer else None,
+            company_id=current_user.company_id,
         )
         db.session.add(borrower)
         db.session.commit()
@@ -935,6 +938,7 @@ def quick_1003():
             status="Application Submitted",
             loan_officer_id=officer.id if officer else None,
             created_at=datetime.utcnow(),
+            company_id=current_user.company_id,
         )
         db.session.add(loan)
         db.session.commit()
@@ -1044,6 +1048,7 @@ def loan_application():
             annual_income=float(annual_income) if annual_income else None,
             income=round(float(annual_income) / 12, 2) if annual_income else None,
             assigned_officer_id=officer.id if officer else None,
+            company_id=current_user.company_id,
         )
 
         if dob:
@@ -1071,6 +1076,7 @@ def loan_application():
             description=loan_purpose or None,
             status="Application Submitted",
             created_at=datetime.utcnow(),
+            company_id=current_user.company_id,
         )
         db.session.add(loan)
         db.session.flush()
@@ -1518,7 +1524,7 @@ def borrower_ai_log(borrower_id):
 @csrf.exempt
 @role_required("loan_officer")
 def credit_check():
-    borrowers = BorrowerProfile.query.all()
+    borrowers = BorrowerProfile.query.filter_by(company_id=current_user.company_id).all()
     borrower_id = request.args.get("borrower_id")
 
     credit_data = None
@@ -2030,6 +2036,7 @@ def auto_create_loan(borrower_id):
         status="Application Submitted",
         loan_officer_id=officer.id if officer else None,
         created_at=datetime.utcnow(),
+        company_id=current_user.company_id,
     )
 
     db.session.add(loan)
@@ -2634,6 +2641,7 @@ def new_loan():
                 status=status,
                 loan_officer_id=officer.id if officer else None,
                 created_at=datetime.utcnow(),
+                company_id=current_user.company_id,
             )
             db.session.add(loan)
             db.session.commit()
@@ -3048,6 +3056,7 @@ def borrower_intake():
             employment_status=form.employment_status.data,
             assigned_to=current_user.id,
             created_at=datetime.utcnow(),
+            company_id=current_user.company_id,
         )
         db.session.add(borrower)
         db.session.commit()
