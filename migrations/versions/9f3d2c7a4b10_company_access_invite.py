@@ -1,7 +1,7 @@
 """add company, access_requests, user_invites
 
 Revision ID: 9f3d2c7a4b10
-Revises: f80fae86417f
+Revises: 8c889c33231d
 Create Date: 2026-03-12
 
 """
@@ -12,7 +12,7 @@ from datetime import datetime
 
 # revision identifiers, used by Alembic.
 revision = "9f3d2c7a4b10"
-down_revision = "f80fae86417f"
+down_revision = "8c889c33231d"
 branch_labels = None
 depends_on = None
 
