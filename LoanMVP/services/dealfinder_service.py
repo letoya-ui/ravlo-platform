@@ -8,8 +8,21 @@ from LoanMVP.services.attom_service import (
 )
 from LoanMVP.services.rentcast_service import (
     get_rentcast_rent_estimate,
+    get_rentcast_value_estimate,
+    find_rentcast_sale_listing,
     RentCastServiceError,
 )
+
+
+def _safe_float(value):
+    try:
+        if value in (None, "", "None"):
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        return float(str(value).replace("$", "").replace(",", "").strip())
+    except Exception:
+        return None
 from LoanMVP.services.dealfinder_normalizer import normalize_property
 from LoanMVP.services.dealfinder_scoring import compute_deal_score
 import requests

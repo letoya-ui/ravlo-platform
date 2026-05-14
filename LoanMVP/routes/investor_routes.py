@@ -119,7 +119,6 @@ from LoanMVP.ai.master_ai import master_ai, CMAIEngine
 # Core Services
 # -------------------------
 from LoanMVP.services.attom_service import (
-    build_attom_dealfinder_profile,
     AttomServiceError,
 )
 from LoanMVP.services.market_service import get_market_snapshot
@@ -4101,6 +4100,23 @@ def api_property_tool_search():
             "error": "Enter a ZIP code, city/state, address, or use your location."
         }), 400
 
+    # Enforce monthly search quota for Core (free) tier
+    sub = (getattr(current_user, "subscription", None) or "").lower()
+    _SEARCH_LIMIT = None if sub in ("pro", "enterprise") else 3
+    if _SEARCH_LIMIT is not None:
+        _ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+        if _ip:
+            _month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            if _ip.deal_finder_search_reset_at is None or _ip.deal_finder_search_reset_at < _month_start:
+                _ip.deal_finder_search_count = 0
+                _ip.deal_finder_search_reset_at = _month_start
+                db.session.flush()
+            if _ip.deal_finder_search_count >= _SEARCH_LIMIT:
+                return jsonify({
+                    "status": "error",
+                    "error": f"You've used all {_SEARCH_LIMIT} Deal Finder searches for this month. Upgrade to Pro for unlimited searches."
+                }), 429
+
     raw_limit = payload.get("limit")
     try:
         limit = max(1, min(int(raw_limit or 20), 25))
@@ -4171,6 +4187,13 @@ def api_property_tool_search():
         if buyer_profile:
             results.sort(key=buyer_profile_score, reverse=True)
 
+        # Increment quota counter on success
+        if _SEARCH_LIMIT is not None and _ip:
+            _ip.deal_finder_search_count = (_ip.deal_finder_search_count or 0) + 1
+            db.session.commit()
+
+        searches_used = getattr(_ip, "deal_finder_search_count", None) if _SEARCH_LIMIT is not None else None
+
         return jsonify({
             "status": "ok",
             "message": (
@@ -4195,6 +4218,8 @@ def api_property_tool_search():
             "address": meta["address"],
             "engine_ready": meta["engine_ready"],
             "budget_remaining": meta["budget_remaining"],
+            "searches_used": searches_used,
+            "searches_limit": _SEARCH_LIMIT,
         })
 
     except Exception as e:
@@ -5321,7 +5346,6 @@ def deal_workspace():
         ravlo_arv_report=ravlo_arv_report,
     )
 
-@investor_bp.route("/deals", methods=["GET"])
 @investor_bp.route("/deals", methods=["GET"])
 @login_required
 @role_required("investor")

@@ -55,6 +55,10 @@ class InvestorProfile(db.Model, TimestampMixin):
 
     is_verified = db.Column(db.Boolean, default=False, nullable=False)
 
+    # Deal Finder monthly search quota
+    deal_finder_search_count = db.Column(db.Integer, default=0, nullable=False)
+    deal_finder_search_reset_at = db.Column(db.DateTime, nullable=True)
+
     # ----------------------------
     # Relationships
     # ----------------------------
