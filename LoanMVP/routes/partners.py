@@ -1,11 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app
-from flask_login import current_user
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app, jsonify
+from flask_login import current_user, login_required
 from datetime import datetime
 from pathlib import Path
 from werkzeug.utils import secure_filename
 from sqlalchemy import desc
 
-from LoanMVP.extensions import db, csrf
+from LoanMVP.extensions import db, csrf, stripe
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.ai.base_ai import AIAssistant
 
@@ -1017,6 +1017,111 @@ def billing():
         page_title="Billing",
         page_subline="Manage your Ravlo Partner plan."
     )
+
+
+@partners_bp.route("/billing/setup-intent", methods=["POST"])
+@login_required
+@role_required("partner_group")
+def partner_billing_setup_intent():
+    if not current_app.config.get("STRIPE_BILLING_ENABLED"):
+        return jsonify({"error": "Billing not enabled."}), 400
+    tier = (request.get_json(silent=True) or {}).get("tier") or request.form.get("tier", "")
+    try:
+        customers = stripe.Customer.list(email=current_user.email, limit=1)
+        if customers.data:
+            customer_id = customers.data[0].id
+        else:
+            customer_id = stripe.Customer.create(
+                email=current_user.email,
+                metadata={"user_id": str(current_user.id)},
+            ).id
+        intent = stripe.SetupIntent.create(
+            customer=customer_id,
+            payment_method_types=["card"],
+            metadata={"user_id": str(current_user.id), "partner_tier": tier},
+        )
+        return jsonify({"client_secret": intent.client_secret})
+    except Exception:
+        current_app.logger.exception("Stripe SetupIntent creation failed for partner")
+        return jsonify({"error": "Unable to initialize payment. Please try again."}), 500
+
+
+_PARTNER_STRIPE_PRICE_MAP = {
+    "featured": "STRIPE_PRICE_FEATURED_PARTNER",
+    "premium":  "STRIPE_PRICE_PREFERRED_PARTNER",
+    "enterprise": "STRIPE_PRICE_ENTERPRISE",
+}
+
+
+@partners_bp.route("/billing/subscribe-checkout/<tier>", methods=["POST"])
+@login_required
+@role_required("partner_group")
+def partner_subscription_checkout(tier):
+    if not current_app.config.get("STRIPE_BILLING_ENABLED"):
+        flash("Stripe billing is not enabled yet.", "warning")
+        return redirect(url_for("partners.billing"))
+
+    normalized = tier.strip().lower()
+    price_key = _PARTNER_STRIPE_PRICE_MAP.get(normalized)
+    price_id = current_app.config.get(price_key, "") if price_key else ""
+
+    if not price_id:
+        flash("That plan is not yet configured for checkout.", "warning")
+        return redirect(url_for("partners.billing"))
+
+    try:
+        session_obj = stripe.checkout.Session.create(
+            mode="subscription",
+            payment_method_types=["card"],
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=url_for("partners.partner_subscription_success", _external=True)
+                        + "?session_id={CHECKOUT_SESSION_ID}&tier=" + normalized,
+            cancel_url=url_for("partners.billing", _external=True),
+            customer_email=current_user.email,
+            metadata={
+                "user_id": str(current_user.id),
+                "partner_tier": normalized,
+            },
+        )
+        return redirect(session_obj.url, code=303)
+    except Exception:
+        current_app.logger.exception("Stripe Checkout creation failed for partner")
+        flash("Unable to start checkout. Please try again.", "danger")
+        return redirect(url_for("partners.billing"))
+
+
+@partners_bp.route("/billing/subscribe-success")
+@login_required
+@role_required("partner_group")
+def partner_subscription_success():
+    session_id = request.args.get("session_id")
+    tier = (request.args.get("tier") or "").strip().lower()
+
+    if session_id:
+        try:
+            session_obj = stripe.checkout.Session.retrieve(session_id)
+            if session_obj.payment_status in ("paid", "no_payment_required"):
+                tier = tier or (session_obj.metadata or {}).get("partner_tier", "")
+        except Exception:
+            current_app.logger.exception("Stripe Checkout verification failed for partner")
+
+    allowed = {"featured", "premium", "enterprise"}
+    if tier in allowed:
+        partner = Partner.query.filter_by(user_id=current_user.id).first()
+        if partner:
+            partner.subscription_tier = tier.title()
+            partner.approved = True
+            partner.active = True
+            partner.status = "Active"
+            partner.featured = tier in {"featured", "premium", "enterprise"}
+            db.session.commit()
+            flash(f"Subscription activated — welcome to {tier.title()}!", "success")
+            if tier in _VIP_ACCESS_TIERS:
+                return redirect(url_for("vip.realtor_dashboard"))
+    else:
+        flash("Subscription checkout completed.", "success")
+
+    return redirect(url_for("partners.billing"))
 
 
 @partners_bp.route("/profile/edit", methods=["GET", "POST"])

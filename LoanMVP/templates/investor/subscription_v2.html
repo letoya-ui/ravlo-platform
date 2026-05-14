@@ -94,6 +94,20 @@
   .billing-consent input {
     margin-top:3px;
   }
+  #card-element-wrapper {
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:10px;
+    padding:14px 16px;
+    margin-bottom:14px;
+    max-width:480px;
+  }
+  #card-errors {
+    color:#ff8080;
+    font-size:.85rem;
+    margin-top:8px;
+    display:none;
+  }
   @media (max-width: 900px) {
     .sub-summary { grid-template-columns:1fr; }
   }
@@ -125,23 +139,137 @@
       </div>
       <div style="display:flex; justify-content:space-between; gap:12px;">
         <span style="color:var(--muted);">Billing Status</span>
-        <strong>{{ active_subscription.status if active_subscription else "Active on user account" }}</strong>
+        <strong style="color:#3ce43c;">
+          {{ active_subscription.status if active_subscription else "Active" }}
+        </strong>
       </div>
     </div>
   </div>
 </section>
 
+{# ── Credit Card / Payment Method ────────────────────────── #}
 <section class="ravlo-card pad" style="margin-top:16px;">
-  <div class="eyebrow">BILLING AND CARD DATA</div>
+  <div class="eyebrow">CREDIT CARD / PAYMENT METHOD</div>
   <div class="billing-note">
     Card entry is handled by our secure payment processor. Ravlo does not store full card numbers,
     CVV codes, magnetic stripe data, or chip data on our servers. We may receive limited billing
-    details such as card brand, last four digits, expiration month/year, billing contact, receipts,
-    subscription status, and processor IDs for account support, fraud prevention, tax, legal, and
-    accounting needs. See the <a href="{{ url_for('investor.subscription_terms') }}">Billing & Card Data Terms</a>.
+    details such as card brand, last four digits, expiration month/year, and billing contact for
+    account support, fraud prevention, tax, legal, and accounting needs.
+    See the <a href="{{ url_for('investor.subscription_terms') }}">Billing &amp; Card Data Terms</a>.
   </div>
+
+  {% if billing_enabled %}
+    <div style="margin-top:16px;">
+      <div id="card-element-wrapper">
+        <div id="card-element"></div>
+        <div id="card-errors"></div>
+      </div>
+
+      <label class="billing-consent" style="margin-bottom:14px;">
+        <input type="checkbox" id="card-consent" required>
+        <span>I authorize Ravlo to charge my card for the selected plan and agree to the
+          <a href="{{ url_for('investor.subscription_terms') }}">Billing &amp; Card Data Terms</a>.
+        </span>
+      </label>
+
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button id="save-card-btn" class="ravlo-btn primary sm" type="button">
+          Save Payment Method
+        </button>
+        <span id="card-spinner" style="display:none; color:var(--muted); font-size:.9rem;">Processing…</span>
+        <span id="card-success" style="display:none; color:#3ce43c; font-size:.9rem;">✔ Card saved</span>
+      </div>
+    </div>
+
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+    (function () {
+      const pubKey = "{{ config.get('STRIPE_PUBLISHABLE_KEY', '') }}";
+      if (!pubKey) return;
+
+      const stripe = Stripe(pubKey);
+      const elements = stripe.elements();
+      const card = elements.create("card", {
+        style: {
+          base: {
+            color: "#e6e6e6",
+            fontFamily: "inherit",
+            fontSize: "15px",
+            "::placeholder": { color: "#666" },
+          },
+          invalid: { color: "#ff8080" },
+        },
+        hidePostalCode: false,
+      });
+      card.mount("#card-element");
+
+      card.on("change", function (e) {
+        const errEl = document.getElementById("card-errors");
+        if (e.error) {
+          errEl.textContent = e.error.message;
+          errEl.style.display = "block";
+        } else {
+          errEl.style.display = "none";
+        }
+      });
+
+      document.getElementById("save-card-btn").addEventListener("click", async function () {
+        const consent = document.getElementById("card-consent");
+        if (!consent.checked) {
+          alert("Please accept the billing terms before saving your card.");
+          return;
+        }
+
+        const btn = this;
+        const spinner = document.getElementById("card-spinner");
+        const successEl = document.getElementById("card-success");
+        btn.disabled = true;
+        spinner.style.display = "inline";
+        successEl.style.display = "none";
+
+        try {
+          const resp = await fetch("{{ url_for('investor.subscription_setup_intent') }}", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": "{{ csrf_token() }}",
+            },
+          });
+          const data = await resp.json();
+          if (data.error) throw new Error(data.error);
+
+          const { setupIntent, error } = await stripe.confirmCardSetup(data.client_secret, {
+            payment_method: { card: card },
+          });
+          if (error) throw new Error(error.message);
+
+          spinner.style.display = "none";
+          successEl.style.display = "inline";
+          btn.textContent = "Update Card";
+          btn.disabled = false;
+
+        } catch (err) {
+          const errEl = document.getElementById("card-errors");
+          errEl.textContent = err.message || "Could not save card. Please try again.";
+          errEl.style.display = "block";
+          btn.disabled = false;
+          spinner.style.display = "none";
+        }
+      });
+    })();
+    </script>
+
+  {% else %}
+    <div style="margin-top:12px; padding:12px 14px; background:rgba(122,184,255,.06);
+                border:1px solid rgba(122,184,255,.2); border-radius:10px;
+                color:var(--muted); font-size:.9rem;">
+      Live billing is not yet active (<code>STRIPE_BILLING_ENABLED=true</code> required).
+      Plans can be activated manually below.
+    </div>
+  {% endif %}
 </section>
 
+{# ── Plan Cards ──────────────────────────────────────────── #}
 <section class="sub-grid">
   {% for plan_name, plan in subscription_catalog.items() %}
   <article class="plan-card {% if current_plan == plan_name %}active{% endif %}">
@@ -156,7 +284,7 @@
     </ul>
 
     {% if current_plan == plan_name %}
-      <div class="pill">Current Plan</div>
+      <div class="pill">✔ Current Plan — Active</div>
     {% elif grandfathered %}
       <div class="pill">Included at no charge</div>
     {% else %}
@@ -172,7 +300,7 @@
           <input type="hidden" name="plan" value="{{ plan_name }}">
           <label class="billing-consent">
             <input type="checkbox" name="accept_billing_terms" value="1" required>
-            <span>I agree to the <a href="{{ url_for('investor.subscription_terms') }}">Billing & Card Data Terms</a>.</span>
+            <span>I agree to the <a href="{{ url_for('investor.subscription_terms') }}">Billing &amp; Card Data Terms</a>.</span>
           </label>
           <button class="ravlo-btn primary sm" type="submit">
             {% if billing_enabled %}Continue to Secure Checkout{% else %}Activate {{ plan_name }}{% endif %}

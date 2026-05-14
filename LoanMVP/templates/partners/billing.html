@@ -8,27 +8,25 @@
 {% block content %}
 <div class="ravlo-shell">
 
-  <section class="ravlo-card">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
-      <div>
-        <div class="eyebrow">CURRENT PLAN</div>
-        <h3 style="margin:6px 0 4px;">{{ partner.subscription_tier or 'Free' }}</h3>
-        <p class="muted" style="margin:0;">
-          This is your current subscription tier for Partner OS.
-        </p>
-      </div>
-
-      <div>
-        {% if partner.featured %}
-          <span class="ravlo-badge success">Featured Active</span>
-        {% else %}
-          <span class="ravlo-badge">Standard Access</span>
-        {% endif %}
-      </div>
+  <section class="ravlo-card" style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+    <div>
+      <div class="eyebrow">CURRENT PLAN</div>
+      <h3 style="margin:6px 0 4px;">{{ partner.subscription_tier or 'Free' }}</h3>
+      <p class="muted" style="margin:0;">Your active Partner OS subscription tier.</p>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      {% if partner.status == 'Active' or partner.subscription_tier %}
+        <span class="ravlo-badge success">Active</span>
+      {% else %}
+        <span class="ravlo-badge">Not Active</span>
+      {% endif %}
+      {% if partner.featured %}
+        <span class="ravlo-badge">Featured</span>
+      {% endif %}
     </div>
   </section>
 
-  <section class="ravlo-grid ravlo-grid-3" style="align-items:stretch;">
+  <section class="ravlo-grid ravlo-grid-3" style="align-items:stretch; margin-top:16px;">
     {% for plan in plans %}
       <article class="ravlo-card" style="display:flex; flex-direction:column; justify-content:space-between; gap:18px;">
         <div>
@@ -46,6 +44,10 @@
         <div>
           {% if (partner.subscription_tier or 'Free') == plan.name %}
             <button class="ravlo-btn ghost" disabled>Current Plan</button>
+          {% elif plan.name == 'Enterprise' %}
+            <a href="mailto:hello@ravlohq.com?subject=Enterprise Partner Inquiry" class="ravlo-btn ghost">
+              Contact Us
+            </a>
           {% else %}
             <a href="{{ url_for('partners.subscribe', tier=plan.name) }}" class="ravlo-btn">
               Select {{ plan.name }}
@@ -54,6 +56,15 @@
         </div>
       </article>
     {% endfor %}
+  </section>
+
+  <section class="ravlo-card" style="margin-top:16px;">
+    <div class="eyebrow">BILLING & CARD DATA</div>
+    <p class="muted" style="margin:8px 0 0; line-height:1.55;">
+      Card entry is handled by our secure payment processor. Ravlo does not store full card numbers,
+      CVV codes, or magnetic stripe data on our servers. We may receive limited billing details such as
+      card brand, last four digits, and expiration date for account support and compliance purposes.
+    </p>
   </section>
 
 </div>

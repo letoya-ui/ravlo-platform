@@ -14924,6 +14924,32 @@ def downgrade_plan():
     return redirect(url_for("investor.subscription"))
 
 
+@investor_bp.route("/subscription/setup-intent", methods=["POST"])
+@login_required
+@role_required("investor")
+def subscription_setup_intent():
+    if not current_app.config.get("STRIPE_BILLING_ENABLED"):
+        return jsonify({"error": "Billing not enabled."}), 400
+    try:
+        customers = stripe.Customer.list(email=current_user.email, limit=1)
+        if customers.data:
+            customer_id = customers.data[0].id
+        else:
+            customer_id = stripe.Customer.create(
+                email=current_user.email,
+                metadata={"user_id": str(current_user.id)},
+            ).id
+        intent = stripe.SetupIntent.create(
+            customer=customer_id,
+            payment_method_types=["card"],
+            metadata={"user_id": str(current_user.id)},
+        )
+        return jsonify({"client_secret": intent.client_secret})
+    except Exception:
+        current_app.logger.exception("Stripe SetupIntent creation failed for investor")
+        return jsonify({"error": "Unable to initialize payment. Please try again."}), 500
+
+
 @investor_bp.route("/subscription/terms", methods=["GET"])
 @login_required
 @role_required("investor")

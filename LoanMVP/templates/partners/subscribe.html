@@ -5,21 +5,162 @@
 {% block content %}
 <div class="ravlo-shell">
   <section class="ravlo-card" style="max-width:720px; margin:auto;">
-    <h2>Confirm {{ selected_tier }} Plan</h2>
+    <div class="eyebrow">PARTNER SUBSCRIPTION</div>
+    <h2 style="margin:8px 0 4px;">{{ selected_tier }} Plan</h2>
     <p class="muted">
-      This is a test subscription flow for now. Payment integration will be added later.
+      {% if selected_tier == 'Free' %}
+        Switch to the Free tier — basic profile and starter access.
+      {% elif selected_tier == 'Featured' %}
+        $49/mo — Featured listing, more visibility, and pro request access.
+      {% elif selected_tier == 'Premium' %}
+        $99/mo — Full workspace access, priority visibility, and advanced tools. Unlocks Partner VIP.
+      {% elif selected_tier == 'Enterprise' %}
+        Custom pricing — full suite, priority support, and custom partner setup.
+      {% endif %}
     </p>
 
-    <form method="POST" action="{{ url_for('partners.confirm_subscription', tier=selected_tier) }}">
-      <div style="margin-top:18px;">
-        <button type="submit" class="ravlo-btn">
-          Confirm {{ selected_tier }}
-        </button>
-        <a href="{{ url_for('partners.billing') }}" class="ravlo-btn ghost">
-          Cancel
-        </a>
+    {% if selected_tier == 'Free' %}
+      {# Free tier — no payment needed #}
+      <form method="POST" action="{{ url_for('partners.confirm_subscription', tier=selected_tier) }}" style="margin-top:18px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="ravlo-btn">Confirm Free Plan</button>
+        <a href="{{ url_for('partners.billing') }}" class="ravlo-btn ghost" style="margin-left:8px;">Cancel</a>
+      </form>
+
+    {% elif config.get('STRIPE_BILLING_ENABLED') %}
+      {# Paid tier with Stripe — inline card entry #}
+      <div style="margin-top:20px;">
+        <div class="eyebrow" style="margin-bottom:8px;">PAYMENT INFORMATION</div>
+        <p class="muted" style="font-size:.85rem; margin-bottom:14px;">
+          Card entry is processed securely by Stripe. Ravlo does not store full card numbers or CVV codes.
+        </p>
+
+        <div id="card-element-wrapper" style="
+          background:rgba(255,255,255,.04);
+          border:1px solid rgba(255,255,255,.12);
+          border-radius:10px;
+          padding:14px 16px;
+          margin-bottom:14px;
+        ">
+          <div id="card-element"></div>
+          <div id="card-errors" style="color:#ff8080; font-size:.85rem; margin-top:8px; display:none;"></div>
+        </div>
+
+        <label style="display:flex; align-items:flex-start; gap:8px; font-size:.84rem; color:var(--muted); margin-bottom:14px;">
+          <input type="checkbox" id="billing-consent" required style="margin-top:3px;">
+          <span>I authorize Ravlo to charge my card for the {{ selected_tier }} plan and agree to the
+            <a href="{{ url_for('partners.billing') }}" style="color:#9ed0ff; font-weight:800;">Billing Terms</a>.
+          </span>
+        </label>
+
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button id="pay-btn" class="ravlo-btn primary" type="button">
+            Subscribe to {{ selected_tier }}
+          </button>
+          <span id="pay-spinner" style="display:none; color:var(--muted); font-size:.9rem;">Processing…</span>
+          <a href="{{ url_for('partners.billing') }}" class="ravlo-btn ghost">Cancel</a>
+        </div>
+
+        {# After card is saved, confirm the subscription tier #}
+        <form id="confirm-form" method="POST"
+              action="{{ url_for('partners.confirm_subscription', tier=selected_tier) }}"
+              style="display:none;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="payment_method_id" id="pm-field">
+        </form>
       </div>
-    </form>
+
+      <script src="https://js.stripe.com/v3/"></script>
+      <script>
+      (function () {
+        const pubKey = "{{ config.get('STRIPE_PUBLISHABLE_KEY', '') }}";
+        if (!pubKey) return;
+
+        const stripe = Stripe(pubKey);
+        const elements = stripe.elements();
+        const card = elements.create("card", {
+          style: {
+            base: {
+              color: "#e6e6e6",
+              fontFamily: "inherit",
+              fontSize: "15px",
+              "::placeholder": { color: "#666" },
+            },
+            invalid: { color: "#ff8080" },
+          },
+          hidePostalCode: false,
+        });
+        card.mount("#card-element");
+
+        card.on("change", function (e) {
+          const errEl = document.getElementById("card-errors");
+          if (e.error) {
+            errEl.textContent = e.error.message;
+            errEl.style.display = "block";
+          } else {
+            errEl.style.display = "none";
+          }
+        });
+
+        document.getElementById("pay-btn").addEventListener("click", async function () {
+          const consent = document.getElementById("billing-consent");
+          if (!consent.checked) {
+            alert("Please accept the billing terms before continuing.");
+            return;
+          }
+
+          const btn = this;
+          const spinner = document.getElementById("pay-spinner");
+          btn.disabled = true;
+          spinner.style.display = "inline";
+
+          try {
+            // 1. Create SetupIntent on the server
+            const resp = await fetch("{{ url_for('partners.partner_billing_setup_intent') }}", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token() }}",
+              },
+              body: JSON.stringify({ tier: "{{ selected_tier|lower }}" }),
+            });
+            const data = await resp.json();
+            if (data.error) throw new Error(data.error);
+
+            // 2. Confirm the card setup
+            const { setupIntent, error } = await stripe.confirmCardSetup(data.client_secret, {
+              payment_method: { card: card },
+            });
+            if (error) throw new Error(error.message);
+
+            // 3. Submit confirm form with the saved payment method id
+            document.getElementById("pm-field").value = setupIntent.payment_method;
+            document.getElementById("confirm-form").submit();
+
+          } catch (err) {
+            const errEl = document.getElementById("card-errors");
+            errEl.textContent = err.message || "Payment failed. Please try again.";
+            errEl.style.display = "block";
+            btn.disabled = false;
+            spinner.style.display = "none";
+          }
+        });
+      })();
+      </script>
+
+    {% else %}
+      {# Billing not yet enabled — dev/staging mode #}
+      <div style="margin-top:14px; padding:12px 14px; background:rgba(122,184,255,.06);
+                  border:1px solid rgba(122,184,255,.2); border-radius:10px; color:var(--muted); font-size:.9rem;">
+        Live billing is not yet active. Activating the {{ selected_tier }} plan in demo mode.
+      </div>
+      <form method="POST" action="{{ url_for('partners.confirm_subscription', tier=selected_tier) }}" style="margin-top:18px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="ravlo-btn primary">Activate {{ selected_tier }}</button>
+        <a href="{{ url_for('partners.billing') }}" class="ravlo-btn ghost" style="margin-left:8px;">Cancel</a>
+      </form>
+    {% endif %}
+
   </section>
 </div>
 {% endblock %}
