@@ -176,36 +176,28 @@ def _agent_identity():
 def _template_defaults():
     defaults = _agent_identity()
     defaults.update({
-        "address": "",
-        "city": "",
-        "state": "",
-        "zip_code": "",
-        "beds": "",
-        "baths": "",
-        "sqft": "",
-        "price": "",
-        "description": "",
-        "status": "",
-        "days_on_market": "",
-        "offer_details": "",
-        "date": "",
-        "time": "",
-        "old_price": "",
-        "new_price": "",
-        "buyer_type": "",
-        "budget": "",
-        "areas": "",
-        "area": "",
-        "timeframe": "",
-        "stats": "",
-        "client_name": "",
-        "pipeline_stage": "",
-        "context": "",
-        "source": "",
-        "email": "",
-        "phone": "",
-        "title": "",
-        "cta": "",
+        # ── shared / realtor ────────────────────────────────────────────────
+        "address": "", "city": "", "state": "", "zip_code": "",
+        "beds": "", "baths": "", "sqft": "", "price": "", "description": "",
+        "status": "", "days_on_market": "", "offer_details": "",
+        "date": "", "time": "", "old_price": "", "new_price": "",
+        "buyer_type": "", "budget": "", "areas": "", "area": "",
+        "timeframe": "", "stats": "", "client_name": "", "pipeline_stage": "",
+        "context": "", "source": "", "email": "", "phone": "",
+        "title": "", "cta": "",
+        # ── contractor ──────────────────────────────────────────────────────
+        "contractor_name": "", "trade": "", "project_type": "", "scope": "",
+        "completion_date": "", "materials": "", "before_description": "",
+        "after_description": "", "timeline": "", "budget_range": "",
+        "service_area": "", "years_experience": "", "services": "",
+        "certifications": "", "new_service": "", "service_details": "",
+        "reason": "", "estimate_date": "", "estimate_amount": "",
+        "notes": "", "incentive": "", "highlight": "", "testimonial": "",
+        # ── insurance ───────────────────────────────────────────────────────
+        "coverage_type": "", "policy_type": "", "renewal_date": "", "tip": "",
+        # ── lending ─────────────────────────────────────────────────────────
+        "current_rate": "", "loan_type": "", "max_loan_amount": "",
+        "program_name": "", "rate_lock_deadline": "",
     })
     return defaults
 
@@ -951,6 +943,8 @@ def template_studio():
     profile = _elena_profile()
     role_type = getattr(profile, "role_type", None) or "realtor"
     is_contractor = role_type in ("contractor", "contractor_realtor")
+    is_insurance = role_type in ("insurance", "insurance_realtor")
+    is_loan_officer = role_type in ("loan_officer", "lender")
 
     # Determine the right dashboard home for the Back button
     if role_type in ("contractor", "contractor_realtor"):
@@ -972,6 +966,8 @@ def template_studio():
         saved_interaction_id=None,
         vip_profile=profile,
         is_contractor=is_contractor,
+        is_insurance=is_insurance,
+        is_loan_officer=is_loan_officer,
         role_type=role_type,
         portal="vip",
         portal_name="VIP Workspace",
@@ -1003,7 +999,14 @@ def template_studio_preview():
     profile = _elena_profile()
     role_type = getattr(profile, "role_type", None) or "realtor"
     is_contractor = role_type in ("contractor", "contractor_realtor")
-    _portal_home = url_for("vip.contractor_dashboard") if is_contractor else url_for("vip.realtor_dashboard")
+    is_insurance = role_type in ("insurance", "insurance_realtor")
+    is_loan_officer = role_type in ("loan_officer", "lender")
+    if role_type in ("contractor", "contractor_realtor"):
+        _portal_home = url_for("vip.contractor_dashboard")
+    elif role_type in ("insurance", "insurance_realtor"):
+        _portal_home = url_for("vip.insurance_dashboard")
+    else:
+        _portal_home = url_for("vip.realtor_dashboard")
 
     return render_template(
         "elena/template_studio.html",
@@ -1018,6 +1021,8 @@ def template_studio_preview():
         saved_flyer_id=None,
         vip_profile=profile,
         is_contractor=is_contractor,
+        is_insurance=is_insurance,
+        is_loan_officer=is_loan_officer,
         role_type=role_type,
         portal="vip",
         portal_name="VIP Workspace",
@@ -1048,7 +1053,14 @@ def template_studio_generate():
     profile = _elena_profile()
     role_type = getattr(profile, "role_type", None) or "realtor"
     is_contractor = role_type in ("contractor", "contractor_realtor")
-    _portal_home = url_for("vip.contractor_dashboard") if is_contractor else url_for("vip.realtor_dashboard")
+    is_insurance = role_type in ("insurance", "insurance_realtor")
+    is_loan_officer = role_type in ("loan_officer", "lender")
+    if role_type in ("contractor", "contractor_realtor"):
+        _portal_home = url_for("vip.contractor_dashboard")
+    elif role_type in ("insurance", "insurance_realtor"):
+        _portal_home = url_for("vip.insurance_dashboard")
+    else:
+        _portal_home = url_for("vip.realtor_dashboard")
 
     return render_template(
         "elena/template_studio.html",
@@ -1063,6 +1075,8 @@ def template_studio_generate():
         saved_flyer_id=None,
         vip_profile=profile,
         is_contractor=is_contractor,
+        is_insurance=is_insurance,
+        is_loan_officer=is_loan_officer,
         role_type=role_type,
         portal="vip",
         portal_name="VIP Workspace",
@@ -1122,7 +1136,14 @@ def template_studio_generate_and_save():
     profile = _elena_profile()
     role_type = getattr(profile, "role_type", None) or "realtor"
     is_contractor = role_type in ("contractor", "contractor_realtor")
-    _portal_home = url_for("vip.contractor_dashboard") if is_contractor else url_for("vip.realtor_dashboard")
+    is_insurance = role_type in ("insurance", "insurance_realtor")
+    is_loan_officer = role_type in ("loan_officer", "lender")
+    if role_type in ("contractor", "contractor_realtor"):
+        _portal_home = url_for("vip.contractor_dashboard")
+    elif role_type in ("insurance", "insurance_realtor"):
+        _portal_home = url_for("vip.insurance_dashboard")
+    else:
+        _portal_home = url_for("vip.realtor_dashboard")
 
     return render_template(
         "elena/template_studio.html",
@@ -1137,6 +1158,8 @@ def template_studio_generate_and_save():
         saved_flyer_id=saved_flyer_id,
         vip_profile=profile,
         is_contractor=is_contractor,
+        is_insurance=is_insurance,
+        is_loan_officer=is_loan_officer,
         role_type=role_type,
         portal="vip",
         portal_name="VIP Workspace",

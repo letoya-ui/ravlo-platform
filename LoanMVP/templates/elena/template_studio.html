@@ -4,8 +4,13 @@
 
 {% block page_title %}Create Content{% endblock %}
 {% set _is_contractor = is_contractor|default(false) %}
+{% set _is_insurance = is_insurance|default(false) %}
+{% set _is_loan_officer = is_loan_officer|default(false) %}
 {% block page_subline %}
-{% if _is_contractor %}Build project showcases, before &amp; after posts, estimate follow-ups, and social content for your contracting business.{% else %}Build flyers, follow-ups, and social posts with client and listing details filled in for you.{% endif %}
+{% if _is_contractor %}Build project showcases, before &amp; after posts, estimate follow-ups, and social content for your contracting business.
+{% elif _is_insurance %}Build coverage flyers, quote follow-ups, renewal reminders, and social content for your insurance clients.
+{% elif _is_loan_officer %}Build rate alerts, pre-approval flyers, loan follow-ups, and social content for your lending business.
+{% else %}Build flyers, follow-ups, and social posts with client and listing details filled in for you.{% endif %}
 {% endblock %}
 
 {% block topbar_actions %}
@@ -28,7 +33,7 @@
 
       <form method="GET" action="{{ url_for('elena.template_studio') }}" class="elena-form">
         <div class="elena-form-grid elena-form-grid-3">
-          {% if not _is_contractor %}
+          {% if not _is_contractor and not _is_insurance and not _is_loan_officer %}
           <label>
             Client ID (optional)
             <input
@@ -48,7 +53,7 @@
           </label>
           {% endif %}
 
-          <label {% if _is_contractor %}style="grid-column:1/-1;"{% endif %}>
+          <label {% if _is_contractor or _is_insurance or _is_loan_officer %}style="grid-column:1/-1;"{% endif %}>
             Content Type
             <select name="template_type">
               <option value="">Select a template</option>
@@ -73,8 +78,8 @@
       <section class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
-            <h3>{% if _is_contractor %}Project &amp; Business Details{% else %}Template Variables{% endif %}</h3>
-            <p>{% if _is_contractor %}Fill in your project and business details — the AI uses these to write the content.{% else %}Review or edit the values below before previewing the prompt.{% endif %}</p>
+            <h3>{% if _is_contractor %}Project &amp; Business Details{% elif _is_insurance %}Coverage &amp; Client Details{% elif _is_loan_officer %}Loan &amp; Borrower Details{% else %}Template Variables{% endif %}</h3>
+            <p>{% if _is_contractor %}Fill in your project and business details — the AI uses these to write the content.{% elif _is_insurance %}Fill in your coverage and client details — the AI uses these to write the content.{% elif _is_loan_officer %}Fill in your loan and borrower details — the AI uses these to write the content.{% else %}Review or edit the values below before previewing the prompt.{% endif %}</p>
           </div>
         </div>
 
