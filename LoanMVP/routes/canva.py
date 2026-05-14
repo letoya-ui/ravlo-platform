@@ -69,6 +69,11 @@ def connect():
     session.permanent = True
     session.modified  = True
 
+    # Remember where to return the user after OAuth completes
+    next_url = request.args.get("next")
+    if next_url:
+        session["canva_next"] = next_url
+
     auth_url = build_canva_auth_url()
     return redirect(auth_url)
 
@@ -124,10 +129,30 @@ def callback():
     session.pop("canva_oauth_state", None)
     session.pop("canva_code_verifier", None)
 
-    flash("Canva connected! You can now create flyers directly in your Canva account.", "success")
-    # Send to onboarding so they see the Connected status; fall back to VIP home
+    # Check whether Canva granted design creation permission.
+    # If design:content:write is missing the app isn't approved for it in the
+    # Canva developer portal — warn the user clearly instead of letting them
+    # discover it as a silent 403 when they try to create a design.
+    granted_scope = token_data.get("scope") or ""
+    if "design:content:write" not in granted_scope:
+        import logging
+        logging.warning(
+            f"[Canva OAuth] connected but design:content:write missing from granted scopes: {granted_scope!r}"
+        )
+        flash(
+            "Canva connected, but design creation is not enabled for this app. "
+            "To create designs from Ravlo, a Ravlo admin needs to enable the "
+            "'design:content:write' scope in the Canva developer portal, then reconnect. "
+            "You can still browse your existing designs.",
+            "warning",
+        )
+    else:
+        flash("Canva connected! You can now create flyers directly from Ravlo.", "success")
+
+    # Return the user to wherever they came from, or onboarding as fallback
+    next_url = session.pop("canva_next", None)
     try:
-        return redirect(url_for("vip.onboarding"))
+        return redirect(next_url or url_for("vip.onboarding"))
     except Exception:
         return redirect(url_for("vip.index"))
 
@@ -214,17 +239,31 @@ def create_flyer():
         data = create_design(access_token, title=title, design_preset=preset)
     except Exception as exc:
         import requests as _req
-        # 403 almost always means the stored token is missing design:content:write.
-        # Wipe the token and send the user through OAuth again to get full scopes.
         if isinstance(exc, _req.exceptions.HTTPError) and getattr(exc.response, "status_code", None) == 403:
+            # 403 means the token is missing design:content:write.
+            # Check whether the stored scope already excludes it — if so,
+            # reconnecting won't help (the Canva app isn't approved for that scope
+            # in the developer portal). Show a clear explanation instead of looping.
             connection = get_user_canva_connection()
+            granted_scope = getattr(connection, "scope", "") or ""
+            if "design:content:write" not in granted_scope:
+                flash(
+                    "Design creation isn't enabled for this Canva integration. "
+                    "A Ravlo admin needs to add the 'design:content:write' scope "
+                    "in the Canva developer portal. Once that's done, disconnect and "
+                    "reconnect Canva to pick up the new permission.",
+                    "warning",
+                )
+                return redirect(request.args.get("next") or url_for("elena.template_studio"))
+            # Scope looks right but still 403 — token may be stale. Wipe and reconnect.
             if connection:
                 from LoanMVP.extensions import db as _db
                 _db.session.delete(connection)
                 _db.session.commit()
+            session["canva_next"] = request.args.get("next") or url_for("elena.template_studio")
             flash(
                 "Canva needs permission to create designs. "
-                "Please reconnect your Canva account to grant full access.",
+                "Please reconnect your Canva account.",
                 "warning",
             )
             return redirect(url_for("canva.connect"))
