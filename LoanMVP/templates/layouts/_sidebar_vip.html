@@ -65,6 +65,12 @@
       <span>Design Studio</span>
     </a>
 
+    <a href="{{ url_for('elena.template_studio') }}"
+       class="ravlo-nav-link {% if ep in ['elena.template_studio', 'elena.template_studio_preview', 'elena.template_studio_generate', 'elena.template_studio_generate_and_save'] %}active{% endif %}">
+      <i class="lucide lucide-wand-sparkles"></i>
+      <span>Content Studio</span>
+    </a>
+
     {% if role == 'contractor_realtor' %}
     <div class="ravlo-nav-section">Realtor</div>
 
@@ -149,6 +155,12 @@
        class="ravlo-nav-link {% if ep == 'vip.insurance_compose_email' %}active{% endif %}">
       <i class="lucide lucide-mail"></i>
       <span>Email Composer</span>
+    </a>
+
+    <a href="{{ url_for('elena.template_studio') }}"
+       class="ravlo-nav-link {% if ep in ['elena.template_studio', 'elena.template_studio_preview', 'elena.template_studio_generate', 'elena.template_studio_generate_and_save'] %}active{% endif %}">
+      <i class="lucide lucide-wand-sparkles"></i>
+      <span>Content Studio</span>
     </a>
 
     <a href="{{ url_for('partners.requests_inbox') }}"
