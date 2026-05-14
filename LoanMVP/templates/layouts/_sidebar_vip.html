@@ -59,6 +59,8 @@
       <span>Workspace</span>
     </a>
 
+    <div class="ravlo-nav-section">Studio</div>
+
     <a href="{{ url_for('vip.design_studio') }}"
        class="ravlo-nav-link {% if ep in ['vip.design_studio', 'vip.create_design_project', 'vip.save_annotation', 'vip.update_annotation', 'vip.delete_annotation', 'vip.upload_design_blueprint'] %}active{% endif %}">
       <i class="lucide lucide-pencil-ruler"></i>
@@ -105,16 +107,18 @@
     </a>
     {% endif %}
 
+    <div class="ravlo-nav-section">Business</div>
+
     <a href="{{ url_for('vip.finances') }}"
        class="ravlo-nav-link {% if ep in ['vip.finances', 'vip.finances_add_income', 'vip.finances_add_expense'] %}active{% endif %}">
       <i class="lucide lucide-receipt"></i>
-      <span>Finances</span>
+      <span>Job Finances</span>
     </a>
 
     <a href="{{ url_for('vip.team') }}"
        class="ravlo-nav-link {% if ep in ['vip.team', 'vip.team_add', 'vip.team_assign_lead', 'vip.team_auto_distribute', 'vip.team_toggle', 'vip.team_delete'] %}active{% endif %}">
       <i class="lucide lucide-users"></i>
-      <span>Team</span>
+      <span>Crew / Team</span>
     </a>
 
     <a href="{{ url_for('vip.ai_pilot') }}"

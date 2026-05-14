@@ -3,7 +3,11 @@
 
 {% block title %}Ravlo • Finances{% endblock %}
 {% block page_title %}{{ header_name }}{% endblock %}
-{% block page_subline %}Income, expenses, closings, and tax set-aside in one place.{% endblock %}
+{% set _role = (vip_profile.role_type or 'realtor') if vip_profile else 'realtor' %}
+{% set _is_contractor = _role in ('contractor', 'contractor_realtor') %}
+{% set _is_insurance  = _role in ('insurance', 'insurance_realtor') %}
+{% set _is_loan_officer = _role in ('loan_officer', 'lender') %}
+{% block page_subline %}{% if _is_contractor %}Income, job costs, materials, and tax set-aside in one place.{% elif _is_loan_officer %}Commissions, income, expenses, and tax set-aside in one place.{% else %}Income, expenses, closings, and tax set-aside in one place.{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-6">
@@ -17,7 +21,7 @@
     <article class="ravlo-card partner-stat-card">
       <div class="partner-stat-label">Pending</div>
       <div class="partner-stat-value">${{ "{:,.0f}".format(total_pending or 0) }}</div>
-      <div class="partner-stat-sub">Closings in flight</div>
+      <div class="partner-stat-sub">{% if _is_contractor %}Invoices in progress{% elif _is_loan_officer %}Pending commissions{% else %}Closings in flight{% endif %}</div>
     </article>
     <article class="ravlo-card partner-stat-card">
       <div class="partner-stat-label">Expenses</div>
@@ -40,7 +44,7 @@
           from received income today.
           {% if tax_projected %}
             Expect another <strong>${{ "{:,.0f}".format(tax_projected or 0) }}</strong>
-            owed on pending closings.
+            owed on {% if _is_contractor %}pending invoices{% elif _is_loan_officer %}pending commissions{% else %}pending closings{% endif %}.
           {% endif %}
         </p>
       </div>
@@ -59,16 +63,30 @@
         <div class="grid grid-cols-2 gap-3">
           <label class="text-xs uppercase opacity-70">Category
             <select name="category" class="ravlo-input mt-1 w-full">
+              {% if _is_contractor %}
+              <option value="job_payment">Job Payment</option>
+              <option value="deposit">Deposit</option>
+              <option value="progress_payment">Progress Payment</option>
+              <option value="final_payment">Final Payment</option>
+              <option value="referral">Referral</option>
+              <option value="other">Other</option>
+              {% elif _is_loan_officer %}
               <option value="commission">Commission</option>
               <option value="bonus">Bonus</option>
               <option value="referral">Referral</option>
               <option value="other">Other</option>
+              {% else %}
+              <option value="commission">Commission</option>
+              <option value="bonus">Bonus</option>
+              <option value="referral">Referral</option>
+              <option value="other">Other</option>
+              {% endif %}
             </select>
           </label>
           <label class="text-xs uppercase opacity-70">Status
             <select name="status" class="ravlo-input mt-1 w-full">
               <option value="received">Received</option>
-              <option value="pending">Pending (closing)</option>
+              <option value="pending">{% if _is_contractor %}Pending (invoice sent){% elif _is_loan_officer %}Pending (commission){% else %}Pending (closing){% endif %}</option>
             </select>
           </label>
         </div>
@@ -76,7 +94,7 @@
           <input type="number" min="0" step="1" name="amount" required class="ravlo-input mt-1 w-full" placeholder="5000">
         </label>
         <label class="text-xs uppercase opacity-70 block">Description
-          <input type="text" name="description" class="ravlo-input mt-1 w-full" placeholder="123 Main St closing">
+          <input type="text" name="description" class="ravlo-input mt-1 w-full" placeholder="{% if _is_contractor %}Kitchen remodel – 47 Oak Ave{% elif _is_loan_officer %}Loan closing – borrower name{% else %}123 Main St closing{% endif %}">
         </label>
         <div class="grid grid-cols-2 gap-3">
           <label class="text-xs uppercase opacity-70">Date
@@ -101,6 +119,17 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label class="text-xs uppercase opacity-70 block">Category
           <select name="category" class="ravlo-input mt-1 w-full">
+            {% if _is_contractor %}
+            <option value="materials">Materials</option>
+            <option value="subcontractors">Subcontractors</option>
+            <option value="tools">Tools / Equipment</option>
+            <option value="labor">Labor</option>
+            <option value="permits">Permits &amp; Fees</option>
+            <option value="fuel">Fuel / Transport</option>
+            <option value="insurance">Insurance</option>
+            <option value="marketing">Marketing</option>
+            <option value="other">Other</option>
+            {% else %}
             <option value="marketing">Marketing</option>
             <option value="gas">Gas / Mileage</option>
             <option value="tolls">Tolls</option>
@@ -109,13 +138,14 @@
             <option value="photography">Photography</option>
             <option value="dues">Dues / Fees</option>
             <option value="other">Other</option>
+            {% endif %}
           </select>
         </label>
         <label class="text-xs uppercase opacity-70 block">Amount ($)
           <input type="number" min="0" step="1" name="amount" required class="ravlo-input mt-1 w-full" placeholder="120">
         </label>
         <label class="text-xs uppercase opacity-70 block">Description
-          <input type="text" name="description" class="ravlo-input mt-1 w-full" placeholder="Open house signage">
+          <input type="text" name="description" class="ravlo-input mt-1 w-full" placeholder="{% if _is_contractor %}Lumber – 47 Oak Ave{% else %}Open house signage{% endif %}">
         </label>
         <div class="grid grid-cols-2 gap-3">
           <label class="text-xs uppercase opacity-70">Date
