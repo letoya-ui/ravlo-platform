@@ -34,6 +34,14 @@ from LoanMVP.services.elena_templates import (
 from LoanMVP.utils.decorators import role_required
 
 from LoanMVP.routes.canva import get_valid_access_token, get_user_canva_connection
+
+
+def _canva_can_create() -> bool:
+    """True only when the user is connected AND has design:content:write scope."""
+    conn = get_user_canva_connection()
+    if not conn or not conn.access_token:
+        return False
+    return "design:content:write" in (conn.scope or "")
 from LoanMVP.services.canva_service import (
     create_design,
     create_export_job,
@@ -970,6 +978,7 @@ def template_studio():
         is_loan_officer=is_loan_officer,
         role_type=role_type,
         canva_connected=bool(get_user_canva_connection()),
+        canva_can_create=_canva_can_create(),
         portal="vip",
         portal_name="VIP Workspace",
         portal_home=_portal_home,
@@ -1026,6 +1035,7 @@ def template_studio_preview():
         is_loan_officer=is_loan_officer,
         role_type=role_type,
         canva_connected=bool(get_user_canva_connection()),
+        canva_can_create=_canva_can_create(),
         portal="vip",
         portal_name="VIP Workspace",
         portal_home=_portal_home,
@@ -1081,6 +1091,7 @@ def template_studio_generate():
         is_loan_officer=is_loan_officer,
         role_type=role_type,
         canva_connected=bool(get_user_canva_connection()),
+        canva_can_create=_canva_can_create(),
         portal="vip",
         portal_name="VIP Workspace",
         portal_home=_portal_home,
@@ -1165,6 +1176,7 @@ def template_studio_generate_and_save():
         is_loan_officer=is_loan_officer,
         role_type=role_type,
         canva_connected=bool(get_user_canva_connection()),
+        canva_can_create=_canva_can_create(),
         portal="vip",
         portal_name="VIP Workspace",
         portal_home=_portal_home,

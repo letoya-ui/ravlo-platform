@@ -150,12 +150,17 @@
             </button>
           </form>
 
-          {% if canva_connected %}
+          {% if canva_can_create %}
             <a href="{{ url_for('canva.create_flyer', title=selected_template|replace('_',' ')|title) }}"
                class="ravlo-btn canva-btn" target="_blank" rel="noopener">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 110-16 8 8 0 010 16zm-1-5h2v2h-2v-2zm0-8h2v6h-2V7z"/></svg>
               Open Blank in Canva
             </a>
+          {% elif canva_connected %}
+            <span class="ravlo-btn canva-btn-pending" title="Canva design creation is pending app approval — coming soon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Canva — Coming Soon
+            </span>
           {% else %}
             <a href="{{ url_for('canva.connect') }}" class="ravlo-btn canva-btn-outline">
               Connect Canva
@@ -173,12 +178,17 @@
             <p>Review the final content below. Copy what you need, then open Canva to design it.</p>
           </div>
           <div class="elena-output-actions">
-            {% if canva_connected %}
+            {% if canva_can_create %}
               <a href="{{ url_for('canva.create_flyer', title=selected_template|replace('_',' ')|title) }}"
                  class="ravlo-btn canva-btn" target="_blank" rel="noopener">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 Open in Canva
               </a>
+            {% elif canva_connected %}
+              <span class="ravlo-btn canva-btn-pending" title="Canva design creation is pending app approval — coming soon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Canva — Coming Soon
+              </span>
             {% else %}
               <a href="{{ url_for('canva.connect') }}" class="ravlo-btn canva-btn-outline">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
@@ -380,6 +390,21 @@
     background: rgba(167, 139, 250, 0.12);
     color: #c4b5fd;
     text-decoration: none;
+  }
+  .ravlo-btn.canva-btn-pending {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: transparent;
+    color: var(--muted, #6b7280);
+    border: 1px solid rgba(107, 114, 128, 0.35);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: default;
+    opacity: 0.7;
   }
 
   /* ── Output section header with action button ──────────────────────────── */
