@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, flash, redirect, request, session, url_for, jsonify, render_template
 from flask_login import current_user, login_required
 
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.services.canva_service import (
     build_canva_auth_url,
@@ -283,6 +283,7 @@ def create_flyer():
 
 
 @canva_bp.post("/webhook")
+@csrf.exempt
 def webhook():
     """Canva webhook receiver.
 

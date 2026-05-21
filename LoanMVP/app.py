@@ -15,9 +15,11 @@ from flask import (
     request,
     send_from_directory,
     current_app,
-    url_for,  
+    url_for,
     session,
+    jsonify,
 )
+from sqlalchemy.exc import SQLAlchemyError
 from flask_cors import CORS
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
