@@ -79,7 +79,8 @@ def resource_path(relative_path: str) -> str:
 # Only additive, nullable columns are safe to self-heal here — destructive
 # or type-changing operations must go through Alembic.
 _SCHEMA_COMPAT_COLUMNS = [
-    ("user",                       "stripe_customer_id", "VARCHAR(255)"),
+    ("user",                       "stripe_customer_id",  "VARCHAR(255)"),
+    ("user",                       "university_tier",     "VARCHAR(20)"),
     ("vip_profiles",              "markets_json",       "TEXT"),
     ("deals",                     "local_cost_factor",  "FLOAT"),
     ("deals",                     "local_cost_label",   "VARCHAR(120)"),
@@ -439,8 +440,65 @@ def create_app():
 
     @app.get("/robots.txt")
     def robots_txt():
-        # Keep it simple: disallow indexing (you can change later)
-        return Response("User-agent: *\nDisallow: /\n", mimetype="text/plain")
+        site_url = os.environ.get("SITE_URL", "https://ravlohq.com").rstrip("/")
+        body = (
+            "User-agent: *\n"
+            "Allow: /\n"
+            "\n"
+            # ── Block private app areas ──────────────────────────────────
+            "Disallow: /admin/\n"
+            "Disallow: /investor/\n"
+            "Disallow: /loan_officer/\n"
+            "Disallow: /processor/\n"
+            "Disallow: /borrower/\n"
+            "Disallow: /partner/workspace/\n"
+            "Disallow: /system/\n"
+            "Disallow: /executive/\n"
+            "Disallow: /api/\n"
+            "Disallow: /university/chat\n"       # API endpoint
+            "Disallow: /university/portal\n"     # React shell (app, not marketing)
+            "Disallow: /flask_session/\n"
+            "\n"
+            f"Sitemap: {site_url}/sitemap.xml\n"
+        )
+        return Response(body, mimetype="text/plain")
+
+    @app.get("/sitemap.xml")
+    def sitemap_xml():
+        site_url = os.environ.get("SITE_URL", "https://ravlohq.com").rstrip("/")
+        pages = [
+            ("/",                    "1.0", "weekly"),
+            ("/university",          "0.9", "weekly"),
+            ("/about",               "0.8", "monthly"),
+            ("/tour",                "0.8", "monthly"),
+            ("/lending-os",          "0.8", "monthly"),
+            ("/plans",               "0.7", "monthly"),
+            ("/partners",            "0.7", "monthly"),
+            ("/faq",                 "0.6", "monthly"),
+            ("/support",             "0.6", "monthly"),
+            ("/story",               "0.6", "monthly"),
+            ("/vision",              "0.6", "monthly"),
+            ("/mission",             "0.6", "monthly"),
+            ("/contact",             "0.5", "monthly"),
+            ("/privacy",             "0.4", "yearly"),
+            ("/terms",               "0.4", "yearly"),
+            ("/disclaimer",          "0.4", "yearly"),
+        ]
+        rows = "\n".join(
+            f"  <url>\n"
+            f"    <loc>{site_url}{path}</loc>\n"
+            f"    <priority>{priority}</priority>\n"
+            f"    <changefreq>{freq}</changefreq>\n"
+            f"  </url>"
+            for path, priority, freq in pages
+        )
+        xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            f"{rows}\n"
+            "</urlset>"
+        )
+        return Response(xml, mimetype="application/xml")
 
 
     @app.route("/favicon.ico")
