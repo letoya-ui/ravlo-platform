@@ -1,0 +1,109 @@
+{# ─────────────────────────────────────────────────────────────────────────
+   university/_access_card.html
+   Include on any settings page to show the user's Ravlo University access.
+
+   Requires university_access to be in template context (injected by the
+   university_bp.app_context_processor in university_routes.py).
+
+   Usage:  {% include 'university/_access_card.html' %}
+   ───────────────────────────────────────────────────────────────────────── #}
+
+{% if university_access %}
+<div class="ravlo-card pad mt-20" style="border:1px solid {{ university_access.border }}; background:{{ university_access.bg }};">
+
+  {# Header row #}
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-size:20px; color:{{ university_access.color }};">{{ university_access.icon }}</span>
+      <div>
+        <div class="ravlo-kicker" style="color:{{ university_access.color }}; margin-bottom:2px;">Ravlo University</div>
+        <div style="font-weight:700; font-size:15px;">{{ university_access.label }}</div>
+      </div>
+    </div>
+    <span style="font-size:11px; padding:4px 10px; border-radius:20px;
+                 border:1px solid {{ university_access.border }};
+                 color:{{ university_access.color }};
+                 font-weight:700; letter-spacing:1px;">
+      {{ university_access.badge }}
+    </span>
+  </div>
+
+  {# Description #}
+  <p class="muted" style="margin-bottom:16px; font-size:13px;">
+    {{ university_access.description }}
+  </p>
+
+  {# Perks #}
+  <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:20px;">
+    {% for perk in university_access.perks %}
+    <span style="font-size:11px; padding:4px 10px; border-radius:20px;
+                 background:rgba(255,255,255,0.05);
+                 border:1px solid rgba(255,255,255,0.08);
+                 color:rgba(255,255,255,0.65);">
+      ✓ {{ perk }}
+    </span>
+    {% endfor %}
+  </div>
+
+  {# Access code + copy button #}
+  <div style="margin-bottom:16px;">
+    <label style="display:block; font-size:10px; letter-spacing:2px; text-transform:uppercase;
+                  color:{{ university_access.color }}; margin-bottom:8px; font-weight:600;">
+      Your Access Code
+    </label>
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <code id="ru-code-{{ university_access.tier_key }}"
+            style="flex:1; padding:12px 16px; border-radius:8px;
+                   background:rgba(0,0,0,0.3);
+                   border:1px solid {{ university_access.border }};
+                   color:{{ university_access.color }};
+                   font-family:monospace; font-size:15px; font-weight:700;
+                   letter-spacing:2px; user-select:all;">
+        {{ university_access.code }}
+      </code>
+      <button type="button"
+              onclick="
+                var el = document.getElementById('ru-code-{{ university_access.tier_key }}');
+                navigator.clipboard.writeText(el.innerText.trim()).then(function(){
+                  var btn = event.target;
+                  btn.textContent = 'Copied!';
+                  setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+                });
+              "
+              style="padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:600;
+                     font-size:12px; letter-spacing:0.5px; white-space:nowrap;
+                     border:1px solid {{ university_access.border }};
+                     background:rgba(0,0,0,0.25);
+                     color:{{ university_access.color }};">
+        Copy
+      </button>
+    </div>
+    <p style="font-size:11px; color:rgba(255,255,255,0.35); margin-top:8px;">
+      Use this code on the Access screen inside the University portal.
+    </p>
+  </div>
+
+  {# CTA #}
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <a href="{{ url_for('university.portal') }}"
+       target="_blank"
+       style="display:inline-flex; align-items:center; gap:6px;
+              padding:11px 22px; border-radius:8px; text-decoration:none;
+              font-weight:700; font-size:13px; letter-spacing:0.5px;
+              background:linear-gradient(135deg, {{ university_access.color }}, {{ university_access.color }}88);
+              color:#080808;">
+      Launch University Portal →
+    </a>
+    <a href="{{ url_for('marketing.university') }}"
+       style="display:inline-flex; align-items:center;
+              padding:11px 22px; border-radius:8px; text-decoration:none;
+              font-weight:600; font-size:13px;
+              border:1px solid {{ university_access.border }};
+              color:{{ university_access.color }};
+              background:transparent;">
+      Learn More
+    </a>
+  </div>
+
+</div>
+{% endif %}
