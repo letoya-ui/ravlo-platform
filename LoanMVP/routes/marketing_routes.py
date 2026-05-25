@@ -141,6 +141,12 @@ PAGE_META = {
         "template": "marketing/partner_plans.html",
         "hero_image": "images/marketing/interior_luxury.jpg",
     },
+    "university": {
+        "title": "Ravlo University | Real Estate Investing Education",
+        "description": "Learn real estate investing with Ravlo University. Guides on deal analysis, renovation strategy, build planning, and how to use every Ravlo studio.",
+        "template": "marketing/university.html",
+        "hero_image": "images/marketing/city_skyline.jpg",
+    },
 }
 
 
@@ -445,3 +451,11 @@ def apply():
 @marketing_bp.route("/apply/success")
 def apply_success():
     return render_template("marketing/apply_success.html")
+
+
+# ---------------------------------------------------------
+# RAVLO UNIVERSITY
+# ---------------------------------------------------------
+@marketing_bp.route("/university")
+def university():
+    return render_marketing_page("university")
