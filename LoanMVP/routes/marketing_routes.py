@@ -458,7 +458,7 @@ def apply_success():
 # ---------------------------------------------------------
 @marketing_bp.route("/academy")
 def academy():
-    return render_marketing_page("academy")
+    return render_template("marketing/academy.html")
 
 
 @marketing_bp.route("/university")
