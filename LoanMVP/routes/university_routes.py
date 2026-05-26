@@ -13,8 +13,8 @@ Auto-registered by LoanMVP/app.py blueprint scanner.
 
 import os
 import requests as http
-from flask import Blueprint, render_template, request, jsonify, current_app
-from flask_login import current_user
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for
+from flask_login import current_user, login_required
 from LoanMVP.extensions import csrf
 
 # ── Blueprint ──────────────────────────────────────────────────────────────
@@ -64,23 +64,68 @@ _TIER_META = {
         "description": "Ravlo Lending Staff — Employment Benefit",
         "perks":       ["Unlimited AI Coaching", "Loan Modules", "Commercial Training", "Deal Review"],
     },
+    "pro": {
+        "label":       "Pro Access",
+        "code":        "",
+        "badge":       "PRO",
+        "color":       "#B06AD4",
+        "bg":          "rgba(176,106,212,0.10)",
+        "border":      "rgba(176,106,212,0.30)",
+        "icon":        "●",
+        "description": "Independent Realtors & Investors — Active Subscriber",
+        "perks":       ["Unlimited AI Coaching", "All Modules", "Success Plans", "Community Access"],
+    },
+    "starter": {
+        "label":       "Starter Access",
+        "code":        "",
+        "badge":       "STARTER",
+        "color":       "#6AD4A0",
+        "bg":          "rgba(106,212,160,0.10)",
+        "border":      "rgba(106,212,160,0.30)",
+        "icon":        "○",
+        "description": "New to Real Estate — Active Subscriber",
+        "perks":       ["Core AI Coaching", "3 Modules", "Basic Success Plan"],
+    },
 }
 
 
 def _university_access_for_user(user):
-    """Return the tier meta dict for a logged-in user, or None."""
+    """Return the tier meta dict for a logged-in user, or None.
+
+    Priority: role-based free access > paid university_tier from Stripe.
+    """
     try:
         if not user or not user.is_authenticated:
             return None
+
+        # Role-based access (investors, partners, lending staff — free)
         role = (getattr(user, "role", "") or "").strip().lower()
         tier_key = _ROLE_TIER.get(role)
+
+        # Paid tier from Stripe webhook
+        if not tier_key:
+            paid = (getattr(user, "university_tier", None) or "").strip().lower()
+            if paid in _TIER_META:
+                tier_key = paid
+
         if not tier_key:
             return None
+
         meta = dict(_TIER_META[tier_key])
         meta["tier_key"] = tier_key
         return meta
     except Exception:
         return None
+
+
+def _user_display_name(user) -> str:
+    """Best-effort display name from available user fields."""
+    for attr in ("full_name", "first_name", "name"):
+        val = (getattr(user, attr, None) or "").strip()
+        if val:
+            return val.title()
+    email = getattr(user, "email", "") or ""
+    return email.split("@")[0].title() or "Member"
 
 
 # ── App-wide context processor ─────────────────────────────────────────────
@@ -93,9 +138,19 @@ def inject_university_access():
 
 # ── Portal shell ───────────────────────────────────────────────────────────
 @university_bp.route("/portal")
+@login_required
 def portal():
-    """Serves the full-screen React shell. Marked noindex — SEO lives at /academy."""
-    return render_template("university/portal.html")
+    """Serves the full-screen React shell. Requires auth + active Academy tier."""
+    access = _university_access_for_user(current_user)
+    if not access:
+        # No valid tier — bounce to academy page so they can subscribe
+        return redirect(url_for("marketing.academy") + "#tiers")
+
+    return render_template(
+        "university/portal.html",
+        server_tier=access["tier_key"],
+        server_user=_user_display_name(current_user),
+    )
 
 
 # ── Business Plan tool ─────────────────────────────────────────────────────
@@ -109,11 +164,11 @@ def business_plan():
 @university_bp.route("/chat", methods=["POST"])
 @csrf.exempt
 def chat():
-    """
-    Proxy Anthropic API so the key never hits the browser.
-    Accepts the same JSON body the JSX sends:
-      { model, max_tokens, system, messages }
-    """
+    """Proxy Anthropic API. Requires auth + active Academy tier."""
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Authentication required."}), 401
+    if not _university_access_for_user(current_user):
+        return jsonify({"error": "Academy access required."}), 403
     if not _ANTHROPIC_KEY:
         return jsonify({"error": "AI coach is not configured on this server."}), 503
 
@@ -153,11 +208,11 @@ def chat():
 @university_bp.route("/business-plan/generate", methods=["POST"])
 @csrf.exempt
 def business_plan_generate():
-    """
-    Proxy Anthropic API for the Business Plan tool so the key never hits the browser.
-    Accepts the same JSON body the JSX sends:
-      { model, max_tokens, system, messages }
-    """
+    """Proxy Anthropic API for Business Plan tool. Requires auth + active Academy tier."""
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Authentication required."}), 401
+    if not _university_access_for_user(current_user):
+        return jsonify({"error": "Academy access required."}), 403
     if not _ANTHROPIC_KEY:
         return jsonify({"error": "AI coach is not configured on this server."}), 503
 
