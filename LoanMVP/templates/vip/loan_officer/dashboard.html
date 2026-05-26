@@ -1,9 +1,12 @@
-{% extends "layouts/ravlo_base.html" %}
+{% extends "layouts/vip_workspace_base.html" %}
 
 {% block title %}Ravlo • {{ header_name }} — Workspace{% endblock %}
 
-{% block content %}
+{% block body %}
 <div class="rl-shell">
+
+  {# Mobile sidebar overlay — tap outside to close #}
+  <div class="rl-overlay" onclick="document.body.classList.remove('rl-sidebar-open')"></div>
 
   {# ── SIDEBAR ── #}
   <aside class="rl-sidebar">
@@ -102,6 +105,13 @@
         </div>
       </div>
       {% endif %}
+
+      <form method="POST" action="{{ url_for('auth.logout') }}" style="margin-top:14px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="rl-btn ghost sm" style="width:100%;justify-content:center;">
+          <i class="bi bi-box-arrow-right"></i> Sign Out
+        </button>
+      </form>
     </div>
   </aside>
 
