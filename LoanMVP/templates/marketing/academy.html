@@ -398,7 +398,7 @@
         <li><span style="color:#6AD4A0">✓</span>Business Plan</li>
         <li><span style="color:#6AD4A0">✓</span>Session History</li>
       </ul>
-      <a href="{{ url_for('university.portal') }}" class="tier-btn" style="background:linear-gradient(135deg,#6AD4A0,#3A9470);color:#080808">Get Started</a>
+      <a href="{{ url_for('checkout.subscribe', plan='academy_starter') }}" class="tier-btn" style="background:linear-gradient(135deg,#6AD4A0,#3A9470);color:#080808">Get Started</a>
     </div>
     <div class="tier-card" style="border-color:rgba(176,106,212,0.4);background:rgba(176,106,212,0.1)">
       <div class="tier-badge" style="background:rgba(176,106,212,0.2);border:1px solid rgba(176,106,212,0.4);color:#B06AD4">MOST POPULAR</div>
@@ -413,7 +413,7 @@
         <li><span style="color:#B06AD4">✓</span>Business Plan</li>
         <li><span style="color:#B06AD4">✓</span>Community Access</li>
       </ul>
-      <a href="{{ url_for('university.portal') }}" class="tier-btn" style="background:linear-gradient(135deg,#B06AD4,#7A3A9A);color:#fff">Subscribe</a>
+      <a href="{{ url_for('checkout.subscribe', plan='academy_pro') }}" class="tier-btn" style="background:linear-gradient(135deg,#B06AD4,#7A3A9A);color:#fff">Subscribe</a>
     </div>
     <div class="tier-card" style="border-color:rgba(212,175,106,0.4);background:rgba(212,175,106,0.1)">
       <div class="tier-badge" style="background:rgba(212,175,106,0.15);border:1px solid rgba(212,175,106,0.4);color:#D4AF6A">VIP PARTNER</div>
