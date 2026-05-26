@@ -1,367 +1,508 @@
-{% extends "layouts/marketing_base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Ravlo Academy | AI-Powered Real Estate Education</title>
+<meta name="description" content="AI-powered coaching for realtors, investors, and lenders. Personalized success plans, loan education, and one-on-one AI coaching — built inside the Ravlo ecosystem."/>
+<link rel="canonical" href="https://ravlohq.com/academy"/>
+<meta property="og:title" content="Ravlo Academy | AI-Powered Real Estate Education"/>
+<meta property="og:description" content="AI coaching for realtors, investors, and lenders. Get a personalized business plan, master loans, and grow your real estate career with Ravlo Academy."/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #D4AF6A; --gold-dim: rgba(212,175,106,0.12); --gold-border: rgba(212,175,106,0.25);
+    --bg: #080808; --text: #EDE8DF; --muted: #7A7268; --faint: #3A3530;
+    --blue: #6AB4D4; --green: #6AD4A0; --purple: #B06AD4; --red: #D46A6A;
+    --serif: 'Cormorant Garamond', serif; --sans: 'DM Sans', sans-serif;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; overflow-x: hidden; }
 
-{% block hero %}
-<section class="mk-hero">
-  <div class="mk-container">
-    <div class="mk-hero-copy" style="max-width:900px;">
-      <div class="mk-eyebrow">Ravlo Academy</div>
-      <h1 class="mk-title-xl">AI-powered coaching for every deal.</h1>
-      <p class="mk-copy-lg">
-        Ravlo Academy gives realtors, investors, and lenders a dedicated AI coach, structured learning modules,
-        and a personalized 90-day business plan — all inside the Ravlo ecosystem.
-      </p>
+  /* NAV */
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 18px 48px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--gold-border); background: rgba(8,8,8,0.92); backdrop-filter: blur(12px); }
+  .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .logo-mark { width: 36px; height: 36px; border: 1.5px solid var(--gold); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 16px; font-weight: 700; color: var(--gold); }
+  .logo-text { display: flex; flex-direction: column; }
+  .logo-name { font-family: var(--serif); font-size: 18px; font-weight: 700; letter-spacing: 2px; color: var(--text); }
+  .logo-sub { font-size: 9px; letter-spacing: 4px; color: var(--gold); text-transform: uppercase; margin-top: -2px; }
+  .nav-links { display: flex; align-items: center; gap: 32px; }
+  .nav-links a { color: var(--muted); font-size: 13px; text-decoration: none; transition: color 0.2s; letter-spacing: 0.3px; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta { padding: 10px 24px; border-radius: 6px; border: 1px solid var(--gold-border); background: var(--gold-dim); color: var(--gold); font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: 1px; text-decoration: none; transition: all 0.2s; }
+  .nav-cta:hover { background: rgba(212,175,106,0.2); border-color: rgba(212,175,106,0.5); }
 
-      <div class="mk-hero-actions">
-        <a href="{{ url_for('university.portal') }}" class="mk-btn mk-btn-primary">Launch Academy Portal →</a>
-        <a href="{{ url_for('university.business_plan') }}" class="mk-btn mk-btn-ghost">Build My Business Plan</a>
-      </div>
+  /* HERO */
+  .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 120px 24px 80px; position: relative; overflow: hidden; }
+  .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 80% 60% at 50% -5%, rgba(212,175,106,0.18) 0%, transparent 70%); pointer-events: none; }
+  .hero::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 80px, rgba(212,175,106,0.015) 80px, rgba(212,175,106,0.015) 81px), repeating-linear-gradient(90deg, transparent, transparent 80px, rgba(212,175,106,0.015) 80px, rgba(212,175,106,0.015) 81px); pointer-events: none; }
+  .hero-eyebrow { font-size: 11px; letter-spacing: 6px; color: var(--gold); text-transform: uppercase; margin-bottom: 24px; font-weight: 500; position: relative; z-index: 1; }
+  .hero h1 { font-family: var(--serif); font-size: clamp(60px, 10vw, 110px); font-weight: 300; line-height: 0.92; margin-bottom: 8px; letter-spacing: -3px; position: relative; z-index: 1; }
+  .hero h1 span { display: block; }
+  .hero h1 .accent { color: var(--gold); font-weight: 700; font-style: italic; }
+  .hero-sub { font-size: clamp(15px, 2vw, 18px); color: var(--muted); max-width: 580px; line-height: 1.75; margin: 36px auto 52px; font-weight: 300; position: relative; z-index: 1; }
+  .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; position: relative; z-index: 1; }
+  .btn-primary { padding: 16px 44px; border-radius: 8px; border: none; background: linear-gradient(135deg, #D4AF6A, #9A7A3A); color: #080808; font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: 1px; font-family: var(--sans); text-decoration: none; display: inline-block; transition: transform 0.2s, box-shadow 0.2s; }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(212,175,106,0.25); }
+  .btn-outline { padding: 16px 44px; border-radius: 8px; border: 1px solid var(--gold-border); background: transparent; color: var(--gold); font-size: 14px; font-weight: 500; cursor: pointer; letter-spacing: 0.5px; font-family: var(--sans); text-decoration: none; display: inline-block; transition: all 0.2s; }
+  .btn-outline:hover { background: var(--gold-dim); border-color: rgba(212,175,106,0.5); }
 
-      <div class="mk-stat-row">
-        <div class="mk-stat">
-          <strong>AI Coach</strong>
-          <span>24/7 coaching tailored to your role and goals.</span>
-        </div>
-        <div class="mk-stat">
-          <strong>6 Modules</strong>
-          <span>Residential, commercial, lending, investing, and more.</span>
-        </div>
-        <div class="mk-stat">
-          <strong>90-Day Plan</strong>
-          <span>Personalized business plan built by AI.</span>
-        </div>
-      </div>
+  /* STATS */
+  .stats { display: flex; gap: 64px; justify-content: center; flex-wrap: wrap; margin-top: 80px; position: relative; z-index: 1; }
+  .stat { text-align: center; }
+  .stat-num { font-family: var(--serif); font-size: 44px; font-weight: 700; color: var(--gold); line-height: 1; }
+  .stat-label { font-size: 11px; color: var(--faint); letter-spacing: 2px; text-transform: uppercase; margin-top: 6px; }
+
+  /* SECTIONS */
+  section { padding: 100px 24px; max-width: 1100px; margin: 0 auto; }
+  .section-eyebrow { font-size: 11px; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; margin-bottom: 16px; }
+  .section-title { font-family: var(--serif); font-size: clamp(36px, 5vw, 56px); font-weight: 300; line-height: 1.05; margin-bottom: 20px; }
+  .section-title strong { font-weight: 700; color: var(--gold); }
+  .section-desc { color: var(--muted); font-size: 16px; max-width: 580px; line-height: 1.7; }
+  .divider { width: 100%; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,106,0.15), transparent); margin: 0; }
+
+  /* WHO IT'S FOR */
+  .audience-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 48px; }
+  .audience-card { padding: 32px; border-radius: 14px; border: 1px solid var(--gold-border); background: var(--gold-dim); position: relative; overflow: hidden; }
+  .audience-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+  .audience-icon { font-size: 32px; margin-bottom: 16px; }
+  .audience-title { font-family: var(--serif); font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .audience-desc { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+  .audience-perks { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .audience-perks li { font-size: 13px; color: #A09888; display: flex; gap: 8px; align-items: flex-start; }
+  .audience-perks li::before { content: '✓'; color: var(--gold); flex-shrink: 0; margin-top: 1px; }
+
+  /* FEATURES */
+  .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 48px; }
+  .feature-card { padding: 28px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); display: flex; gap: 20px; align-items: flex-start; transition: all 0.2s; }
+  .feature-card:hover { border-color: var(--gold-border); background: var(--gold-dim); }
+  .feature-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .feature-body h4 { font-family: var(--serif); font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .feature-body p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  /* MODULES */
+  .modules-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 48px; }
+  .module-card { padding: 24px; border-radius: 12px; border: 1px solid; transition: all 0.2s; }
+  .module-card:hover { transform: translateY(-3px); }
+  .module-emoji { font-size: 28px; margin-bottom: 12px; }
+  .module-title { font-family: var(--serif); font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .module-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+  .module-lessons { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
+
+  /* PLAN TIERS */
+  .tiers-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 48px; }
+  .tier-card { padding: 24px; border-radius: 14px; border: 1px solid; position: relative; }
+  .tier-badge { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 10px; padding: 3px 14px; border-radius: 20px; font-weight: 700; letter-spacing: 1px; white-space: nowrap; }
+  .tier-icon { font-size: 24px; margin-bottom: 12px; }
+  .tier-name { font-family: var(--serif); font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .tier-price { font-family: var(--serif); font-size: 32px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .tier-price-sub { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+  .tier-desc { font-size: 12px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+  .tier-perks { list-style: none; display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
+  .tier-perks li { font-size: 12px; color: #A09888; display: flex; gap: 6px; }
+  .tier-btn { width: 100%; padding: 11px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--sans); letter-spacing: 0.5px; border: none; transition: all 0.2s; text-decoration: none; display: block; text-align: center; }
+
+  /* BUSINESS PLAN HIGHLIGHT */
+  .biz-highlight { padding: 60px; border-radius: 20px; border: 1px solid var(--gold-border); background: linear-gradient(135deg, rgba(212,175,106,0.08) 0%, rgba(212,175,106,0.03) 100%); position: relative; overflow: hidden; margin-top: 48px; }
+  .biz-highlight::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+  .biz-highlight::after { content: 'ACADEMY'; position: absolute; right: -20px; top: 50%; transform: translateY(-50%) rotate(90deg); font-family: var(--serif); font-size: 80px; font-weight: 700; color: rgba(212,175,106,0.04); letter-spacing: 8px; pointer-events: none; }
+  .biz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  .biz-steps { display: flex; flex-direction: column; gap: 20px; margin-top: 28px; }
+  .biz-step { display: flex; gap: 16px; align-items: flex-start; }
+  .biz-step-num { width: 32px; height: 32px; border-radius: 8px; background: var(--gold-dim); border: 1px solid var(--gold-border); display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 14px; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+  .biz-step-body h5 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .biz-step-body p { font-size: 13px; color: var(--muted); }
+
+  /* PARTNER BLOCK */
+  .partner-block { text-align: center; padding: 80px 24px; background: linear-gradient(180deg, transparent, rgba(212,175,106,0.04) 50%, transparent); border-top: 1px solid rgba(212,175,106,0.08); border-bottom: 1px solid rgba(212,175,106,0.08); }
+
+  /* FOOTER */
+  footer { padding: 60px 48px 40px; border-top: 1px solid rgba(212,175,106,0.08); }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+  .footer-brand p { font-size: 13px; color: var(--muted); margin-top: 16px; line-height: 1.6; max-width: 280px; }
+  .footer-col h5 { font-size: 10px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 16px; }
+  .footer-col a { display: block; font-size: 13px; color: var(--muted); text-decoration: none; margin-bottom: 10px; transition: color 0.2s; }
+  .footer-col a:hover { color: var(--text); }
+  .footer-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.04); }
+  .footer-bottom p { font-size: 12px; color: var(--faint); }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    nav { padding: 16px 20px; }
+    .nav-links { display: none; }
+    .audience-grid, .modules-grid, .tiers-grid { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: 1fr; }
+    .biz-grid { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+    .biz-highlight { padding: 36px 24px; }
+    .stats { gap: 32px; }
+    section { padding: 60px 20px; }
+  }
+  @media (max-width: 600px) {
+    .footer-grid { grid-template-columns: 1fr; }
+    footer { padding: 40px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="{{ url_for('marketing_home') }}" class="logo">
+    <div class="logo-mark">R</div>
+    <div class="logo-text">
+      <span class="logo-name">RAVLO</span>
+      <span class="logo-sub">Academy</span>
     </div>
+  </a>
+  <div class="nav-links">
+    <a href="{{ url_for('marketing_home') }}">Home</a>
+    <a href="{{ url_for('marketing.lending_os') }}">Lending OS</a>
+    <a href="{{ url_for('marketing.partners') }}">Partners</a>
+    <a href="{{ url_for('marketing.plans') }}">Plans</a>
+    <a href="{{ url_for('marketing.contact') }}">Contact</a>
   </div>
-</section>
-{% endblock %}
+  <a href="{{ url_for('university.portal') }}" class="nav-cta">Enter Academy →</a>
+</nav>
 
-{% block content %}
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Knowledge · Coaching · Growth</div>
+  <h1>
+    <span>Ravlo</span>
+    <span class="accent">Academy</span>
+  </h1>
+  <p class="hero-sub">AI-powered education for realtors, investors, and lenders. One-on-one coaching, personalized business plans, and the loan knowledge to move faster on every deal.</p>
+  <div class="hero-actions">
+    <a href="{{ url_for('university.portal') }}" class="btn-primary">Start Learning Free</a>
+    <a href="#tiers" class="btn-outline">View Plans</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-num">6</div><div class="stat-label">Learning Modules</div></div>
+    <div class="stat"><div class="stat-num">AI</div><div class="stat-label">Powered Coaching</div></div>
+    <div class="stat"><div class="stat-num">1:1</div><div class="stat-label">Business Plans</div></div>
+    <div class="stat"><div class="stat-num">3</div><div class="stat-label">Audiences Served</div></div>
+  </div>
+</div>
 
-<section class="mk-section-tight">
-  <div class="mk-container">
-    <div class="mk-kicker">Who it's for</div>
-    <h2 class="mk-title-lg">Built for every role in real estate.</h2>
+<div class="divider"></div>
 
-    <div class="mk-grid-3" style="margin-top:28px;">
-      <div class="mk-card">
-        <div class="mk-card-icon">R</div>
-        <h3>Realtors & Agents</h3>
-        <p>
-          Master lead generation, conversion, and client experience. Get a 90-day action plan built
-          around your market, your SOI, and your income goals.
-        </p>
-      </div>
-
-      <div class="mk-card">
-        <div class="mk-card-icon">I</div>
-        <h3>Investors</h3>
-        <p>
-          BRRRR, multifamily, deal analysis, portfolio scaling — get coaching from an AI that
-          understands the numbers and the strategy behind every acquisition.
-        </p>
-      </div>
-
-      <div class="mk-card">
-        <div class="mk-card-icon">L</div>
-        <h3>Lenders & Loan Officers</h3>
-        <p>
-          Build your referral network, master pipeline management, and grow production with a
-          structured plan built for mortgage professionals.
-        </p>
-      </div>
+<!-- WHO IT'S FOR -->
+<section>
+  <div class="section-eyebrow">Who Ravlo Academy Serves</div>
+  <h2 class="section-title">Built for every corner of<br/><strong>real estate.</strong></h2>
+  <p class="section-desc">Whether you close deals, fund them, or help investors find them — Academy has a lane built specifically for you.</p>
+  <div class="audience-grid">
+    <div class="audience-card">
+      <div class="audience-icon">🏠</div>
+      <div class="audience-title">Realtors</div>
+      <p class="audience-desc">Grow your client base, master your market, and learn to speak the language of investors.</p>
+      <ul class="audience-perks">
+        <li>Listing &amp; buyer representation strategies</li>
+        <li>Geographic farming systems</li>
+        <li>SOI &amp; CRM automation</li>
+        <li>Investor client conversion</li>
+        <li>AI-powered business growth coaching</li>
+      </ul>
     </div>
-  </div>
-</section>
-
-<section class="mk-section">
-  <div class="mk-container">
-    <div class="mk-split-panel">
-      <div class="mk-panel">
-        <div class="mk-kicker">Academy Features</div>
-        <h2 class="mk-title-lg">Everything you need to grow.</h2>
-
-        <div class="mk-list">
-          <div class="mk-list-item">
-            <div class="mk-check">✓</div>
-            <div>
-              <strong>AI Coach</strong>
-              <div class="mk-copy">24/7 real estate coaching tailored to your role, market, and specific goals. Ask anything, get real answers.</div>
-            </div>
-          </div>
-
-          <div class="mk-list-item">
-            <div class="mk-check">✓</div>
-            <div>
-              <strong>Personalized Business Plans</strong>
-              <div class="mk-copy">A structured 90-day success plan with 30/60/90-day milestones, weekly metrics, and a revenue projection built for you.</div>
-            </div>
-          </div>
-
-          <div class="mk-list-item">
-            <div class="mk-check">✓</div>
-            <div>
-              <strong>6 Learning Modules</strong>
-              <div class="mk-copy">Residential sales, commercial investing, mortgage lending, deal analysis, portfolio building, and platform mastery.</div>
-            </div>
-          </div>
-
-          <div class="mk-list-item">
-            <div class="mk-check">✓</div>
-            <div>
-              <strong>Platform Connection</strong>
-              <div class="mk-copy">Academy is built inside the Ravlo ecosystem. Your plan, your coach, and your deals — all in one place.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="mk-panel">
-        <div class="mk-kicker">Your 90-Day Business Plan</div>
-        <h2 class="mk-title-lg">A real plan. Not a template.</h2>
-        <p class="mk-copy">
-          Answer 6 questions about your role, goals, and challenges. Ravlo Academy builds a
-          complete, personalized business plan with specific actions, weekly KPIs, and a
-          revenue projection — in under 60 seconds.
-        </p>
-
-        <div class="mk-divider"></div>
-
-        <div class="mk-grid-2">
-          <div class="mk-card">
-            <h4>30-Day Sprint</h4>
-            <p>Specific daily and weekly actions with real numbers — not generic advice.</p>
-          </div>
-          <div class="mk-card">
-            <h4>Revenue Projection</h4>
-            <p>Conservative and optimistic forecasts based on your role and primary goal.</p>
-          </div>
-          <div class="mk-card">
-            <h4>Key Metrics</h4>
-            <p>A weekly tracking table with 5–7 specific metrics and targets.</p>
-          </div>
-          <div class="mk-card">
-            <h4>AI Coach Follow-up</h4>
-            <p>Ask questions, drill into any section, and adjust your plan after it's built.</p>
-          </div>
-        </div>
-
-        <div style="margin-top:24px;">
-          <a href="{{ url_for('university.business_plan') }}" class="mk-btn mk-btn-primary">Build My Business Plan →</a>
-        </div>
-      </div>
+    <div class="audience-card" style="border-color:rgba(106,180,212,0.3);background:rgba(106,180,212,0.08)">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#6AB4D4,transparent)"></div>
+      <div class="audience-icon">🏗️</div>
+      <div class="audience-title">Investors</div>
+      <p class="audience-desc">Analyze deals faster, structure creative financing, and scale your portfolio with confidence.</p>
+      <ul class="audience-perks">
+        <li>BRRRR &amp; multifamily underwriting</li>
+        <li>Deal sourcing &amp; off-market strategies</li>
+        <li>Creative financing &amp; joint ventures</li>
+        <li>Cap rate &amp; NOI deep dives</li>
+        <li>Personalized portfolio growth plan</li>
+      </ul>
     </div>
-  </div>
-</section>
-
-<section class="mk-section-tight">
-  <div class="mk-container">
-    <div class="mk-kicker">Learning Modules</div>
-    <h2 class="mk-title-lg">Six modules. One ecosystem.</h2>
-
-    <div class="mk-grid-3" style="margin-top:28px;">
-      <div class="mk-card">
-        <div class="mk-card-icon">1</div>
-        <h3>Residential Sales</h3>
-        <p>Lead generation, client conversion, listing strategy, and building a sustainable book of business.</p>
-      </div>
-
-      <div class="mk-card">
-        <div class="mk-card-icon">2</div>
-        <h3>Real Estate Investing</h3>
-        <p>BRRRR strategy, fix-and-flip analysis, ARV, rehab cost estimation, and exit strategy comparison.</p>
-      </div>
-
-      <div class="mk-card">
-        <div class="mk-card-icon">3</div>
-        <h3>Mortgage & Lending</h3>
-        <p>Loan products, pipeline management, referral networks, and production growth for LOs and brokers.</p>
-      </div>
-
-      <div class="mk-card">
-        <div class="mk-card-icon">4</div>
-        <h3>Commercial Real Estate</h3>
-        <p>Multifamily, NNN, deal underwriting, cap rates, and how to evaluate larger acquisitions.</p>
-      </div>
-
-      <div class="mk-card">
-        <div class="mk-card-icon">5</div>
-        <h3>Portfolio Building</h3>
-        <p>Scaling from one deal to many — systems, leverage, team building, and long-term wealth creation.</p>
-      </div>
-
-      <div class="mk-card">
-        <div class="mk-card-icon">6</div>
-        <h3>Platform & Workflow</h3>
-        <p>Mastering every Ravlo studio, workflow, and reporting tool for maximum performance.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="mk-section">
-  <div class="mk-container">
-    <div class="mk-kicker">Access Tiers</div>
-    <h2 class="mk-title-lg">Choose your Academy plan.</h2>
-
-    <div class="mk-grid-4" style="margin-top:28px;">
-      <div class="mk-plan">
-        <div class="mk-plan-badge">Starter</div>
-        <h3>Starter</h3>
-        <div class="mk-plan-price">$47<span style="font-size:1rem;font-weight:700;">/mo</span></div>
-        <div class="mk-plan-note">AI coach access and core learning modules.</div>
-        <div class="mk-list">
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">AI Coach (limited sessions)</div></div>
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">2 learning modules</div></div>
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Business plan (1/month)</div></div>
-        </div>
-        <div style="margin-top:20px;">
-          <a href="{{ url_for('marketing.enter') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Get Started</a>
-        </div>
-      </div>
-
-      <div class="mk-plan featured">
-        <div class="mk-plan-badge">Most Popular</div>
-        <h3>Pro</h3>
-        <div class="mk-plan-price">$97<span style="font-size:1rem;font-weight:700;">/mo</span></div>
-        <div class="mk-plan-note">Full Academy access for serious professionals.</div>
-        <div class="mk-list">
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Unlimited AI coaching</div></div>
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">All 6 learning modules</div></div>
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Unlimited business plans</div></div>
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Priority support</div></div>
-        </div>
-        <div style="margin-top:20px;">
-          <a href="{{ url_for('marketing.enter') }}" class="mk-btn mk-btn-primary" style="width:100%;">Choose Pro</a>
-        </div>
-      </div>
-
-      <div class="mk-plan">
-        <div class="mk-plan-badge">Elite · Free for Partners</div>
-        <h3>Elite</h3>
-        <div class="mk-plan-price" style="font-size:1.4rem;">Included</div>
-        <div class="mk-plan-note">For all Ravlo VIP Partners — no extra cost.</div>
-        <div class="mk-list">
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Everything in Pro</div></div>
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Exclusive investor briefings</div></div>
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">1-on-1 success planning</div></div>
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Partner-only sessions</div></div>
-        </div>
-        <div style="margin-top:20px;">
-          <a href="{{ url_for('marketing.partner_plans') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Become a Partner</a>
-        </div>
-      </div>
-
-      <div class="mk-plan">
-        <div class="mk-plan-badge">Lending Team · Free</div>
-        <h3>Lending Team</h3>
-        <div class="mk-plan-price" style="font-size:1.4rem;">Included</div>
-        <div class="mk-plan-note">For Ravlo lending staff — employment benefit.</div>
-        <div class="mk-list">
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Unlimited AI coaching</div></div>
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Loan & lending modules</div></div>
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Commercial training</div></div>
-          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Deal review sessions</div></div>
-        </div>
-        <div style="margin-top:20px;">
-          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Contact Us</a>
-        </div>
-      </div>
+    <div class="audience-card" style="border-color:rgba(106,212,160,0.3);background:rgba(106,212,160,0.08)">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#6AD4A0,transparent)"></div>
+      <div class="audience-icon">💰</div>
+      <div class="audience-title">Lenders</div>
+      <p class="audience-desc">Master every loan product, sharpen your underwriting, and close more deals with confidence.</p>
+      <ul class="audience-perks">
+        <li>Conventional, FHA, VA loan mastery</li>
+        <li>DSCR &amp; commercial underwriting</li>
+        <li>SBA 7(a) &amp; 504 programs</li>
+        <li>Bridge, hard money &amp; CMBS</li>
+        <li>Borrower qualification frameworks</li>
+      </ul>
     </div>
   </div>
 </section>
 
-<section class="mk-section">
-  <div class="mk-container">
-    <div class="mk-split-panel">
-      <div class="mk-panel">
-        <div class="mk-kicker">VIP Partners</div>
-        <h2 class="mk-title-lg">Partners get full Academy access — free.</h2>
-        <p class="mk-copy">
-          Every Ravlo VIP Partner receives Elite-tier Academy access as part of their partnership.
-          That includes unlimited AI coaching, all six learning modules, the full business plan system,
-          and exclusive investor briefings. No extra cost. No separate signup.
-        </p>
+<div class="divider"></div>
 
-        <div class="mk-divider"></div>
-
-        <div class="mk-list">
-          <div class="mk-list-item">
-            <div class="mk-check">✓</div>
-            <div>
-              <strong>Unlimited AI Coaching</strong>
-              <div class="mk-copy">Ask anything about deals, clients, or your career — your coach is always on.</div>
-            </div>
-          </div>
-          <div class="mk-list-item">
-            <div class="mk-check">✓</div>
-            <div>
-              <strong>All 6 Modules</strong>
-              <div class="mk-copy">Full access to every learning track — residential, commercial, lending, and more.</div>
-            </div>
-          </div>
-          <div class="mk-list-item">
-            <div class="mk-check">✓</div>
-            <div>
-              <strong>Business Plan System</strong>
-              <div class="mk-copy">Build and rebuild your 90-day plan as your goals evolve.</div>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top:28px;">
-          <a href="{{ url_for('marketing.partner_plans') }}" class="mk-btn mk-btn-primary">View Partner Plans →</a>
-        </div>
+<!-- FEATURES -->
+<section>
+  <div class="section-eyebrow">What's Inside</div>
+  <h2 class="section-title">More than a course.<br/><strong>A coaching system.</strong></h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(212,175,106,0.12)">🤖</div>
+      <div class="feature-body">
+        <h4>AI Coach — Always On</h4>
+        <p>Get real answers to real questions 24/7. Your AI coach draws on deep real estate expertise to give you specific, actionable guidance — not generic advice.</p>
       </div>
-
-      <div class="mk-panel">
-        <div class="mk-kicker">Inside the Platform</div>
-        <h2 class="mk-title-lg">Academy lives inside Ravlo.</h2>
-        <p class="mk-copy">
-          Ravlo Academy is not a separate app or a generic course platform. It's built inside
-          the Ravlo ecosystem — your AI coach knows your role, your goals, and your business.
-          Learning and doing happen in the same place.
-        </p>
-
-        <div class="mk-divider"></div>
-
-        <div class="mk-grid-2">
-          <div class="mk-card">
-            <h4>Connected to your deals</h4>
-            <p>Your coach can reference your active workflow and help you apply what you learn.</p>
-          </div>
-          <div class="mk-card">
-            <h4>Role-aware</h4>
-            <p>Academy knows if you're a realtor, investor, or lender — and adjusts everything accordingly.</p>
-          </div>
-          <div class="mk-card">
-            <h4>Always available</h4>
-            <p>No scheduled sessions. No waiting. Your AI coach is there when you need it.</p>
-          </div>
-          <div class="mk-card">
-            <h4>Built to scale</h4>
-            <p>As your goals evolve, your plan and coaching evolve with you.</p>
-          </div>
-        </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(106,212,160,0.12)">📋</div>
+      <div class="feature-body">
+        <h4>Personalized Business Plans</h4>
+        <p>Every member gets a custom 90-day success plan built around their role, goals, and biggest challenges. Your plan evolves as you grow.</p>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(106,180,212,0.12)">📚</div>
+      <div class="feature-body">
+        <h4>Structured Learning Modules</h4>
+        <p>Six modules covering residential, commercial, lending, investing, business growth, and advanced deal structuring — with progress tracking built in.</p>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(176,106,212,0.12)">💬</div>
+      <div class="feature-body">
+        <h4>Session History &amp; Notes</h4>
+        <p>Every coaching conversation is saved and searchable. Pick up where you left off, revisit key insights, and build a personal knowledge library over time.</p>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(212,160,106,0.12)">🎯</div>
+      <div class="feature-body">
+        <h4>Goal-Based Onboarding</h4>
+        <p>Academy learns your role, goals, and biggest challenges at signup — then tailors every recommendation, module, and coaching session to your specific situation.</p>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(212,106,106,0.12)">🔗</div>
+      <div class="feature-body">
+        <h4>Connected to Ravlo Platform</h4>
+        <p>Academy isn't standalone — it's woven into the Ravlo ecosystem. Learn how to analyze deals, then do it inside Ravlo's studios immediately.</p>
       </div>
     </div>
   </div>
 </section>
 
-<section class="mk-section">
-  <div class="mk-container">
-    <div class="mk-cta">
-      <div class="mk-kicker">Get Started</div>
-      <h2 class="mk-title-lg">Start with your business plan today.</h2>
-      <p>
-        Answer 6 questions. Get a personalized 90-day business plan built by AI — with specific actions,
-        real metrics, and a revenue projection tailored to your role and goals.
-      </p>
-      <div class="mk-cta-actions">
-        <a href="{{ url_for('university.business_plan') }}" class="mk-btn mk-btn-primary">Build My Business Plan →</a>
-        <a href="{{ url_for('university.portal') }}" class="mk-btn mk-btn-ghost">Launch Academy Portal</a>
+<div class="divider"></div>
+
+<!-- MODULES -->
+<section>
+  <div class="section-eyebrow">Learning Modules</div>
+  <h2 class="section-title">Six modules.<br/><strong>Every angle covered.</strong></h2>
+  <div class="modules-grid">
+    <div class="module-card" style="border-color:rgba(212,175,106,0.25);background:rgba(212,175,106,0.07)">
+      <div class="module-emoji">🏠</div>
+      <div class="module-title">Residential Mastery</div>
+      <p class="module-desc">Listings, buyers, negotiation, CMAs, and lead conversion — the full residential playbook.</p>
+      <div class="module-lessons" style="color:#D4AF6A">6 Lessons · All Plans</div>
+    </div>
+    <div class="module-card" style="border-color:rgba(106,180,212,0.25);background:rgba(106,180,212,0.07)">
+      <div class="module-emoji">🏢</div>
+      <div class="module-title">Commercial Real Estate</div>
+      <p class="module-desc">Cap rates, NOI, 1031 exchanges, investment sales, and tenant/landlord representation.</p>
+      <div class="module-lessons" style="color:#6AB4D4">6 Lessons · Pro &amp; Elite</div>
+    </div>
+    <div class="module-card" style="border-color:rgba(106,212,160,0.25);background:rgba(106,212,160,0.07)">
+      <div class="module-emoji">💰</div>
+      <div class="module-title">Mortgage &amp; Lending</div>
+      <p class="module-desc">Conventional, FHA, VA, DSCR, SBA, bridge, hard money, underwriting, and loan processing.</p>
+      <div class="module-lessons" style="color:#6AD4A0">10 Lessons · Pro &amp; Elite</div>
+    </div>
+    <div class="module-card" style="border-color:rgba(176,106,212,0.25);background:rgba(176,106,212,0.07)">
+      <div class="module-emoji">📈</div>
+      <div class="module-title">Realtor Business Growth</div>
+      <p class="module-desc">SOI systems, CRM automation, social media, geographic farming, and team building.</p>
+      <div class="module-lessons" style="color:#B06AD4">6 Lessons · All Plans</div>
+    </div>
+    <div class="module-card" style="border-color:rgba(212,106,106,0.25);background:rgba(212,106,106,0.07)">
+      <div class="module-emoji">🏗️</div>
+      <div class="module-title">Real Estate Investing</div>
+      <p class="module-desc">BRRRR, multifamily underwriting, market selection, deal sourcing, and exit strategies.</p>
+      <div class="module-lessons" style="color:#D46A6A">6 Lessons · Pro &amp; Elite</div>
+    </div>
+    <div class="module-card" style="border-color:rgba(212,160,106,0.25);background:rgba(212,160,106,0.07)">
+      <div class="module-emoji">⚡</div>
+      <div class="module-title">Advanced Deal Structuring</div>
+      <p class="module-desc">Creative financing, seller financing, joint ventures, syndication, and off-market strategies.</p>
+      <div class="module-lessons" style="color:#D4A06A">6 Lessons · Elite Only</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- BUSINESS PLAN HIGHLIGHT -->
+<section>
+  <div class="section-eyebrow">Exclusive Feature</div>
+  <h2 class="section-title">Your personalized<br/><strong>90-day business plan.</strong></h2>
+  <div class="biz-highlight">
+    <div class="biz-grid">
+      <div>
+        <div class="section-eyebrow">How It Works</div>
+        <h3 style="font-family:var(--serif);font-size:32px;font-weight:300;margin-bottom:16px">Built around <strong style="color:var(--gold)">you.</strong></h3>
+        <p style="color:var(--muted);font-size:14px;line-height:1.7;margin-bottom:8px">Your AI coach asks the right questions, then builds a fully personalized plan covering your 30-day sprint, 60-day milestones, and 90-day vision — with weekly metrics and an accountability framework.</p>
+        <p style="color:var(--muted);font-size:14px;line-height:1.7">Available to all Academy members and all Ravlo VIP Partners — included in every plan, no upgrade required.</p>
+        <div style="margin-top:28px">
+          <a href="{{ url_for('university.business_plan') }}" class="btn-primary">Get My Business Plan</a>
+        </div>
+      </div>
+      <div>
+        <div class="biz-steps">
+          <div class="biz-step">
+            <div class="biz-step-num">1</div>
+            <div class="biz-step-body"><h5>Assessment</h5><p>Your coach evaluates your role, experience level, and current situation.</p></div>
+          </div>
+          <div class="biz-step">
+            <div class="biz-step-num">2</div>
+            <div class="biz-step-body"><h5>30-Day Sprint</h5><p>Specific daily and weekly actions to build momentum immediately.</p></div>
+          </div>
+          <div class="biz-step">
+            <div class="biz-step-num">3</div>
+            <div class="biz-step-body"><h5>60-Day Milestones</h5><p>Measurable targets that mark real progress toward your goal.</p></div>
+          </div>
+          <div class="biz-step">
+            <div class="biz-step-num">4</div>
+            <div class="biz-step-body"><h5>90-Day Vision</h5><p>A clear picture of where you'll be and how to sustain the momentum.</p></div>
+          </div>
+          <div class="biz-step">
+            <div class="biz-step-num">5</div>
+            <div class="biz-step-body"><h5>Weekly Metrics &amp; Accountability</h5><p>The exact numbers to track and a system to keep you on course.</p></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-{% endblock %}
+<div class="divider"></div>
+
+<!-- TIERS -->
+<section id="tiers">
+  <div class="section-eyebrow">Access Tiers</div>
+  <h2 class="section-title">Choose your<br/><strong>Academy plan.</strong></h2>
+  <p class="section-desc">Every plan includes access to your AI coach and personalized business plan. Upgrade for deeper modules and advanced deal content.</p>
+  <div class="tiers-grid">
+    <div class="tier-card" style="border-color:rgba(106,212,160,0.3);background:rgba(106,212,160,0.07)">
+      <div class="tier-icon">○</div>
+      <div class="tier-name">Starter</div>
+      <div class="tier-price" style="color:#6AD4A0">$47</div>
+      <div class="tier-price-sub">/month</div>
+      <p class="tier-desc">New to real estate and ready to build a foundation.</p>
+      <ul class="tier-perks">
+        <li><span style="color:#6AD4A0">✓</span>Core AI Coaching</li>
+        <li><span style="color:#6AD4A0">✓</span>3 Modules</li>
+        <li><span style="color:#6AD4A0">✓</span>Business Plan</li>
+        <li><span style="color:#6AD4A0">✓</span>Session History</li>
+      </ul>
+      <a href="{{ url_for('university.portal') }}" class="tier-btn" style="background:linear-gradient(135deg,#6AD4A0,#3A9470);color:#080808">Get Started</a>
+    </div>
+    <div class="tier-card" style="border-color:rgba(176,106,212,0.4);background:rgba(176,106,212,0.1)">
+      <div class="tier-badge" style="background:rgba(176,106,212,0.2);border:1px solid rgba(176,106,212,0.4);color:#B06AD4">MOST POPULAR</div>
+      <div class="tier-icon">●</div>
+      <div class="tier-name">Pro</div>
+      <div class="tier-price" style="color:#B06AD4">$97</div>
+      <div class="tier-price-sub">/month</div>
+      <p class="tier-desc">Active realtors and investors ready to scale.</p>
+      <ul class="tier-perks">
+        <li><span style="color:#B06AD4">✓</span>Unlimited AI Coaching</li>
+        <li><span style="color:#B06AD4">✓</span>All 6 Modules</li>
+        <li><span style="color:#B06AD4">✓</span>Business Plan</li>
+        <li><span style="color:#B06AD4">✓</span>Community Access</li>
+      </ul>
+      <a href="{{ url_for('university.portal') }}" class="tier-btn" style="background:linear-gradient(135deg,#B06AD4,#7A3A9A);color:#fff">Subscribe</a>
+    </div>
+    <div class="tier-card" style="border-color:rgba(212,175,106,0.4);background:rgba(212,175,106,0.1)">
+      <div class="tier-badge" style="background:rgba(212,175,106,0.15);border:1px solid rgba(212,175,106,0.4);color:#D4AF6A">VIP PARTNER</div>
+      <div class="tier-icon">◆</div>
+      <div class="tier-name">Elite</div>
+      <div class="tier-price" style="color:#D4AF6A">Free</div>
+      <div class="tier-price-sub">Ravlo Investors &amp; Partners</div>
+      <p class="tier-desc">Complimentary access for all Ravlo VIP partners.</p>
+      <ul class="tier-perks">
+        <li><span style="color:#D4AF6A">✓</span>Everything in Pro</li>
+        <li><span style="color:#D4AF6A">✓</span>Advanced Deal Structuring</li>
+        <li><span style="color:#D4AF6A">✓</span>Investor Briefings</li>
+        <li><span style="color:#D4AF6A">✓</span>Priority Support</li>
+      </ul>
+      <a href="{{ url_for('marketing.partner_plans') }}" class="tier-btn" style="background:linear-gradient(135deg,#D4AF6A,#9A7A3A);color:#080808">Become a Partner</a>
+    </div>
+    <div class="tier-card" style="border-color:rgba(106,180,212,0.4);background:rgba(106,180,212,0.1)">
+      <div class="tier-badge" style="background:rgba(106,180,212,0.15);border:1px solid rgba(106,180,212,0.4);color:#6AB4D4">TEAM BENEFIT</div>
+      <div class="tier-icon">◈</div>
+      <div class="tier-name">Lending Team</div>
+      <div class="tier-price" style="color:#6AB4D4">Free</div>
+      <div class="tier-price-sub">Ravlo Lending Staff</div>
+      <p class="tier-desc">Included with all Ravlo Lending OS team plans.</p>
+      <ul class="tier-perks">
+        <li><span style="color:#6AB4D4">✓</span>Full Loan Module</li>
+        <li><span style="color:#6AB4D4">✓</span>Commercial Training</li>
+        <li><span style="color:#6AB4D4">✓</span>Business Plan</li>
+        <li><span style="color:#6AB4D4">✓</span>Team Dashboard</li>
+      </ul>
+      <a href="{{ url_for('marketing.lending_os') }}" class="tier-btn" style="background:linear-gradient(135deg,#6AB4D4,#3A7A9A);color:#080808">View Lending OS</a>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- VIP PARTNER BLOCK -->
+<div class="partner-block">
+  <div style="max-width:600px;margin:0 auto">
+    <div style="font-size:11px;letter-spacing:4px;color:var(--muted);text-transform:uppercase;margin-bottom:16px">For VIP Partners</div>
+    <h2 style="font-family:var(--serif);font-size:clamp(36px,5vw,52px);font-weight:300;margin-bottom:20px">Academy is a benefit,<br/><strong style="color:var(--gold)">not an add-on.</strong></h2>
+    <p style="color:var(--muted);font-size:16px;line-height:1.7;margin-bottom:36px">All Ravlo VIP Partners receive Elite Academy access — including unlimited AI coaching, every module, the full business plan system, and investor briefings. No extra cost. No separate signup.</p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+      <a href="{{ url_for('marketing.partner_plans') }}" class="btn-primary">View Partner Plans</a>
+      <a href="{{ url_for('marketing.contact') }}" class="btn-outline">Talk to Us</a>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="{{ url_for('marketing_home') }}" class="logo">
+        <div class="logo-mark">R</div>
+        <div class="logo-text">
+          <span class="logo-name">RAVLO</span>
+          <span class="logo-sub">Academy</span>
+        </div>
+      </a>
+      <p>AI-powered education for realtors, investors, and lenders — built inside the Ravlo ecosystem.</p>
+    </div>
+    <div class="footer-col">
+      <h5>Platform</h5>
+      <a href="{{ url_for('marketing.tour') }}">Tour</a>
+      <a href="{{ url_for('marketing.lending_os') }}">Lending OS</a>
+      <a href="{{ url_for('marketing.plans') }}">Plans</a>
+      <a href="{{ url_for('marketing.partners') }}">Partners</a>
+    </div>
+    <div class="footer-col">
+      <h5>Academy</h5>
+      <a href="{{ url_for('university.portal') }}">Enter Academy</a>
+      <a href="#tiers">Pricing</a>
+      <a href="{{ url_for('marketing.partner_plans') }}">VIP Access</a>
+      <a href="{{ url_for('marketing.contact') }}">Get Help</a>
+    </div>
+    <div class="footer-col">
+      <h5>Company</h5>
+      <a href="{{ url_for('marketing.about') }}">About</a>
+      <a href="{{ url_for('marketing.story') }}">Story</a>
+      <a href="{{ url_for('marketing.contact') }}">Contact</a>
+      <a href="{{ url_for('marketing.privacy') }}">Privacy</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© Ravlo 2026 · ravlohq.com</p>
+    <p>Ravlo Academy — Real Estate Education, Reimagined</p>
+  </div>
+</footer>
+
+</body>
+</html>
