@@ -127,12 +127,21 @@ def _deactivate_investor(user):
 
 # ─── Event handlers ───────────────────────────────────────────────────────────
 
+_VALID_ACADEMY_TIERS = {"starter", "pro", "elite", "lending"}
+
+
+def _activate_academy_tier(user, tier: str):
+    if tier in _VALID_ACADEMY_TIERS:
+        user.university_tier = tier
+
+
 def _handle_checkout_completed(session):
     """Activate subscription immediately when Stripe confirms checkout paid."""
     metadata = session.get("metadata") or {}
     user_id = metadata.get("user_id")
     partner_tier = metadata.get("partner_tier", "")
     sub_plan = metadata.get("subscription_plan", "")
+    academy_tier = metadata.get("academy_tier", "")
     customer_id = session.get("customer") or ""
 
     if not user_id:
@@ -163,6 +172,11 @@ def _handle_checkout_completed(session):
             current_app.logger.warning(
                 "webhook checkout.session.completed: no partner for user %s", user_id
             )
+    elif academy_tier:
+        _activate_academy_tier(user, academy_tier)
+        current_app.logger.info(
+            "webhook: activated academy tier=%s for user=%s", academy_tier, user_id
+        )
     elif sub_plan:
         _activate_investor_plan(user, sub_plan, customer_id)
         current_app.logger.info(
@@ -185,6 +199,7 @@ def _handle_subscription_updated(subscription):
     user_id = metadata.get("user_id")
     partner_tier = metadata.get("partner_tier", "")
     sub_plan = metadata.get("subscription_plan", "")
+    academy_tier = metadata.get("academy_tier", "")
 
     # Try partner lookup first (by customer_id, then metadata)
     partner = _get_partner_by_stripe_customer(customer_id)
@@ -200,11 +215,20 @@ def _handle_subscription_updated(subscription):
         )
         return
 
-    # Investor lookup
+    # Investor / Academy lookup
     user = _get_user_by_stripe_customer(customer_id) or (
         _get_user(user_id) if user_id else None
     )
-    if user and sub_plan:
+    if not user:
+        return
+
+    if academy_tier:
+        _activate_academy_tier(user, academy_tier)
+        db.session.commit()
+        current_app.logger.info(
+            "webhook subscription.updated: user %s academy_tier=%s status=%s", user.id, academy_tier, status
+        )
+    elif sub_plan:
         _activate_investor_plan(user, sub_plan, customer_id)
         db.session.commit()
         current_app.logger.info(
@@ -232,6 +256,9 @@ def _handle_subscription_deleted(subscription):
     )
     if user:
         _deactivate_investor(user)
+        # Clear paid academy tier on cancellation (elite/lending are role-based, not sub-based)
+        if getattr(user, "university_tier", None) in ("starter", "pro"):
+            user.university_tier = None
         db.session.commit()
         current_app.logger.info(
             "webhook subscription.deleted: user %s downgraded to core", user.id
