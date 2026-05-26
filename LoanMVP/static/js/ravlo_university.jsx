@@ -216,30 +216,42 @@ function RavloAcademy() {
 
   const notify = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 3000); };
 
-  // ── Smart code detection ──────────────────────────────────────────────────
-  const handleSmartCodeAccess = () => {
+  // ── Smart code detection — validated server-side ─────────────────────────
+  const handleSmartCodeAccess = async () => {
     const code = codeInput.trim().toUpperCase();
-    const detectedTier = CODE_MAP[code];
-    if (detectedTier) {
-      const name = nameInput.trim() || "Member";
-      setTier(detectedTier);
-      setUserName(name);
-      setCodeError("");
-      // Check if first time (onboarding needed)
-      const store = loadStorage();
-      const userData = store[name] || {};
-      if (!userData.onboarded) {
-        setOnboardingStep(0);
-        setOnboardingAnswers({ role: "", goal: "", challenge: "" });
-        setScreen("onboarding");
+    const name = nameInput.trim() || "Member";
+    if (!code) { setCodeError("Please enter your access code."); return; }
+
+    setLoading(true);
+    setCodeError("");
+    try {
+      const res = await fetch("/academy/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, name }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const resolvedName = data.name || name;
+        setTier(data.tier);
+        setUserName(resolvedName);
+        const store = loadStorage();
+        const userData = store[resolvedName] || {};
+        if (!userData.onboarded) {
+          setOnboardingStep(0);
+          setOnboardingAnswers({ role: "", goal: "", challenge: "" });
+          setScreen("onboarding");
+        } else {
+          setHasOnboarded(true);
+          setScreen("dashboard");
+        }
       } else {
-        setHasOnboarded(true);
-        setScreen("dashboard");
+        setCodeError(data.error || "Access code not recognized.");
       }
-    } else if (code.length > 0) {
-      setCodeError("Access code not recognized. Contact your Ravlo representative.");
-    } else {
-      setCodeError("Please enter your access code.");
+    } catch {
+      setCodeError("Connection error. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
