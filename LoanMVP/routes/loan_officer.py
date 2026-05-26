@@ -61,7 +61,8 @@ from LoanMVP.models.loan_models import (
     Upload,
     LoanStatusEvent,
     LoanScenario,
-    BorrowerConsent,  
+    BorrowerConsent,
+    CreditPullAudit,
 )
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.processor_model import ProcessorProfile
