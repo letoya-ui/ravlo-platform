@@ -2306,10 +2306,37 @@ def submit_capital_application():
     if not request.form.get("credit_consent"):
         return jsonify({"success": False, "message": "Credit authorization is required to submit this application."}), 400
 
+    consent_signature = (request.form.get("consent_signature") or "").strip()
+    consent_timestamp = datetime.utcnow()
+
     db.session.add(BorrowerConsent(
         borrower_id=borrower.id,
         consent_type="credit_pull",
         ip_address=request.remote_addr,
+    ))
+
+    hard_pull = bool(request.form.get("hard_pull_consent"))
+    consent_notes = (
+        f"FCRA soft-pull authorization granted.\n"
+        f"Signature: {consent_signature or '(not provided)'}\n"
+        f"IP: {request.remote_addr}\n"
+        f"Hard-pull also authorized: {'Yes' if hard_pull else 'No'}"
+    )
+
+    db.session.add(LoanDocument(
+        borrower_profile_id=borrower.id,
+        investor_profile_id=investor.id,
+        loan_id=loan.id,
+        company_id=get_caughman_mason_company_id(),
+        document_name="FCRA Credit Pull Authorization",
+        document_type="Credit Authorization",
+        file_name=f"credit_authorization_{borrower.id}_{consent_timestamp.strftime('%Y%m%d')}.txt",
+        notes=consent_notes,
+        uploaded_by=consent_signature or (borrower.full_name or "Borrower"),
+        status="Completed",
+        review_status="Approved",
+        submitted_at=consent_timestamp,
+        created_at=consent_timestamp,
     ))
 
     # -----------------------------
