@@ -234,6 +234,72 @@ textarea.ravlo-input{
 
 </section>
 
+<!-- CREDIT CONSENT -->
+<section class="ravlo-card" id="consentSection">
+
+<h3>Credit Authorization</h3>
+<p class="section-sub">Required under the Fair Credit Reporting Act (FCRA) before we may access your credit information.</p>
+
+<div style="margin:18px 0;padding:16px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);font-size:13px;line-height:1.7;color:var(--muted)">
+  <strong style="color:var(--text)">FCRA Disclosure &amp; Authorization</strong><br>
+  In connection with your capital application, you authorize Ravlo and its lending partners to obtain a consumer credit report and other information about you from one or more consumer reporting agencies (such as Equifax, Experian, or TransUnion) and from other sources. This authorization is valid for the duration of this transaction and any related financing. You have the right to request a description of the nature and scope of any investigation and a copy of your credit report. This is a <strong style="color:var(--text)">soft pull</strong> for pre-qualification and does <strong style="color:var(--text)">not</strong> affect your credit score. A hard pull will only be performed with your explicit consent prior to final underwriting.
+</div>
+
+<div style="display:flex;flex-direction:column;gap:14px">
+
+  <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+    <input type="checkbox"
+           name="credit_consent"
+           id="creditConsentCheck"
+           value="1"
+           required
+           style="margin-top:3px;accent-color:var(--accent);width:16px;height:16px;flex-shrink:0">
+    <span style="font-size:13px;line-height:1.6">
+      I have read and understand the FCRA disclosure above. I authorize Ravlo and its lending partners to obtain my credit report (soft pull) for pre-qualification purposes. <span style="color:#e05050">*</span>
+    </span>
+  </label>
+
+  <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+    <input type="checkbox"
+           name="hard_pull_consent"
+           id="hardPullCheck"
+           value="1"
+           style="margin-top:3px;accent-color:var(--accent);width:16px;height:16px;flex-shrink:0">
+    <span style="font-size:13px;line-height:1.6">
+      I additionally authorize a hard credit inquiry for the purpose of formal underwriting and loan origination (optional — your loan officer will confirm before proceeding).
+    </span>
+  </label>
+
+</div>
+
+<div class="ravlo-grid ravlo-grid-2" style="margin-top:18px">
+
+<div class="form-group">
+  <label>Electronic Signature (type your full name)</label>
+  <input class="ravlo-input"
+         name="consent_signature"
+         id="consentSignature"
+         placeholder="Full legal name"
+         autocomplete="name">
+</div>
+
+<div class="form-group">
+  <label>Date</label>
+  <input class="ravlo-input"
+         name="consent_date"
+         id="consentDate"
+         readonly
+         style="background:rgba(255,255,255,0.02);cursor:default">
+</div>
+
+</div>
+
+<p id="consentError" style="display:none;margin-top:12px;color:#e05050;font-size:13px">
+  Please check the credit authorization box and provide your signature before submitting.
+</p>
+
+</section>
+
 <!-- SUBMIT -->
 <div class="btn-row">
 <button id="capitalSubmitBtn"
@@ -254,12 +320,30 @@ document.addEventListener("DOMContentLoaded", function(){
 const form = document.getElementById("capitalAppForm");
 const submitBtn = document.getElementById("capitalSubmitBtn");
 const csrfToken = form?.querySelector('input[name="csrf_token"]')?.value || "";
+const consentCheck = document.getElementById("creditConsentCheck");
+const signatureField = document.getElementById("consentSignature");
+const consentDateField = document.getElementById("consentDate");
+const consentError = document.getElementById("consentError");
 
 if(!form) return;
+
+// Pre-fill today's date
+if(consentDateField){
+  const today = new Date();
+  consentDateField.value = today.toLocaleDateString("en-US", {year:"numeric",month:"long",day:"numeric"});
+}
 
 form.addEventListener("submit", async function(e){
 
 e.preventDefault();
+
+// Validate consent
+if(!consentCheck?.checked || !(signatureField?.value || "").trim()){
+  if(consentError) consentError.style.display = "block";
+  document.getElementById("consentSection")?.scrollIntoView({behavior:"smooth", block:"center"});
+  return;
+}
+if(consentError) consentError.style.display = "none";
 
 submitBtn.disabled = true;
 submitBtn.textContent = "Submitting...";

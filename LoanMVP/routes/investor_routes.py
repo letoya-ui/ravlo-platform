@@ -62,6 +62,7 @@ from LoanMVP.models.loan_models import (
     LoanQuote,
     BorrowerProfile,
     LoanStatusEvent,
+    BorrowerConsent,
 )
 from LoanMVP.models.document_models import (
     LoanDocument,
@@ -2298,6 +2299,18 @@ def submit_capital_application():
 
     db.session.add(loan)
     db.session.flush()
+
+    # -----------------------------
+    # Credit consent
+    # -----------------------------
+    if not request.form.get("credit_consent"):
+        return jsonify({"success": False, "message": "Credit authorization is required to submit this application."}), 400
+
+    db.session.add(BorrowerConsent(
+        borrower_id=borrower.id,
+        consent_type="credit_pull",
+        ip_address=request.remote_addr,
+    ))
 
     # -----------------------------
     # Update deal funding status
