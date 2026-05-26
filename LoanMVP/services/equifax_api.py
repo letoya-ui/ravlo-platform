@@ -13,18 +13,23 @@ class EquifaxAPI:
             "Content-Type": "application/json",
         }
 
+        full_name = (getattr(borrower, "full_name", "") or "").strip()
+        name_parts = full_name.split(" ", 1)
+        first = name_parts[0] if name_parts else ""
+        last = name_parts[1] if len(name_parts) > 1 else ""
+
         payload = {
             "consumer": {
-                "ssn": borrower.ssn,
+                "ssn": getattr(borrower, "ssn", None),
                 "name": {
-                    "first": borrower.first_name,
-                    "last": borrower.last_name
+                    "first": first,
+                    "last": last,
                 },
                 "address": {
-                    "street": borrower.address,
-                    "city": borrower.city,
-                    "state": borrower.state,
-                    "zip": borrower.zip_code
+                    "street": getattr(borrower, "address", None),
+                    "city": getattr(borrower, "city", None),
+                    "state": getattr(borrower, "state", None),
+                    "zip": getattr(borrower, "zip", None),
                 }
             }
         }
