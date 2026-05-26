@@ -409,6 +409,18 @@ textarea{
   justify-content:flex-end;
 }
 
+/* Mobile sidebar backdrop */
+.rl-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  z-index:999;
+}
+body.rl-sidebar-open .rl-overlay{
+  display:block;
+}
+
 .re-menu-btn,
 .rl-menu-btn{
   width:42px;
