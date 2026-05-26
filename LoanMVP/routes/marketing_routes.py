@@ -141,10 +141,10 @@ PAGE_META = {
         "template": "marketing/partner_plans.html",
         "hero_image": "images/marketing/interior_luxury.jpg",
     },
-    "university": {
-        "title": "Ravlo University | Real Estate Investing Education",
-        "description": "Learn real estate investing with Ravlo University. Guides on deal analysis, renovation strategy, build planning, and how to use every Ravlo studio.",
-        "template": "marketing/university.html",
+    "academy": {
+        "title": "Ravlo Academy | AI-Powered Real Estate Education",
+        "description": "AI coaching for realtors, investors, and lenders. Get a personalized business plan, master loans, and grow your real estate career with Ravlo Academy.",
+        "template": "marketing/academy.html",
         "hero_image": "images/marketing/city_skyline.jpg",
     },
 }
@@ -454,8 +454,18 @@ def apply_success():
 
 
 # ---------------------------------------------------------
-# RAVLO UNIVERSITY
+# RAVLO ACADEMY
 # ---------------------------------------------------------
+@marketing_bp.route("/academy")
+def academy():
+    return render_marketing_page("academy")
+
+
 @marketing_bp.route("/university")
-def university():
-    return render_marketing_page("university")
+def university_redirect():
+    return redirect(url_for("marketing.academy"), code=301)
+
+
+@marketing_bp.route("/university/portal")
+def university_portal_redirect():
+    return redirect(url_for("university.portal"), code=301)

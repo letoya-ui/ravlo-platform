@@ -1,0 +1,367 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:900px;">
+      <div class="mk-eyebrow">Ravlo Academy</div>
+      <h1 class="mk-title-xl">AI-powered coaching for every deal.</h1>
+      <p class="mk-copy-lg">
+        Ravlo Academy gives realtors, investors, and lenders a dedicated AI coach, structured learning modules,
+        and a personalized 90-day business plan — all inside the Ravlo ecosystem.
+      </p>
+
+      <div class="mk-hero-actions">
+        <a href="{{ url_for('university.portal') }}" class="mk-btn mk-btn-primary">Launch Academy Portal →</a>
+        <a href="{{ url_for('university.business_plan') }}" class="mk-btn mk-btn-ghost">Build My Business Plan</a>
+      </div>
+
+      <div class="mk-stat-row">
+        <div class="mk-stat">
+          <strong>AI Coach</strong>
+          <span>24/7 coaching tailored to your role and goals.</span>
+        </div>
+        <div class="mk-stat">
+          <strong>6 Modules</strong>
+          <span>Residential, commercial, lending, investing, and more.</span>
+        </div>
+        <div class="mk-stat">
+          <strong>90-Day Plan</strong>
+          <span>Personalized business plan built by AI.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-kicker">Who it's for</div>
+    <h2 class="mk-title-lg">Built for every role in real estate.</h2>
+
+    <div class="mk-grid-3" style="margin-top:28px;">
+      <div class="mk-card">
+        <div class="mk-card-icon">R</div>
+        <h3>Realtors & Agents</h3>
+        <p>
+          Master lead generation, conversion, and client experience. Get a 90-day action plan built
+          around your market, your SOI, and your income goals.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">I</div>
+        <h3>Investors</h3>
+        <p>
+          BRRRR, multifamily, deal analysis, portfolio scaling — get coaching from an AI that
+          understands the numbers and the strategy behind every acquisition.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">L</div>
+        <h3>Lenders & Loan Officers</h3>
+        <p>
+          Build your referral network, master pipeline management, and grow production with a
+          structured plan built for mortgage professionals.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">Academy Features</div>
+        <h2 class="mk-title-lg">Everything you need to grow.</h2>
+
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>AI Coach</strong>
+              <div class="mk-copy">24/7 real estate coaching tailored to your role, market, and specific goals. Ask anything, get real answers.</div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Personalized Business Plans</strong>
+              <div class="mk-copy">A structured 90-day success plan with 30/60/90-day milestones, weekly metrics, and a revenue projection built for you.</div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>6 Learning Modules</strong>
+              <div class="mk-copy">Residential sales, commercial investing, mortgage lending, deal analysis, portfolio building, and platform mastery.</div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Platform Connection</strong>
+              <div class="mk-copy">Academy is built inside the Ravlo ecosystem. Your plan, your coach, and your deals — all in one place.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">Your 90-Day Business Plan</div>
+        <h2 class="mk-title-lg">A real plan. Not a template.</h2>
+        <p class="mk-copy">
+          Answer 6 questions about your role, goals, and challenges. Ravlo Academy builds a
+          complete, personalized business plan with specific actions, weekly KPIs, and a
+          revenue projection — in under 60 seconds.
+        </p>
+
+        <div class="mk-divider"></div>
+
+        <div class="mk-grid-2">
+          <div class="mk-card">
+            <h4>30-Day Sprint</h4>
+            <p>Specific daily and weekly actions with real numbers — not generic advice.</p>
+          </div>
+          <div class="mk-card">
+            <h4>Revenue Projection</h4>
+            <p>Conservative and optimistic forecasts based on your role and primary goal.</p>
+          </div>
+          <div class="mk-card">
+            <h4>Key Metrics</h4>
+            <p>A weekly tracking table with 5–7 specific metrics and targets.</p>
+          </div>
+          <div class="mk-card">
+            <h4>AI Coach Follow-up</h4>
+            <p>Ask questions, drill into any section, and adjust your plan after it's built.</p>
+          </div>
+        </div>
+
+        <div style="margin-top:24px;">
+          <a href="{{ url_for('university.business_plan') }}" class="mk-btn mk-btn-primary">Build My Business Plan →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-kicker">Learning Modules</div>
+    <h2 class="mk-title-lg">Six modules. One ecosystem.</h2>
+
+    <div class="mk-grid-3" style="margin-top:28px;">
+      <div class="mk-card">
+        <div class="mk-card-icon">1</div>
+        <h3>Residential Sales</h3>
+        <p>Lead generation, client conversion, listing strategy, and building a sustainable book of business.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">2</div>
+        <h3>Real Estate Investing</h3>
+        <p>BRRRR strategy, fix-and-flip analysis, ARV, rehab cost estimation, and exit strategy comparison.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">3</div>
+        <h3>Mortgage & Lending</h3>
+        <p>Loan products, pipeline management, referral networks, and production growth for LOs and brokers.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">4</div>
+        <h3>Commercial Real Estate</h3>
+        <p>Multifamily, NNN, deal underwriting, cap rates, and how to evaluate larger acquisitions.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">5</div>
+        <h3>Portfolio Building</h3>
+        <p>Scaling from one deal to many — systems, leverage, team building, and long-term wealth creation.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">6</div>
+        <h3>Platform & Workflow</h3>
+        <p>Mastering every Ravlo studio, workflow, and reporting tool for maximum performance.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">Access Tiers</div>
+    <h2 class="mk-title-lg">Choose your Academy plan.</h2>
+
+    <div class="mk-grid-4" style="margin-top:28px;">
+      <div class="mk-plan">
+        <div class="mk-plan-badge">Starter</div>
+        <h3>Starter</h3>
+        <div class="mk-plan-price">$47<span style="font-size:1rem;font-weight:700;">/mo</span></div>
+        <div class="mk-plan-note">AI coach access and core learning modules.</div>
+        <div class="mk-list">
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">AI Coach (limited sessions)</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">2 learning modules</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Business plan (1/month)</div></div>
+        </div>
+        <div style="margin-top:20px;">
+          <a href="{{ url_for('marketing.enter') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Get Started</a>
+        </div>
+      </div>
+
+      <div class="mk-plan featured">
+        <div class="mk-plan-badge">Most Popular</div>
+        <h3>Pro</h3>
+        <div class="mk-plan-price">$97<span style="font-size:1rem;font-weight:700;">/mo</span></div>
+        <div class="mk-plan-note">Full Academy access for serious professionals.</div>
+        <div class="mk-list">
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Unlimited AI coaching</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">All 6 learning modules</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Unlimited business plans</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Priority support</div></div>
+        </div>
+        <div style="margin-top:20px;">
+          <a href="{{ url_for('marketing.enter') }}" class="mk-btn mk-btn-primary" style="width:100%;">Choose Pro</a>
+        </div>
+      </div>
+
+      <div class="mk-plan">
+        <div class="mk-plan-badge">Elite · Free for Partners</div>
+        <h3>Elite</h3>
+        <div class="mk-plan-price" style="font-size:1.4rem;">Included</div>
+        <div class="mk-plan-note">For all Ravlo VIP Partners — no extra cost.</div>
+        <div class="mk-list">
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Everything in Pro</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Exclusive investor briefings</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">1-on-1 success planning</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Partner-only sessions</div></div>
+        </div>
+        <div style="margin-top:20px;">
+          <a href="{{ url_for('marketing.partner_plans') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Become a Partner</a>
+        </div>
+      </div>
+
+      <div class="mk-plan">
+        <div class="mk-plan-badge">Lending Team · Free</div>
+        <h3>Lending Team</h3>
+        <div class="mk-plan-price" style="font-size:1.4rem;">Included</div>
+        <div class="mk-plan-note">For Ravlo lending staff — employment benefit.</div>
+        <div class="mk-list">
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Unlimited AI coaching</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Loan & lending modules</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Commercial training</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Deal review sessions</div></div>
+        </div>
+        <div style="margin-top:20px;">
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Contact Us</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">VIP Partners</div>
+        <h2 class="mk-title-lg">Partners get full Academy access — free.</h2>
+        <p class="mk-copy">
+          Every Ravlo VIP Partner receives Elite-tier Academy access as part of their partnership.
+          That includes unlimited AI coaching, all six learning modules, the full business plan system,
+          and exclusive investor briefings. No extra cost. No separate signup.
+        </p>
+
+        <div class="mk-divider"></div>
+
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Unlimited AI Coaching</strong>
+              <div class="mk-copy">Ask anything about deals, clients, or your career — your coach is always on.</div>
+            </div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>All 6 Modules</strong>
+              <div class="mk-copy">Full access to every learning track — residential, commercial, lending, and more.</div>
+            </div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Business Plan System</strong>
+              <div class="mk-copy">Build and rebuild your 90-day plan as your goals evolve.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:28px;">
+          <a href="{{ url_for('marketing.partner_plans') }}" class="mk-btn mk-btn-primary">View Partner Plans →</a>
+        </div>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">Inside the Platform</div>
+        <h2 class="mk-title-lg">Academy lives inside Ravlo.</h2>
+        <p class="mk-copy">
+          Ravlo Academy is not a separate app or a generic course platform. It's built inside
+          the Ravlo ecosystem — your AI coach knows your role, your goals, and your business.
+          Learning and doing happen in the same place.
+        </p>
+
+        <div class="mk-divider"></div>
+
+        <div class="mk-grid-2">
+          <div class="mk-card">
+            <h4>Connected to your deals</h4>
+            <p>Your coach can reference your active workflow and help you apply what you learn.</p>
+          </div>
+          <div class="mk-card">
+            <h4>Role-aware</h4>
+            <p>Academy knows if you're a realtor, investor, or lender — and adjusts everything accordingly.</p>
+          </div>
+          <div class="mk-card">
+            <h4>Always available</h4>
+            <p>No scheduled sessions. No waiting. Your AI coach is there when you need it.</p>
+          </div>
+          <div class="mk-card">
+            <h4>Built to scale</h4>
+            <p>As your goals evolve, your plan and coaching evolve with you.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">Get Started</div>
+      <h2 class="mk-title-lg">Start with your business plan today.</h2>
+      <p>
+        Answer 6 questions. Get a personalized 90-day business plan built by AI — with specific actions,
+        real metrics, and a revenue projection tailored to your role and goals.
+      </p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('university.business_plan') }}" class="mk-btn mk-btn-primary">Build My Business Plan →</a>
+        <a href="{{ url_for('university.portal') }}" class="mk-btn mk-btn-ghost">Launch Academy Portal</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

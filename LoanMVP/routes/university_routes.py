@@ -1,10 +1,12 @@
 """
 LoanMVP/routes/university_routes.py
 
-Ravlo University — Flask integration
-  GET  /university/portal   → full-screen React app shell
-  POST /university/chat     → Anthropic API proxy (keeps key server-side)
-  APP  context_processor    → injects university_access into every template
+Ravlo Academy — Flask integration
+  GET  /academy/portal              → full-screen React app shell
+  POST /academy/chat                → Anthropic API proxy (keeps key server-side)
+  GET  /academy/business-plan       → AI Business Plan tool shell
+  POST /academy/business-plan/generate → Anthropic proxy for business plan
+  APP  context_processor            → injects university_access into every template
 
 Auto-registered by LoanMVP/app.py blueprint scanner.
 """
@@ -16,7 +18,7 @@ from flask_login import current_user
 from LoanMVP.extensions import csrf
 
 # ── Blueprint ──────────────────────────────────────────────────────────────
-university_bp = Blueprint("university", __name__, url_prefix="/university")
+university_bp = Blueprint("university", __name__, url_prefix="/academy")
 
 _ANTHROPIC_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
 _ANTHROPIC_URL  = "https://api.anthropic.com/v1/messages"
@@ -92,8 +94,15 @@ def inject_university_access():
 # ── Portal shell ───────────────────────────────────────────────────────────
 @university_bp.route("/portal")
 def portal():
-    """Serves the full-screen React shell. Marked noindex — SEO lives at /university."""
+    """Serves the full-screen React shell. Marked noindex — SEO lives at /academy."""
     return render_template("university/portal.html")
+
+
+# ── Business Plan tool ─────────────────────────────────────────────────────
+@university_bp.route("/business-plan")
+def business_plan():
+    """AI Business Plan generator — standalone tool."""
+    return render_template("academy/business_plan.html")
 
 
 # ── Anthropic proxy ────────────────────────────────────────────────────────
@@ -136,5 +145,49 @@ def chat():
     except http.exceptions.Timeout:
         return jsonify({"error": "AI coach timed out. Please try again."}), 504
     except Exception as exc:
-        current_app.logger.error("university /chat error: %s", exc)
+        current_app.logger.error("academy /chat error: %s", exc)
+        return jsonify({"error": "Connection error. Please try again."}), 500
+
+
+# ── Business Plan proxy ────────────────────────────────────────────────────
+@university_bp.route("/business-plan/generate", methods=["POST"])
+@csrf.exempt
+def business_plan_generate():
+    """
+    Proxy Anthropic API for the Business Plan tool so the key never hits the browser.
+    Accepts the same JSON body the JSX sends:
+      { model, max_tokens, system, messages }
+    """
+    if not _ANTHROPIC_KEY:
+        return jsonify({"error": "AI coach is not configured on this server."}), 503
+
+    payload = request.get_json(silent=True) or {}
+    messages = payload.get("messages", [])
+    if not messages:
+        return jsonify({"error": "messages are required"}), 400
+
+    body = {
+        "model":      payload.get("model", _DEFAULT_MODEL),
+        "max_tokens": min(int(payload.get("max_tokens", 1000)), _MAX_TOKENS_CAP),
+        "system":     payload.get("system", ""),
+        "messages":   messages,
+    }
+
+    try:
+        resp = http.post(
+            _ANTHROPIC_URL,
+            headers={
+                "x-api-key":         _ANTHROPIC_KEY,
+                "anthropic-version": _ANTHROPIC_VER,
+                "content-type":      "application/json",
+            },
+            json=body,
+            timeout=60,
+        )
+        return jsonify(resp.json()), resp.status_code
+
+    except http.exceptions.Timeout:
+        return jsonify({"error": "Plan generation timed out. Please try again."}), 504
+    except Exception as exc:
+        current_app.logger.error("academy /business-plan/generate error: %s", exc)
         return jsonify({"error": "Connection error. Please try again."}), 500
