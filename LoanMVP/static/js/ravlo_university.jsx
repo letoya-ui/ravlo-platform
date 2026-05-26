@@ -158,6 +158,26 @@ function RavloAcademy() {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
+  // ── Server-injected tier (authoritative — set by Flask, never user-controlled) ──
+  useEffect(() => {
+    const srv = window.RAVLO_ACADEMY || {};
+    if (srv.tier && ACCESS_TIERS[srv.tier]) {
+      const name = (srv.userName || "").trim() || "Member";
+      setTier(srv.tier);
+      setUserName(name);
+      const store = loadStorage();
+      const userData = store[name] || {};
+      if (!userData.onboarded) {
+        setOnboardingStep(0);
+        setOnboardingAnswers({ role: "", goal: "", challenge: "" });
+        setScreen("onboarding");
+      } else {
+        setHasOnboarded(true);
+        setScreen("dashboard");
+      }
+    }
+  }, []);
+
   // Mobile detection
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);

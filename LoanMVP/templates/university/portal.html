@@ -81,6 +81,14 @@
     });
   </script>
 
+  {# Server-side tier injected before JSX loads — this is authoritative, no bypass possible #}
+  <script>
+    window.RAVLO_ACADEMY = {
+      tier: {{ server_tier | tojson }},
+      userName: {{ server_user | tojson }}
+    };
+  </script>
+
   {# The component — Babel compiles JSX on load, then mounts to #ravlo-university-root #}
   <script type="text/babel"
           data-presets="react"
