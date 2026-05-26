@@ -443,21 +443,40 @@ def create_app():
         site_url = os.environ.get("SITE_URL", "https://ravlohq.com").rstrip("/")
         body = (
             "User-agent: *\n"
-            "Allow: /\n"
             "\n"
-            # ── Block private app areas ──────────────────────────────────
+            # ── Public marketing pages are crawlable by default ──────────
+            # ── Block all private / authenticated app areas ──────────────
             "Disallow: /admin/\n"
+            "Disallow: /executive/\n"
+            "Disallow: /system/\n"
+            "\n"
+            "Disallow: /borrower/\n"
             "Disallow: /investor/\n"
             "Disallow: /loan_officer/\n"
             "Disallow: /processor/\n"
-            "Disallow: /borrower/\n"
-            "Disallow: /partner/workspace/\n"
-            "Disallow: /system/\n"
-            "Disallow: /executive/\n"
+            "Disallow: /underwriter/\n"
+            "Disallow: /crm/\n"
+            "\n"
+            "Disallow: /partners/\n"
+            "Disallow: /vip/\n"
+            "\n"
+            "Disallow: /auth/\n"
+            "Disallow: /account/\n"
+            "Disallow: /notifications/\n"
+            "\n"
             "Disallow: /api/\n"
-            "Disallow: /university/chat\n"       # API endpoint
-            "Disallow: /university/portal\n"     # React shell (app, not marketing)
+            "Disallow: /checkout/\n"
+            "Disallow: /stripe/\n"
+            "Disallow: /track/\n"
+            "Disallow: /canva/\n"
+            "Disallow: /elena/\n"
+            "\n"
+            "Disallow: /academy/\n"         # API/portal endpoints (not marketing page)
+            "Disallow: /university/chat\n"
+            "Disallow: /university/portal\n"
+            "\n"
             "Disallow: /flask_session/\n"
+            "Disallow: /property/\n"
             "\n"
             f"Sitemap: {site_url}/sitemap.xml\n"
         )
