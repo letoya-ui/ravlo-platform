@@ -105,11 +105,48 @@ Submit your deal details to start the funding review process.
           ></textarea>
         </div>
 
+        <!-- CREDIT CONSENT -->
+        <div class="span-2 consent-box">
+          <h4 style="margin:0 0 10px">Credit Authorization</h4>
+          <div class="consent-disclosure">
+            <strong>FCRA Disclosure &amp; Authorization</strong><br>
+            In connection with your loan application, you authorize Ravlo and its lending partners to obtain a consumer credit report from one or more consumer reporting agencies (Equifax, Experian, TransUnion). This is a <strong>soft pull</strong> for pre-qualification and does <strong>not</strong> affect your credit score. A hard pull will only be performed with your explicit consent prior to final underwriting.
+          </div>
+
+          <label class="consent-row">
+            <input type="checkbox" name="credit_consent" id="creditConsentCheck" value="1" required>
+            <span>I authorize Ravlo and its lending partners to obtain my credit report (soft pull) for pre-qualification purposes. <span style="color:#e05050">*</span></span>
+          </label>
+
+          <label class="consent-row">
+            <input type="checkbox" name="hard_pull_consent" value="1">
+            <span>I additionally authorize a hard credit inquiry for formal underwriting (optional — your loan officer will confirm before proceeding).</span>
+          </label>
+
+          <div class="consent-sig-row">
+            <div class="form-group">
+              <label for="consent_signature">Electronic Signature (type your full name)</label>
+              <input type="text" name="consent_signature" id="consent_signature" class="ravlo-input"
+                     placeholder="Full legal name" autocomplete="name"
+                     value="{{ borrower.full_name if borrower else '' }}">
+            </div>
+            <div class="form-group">
+              <label>Date</label>
+              <input type="text" id="consentDate" name="consent_date" class="ravlo-input" readonly
+                     style="background:rgba(255,255,255,.02);cursor:default">
+            </div>
+          </div>
+
+          <p id="consentError" style="display:none;color:#e05050;font-size:13px;margin-top:8px">
+            Please check the credit authorization box and provide your signature before submitting.
+          </p>
+        </div>
+
         <div class="span-2 form-actions">
           <a href="{{ url_for('borrower.dashboard') }}" class="ravlo-btn ghost">
             Back to Dashboard
           </a>
-          <button type="submit" class="ravlo-btn primary">
+          <button type="submit" id="applySubmitBtn" class="ravlo-btn primary">
             Submit Application
           </button>
         </div>
@@ -333,6 +370,80 @@ Submit your deal details to start the funding review process.
       justify-content:flex-start;
     }
   }
+
+  .consent-box{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    padding:18px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.03);
+  }
+
+  .consent-disclosure{
+    font-size:13px;
+    line-height:1.7;
+    color:rgba(255,255,255,.65);
+    padding:12px 14px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,.07);
+    background:rgba(255,255,255,.02);
+  }
+
+  .consent-row{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    cursor:pointer;
+    font-size:13px;
+    line-height:1.6;
+  }
+
+  .consent-row input[type=checkbox]{
+    margin-top:3px;
+    accent-color:var(--accent, #6b9bd2);
+    width:16px;
+    height:16px;
+    flex-shrink:0;
+  }
+
+  .consent-sig-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+
+  @media (max-width:600px){
+    .consent-sig-row{ grid-template-columns:1fr; }
+  }
 </style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  const dateField = document.getElementById("consentDate");
+  if(dateField){
+    dateField.value = new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+  }
+
+  const form = document.querySelector(".ravlo-form-grid")?.closest("form");
+  const submitBtn = document.getElementById("applySubmitBtn");
+  const consentCheck = document.getElementById("creditConsentCheck");
+  const sigField = document.getElementById("consent_signature");
+  const errorEl = document.getElementById("consentError");
+
+  if(!form || !submitBtn) return;
+
+  form.addEventListener("submit", function(e){
+    if(!consentCheck?.checked || !(sigField?.value || "").trim()){
+      e.preventDefault();
+      if(errorEl) errorEl.style.display = "block";
+      document.querySelector(".consent-box")?.scrollIntoView({behavior:"smooth", block:"center"});
+    } else {
+      if(errorEl) errorEl.style.display = "none";
+    }
+  });
+});
+</script>
 
 {% endblock %}

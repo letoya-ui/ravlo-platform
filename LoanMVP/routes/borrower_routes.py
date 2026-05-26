@@ -291,6 +291,10 @@ def apply():
         return redirect(url_for("borrower.create_profile"))
 
     if request.method == "POST":
+        if not request.form.get("credit_consent"):
+            flash("Credit authorization is required to submit your application.", "danger")
+            return redirect(url_for("borrower.apply"))
+
         loan_type = request.form.get("loan_type")
         amount = safe_float(request.form.get("amount"))
         property_address = (request.form.get("property_address") or "").strip()
@@ -324,6 +328,40 @@ def apply():
             created_at=datetime.utcnow(),
         )
         db.session.add(loan)
+        db.session.flush()
+
+        consent_signature = (request.form.get("consent_signature") or "").strip()
+        hard_pull = bool(request.form.get("hard_pull_consent"))
+        consent_timestamp = datetime.utcnow()
+
+        db.session.add(BorrowerConsent(
+            borrower_id=borrower.id,
+            consent_type="credit_pull",
+            ip_address=request.remote_addr,
+        ))
+
+        consent_notes = (
+            f"FCRA soft-pull authorization granted.\n"
+            f"Signature: {consent_signature or '(not provided)'}\n"
+            f"IP: {request.remote_addr}\n"
+            f"Hard-pull also authorized: {'Yes' if hard_pull else 'No'}"
+        )
+
+        db.session.add(LoanDocument(
+            borrower_profile_id=borrower.id,
+            loan_id=loan.id,
+            company_id=getattr(borrower, "company_id", None),
+            document_name="FCRA Credit Pull Authorization",
+            document_type="Credit Authorization",
+            file_name=f"credit_authorization_{borrower.id}_{consent_timestamp.strftime('%Y%m%d')}.txt",
+            notes=consent_notes,
+            uploaded_by=consent_signature or (borrower.full_name or "Borrower"),
+            status="Completed",
+            review_status="Approved",
+            submitted_at=consent_timestamp,
+            created_at=consent_timestamp,
+        ))
+
         db.session.commit()
 
         flash("Application submitted successfully.", "success")
