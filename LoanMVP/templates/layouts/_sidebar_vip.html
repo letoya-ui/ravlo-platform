@@ -8,7 +8,7 @@
 <div class="ravlo-sidebar-inner">
 
   <div class="ravlo-sidebar-brand">
-    <a href="{% if role in ('contractor', 'contractor_realtor') %}{{ url_for('vip.contractor_dashboard') }}{% elif role in ('insurance', 'insurance_realtor') %}{{ url_for('vip.insurance_dashboard') }}{% elif role in ('loan_officer', 'lender') %}{{ url_for('vip.loan_officer_dashboard') }}{% elif role == 'realtor' %}{{ url_for('vip.realtor_dashboard') }}{% else %}{{ url_for('partners.dashboard') }}{% endif %}" class="ravlo-brand-link">
+    <a href="{% if role in ('contractor', 'contractor_realtor') %}{{ url_for('vip.contractor_dashboard') }}{% elif role in ('insurance', 'insurance_realtor') %}{{ url_for('vip.insurance_dashboard') }}{% elif role == 'realtor' %}{{ url_for('vip.realtor_dashboard') }}{% else %}{{ url_for('partners.dashboard') }}{% endif %}" class="ravlo-brand-link">
       <div class="ravlo-brand-mark">
         <span>R</span>
       </div>
@@ -170,44 +170,6 @@
        class="ravlo-nav-link {% if ep in ['vip.finances', 'vip.finances_add_income', 'vip.finances_add_expense'] %}active{% endif %}">
       <i class="lucide lucide-receipt"></i><span>{% if role == 'insurance_realtor' %}All Finances{% else %}Finances{% endif %}</span>
     </a>
-
-    <a href="{{ url_for('vip.team') }}"
-       class="ravlo-nav-link {% if ep in ['vip.team', 'vip.team_add', 'vip.team_assign_lead', 'vip.team_auto_distribute', 'vip.team_toggle', 'vip.team_delete'] %}active{% endif %}">
-      <i class="lucide lucide-users"></i><span>Team</span>
-    </a>
-
-    <a href="{{ url_for('vip.ai_pilot') }}"
-       class="ravlo-nav-link {% if ep in ['vip.ai_pilot', 'vip.ai_pilot_command'] %}active{% endif %}">
-      <i class="lucide lucide-sparkles"></i><span>Copilot</span>
-    </a>
-
-    {% elif role in ('loan_officer', 'lender') %}
-    {# ── LOAN OFFICER ── #}
-    <div class="ravlo-nav-section">Workspace</div>
-
-    <a href="{{ url_for('vip.loan_officer_dashboard') }}"
-       class="ravlo-nav-link {% if ep == 'vip.loan_officer_dashboard' %}active{% endif %}">
-      <i class="lucide lucide-layout-dashboard"></i><span>Dashboard</span>
-    </a>
-
-    <div class="ravlo-nav-section">Lending</div>
-
-    <a href="{{ url_for('vip.finances') }}"
-       class="ravlo-nav-link {% if ep in ['vip.finances', 'vip.finances_add_income', 'vip.finances_add_expense'] %}active{% endif %}">
-      <i class="lucide lucide-receipt"></i><span>Commissions</span>
-    </a>
-
-    <a href="{{ url_for('elena.template_studio') }}"
-       class="ravlo-nav-link {% if ep in ['elena.template_studio', 'elena.template_studio_preview', 'elena.template_studio_generate', 'elena.template_studio_generate_and_save'] %}active{% endif %}">
-      <i class="lucide lucide-wand-sparkles"></i><span>Content Studio</span>
-    </a>
-
-    <a href="{{ url_for('partners.requests_inbox') }}"
-       class="ravlo-nav-link {% if ep in ['partners.requests_inbox', 'partners.request_detail'] %}active{% endif %}">
-      <i class="lucide lucide-inbox"></i><span>Lead Inbox</span>
-    </a>
-
-    <div class="ravlo-nav-section">Business</div>
 
     <a href="{{ url_for('vip.team') }}"
        class="ravlo-nav-link {% if ep in ['vip.team', 'vip.team_add', 'vip.team_assign_lead', 'vip.team_auto_distribute', 'vip.team_toggle', 'vip.team_delete'] %}active{% endif %}">
