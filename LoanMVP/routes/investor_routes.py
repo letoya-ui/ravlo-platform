@@ -5365,6 +5365,25 @@ def deal_workspace():
                 "ai_recommendation": workspace_analysis.get("ai_recommendation") or {},
             }
 
+        # ── Photo guarantee: proxy deal_results photos + Street View fallback ──
+        # deal.results_json may hold raw RentCast/Realtor CDN URLs that expire.
+        # Proxy them and merge into workspace_analysis so the template always
+        # has fully-proxied photos (no raw external URLs in page markup).
+        if selected_prop and isinstance(workspace_analysis, dict):
+            _dr = (deal.results_json or {}) if deal else {}
+            _extra = _proxy_photo_list(_collect_property_photo_urls(_dr))
+            _current = list(workspace_analysis.get("listing_photos") or [])
+            for _p in _extra:
+                if _p not in _current:
+                    _current.append(_p)
+            if _current:
+                workspace_analysis["listing_photos"] = _current
+                if not workspace_analysis.get("image_url"):
+                    workspace_analysis["image_url"] = _current[0]
+            # Final fallback: Google Street View when no listing photos exist
+            if not workspace_analysis.get("image_url"):
+                workspace_analysis = _ensure_property_image_coverage(workspace_analysis)
+
         try:
             partners = get_workspace_partners_for_property(selected_prop)
         except Exception:
