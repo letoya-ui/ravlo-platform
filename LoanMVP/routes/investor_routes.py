@@ -790,11 +790,14 @@ def _streetview_fallback_url(result):
 
     The key is injected server-side by :func:`api_property_tool_image`
     so it never appears in client-visible markup.
-    Returns ``None`` when the address is too short.
+    Returns ``None`` when no API key is configured or address is too short.
 
     Prefers latitude/longitude coordinates when available because they
     produce more reliable Street View results than text addresses.
     """
+    from flask import current_app as _ca
+    if not (_ca.config.get("GOOGLE_PLACES_API_KEY") or "").strip():
+        return None
     lat = result.get("latitude")
     lon = result.get("longitude")
     if lat is not None and lon is not None:
@@ -4337,9 +4340,11 @@ def api_property_tool_image():
 
     if source_url.startswith(_STREETVIEW_BASE):
         google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or ""
-        if google_key:
-            sep = "&" if "?" in source_url else "?"
-            source_url = f"{source_url}{sep}key={google_key}"
+        if not google_key:
+            # No API key — redirect to placeholder instead of attempting a doomed request
+            return redirect(url_for("static", filename="images/placeholder_property.jpg"))
+        sep = "&" if "?" in source_url else "?"
+        source_url = f"{source_url}{sep}key={google_key}"
 
     try:
         upstream = requests.get(
@@ -4352,11 +4357,11 @@ def api_property_tool_image():
             },
         )
         if not upstream.ok:
-            abort(404)
+            return redirect(url_for("static", filename="images/placeholder_property.jpg"))
 
         content_type = upstream.headers.get("Content-Type", "image/jpeg")
         if not content_type.startswith("image/"):
-            abort(415)
+            return redirect(url_for("static", filename="images/placeholder_property.jpg"))
 
         payload = io.BytesIO(upstream.content)
         response = send_file(payload, mimetype=content_type, conditional=True)
@@ -4364,7 +4369,7 @@ def api_property_tool_image():
         return response
     except Exception:
         current_app.logger.warning("property_tool_image proxy failed for %s", log_url, exc_info=True)
-        abort(404)
+        return redirect(url_for("static", filename="images/placeholder_property.jpg"))
 
 @investor_bp.route("/api/property_detail", methods=["POST"])
 @csrf.exempt
