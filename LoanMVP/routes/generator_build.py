@@ -1670,43 +1670,48 @@ def _build_generate_response(*, persist_to_investor=False):
     current_app.logger.info("FORWARDING BUILD GENERATOR TO RENOVATION_ENGINE_URL=%s", engine_url)
 
     if not engine_url:
-        return jsonify(
-            {
-                "status": "error",
-                "message": "RENOVATION_ENGINE_URL is not configured.",
+        # GPU engine offline — fall back to OpenAI/Claude cloud generation
+        try:
+            from LoanMVP.services.cloud_studio_service import run_cloud_generation
+            payload = run_cloud_generation(spec)
+        except Exception as exc:
+            current_app.logger.error("Cloud studio generation failed: %s", exc)
+            return jsonify({"status": "error", "message": f"Cloud generation failed: {exc}"}), 500
+        _gen_ok = _as_dict(payload).get("status") not in ("error", "failed")
+        _status_code = 200 if _gen_ok else 500
+    else:
+        try:
+            response = _post_build_generate(engine_url, spec)
+        except requests.exceptions.SSLError as exc:
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": str(exc),
+                    "detail": (
+                        "The HTTPS request reached the network but TLS failed before "
+                        "certificate verification. For ngrok dev URLs this usually "
+                        "means local network security is blocking the tunnel hostname."
+                    ),
+                }
+            ), 502
+        except requests.exceptions.RequestException as exc:
+            return jsonify({"status": "error", "message": str(exc)}), 502
+
+        try:
+            raw_payload = response.json()
+            payload = raw_payload if isinstance(raw_payload, dict) else {
+                "status": "ok",
+                "result": raw_payload,
             }
-        ), 500
-
-    try:
-        response = _post_build_generate(engine_url, spec)
-    except requests.exceptions.SSLError as exc:
-        return jsonify(
-            {
+        except Exception:
+            payload = {
                 "status": "error",
-                "message": str(exc),
-                "detail": (
-                    "The HTTPS request reached the network but TLS failed before "
-                    "certificate verification. For ngrok dev URLs this usually "
-                    "means local network security is blocking the tunnel hostname."
-                ),
+                "message": response.text,
             }
-        ), 502
-    except requests.exceptions.RequestException as exc:
-        return jsonify({"status": "error", "message": str(exc)}), 502
+        _gen_ok = response.ok and _as_dict(payload).get("status") not in ("error", "failed")
+        _status_code = response.status_code
 
-    try:
-        raw_payload = response.json()
-        payload = raw_payload if isinstance(raw_payload, dict) else {
-            "status": "ok",
-            "result": raw_payload,
-        }
-    except Exception:
-        payload = {
-            "status": "error",
-            "message": response.text,
-        }
-
-    if response.ok and _as_dict(payload).get("status") not in ("error", "failed"):
+    if _gen_ok:
         payload.setdefault("build_intelligence", _build_intelligence_package(spec, payload))
         payload.setdefault("scope", payload["build_intelligence"].get("scope"))
         payload.setdefault("materials", payload["build_intelligence"].get("materials"))
@@ -1746,7 +1751,7 @@ def _build_generate_response(*, persist_to_investor=False):
         except Exception:
             pass
 
-    if persist_to_investor and response.ok and _as_dict(payload).get("status") not in ("error", "failed"):
+    if persist_to_investor and _gen_ok:
         save_enabled = _truthy(
             data.get("save_to_investor")
             if "save_to_investor" in data
@@ -1791,7 +1796,7 @@ def _build_generate_response(*, persist_to_investor=False):
                 })
 
     payload.setdefault("status", "ok")
-    return jsonify(payload), response.status_code
+    return jsonify(payload), _status_code
 
 
 @generator_build_bp.post("/chat")
