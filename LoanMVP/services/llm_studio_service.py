@@ -145,7 +145,7 @@ def dalle_generate_images(payload: dict) -> dict:
             errors.append(f"{mode}: {exc}")
             images_b64[mode] = None
 
-    return {
+    result = {
         "images_base64": images_b64,
         "job_id": uuid.uuid4().hex,
         "seed": 0,
@@ -155,6 +155,22 @@ def dalle_generate_images(payload: dict) -> dict:
         },
         "ok": not errors or any(v for v in images_b64.values()),
     }
+
+    # Fire-and-forget training data log (b64 URLs are logged after upload by callers)
+    try:
+        from LoanMVP.services.training_service import log_studio_batch
+        feature = payload.get("feature") or payload.get("mode") or "studio"
+        log_studio_batch(
+            feature=feature,
+            provider="dalle3",
+            payload=payload,
+            images_b64_or_urls={k: "" for k in images_b64 if images_b64[k]},
+            is_urls=False,
+        )
+    except Exception:
+        pass
+
+    return result
 
 
 # ---------------------------------------------------------------------------

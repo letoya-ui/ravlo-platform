@@ -307,7 +307,26 @@ def chat():
             json=body,
             timeout=45,
         )
-        return jsonify(resp.json()), resp.status_code
+        resp_data = resp.json()
+
+        try:
+            ai_text = (resp_data.get("content") or [{}])[0].get("text", "")
+            tier_key, _ = _current_access()
+            user_id = current_user.id if current_user.is_authenticated else None
+            from LoanMVP.services.training_service import log_academy_chat
+            log_academy_chat(
+                messages=messages,
+                ai_response=ai_text,
+                tier=tier_key,
+                feature="chat",
+                system_prompt=body.get("system", ""),
+                model=body.get("model", _DEFAULT_MODEL),
+                user_id=user_id,
+            )
+        except Exception:
+            pass
+
+        return jsonify(resp_data), resp.status_code
     except http.exceptions.Timeout:
         return jsonify({"error": "AI coach timed out. Please try again."}), 504
     except Exception as exc:
@@ -350,7 +369,26 @@ def business_plan_generate():
             json=body,
             timeout=60,
         )
-        return jsonify(resp.json()), resp.status_code
+        resp_data = resp.json()
+
+        try:
+            ai_text = (resp_data.get("content") or [{}])[0].get("text", "")
+            tier_key, _ = _current_access()
+            user_id = current_user.id if current_user.is_authenticated else None
+            from LoanMVP.services.training_service import log_academy_chat
+            log_academy_chat(
+                messages=messages,
+                ai_response=ai_text,
+                tier=tier_key,
+                feature="business_plan",
+                system_prompt=body.get("system", ""),
+                model=body.get("model", _DEFAULT_MODEL),
+                user_id=user_id,
+            )
+        except Exception:
+            pass
+
+        return jsonify(resp_data), resp.status_code
     except http.exceptions.Timeout:
         return jsonify({"error": "Plan generation timed out. Please try again."}), 504
     except Exception as exc:
