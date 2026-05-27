@@ -33,6 +33,8 @@ pdfkit==1.0.0
 pdfrw==0.4
 
 openai==1.55.3
+anthropic>=0.28.0
+replicate>=0.30.0
 
 # Critical scientific stack pins
 numpy==1.26.4

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import uuid
 from flask import current_app
+
+log = logging.getLogger(__name__)
 
 from LoanMVP.services.investor.investor_engine_helpers import (
     _post_renovation_engine_json,
@@ -274,11 +277,30 @@ def run_build_concept(payload):
 
     _build_log_sources(engine_payload, mode_key or intent)
 
-    response = _post_renovation_engine_json(
-        "/v1/build_concept",
-        engine_payload,
-        timeout=UPLOAD_TIMEOUT,
+    # Check whether the operator has forced the OpenAI backend
+    _force_openai = (
+        (current_app.config.get("AI_IMAGE_BACKEND") or "").lower() == "openai"
+        or not (current_app.config.get("RENOVATION_ENGINE_URL") or "").strip()
     )
+
+    response = None
+
+    if not _force_openai:
+        try:
+            response = _post_renovation_engine_json(
+                "/v1/build_concept",
+                engine_payload,
+                timeout=UPLOAD_TIMEOUT,
+            )
+        except Exception as engine_err:
+            log.warning(
+                "Renovation engine unavailable (%s) — falling back to DALL-E 3.",
+                engine_err,
+            )
+
+    if response is None:
+        from LoanMVP.services.llm_studio_service import dalle_generate_images
+        response = dalle_generate_images(engine_payload)
 
     if cost_ctx and apply_multiplier_to_engine_response is not None:
         try:

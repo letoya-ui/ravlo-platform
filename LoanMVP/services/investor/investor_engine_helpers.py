@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import os
 import time
 from urllib.parse import urlparse
+
+_log = logging.getLogger(__name__)
 
 import requests
 from flask import current_app
@@ -432,3 +435,31 @@ def _post_scope_engine_json(path, payload, timeout=SCOPE_TIMEOUT):
             f"Scope engine returned invalid JSON. "
             f"url={url} status={res.status_code} content_type={content_type} error={e} body={body}"
         )
+
+
+# ---------------------------------------------------------------------------
+# DALL-E 3 fallback wrapper
+# ---------------------------------------------------------------------------
+
+def _engine_or_dalle(path: str, payload: dict, timeout: int = RENDER_TIMEOUT) -> dict:
+    """Call the Renovation Engine; fall back to DALL-E 3 if unavailable.
+
+    Drop-in replacement for ``_post_renovation_engine_json`` at image-
+    generation call sites. Returns the same dict shape either way.
+    """
+    _force_openai = (
+        (current_app.config.get("AI_IMAGE_BACKEND") or "").lower() == "openai"
+        or not (current_app.config.get("RENOVATION_ENGINE_URL") or "").strip()
+    )
+
+    if not _force_openai:
+        try:
+            return _post_renovation_engine_json(path, payload, timeout=timeout)
+        except Exception as err:
+            _log.warning(
+                "Renovation engine unavailable for %s (%s) — using DALL-E 3 fallback.",
+                path, err,
+            )
+
+    from LoanMVP.services.llm_studio_service import dalle_generate_images
+    return dalle_generate_images(payload)

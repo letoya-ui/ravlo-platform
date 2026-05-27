@@ -177,8 +177,18 @@ class Config:
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
     AI_MODEL = os.environ.get("AI_MODEL", "gpt-4o-mini")
     AI_TIMEOUT = _env_int("AI_TIMEOUT", 30)
+    ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+    REPLICATE_API_KEY = os.environ.get("REPLICATE_API_KEY", "")
+    REPLICATE_SDXL_TRAINER_VERSION = os.environ.get(
+        "REPLICATE_SDXL_TRAINER_VERSION", "stability-ai/sdxl"
+    )
+    REPLICATE_SDXL_DESTINATION = os.environ.get(
+        "REPLICATE_SDXL_DESTINATION", "ravlo/ravlo-studio-sdxl"
+    )
+    # "engine" = GPU renovation engine (default), "openai" = force DALL-E 3 bypass
+    AI_IMAGE_BACKEND = os.environ.get("AI_IMAGE_BACKEND", "engine")
     RENOVATION_ENGINE_URL = _engine_url_from_env("")
-    
+
     RENOVATION_API_KEY = os.getenv("RENOVATION_API_KEY", "")
 
     GOOGLE_PLACES_API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY", "")
