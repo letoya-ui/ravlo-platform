@@ -5,13 +5,13 @@ from LoanMVP.extensions import db
 # 🧱 Base Model Imports — Core Entities First
 # ======================================================
 
-# 🧍 User & Authentication
+# 🧔 User & Authentication
 from LoanMVP.models.user_model import User
 
 # 🏠 Property (used by LoanApplication)
 from LoanMVP.models.property import Property, SavedProperty 
 
-# 🧾 Borrower / Loan Models (core financial logic)
+# 🧧 Borrower / Loan Models (core financial logic)
 from LoanMVP.models.loan_models import (
     BorrowerProfile,
     LoanIntakeSession,
@@ -156,6 +156,14 @@ from LoanMVP.models.vip_models import (
 from LoanMVP.models.canva_models import CanvaConnection
 
 from LoanMVP.models.cost_models import CostObservation
+
+# 🎓 Training / Fine-tune data collection
+from LoanMVP.models.training_models import (
+    StudioGenerationLog,
+    AcademyChatLog,
+    TrainingJob,
+)
+
 # ======================================================
 # 🧩 SQLAlchemy Export (for Migrate / Shell)
 # ======================================================
@@ -217,4 +225,9 @@ __all__ = [
     "CanvaConnection",
 
     "CostObservation",
+
+    # Training / Fine-tune
+    "StudioGenerationLog",
+    "AcademyChatLog",
+    "TrainingJob",
 ]

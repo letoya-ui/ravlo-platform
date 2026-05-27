@@ -1,4 +1,3 @@
-import base64
 import copy
 import json
 import os
@@ -1718,6 +1717,34 @@ def _build_generate_response(*, persist_to_investor=False):
         payload.setdefault("build_modes", sorted(BUILD_MODES))
         payload.setdefault("design_modes", sorted(DESIGN_MODES))
         payload.setdefault("deal_modes", sorted(DEAL_MODES))
+
+        try:
+            from LoanMVP.services.training_service import log_studio_batch
+            outputs = _normalize_generator_outputs(payload)
+            images_by_mode = {
+                mode: _find_first_url(block)
+                for mode, block in outputs.items()
+                if _find_first_url(block)
+            }
+            if images_by_mode:
+                _prompt = spec.get("engine_prompt") or spec.get("prompt") or spec.get("description") or ""
+                log_studio_batch(
+                    feature=spec.get("studio") or "build_studio",
+                    provider="renovation_engine",
+                    payload={
+                        "prompt": _prompt,
+                        "style": spec.get("style", ""),
+                        "property_type": spec.get("property_type", ""),
+                        "stories": spec.get("stories", ""),
+                        "description": spec.get("description", ""),
+                        "intent": spec.get("intent", ""),
+                    },
+                    images_b64_or_urls=images_by_mode,
+                    user_id=current_user.id if getattr(current_user, "is_authenticated", False) else None,
+                    is_urls=True,
+                )
+        except Exception:
+            pass
 
     if persist_to_investor and response.ok and _as_dict(payload).get("status") not in ("error", "failed"):
         save_enabled = _truthy(
