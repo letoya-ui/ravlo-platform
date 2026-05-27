@@ -214,6 +214,7 @@ from LoanMVP.services.investor.investor_engine_helpers import (
     _post_renovation_engine_json,
     _post_renovation_engine_multipart,
     _post_scope_engine_json,
+    _engine_or_dalle,
 )
 from LoanMVP.services.investor.property_orchestrator import (
     CanonicalProperty,
@@ -12808,7 +12809,7 @@ def design_studio_generate():
                 bool(payload.get("image_base64")),
                 (payload.get("prompt") or payload.get("engine_prompt") or "")[:500],
             )
-            engine_json = _post_renovation_engine_json(
+            engine_json = _engine_or_dalle(
                 "/v1/build_concept",
                 payload,
                 timeout=BLUEPRINT_RENDER_TIMEOUT,
@@ -12864,7 +12865,7 @@ def design_studio_generate():
             }
             payload.update(_build_studio_quality_controls("interior"))
 
-            engine_json = _post_renovation_engine_json(
+            engine_json = _engine_or_dalle(
                 "/v1/renovate",
                 payload,
                 timeout=RENDER_TIMEOUT,

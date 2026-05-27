@@ -243,27 +243,36 @@ def _project_studio_strategy_cards(snapshot: dict, engine_data: dict | None) -> 
 
 
 def _call_deal_architect(payload: dict) -> dict:
+    import logging
     import requests
 
+    log = logging.getLogger(__name__)
+
     engine_url = (current_app.config.get("RENOVATION_ENGINE_URL") or "").rstrip("/")
-    if not engine_url:
-        raise RuntimeError(
-            "RENOVATION_ENGINE_URL is missing. Add it to your Flask app config or environment."
-        )
 
-    headers = {"Content-Type": "application/json"}
-    api_key = (current_app.config.get("RENOVATION_ENGINE_API_KEY") or "").strip()
-    if api_key:
-        headers["X-API-Key"] = api_key
+    if engine_url:
+        headers = {"Content-Type": "application/json"}
+        api_key = (current_app.config.get("RENOVATION_ENGINE_API_KEY") or "").strip()
+        if api_key:
+            headers["X-API-Key"] = api_key
 
-    resp = requests.post(
-        f"{engine_url}/v1/deal_architect",
-        json=payload,
-        headers=headers,
-        timeout=20,
-    )
-    resp.raise_for_status()
-    return resp.json()
+        try:
+            resp = requests.post(
+                f"{engine_url}/v1/deal_architect",
+                json=payload,
+                headers=headers,
+                timeout=20,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as engine_err:
+            log.warning(
+                "Deal Architect engine unavailable (%s) — falling back to Claude.",
+                engine_err,
+            )
+
+    from LoanMVP.services.llm_studio_service import claude_deal_analysis
+    return claude_deal_analysis(payload)
 
 
 def _project_studio_lookup(address: str, city: str = "", state: str = "", zip_code: str = "") -> dict:
