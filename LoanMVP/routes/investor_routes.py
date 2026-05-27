@@ -6491,7 +6491,7 @@ def design_studio_generate_variant():
         }
         payload.update(_build_studio_quality_controls("interior"))
 
-        engine_json = _post_renovation_engine_json(
+        engine_json = _engine_or_dalle(
             "/v1/renovate",
             payload,
             timeout=RENDER_TIMEOUT,
@@ -8199,7 +8199,7 @@ def generate_exterior_back():
         _log_build_source_state(payload, "exterior_back")
         _log_rear_generation_settings(payload)
 
-        engine_json = _post_renovation_engine_json(
+        engine_json = _engine_or_dalle(
             "/v1/build_concept",
             payload,
             timeout=RENDER_TIMEOUT,
@@ -8443,7 +8443,7 @@ def generate_build_exterior():
         _log_build_source_state(payload, "exterior_front")
         current_app.logger.warning(f"EXTERIOR FINAL PAYLOAD: {payload}")
 
-        result = _post_renovation_engine_json(
+        result = _engine_or_dalle(
             "/v1/build_concept",
             payload,
             timeout=UPLOAD_TIMEOUT,
@@ -9235,7 +9235,7 @@ def generate_build_interior():
             payload.get("strength"),
         )
 
-        engine_json = _post_renovation_engine_json(
+        engine_json = _engine_or_dalle(
             endpoint,
             payload,
             timeout=BLUEPRINT_RENDER_TIMEOUT,
@@ -9695,7 +9695,7 @@ def generate_build_blueprint():
             sorted(payload.keys()),
         )
 
-        engine_json = _post_renovation_engine_json(
+        engine_json = _engine_or_dalle(
             "/v1/build_concept",
             payload,
             timeout=RENDER_TIMEOUT,
@@ -10387,7 +10387,7 @@ def generate_full_build():
                 sorted(payload.keys()),
             )
 
-            engine_json = _post_renovation_engine_json(
+            engine_json = _engine_or_dalle(
                 "/v1/build_concept",
                 payload,
                 timeout=RENDER_TIMEOUT,
@@ -10832,7 +10832,7 @@ def generate_build_room():
         }
         payload.update(_build_studio_quality_controls("interior_room"))
 
-        engine_json = _post_renovation_engine_json(
+        engine_json = _engine_or_dalle(
             "/v1/build_concept",
             payload,
             timeout=RENDER_TIMEOUT,
@@ -11091,7 +11091,7 @@ def generate_build_studio_upload():
         # -----------------------------
         # CALL ENGINE
         # -----------------------------
-        result = _post_renovation_engine_json(
+        result = _engine_or_dalle(
             "/v1/build_concept",
             payload,
             timeout=UPLOAD_TIMEOUT,
