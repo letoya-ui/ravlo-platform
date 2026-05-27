@@ -9,7 +9,7 @@ class StudioGenerationLog(db.Model):
     __tablename__ = "studio_generation_logs"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
     feature = db.Column(db.String(50), nullable=False)       # build_studio | design_studio | project_build
     provider = db.Column(db.String(30), nullable=False)      # engine | dalle3
     output_mode = db.Column(db.String(50), nullable=True)    # blueprint | exterior_front | interior | ...
@@ -29,7 +29,7 @@ class AcademyChatLog(db.Model):
     __tablename__ = "academy_chat_logs"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
     session_key = db.Column(db.String(100), nullable=True)   # anonymous session fingerprint
     tier = db.Column(db.String(30), nullable=True)           # starter | pro | elite | lending
     feature = db.Column(db.String(30), nullable=False, default="chat")  # chat | business_plan
@@ -58,7 +58,7 @@ class TrainingJob(db.Model):
     result_json = db.Column(db.Text, nullable=True)          # response from provider
     model_url = db.Column(db.String(512), nullable=True)     # output model/weights URL
     sample_count = db.Column(db.Integer, nullable=True)      # number of training samples used
-    triggered_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    triggered_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     completed_at = db.Column(db.DateTime, nullable=True)
 
