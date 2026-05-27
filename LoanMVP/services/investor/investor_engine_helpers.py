@@ -74,6 +74,8 @@ def _scope_engine_headers() -> dict:
 
 def _renovation_engine_url(path: str = "") -> str:
     base = _engine_base_url() or RENOVATION_ENGINE_URL
+    if not base:
+        raise RuntimeError("RENOVATION_ENGINE_URL is not configured.")
     return f"{base.rstrip('/')}{path}"
 
 
