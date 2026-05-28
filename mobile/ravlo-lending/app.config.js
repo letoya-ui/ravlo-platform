@@ -7,13 +7,7 @@ export default ({ config }) => ({
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'https://ravlo.app',
     eas: {
-      projectId: process.env.EAS_PROJECT_ID_LENDING ?? 'REPLACE_WITH_EAS_PROJECT_ID',
+      projectId: 'b8210393-8f43-46eb-bb63-92871f4cb7f0',
     },
-  },
-  updates: {
-    url: `https://u.expo.dev/${process.env.EAS_PROJECT_ID_LENDING ?? 'REPLACE_WITH_EAS_PROJECT_ID'}`,
-  },
-  runtimeVersion: {
-    policy: 'appVersion',
   },
 });
