@@ -790,11 +790,14 @@ def _streetview_fallback_url(result):
 
     The key is injected server-side by :func:`api_property_tool_image`
     so it never appears in client-visible markup.
-    Returns ``None`` when the address is too short.
+    Returns ``None`` when no API key is configured or address is too short.
 
     Prefers latitude/longitude coordinates when available because they
     produce more reliable Street View results than text addresses.
     """
+    from flask import current_app as _ca
+    if not (_ca.config.get("GOOGLE_PLACES_API_KEY") or "").strip():
+        return None
     lat = result.get("latitude")
     lon = result.get("longitude")
     if lat is not None and lon is not None:
@@ -4102,6 +4105,7 @@ def api_deal_architect_proxy():
 # -------------------------------------------------------------------
 
 @investor_bp.route("/api/property_tool_search", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_search():
@@ -4336,9 +4340,11 @@ def api_property_tool_image():
 
     if source_url.startswith(_STREETVIEW_BASE):
         google_key = current_app.config.get("GOOGLE_PLACES_API_KEY") or ""
-        if google_key:
-            sep = "&" if "?" in source_url else "?"
-            source_url = f"{source_url}{sep}key={google_key}"
+        if not google_key:
+            # No API key — redirect to placeholder instead of attempting a doomed request
+            return redirect(url_for("static", filename="images/placeholder_property.jpg"))
+        sep = "&" if "?" in source_url else "?"
+        source_url = f"{source_url}{sep}key={google_key}"
 
     try:
         upstream = requests.get(
@@ -4351,11 +4357,11 @@ def api_property_tool_image():
             },
         )
         if not upstream.ok:
-            abort(404)
+            return redirect(url_for("static", filename="images/placeholder_property.jpg"))
 
         content_type = upstream.headers.get("Content-Type", "image/jpeg")
         if not content_type.startswith("image/"):
-            abort(415)
+            return redirect(url_for("static", filename="images/placeholder_property.jpg"))
 
         payload = io.BytesIO(upstream.content)
         response = send_file(payload, mimetype=content_type, conditional=True)
@@ -4363,9 +4369,10 @@ def api_property_tool_image():
         return response
     except Exception:
         current_app.logger.warning("property_tool_image proxy failed for %s", log_url, exc_info=True)
-        abort(404)
+        return redirect(url_for("static", filename="images/placeholder_property.jpg"))
 
 @investor_bp.route("/api/property_detail", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_detail():
@@ -4437,6 +4444,7 @@ def api_property_detail():
 
 
 @investor_bp.route("/api/property_tool_save", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_save():
@@ -4524,6 +4532,7 @@ def api_property_tool_save():
 
      
 @investor_bp.route("/api/property_tool_save_and_analyze", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_save_and_analyze():
@@ -4841,6 +4850,7 @@ def api_property_tool_save_and_analyze():
 
 @investor_bp.route("/api/intelligence/card", methods=["POST"])
 @investor_bp.route("/api/property_tool_card", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_card():
@@ -4893,6 +4903,7 @@ def api_property_tool_card():
 
 
 @investor_bp.route("/api/property_tool_view_details", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_view_details():
@@ -5364,6 +5375,25 @@ def deal_workspace():
                 "reason": workspace_analysis.get("best_exit_reason"),
                 "ai_recommendation": workspace_analysis.get("ai_recommendation") or {},
             }
+
+        # ── Photo guarantee: proxy deal_results photos + Street View fallback ──
+        # deal.results_json may hold raw RentCast/Realtor CDN URLs that expire.
+        # Proxy them and merge into workspace_analysis so the template always
+        # has fully-proxied photos (no raw external URLs in page markup).
+        if selected_prop and isinstance(workspace_analysis, dict):
+            _dr = (deal.results_json or {}) if deal else {}
+            _extra = _proxy_photo_list(_collect_property_photo_urls(_dr))
+            _current = list(workspace_analysis.get("listing_photos") or [])
+            for _p in _extra:
+                if _p not in _current:
+                    _current.append(_p)
+            if _current:
+                workspace_analysis["listing_photos"] = _current
+                if not workspace_analysis.get("image_url"):
+                    workspace_analysis["image_url"] = _current[0]
+            # Final fallback: Google Street View when no listing photos exist
+            if not workspace_analysis.get("image_url"):
+                workspace_analysis = _ensure_property_image_coverage(workspace_analysis)
 
         try:
             partners = get_workspace_partners_for_property(selected_prop)
@@ -6491,7 +6521,7 @@ def design_studio_generate_variant():
         }
         payload.update(_build_studio_quality_controls("interior"))
 
-        engine_json = _post_renovation_engine_json(
+        engine_json = _engine_or_dalle(
             "/v1/renovate",
             payload,
             timeout=RENDER_TIMEOUT,
@@ -8199,7 +8229,7 @@ def generate_exterior_back():
         _log_build_source_state(payload, "exterior_back")
         _log_rear_generation_settings(payload)
 
-        engine_json = _post_renovation_engine_json(
+        engine_json = _engine_or_dalle(
             "/v1/build_concept",
             payload,
             timeout=RENDER_TIMEOUT,
@@ -8443,7 +8473,7 @@ def generate_build_exterior():
         _log_build_source_state(payload, "exterior_front")
         current_app.logger.warning(f"EXTERIOR FINAL PAYLOAD: {payload}")
 
-        result = _post_renovation_engine_json(
+        result = _engine_or_dalle(
             "/v1/build_concept",
             payload,
             timeout=UPLOAD_TIMEOUT,
@@ -9235,7 +9265,7 @@ def generate_build_interior():
             payload.get("strength"),
         )
 
-        engine_json = _post_renovation_engine_json(
+        engine_json = _engine_or_dalle(
             endpoint,
             payload,
             timeout=BLUEPRINT_RENDER_TIMEOUT,
@@ -9695,7 +9725,7 @@ def generate_build_blueprint():
             sorted(payload.keys()),
         )
 
-        engine_json = _post_renovation_engine_json(
+        engine_json = _engine_or_dalle(
             "/v1/build_concept",
             payload,
             timeout=RENDER_TIMEOUT,
@@ -10387,7 +10417,7 @@ def generate_full_build():
                 sorted(payload.keys()),
             )
 
-            engine_json = _post_renovation_engine_json(
+            engine_json = _engine_or_dalle(
                 "/v1/build_concept",
                 payload,
                 timeout=RENDER_TIMEOUT,
@@ -10832,7 +10862,7 @@ def generate_build_room():
         }
         payload.update(_build_studio_quality_controls("interior_room"))
 
-        engine_json = _post_renovation_engine_json(
+        engine_json = _engine_or_dalle(
             "/v1/build_concept",
             payload,
             timeout=RENDER_TIMEOUT,
@@ -11091,7 +11121,7 @@ def generate_build_studio_upload():
         # -----------------------------
         # CALL ENGINE
         # -----------------------------
-        result = _post_renovation_engine_json(
+        result = _engine_or_dalle(
             "/v1/build_concept",
             payload,
             timeout=UPLOAD_TIMEOUT,

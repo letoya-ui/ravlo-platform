@@ -201,6 +201,13 @@ Review a saved property, compare exit paths, and move the best opportunity into 
         {% endif %}
     {% endif %}
 
+    {# Ensure primary_photo and all gallery photos are routed through the image proxy
+       so expired RentCast/Realtor CDN URLs are fetched server-side instead of failing
+       in the browser. Skip URLs that are already proxied or are local paths. #}
+    {% if primary_photo and not primary_photo.startswith('/') and 'property_tool_image' not in primary_photo %}
+        {% set primary_photo = url_for('investor.api_property_tool_image', src=primary_photo) %}
+    {% endif %}
+
     {% set budget_metrics = budget_snapshot or {} %}
     {% set budget_total = budget_metrics.get("estimated_total_with_contingency", budget.total_budget if budget else 0) %}
     {% set budget_estimated = budget_metrics.get("estimated_subtotal", budget.total_cost if budget else 0) %}
@@ -292,6 +299,9 @@ Review a saved property, compare exit paths, and move the best opportunity into 
     {% set land_roi_strength = ((land_score / max_roi) * 100) if max_roi else 0 %}
 
     {% set hero_photo = primary_photo %}
+    {% if hero_photo and not hero_photo.startswith('/') and 'property_tool_image' not in hero_photo %}
+        {% set hero_photo = url_for('investor.api_property_tool_image', src=hero_photo) %}
+    {% endif %}
     {% if not hero_photo and listing_photos %}
         {% if listing_photos[0] is mapping %}
             {% set hero_photo = listing_photos[0].get("url") %}
@@ -315,6 +325,9 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                     {% set photo_url = photo.get("url") %}
                 {% else %}
                     {% set photo_url = photo %}
+                {% endif %}
+                {% if photo_url and not photo_url.startswith('/') and 'property_tool_image' not in photo_url %}
+                    {% set photo_url = url_for('investor.api_property_tool_image', src=photo_url) %}
                 {% endif %}
                 {% if photo_url %}
                 <div class="workspace-hero-thumb">
@@ -902,6 +915,9 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                                 {% set photo_url = photo.get("url") %}
                             {% else %}
                                 {% set photo_url = photo %}
+                            {% endif %}
+                            {% if photo_url and not photo_url.startswith('/') and 'property_tool_image' not in photo_url %}
+                                {% set photo_url = url_for('investor.api_property_tool_image', src=photo_url) %}
                             {% endif %}
                             {% if photo_url %}
                             <div class="workspace-photo-tile">
