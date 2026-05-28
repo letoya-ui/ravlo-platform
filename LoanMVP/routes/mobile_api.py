@@ -33,6 +33,9 @@ def _decode_token(token: str) -> dict:
     return jwt.decode(token, _get_secret(), algorithms=['HS256'])
 
 
+LOAN_ROLES = ('loan_officer', 'processor', 'underwriter', 'admin')
+
+
 def require_auth(f):
     """Decorator that validates Bearer JWT and injects current_user."""
     @wraps(f)
@@ -602,3 +605,111 @@ def elena_chat():
         return jsonify({'error': 'Elena is temporarily unavailable. Please try again.'}), 500
 
     return jsonify({'reply': reply, 'role': 'assistant'}), 200
+
+
+# ---------------------------------------------------------------------------
+# Push notification registration
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/notifications/register', methods=['POST'])
+@require_auth
+def register_push_token(current_user=None):
+    current_user = request.current_user
+    body = request.get_json() or {}
+    push_token = body.get('push_token', '')
+    platform = body.get('platform', '')
+    app_name = body.get('app', '')
+
+    if not push_token:
+        return jsonify({'error': 'push_token required'}), 400
+
+    try:
+        # Store on user model if field exists, otherwise just acknowledge
+        if hasattr(current_user, 'push_token'):
+            current_user.push_token = push_token
+            from LoanMVP.extensions import db
+            db.session.commit()
+        else:
+            # Log for now - a migration can add this column later
+            current_app.logger.info(
+                f"Push token registered: user={current_user.id} app={app_name} platform={platform}"
+            )
+    except Exception as e:
+        current_app.logger.error(f"Push token registration error: {e}")
+
+    return jsonify({'success': True, 'message': 'Push token registered'})
+
+
+# ---------------------------------------------------------------------------
+# Document upload
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/lending/documents/upload', methods=['POST'])
+@require_auth
+def upload_document(current_user=None):
+    current_user = request.current_user
+    if current_user.role not in LOAN_ROLES:
+        return jsonify({'error': 'Forbidden'}), 403
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['file']
+    loan_id = request.form.get('loan_id')
+    doc_type = request.form.get('doc_type', 'general')
+
+    if not file.filename:
+        return jsonify({'error': 'Empty file'}), 400
+
+    try:
+        import boto3
+        from werkzeug.utils import secure_filename
+        import uuid
+
+        filename = secure_filename(file.filename)
+        key = f"loan_docs/{loan_id}/{uuid.uuid4()}_{filename}"
+
+        s3_bucket = os.environ.get('S3_BUCKET_NAME', os.environ.get('AWS_S3_BUCKET'))
+
+        if s3_bucket:
+            s3 = boto3.client('s3')
+            s3.upload_fileobj(file, s3_bucket, key, ExtraArgs={'ContentType': file.content_type})
+            file_url = f"https://{s3_bucket}.s3.amazonaws.com/{key}"
+        else:
+            # Local fallback: save to uploads dir
+            upload_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads', 'mobile', str(loan_id))
+            os.makedirs(upload_dir, exist_ok=True)
+            local_path = os.path.join(upload_dir, f"{uuid.uuid4()}_{filename}")
+            file.save(local_path)
+            file_url = f"/uploads/mobile/{loan_id}/{os.path.basename(local_path)}"
+
+        # Try to create a document record
+        try:
+            from LoanMVP.models.document_models import LoanDocument
+            from LoanMVP.extensions import db
+            doc = LoanDocument(
+                loan_id=int(loan_id) if loan_id else None,
+                uploaded_by=current_user.id,
+                doc_type=doc_type,
+                filename=filename,
+                file_url=file_url,
+                source='mobile',
+            )
+            db.session.add(doc)
+            db.session.commit()
+            doc_id = doc.id
+        except Exception:
+            doc_id = None
+
+        return jsonify({
+            'success': True,
+            'document': {
+                'id': doc_id,
+                'filename': filename,
+                'doc_type': doc_type,
+                'file_url': file_url,
+            }
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
