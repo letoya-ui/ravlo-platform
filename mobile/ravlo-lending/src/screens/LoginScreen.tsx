@@ -11,13 +11,15 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
 import { useAuthStore } from '../store/authStore';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isLoading } = useAuthStore();
+  const { login, isLoading, biometricAvailable, biometricEnabled, authenticateWithBiometric } =
+    useAuthStore();
 
   const handleLogin = async () => {
     const trimmedEmail = email.trim().toLowerCase();
@@ -29,6 +31,17 @@ export default function LoginScreen() {
       await login(trimmedEmail, password);
     } catch (err: any) {
       Alert.alert('Login Failed', err.message || 'Invalid credentials.');
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    try {
+      const success = await authenticateWithBiometric();
+      if (!success) {
+        Alert.alert('Authentication Failed', 'Biometric authentication was not successful.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', 'Biometric authentication encountered an error.');
     }
   };
 
@@ -64,7 +77,7 @@ export default function LoginScreen() {
             style={styles.input}
             value={password}
             onChangeText={setPassword}
-            placeholder="••••••••"
+            placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
             placeholderTextColor={Colors.textMuted}
             secureTextEntry
           />
@@ -81,6 +94,17 @@ export default function LoginScreen() {
               <Text style={styles.buttonText}>Sign In</Text>
             )}
           </TouchableOpacity>
+
+          {biometricAvailable && biometricEnabled && (
+            <TouchableOpacity
+              style={styles.biometricButton}
+              onPress={handleBiometricLogin}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="finger-print-outline" size={22} color={Colors.blueprint} />
+              <Text style={styles.biometricButtonText}>Use Face ID / Touch ID</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -125,4 +149,16 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { ...Typography.label, color: Colors.white, fontSize: 16 },
+  biometricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.blueprint,
+    borderRadius: Radii.md,
+    paddingVertical: Spacing.md,
+    marginTop: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  biometricButtonText: { ...Typography.label, color: Colors.blueprint, fontSize: 16 },
 });
