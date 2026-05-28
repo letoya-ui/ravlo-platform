@@ -1302,7 +1302,7 @@ class PropertyIntelligenceOrchestrator:
             except Exception as exc:
                 _log.warning("[mashvisor] get_property_images failed: %s", exc)
         else:
-            _log.warning("[mashvisor] no property_id -- cannot fetch images")
+            _log.debug("[mashvisor] no property_id -- skipping image fetch")
 
         _log.info("[mashvisor] final photo count: mashvisor=%d  existing=%d", len(mashvisor_photos), len(cp.photos))
         if mashvisor_photos:
