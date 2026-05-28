@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Ravlo Lending",
+    "slug": "ravlo-lending",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": { "backgroundColor": "#0C1116" },
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.ravlo.lending" },
+    "android": { "package": "com.ravlo.lending", "adaptiveIcon": { "backgroundColor": "#0C1116" } }
+  }
+}
