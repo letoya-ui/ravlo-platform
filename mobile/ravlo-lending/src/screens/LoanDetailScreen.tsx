@@ -126,6 +126,19 @@ export default function LoanDetailScreen({ route, navigation }: any) {
           <DetailRow label="Last Updated" value={loan.updated_at ? new Date(loan.updated_at).toLocaleDateString() : '—'} />
         </View>
       </ScrollView>
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() =>
+          navigation.navigate('DocumentUpload', {
+            loanId: loan.id,
+            loanNumber: loan.id,
+          })
+        }
+        activeOpacity={0.85}
+      >
+        <Ionicons name="add" size={28} color={Colors.white} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -146,7 +159,7 @@ const styles = StyleSheet.create({
   navBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   backText: { ...Typography.body, color: Colors.textPrimary },
-  scroll: { padding: Spacing.lg },
+  scroll: { padding: Spacing.lg, paddingBottom: 100 },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: Spacing.xs },
   title: { ...Typography.h2, color: Colors.textPrimary, flex: 1, marginRight: Spacing.sm },
   statusBadge: { borderWidth: 1, borderRadius: Radii.full, paddingHorizontal: Spacing.sm, paddingVertical: 3 },
@@ -175,4 +188,20 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.xs },
   detailLabel: { ...Typography.bodySmall, color: Colors.textMuted },
   detailValue: { ...Typography.bodySmall, color: Colors.textPrimary, fontWeight: '600' },
+  fab: {
+    position: 'absolute',
+    bottom: Spacing.xl,
+    right: Spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.blueprint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
 });
