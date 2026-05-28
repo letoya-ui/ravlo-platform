@@ -7,6 +7,9 @@
     "userInterfaceStyle": "dark",
     "splash": { "backgroundColor": "#0C1116" },
     "ios": { "supportsTablet": true, "bundleIdentifier": "com.ravlo.academy" },
-    "android": { "package": "com.ravlo.academy", "adaptiveIcon": { "backgroundColor": "#0C1116" } }
+    "android": { "package": "com.ravlo.academy", "adaptiveIcon": { "backgroundColor": "#0C1116" } },
+    "plugins": [
+      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#3A5C7A" }]
+    ]
   }
 }
