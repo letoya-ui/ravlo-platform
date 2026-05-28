@@ -10,10 +10,4 @@ export default ({ config }) => ({
       projectId: process.env.EAS_PROJECT_ID_LENDING ?? 'REPLACE_WITH_EAS_PROJECT_ID',
     },
   },
-  updates: {
-    url: `https://u.expo.dev/${process.env.EAS_PROJECT_ID_LENDING ?? 'REPLACE_WITH_EAS_PROJECT_ID'}`,
-  },
-  runtimeVersion: {
-    policy: 'appVersion',
-  },
 });
