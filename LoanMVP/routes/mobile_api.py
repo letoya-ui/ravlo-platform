@@ -1,0 +1,604 @@
+"""Mobile API Blueprint - JWT-authenticated endpoints for Ravlo mobile apps."""
+
+import os
+import jwt
+import datetime
+from functools import wraps
+from flask import Blueprint, request, jsonify, current_app
+
+mobile_api = Blueprint('mobile_api', __name__, url_prefix='/mobile')
+
+# ---------------------------------------------------------------------------
+# JWT helpers
+# ---------------------------------------------------------------------------
+
+def _get_secret():
+    return (
+        os.environ.get('JWT_SECRET_KEY')
+        or os.environ.get('SECRET_KEY')
+        or 'ravlo-jwt-secret-2025'
+    )
+
+
+def _encode_token(user_id: int) -> str:
+    payload = {
+        'sub': user_id,
+        'iat': datetime.datetime.utcnow(),
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30),
+    }
+    return jwt.encode(payload, _get_secret(), algorithm='HS256')
+
+
+def _decode_token(token: str) -> dict:
+    return jwt.decode(token, _get_secret(), algorithms=['HS256'])
+
+
+def require_auth(f):
+    """Decorator that validates Bearer JWT and injects current_user."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Missing or invalid Authorization header'}), 401
+        token = auth_header.split(' ', 1)[1]
+        try:
+            payload = _decode_token(token)
+        except jwt.ExpiredSignatureError:
+            return jsonify({'error': 'Token expired'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'error': 'Invalid token'}), 401
+
+        try:
+            from LoanMVP.models import User
+            user = User.query.get(payload['sub'])
+        except Exception:
+            return jsonify({'error': 'Could not load user'}), 500
+
+        if user is None:
+            return jsonify({'error': 'User not found'}), 401
+
+        request.current_user = user
+        return f(*args, **kwargs)
+    return decorated
+
+
+def _serialize_user(user) -> dict:
+    first = getattr(user, 'first_name', '') or ''
+    last = getattr(user, 'last_name', '') or ''
+    return {
+        'id': getattr(user, 'id', None),
+        'email': getattr(user, 'email', ''),
+        'first_name': first,
+        'last_name': last,
+        'full_name': f'{first} {last}'.strip(),
+        'role': getattr(user, 'role', 'borrower'),
+        'subscription': getattr(user, 'subscription', 'free'),
+        'university_tier': getattr(user, 'university_tier', None),
+        'onboarding_complete': getattr(user, 'onboarding_complete', False),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Auth routes
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/auth/login', methods=['POST'])
+def login():
+    """Validate email/password and return JWT + user object."""
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or ''
+
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required'}), 400
+
+    try:
+        from LoanMVP.models import User
+        user = User.query.filter_by(email=email).first()
+    except Exception as exc:
+        current_app.logger.error('mobile login db error: %s', exc)
+        return jsonify({'error': 'Database error'}), 500
+
+    if user is None:
+        return jsonify({'error': 'Invalid email or password'}), 401
+
+    # Support both check_password_hash helpers and Werkzeug's method
+    try:
+        check_fn = getattr(user, 'check_password', None)
+        if check_fn is not None:
+            valid = check_fn(password)
+        else:
+            from werkzeug.security import check_password_hash
+            stored = getattr(user, 'password_hash', None) or getattr(user, 'password', '')
+            valid = check_password_hash(stored, password)
+    except Exception as exc:
+        current_app.logger.error('mobile login password check error: %s', exc)
+        return jsonify({'error': 'Authentication error'}), 500
+
+    if not valid:
+        return jsonify({'error': 'Invalid email or password'}), 401
+
+    token = _encode_token(user.id)
+    return jsonify({'token': token, 'user': _serialize_user(user)}), 200
+
+
+@mobile_api.route('/auth/me', methods=['GET'])
+@require_auth
+def me():
+    """Return the authenticated user's profile."""
+    return jsonify({'user': _serialize_user(request.current_user)}), 200
+
+
+@mobile_api.route('/auth/refresh', methods=['POST'])
+@require_auth
+def refresh():
+    """Issue a fresh token for the authenticated user."""
+    token = _encode_token(request.current_user.id)
+    return jsonify({'token': token}), 200
+
+
+# ---------------------------------------------------------------------------
+# Lending routes
+# ---------------------------------------------------------------------------
+
+def _serialize_loan(loan) -> dict:
+    borrower = getattr(loan, 'borrower', None)
+    borrower_name = ''
+    if borrower is not None:
+        b_first = getattr(borrower, 'first_name', '') or ''
+        b_last = getattr(borrower, 'last_name', '') or ''
+        borrower_name = f'{b_first} {b_last}'.strip()
+    else:
+        borrower_name = getattr(loan, 'borrower_name', '') or ''
+
+    return {
+        'id': getattr(loan, 'id', None),
+        'borrower_name': borrower_name,
+        'loan_amount': float(getattr(loan, 'loan_amount', 0) or 0),
+        'loan_type': getattr(loan, 'loan_type', '') or '',
+        'status': getattr(loan, 'status', '') or '',
+        'ltv': float(getattr(loan, 'ltv', 0) or 0),
+        'interest_rate': float(getattr(loan, 'interest_rate', 0) or 0),
+        'property_address': getattr(loan, 'property_address', '') or '',
+        'created_at': str(getattr(loan, 'created_at', '') or ''),
+        'updated_at': str(getattr(loan, 'updated_at', '') or ''),
+    }
+
+
+@mobile_api.route('/lending/loans', methods=['GET'])
+@require_auth
+def list_loans():
+    """Return loans filtered by the requesting user's role."""
+    user = request.current_user
+    role = getattr(user, 'role', 'borrower')
+
+    try:
+        from LoanMVP.models import Loan
+    except ImportError:
+        return jsonify({'loans': [], 'total': 0}), 200
+
+    try:
+        if role == 'borrower':
+            # Borrowers only see their own loans
+            borrower_id_col = getattr(Loan, 'borrower_id', None)
+            if borrower_id_col is not None:
+                loans = Loan.query.filter_by(borrower_id=user.id).all()
+            else:
+                loans = Loan.query.all()
+        elif role in ('loan_officer', 'processor', 'underwriter', 'admin'):
+            loans = Loan.query.all()
+        else:
+            loans = Loan.query.all()
+    except Exception as exc:
+        current_app.logger.error('list_loans error: %s', exc)
+        return jsonify({'error': 'Could not retrieve loans'}), 500
+
+    return jsonify({'loans': [_serialize_loan(l) for l in loans], 'total': len(loans)}), 200
+
+
+@mobile_api.route('/lending/loans/<int:loan_id>', methods=['GET'])
+@require_auth
+def loan_detail(loan_id):
+    """Return a single loan's details."""
+    try:
+        from LoanMVP.models import Loan
+    except ImportError:
+        return jsonify({'error': 'Loan model not available'}), 404
+
+    try:
+        loan = Loan.query.get(loan_id)
+    except Exception as exc:
+        current_app.logger.error('loan_detail error: %s', exc)
+        return jsonify({'error': 'Database error'}), 500
+
+    if loan is None:
+        return jsonify({'error': 'Loan not found'}), 404
+
+    return jsonify({'loan': _serialize_loan(loan)}), 200
+
+
+@mobile_api.route('/lending/pipeline/summary', methods=['GET'])
+@require_auth
+def pipeline_summary():
+    """Return aggregate pipeline stats."""
+    try:
+        from LoanMVP.models import Loan
+        from sqlalchemy import func
+        from LoanMVP.extensions import db
+    except ImportError:
+        return jsonify({'total': 0, 'active': 0, 'closed': 0, 'volume': 0.0}), 200
+
+    try:
+        total = Loan.query.count()
+        active_statuses = ('submitted', 'processing', 'underwriting', 'approved', 'in_review')
+        closed_statuses = ('closed', 'funded', 'denied', 'cancelled')
+        active = Loan.query.filter(Loan.status.in_(active_statuses)).count()
+        closed = Loan.query.filter(Loan.status.in_(closed_statuses)).count()
+        volume_result = db.session.query(func.sum(Loan.loan_amount)).scalar()
+        volume = float(volume_result or 0)
+    except Exception as exc:
+        current_app.logger.error('pipeline_summary error: %s', exc)
+        return jsonify({'total': 0, 'active': 0, 'closed': 0, 'volume': 0.0}), 200
+
+    return jsonify({'total': total, 'active': active, 'closed': closed, 'volume': volume}), 200
+
+
+# ---------------------------------------------------------------------------
+# Investor routes
+# ---------------------------------------------------------------------------
+
+def _serialize_deal(deal) -> dict:
+    return {
+        'id': getattr(deal, 'id', None),
+        'name': getattr(deal, 'name', '') or getattr(deal, 'title', '') or '',
+        'amount': float(getattr(deal, 'amount', 0) or getattr(deal, 'investment_amount', 0) or 0),
+        'return_rate': float(getattr(deal, 'return_rate', 0) or getattr(deal, 'expected_return', 0) or 0),
+        'status': getattr(deal, 'status', '') or '',
+        'asset_class': getattr(deal, 'asset_class', '') or getattr(deal, 'deal_type', '') or '',
+        'description': getattr(deal, 'description', '') or '',
+        'created_at': str(getattr(deal, 'created_at', '') or ''),
+    }
+
+
+@mobile_api.route('/investor/dashboard', methods=['GET'])
+@require_auth
+def investor_dashboard():
+    """Return investor portfolio statistics."""
+    user = request.current_user
+
+    try:
+        from LoanMVP.models import Deal
+        from sqlalchemy import func
+        from LoanMVP.extensions import db
+    except ImportError:
+        return jsonify({'total_invested': 0.0, 'active_deals': 0, 'total_deals': 0, 'avg_return': 0.0}), 200
+
+    try:
+        investor_id_col = getattr(Deal, 'investor_id', None)
+        if investor_id_col is not None:
+            base_query = Deal.query.filter_by(investor_id=user.id)
+        else:
+            base_query = Deal.query
+
+        total_deals = base_query.count()
+        active_deals = base_query.filter(Deal.status.in_(['active', 'open', 'funded'])).count()
+        total_invested_result = db.session.query(func.sum(Deal.amount)).filter(
+            Deal.investor_id == user.id if investor_id_col is not None else True
+        ).scalar()
+        total_invested = float(total_invested_result or 0)
+        avg_return_result = db.session.query(func.avg(Deal.return_rate)).filter(
+            Deal.investor_id == user.id if investor_id_col is not None else True
+        ).scalar()
+        avg_return = float(avg_return_result or 0)
+    except Exception as exc:
+        current_app.logger.error('investor_dashboard error: %s', exc)
+        return jsonify({'total_invested': 0.0, 'active_deals': 0, 'total_deals': 0, 'avg_return': 0.0}), 200
+
+    return jsonify({
+        'total_invested': total_invested,
+        'active_deals': active_deals,
+        'total_deals': total_deals,
+        'avg_return': avg_return,
+    }), 200
+
+
+@mobile_api.route('/investor/deals', methods=['GET'])
+@require_auth
+def investor_deals():
+    """Return deals visible to the current investor."""
+    user = request.current_user
+
+    try:
+        from LoanMVP.models import Deal
+    except ImportError:
+        return jsonify({'deals': [], 'total': 0}), 200
+
+    try:
+        investor_id_col = getattr(Deal, 'investor_id', None)
+        if investor_id_col is not None:
+            deals = Deal.query.filter_by(investor_id=user.id).all()
+        else:
+            deals = Deal.query.all()
+    except Exception as exc:
+        current_app.logger.error('investor_deals error: %s', exc)
+        return jsonify({'error': 'Could not retrieve deals'}), 500
+
+    return jsonify({'deals': [_serialize_deal(d) for d in deals], 'total': len(deals)}), 200
+
+
+@mobile_api.route('/investor/deals/<int:deal_id>', methods=['GET'])
+@require_auth
+def deal_detail(deal_id):
+    """Return a single deal's details."""
+    try:
+        from LoanMVP.models import Deal
+    except ImportError:
+        return jsonify({'error': 'Deal model not available'}), 404
+
+    try:
+        deal = Deal.query.get(deal_id)
+    except Exception as exc:
+        current_app.logger.error('deal_detail error: %s', exc)
+        return jsonify({'error': 'Database error'}), 500
+
+    if deal is None:
+        return jsonify({'error': 'Deal not found'}), 404
+
+    return jsonify({'deal': _serialize_deal(deal)}), 200
+
+
+# ---------------------------------------------------------------------------
+# Partner routes
+# ---------------------------------------------------------------------------
+
+def _serialize_referral(referral) -> dict:
+    return {
+        'id': getattr(referral, 'id', None),
+        'name': getattr(referral, 'name', '') or getattr(referral, 'referral_name', '') or '',
+        'email': getattr(referral, 'email', '') or '',
+        'status': getattr(referral, 'status', '') or '',
+        'created_at': str(getattr(referral, 'created_at', '') or ''),
+        'converted_at': str(getattr(referral, 'converted_at', '') or ''),
+    }
+
+
+@mobile_api.route('/partner/referrals', methods=['GET'])
+@require_auth
+def partner_referrals():
+    """Return referrals submitted by the current partner."""
+    user = request.current_user
+
+    try:
+        from LoanMVP.models import Referral
+    except ImportError:
+        return jsonify({'referrals': [], 'total': 0, 'pending': 0, 'converted': 0}), 200
+
+    try:
+        partner_id_col = getattr(Referral, 'partner_id', None)
+        if partner_id_col is not None:
+            referrals = Referral.query.filter_by(partner_id=user.id).all()
+        else:
+            referrals = Referral.query.all()
+        pending = sum(1 for r in referrals if getattr(r, 'status', '') in ('pending', 'submitted', 'new'))
+        converted = sum(1 for r in referrals if getattr(r, 'status', '') in ('converted', 'closed', 'funded'))
+    except Exception as exc:
+        current_app.logger.error('partner_referrals error: %s', exc)
+        return jsonify({'referrals': [], 'total': 0, 'pending': 0, 'converted': 0}), 200
+
+    return jsonify({
+        'referrals': [_serialize_referral(r) for r in referrals],
+        'total': len(referrals),
+        'pending': pending,
+        'converted': converted,
+    }), 200
+
+
+# ---------------------------------------------------------------------------
+# Academy routes
+# ---------------------------------------------------------------------------
+
+def _serialize_course(course) -> dict:
+    return {
+        'id': getattr(course, 'id', None),
+        'title': getattr(course, 'title', '') or '',
+        'description': getattr(course, 'description', '') or '',
+        'duration': getattr(course, 'duration', '') or '',
+        'level': getattr(course, 'level', '') or getattr(course, 'difficulty', '') or 'Beginner',
+        'category': getattr(course, 'category', '') or '',
+        'thumbnail_url': getattr(course, 'thumbnail_url', '') or '',
+        'is_published': getattr(course, 'is_published', True),
+    }
+
+
+def _serialize_progress(progress) -> dict:
+    return {
+        'id': getattr(progress, 'id', None),
+        'course_id': getattr(progress, 'course_id', None),
+        'completed': getattr(progress, 'completed', False),
+        'percent_complete': float(getattr(progress, 'percent_complete', 0) or 0),
+        'last_accessed': str(getattr(progress, 'last_accessed', '') or ''),
+    }
+
+
+@mobile_api.route('/academy/courses', methods=['GET'])
+@require_auth
+def list_courses():
+    """Return available academy courses."""
+    try:
+        from LoanMVP.models import Course
+    except ImportError:
+        return jsonify({'courses': [], 'total': 0}), 200
+
+    try:
+        is_published_col = getattr(Course, 'is_published', None)
+        if is_published_col is not None:
+            courses = Course.query.filter_by(is_published=True).all()
+        else:
+            courses = Course.query.all()
+    except Exception as exc:
+        current_app.logger.error('list_courses error: %s', exc)
+        return jsonify({'courses': [], 'total': 0}), 200
+
+    return jsonify({'courses': [_serialize_course(c) for c in courses], 'total': len(courses)}), 200
+
+
+@mobile_api.route('/academy/courses/<int:course_id>', methods=['GET'])
+@require_auth
+def course_detail(course_id):
+    """Return a single course's details."""
+    try:
+        from LoanMVP.models import Course
+    except ImportError:
+        return jsonify({'error': 'Course model not available'}), 404
+
+    try:
+        course = Course.query.get(course_id)
+    except Exception as exc:
+        current_app.logger.error('course_detail error: %s', exc)
+        return jsonify({'error': 'Database error'}), 500
+
+    if course is None:
+        return jsonify({'error': 'Course not found'}), 404
+
+    return jsonify({'course': _serialize_course(course)}), 200
+
+
+@mobile_api.route('/academy/progress', methods=['GET'])
+@require_auth
+def get_progress():
+    """Return the current user's course progress."""
+    user = request.current_user
+
+    try:
+        from LoanMVP.models import CourseProgress
+    except ImportError:
+        return jsonify({'progress': [], 'courses_completed': 0, 'completion_rate': 0.0}), 200
+
+    try:
+        user_id_col = getattr(CourseProgress, 'user_id', None)
+        if user_id_col is not None:
+            progress_list = CourseProgress.query.filter_by(user_id=user.id).all()
+        else:
+            progress_list = CourseProgress.query.all()
+
+        courses_completed = sum(1 for p in progress_list if getattr(p, 'completed', False))
+        total = len(progress_list)
+        completion_rate = (courses_completed / total * 100) if total > 0 else 0.0
+    except Exception as exc:
+        current_app.logger.error('get_progress error: %s', exc)
+        return jsonify({'progress': [], 'courses_completed': 0, 'completion_rate': 0.0}), 200
+
+    return jsonify({
+        'progress': [_serialize_progress(p) for p in progress_list],
+        'courses_completed': courses_completed,
+        'completion_rate': completion_rate,
+    }), 200
+
+
+@mobile_api.route('/academy/progress/<int:course_id>', methods=['POST'])
+@require_auth
+def update_progress(course_id):
+    """Create or update progress for a course."""
+    user = request.current_user
+    data = request.get_json(silent=True) or {}
+    percent_complete = float(data.get('percent_complete', 0) or 0)
+    completed = bool(data.get('completed', percent_complete >= 100))
+
+    try:
+        from LoanMVP.models import CourseProgress
+        from LoanMVP.extensions import db
+        import datetime as dt
+    except ImportError:
+        return jsonify({'error': 'Progress model not available'}), 500
+
+    try:
+        user_id_col = getattr(CourseProgress, 'user_id', None)
+        if user_id_col is not None:
+            progress = CourseProgress.query.filter_by(user_id=user.id, course_id=course_id).first()
+        else:
+            progress = None
+
+        if progress is None:
+            progress = CourseProgress()
+            if getattr(CourseProgress, 'user_id', None) is not None:
+                progress.user_id = user.id
+            if getattr(CourseProgress, 'course_id', None) is not None:
+                progress.course_id = course_id
+            db.session.add(progress)
+
+        if getattr(CourseProgress, 'percent_complete', None) is not None:
+            progress.percent_complete = percent_complete
+        if getattr(CourseProgress, 'completed', None) is not None:
+            progress.completed = completed
+        if getattr(CourseProgress, 'last_accessed', None) is not None:
+            progress.last_accessed = dt.datetime.utcnow()
+
+        db.session.commit()
+    except Exception as exc:
+        current_app.logger.error('update_progress error: %s', exc)
+        try:
+            from LoanMVP.extensions import db
+            db.session.rollback()
+        except Exception:
+            pass
+        return jsonify({'error': 'Could not update progress'}), 500
+
+    return jsonify({'progress': _serialize_progress(progress)}), 200
+
+
+# ---------------------------------------------------------------------------
+# Elena AI chat route
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/elena/chat', methods=['POST'])
+@require_auth
+def elena_chat():
+    """Proxy a chat message to Elena, the Ravlo AI lending assistant."""
+    user = request.current_user
+    data = request.get_json(silent=True) or {}
+    message = (data.get('message') or '').strip()
+    history = data.get('history', [])  # list of {role, content}
+
+    if not message:
+        return jsonify({'error': 'Message is required'}), 400
+
+    try:
+        import anthropic
+    except ImportError:
+        return jsonify({'error': 'Anthropic library not available'}), 500
+
+    first_name = getattr(user, 'first_name', '') or 'there'
+    role = getattr(user, 'role', 'borrower')
+
+    system_prompt = (
+        f"You are Elena, Ravlo's expert AI lending assistant. "
+        f"You are speaking with {first_name}, whose role is {role}. "
+        f"You specialize in real estate lending, loan origination, underwriting guidelines, "
+        f"investment analysis, and mortgage products. "
+        f"Be concise, professional, and friendly. "
+        f"Always provide actionable, accurate information. "
+        f"If you don't know something, say so clearly rather than guessing."
+    )
+
+    messages = []
+    for entry in history:
+        entry_role = entry.get('role', '')
+        entry_content = entry.get('content', '')
+        if entry_role in ('user', 'assistant') and entry_content:
+            messages.append({'role': entry_role, 'content': entry_content})
+    messages.append({'role': 'user', 'content': message})
+
+    try:
+        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+        response = client.messages.create(
+            model='claude-opus-4-7',
+            max_tokens=1024,
+            system=system_prompt,
+            messages=messages,
+        )
+        reply = response.content[0].text if response.content else ''
+    except Exception as exc:
+        current_app.logger.error('elena_chat error: %s', exc)
+        return jsonify({'error': 'Elena is temporarily unavailable. Please try again.'}), 500
+
+    return jsonify({'reply': reply, 'role': 'assistant'}), 200
