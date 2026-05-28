@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Ravlo Investor",
+    "slug": "ravlo-investor",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": { "backgroundColor": "#0C1116" },
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.ravlo.investor" },
+    "android": { "package": "com.ravlo.investor", "adaptiveIcon": { "backgroundColor": "#0C1116" } },
+    "plugins": [
+      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#3A5C7A" }]
+    ]
+  }
+}

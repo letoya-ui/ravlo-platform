@@ -1,0 +1,145 @@
+name: Ravlo Mobile — EAS Build
+
+on:
+  # Auto-build preview on pushes to the mobile apps
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+
+  # Manual trigger: choose app + profile
+  workflow_dispatch:
+    inputs:
+      app:
+        description: App to build
+        required: true
+        type: choice
+        options:
+          - all
+          - ravlo-lending
+          - ravlo-investor
+          - ravlo-academy
+        default: all
+      profile:
+        description: Build profile
+        required: true
+        type: choice
+        options:
+          - preview
+          - production
+        default: preview
+      platform:
+        description: Platform
+        required: true
+        type: choice
+        options:
+          - all
+          - ios
+          - android
+        default: all
+
+env:
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  EXPO_PUBLIC_API_URL: ${{ secrets.RAVLO_API_URL }}
+
+jobs:
+  build:
+    name: Build ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [ravlo-lending, ravlo-investor, ravlo-academy]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Skip if not selected
+        if: |
+          github.event_name == 'workflow_dispatch' &&
+          inputs.app != 'all' &&
+          inputs.app != matrix.app
+        run: echo "Skipping ${{ matrix.app }}" && exit 0
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/${{ matrix.app }}/package-lock.json
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli@latest
+
+      - name: Install dependencies
+        working-directory: mobile/${{ matrix.app }}
+        run: npm ci
+
+      - name: Set EAS project env vars
+        working-directory: mobile/${{ matrix.app }}
+        run: |
+          case "${{ matrix.app }}" in
+            ravlo-lending)  echo "EAS_PROJECT_ID_LENDING=${{ secrets.EAS_PROJECT_ID_LENDING }}"   >> $GITHUB_ENV ;;
+            ravlo-investor) echo "EAS_PROJECT_ID_INVESTOR=${{ secrets.EAS_PROJECT_ID_INVESTOR }}" >> $GITHUB_ENV ;;
+            ravlo-academy)  echo "EAS_PROJECT_ID_ACADEMY=${{ secrets.EAS_PROJECT_ID_ACADEMY }}"   >> $GITHUB_ENV ;;
+          esac
+
+      - name: EAS Build (preview)
+        if: github.event_name == 'push' || inputs.profile == 'preview'
+        working-directory: mobile/${{ matrix.app }}
+        run: |
+          eas build \
+            --profile preview \
+            --platform ${{ inputs.platform || 'all' }} \
+            --non-interactive \
+            --no-wait
+
+      - name: EAS Build (production)
+        if: github.event_name == 'workflow_dispatch' && inputs.profile == 'production'
+        working-directory: mobile/${{ matrix.app }}
+        run: |
+          eas build \
+            --profile production \
+            --platform ${{ inputs.platform }} \
+            --non-interactive \
+            --no-wait
+
+  submit:
+    name: Submit ${{ matrix.app }} to stores
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.profile == 'production'
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [ravlo-lending, ravlo-investor, ravlo-academy]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Skip if not selected
+        if: inputs.app != 'all' && inputs.app != matrix.app
+        run: echo "Skipping ${{ matrix.app }}" && exit 0
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli@latest
+
+      - name: EAS Submit
+        working-directory: mobile/${{ matrix.app }}
+        run: |
+          eas submit \
+            --profile production \
+            --platform ${{ inputs.platform }} \
+            --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_PROJECT_ID_LENDING: ${{ secrets.EAS_PROJECT_ID_LENDING }}
+          EAS_PROJECT_ID_INVESTOR: ${{ secrets.EAS_PROJECT_ID_INVESTOR }}
+          EAS_PROJECT_ID_ACADEMY: ${{ secrets.EAS_PROJECT_ID_ACADEMY }}
