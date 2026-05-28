@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Ravlo Academy",
+    "slug": "ravlo-academy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": { "backgroundColor": "#0C1116" },
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.ravlo.academy" },
+    "android": { "package": "com.ravlo.academy", "adaptiveIcon": { "backgroundColor": "#0C1116" } }
+  }
+}
