@@ -9,7 +9,8 @@
     "ios": { "supportsTablet": true, "bundleIdentifier": "com.ravlo.lending" },
     "android": { "package": "com.ravlo.lending", "adaptiveIcon": { "backgroundColor": "#0C1116" } },
     "plugins": [
-      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#3A5C7A" }],
+      "expo-secure-store",
+      ["expo-notifications", { "color": "#3A5C7A" }],
       ["expo-image-picker", { "cameraPermission": "Ravlo needs camera access to photograph loan documents." }]
     ]
   }
