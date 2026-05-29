@@ -1,19 +1,25 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { api } from './api';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+const isExpoGo = Constants.appOwnership === 'expo';
+
+if (!isExpoGo) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 export async function registerForPushNotifications(
   appName: 'lending' | 'investor' | 'academy'
 ): Promise<string | null> {
+  if (isExpoGo) return null;
   if (!Device.isDevice) return null;
 
   try {
@@ -58,6 +64,7 @@ export function useNotificationListeners(
   onNotification: (n: Notifications.Notification) => void,
   onResponse: (r: Notifications.NotificationResponse) => void
 ): () => void {
+  if (isExpoGo) return () => {};
   const notifSub = Notifications.addNotificationReceivedListener(onNotification);
   const responseSub = Notifications.addNotificationResponseReceivedListener(onResponse);
   return () => {
