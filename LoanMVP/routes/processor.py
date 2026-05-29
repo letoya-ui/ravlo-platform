@@ -635,7 +635,8 @@ def documents():
     return render_template("processor/documents.html", documents=docs, title="Documents Pipeline")
 
 @processor_bp.route("/request-doc/<int:loan_id>", methods=["GET", "POST"])
-def request_document(loan_id):
+@login_required
+@role_required("processor")
     loan = LoanApplication.query.get_or_404(loan_id)
 
     if request.method == "POST":
@@ -660,7 +661,8 @@ def request_document(loan_id):
     return render_template("processor/request_doc.html", loan=loan)
 
 @processor_bp.route("/add-note/<int:loan_id>", methods=["GET", "POST"])
-@csrf.exempt
+@login_required
+@role_required("processor")
 def add_processor_note(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
 
@@ -682,7 +684,8 @@ def add_processor_note(loan_id):
     return render_template("processor/add_note.html", loan=loan)
 
 @processor_bp.route("/update-status/<int:loan_id>", methods=["GET", "POST"])
-@csrf.exempt
+@login_required
+@role_required("processor")
 def update_loan_status(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
 
@@ -700,6 +703,8 @@ def update_loan_status(loan_id):
     return render_template("processor/update_status.html", loan=loan, statuses=statuses)
 
 @processor_bp.route("/assign/<int:loan_id>", methods=["GET", "POST"])
+@login_required
+@role_required("processor")
 def assign_loan(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
     users = User.query.all()
@@ -716,6 +721,8 @@ def assign_loan(loan_id):
     return render_template("processor/assign_loan.html", loan=loan, users=users)
 
 @processor_bp.route("/submit-underwriter/<int:loan_id>")
+@login_required
+@role_required("processor")
 def submit_underwriter(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
 

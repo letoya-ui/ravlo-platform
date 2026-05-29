@@ -767,8 +767,7 @@ def listing():
         partner.specialty = request.form.get("specialty")
         partner.service_area = request.form.get("service_area")
         partner.logo_url = request.form.get("logo_url")
-        partner.featured = "featured" in request.form
-        partner.subscription_tier = request.form.get("subscription_tier")
+        # subscription_tier and featured are billing/admin fields — never accept from user input
 
         db.session.commit()
         flash("Your marketplace listing has been updated.", "success")

@@ -579,9 +579,9 @@ def post_login_redirect():
     if role == "investor" and getattr(current_user, "subscription", "free") == "free":
         return redirect(url_for("investor.choose_plan"))
 
-    # 👇 only allow next for non-admin users
+    # Safe redirect: reject protocol-relative URLs like //evil.com
     next_page = (request.args.get("next") or "").strip()
-    if next_page.startswith("/"):
+    if next_page.startswith("/") and not next_page.startswith("//"):
         return redirect(next_page)
 
     return redirect(url_for(_dashboard_for_role(role)))
@@ -637,8 +637,7 @@ def register_borrower():
         db.session.add(user)
         db.session.commit()
 
-        session.permanent = True
-        login_user(user, remember=True)
+        login_user(user)
 
         flash("Borrower account created successfully.", "success")
         return redirect(url_for("borrower.create_profile"))

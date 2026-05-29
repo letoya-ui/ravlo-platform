@@ -23,7 +23,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask_cors import CORS
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
-from flask_login import LoginManager, current_user
+from flask_login import LoginManager, current_user, login_required
 from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -369,6 +369,7 @@ def create_app():
         return render_template("dashboard.html", dashboards=dashboards)
 
     @app.route("/dashboard-index")
+    @login_required
     def index():
         dashboards = [
             # User-facing
@@ -403,6 +404,7 @@ def create_app():
     
 
     @app.route("/api/property/resolve", methods=["POST"])
+    @login_required
     def api_resolve_property():
         payload = request.get_json() or {}
         address = payload.get("address")
