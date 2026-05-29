@@ -3,10 +3,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ display_name }} — Orange County Real Estate Expert</title>
-  <meta name="description" content="{{ bio[:160] if bio else display_name ~ ' — Your trusted Orange County real estate partner. Buying, selling, and investing in OC.' }}">
-  <meta property="og:title" content="{{ display_name }} — OC Real Estate">
-  <meta property="og:description" content="{{ headline }}">
+
+  <!-- ═══ PRIMARY SEO ═══════════════════════════════════════════════ -->
+  {% set _desc = (bio[:155] ~ '…') if bio|length > 155 else (bio if bio else display_name ~ ' — Your trusted Orange County, NY real estate partner. Buying, selling, and investing in Orange County, New York.') %}
+  <title>{{ display_name }} — Orange County NY Real Estate Expert</title>
+  <meta name="description"        content="{{ _desc }}">
+  <meta name="keywords"           content="Orange County NY real estate, Orange County New York homes for sale, {{ display_name }}, realtor Orange County NY, buy home Orange County NY, sell home Middletown NY, Newburgh NY real estate">
+  <meta name="robots"             content="index, follow">
+  <meta name="author"             content="{{ display_name }}">
+  <link rel="canonical"           href="{{ canonical_url }}">
+
+  <!-- ═══ OPEN GRAPH (Facebook / LinkedIn / iMessage) ══════════════ -->
+  <meta property="og:type"        content="website">
+  <meta property="og:url"         content="{{ canonical_url }}">
+  <meta property="og:title"       content="{{ display_name }} — Orange County NY Real Estate Expert">
+  <meta property="og:description" content="{{ _desc }}">
+  <meta property="og:locale"      content="en_US">
+  {% if profile_image_url %}
+  <meta property="og:image"       content="{{ profile_image_url }}">
+  <meta property="og:image:alt"   content="{{ display_name }} — Orange County NY Realtor">
+  {% elif logo_url %}
+  <meta property="og:image"       content="{{ logo_url }}">
+  {% endif %}
+
+  <!-- ═══ TWITTER CARD ══════════════════════════════════════════════ -->
+  <meta name="twitter:card"        content="summary_large_image">
+  <meta name="twitter:title"       content="{{ display_name }} — Orange County NY Real Estate">
+  <meta name="twitter:description" content="{{ _desc }}">
+  {% if profile_image_url %}
+  <meta name="twitter:image"       content="{{ profile_image_url }}">
+  {% endif %}
+
+  <!-- ═══ GOOGLE SITE VERIFICATION ══════════════════════════════════ -->
+  {% if gsc_verification_code %}
+  <meta name="google-site-verification" content="{{ gsc_verification_code }}">
+  {% endif %}
+
+  <!-- ═══ JSON-LD STRUCTURED DATA ═══════════════════════════════════ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": ["RealEstateAgent", "LocalBusiness"],
+    "name": "{{ display_name | e }}",
+    "description": "{{ _desc | e }}",
+    "url": "{{ canonical_url }}",
+    {% if phone %}"telephone": "{{ phone | e }}",{% endif %}
+    {% if email %}"email": "{{ email | e }}",{% endif %}
+    {% if profile_image_url %}"image": "{{ profile_image_url | e }}",{% endif %}
+    "areaServed": {
+      "@type": "AdministrativeArea",
+      "name": "{{ (service_area or 'Orange County, NY') | e }}"
+    },
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Orange County",
+      "addressRegion": "NY",
+      "addressCountry": "US"
+    },
+    {% if specialties %}"knowsAbout": "{{ specialties | e }}",{% endif %}
+    "priceRange": "$$$$",
+    "openingHoursSpecification": {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+      "opens": "08:00",
+      "closes": "20:00"
+    },
+    "sameAs": [
+      {% if website %}"{{ website | e }}"{% endif %}
+    ]
+  }
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
@@ -14,7 +80,7 @@
 
   <style>
     /* ================================================================
-       BONNIE SELLS OC HOMES — White-Label Site
+       BONNIE SELLS OC HOMES — White-Label Site (Orange County, NY)
        Design: premium dark navy × champagne gold
     ================================================================ */
 
@@ -865,6 +931,17 @@
       }
     }
   </style>
+
+  <!-- ═══ GOOGLE ANALYTICS 4 ════════════════════════════════════════ -->
+  {% if ga_measurement_id %}
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '{{ ga_measurement_id }}');
+  </script>
+  {% endif %}
 </head>
 
 <body>
@@ -886,7 +963,7 @@
       {% endif %}
       <div class="bn-brand-copy">
         <div class="bn-brand-name">{{ display_name }}</div>
-        <div class="bn-brand-tag">Orange County Real Estate</div>
+        <div class="bn-brand-tag">Orange County, NY Real Estate</div>
       </div>
     </a>
 
@@ -940,7 +1017,7 @@
 
   <div class="bn-eyebrow">
     <i class="lucide lucide-star" style="font-size:.7rem;"></i>
-    {% if service_area %}{{ service_area }}{% else %}Orange County, CA{% endif %} Expert
+    {% if service_area %}{{ service_area }}{% else %}Orange County, NY{% endif %} Expert
   </div>
 
   <h1>
@@ -985,7 +1062,7 @@
   <!-- Stats strip -->
   <div class="bn-stats">
     <div class="bn-stat">
-      <strong>OC</strong>
+      <strong>NY</strong>
       <span>Local Expert</span>
     </div>
     <div class="bn-stat">
@@ -1164,7 +1241,7 @@
       <div class="bn-form-row">
         <div class="bn-form-group">
           <label>Preferred Area(s)</label>
-          <input name="preferred_areas" placeholder="e.g. Irvine, Newport Beach">
+          <input name="preferred_areas" placeholder="e.g. Middletown, Newburgh, Warwick">
         </div>
         <div class="bn-form-group">
           <label>Budget Range</label>
@@ -1194,7 +1271,7 @@
   <div>
     &copy; {{ display_name }}
     {% if profile.business_name %} &middot; {{ profile.business_name }}{% endif %}
-    &middot; Orange County Real Estate
+    &middot; Orange County, NY Real Estate
   </div>
   <div class="bn-footer-links">
     {% if phone %}<a href="tel:{{ phone }}">{{ phone }}</a>{% endif %}

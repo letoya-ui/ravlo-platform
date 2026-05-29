@@ -14,7 +14,7 @@ dedicated template for a fully branded website experience.
 import json
 from datetime import datetime
 
-from flask import Blueprint, render_template, request, abort, flash, redirect, url_for
+from flask import Blueprint, render_template, request, abort, flash, redirect, url_for, Response
 from sqlalchemy import func
 
 from LoanMVP.extensions import db, csrf
@@ -65,6 +65,9 @@ def _load_realtor_context(slug):
         .all()
     )
 
+    # Build the canonical public URL for this realtor page.
+    canonical_url = request.url_root.rstrip("/") + f"/p/{profile.public_slug}"
+
     return {
         "profile": profile,
         "user": user,
@@ -82,6 +85,10 @@ def _load_realtor_context(slug):
         "email": user.email if user else "",
         "phone": partner.phone if partner else "",
         "website": partner.website if partner else "",
+        # SEO / Analytics
+        "canonical_url": canonical_url,
+        "gsc_verification_code": getattr(profile, "gsc_verification_code", None) or "",
+        "ga_measurement_id": getattr(profile, "ga_measurement_id", None) or "",
     }
 
 
@@ -174,3 +181,39 @@ def realtor_lead_capture(slug):
         submitted=True,
         submitted_name=client_name,
     )
+
+
+# ── Per-realtor sitemap ────────────────────────────────────────────────────────
+
+@public_pages_bp.route("/<slug>/sitemap.xml", methods=["GET"])
+def realtor_sitemap(slug):
+    """Generate a sitemap.xml for a realtor's public page.
+
+    Tells Google exactly which URLs to index for this realtor.
+    Currently lists the main landing page; will automatically grow
+    when blog posts are added in Track 5.
+    """
+    profile = VIPProfile.query.filter(
+        func.lower(VIPProfile.public_slug) == slug.lower(),
+        VIPProfile.role_type.in_(["realtor", "contractor_realtor", "insurance_realtor"]),
+        VIPProfile.marketplace_enabled == "yes",
+    ).first()
+
+    if not profile:
+        abort(404)
+
+    base = request.url_root.rstrip("/")
+    page_url = f"{base}/p/{profile.public_slug}"
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>{page_url}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>"""
+
+    return Response(xml.strip(), mimetype="application/xml")
