@@ -1,7 +1,7 @@
 """
 Create Bonnie's VIP Realtor account.
 
-    python -m LoanMVP.create_bonnie_realtor
+    python -m LoanMVP.create_bonnie_realtor --password <choose-a-password>
 
 What this script creates:
   - User            role=partner, email=Bonniesellsochomes@gmail.com
@@ -12,6 +12,7 @@ What this script creates:
 Safe to run multiple times — existing records are updated in place.
 """
 
+import argparse
 import json
 import os
 from datetime import datetime, timedelta
@@ -25,10 +26,9 @@ from LoanMVP.models.vip_models import VIPProfile
 EMAIL      = "Bonniesellsochomes@gmail.com"
 FIRST_NAME = "Bonnie"
 LAST_NAME  = ""
-PASSWORD   = "TempPass123!"
 
 
-def create_bonnie_realtor():
+def create_bonnie_realtor(password: str):
     with app.app_context():
         # -- 1. User -------------------------------------------------------
         user = User.query.filter(
@@ -48,7 +48,7 @@ def create_bonnie_realtor():
                 onboarding_complete=True,
                 subscription="pro",
             )
-            user.set_password(PASSWORD)
+            user.set_password(password)
             db.session.add(user)
             db.session.flush()
             created_user = True
@@ -58,7 +58,7 @@ def create_bonnie_realtor():
             user.first_name = FIRST_NAME
             user.subscription = "pro"
             if not user.password_hash:
-                user.set_password(PASSWORD)
+                user.set_password(password)
 
         # -- 2. Partner ----------------------------------------------------
         partner = Partner.query.filter_by(user_id=user.id).first()
@@ -128,7 +128,7 @@ def create_bonnie_realtor():
         print("  Bonnie — VIP Realtor Account")
         print("=" * 55)
         print(f"  Email    : {EMAIL}")
-        print(f"  Password : {PASSWORD}")
+        print(f"  Password : {'*' * len(password)}")
         print(f"  Role     : partner  (VIP Premium tier)")
         print(f"  VIP type : realtor")
         print(f"  User     : {'created' if created_user   else 'updated'} (id={user.id})")
@@ -143,4 +143,19 @@ def create_bonnie_realtor():
 
 
 if __name__ == "__main__":
-    create_bonnie_realtor()
+    parser = argparse.ArgumentParser(
+        description="Create Bonnie's VIP Realtor account.",
+    )
+    parser.add_argument(
+        "--password",
+        default=os.environ.get("BONNIE_REALTOR_PASSWORD", ""),
+        help="Login password (or set BONNIE_REALTOR_PASSWORD env var)",
+    )
+    args = parser.parse_args()
+
+    if not args.password:
+        parser.error(
+            "Password is required. Pass --password <pw> or set BONNIE_REALTOR_PASSWORD."
+        )
+
+    create_bonnie_realtor(args.password)
