@@ -16,7 +16,7 @@ import DashboardScreen from './src/screens/DashboardScreen';
 import LoanListScreen from './src/screens/LoanListScreen';
 import LoanDetailScreen from './src/screens/LoanDetailScreen';
 import DocumentUploadScreen from './src/screens/documents/DocumentUploadScreen';
-import ElenaScreen from './src/screens/ElenaScreen';
+import RavloAIScreen from './src/screens/ElenaScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 
@@ -46,7 +46,7 @@ function MainTabs() {
           let iconName: keyof typeof Ionicons.glyphMap = 'grid-outline';
           if (route.name === 'Dashboard') iconName = 'grid-outline';
           else if (route.name === 'Loans') iconName = 'documents-outline';
-          else if (route.name === 'Elena') iconName = 'sparkles-outline';
+          else if (route.name === 'RavloAI') iconName = 'sparkles-outline';
           else if (route.name === 'Profile') iconName = 'person-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -54,7 +54,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Loans" component={LoanNavigator} />
-      <Tab.Screen name="Elena" component={ElenaScreen} options={{ tabBarLabel: 'Elena AI' }} />
+      <Tab.Screen name="RavloAI" component={RavloAIScreen} options={{ tabBarLabel: 'Ravlo AI' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

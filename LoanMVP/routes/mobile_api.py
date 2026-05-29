@@ -107,7 +107,6 @@ def login():
     if user is None:
         return jsonify({'error': 'Invalid email or password'}), 401
 
-    # Support both check_password_hash helpers and Werkzeug's method
     try:
         check_fn = getattr(user, 'check_password', None)
         if check_fn is not None:
@@ -184,7 +183,6 @@ def list_loans():
 
     try:
         if role == 'borrower':
-            # Borrowers only see their own loans
             borrower_id_col = getattr(Loan, 'borrower_id', None)
             if borrower_id_col is not None:
                 loans = Loan.query.filter_by(borrower_id=user.id).all()
@@ -204,7 +202,6 @@ def list_loans():
 @mobile_api.route('/lending/loans/<int:loan_id>', methods=['GET'])
 @require_auth
 def loan_detail(loan_id):
-    """Return a single loan's details."""
     try:
         from LoanMVP.models import Loan
     except ImportError:
@@ -225,7 +222,6 @@ def loan_detail(loan_id):
 @mobile_api.route('/lending/pipeline/summary', methods=['GET'])
 @require_auth
 def pipeline_summary():
-    """Return aggregate pipeline stats."""
     try:
         from LoanMVP.models import Loan
         from sqlalchemy import func
@@ -268,7 +264,6 @@ def _serialize_deal(deal) -> dict:
 @mobile_api.route('/investor/dashboard', methods=['GET'])
 @require_auth
 def investor_dashboard():
-    """Return investor portfolio statistics."""
     user = request.current_user
 
     try:
@@ -310,7 +305,6 @@ def investor_dashboard():
 @mobile_api.route('/investor/deals', methods=['GET'])
 @require_auth
 def investor_deals():
-    """Return deals visible to the current investor."""
     user = request.current_user
 
     try:
@@ -334,7 +328,6 @@ def investor_deals():
 @mobile_api.route('/investor/deals/<int:deal_id>', methods=['GET'])
 @require_auth
 def deal_detail(deal_id):
-    """Return a single deal's details."""
     try:
         from LoanMVP.models import Deal
     except ImportError:
@@ -370,7 +363,6 @@ def _serialize_referral(referral) -> dict:
 @mobile_api.route('/partner/referrals', methods=['GET'])
 @require_auth
 def partner_referrals():
-    """Return referrals submitted by the current partner."""
     user = request.current_user
 
     try:
@@ -428,7 +420,6 @@ def _serialize_progress(progress) -> dict:
 @mobile_api.route('/academy/courses', methods=['GET'])
 @require_auth
 def list_courses():
-    """Return available academy courses."""
     try:
         from LoanMVP.models import Course
     except ImportError:
@@ -450,7 +441,6 @@ def list_courses():
 @mobile_api.route('/academy/courses/<int:course_id>', methods=['GET'])
 @require_auth
 def course_detail(course_id):
-    """Return a single course's details."""
     try:
         from LoanMVP.models import Course
     except ImportError:
@@ -471,7 +461,6 @@ def course_detail(course_id):
 @mobile_api.route('/academy/progress', methods=['GET'])
 @require_auth
 def get_progress():
-    """Return the current user's course progress."""
     user = request.current_user
 
     try:
@@ -503,7 +492,6 @@ def get_progress():
 @mobile_api.route('/academy/progress/<int:course_id>', methods=['POST'])
 @require_auth
 def update_progress(course_id):
-    """Create or update progress for a course."""
     user = request.current_user
     data = request.get_json(silent=True) or {}
     percent_complete = float(data.get('percent_complete', 0) or 0)
@@ -552,17 +540,17 @@ def update_progress(course_id):
 
 
 # ---------------------------------------------------------------------------
-# Elena AI chat route
+# Ravlo AI chat route (mobile/ai/chat)
 # ---------------------------------------------------------------------------
 
-@mobile_api.route('/elena/chat', methods=['POST'])
+@mobile_api.route('/ai/chat', methods=['POST'])
 @require_auth
-def elena_chat():
-    """Proxy a chat message to Elena, the Ravlo AI lending assistant."""
+def ai_chat():
+    """Chat with Ravlo AI, the intelligent lending assistant."""
     user = request.current_user
     data = request.get_json(silent=True) or {}
     message = (data.get('message') or '').strip()
-    history = data.get('history', [])  # list of {role, content}
+    history = data.get('history', [])
 
     if not message:
         return jsonify({'error': 'Message is required'}), 400
@@ -570,13 +558,13 @@ def elena_chat():
     try:
         import anthropic
     except ImportError:
-        return jsonify({'error': 'Anthropic library not available'}), 500
+        return jsonify({'error': 'AI service not available'}), 500
 
     first_name = getattr(user, 'first_name', '') or 'there'
     role = getattr(user, 'role', 'borrower')
 
     system_prompt = (
-        f"You are Elena, Ravlo's expert AI lending assistant. "
+        f"You are Ravlo AI, an intelligent assistant for the Ravlo lending and real estate platform. "
         f"You are speaking with {first_name}, whose role is {role}. "
         f"You specialize in real estate lending, loan origination, underwriting guidelines, "
         f"investment analysis, and mortgage products. "
@@ -603,8 +591,8 @@ def elena_chat():
         )
         reply = response.content[0].text if response.content else ''
     except Exception as exc:
-        current_app.logger.error('elena_chat error: %s', exc)
-        return jsonify({'error': 'Elena is temporarily unavailable. Please try again.'}), 500
+        current_app.logger.error('ai_chat error: %s', exc)
+        return jsonify({'error': 'Ravlo AI is temporarily unavailable. Please try again.'}), 500
 
     return jsonify({'reply': reply, 'role': 'assistant'}), 200
 
@@ -626,13 +614,11 @@ def register_push_token(current_user=None):
         return jsonify({'error': 'push_token required'}), 400
 
     try:
-        # Store on user model if field exists, otherwise just acknowledge
         if hasattr(current_user, 'push_token'):
             current_user.push_token = push_token
             from LoanMVP.extensions import db
             db.session.commit()
         else:
-            # Log for now - a migration can add this column later
             current_app.logger.info(
                 f"Push token registered: user={current_user.id} app={app_name} platform={platform}"
             )
@@ -678,14 +664,12 @@ def upload_document(current_user=None):
             s3.upload_fileobj(file, s3_bucket, key, ExtraArgs={'ContentType': file.content_type})
             file_url = f"https://{s3_bucket}.s3.amazonaws.com/{key}"
         else:
-            # Local fallback: save to uploads dir
             upload_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads', 'mobile', str(loan_id))
             os.makedirs(upload_dir, exist_ok=True)
             local_path = os.path.join(upload_dir, f"{uuid.uuid4()}_{filename}")
             file.save(local_path)
             file_url = f"/uploads/mobile/{loan_id}/{os.path.basename(local_path)}"
 
-        # Try to create a document record
         try:
             from LoanMVP.models.document_models import LoanDocument
             from LoanMVP.extensions import db
