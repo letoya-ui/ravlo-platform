@@ -51,9 +51,10 @@ class VIPProfile(VIPBaseModel):
     profile_image_url = Column(String(500), nullable=True)
     cover_image_url   = Column(String(500), nullable=True)
 
-    # Analytics / Search Console
-    ga_measurement_id    = Column(String(50),  nullable=True)
+    # Analytics / Search Console / Custom Domain
+    ga_measurement_id     = Column(String(50),  nullable=True)
     gsc_verification_code = Column(String(100), nullable=True)
+    custom_domain         = Column(String(255), nullable=True)
 
     # ── External LO fields ───────────────────────────────────
     lo_is_external          = Column(Boolean, default=False, nullable=False)
@@ -88,6 +89,20 @@ class VIPProfile(VIPBaseModel):
         back_populates="vip_profile",
         lazy=True,
         order_by="VIPClientSession.created_at.desc()",
+    )
+
+    testimonials = relationship(
+        "VIPTestimonial",
+        back_populates="vip_profile",
+        lazy=True,
+        order_by="VIPTestimonial.display_order.asc()",
+    )
+
+    blog_posts = relationship(
+        "VIPBlogPost",
+        back_populates="vip_profile",
+        lazy=True,
+        order_by="VIPBlogPost.published_at.desc()",
     )
 
     def __repr__(self):
@@ -407,3 +422,46 @@ class VIPClientSession(VIPBaseModel):
 
     def __repr__(self):
         return f"<VIPClientSession {self.id} - {self.property_address}>"
+
+
+# ---------------------------------------------------------
+# TESTIMONIALS
+# ---------------------------------------------------------
+class VIPTestimonial(VIPBaseModel):
+    __tablename__ = "vip_testimonials"
+
+    vip_profile_id = Column(Integer, ForeignKey("vip_profiles.id"), nullable=False)
+
+    reviewer_name  = Column(String(255), nullable=False)
+    reviewer_title = Column(String(255), nullable=True)
+    body           = Column(Text,        nullable=False)
+    rating         = Column(Integer,     nullable=True, default=5)
+    display_order  = Column(Integer,     nullable=False, default=0)
+    approved       = Column(Boolean,     nullable=False, default=True)
+
+    vip_profile = relationship("VIPProfile", back_populates="testimonials")
+
+    def __repr__(self):
+        return f"<VIPTestimonial {self.id} - {self.reviewer_name}>"
+
+
+# ---------------------------------------------------------
+# BLOG POSTS
+# ---------------------------------------------------------
+class VIPBlogPost(VIPBaseModel):
+    __tablename__ = "vip_blog_posts"
+
+    vip_profile_id  = Column(Integer, ForeignKey("vip_profiles.id"), nullable=False)
+
+    title           = Column(String(255), nullable=False)
+    slug            = Column(String(255), nullable=False)
+    summary         = Column(String(500), nullable=True)
+    body            = Column(Text,        nullable=True)
+    cover_image_url = Column(String(500), nullable=True)
+    is_published    = Column(Boolean,     nullable=False, default=False)
+    published_at    = Column(DateTime,    nullable=True)
+
+    vip_profile = relationship("VIPProfile", back_populates="blog_posts")
+
+    def __repr__(self):
+        return f"<VIPBlogPost {self.id} - {self.slug}>"
