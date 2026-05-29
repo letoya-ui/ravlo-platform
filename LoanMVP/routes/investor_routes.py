@@ -1753,8 +1753,8 @@ def create_profile():
 
         db.session.commit()
 
-        flash("Investor profile saved successfully!", "success")
-        return redirect(url_for("investor.command_center"))
+        flash("Profile saved! Choose your plan to activate your investor workspace.", "success")
+        return redirect(url_for("investor.choose_plan"))
 
     return render_template(
         "investor/create_profile.html",
@@ -15013,6 +15013,58 @@ def payments():
         payments=payments,
         title="Billing",
         active_tab="billing"
+    )
+
+
+@investor_bp.route("/choose-plan", methods=["GET", "POST"])
+@login_required
+@role_required("investor")
+def choose_plan():
+    """Onboarding subscription selection — shown after profile creation and for any investor
+    whose plan has never been explicitly set (DB subscription == 'free' default)."""
+    if request.method == "POST":
+        selected = (request.form.get("plan") or "Core").strip().title()
+        if selected not in _subscription_catalog():
+            selected = "Core"
+
+        if selected == "Core":
+            current_user.subscription_plan = "Core"
+            _sync_investor_subscription_record(current_user)
+            try:
+                from LoanMVP.services.subscriptions import sync_features_with_subscription
+                sync_features_with_subscription(current_user.id)
+            except Exception:
+                current_app.logger.exception("choose_plan Core sync failed")
+            db.session.commit()
+            flash("You're on the Core plan. Upgrade anytime from your subscription page.", "info")
+            return redirect(url_for("investor.command_center"))
+
+        # Paid plan selected
+        if current_app.config.get("STRIPE_BILLING_ENABLED", False):
+            try:
+                return _create_investor_subscription_checkout(selected, cancel_endpoint="investor.choose_plan")
+            except Exception:
+                current_app.logger.exception("choose_plan Stripe checkout failed")
+                flash("Could not start checkout. Please try again.", "danger")
+                return redirect(url_for("investor.choose_plan"))
+
+        # Billing not yet live — activate plan directly
+        current_user.subscription_plan = selected
+        _sync_investor_subscription_record(current_user)
+        try:
+            from LoanMVP.services.subscriptions import sync_features_with_subscription
+            sync_features_with_subscription(current_user.id)
+        except Exception:
+            current_app.logger.exception("choose_plan paid sync failed")
+        db.session.commit()
+        flash(f"Welcome to {selected}! Your plan is now active.", "success")
+        return redirect(url_for("investor.command_center"))
+
+    return render_template(
+        "investor/choose_plan.html",
+        subscription_catalog=_subscription_catalog(),
+        billing_enabled=current_app.config.get("STRIPE_BILLING_ENABLED", False),
+        title="Choose Your Plan",
     )
 
 
