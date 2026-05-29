@@ -158,7 +158,10 @@ class User(UserMixin, db.Model):
         labels = {
             "free": "Core",
             "core": "Core",
-            "pro": "Pro",
+            "explorer": "Core",
+            "operator": "Operator",
+            "pro": "Operator",
+            "premium": "Operator",
             "enterprise": "Enterprise",
         }
         return labels.get(tier, tier.title() if tier else "Core")
@@ -170,9 +173,11 @@ class User(UserMixin, db.Model):
             "free": "core",
             "starter": "core",
             "individual": "core",
-            "team": "pro",
-            "premium": "pro",
-            "active": "pro",
+            "explorer": "core",
+            "pro": "operator",
+            "team": "operator",
+            "premium": "operator",
+            "active": "operator",
         }
         self.subscription = alias_map.get(normalized, normalized or "core")
 
