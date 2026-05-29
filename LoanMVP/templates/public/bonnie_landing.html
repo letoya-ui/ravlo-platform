@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- ═══ PRIMARY SEO ═══════════════════════════════════════════════ -->
-  {% set _desc = (bio[:155] ~ '…') if bio|length > 155 else (bio if bio else display_name ~ ' — Your trusted Orange County real estate partner. Buying, selling, and investing in OC.') %}
-  <title>{{ display_name }} — Orange County Real Estate Expert</title>
+  {% set _desc = (bio[:155] ~ '…') if bio|length > 155 else (bio if bio else display_name ~ ' — Your trusted Orange County, NY real estate partner. Buying, selling, and investing in Orange County, New York.') %}
+  <title>{{ display_name }} — Orange County NY Real Estate Expert</title>
   <meta name="description"        content="{{ _desc }}">
-  <meta name="keywords"           content="Orange County real estate, OC homes for sale, {{ display_name }}, realtor Orange County, buy home OC, sell home OC">
+  <meta name="keywords"           content="Orange County NY real estate, Orange County New York homes for sale, {{ display_name }}, realtor Orange County NY, buy home Orange County NY, sell home Middletown NY, Newburgh NY real estate">
   <meta name="robots"             content="index, follow">
   <meta name="author"             content="{{ display_name }}">
   <link rel="canonical"           href="{{ canonical_url }}">
@@ -16,19 +16,19 @@
   <!-- ═══ OPEN GRAPH (Facebook / LinkedIn / iMessage) ══════════════ -->
   <meta property="og:type"        content="website">
   <meta property="og:url"         content="{{ canonical_url }}">
-  <meta property="og:title"       content="{{ display_name }} — Orange County Real Estate Expert">
+  <meta property="og:title"       content="{{ display_name }} — Orange County NY Real Estate Expert">
   <meta property="og:description" content="{{ _desc }}">
   <meta property="og:locale"      content="en_US">
   {% if profile_image_url %}
   <meta property="og:image"       content="{{ profile_image_url }}">
-  <meta property="og:image:alt"   content="{{ display_name }} — OC Realtor">
+  <meta property="og:image:alt"   content="{{ display_name }} — Orange County NY Realtor">
   {% elif logo_url %}
   <meta property="og:image"       content="{{ logo_url }}">
   {% endif %}
 
   <!-- ═══ TWITTER CARD ══════════════════════════════════════════════ -->
   <meta name="twitter:card"        content="summary_large_image">
-  <meta name="twitter:title"       content="{{ display_name }} — OC Real Estate">
+  <meta name="twitter:title"       content="{{ display_name }} — Orange County NY Real Estate">
   <meta name="twitter:description" content="{{ _desc }}">
   {% if profile_image_url %}
   <meta name="twitter:image"       content="{{ profile_image_url }}">
@@ -52,12 +52,12 @@
     {% if profile_image_url %}"image": "{{ profile_image_url | e }}",{% endif %}
     "areaServed": {
       "@type": "AdministrativeArea",
-      "name": "{{ (service_area or 'Orange County, CA') | e }}"
+      "name": "{{ (service_area or 'Orange County, NY') | e }}"
     },
     "address": {
       "@type": "PostalAddress",
       "addressLocality": "Orange County",
-      "addressRegion": "CA",
+      "addressRegion": "NY",
       "addressCountry": "US"
     },
     {% if specialties %}"knowsAbout": "{{ specialties | e }}",{% endif %}
@@ -80,7 +80,7 @@
 
   <style>
     /* ================================================================
-       BONNIE SELLS OC HOMES — White-Label Site
+       BONNIE SELLS OC HOMES — White-Label Site (Orange County, NY)
        Design: premium dark navy × champagne gold
     ================================================================ */
 
@@ -952,7 +952,7 @@
       {% endif %}
       <div class="bn-brand-copy">
         <div class="bn-brand-name">{{ display_name }}</div>
-        <div class="bn-brand-tag">Orange County Real Estate</div>
+        <div class="bn-brand-tag">Orange County, NY Real Estate</div>
       </div>
     </a>
 
@@ -1006,7 +1006,7 @@
 
   <div class="bn-eyebrow">
     <i class="lucide lucide-star" style="font-size:.7rem;"></i>
-    {% if service_area %}{{ service_area }}{% else %}Orange County, CA{% endif %} Expert
+    {% if service_area %}{{ service_area }}{% else %}Orange County, NY{% endif %} Expert
   </div>
 
   <h1>
@@ -1051,7 +1051,7 @@
   <!-- Stats strip -->
   <div class="bn-stats">
     <div class="bn-stat">
-      <strong>OC</strong>
+      <strong>NY</strong>
       <span>Local Expert</span>
     </div>
     <div class="bn-stat">
@@ -1230,7 +1230,7 @@
       <div class="bn-form-row">
         <div class="bn-form-group">
           <label>Preferred Area(s)</label>
-          <input name="preferred_areas" placeholder="e.g. Irvine, Newport Beach">
+          <input name="preferred_areas" placeholder="e.g. Middletown, Newburgh, Warwick">
         </div>
         <div class="bn-form-group">
           <label>Budget Range</label>
@@ -1260,7 +1260,7 @@
   <div>
     &copy; {{ display_name }}
     {% if profile.business_name %} &middot; {{ profile.business_name }}{% endif %}
-    &middot; Orange County Real Estate
+    &middot; Orange County, NY Real Estate
   </div>
   <div class="bn-footer-links">
     {% if phone %}<a href="tel:{{ phone }}">{{ phone }}</a>{% endif %}

@@ -111,15 +111,15 @@ def create_bonnie_realtor(password: str):
                 assistant_name="Elena",
                 marketplace_enabled="yes",
                 public_slug="bonnie-sells-oc-homes",
-                headline="Your Orange County Real Estate Expert",
+                headline="Your Orange County NY Real Estate Expert",
                 bio=(
                     "With deep roots in Orange County and a passion for connecting "
                     "people with the right home, Bonnie brings a personal, "
                     "results-driven approach to every transaction. Whether you're "
-                    "buying your first home, selling, or investing across OC, "
+                    "buying your first home, selling, or investing across Orange County NY, "
                     "she's with you every step of the way."
                 ),
-                service_area="Orange County, CA",
+                service_area="Orange County, NY",
                 specialties="Residential • Buyers & Sellers • Investment",
                 brand_color="#C9A878",
                 enabled_modules=json.dumps([
@@ -137,9 +137,9 @@ def create_bonnie_realtor(password: str):
             if not vip.brand_color:
                 vip.brand_color = "#C9A878"
             if not vip.headline:
-                vip.headline = "Your Orange County Real Estate Expert"
+                vip.headline = "Your Orange County NY Real Estate Expert"
             if not vip.service_area:
-                vip.service_area = "Orange County, CA"
+                vip.service_area = "Orange County, NY"
 
         db.session.commit()
 
