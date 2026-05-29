@@ -1,26 +1,35 @@
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
 import Constants from 'expo-constants';
+import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { api } from './api';
 
 const isExpoGo = Constants.appOwnership === 'expo';
 
+// Use require() instead of import so the module only initialises when NOT in
+// Expo Go. Static imports always run module-level side effects immediately,
+// but expo-notifications throws during its own init in Expo Go SDK 53+.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let Notifications: any = null;
+
 if (!isExpoGo) {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-    }),
-  });
+  try {
+    Notifications = require('expo-notifications');
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  } catch {
+    // not available
+  }
 }
 
 export async function registerForPushNotifications(
   appName: 'lending' | 'investor' | 'academy'
 ): Promise<string | null> {
-  if (isExpoGo) return null;
-  if (!Device.isDevice) return null;
+  if (!Notifications || !Device.isDevice) return null;
 
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -61,10 +70,12 @@ export async function registerForPushNotifications(
 }
 
 export function useNotificationListeners(
-  onNotification: (n: Notifications.Notification) => void,
-  onResponse: (r: Notifications.NotificationResponse) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onNotification: (n: any) => void,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onResponse: (r: any) => void
 ): () => void {
-  if (isExpoGo) return () => {};
+  if (!Notifications) return () => {};
   const notifSub = Notifications.addNotificationReceivedListener(onNotification);
   const responseSub = Notifications.addNotificationResponseReceivedListener(onResponse);
   return () => {
