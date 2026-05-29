@@ -51,6 +51,10 @@ class VIPProfile(VIPBaseModel):
     profile_image_url = Column(String(500), nullable=True)
     cover_image_url   = Column(String(500), nullable=True)
 
+    # Analytics / Search Console
+    ga_measurement_id    = Column(String(50),  nullable=True)
+    gsc_verification_code = Column(String(100), nullable=True)
+
     # ── External LO fields ───────────────────────────────────
     lo_is_external          = Column(Boolean, default=False, nullable=False)
     lo_licensed_residential = Column(Boolean, default=False, nullable=False)

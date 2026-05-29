@@ -360,6 +360,40 @@ Clients, listings, flyers, follow-ups, and Copilot in one realtor workspace.
         {% endif %}
       </section>
 
+      {# ── WEBSITE SETTINGS ── #}
+      {% if vip_profile and vip_profile.public_slug %}
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Your Website</h3>
+            <p>Analytics &amp; Search Console</p>
+          </div>
+          <a href="{{ url_for('public_pages.realtor_landing', slug=vip_profile.public_slug) }}"
+             target="_blank" rel="noopener"
+             class="ravlo-btn ghost sm">View ↗</a>
+        </div>
+        <form method="POST" action="{{ url_for('vip.save_website_settings') }}" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div>
+            <label style="display:block;font-size:0.7rem;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:4px;">GA4 Measurement ID</label>
+            <input name="ga_measurement_id"
+                   value="{{ vip_profile.ga_measurement_id or '' }}"
+                   placeholder="G-XXXXXXXXXX"
+                   class="ravlo-input" style="width:100%;font-size:0.85rem;">
+          </div>
+          <div>
+            <label style="display:block;font-size:0.7rem;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:4px;">Search Console Code</label>
+            <input name="gsc_verification_code"
+                   value="{{ vip_profile.gsc_verification_code or '' }}"
+                   placeholder="Paste verification code…"
+                   class="ravlo-input" style="width:100%;font-size:0.85rem;">
+            <p style="font-size:0.7rem;color:#6b7280;margin-top:4px;">The <code>content</code> value from the GSC &lt;meta&gt; tag.</p>
+          </div>
+          <button type="submit" class="ravlo-btn primary sm">Save</button>
+        </form>
+      </section>
+      {% endif %}
+
     </aside>
   </div>
 </div>

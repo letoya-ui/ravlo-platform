@@ -4038,6 +4038,24 @@ def onboarding_save():
     return redirect(url_for("vip.index"))
 
 
+@vip_bp.post("/website-settings/save")
+@role_required("partner_group", "admin")
+def save_website_settings():
+    profile = get_or_create_vip_profile()
+
+    ga_id = (request.form.get("ga_measurement_id") or "").strip()
+    gsc_code = (request.form.get("gsc_verification_code") or "").strip()
+
+    if hasattr(profile, "ga_measurement_id"):
+        profile.ga_measurement_id = ga_id or None
+    if hasattr(profile, "gsc_verification_code"):
+        profile.gsc_verification_code = gsc_code or None
+
+    db.session.commit()
+    flash("Website settings saved.", "success")
+    return redirect(url_for("vip.realtor_dashboard"))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # DESIGN STUDIO
 # ─────────────────────────────────────────────────────────────────────────────

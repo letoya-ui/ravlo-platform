@@ -85,9 +85,10 @@ def _load_realtor_context(slug):
         "email": user.email if user else "",
         "phone": partner.phone if partner else "",
         "website": partner.website if partner else "",
-        # SEO
+        # SEO / Analytics
         "canonical_url": canonical_url,
         "gsc_verification_code": getattr(profile, "gsc_verification_code", None) or "",
+        "ga_measurement_id": getattr(profile, "ga_measurement_id", None) or "",
     }
 
 
