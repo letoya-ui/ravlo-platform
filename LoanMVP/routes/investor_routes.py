@@ -14910,7 +14910,7 @@ def start_subscription_checkout(plan):
         flash("Invalid plan or missing Stripe price id.", "danger")
         return redirect(url_for("investor.payments"))
 
-    app_plan = _stripe_app_plan_from_slug(normalized) or "Pro"
+    app_plan = _stripe_app_plan_from_slug(normalized) or "Operator"
     session_obj = stripe.checkout.Session.create(
         mode="subscription",
         payment_method_types=["card"],
