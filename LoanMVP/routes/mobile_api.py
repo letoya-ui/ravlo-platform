@@ -36,6 +36,7 @@ def _decode_token(token: str) -> dict:
 
 
 LOAN_ROLES = ('loan_officer', 'processor', 'underwriter', 'admin')
+ADMIN_ROLES = ('admin', 'platform_admin', 'master_admin', 'lending_admin', 'executive')
 
 
 def require_auth(f):
@@ -63,6 +64,16 @@ def require_auth(f):
             return jsonify({'error': 'User not found'}), 401
 
         request.current_user = user
+        return f(*args, **kwargs)
+    return decorated
+
+
+def require_admin(f):
+    """Decorator that enforces admin/owner-only access."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if getattr(request.current_user, 'role', '') not in ADMIN_ROLES:
+            return jsonify({'error': 'Admin access required'}), 403
         return f(*args, **kwargs)
     return decorated
 
@@ -540,7 +551,7 @@ def update_progress(course_id):
 
 
 # ---------------------------------------------------------------------------
-# Ravlo AI chat route (mobile/ai/chat)
+# Ravlo AI chat route
 # ---------------------------------------------------------------------------
 
 @mobile_api.route('/ai/chat', methods=['POST'])
@@ -699,3 +710,195 @@ def upload_document(current_user=None):
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Admin / Owner routes
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/admin/overview', methods=['GET'])
+@require_auth
+@require_admin
+def admin_overview():
+    """Platform-wide stats mirroring the executive dashboard."""
+    import datetime as dt
+    from LoanMVP.extensions import db
+    from sqlalchemy import func
+
+    user_stats = {'total': 0, 'active': 0, 'blocked': 0, 'recent_signups': 0, 'subscriptions': {}, 'roles': {}}
+    try:
+        from LoanMVP.models import User
+        user_stats['total'] = User.query.count()
+        user_stats['active'] = User.query.filter_by(is_active=True).count()
+        user_stats['blocked'] = User.query.filter_by(is_blocked=True).count()
+        thirty_days_ago = dt.datetime.utcnow() - dt.timedelta(days=30)
+        user_stats['recent_signups'] = User.query.filter(User.created_at >= thirty_days_ago).count()
+        for row in db.session.query(User.subscription, func.count(User.id)).group_by(User.subscription).all():
+            user_stats['subscriptions'][row[0] or 'free'] = row[1]
+        for row in db.session.query(User.role, func.count(User.id)).group_by(User.role).all():
+            user_stats['roles'][row[0] or 'unknown'] = row[1]
+    except Exception as exc:
+        current_app.logger.error('admin_overview user stats: %s', exc)
+
+    loan_stats = {'total': 0, 'active': 0, 'volume': 0.0}
+    try:
+        from LoanMVP.models import Loan
+        loan_stats['total'] = Loan.query.count()
+        loan_stats['active'] = Loan.query.filter(
+            Loan.status.in_(('submitted', 'processing', 'underwriting', 'approved', 'in_review'))
+        ).count()
+        vol = db.session.query(func.sum(Loan.loan_amount)).scalar()
+        loan_stats['volume'] = float(vol or 0)
+    except Exception as exc:
+        current_app.logger.error('admin_overview loan stats: %s', exc)
+
+    company_count = 0
+    try:
+        from LoanMVP.models import Company
+        company_count = Company.query.count()
+    except Exception as exc:
+        current_app.logger.error('admin_overview company stats: %s', exc)
+
+    request_stats = {'pending': 0, 'approved': 0, 'total': 0}
+    try:
+        from LoanMVP.models import AccessRequest
+        request_stats['total'] = AccessRequest.query.count()
+        request_stats['pending'] = AccessRequest.query.filter_by(status='pending').count()
+        request_stats['approved'] = AccessRequest.query.filter_by(status='approved').count()
+    except Exception as exc:
+        current_app.logger.error('admin_overview access request stats: %s', exc)
+
+    pending_invites = 0
+    try:
+        from LoanMVP.models import UserInvite
+        pending_invites = UserInvite.query.filter_by(status='pending').count()
+    except Exception as exc:
+        current_app.logger.error('admin_overview invite stats: %s', exc)
+
+    doc_count = 0
+    try:
+        from LoanMVP.models.document_models import LoanDocument
+        doc_count = LoanDocument.query.count()
+    except Exception as exc:
+        current_app.logger.error('admin_overview doc stats: %s', exc)
+
+    return jsonify({
+        'users': user_stats,
+        'loans': loan_stats,
+        'companies': company_count,
+        'documents': doc_count,
+        'access_requests': request_stats,
+        'pending_invites': pending_invites,
+    }), 200
+
+
+@mobile_api.route('/admin/users', methods=['GET'])
+@require_auth
+@require_admin
+def admin_users():
+    """Paginated, searchable user list for admin/owner."""
+    page = max(1, int(request.args.get('page', 1)))
+    per_page = min(50, max(1, int(request.args.get('per_page', 25))))
+    search = (request.args.get('search') or '').strip()
+    role_filter = (request.args.get('role') or '').strip()
+
+    try:
+        from LoanMVP.models import User
+        query = User.query
+        if search:
+            like = f'%{search}%'
+            query = query.filter(
+                (User.email.ilike(like)) |
+                (User.first_name.ilike(like)) |
+                (User.last_name.ilike(like))
+            )
+        if role_filter:
+            query = query.filter_by(role=role_filter)
+
+        total = query.count()
+        users = query.order_by(User.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+
+        def _s(u):
+            first = getattr(u, 'first_name', '') or ''
+            last = getattr(u, 'last_name', '') or ''
+            return {
+                'id': u.id,
+                'full_name': f'{first} {last}'.strip() or u.email,
+                'email': u.email,
+                'role': getattr(u, 'role', '') or '',
+                'subscription': getattr(u, 'subscription', '') or 'free',
+                'is_active': getattr(u, 'is_active', True),
+                'is_blocked': getattr(u, 'is_blocked', False),
+                'created_at': str(getattr(u, 'created_at', '') or ''),
+                'last_login': str(getattr(u, 'last_login', '') or ''),
+                'onboarding_complete': getattr(u, 'onboarding_complete', False),
+            }
+
+        return jsonify({
+            'users': [_s(u) for u in users],
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'pages': (total + per_page - 1) // per_page,
+        }), 200
+    except Exception as exc:
+        current_app.logger.error('admin_users error: %s', exc)
+        return jsonify({'error': 'Could not retrieve users'}), 500
+
+
+@mobile_api.route('/admin/activity', methods=['GET'])
+@require_auth
+@require_admin
+def admin_activity():
+    """Recent platform activity: signups, access requests, leads."""
+    recent_users = []
+    try:
+        from LoanMVP.models import User
+        for u in User.query.order_by(User.created_at.desc()).limit(10).all():
+            first = getattr(u, 'first_name', '') or ''
+            last = getattr(u, 'last_name', '') or ''
+            recent_users.append({
+                'id': u.id,
+                'name': f'{first} {last}'.strip() or u.email,
+                'email': u.email,
+                'role': getattr(u, 'role', '') or '',
+                'subscription': getattr(u, 'subscription', '') or 'free',
+                'created_at': str(getattr(u, 'created_at', '') or ''),
+            })
+    except Exception as exc:
+        current_app.logger.error('admin_activity users: %s', exc)
+
+    recent_requests = []
+    try:
+        from LoanMVP.models import AccessRequest
+        for r in AccessRequest.query.order_by(AccessRequest.created_at.desc()).limit(10).all():
+            recent_requests.append({
+                'id': r.id,
+                'name': getattr(r, 'contact_name', '') or getattr(r, 'name', '') or '',
+                'email': getattr(r, 'email', '') or '',
+                'company': getattr(r, 'company_name', '') or '',
+                'status': getattr(r, 'status', '') or '',
+                'created_at': str(getattr(r, 'created_at', '') or ''),
+            })
+    except Exception as exc:
+        current_app.logger.error('admin_activity requests: %s', exc)
+
+    recent_leads = []
+    try:
+        from LoanMVP.models import Lead
+        for lead in Lead.query.order_by(Lead.created_at.desc()).limit(5).all():
+            recent_leads.append({
+                'id': lead.id,
+                'name': getattr(lead, 'name', '') or getattr(lead, 'full_name', '') or '',
+                'email': getattr(lead, 'email', '') or '',
+                'status': getattr(lead, 'status', '') or '',
+                'created_at': str(getattr(lead, 'created_at', '') or ''),
+            })
+    except Exception as exc:
+        current_app.logger.error('admin_activity leads: %s', exc)
+
+    return jsonify({
+        'recent_users': recent_users,
+        'recent_requests': recent_requests,
+        'recent_leads': recent_leads,
+    }), 200
