@@ -4,3 +4,23 @@
 {"_e":"devserver:start","_t":1779996717238,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
 {"_e":"metro:config","_t":1779996717616,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
 {"_e":"metro:instantiate","_t":1779996725882,"atlas":false,"workers":8,"host":"::","port":8081}
+{"_e":"root:init","_t":1780070954255,"format":"v0-jsonl","version":"56.1.13"}
+{"_e":"env:mode","_t":1780070954256,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1780070954259,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1780070954599,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1780070954985,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"metro:instantiate","_t":1780070962767,"atlas":false,"workers":8,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1780070974913,"id":"1","platform":"android","environment":null,"entry":"index.ts"}
+{"_e":"metro:bundling:progress","_t":1780070974913,"id":"1","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1780070974917,"id":"1","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:failed","_t":1780070974921,"id":"1","message":"Cannot read properties of undefined (reading 'transformFile')","importStack":null,"filename":null,"targetModuleName":null,"originModulePath":null}
+{"_e":"root:init","_t":1780071177656,"format":"v0-jsonl","version":"56.1.13"}
+{"_e":"env:mode","_t":1780071177656,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1780071177659,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1780071178008,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1780071178398,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"metro:instantiate","_t":1780071186049,"atlas":false,"workers":8,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1780071219233,"id":"1","platform":"android","environment":null,"entry":"index.ts"}
+{"_e":"metro:bundling:progress","_t":1780071219234,"id":"1","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1780071219238,"id":"1","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:failed","_t":1780071219242,"id":"1","message":"Cannot read properties of undefined (reading 'transformFile')","importStack":null,"filename":null,"targetModuleName":null,"originModulePath":null}
