@@ -5,8 +5,10 @@ import jwt
 import datetime
 from functools import wraps
 from flask import Blueprint, request, jsonify, current_app
+from LoanMVP.extensions import csrf
 
 mobile_api = Blueprint('mobile_api', __name__, url_prefix='/mobile')
+csrf.exempt(mobile_api)
 
 # ---------------------------------------------------------------------------
 # JWT helpers
