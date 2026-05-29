@@ -8,6 +8,7 @@ are created as ElenaClient records (pipeline_stage='new') and
 trigger a VIPNotification so the realtor is alerted immediately.
 """
 
+import json
 from datetime import datetime
 
 from flask import Blueprint, render_template, request, abort, flash, redirect, url_for
@@ -34,9 +35,22 @@ def _load_realtor_context(slug):
     user = User.query.get(profile.user_id)
     partner = Partner.query.filter_by(user_id=profile.user_id).first() if user else None
 
+    # Scope listings to this realtor's configured markets so each
+    # public page only shows its own inventory.
+    markets = []
+    raw_markets = getattr(profile, "markets_json", None) or "[]"
+    try:
+        markets = json.loads(raw_markets)
+        if not isinstance(markets, list):
+            markets = []
+    except (TypeError, ValueError):
+        markets = []
+
+    listings_q = ElenaListing.query.filter_by(status="active")
+    if markets:
+        listings_q = listings_q.filter(ElenaListing.market.in_(markets))
     active_listings = (
-        ElenaListing.query
-        .filter_by(status="active")
+        listings_q
         .order_by(ElenaListing.created_at.desc())
         .limit(6)
         .all()
@@ -103,6 +117,17 @@ def realtor_lead_capture(slug):
         notes_parts.append(f"Message: {message}")
     notes_parts.append(f"Source: Public landing page (/p/{slug})")
 
+    # Determine the realtor's primary market for the lead record.
+    markets = []
+    raw_markets = getattr(profile, "markets_json", None) or "[]"
+    try:
+        markets = json.loads(raw_markets)
+        if not isinstance(markets, list):
+            markets = []
+    except (TypeError, ValueError):
+        markets = []
+    primary_market = markets[0] if markets else None
+
     lead = ElenaClient(
         name=client_name,
         email=client_email or None,
@@ -112,6 +137,8 @@ def realtor_lead_capture(slug):
         notes="\n".join(notes_parts),
         preferred_areas=preferred_areas or None,
         budget=budget or None,
+        assigned_member_id=profile.user_id,
+        market=primary_market,
     )
     db.session.add(lead)
 
