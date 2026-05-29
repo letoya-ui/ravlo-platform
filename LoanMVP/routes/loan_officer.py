@@ -25,6 +25,7 @@ from werkzeug.utils import secure_filename
 
 from LoanMVP.extensions import db, csrf
 from LoanMVP.utils.decorators import role_required, loan_officer_onboarding_required
+from LoanMVP.utils.loan_access import get_loan_or_404
 
 # AI
 from LoanMVP.ai.base_ai import AIAssistant
@@ -671,7 +672,7 @@ def send_message():
 @role_required("loan_officer")
 def loan_file(loan_id):
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
 
     # Optional ownership check
     if officer and loan.loan_officer_id and loan.loan_officer_id != officer.id:
@@ -2354,7 +2355,7 @@ def save_call_notes():
 @csrf.exempt
 @role_required("loan_officer")
 def edit_loan(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     form = LoanEditForm(obj=loan)
 
     if form.validate_on_submit():
@@ -2376,7 +2377,7 @@ def edit_loan(loan_id):
 @csrf.exempt
 @role_required("loan_officer")
 def generate_quote(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     form = GenerateQuoteForm()
     quote = None
 
@@ -2453,7 +2454,7 @@ def intake_review(borrower_id):
 @loan_officer_bp.route("/loan-summary/<int:loan_id>")
 @role_required("loan_officer")
 def loan_summary(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = loan.borrower_profile
 
     quotes = (
@@ -2550,7 +2551,7 @@ def profile(borrower_id):
 @csrf.exempt
 @role_required("loan_officer")
 def quote_plan(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     form = QuotePlanForm()
 
     plan = (
@@ -2666,7 +2667,7 @@ def new_loan():
 @loan_officer_bp.route("/capital-funds/<int:loan_id>")
 @role_required("loan_officer")
 def capital_funds(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
 
     borrower = loan.borrower_profile
     investor = getattr(loan, "investor_profile", None)
@@ -3449,7 +3450,7 @@ Write a luxury-finance preapproval summary including:
 @loan_officer_bp.route("/preapproval_letter/<int:loan_id>")
 @role_required("loan_officer")
 def preapproval_letter(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = loan.borrower_profile
     credit = borrower.credit_profiles[-1] if borrower.credit_profiles else None
 
@@ -3619,7 +3620,7 @@ def ai_chat_history():
 @csrf.exempt
 @role_required("loan_officer")
 def loan_scenarios(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     scenarios = []
 
     if request.method == "POST":
@@ -3684,7 +3685,7 @@ Provide:
 @loan_officer_bp.route("/loan/<int:loan_id>/scenario/add", methods=["POST"])
 @role_required("loan_officer")
 def add_scenario(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
 
     s = LoanScenario(
         loan_id=loan.id,
@@ -3721,7 +3722,7 @@ def delete_scenario(loan_id, id):
 @loan_officer_bp.route("/loan/<int:loan_id>/generate_1003")
 @role_required("loan_officer")
 def generate_1003(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = loan.borrower_profile
 
     pdf_path = fill_1003_pdf(borrower, loan)
@@ -3776,7 +3777,7 @@ def request_documents(borrower_id):
 @csrf.exempt
 @role_required("loan_officer")
 def generate_doc_needs(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = loan.borrower_profile
     credit = borrower.credit_profiles[-1] if borrower.credit_profiles else None
 
@@ -3791,7 +3792,7 @@ def generate_doc_needs(loan_id):
 @csrf.exempt
 @role_required("loan_officer")
 def save_preapproval_snapshot(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = loan.borrower_profile
     credit = borrower.credit_profiles[-1] if borrower.credit_profiles else None
 

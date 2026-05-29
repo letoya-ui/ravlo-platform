@@ -386,7 +386,7 @@
 // ── State ──────────────────────────────────────────────────────────────────
 const CSRF_TOKEN = "{{ csrf_token() }}";
 let currentSessionId = {{ current_session.id if current_session else 'null' }};
-let scope = {{ scope_json | safe }};  // list of room dicts
+let scope = JSON.parse({{ scope_json | tojson }});
 let activeTierId   = "{{ current_session.commission_tier if current_session else 'standard' }}";
 let activeTierPct  = {{ current_session.commission_pct if current_session and current_session.commission_pct else '1.5' }};
 

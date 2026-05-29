@@ -17,7 +17,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.security import generate_password_hash
 
 from LoanMVP.app import login_manager, mail
-from LoanMVP.extensions import csrf, db
+from LoanMVP.extensions import csrf, db, limiter
 from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm, LoginForm
 from LoanMVP.services.subscriptions import sync_features_with_subscription
 from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
@@ -313,6 +313,7 @@ def _parse_name_parts(full_name: str, first_name: str, last_name: str):
 # LOGIN
 # ============================================================
 @auth_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def login():
     form = LoginForm()
 
@@ -434,6 +435,7 @@ def logout():
 # REGISTER
 # ============================================================
 @auth_bp.route("/register", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def register():
     recovery_mode = _workspace_recovery_mode()
 
@@ -591,6 +593,7 @@ def post_login_redirect():
 # ============================================================
 
 @auth_bp.route("/register_borrower", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def register_borrower():
     if _registration_blocked():
         flash("Borrower registration is disabled for this workspace.", "warning")
@@ -652,6 +655,7 @@ def register_borrower():
 
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])
 @auth_bp.route("/reset_password_request", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def forgot_password():
     form = ResetPasswordRequestForm()
 

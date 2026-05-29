@@ -27,6 +27,7 @@ from LoanMVP.models.payment_models import PaymentRecord
 from LoanMVP.models.user_model import User
 from LoanMVP.ai.base_ai import AIAssistant
 from LoanMVP.utils.decorators import role_required  # ✅ Added for role control
+from LoanMVP.utils.loan_access import get_loan_or_404
 
 # ✅ SocketIO imported safely at the bottom
 from flask_socketio import emit, join_room
@@ -508,7 +509,7 @@ def api_loan_documents(loan_id):
 @csrf.exempt
 @role_required("processor")
 def loan_review(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = BorrowerProfile.query.get_or_404(loan.borrower_profile_id)
 
     # ⭐ FIX: Use the correct model
@@ -556,7 +557,7 @@ def loan_review(loan_id):
 @csrf.exempt
 @role_required("processor")
 def add_condition(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = loan.borrower_profile
 
     condition_type = request.form.get("condition_type")
@@ -591,7 +592,7 @@ def add_condition(loan_id):
 @csrf.exempt
 @role_required("processor")
 def edit_loan(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = BorrowerProfile.query.get_or_404(loan.borrower_profile_id)
 
     if request.method == "POST":
@@ -637,7 +638,7 @@ def documents():
 @processor_bp.route("/request-doc/<int:loan_id>", methods=["GET", "POST"])
 @login_required
 @role_required("processor")
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
 
     if request.method == "POST":
         doc_name = request.form.get("document_name")
@@ -664,7 +665,7 @@ def documents():
 @login_required
 @role_required("processor")
 def add_processor_note(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
 
     if request.method == "POST":
         note = request.form.get("note")
@@ -687,7 +688,7 @@ def add_processor_note(loan_id):
 @login_required
 @role_required("processor")
 def update_loan_status(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
 
     statuses = ["Pending", "Processing", "Submitted", "Suspended", "Clear to Close"]
 
@@ -706,7 +707,7 @@ def update_loan_status(loan_id):
 @login_required
 @role_required("processor")
 def assign_loan(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     users = User.query.all()
 
     if request.method == "POST":
@@ -724,7 +725,7 @@ def assign_loan(loan_id):
 @login_required
 @role_required("processor")
 def submit_underwriter(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
 
     loan.status = "Submitted"
     loan.submitted_to_uw = datetime.utcnow()
@@ -888,7 +889,7 @@ def new_message():
 @role_required("processor")
 def condition_review(loan_id):
     """Processor handles document requests from Underwriter and Borrower."""
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = BorrowerProfile.query.get_or_404(loan.borrower_profile_id)
     conditions = ConditionRequest.query.filter_by(loan_id=loan.id).all()
     borrower_docs = DocumentRequest.query.filter_by(borrower_id=borrower.id).all()
@@ -1383,7 +1384,7 @@ def processor_reply(data):
 @role_required("processor")
 def file_review(loan_id):
     """Unified Processor Loan File Review — Command Center"""
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = BorrowerProfile.query.get_or_404(loan.borrower_profile_id)
 
     # ------------------------------
@@ -1505,7 +1506,7 @@ def calculate_dti_ltv(borrower, loan, credit):
 
 @processor_bp.route("/analysis/<int:loan_id>")
 def processor_analysis(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = loan.borrower_profile
     credit = borrower.credit_reports[-1] if borrower.credit_reports else None
 
