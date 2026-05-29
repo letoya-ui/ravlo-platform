@@ -110,6 +110,8 @@ def create_bonnie_realtor(password: str):
                 role_type="realtor",
                 assistant_name="Elena",
                 marketplace_enabled="yes",
+                public_slug="bonnie-sells-oc-homes",
+                headline="Your Trusted Real Estate Partner",
                 enabled_modules=json.dumps([
                     "crm", "finances", "ai_pilot", "content_studio", "canva",
                 ]),
@@ -119,6 +121,8 @@ def create_bonnie_realtor(password: str):
         else:
             vip.role_type = "realtor"
             vip.marketplace_enabled = "yes"
+            if not vip.public_slug:
+                vip.public_slug = "bonnie-sells-oc-homes"
 
         db.session.commit()
 
@@ -138,6 +142,7 @@ def create_bonnie_realtor(password: str):
         print("  Dashboards unlocked:")
         print("    /vip/realtor     — Realtor VIP workspace")
         print("    /partners/       — Partner OS")
+        print(f"    /p/{vip.public_slug}  — Public landing page")
         print("=" * 55)
         print()
 
