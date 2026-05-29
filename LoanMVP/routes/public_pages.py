@@ -6,6 +6,9 @@ Each realtor gets a public URL at /p/<slug> that displays their
 branding, active listings, and a contact form. Submitted leads
 are created as ElenaClient records (pipeline_stage='new') and
 trigger a VIPNotification so the realtor is alerted immediately.
+
+White-label support: slugs listed in SLUG_TEMPLATES get their own
+dedicated template for a fully branded website experience.
 """
 
 import json
@@ -21,6 +24,12 @@ from LoanMVP.models.user_model import User
 from LoanMVP.models.crm_models import Partner
 
 public_pages_bp = Blueprint("public_pages", __name__, url_prefix="/p")
+
+# Slug → dedicated white-label template. All other slugs fall back to the
+# generic realtor_landing.html.
+SLUG_TEMPLATES: dict[str, str] = {
+    "bonnie-sells-oc-homes": "public/bonnie_landing.html",
+}
 
 
 def _load_realtor_context(slug):
@@ -66,7 +75,7 @@ def _load_realtor_context(slug):
         "bio": profile.bio or "",
         "service_area": profile.service_area or (partner.service_area if partner else ""),
         "specialties": profile.specialties or (partner.specialty if partner else ""),
-        "brand_color": profile.brand_color or "#6366f1",
+        "brand_color": profile.brand_color or "#C9A878",
         "logo_url": profile.logo_url or (partner.logo_url if partner else None),
         "profile_image_url": profile.profile_image_url,
         "cover_image_url": profile.cover_image_url,
@@ -76,13 +85,18 @@ def _load_realtor_context(slug):
     }
 
 
+def _template_for(slug: str) -> str:
+    """Return the white-label template for slug, or the generic fallback."""
+    return SLUG_TEMPLATES.get(slug.lower(), "public/realtor_landing.html")
+
+
 @public_pages_bp.route("/<slug>", methods=["GET"])
 def realtor_landing(slug):
     ctx = _load_realtor_context(slug)
     if ctx is None:
         abort(404)
 
-    return render_template("public/realtor_landing.html", **ctx)
+    return render_template(_template_for(slug), **ctx)
 
 
 @public_pages_bp.route("/<slug>/contact", methods=["POST"])
@@ -104,7 +118,7 @@ def realtor_lead_capture(slug):
 
     if not client_name:
         return render_template(
-            "public/realtor_landing.html",
+            _template_for(slug),
             **ctx,
             form_error="Name is required.",
             submitted=False,
@@ -155,7 +169,7 @@ def realtor_lead_capture(slug):
     db.session.commit()
 
     return render_template(
-        "public/realtor_landing.html",
+        _template_for(slug),
         **ctx,
         submitted=True,
         submitted_name=client_name,

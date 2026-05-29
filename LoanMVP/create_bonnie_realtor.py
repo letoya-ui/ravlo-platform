@@ -111,7 +111,17 @@ def create_bonnie_realtor(password: str):
                 assistant_name="Elena",
                 marketplace_enabled="yes",
                 public_slug="bonnie-sells-oc-homes",
-                headline="Your Trusted Real Estate Partner",
+                headline="Your Orange County Real Estate Expert",
+                bio=(
+                    "With deep roots in Orange County and a passion for connecting "
+                    "people with the right home, Bonnie brings a personal, "
+                    "results-driven approach to every transaction. Whether you're "
+                    "buying your first home, selling, or investing across OC, "
+                    "she's with you every step of the way."
+                ),
+                service_area="Orange County, CA",
+                specialties="Residential • Buyers & Sellers • Investment",
+                brand_color="#C9A878",
                 enabled_modules=json.dumps([
                     "crm", "finances", "ai_pilot", "content_studio", "canva",
                 ]),
@@ -123,6 +133,13 @@ def create_bonnie_realtor(password: str):
             vip.marketplace_enabled = "yes"
             if not vip.public_slug:
                 vip.public_slug = "bonnie-sells-oc-homes"
+            # Apply white-label branding defaults if not customised yet
+            if not vip.brand_color:
+                vip.brand_color = "#C9A878"
+            if not vip.headline:
+                vip.headline = "Your Orange County Real Estate Expert"
+            if not vip.service_area:
+                vip.service_area = "Orange County, CA"
 
         db.session.commit()
 
