@@ -70,7 +70,7 @@ export default function ProgressScreen() {
         keyExtractor={(item) => String(item.id ?? item.course_id)}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.blueprint} />}
-        ListHeaderComponent=(
+        ListHeaderComponent={(
           <View>
             <Text style={styles.title}>My Progress</Text>
             <View style={styles.statsRow}>
@@ -95,7 +95,7 @@ export default function ProgressScreen() {
             </View>
             <Text style={styles.sectionTitle}>Course Progress</Text>
           </View>
-        )
+        )}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="bar-chart-outline" size={48} color={Colors.textMuted} />
