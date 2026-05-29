@@ -622,6 +622,67 @@ def create_app():
     def make_session_permanent():
         session.permanent = True
 
+    @app.before_request
+    def handle_custom_domain():
+        """Serve VIP realtor pages when traffic arrives on a custom domain.
+
+        When `bonniesellsochomes.com` (or any custom domain stored in
+        VIPProfile.custom_domain) resolves to this server, Flask would
+        normally route to the marketing home page.  This hook intercepts
+        the request before routing and renders the correct public page.
+
+        Supported paths on custom domains:
+          GET  /             → realtor landing page
+          POST /contact      → lead-capture form
+          GET  /sitemap.xml  → per-realtor sitemap
+          GET  /blog         → blog post list
+          GET  /blog/<slug>  → individual blog post
+        """
+        host = request.host.split(":")[0].lower()
+        # Skip for localhost / known internal hosts
+        if host in ("localhost", "127.0.0.1", "0.0.0.0"):
+            return None
+
+        from LoanMVP.models.vip_models import VIPProfile
+        from sqlalchemy import func as sa_func
+        profile = VIPProfile.query.filter(
+            sa_func.lower(VIPProfile.custom_domain) == host,
+            VIPProfile.marketplace_enabled == "yes",
+        ).first()
+        if not profile:
+            return None
+
+        from LoanMVP.routes.public_pages import (
+            _load_realtor_context, _template_for, _handle_lead_capture,
+        )
+        slug = profile.public_slug
+        path = request.path.rstrip("/") or "/"
+        method = request.method.upper()
+
+        if path == "/" and method == "GET":
+            ctx = _load_realtor_context(slug)
+            if not ctx:
+                return None
+            return render_template(_template_for(slug), **ctx)
+
+        if path == "/contact" and method == "POST":
+            return _handle_lead_capture(slug)
+
+        if path == "/sitemap.xml" and method == "GET":
+            from LoanMVP.routes.public_pages import _build_sitemap_xml
+            return _build_sitemap_xml(profile)
+
+        if path == "/blog" and method == "GET":
+            from LoanMVP.routes.public_pages import _render_blog_list
+            return _render_blog_list(slug)
+
+        if path.startswith("/blog/") and method == "GET":
+            post_slug = path[len("/blog/"):]
+            from LoanMVP.routes.public_pages import _render_blog_post
+            return _render_blog_post(slug, post_slug)
+
+        return None
+
     return app
 
 

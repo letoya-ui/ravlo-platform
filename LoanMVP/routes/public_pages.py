@@ -9,16 +9,21 @@ trigger a VIPNotification so the realtor is alerted immediately.
 
 White-label support: slugs listed in SLUG_TEMPLATES get their own
 dedicated template for a fully branded website experience.
+
+Custom domain support: the app.before_request hook in app.py detects
+custom domains and calls the _handle_lead_capture, _build_sitemap_xml,
+_render_blog_list, and _render_blog_post helpers defined here.
 """
 
 import json
+import re
 from datetime import datetime
 
 from flask import Blueprint, render_template, request, abort, flash, redirect, url_for, Response
 from sqlalchemy import func
 
 from LoanMVP.extensions import db, csrf
-from LoanMVP.models.vip_models import VIPProfile, VIPNotification
+from LoanMVP.models.vip_models import VIPProfile, VIPNotification, VIPTestimonial, VIPBlogPost
 from LoanMVP.models.elena_models import ElenaClient, ElenaListing
 from LoanMVP.models.user_model import User
 from LoanMVP.models.crm_models import Partner
@@ -44,8 +49,6 @@ def _load_realtor_context(slug):
     user = User.query.get(profile.user_id)
     partner = Partner.query.filter_by(user_id=profile.user_id).first() if user else None
 
-    # Scope listings to this realtor's configured markets so each
-    # public page only shows its own inventory.
     markets = []
     raw_markets = getattr(profile, "markets_json", None) or "[]"
     try:
@@ -65,7 +68,11 @@ def _load_realtor_context(slug):
         .all()
     )
 
-    # Build the canonical public URL for this realtor page.
+    testimonials = VIPTestimonial.query.filter_by(
+        vip_profile_id=profile.id,
+        approved=True,
+    ).order_by(VIPTestimonial.display_order.asc()).all()
+
     canonical_url = request.url_root.rstrip("/") + f"/p/{profile.public_slug}"
 
     return {
@@ -73,6 +80,7 @@ def _load_realtor_context(slug):
         "user": user,
         "partner": partner,
         "listings": active_listings,
+        "testimonials": testimonials,
         "display_name": profile.display_name or (user.full_name if user else "Realtor"),
         "headline": profile.headline or "Your Trusted Real Estate Partner",
         "bio": profile.bio or "",
@@ -97,31 +105,25 @@ def _template_for(slug: str) -> str:
     return SLUG_TEMPLATES.get(slug.lower(), "public/realtor_landing.html")
 
 
-@public_pages_bp.route("/<slug>", methods=["GET"])
-def realtor_landing(slug):
-    ctx = _load_realtor_context(slug)
-    if ctx is None:
-        abort(404)
+def _handle_lead_capture(slug: str):
+    """Process lead capture form and return a rendered response.
 
-    return render_template(_template_for(slug), **ctx)
-
-
-@public_pages_bp.route("/<slug>/contact", methods=["POST"])
-@csrf.exempt
-def realtor_lead_capture(slug):
+    Extracted so it can be called both from the blueprint route and from
+    the custom-domain before_request handler in app.py.
+    """
     ctx = _load_realtor_context(slug)
     if ctx is None:
         abort(404)
 
     profile = ctx["profile"]
 
-    client_name = (request.form.get("client_name") or "").strip()
-    client_email = (request.form.get("client_email") or "").strip()
-    client_phone = (request.form.get("client_phone") or "").strip()
-    interest = (request.form.get("interest") or "").strip()
-    message = (request.form.get("message") or "").strip()
+    client_name     = (request.form.get("client_name")     or "").strip()
+    client_email    = (request.form.get("client_email")    or "").strip()
+    client_phone    = (request.form.get("client_phone")    or "").strip()
+    interest        = (request.form.get("interest")        or "").strip()
+    message         = (request.form.get("message")        or "").strip()
     preferred_areas = (request.form.get("preferred_areas") or "").strip()
-    budget = (request.form.get("budget") or "").strip()
+    budget          = (request.form.get("budget")          or "").strip()
 
     if not client_name:
         return render_template(
@@ -138,7 +140,6 @@ def realtor_lead_capture(slug):
         notes_parts.append(f"Message: {message}")
     notes_parts.append(f"Source: Public landing page (/p/{slug})")
 
-    # Determine the realtor's primary market for the lead record.
     markets = []
     raw_markets = getattr(profile, "markets_json", None) or "[]"
     try:
@@ -183,37 +184,116 @@ def realtor_lead_capture(slug):
     )
 
 
-# ── Per-realtor sitemap ────────────────────────────────────────────────────────
+def _build_sitemap_xml(profile: VIPProfile) -> Response:
+    """Build sitemap XML for a realtor profile (landing page + blog posts)."""
+    base = request.url_root.rstrip("/")
+    page_url = f"{base}/p/{profile.public_slug}"
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+
+    urls = [
+        f"""  <url>
+    <loc>{page_url}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>"""
+    ]
+
+    blog_posts = VIPBlogPost.query.filter_by(
+        vip_profile_id=profile.id,
+        is_published=True,
+    ).all()
+    for post in blog_posts:
+        post_date = (post.published_at or post.created_at or datetime.utcnow()).strftime("%Y-%m-%d")
+        urls.append(
+            f"""  <url>
+    <loc>{page_url}/blog/{post.slug}</loc>
+    <lastmod>{post_date}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>"""
+        )
+
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    xml += "\n".join(urls) + "\n"
+    xml += "</urlset>"
+
+    return Response(xml, mimetype="application/xml")
+
+
+def _render_blog_list(slug: str):
+    """Render the blog post list page for a realtor."""
+    profile = VIPProfile.query.filter(
+        func.lower(VIPProfile.public_slug) == slug.lower(),
+        VIPProfile.marketplace_enabled == "yes",
+    ).first()
+    if not profile:
+        abort(404)
+
+    posts = VIPBlogPost.query.filter_by(
+        vip_profile_id=profile.id,
+        is_published=True,
+    ).order_by(VIPBlogPost.published_at.desc()).all()
+
+    ctx = _load_realtor_context(slug) or {}
+    return render_template("public/blog_list.html", posts=posts, **ctx)
+
+
+def _render_blog_post(slug: str, post_slug: str):
+    """Render an individual blog post page."""
+    profile = VIPProfile.query.filter(
+        func.lower(VIPProfile.public_slug) == slug.lower(),
+        VIPProfile.marketplace_enabled == "yes",
+    ).first()
+    if not profile:
+        abort(404)
+
+    post = VIPBlogPost.query.filter_by(
+        vip_profile_id=profile.id,
+        slug=post_slug,
+        is_published=True,
+    ).first()
+    if not post:
+        abort(404)
+
+    ctx = _load_realtor_context(slug) or {}
+    return render_template("public/blog_post.html", post=post, **ctx)
+
+
+# ── Routes ────────────────────────────────────────────────────────────────────
+
+@public_pages_bp.route("/<slug>", methods=["GET"])
+def realtor_landing(slug):
+    ctx = _load_realtor_context(slug)
+    if ctx is None:
+        abort(404)
+    return render_template(_template_for(slug), **ctx)
+
+
+@public_pages_bp.route("/<slug>/contact", methods=["POST"])
+@csrf.exempt
+def realtor_lead_capture(slug):
+    return _handle_lead_capture(slug)
+
 
 @public_pages_bp.route("/<slug>/sitemap.xml", methods=["GET"])
 def realtor_sitemap(slug):
-    """Generate a sitemap.xml for a realtor's public page.
-
-    Tells Google exactly which URLs to index for this realtor.
-    Currently lists the main landing page; will automatically grow
-    when blog posts are added in Track 5.
-    """
     profile = VIPProfile.query.filter(
         func.lower(VIPProfile.public_slug) == slug.lower(),
         VIPProfile.role_type.in_(["realtor", "contractor_realtor", "insurance_realtor"]),
         VIPProfile.marketplace_enabled == "yes",
     ).first()
-
     if not profile:
         abort(404)
+    return _build_sitemap_xml(profile)
 
-    base = request.url_root.rstrip("/")
-    page_url = f"{base}/p/{profile.public_slug}"
-    today = datetime.utcnow().strftime("%Y-%m-%d")
 
-    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>{page_url}</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-</urlset>"""
+@public_pages_bp.route("/<slug>/blog", methods=["GET"])
+def realtor_blog_list(slug):
+    return _render_blog_list(slug)
 
-    return Response(xml.strip(), mimetype="application/xml")
+
+@public_pages_bp.route("/<slug>/blog/<post_slug>", methods=["GET"])
+def realtor_blog_post(slug, post_slug):
+    return _render_blog_post(slug, post_slug)

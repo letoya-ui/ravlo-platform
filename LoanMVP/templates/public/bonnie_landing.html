@@ -70,7 +70,23 @@
     },
     "sameAs": [
       {% if website %}"{{ website | e }}"{% endif %}
-    ]
+    ]{% if testimonials %},
+    "review": [
+      {% for t in testimonials %}
+      {
+        "@type": "Review",
+        "author": { "@type": "Person", "name": "{{ t.reviewer_name | e }}" },
+        "reviewBody": "{{ t.body | replace('"', '\\"') | e }}",
+        "reviewRating": { "@type": "Rating", "ratingValue": "{{ t.rating or 5 }}", "bestRating": "5" }
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ],
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "{{ (testimonials | sum(attribute='rating') / testimonials | length) | round(1) }}",
+      "reviewCount": "{{ testimonials | length }}",
+      "bestRating": "5"
+    }{% endif %}
   }
   </script>
 
@@ -929,6 +945,56 @@
         flex-direction: column;
         align-items: stretch;
       }
+
+      .bn-testimonials-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ── Testimonials ─────────────────────────────────────────────── */
+    .bn-testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+    .bn-testimonial-card {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(201,168,120,.15);
+      border-radius: 14px;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .bn-testimonial-stars {
+      color: var(--brand);
+      font-size: 1rem;
+      letter-spacing: 2px;
+    }
+    .bn-testimonial-body {
+      font-size: .95rem;
+      line-height: 1.65;
+      color: rgba(255,255,255,.85);
+      font-style: italic;
+      margin: 0;
+      flex: 1;
+    }
+    .bn-testimonial-author {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .bn-testimonial-name {
+      font-weight: 600;
+      font-size: .9rem;
+      color: var(--brand);
+    }
+    .bn-testimonial-title {
+      font-size: .78rem;
+      color: rgba(255,255,255,.45);
+      text-transform: uppercase;
+      letter-spacing: .05em;
     }
   </style>
 
@@ -1175,6 +1241,39 @@
           {% if listing.baths %}<span><i class="lucide lucide-droplets"></i> {{ listing.baths }} ba</span>{% endif %}
           {% if listing.sqft %}<span><i class="lucide lucide-ruler"></i> {{ listing.sqft | int }} sqft</span>{% endif %}
         </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+
+{% if testimonials %}
+<!-- ══════════════════════════════════════════════════════════
+     TESTIMONIALS
+════════════════════════════════════════════════════════════ -->
+<section class="bn-section" id="reviews">
+  <div class="bn-section-label">
+    <i class="lucide lucide-star" style="font-size:.8rem;"></i> Reviews
+  </div>
+  <h2 class="bn-section-title">What Clients Are Saying</h2>
+  <p class="bn-section-copy">
+    Real stories from buyers, sellers, and investors across Orange County, NY.
+  </p>
+
+  <div class="bn-testimonials-grid">
+    {% for t in testimonials %}
+    <div class="bn-testimonial-card">
+      <div class="bn-testimonial-stars">
+        {% for i in range(t.rating or 5) %}★{% endfor %}
+      </div>
+      <blockquote class="bn-testimonial-body">"{{ t.body }}"</blockquote>
+      <div class="bn-testimonial-author">
+        <span class="bn-testimonial-name">{{ t.reviewer_name }}</span>
+        {% if t.reviewer_title %}
+        <span class="bn-testimonial-title">{{ t.reviewer_title }}</span>
+        {% endif %}
       </div>
     </div>
     {% endfor %}

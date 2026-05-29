@@ -1,5 +1,6 @@
 # LoanMVP/routes/vip.py
 import json
+import re
 import hashlib
 import hmac
 from datetime import datetime, timedelta
@@ -29,6 +30,8 @@ from LoanMVP.models.vip_models import (
     VIPTeamMember,
     InsuranceQuoteRequest,
     VIPClientSession,
+    VIPTestimonial,
+    VIPBlogPost,
 )
 
 # ── Investor / deal models ────────────────────────────────────────────────────
@@ -4043,16 +4046,133 @@ def onboarding_save():
 def save_website_settings():
     profile = get_or_create_vip_profile()
 
-    ga_id = (request.form.get("ga_measurement_id") or "").strip()
-    gsc_code = (request.form.get("gsc_verification_code") or "").strip()
+    ga_id      = (request.form.get("ga_measurement_id")     or "").strip()
+    gsc_code   = (request.form.get("gsc_verification_code") or "").strip()
+    custom_dom = (request.form.get("custom_domain")         or "").strip().lower()
 
     if hasattr(profile, "ga_measurement_id"):
         profile.ga_measurement_id = ga_id or None
     if hasattr(profile, "gsc_verification_code"):
         profile.gsc_verification_code = gsc_code or None
+    if hasattr(profile, "custom_domain"):
+        profile.custom_domain = custom_dom or None
 
     db.session.commit()
     flash("Website settings saved.", "success")
+    return redirect(url_for("vip.realtor_dashboard"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TESTIMONIALS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@vip_bp.post("/testimonials/add")
+@role_required("partner_group", "admin")
+def add_testimonial():
+    profile = get_or_create_vip_profile()
+
+    reviewer_name  = (request.form.get("reviewer_name")  or "").strip()
+    reviewer_title = (request.form.get("reviewer_title") or "").strip()
+    body           = (request.form.get("body")           or "").strip()
+    rating         = request.form.get("rating", 5)
+
+    if not reviewer_name or not body:
+        flash("Name and review text are required.", "danger")
+        return redirect(url_for("vip.realtor_dashboard"))
+
+    try:
+        rating = max(1, min(5, int(rating)))
+    except (ValueError, TypeError):
+        rating = 5
+
+    count = VIPTestimonial.query.filter_by(vip_profile_id=profile.id).count()
+    t = VIPTestimonial(
+        vip_profile_id=profile.id,
+        reviewer_name=reviewer_name,
+        reviewer_title=reviewer_title or None,
+        body=body,
+        rating=rating,
+        display_order=count,
+        approved=True,
+    )
+    db.session.add(t)
+    db.session.commit()
+    flash("Testimonial added.", "success")
+    return redirect(url_for("vip.realtor_dashboard"))
+
+
+@vip_bp.post("/testimonials/<int:testimonial_id>/delete")
+@role_required("partner_group", "admin")
+def delete_testimonial(testimonial_id):
+    profile = get_or_create_vip_profile()
+    t = VIPTestimonial.query.filter_by(id=testimonial_id, vip_profile_id=profile.id).first_or_404()
+    db.session.delete(t)
+    db.session.commit()
+    flash("Testimonial removed.", "success")
+    return redirect(url_for("vip.realtor_dashboard"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BLOG POSTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _slugify(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[\s_]+", "-", text)
+    text = re.sub(r"-+", "-", text)
+    return text
+
+
+@vip_bp.post("/blog/save")
+@role_required("partner_group", "admin")
+def save_blog_post():
+    profile = get_or_create_vip_profile()
+
+    post_id = request.form.get("post_id", type=int)
+    title   = (request.form.get("title")   or "").strip()
+    body    = (request.form.get("body")    or "").strip()
+    summary = (request.form.get("summary") or "").strip()
+    publish = request.form.get("is_published") == "1"
+
+    if not title:
+        flash("Title is required.", "danger")
+        return redirect(url_for("vip.realtor_dashboard"))
+
+    if post_id:
+        post = VIPBlogPost.query.filter_by(id=post_id, vip_profile_id=profile.id).first_or_404()
+    else:
+        slug = _slugify(title)
+        # ensure unique slug within this profile
+        existing = VIPBlogPost.query.filter_by(vip_profile_id=profile.id, slug=slug).first()
+        if existing:
+            slug = f"{slug}-{int(datetime.utcnow().timestamp())}"
+        post = VIPBlogPost(vip_profile_id=profile.id, slug=slug)
+        db.session.add(post)
+
+    post.title   = title
+    post.body    = body
+    post.summary = summary or None
+
+    if publish and not post.is_published:
+        post.is_published = True
+        post.published_at = post.published_at or datetime.utcnow()
+    elif not publish:
+        post.is_published = False
+
+    db.session.commit()
+    flash("Blog post saved.", "success")
+    return redirect(url_for("vip.realtor_dashboard"))
+
+
+@vip_bp.post("/blog/<int:post_id>/delete")
+@role_required("partner_group", "admin")
+def delete_blog_post(post_id):
+    profile = get_or_create_vip_profile()
+    post = VIPBlogPost.query.filter_by(id=post_id, vip_profile_id=profile.id).first_or_404()
+    db.session.delete(post)
+    db.session.commit()
+    flash("Blog post deleted.", "success")
     return redirect(url_for("vip.realtor_dashboard"))
 
 
