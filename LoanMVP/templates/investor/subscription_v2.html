@@ -292,7 +292,7 @@
         {% if plan_name == "Core" %}
         <form method="POST" action="{{ url_for('investor.downgrade_plan') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="ravlo-btn ghost sm" type="submit">Switch to Core (Free)</button>
+          <button class="ravlo-btn ghost sm" type="submit">Switch to Core ($29/mo)</button>
         </form>
         {% else %}
         <form method="POST" action="{{ url_for('investor.upgrade_plan') }}">
