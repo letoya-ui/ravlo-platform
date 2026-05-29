@@ -4,6 +4,9 @@ vip_testimonials, vip_blog_posts.
 Merges the main chain (20260514cs01) with the markets_json branch (a1b2c3d4e5f6)
 and applies all columns/tables added for Bonnie's white-label site Tracks 2-5.
 
+Uses ALTER TABLE ... ADD COLUMN IF NOT EXISTS (PostgreSQL 9.6+) so the upgrade
+is safe to re-run even if the columns were added manually.
+
 Revision ID: b2c3d4e5f6a7
 Revises: 20260514cs01, a1b2c3d4e5f6
 Create Date: 2026-05-29 00:02:00.000000
@@ -18,23 +21,15 @@ depends_on = None
 
 
 def upgrade():
+    # Use raw SQL with IF NOT EXISTS so this is idempotent on PostgreSQL.
+    # batch_alter_table is silently a no-op for conditional adds on Postgres.
+    op.execute("ALTER TABLE vip_profiles ADD COLUMN IF NOT EXISTS ga_measurement_id VARCHAR(50)")
+    op.execute("ALTER TABLE vip_profiles ADD COLUMN IF NOT EXISTS gsc_verification_code VARCHAR(100)")
+    op.execute("ALTER TABLE vip_profiles ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255)")
+
     conn = op.get_bind()
     inspector = sa.inspect(conn)
 
-    # ── vip_profiles: analytics + custom domain columns ──────────────────────
-    vp_cols = (
-        {c["name"] for c in inspector.get_columns("vip_profiles")}
-        if inspector.has_table("vip_profiles") else set()
-    )
-    with op.batch_alter_table('vip_profiles', schema=None) as batch_op:
-        if "ga_measurement_id" not in vp_cols:
-            batch_op.add_column(sa.Column('ga_measurement_id', sa.String(length=50), nullable=True))
-        if "gsc_verification_code" not in vp_cols:
-            batch_op.add_column(sa.Column('gsc_verification_code', sa.String(length=100), nullable=True))
-        if "custom_domain" not in vp_cols:
-            batch_op.add_column(sa.Column('custom_domain', sa.String(length=255), nullable=True))
-
-    # ── vip_testimonials ─────────────────────────────────────────────────────
     if not inspector.has_table("vip_testimonials"):
         op.create_table(
             'vip_testimonials',
@@ -52,7 +47,6 @@ def upgrade():
             sa.PrimaryKeyConstraint('id'),
         )
 
-    # ── vip_blog_posts ───────────────────────────────────────────────────────
     if not inspector.has_table("vip_blog_posts"):
         op.create_table(
             'vip_blog_posts',
@@ -75,7 +69,6 @@ def upgrade():
 def downgrade():
     op.drop_table('vip_blog_posts')
     op.drop_table('vip_testimonials')
-    with op.batch_alter_table('vip_profiles', schema=None) as batch_op:
-        batch_op.drop_column('custom_domain')
-        batch_op.drop_column('gsc_verification_code')
-        batch_op.drop_column('ga_measurement_id')
+    op.execute("ALTER TABLE vip_profiles DROP COLUMN IF EXISTS custom_domain")
+    op.execute("ALTER TABLE vip_profiles DROP COLUMN IF EXISTS gsc_verification_code")
+    op.execute("ALTER TABLE vip_profiles DROP COLUMN IF EXISTS ga_measurement_id")
