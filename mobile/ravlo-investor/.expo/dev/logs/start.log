@@ -228,3 +228,9 @@
 {"_e":"metro:bundling:progress","_t":1780074292239,"id":"1","progress":0.999,"total":1535,"current":1535}
 {"_e":"metro:bundling:done","_t":1780074292457,"id":"1","total":1535,"ms":9034.7609}
 {"_e":"metro:client_log","_t":1780074295780,"level":"warn","data":["InteractionManager has been deprecated and will be removed in a future release. Please refactor long tasks into smaller ones, and  use 'requestIdleCallback' instead."]}
+{"_e":"root:init","_t":1780076702330,"format":"v0-jsonl","version":"56.1.13"}
+{"_e":"env:mode","_t":1780076702331,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1780076702334,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1780076704903,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1780076705284,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"metro:instantiate","_t":1780076712645,"atlas":false,"workers":8,"host":"::","port":8082}
