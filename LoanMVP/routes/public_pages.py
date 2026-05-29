@@ -137,7 +137,6 @@ def realtor_lead_capture(slug):
         notes="\n".join(notes_parts),
         preferred_areas=preferred_areas or None,
         budget=budget or None,
-        assigned_member_id=profile.user_id,
         market=primary_market,
     )
     db.session.add(lead)
