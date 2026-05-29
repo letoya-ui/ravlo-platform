@@ -989,30 +989,35 @@ def _proxy_search_result_images(result):
 def _subscription_catalog():
     return {
         "Core": {
-            "key": "core",
-            "price": 0,
+            "key": "explorer",
+            "price": 29,
+            "stripe_slug": "explorer",
             "features": [
                 "✔ Capital access",
                 "✔ Saved properties",
                 "✔ Deal Finder (3 searches/mo)",
                 "✔ Messaging",
+                "✔ Academy access",
             ],
         },
-        "Pro": {
-            "key": "pro",
-            "price": 79,
+        "Operator": {
+            "key": "operator",
+            "price": 99,
+            "stripe_slug": "operator",
             "features": [
                 "✔ Everything in Core",
                 "✔ Deal workspace",
                 "✔ Unlimited property search",
                 "✔ Partner network",
+                "✔ AI Deal Insights",
             ],
         },
         "Enterprise": {
             "key": "enterprise",
             "price": 149,
+            "stripe_slug": "enterprise",
             "features": [
-                "✔ Everything in Core & Pro",
+                "✔ Everything in Core & Operator",
                 "✔ Deal Architect",
                 "✔ Build Studio & Design Studio",
                 "✔ Budget Studio",
@@ -1065,11 +1070,11 @@ def _investor_effective_subscription_plan(user):
     plan_aliases = {
         "free": "Core",
         "core": "Core",
-        "explorer": "Pro",
-        "operator": "Pro",
-        "pro": "Pro",
-        "premium": "Pro",
-        "active": "Pro",
+        "explorer": "Core",
+        "operator": "Operator",
+        "pro": "Operator",
+        "premium": "Operator",
+        "active": "Operator",
         "enterprise": "Enterprise",
     }
     aliased = plan_aliases.get(raw_tier)
@@ -1753,8 +1758,8 @@ def create_profile():
 
         db.session.commit()
 
-        flash("Investor profile saved successfully!", "success")
-        return redirect(url_for("investor.command_center"))
+        flash("Profile saved! Choose your plan to activate your investor workspace.", "success")
+        return redirect(url_for("investor.choose_plan"))
 
     return render_template(
         "investor/create_profile.html",
@@ -14789,15 +14794,15 @@ def _stripe_subscription_catalog():
     plans = [
         ("individual_loan_officer", "Individual Loan Officer", "LendingOS", 149, cfg.get("STRIPE_PRICE_INDIVIDUAL_LOAN_OFFICER")),
         ("brokerage_small_team", "Brokerage / Small Team", "LendingOS", 799, cfg.get("STRIPE_PRICE_BROKERAGE_SMALL_TEAM")),
-        ("explorer", "Explorer", "Investor", 29, cfg.get("STRIPE_PRICE_EXPLORER")),
+        ("explorer", "Core", "Investor", 29, cfg.get("STRIPE_PRICE_EXPLORER")),
         ("operator", "Operator", "Investor", 99, cfg.get("STRIPE_PRICE_OPERATOR")),
+        ("enterprise", "Enterprise", "Investor", 149, cfg.get("STRIPE_PRICE_ENTERPRISE")),
         ("basic_listing", "Basic Listing", "Partner", 49, cfg.get("STRIPE_PRICE_BASIC_LISTING")),
         ("preferred_partner", "Preferred Partner", "Partner", 99, cfg.get("STRIPE_PRICE_PREFERRED_PARTNER")),
         ("featured_partner", "Featured Partner", "Partner", 199, cfg.get("STRIPE_PRICE_FEATURED_PARTNER")),
-        # Legacy tiers kept for compatibility
-        ("core", "Core", "Legacy", 149, cfg.get("STRIPE_PRICE_CORE")),
-        ("pro", "Pro", "Legacy", 299, cfg.get("STRIPE_PRICE_PRO")),
-        ("enterprise", "Enterprise", "Legacy", 799, cfg.get("STRIPE_PRICE_ENTERPRISE")),
+        # Legacy slugs kept for webhook compatibility
+        ("core", "Core (Legacy)", "Legacy", 29, cfg.get("STRIPE_PRICE_CORE")),
+        ("pro", "Pro (Legacy)", "Legacy", 99, cfg.get("STRIPE_PRICE_PRO")),
     ]
     return [
         {
@@ -14828,23 +14833,24 @@ def _billing_terms_accepted():
 def _stripe_app_plan_from_slug(plan: str):
     normalized = (plan or "").strip().lower()
     mapping = {
-        "core": "Pro",
-        "explorer": "Pro",
-        "operator": "Pro",
-        "pro": "Pro",
+        "explorer": "Core",
+        "core": "Core",
+        "operator": "Operator",
+        "pro": "Operator",
         "enterprise": "Enterprise",
     }
     return mapping.get(normalized)
 
 
 def _stripe_subscription_price_for_investor_plan(plan_name: str):
-    app_plan = _normalize_investor_plan_name(plan_name) or "Pro"
-    key = (_subscription_catalog().get(app_plan, {}).get("key") or app_plan).strip().lower()
+    app_plan = _normalize_investor_plan_name(plan_name) or "Operator"
+    stripe_slug = (_subscription_catalog().get(app_plan, {}).get("stripe_slug") or app_plan).strip().lower()
     fallback_slugs = {
-        "pro": ["pro", "operator", "explorer"],
+        "explorer": ["explorer"],
+        "operator": ["operator"],
         "enterprise": ["enterprise"],
     }
-    candidates = fallback_slugs.get(key, [key])
+    candidates = fallback_slugs.get(stripe_slug, [stripe_slug])
 
     seen = set()
     for candidate in candidates:
@@ -14904,7 +14910,7 @@ def start_subscription_checkout(plan):
         flash("Invalid plan or missing Stripe price id.", "danger")
         return redirect(url_for("investor.payments"))
 
-    app_plan = _stripe_app_plan_from_slug(normalized) or "Pro"
+    app_plan = _stripe_app_plan_from_slug(normalized) or "Operator"
     session_obj = stripe.checkout.Session.create(
         mode="subscription",
         payment_method_types=["card"],
@@ -15016,6 +15022,46 @@ def payments():
     )
 
 
+@investor_bp.route("/choose-plan", methods=["GET", "POST"])
+@login_required
+@role_required("investor")
+def choose_plan():
+    """Onboarding subscription selection — shown after profile creation and for any investor
+    whose plan has never been explicitly set (DB subscription == 'free' default).
+    All plans are paid; there is no free tier."""
+    if request.method == "POST":
+        selected = (request.form.get("plan") or "Core").strip().title()
+        if selected not in _subscription_catalog():
+            selected = "Core"
+
+        if current_app.config.get("STRIPE_BILLING_ENABLED", False):
+            try:
+                return _create_investor_subscription_checkout(selected, cancel_endpoint="investor.choose_plan")
+            except Exception:
+                current_app.logger.exception("choose_plan Stripe checkout failed")
+                flash("Could not start checkout. Please try again.", "danger")
+                return redirect(url_for("investor.choose_plan"))
+
+        # Billing not yet live — activate plan directly
+        current_user.subscription_plan = selected
+        _sync_investor_subscription_record(current_user)
+        try:
+            from LoanMVP.services.subscriptions import sync_features_with_subscription
+            sync_features_with_subscription(current_user.id)
+        except Exception:
+            current_app.logger.exception("choose_plan sync failed")
+        db.session.commit()
+        flash(f"Welcome to {selected}! Your plan is now active.", "success")
+        return redirect(url_for("investor.command_center"))
+
+    return render_template(
+        "investor/choose_plan.html",
+        subscription_catalog=_subscription_catalog(),
+        billing_enabled=current_app.config.get("STRIPE_BILLING_ENABLED", False),
+        title="Choose Your Plan",
+    )
+
+
 @investor_bp.route("/subscription", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -15044,9 +15090,9 @@ def subscription():
 @login_required
 @role_required("investor")
 def upgrade_plan():
-    selected_plan = (request.form.get("plan") or "Pro").strip().title()
+    selected_plan = (request.form.get("plan") or "Operator").strip().title()
     if selected_plan not in _subscription_catalog():
-        selected_plan = "Pro"
+        selected_plan = "Operator"
 
     if _is_investor_grandfathered(current_user):
         current_user.subscription_plan = "Enterprise"
@@ -15055,17 +15101,16 @@ def upgrade_plan():
         flash("This account is grandfathered into full investor access at no charge.", "success")
         return redirect(url_for("investor.subscription"))
 
-    if selected_plan != "Free" and not _billing_terms_accepted():
+    if not _billing_terms_accepted():
         flash("Please accept the billing and card data terms before activating a paid plan.", "warning")
         return redirect(url_for("investor.subscription"))
 
-    if selected_plan != "Free":
-        if current_app.config.get("STRIPE_BILLING_ENABLED", False):
-            return _create_investor_subscription_checkout(selected_plan)
+    if current_app.config.get("STRIPE_BILLING_ENABLED", False):
+        return _create_investor_subscription_checkout(selected_plan)
 
-        if not current_app.config.get("ALLOW_MANUAL_INVESTOR_SUBSCRIPTION_UPGRADES", False):
-            flash("Paid investor plans must be activated through secure checkout.", "warning")
-            return redirect(url_for("investor.subscription"))
+    if not current_app.config.get("ALLOW_MANUAL_INVESTOR_SUBSCRIPTION_UPGRADES", False):
+        flash("Plans must be activated through secure checkout.", "warning")
+        return redirect(url_for("investor.subscription"))
 
     current_user.subscription_plan = selected_plan
     _sync_investor_subscription_record(current_user)

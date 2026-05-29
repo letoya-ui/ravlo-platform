@@ -1,8 +1,39 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
 from LoanMVP.extensions import db
 from LoanMVP.models.admin import AccessRequest
 
 public_bp = Blueprint("public", __name__)
+
+
+@public_bp.route("/robots.txt", methods=["GET"])
+def robots_txt():
+    """Serve robots.txt.
+
+    Allow Google to crawl all public realtor pages (/p/*) and the
+    marketing site. Block internal app routes that should never appear
+    in search results.
+    """
+    base = request.url_root.rstrip("/")
+    content = f"""User-agent: *
+Disallow: /admin
+Disallow: /api/
+Disallow: /vip/
+Disallow: /employee/
+Disallow: /borrower/
+Disallow: /loan-officer/
+Disallow: /processor/
+Disallow: /underwriter/
+Disallow: /executive/
+Disallow: /investor/
+Disallow: /partners/
+Disallow: /crm/
+Disallow: /university/
+Disallow: /elena/
+Allow: /p/
+
+Sitemap: {base}/p/bonnie-sells-oc-homes/sitemap.xml
+"""
+    return Response(content, mimetype="text/plain")
 
 
 @public_bp.route("/request-access", methods=["GET", "POST"])

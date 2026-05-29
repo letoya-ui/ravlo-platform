@@ -574,6 +574,11 @@ def post_login_redirect():
     if role in ["admin", "platform_admin", "master_admin", "lending_admin"]:
         return redirect(url_for("admin.dashboard"))
 
+    # Investors who have never explicitly selected a plan (DB value still the
+    # default "free") are sent to the subscription selection step.
+    if role == "investor" and getattr(current_user, "subscription", "free") == "free":
+        return redirect(url_for("investor.choose_plan"))
+
     # 👇 only allow next for non-admin users
     next_page = (request.args.get("next") or "").strip()
     if next_page.startswith("/"):
