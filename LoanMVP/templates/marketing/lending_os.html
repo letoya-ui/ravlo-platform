@@ -13,7 +13,7 @@
         </p>
 
         <div class="mk-hero-actions">
-          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Request a Demo</a>
+          <a href="#request-preview" class="mk-btn mk-btn-primary">Get Free Preview Access</a>
           <a href="#founders-access" class="mk-btn mk-btn-ghost">See Founders Access</a>
         </div>
 
@@ -100,6 +100,92 @@
 
 {% block content %}
 
+<style>
+.los-form-section {
+  background: #0f1117;
+  border-top: 1px solid #1e2230;
+  border-bottom: 1px solid #1e2230;
+}
+.los-form-wrap {
+  max-width: 640px;
+  margin: 0 auto;
+  background: #141824;
+  border: 1px solid #252d40;
+  border-radius: 16px;
+  padding: 2.5rem;
+}
+.los-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.los-form-row-single {
+  grid-template-columns: 1fr;
+}
+@media (max-width: 600px) {
+  .los-form-row { grid-template-columns: 1fr; }
+}
+.los-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.los-form-group label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #9aa3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.los-form-group input {
+  background: #0d1017;
+  border: 1px solid #2a3348;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: #f0f4ff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.los-form-group input:focus {
+  border-color: #C9A878;
+}
+.los-form-group input::placeholder {
+  color: #4a5568;
+}
+.los-submit-btn {
+  width: 100%;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  background: #C9A878;
+  color: #0d0d0d;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  letter-spacing: 0.01em;
+}
+.los-submit-btn:hover { background: #d4b888; }
+.los-form-note {
+  text-align: center;
+  margin-top: 0.85rem;
+  font-size: 0.82rem;
+  color: #5a6680;
+}
+.los-flash {
+  padding: 0.85rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+}
+.los-flash-warning { background: #2d2000; border: 1px solid #7a5c00; color: #f0c040; }
+.los-flash-success { background: #002d1a; border: 1px solid #006640; color: #40d488; }
+.los-flash-danger  { background: #2d0010; border: 1px solid #6a0030; color: #f04090; }
+</style>
+
 <section class="mk-section">
   <div class="mk-container">
 
@@ -123,9 +209,9 @@
         </p>
 
         <ul class="mk-bullet-list">
-          <li>Borrower intake & application flow</li>
-          <li>Loan pipeline & stage tracking</li>
-          <li>Conditions & document management</li>
+          <li>Borrower intake &amp; application flow</li>
+          <li>Loan pipeline &amp; stage tracking</li>
+          <li>Conditions &amp; document management</li>
           <li>Internal team coordination</li>
           <li>Borrower communication support</li>
         </ul>
@@ -273,7 +359,7 @@
       <div class="mk-eyebrow">Launch Offer</div>
       <h2 class="mk-title-lg">Founders Access for early lending teams.</h2>
       <p class="mk-copy-lg">
-        We’re opening Ravlo Lending OS to a limited group of lenders who want earlier access,
+        We're opening Ravlo Lending OS to a limited group of lenders who want earlier access,
         direct support, and a stronger operating system for lending workflow.
       </p>
     </div>
@@ -296,7 +382,7 @@
         </ul>
 
         <div class="mk-hero-actions">
-          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Request Founders Access</a>
+          <a href="#request-preview" class="mk-btn mk-btn-primary">Request Founders Access</a>
         </div>
       </article>
 
@@ -364,21 +450,55 @@
   </div>
 </section>
 
-<section class="mk-section">
+{# ── Lead capture ─────────────────────────────────────────────────────────── #}
+<section id="request-preview" class="mk-section los-form-section">
   <div class="mk-container">
-    <div class="mk-mini-cta">
-      <div>
-        <div class="mk-eyebrow">Opportunities</div>
-        <h3>We’re also open to connecting with experienced loan officers and processors.</h3>
-        <p>
-          As Ravlo grows, we welcome introductions from professionals who understand clean lending execution,
-          borrower service, and operational excellence.
-        </p>
-      </div>
+    <div class="mk-section-head">
+      <div class="mk-eyebrow">Free Preview Access</div>
+      <h2 class="mk-title-lg">See it running. No commitment.</h2>
+      <p class="mk-copy-lg">
+        Enter your info below and we'll email your Ravlo Lending OS login credentials in minutes.
+        Explore every role — Loan Officer, Processor, Borrower, Underwriter, Admin — on your own time.
+      </p>
+    </div>
 
-      <div class="mk-mini-cta-actions">
-        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost">Apply Interest</a>
-      </div>
+    <div class="los-form-wrap">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="los-flash los-flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('marketing.lending_os_request_preview') }}">
+        <div class="los-form-row">
+          <div class="los-form-group">
+            <label>First Name *</label>
+            <input type="text" name="first_name" required placeholder="John">
+          </div>
+          <div class="los-form-group">
+            <label>Last Name</label>
+            <input type="text" name="last_name" placeholder="Smith">
+          </div>
+        </div>
+        <div class="los-form-row">
+          <div class="los-form-group">
+            <label>Work Email *</label>
+            <input type="email" name="email" required placeholder="you@company.com">
+          </div>
+          <div class="los-form-group">
+            <label>Company</label>
+            <input type="text" name="company" placeholder="Your Lending Company">
+          </div>
+        </div>
+        <div class="los-form-row los-form-row-single">
+          <div class="los-form-group">
+            <label>Phone (optional)</label>
+            <input type="tel" name="phone" placeholder="(555) 000-0000">
+          </div>
+        </div>
+        <button type="submit" class="los-submit-btn">Get Free Preview Access &rarr;</button>
+        <p class="los-form-note">No credit card. No commitment. Login credentials sent to your inbox.</p>
+      </form>
     </div>
   </div>
 </section>
@@ -393,7 +513,7 @@
       </p>
 
       <div class="mk-hero-actions" style="justify-content:center;">
-        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Request a Demo</a>
+        <a href="#request-preview" class="mk-btn mk-btn-primary">Get Free Preview Access</a>
         <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">See the Platform</a>
       </div>
     </div>
