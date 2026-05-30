@@ -106,10 +106,7 @@ try:
 except Exception:
     InvestorActivity = None
 
-try:
-    from LoanMVP.models.partner_models import PartnerRequest
-except Exception:
-    PartnerRequest = None
+from LoanMVP.models.partner_models import PartnerRequest
 
 # -------------------------
 # AI / Assistants
