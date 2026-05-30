@@ -38,6 +38,7 @@ def _decode_token(token: str) -> dict:
 
 
 LOAN_ROLES = ('loan_officer', 'processor', 'underwriter', 'admin')
+ADMIN_ROLES = ('admin', 'platform_admin', 'master_admin', 'lending_admin', 'executive')
 
 
 def require_auth(f):
@@ -65,6 +66,16 @@ def require_auth(f):
             return jsonify({'error': 'User not found'}), 401
 
         request.current_user = user
+        return f(*args, **kwargs)
+    return decorated
+
+
+def require_admin(f):
+    """Decorator that enforces admin/owner-only access."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if getattr(request.current_user, 'role', '') not in ADMIN_ROLES:
+            return jsonify({'error': 'Admin access required'}), 403
         return f(*args, **kwargs)
     return decorated
 
@@ -109,7 +120,6 @@ def login():
     if user is None:
         return jsonify({'error': 'Invalid email or password'}), 401
 
-    # Support both check_password_hash helpers and Werkzeug's method
     try:
         check_fn = getattr(user, 'check_password', None)
         if check_fn is not None:
@@ -186,7 +196,6 @@ def list_loans():
 
     try:
         if role == 'borrower':
-            # Borrowers only see their own loans
             borrower_id_col = getattr(Loan, 'borrower_id', None)
             if borrower_id_col is not None:
                 loans = Loan.query.filter_by(borrower_id=user.id).all()
@@ -206,7 +215,6 @@ def list_loans():
 @mobile_api.route('/lending/loans/<int:loan_id>', methods=['GET'])
 @require_auth
 def loan_detail(loan_id):
-    """Return a single loan's details."""
     try:
         from LoanMVP.models import Loan
     except ImportError:
@@ -227,7 +235,6 @@ def loan_detail(loan_id):
 @mobile_api.route('/lending/pipeline/summary', methods=['GET'])
 @require_auth
 def pipeline_summary():
-    """Return aggregate pipeline stats."""
     try:
         from LoanMVP.models import Loan
         from sqlalchemy import func
@@ -270,7 +277,6 @@ def _serialize_deal(deal) -> dict:
 @mobile_api.route('/investor/dashboard', methods=['GET'])
 @require_auth
 def investor_dashboard():
-    """Return investor portfolio statistics."""
     user = request.current_user
 
     try:
@@ -312,7 +318,6 @@ def investor_dashboard():
 @mobile_api.route('/investor/deals', methods=['GET'])
 @require_auth
 def investor_deals():
-    """Return deals visible to the current investor."""
     user = request.current_user
 
     try:
@@ -336,7 +341,6 @@ def investor_deals():
 @mobile_api.route('/investor/deals/<int:deal_id>', methods=['GET'])
 @require_auth
 def deal_detail(deal_id):
-    """Return a single deal's details."""
     try:
         from LoanMVP.models import Deal
     except ImportError:
@@ -372,7 +376,6 @@ def _serialize_referral(referral) -> dict:
 @mobile_api.route('/partner/referrals', methods=['GET'])
 @require_auth
 def partner_referrals():
-    """Return referrals submitted by the current partner."""
     user = request.current_user
 
     try:
@@ -430,7 +433,6 @@ def _serialize_progress(progress) -> dict:
 @mobile_api.route('/academy/courses', methods=['GET'])
 @require_auth
 def list_courses():
-    """Return available academy courses."""
     try:
         from LoanMVP.models import Course
     except ImportError:
@@ -452,7 +454,6 @@ def list_courses():
 @mobile_api.route('/academy/courses/<int:course_id>', methods=['GET'])
 @require_auth
 def course_detail(course_id):
-    """Return a single course's details."""
     try:
         from LoanMVP.models import Course
     except ImportError:
@@ -473,7 +474,6 @@ def course_detail(course_id):
 @mobile_api.route('/academy/progress', methods=['GET'])
 @require_auth
 def get_progress():
-    """Return the current user's course progress."""
     user = request.current_user
 
     try:
@@ -505,7 +505,6 @@ def get_progress():
 @mobile_api.route('/academy/progress/<int:course_id>', methods=['POST'])
 @require_auth
 def update_progress(course_id):
-    """Create or update progress for a course."""
     user = request.current_user
     data = request.get_json(silent=True) or {}
     percent_complete = float(data.get('percent_complete', 0) or 0)
@@ -554,17 +553,17 @@ def update_progress(course_id):
 
 
 # ---------------------------------------------------------------------------
-# Elena AI chat route
+# Ravlo AI chat route
 # ---------------------------------------------------------------------------
 
-@mobile_api.route('/elena/chat', methods=['POST'])
+@mobile_api.route('/ai/chat', methods=['POST'])
 @require_auth
-def elena_chat():
-    """Proxy a chat message to Elena, the Ravlo AI lending assistant."""
+def ai_chat():
+    """Chat with Ravlo AI, the intelligent lending assistant."""
     user = request.current_user
     data = request.get_json(silent=True) or {}
     message = (data.get('message') or '').strip()
-    history = data.get('history', [])  # list of {role, content}
+    history = data.get('history', [])
 
     if not message:
         return jsonify({'error': 'Message is required'}), 400
@@ -572,13 +571,13 @@ def elena_chat():
     try:
         import anthropic
     except ImportError:
-        return jsonify({'error': 'Anthropic library not available'}), 500
+        return jsonify({'error': 'AI service not available'}), 500
 
     first_name = getattr(user, 'first_name', '') or 'there'
     role = getattr(user, 'role', 'borrower')
 
     system_prompt = (
-        f"You are Elena, Ravlo's expert AI lending assistant. "
+        f"You are Ravlo AI, an intelligent assistant for the Ravlo lending and real estate platform. "
         f"You are speaking with {first_name}, whose role is {role}. "
         f"You specialize in real estate lending, loan origination, underwriting guidelines, "
         f"investment analysis, and mortgage products. "
@@ -605,8 +604,8 @@ def elena_chat():
         )
         reply = response.content[0].text if response.content else ''
     except Exception as exc:
-        current_app.logger.error('elena_chat error: %s', exc)
-        return jsonify({'error': 'Elena is temporarily unavailable. Please try again.'}), 500
+        current_app.logger.error('ai_chat error: %s', exc)
+        return jsonify({'error': 'Ravlo AI is temporarily unavailable. Please try again.'}), 500
 
     return jsonify({'reply': reply, 'role': 'assistant'}), 200
 
@@ -628,13 +627,11 @@ def register_push_token(current_user=None):
         return jsonify({'error': 'push_token required'}), 400
 
     try:
-        # Store on user model if field exists, otherwise just acknowledge
         if hasattr(current_user, 'push_token'):
             current_user.push_token = push_token
             from LoanMVP.extensions import db
             db.session.commit()
         else:
-            # Log for now - a migration can add this column later
             current_app.logger.info(
                 f"Push token registered: user={current_user.id} app={app_name} platform={platform}"
             )
@@ -680,14 +677,12 @@ def upload_document(current_user=None):
             s3.upload_fileobj(file, s3_bucket, key, ExtraArgs={'ContentType': file.content_type})
             file_url = f"https://{s3_bucket}.s3.amazonaws.com/{key}"
         else:
-            # Local fallback: save to uploads dir
             upload_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads', 'mobile', str(loan_id))
             os.makedirs(upload_dir, exist_ok=True)
             local_path = os.path.join(upload_dir, f"{uuid.uuid4()}_{filename}")
             file.save(local_path)
             file_url = f"/uploads/mobile/{loan_id}/{os.path.basename(local_path)}"
 
-        # Try to create a document record
         try:
             from LoanMVP.models.document_models import LoanDocument
             from LoanMVP.extensions import db
@@ -717,3 +712,195 @@ def upload_document(current_user=None):
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Admin / Owner routes
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/admin/overview', methods=['GET'])
+@require_auth
+@require_admin
+def admin_overview():
+    """Platform-wide stats mirroring the executive dashboard."""
+    import datetime as dt
+    from LoanMVP.extensions import db
+    from sqlalchemy import func
+
+    user_stats = {'total': 0, 'active': 0, 'blocked': 0, 'recent_signups': 0, 'subscriptions': {}, 'roles': {}}
+    try:
+        from LoanMVP.models import User
+        user_stats['total'] = User.query.count()
+        user_stats['active'] = User.query.filter_by(is_active=True).count()
+        user_stats['blocked'] = User.query.filter_by(is_blocked=True).count()
+        thirty_days_ago = dt.datetime.utcnow() - dt.timedelta(days=30)
+        user_stats['recent_signups'] = User.query.filter(User.created_at >= thirty_days_ago).count()
+        for row in db.session.query(User.subscription, func.count(User.id)).group_by(User.subscription).all():
+            user_stats['subscriptions'][row[0] or 'free'] = row[1]
+        for row in db.session.query(User.role, func.count(User.id)).group_by(User.role).all():
+            user_stats['roles'][row[0] or 'unknown'] = row[1]
+    except Exception as exc:
+        current_app.logger.error('admin_overview user stats: %s', exc)
+
+    loan_stats = {'total': 0, 'active': 0, 'volume': 0.0}
+    try:
+        from LoanMVP.models import Loan
+        loan_stats['total'] = Loan.query.count()
+        loan_stats['active'] = Loan.query.filter(
+            Loan.status.in_(('submitted', 'processing', 'underwriting', 'approved', 'in_review'))
+        ).count()
+        vol = db.session.query(func.sum(Loan.loan_amount)).scalar()
+        loan_stats['volume'] = float(vol or 0)
+    except Exception as exc:
+        current_app.logger.error('admin_overview loan stats: %s', exc)
+
+    company_count = 0
+    try:
+        from LoanMVP.models import Company
+        company_count = Company.query.count()
+    except Exception as exc:
+        current_app.logger.error('admin_overview company stats: %s', exc)
+
+    request_stats = {'pending': 0, 'approved': 0, 'total': 0}
+    try:
+        from LoanMVP.models import AccessRequest
+        request_stats['total'] = AccessRequest.query.count()
+        request_stats['pending'] = AccessRequest.query.filter_by(status='pending').count()
+        request_stats['approved'] = AccessRequest.query.filter_by(status='approved').count()
+    except Exception as exc:
+        current_app.logger.error('admin_overview access request stats: %s', exc)
+
+    pending_invites = 0
+    try:
+        from LoanMVP.models import UserInvite
+        pending_invites = UserInvite.query.filter_by(status='pending').count()
+    except Exception as exc:
+        current_app.logger.error('admin_overview invite stats: %s', exc)
+
+    doc_count = 0
+    try:
+        from LoanMVP.models.document_models import LoanDocument
+        doc_count = LoanDocument.query.count()
+    except Exception as exc:
+        current_app.logger.error('admin_overview doc stats: %s', exc)
+
+    return jsonify({
+        'users': user_stats,
+        'loans': loan_stats,
+        'companies': company_count,
+        'documents': doc_count,
+        'access_requests': request_stats,
+        'pending_invites': pending_invites,
+    }), 200
+
+
+@mobile_api.route('/admin/users', methods=['GET'])
+@require_auth
+@require_admin
+def admin_users():
+    """Paginated, searchable user list for admin/owner."""
+    page = max(1, int(request.args.get('page', 1)))
+    per_page = min(50, max(1, int(request.args.get('per_page', 25))))
+    search = (request.args.get('search') or '').strip()
+    role_filter = (request.args.get('role') or '').strip()
+
+    try:
+        from LoanMVP.models import User
+        query = User.query
+        if search:
+            like = f'%{search}%'
+            query = query.filter(
+                (User.email.ilike(like)) |
+                (User.first_name.ilike(like)) |
+                (User.last_name.ilike(like))
+            )
+        if role_filter:
+            query = query.filter_by(role=role_filter)
+
+        total = query.count()
+        users = query.order_by(User.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+
+        def _s(u):
+            first = getattr(u, 'first_name', '') or ''
+            last = getattr(u, 'last_name', '') or ''
+            return {
+                'id': u.id,
+                'full_name': f'{first} {last}'.strip() or u.email,
+                'email': u.email,
+                'role': getattr(u, 'role', '') or '',
+                'subscription': getattr(u, 'subscription', '') or 'free',
+                'is_active': getattr(u, 'is_active', True),
+                'is_blocked': getattr(u, 'is_blocked', False),
+                'created_at': str(getattr(u, 'created_at', '') or ''),
+                'last_login': str(getattr(u, 'last_login', '') or ''),
+                'onboarding_complete': getattr(u, 'onboarding_complete', False),
+            }
+
+        return jsonify({
+            'users': [_s(u) for u in users],
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'pages': (total + per_page - 1) // per_page,
+        }), 200
+    except Exception as exc:
+        current_app.logger.error('admin_users error: %s', exc)
+        return jsonify({'error': 'Could not retrieve users'}), 500
+
+
+@mobile_api.route('/admin/activity', methods=['GET'])
+@require_auth
+@require_admin
+def admin_activity():
+    """Recent platform activity: signups, access requests, leads."""
+    recent_users = []
+    try:
+        from LoanMVP.models import User
+        for u in User.query.order_by(User.created_at.desc()).limit(10).all():
+            first = getattr(u, 'first_name', '') or ''
+            last = getattr(u, 'last_name', '') or ''
+            recent_users.append({
+                'id': u.id,
+                'name': f'{first} {last}'.strip() or u.email,
+                'email': u.email,
+                'role': getattr(u, 'role', '') or '',
+                'subscription': getattr(u, 'subscription', '') or 'free',
+                'created_at': str(getattr(u, 'created_at', '') or ''),
+            })
+    except Exception as exc:
+        current_app.logger.error('admin_activity users: %s', exc)
+
+    recent_requests = []
+    try:
+        from LoanMVP.models import AccessRequest
+        for r in AccessRequest.query.order_by(AccessRequest.created_at.desc()).limit(10).all():
+            recent_requests.append({
+                'id': r.id,
+                'name': getattr(r, 'contact_name', '') or getattr(r, 'name', '') or '',
+                'email': getattr(r, 'email', '') or '',
+                'company': getattr(r, 'company_name', '') or '',
+                'status': getattr(r, 'status', '') or '',
+                'created_at': str(getattr(r, 'created_at', '') or ''),
+            })
+    except Exception as exc:
+        current_app.logger.error('admin_activity requests: %s', exc)
+
+    recent_leads = []
+    try:
+        from LoanMVP.models import Lead
+        for lead in Lead.query.order_by(Lead.created_at.desc()).limit(5).all():
+            recent_leads.append({
+                'id': lead.id,
+                'name': getattr(lead, 'name', '') or getattr(lead, 'full_name', '') or '',
+                'email': getattr(lead, 'email', '') or '',
+                'status': getattr(lead, 'status', '') or '',
+                'created_at': str(getattr(lead, 'created_at', '') or ''),
+            })
+    except Exception as exc:
+        current_app.logger.error('admin_activity leads: %s', exc)
+
+    return jsonify({
+        'recent_users': recent_users,
+        'recent_requests': recent_requests,
+        'recent_leads': recent_leads,
+    }), 200

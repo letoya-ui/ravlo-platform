@@ -22,9 +22,9 @@ interface Message {
   content: string;
 }
 
-export default function ElenaScreen() {
+export default function RavloAIScreen() {
   const [messages, setMessages] = useState<Message[]>([
-    { id: '0', role: 'assistant', content: "Hi! I'm Elena, your Ravlo AI lending assistant. Ask me anything about loans, underwriting, investment analysis, or mortgage products." },
+    { id: '0', role: 'assistant', content: "Hi! I'm Ravlo AI, your intelligent lending assistant. Ask me anything about loans, underwriting, investment analysis, or mortgage products." },
   ]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -42,11 +42,11 @@ export default function ElenaScreen() {
     const history = messages.map((m) => ({ role: m.role, content: m.content }));
 
     try {
-      const res = await api.post('/mobile/elena/chat', { message: text, history });
+      const res = await api.post('/mobile/ai/chat', { message: text, history });
       const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: res.data.reply };
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err: any) {
-      Alert.alert('Elena Error', err.response?.data?.error || 'Could not reach Elena. Please try again.');
+      Alert.alert('Ravlo AI', err.response?.data?.error || 'Could not reach Ravlo AI. Please try again.');
     } finally {
       setSending(false);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
@@ -61,8 +61,8 @@ export default function ElenaScreen() {
             <Ionicons name="sparkles" size={20} color={Colors.white} />
           </View>
           <View>
-            <Text style={styles.headerName}>Elena</Text>
-            <Text style={styles.headerSub}>AI Lending Assistant</Text>
+            <Text style={styles.headerName}>Ravlo AI</Text>
+            <Text style={styles.headerSub}>Intelligent Lending Assistant</Text>
           </View>
         </View>
       </View>
@@ -76,7 +76,7 @@ export default function ElenaScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="chatbubbles-outline" size={48} color={Colors.textMuted} />
-            <Text style={styles.emptyText}>Start a conversation with Elena</Text>
+            <Text style={styles.emptyText}>Start a conversation with Ravlo AI</Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -101,7 +101,7 @@ export default function ElenaScreen() {
             style={styles.textInput}
             value={input}
             onChangeText={setInput}
-            placeholder="Ask Elena anything…"
+            placeholder="Ask Ravlo anything…"
             placeholderTextColor={Colors.textMuted}
             multiline
             maxLength={2000}
