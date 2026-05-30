@@ -2,6 +2,7 @@ export default ({ config }) => ({
   ...config,
   name: 'Ravlo Investor',
   slug: 'ravlo-investor',
+  owner: 'letoyamason',
   version: '1.0.0',
   orientation: 'portrait',
   userInterfaceStyle: 'dark',

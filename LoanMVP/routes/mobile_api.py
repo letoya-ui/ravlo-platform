@@ -5,7 +5,7 @@ import jwt
 import datetime
 from functools import wraps
 from flask import Blueprint, request, jsonify, current_app
-from LoanMVP.extensions import csrf
+from LoanMVP.extensions import csrf, db
 
 mobile_api = Blueprint('mobile_api', __name__, url_prefix='/mobile')
 csrf.exempt(mobile_api)
@@ -902,3 +902,395 @@ def admin_activity():
         'recent_requests': recent_requests,
         'recent_leads': recent_leads,
     }), 200
+
+
+# ---------------------------------------------------------------------------
+# Loan Officer / LO-role dashboard
+# ---------------------------------------------------------------------------
+
+LO_ROLES = ('loan_officer', 'processor', 'underwriter', 'admin', 'platform_admin',
+             'master_admin', 'lending_admin', 'executive')
+
+
+@mobile_api.route('/lending/dashboard', methods=['GET'])
+@require_auth
+def lo_dashboard():
+    user = request.current_user
+    uid = user.id
+    today = datetime.datetime.utcnow().date()
+    data = {}
+
+    try:
+        from LoanMVP.models.crm_models import Lead
+        lead_counts = {}
+        for status in ('New', 'Active', 'Contacted', 'Pending', 'Closed'):
+            lead_counts[status.lower()] = Lead.query.filter_by(assigned_to=uid, status=status).count()
+        lead_counts['total'] = Lead.query.filter_by(assigned_to=uid).count()
+        data['leads'] = lead_counts
+    except Exception as exc:
+        current_app.logger.error('lo_dashboard leads: %s', exc)
+        data['leads'] = {}
+
+    try:
+        from LoanMVP.models.crm_models import Task
+        data['tasks'] = {
+            'due_today': Task.query.filter_by(assigned_to=uid, completed=False).filter(Task.due_date == today).count(),
+            'overdue': Task.query.filter_by(assigned_to=uid, completed=False).filter(Task.due_date < today).count(),
+            'total_open': Task.query.filter_by(assigned_to=uid, completed=False).count(),
+        }
+    except Exception as exc:
+        current_app.logger.error('lo_dashboard tasks: %s', exc)
+        data['tasks'] = {}
+
+    try:
+        from LoanMVP.models.crm_models import Message
+        data['messages'] = {
+            'unread': Message.query.filter_by(receiver_id=uid, is_read=False).count(),
+        }
+    except Exception as exc:
+        current_app.logger.error('lo_dashboard messages: %s', exc)
+        data['messages'] = {}
+
+    try:
+        from LoanMVP.models.loan_models import LoanApplication
+        loans = LoanApplication.query.filter_by(assigned_to=uid).all()
+        volume = sum(getattr(l, 'loan_amount', 0) or 0 for l in loans)
+        active = sum(1 for l in loans if getattr(l, 'status', '') in ('Active', 'Processing', 'In Review'))
+        data['pipeline'] = {'total': len(loans), 'active': active, 'volume': volume}
+    except Exception as exc:
+        current_app.logger.error('lo_dashboard pipeline: %s', exc)
+        data['pipeline'] = {}
+
+    return jsonify(data), 200
+
+
+# ---------------------------------------------------------------------------
+# Leads endpoints
+# ---------------------------------------------------------------------------
+
+LEAD_STATUSES = ['New', 'Contacted', 'Active', 'Pending', 'Qualified', 'Closed', 'Unqualified']
+
+
+@mobile_api.route('/lending/leads', methods=['GET'])
+@require_auth
+def lo_leads():
+    user = request.current_user
+    uid = user.id
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 20))
+    search = request.args.get('search', '').strip()
+    status_filter = request.args.get('status', '').strip()
+
+    try:
+        from LoanMVP.models.crm_models import Lead
+        q = Lead.query.filter_by(assigned_to=uid)
+        if status_filter and status_filter != 'All':
+            q = q.filter(Lead.status == status_filter)
+        if search:
+            like = f'%{search}%'
+            q = q.filter(
+                db.or_(Lead.name.ilike(like), Lead.email.ilike(like), Lead.phone.ilike(like))
+            )
+        q = q.order_by(Lead.created_at.desc())
+        paginated = q.paginate(page=page, per_page=per_page, error_out=False)
+        items = []
+        for lead in paginated.items:
+            items.append({
+                'id': lead.id,
+                'name': getattr(lead, 'name', '') or '',
+                'email': getattr(lead, 'email', '') or '',
+                'phone': getattr(lead, 'phone', '') or '',
+                'status': getattr(lead, 'status', 'New') or 'New',
+                'created_at': str(getattr(lead, 'created_at', '') or ''),
+                'updated_at': str(getattr(lead, 'updated_at', '') or ''),
+            })
+        return jsonify({'leads': items, 'total': paginated.total, 'pages': paginated.pages, 'page': page}), 200
+    except Exception as exc:
+        current_app.logger.error('lo_leads: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+@mobile_api.route('/lending/leads/<int:lead_id>', methods=['GET'])
+@require_auth
+def lo_lead_detail(lead_id):
+    try:
+        from LoanMVP.models.crm_models import Lead, CRMNote
+        from LoanMVP.models.loan_models import BorrowerProfile
+        lead = Lead.query.get_or_404(lead_id)
+        notes = []
+        for n in CRMNote.query.filter_by(lead_id=lead_id).order_by(CRMNote.created_at.desc()).limit(20).all():
+            notes.append({
+                'id': n.id,
+                'content': n.content,
+                'created_at': str(n.created_at),
+                'user_id': n.user_id,
+            })
+        borrowers = []
+        for b in getattr(lead, 'borrowers', []):
+            borrowers.append({
+                'id': b.id,
+                'full_name': getattr(b, 'full_name', '') or '',
+                'email': getattr(b, 'email', '') or '',
+                'loan_type': getattr(b, 'loan_type', '') or '',
+                'loan_amount': getattr(b, 'loan_amount', 0) or 0,
+                'status': getattr(b, 'status', '') or '',
+            })
+        return jsonify({
+            'id': lead.id,
+            'name': getattr(lead, 'name', '') or '',
+            'email': getattr(lead, 'email', '') or '',
+            'phone': getattr(lead, 'phone', '') or '',
+            'message': getattr(lead, 'message', '') or '',
+            'status': getattr(lead, 'status', 'New') or 'New',
+            'created_at': str(getattr(lead, 'created_at', '') or ''),
+            'updated_at': str(getattr(lead, 'updated_at', '') or ''),
+            'notes': notes,
+            'borrowers': borrowers,
+        }), 200
+    except Exception as exc:
+        current_app.logger.error('lo_lead_detail: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+@mobile_api.route('/lending/leads/<int:lead_id>/status', methods=['POST'])
+@require_auth
+def lo_lead_status(lead_id):
+    try:
+        from LoanMVP.models.crm_models import Lead
+        from LoanMVP.extensions import db as _db
+        data = request.get_json(force=True) or {}
+        new_status = data.get('status', '')
+        if new_status not in LEAD_STATUSES:
+            return jsonify({'error': 'Invalid status'}), 400
+        lead = Lead.query.get_or_404(lead_id)
+        lead.status = new_status
+        _db.session.commit()
+        return jsonify({'ok': True, 'status': new_status}), 200
+    except Exception as exc:
+        current_app.logger.error('lo_lead_status: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+@mobile_api.route('/lending/leads/<int:lead_id>/note', methods=['POST'])
+@require_auth
+def lo_lead_note(lead_id):
+    try:
+        from LoanMVP.models.crm_models import CRMNote
+        from LoanMVP.extensions import db as _db
+        data = request.get_json(force=True) or {}
+        content = (data.get('content') or '').strip()
+        if not content:
+            return jsonify({'error': 'Content required'}), 400
+        note = CRMNote(lead_id=lead_id, user_id=request.current_user.id, content=content)
+        _db.session.add(note)
+        _db.session.commit()
+        return jsonify({'ok': True, 'note': {'id': note.id, 'content': note.content, 'created_at': str(note.created_at)}}), 201
+    except Exception as exc:
+        current_app.logger.error('lo_lead_note: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Borrowers
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/lending/borrowers', methods=['GET'])
+@require_auth
+def lo_borrowers():
+    user = request.current_user
+    uid = user.id
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 20))
+    search = request.args.get('search', '').strip()
+
+    try:
+        from LoanMVP.models.loan_models import BorrowerProfile
+        q = BorrowerProfile.query.filter(
+            db.or_(BorrowerProfile.assigned_to == uid, BorrowerProfile.assigned_officer_id == uid)
+        )
+        if search:
+            like = f'%{search}%'
+            q = q.filter(
+                db.or_(BorrowerProfile.full_name.ilike(like), BorrowerProfile.email.ilike(like))
+            )
+        q = q.order_by(BorrowerProfile.id.desc())
+        paginated = q.paginate(page=page, per_page=per_page, error_out=False)
+        items = []
+        for b in paginated.items:
+            items.append({
+                'id': b.id,
+                'full_name': getattr(b, 'full_name', '') or '',
+                'email': getattr(b, 'email', '') or '',
+                'phone': getattr(b, 'phone', '') or '',
+                'loan_type': getattr(b, 'loan_type', '') or '',
+                'loan_amount': getattr(b, 'loan_amount', 0) or 0,
+                'status': getattr(b, 'status', '') or '',
+                'credit_score': getattr(b, 'credit_score', None),
+            })
+        return jsonify({'borrowers': items, 'total': paginated.total, 'pages': paginated.pages, 'page': page}), 200
+    except Exception as exc:
+        current_app.logger.error('lo_borrowers: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Tasks
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/lending/tasks', methods=['GET'])
+@require_auth
+def lo_tasks():
+    user = request.current_user
+    uid = user.id
+    today = datetime.datetime.utcnow().date()
+
+    try:
+        from LoanMVP.models.crm_models import Task
+        tasks = Task.query.filter_by(assigned_to=uid, completed=False).order_by(Task.due_date.asc().nullslast()).all()
+        overdue, due_today, upcoming = [], [], []
+        for t in tasks:
+            item = {
+                'id': t.id,
+                'title': getattr(t, 'title', '') or '',
+                'description': getattr(t, 'description', '') or '',
+                'due_date': str(t.due_date) if t.due_date else None,
+                'priority': getattr(t, 'priority', 'Normal') or 'Normal',
+                'status': getattr(t, 'status', 'Pending') or 'Pending',
+            }
+            if t.due_date is None:
+                upcoming.append(item)
+            elif t.due_date < today:
+                overdue.append(item)
+            elif t.due_date == today:
+                due_today.append(item)
+            else:
+                upcoming.append(item)
+        return jsonify({'overdue': overdue, 'due_today': due_today, 'upcoming': upcoming}), 200
+    except Exception as exc:
+        current_app.logger.error('lo_tasks: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+@mobile_api.route('/lending/tasks/<int:task_id>/complete', methods=['POST'])
+@require_auth
+def lo_task_complete(task_id):
+    try:
+        from LoanMVP.models.crm_models import Task
+        from LoanMVP.extensions import db as _db
+        task = Task.query.get_or_404(task_id)
+        task.completed = True
+        task.status = 'Completed'
+        _db.session.commit()
+        return jsonify({'ok': True}), 200
+    except Exception as exc:
+        current_app.logger.error('lo_task_complete: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Messages
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/lending/messages', methods=['GET'])
+@require_auth
+def lo_messages():
+    user = request.current_user
+    uid = user.id
+
+    try:
+        from LoanMVP.models.crm_models import Message
+        from LoanMVP.models import User
+        from sqlalchemy import func as sql_func
+
+        all_msgs = Message.query.filter(
+            db.or_(Message.sender_id == uid, Message.receiver_id == uid)
+        ).order_by(Message.created_at.desc()).all()
+
+        seen_partners = {}
+        conversations = []
+        for msg in all_msgs:
+            partner_id = msg.receiver_id if msg.sender_id == uid else msg.sender_id
+            if partner_id not in seen_partners:
+                seen_partners[partner_id] = True
+                partner = User.query.get(partner_id)
+                unread = Message.query.filter_by(sender_id=partner_id, receiver_id=uid, is_read=False).count()
+                first = getattr(partner, 'first_name', '') or ''
+                last = getattr(partner, 'last_name', '') or ''
+                conversations.append({
+                    'partner_id': partner_id,
+                    'partner_name': f'{first} {last}'.strip() or 'Unknown',
+                    'partner_role': getattr(partner, 'role', '') or '',
+                    'last_message': msg.content[:100],
+                    'last_message_at': str(msg.created_at),
+                    'unread': unread,
+                    'is_mine': msg.sender_id == uid,
+                })
+        return jsonify({'conversations': conversations}), 200
+    except Exception as exc:
+        current_app.logger.error('lo_messages: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+@mobile_api.route('/lending/messages/<int:other_user_id>/thread', methods=['GET'])
+@require_auth
+def lo_message_thread(other_user_id):
+    user = request.current_user
+    uid = user.id
+
+    try:
+        from LoanMVP.models.crm_models import Message
+        from LoanMVP.extensions import db as _db
+        msgs = Message.query.filter(
+            db.or_(
+                db.and_(Message.sender_id == uid, Message.receiver_id == other_user_id),
+                db.and_(Message.sender_id == other_user_id, Message.receiver_id == uid),
+            )
+        ).order_by(Message.created_at.asc()).all()
+
+        for m in msgs:
+            if m.receiver_id == uid and not m.is_read:
+                m.is_read = True
+        _db.session.commit()
+
+        thread = []
+        for m in msgs:
+            thread.append({
+                'id': m.id,
+                'sender_id': m.sender_id,
+                'is_mine': m.sender_id == uid,
+                'content': m.content,
+                'created_at': str(m.created_at),
+                'is_read': m.is_read,
+            })
+        return jsonify({'thread': thread, 'other_user_id': other_user_id}), 200
+    except Exception as exc:
+        current_app.logger.error('lo_message_thread: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+@mobile_api.route('/lending/messages/send', methods=['POST'])
+@require_auth
+def lo_message_send():
+    user = request.current_user
+    uid = user.id
+
+    try:
+        from LoanMVP.models.crm_models import Message
+        from LoanMVP.extensions import db as _db
+        data = request.get_json(force=True) or {}
+        receiver_id = data.get('receiver_id')
+        content = (data.get('content') or '').strip()
+        if not receiver_id or not content:
+            return jsonify({'error': 'receiver_id and content required'}), 400
+        msg = Message(
+            sender_id=uid,
+            receiver_id=int(receiver_id),
+            content=content,
+            sender_role=getattr(user, 'role', ''),
+        )
+        _db.session.add(msg)
+        _db.session.commit()
+        return jsonify({'ok': True, 'message': {'id': msg.id, 'content': msg.content, 'created_at': str(msg.created_at)}}), 201
+    except Exception as exc:
+        current_app.logger.error('lo_message_send: %s', exc)
+        return jsonify({'error': str(exc)}), 500
