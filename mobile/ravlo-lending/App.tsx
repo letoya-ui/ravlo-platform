@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -22,52 +22,76 @@ import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 import AdminDashboardScreen from './src/screens/admin/AdminDashboardScreen';
 import AdminUsersScreen from './src/screens/admin/AdminUsersScreen';
 import AdminActivityScreen from './src/screens/admin/AdminActivityScreen';
+import LeadsScreen from './src/screens/LeadsScreen';
+import LeadDetailScreen from './src/screens/LeadDetailScreen';
+import BorrowersScreen from './src/screens/BorrowersScreen';
+import TasksScreen from './src/screens/TasksScreen';
+import MessagesScreen from './src/screens/MessagesScreen';
+import MoreScreen from './src/screens/MoreScreen';
 
 const Tab = createBottomTabNavigator();
-const LoanStack = createStackNavigator();
-const AdminStack = createStackNavigator();
+const Stack = createStackNavigator();
 const RootStack = createStackNavigator();
 
 const ADMIN_ROLES = ['admin', 'platform_admin', 'master_admin', 'lending_admin', 'executive'];
+const LO_ROLES = ['loan_officer', 'processor', 'underwriter'];
 
 function LoanNavigator() {
   return (
-    <LoanStack.Navigator screenOptions={{ headerShown: false }}>
-      <LoanStack.Screen name="LoanList" component={LoanListScreen} />
-      <LoanStack.Screen name="LoanDetail" component={LoanDetailScreen} />
-      <LoanStack.Screen name="DocumentUpload" component={DocumentUploadScreen} />
-    </LoanStack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="LoanList" component={LoanListScreen} />
+      <Stack.Screen name="LoanDetail" component={LoanDetailScreen} />
+      <Stack.Screen name="DocumentUpload" component={DocumentUploadScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function LeadNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="LeadList" component={LeadsScreen} />
+      <Stack.Screen name="LeadDetail" component={LeadDetailScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function MoreNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MoreMenu" component={MoreScreen} />
+      <Stack.Screen name="Tasks" component={TasksScreen} />
+      <Stack.Screen name="Messages" component={MessagesScreen} />
+      <Stack.Screen name="RavloAI" component={RavloAIScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+    </Stack.Navigator>
   );
 }
 
 function AdminNavigator() {
   return (
-    <AdminStack.Navigator screenOptions={{ headerShown: false }}>
-      <AdminStack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
-      <AdminStack.Screen name="AdminUsers" component={AdminUsersScreen} />
-      <AdminStack.Screen name="AdminActivity" component={AdminActivityScreen} />
-    </AdminStack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+      <Stack.Screen name="AdminUsers" component={AdminUsersScreen} />
+      <Stack.Screen name="AdminActivity" component={AdminActivityScreen} />
+    </Stack.Navigator>
   );
 }
 
 function MainTabs() {
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: Colors.blueprint,
-        tabBarInactiveTintColor: Colors.textMuted,
-        tabBarIcon: ({ color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap = 'grid-outline';
-          if (route.name === 'Dashboard') iconName = 'grid-outline';
-          else if (route.name === 'Loans') iconName = 'documents-outline';
-          else if (route.name === 'RavloAI') iconName = 'sparkles-outline';
-          else if (route.name === 'Profile') iconName = 'person-outline';
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-      })}
-    >
+    <Tab.Navigator screenOptions={({ route }) => ({
+      headerShown: false,
+      tabBarStyle: styles.tabBar,
+      tabBarActiveTintColor: Colors.blueprint,
+      tabBarInactiveTintColor: Colors.textMuted,
+      tabBarIcon: ({ color, size }) => {
+        const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+          Dashboard: 'grid-outline', Loans: 'documents-outline',
+          RavloAI: 'sparkles-outline', Profile: 'person-outline',
+        };
+        return <Ionicons name={icons[route.name] || 'grid-outline'} size={size} color={color} />;
+      },
+    })}>
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Loans" component={LoanNavigator} />
       <Tab.Screen name="RavloAI" component={RavloAIScreen} options={{ tabBarLabel: 'Ravlo AI' }} />
@@ -76,45 +100,49 @@ function MainTabs() {
   );
 }
 
+function LoanOfficerTabs() {
+  return (
+    <Tab.Navigator screenOptions={({ route }) => ({
+      headerShown: false,
+      tabBarStyle: styles.tabBar,
+      tabBarActiveTintColor: Colors.blueprint,
+      tabBarInactiveTintColor: Colors.textMuted,
+      tabBarIcon: ({ color, size }) => {
+        const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+          Dashboard: 'grid-outline', Leads: 'people-outline',
+          Pipeline: 'documents-outline', Borrowers: 'person-outline', More: 'menu-outline',
+        };
+        return <Ionicons name={icons[route.name] || 'grid-outline'} size={size} color={color} />;
+      },
+    })}>
+      <Tab.Screen name="Dashboard" component={DashboardScreen} />
+      <Tab.Screen name="Leads" component={LeadNavigator} />
+      <Tab.Screen name="Pipeline" component={LoanNavigator} options={{ tabBarLabel: 'Pipeline' }} />
+      <Tab.Screen name="Borrowers" component={BorrowersScreen} />
+      <Tab.Screen name="More" component={MoreNavigator} />
+    </Tab.Navigator>
+  );
+}
+
 function AdminTabs() {
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: Colors.blueprint,
-        tabBarInactiveTintColor: Colors.textMuted,
-        tabBarIcon: ({ color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap = 'grid-outline';
-          if (route.name === 'OwnerHome') iconName = 'stats-chart-outline';
-          else if (route.name === 'Users') iconName = 'people-outline';
-          else if (route.name === 'Activity') iconName = 'pulse-outline';
-          else if (route.name === 'RavloAI') iconName = 'sparkles-outline';
-          else if (route.name === 'Profile') iconName = 'person-outline';
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-      })}
-    >
-      <Tab.Screen
-        name="OwnerHome"
-        component={AdminNavigator}
-        options={{ tabBarLabel: 'Overview' }}
-      />
-      <Tab.Screen
-        name="Users"
-        component={AdminUsersScreen}
-        options={{ tabBarLabel: 'Users' }}
-      />
-      <Tab.Screen
-        name="Activity"
-        component={AdminActivityScreen}
-        options={{ tabBarLabel: 'Activity' }}
-      />
-      <Tab.Screen
-        name="RavloAI"
-        component={RavloAIScreen}
-        options={{ tabBarLabel: 'Ravlo AI' }}
-      />
+    <Tab.Navigator screenOptions={({ route }) => ({
+      headerShown: false,
+      tabBarStyle: styles.tabBar,
+      tabBarActiveTintColor: Colors.blueprint,
+      tabBarInactiveTintColor: Colors.textMuted,
+      tabBarIcon: ({ color, size }) => {
+        const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+          OwnerHome: 'stats-chart-outline', Users: 'people-outline',
+          Activity: 'pulse-outline', RavloAI: 'sparkles-outline', Profile: 'person-outline',
+        };
+        return <Ionicons name={icons[route.name] || 'grid-outline'} size={size} color={color} />;
+      },
+    })}>
+      <Tab.Screen name="OwnerHome" component={AdminNavigator} options={{ tabBarLabel: 'Overview' }} />
+      <Tab.Screen name="Users" component={AdminUsersScreen} />
+      <Tab.Screen name="Activity" component={AdminActivityScreen} />
+      <Tab.Screen name="RavloAI" component={RavloAIScreen} options={{ tabBarLabel: 'Ravlo AI' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -122,8 +150,10 @@ function AdminTabs() {
 
 function RoleBasedTabs() {
   const { user } = useAuthStore();
-  const isAdmin = ADMIN_ROLES.includes(user?.role || '');
-  return isAdmin ? <AdminTabs /> : <MainTabs />;
+  const role = user?.role || '';
+  if (ADMIN_ROLES.includes(role)) return <AdminTabs />;
+  if (LO_ROLES.includes(role)) return <LoanOfficerTabs />;
+  return <MainTabs />;
 }
 
 export default function App() {
@@ -135,9 +165,7 @@ export default function App() {
       try {
         const done = await AsyncStorage.getItem('ravlo_onboarding_done');
         setOnboardingDone(done === 'true');
-      } catch {
-        setOnboardingDone(true);
-      }
+      } catch { setOnboardingDone(true); }
       await loadToken();
     };
     init();
@@ -147,14 +175,8 @@ export default function App() {
     if (!token) return;
     registerForPushNotifications('lending');
     const cleanup = useNotificationListeners(
-      (notification) => {
-        const title = notification.request.content.title || 'Ravlo Lending';
-        const body = notification.request.content.body || '';
-        Alert.alert(title, body);
-      },
-      (response) => {
-        console.log('Notification tapped:', response.notification.request.content);
-      }
+      (n) => Alert.alert(n.request.content.title || 'Ravlo Lending', n.request.content.body || ''),
+      (r) => console.log('Notification tapped:', r.notification.request.content)
     );
     return cleanup;
   }, [token]);
@@ -168,11 +190,7 @@ export default function App() {
           <RootStack.Navigator screenOptions={{ headerShown: false }}>
             {!onboardingDone ? (
               <RootStack.Screen name="Onboarding">
-                {() => (
-                  <OnboardingScreen
-                    onDone={() => setOnboardingDone(true)}
-                  />
-                )}
+                {() => <OnboardingScreen onDone={() => setOnboardingDone(true)} />}
               </RootStack.Screen>
             ) : token ? (
               <RootStack.Screen name="Main" component={RoleBasedTabs} />
@@ -188,9 +206,5 @@ export default function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  tabBar: {
-    backgroundColor: Colors.surface,
-    borderTopColor: Colors.border,
-    borderTopWidth: 1,
-  },
+  tabBar: { backgroundColor: Colors.surface, borderTopColor: Colors.border, borderTopWidth: 1 },
 });
