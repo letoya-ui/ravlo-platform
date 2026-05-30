@@ -400,6 +400,141 @@ def deal_detail(deal_id):
 
 
 # ---------------------------------------------------------------------------
+# Investor — portfolio & investments
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/investor/portfolio', methods=['GET'])
+@require_auth
+def investor_portfolio():
+    """Return Investment records for the authenticated investor."""
+    user = request.current_user
+    try:
+        from LoanMVP.models.investor_models import Investment, InvestorProfile
+        profile = InvestorProfile.query.filter_by(user_id=user.id).first()
+        if not profile:
+            return jsonify({'investments': [], 'stats': {}}), 200
+        investments = Investment.query.filter_by(investor_profile_id=profile.id).order_by(Investment.created_at.desc()).all()
+
+        def _ser(inv):
+            profit = getattr(inv, 'projected_profit', None)
+            roi = getattr(inv, 'projected_roi', None)
+            return {
+                'id': inv.id,
+                'title': getattr(inv, 'title', '') or getattr(inv, 'property_address', '') or 'Untitled',
+                'strategy': getattr(inv, 'strategy', '') or '',
+                'address': getattr(inv, 'property_address', '') or '',
+                'city': getattr(inv, 'city', '') or '',
+                'state': getattr(inv, 'state', '') or '',
+                'status': getattr(inv, 'status', 'pipeline') or 'pipeline',
+                'stage': getattr(inv, 'stage', '') or '',
+                'purchase_price': int(getattr(inv, 'purchase_price', 0) or 0),
+                'rehab_budget': int(getattr(inv, 'rehab_budget', 0) or 0),
+                'arv': int(getattr(inv, 'arv', 0) or 0),
+                'monthly_rent': int(getattr(inv, 'monthly_rent', 0) or 0),
+                'loan_amount': int(getattr(inv, 'loan_amount', 0) or 0),
+                'projected_profit': int(profit or 0),
+                'projected_roi': float(roi or 0),
+                'notes': getattr(inv, 'notes', '') or '',
+                'created_at': str(getattr(inv, 'created_at', '') or ''),
+            }
+
+        serialized = [_ser(i) for i in investments]
+
+        total_invested = sum(i['purchase_price'] + i['rehab_budget'] for i in serialized)
+        total_arv = sum(i['arv'] for i in serialized)
+        total_profit = sum(i['projected_profit'] for i in serialized)
+        by_status = {}
+        by_strategy = {}
+        for i in serialized:
+            by_status[i['status']] = by_status.get(i['status'], 0) + 1
+            if i['strategy']:
+                by_strategy[i['strategy']] = by_strategy.get(i['strategy'], 0) + 1
+
+        return jsonify({
+            'investments': serialized,
+            'stats': {
+                'total': len(serialized),
+                'total_invested': total_invested,
+                'total_arv': total_arv,
+                'total_profit': total_profit,
+                'by_status': by_status,
+                'by_strategy': by_strategy,
+            }
+        }), 200
+    except Exception as exc:
+        current_app.logger.error('investor_portfolio error: %s', exc)
+        return jsonify({'investments': [], 'stats': {}}), 200
+
+
+@mobile_api.route('/investor/funding-requests', methods=['GET'])
+@require_auth
+def list_funding_requests():
+    user = request.current_user
+    try:
+        from LoanMVP.models.investor_models import FundingRequest
+        from LoanMVP.models import Deal
+        requests_q = FundingRequest.query.filter_by(investor_id=user.id).order_by(FundingRequest.created_at.desc()).all()
+
+        def _ser(fr):
+            deal = None
+            try:
+                deal = Deal.query.get(fr.deal_id)
+            except Exception:
+                pass
+            return {
+                'id': fr.id,
+                'deal_id': fr.deal_id,
+                'deal_title': (getattr(deal, 'title', '') or getattr(deal, 'address', '') or 'Deal') if deal else 'Deal',
+                'requested_amount': float(fr.requested_amount or 0),
+                'status': fr.status or 'submitted',
+                'notes': fr.notes or '',
+                'created_at': str(fr.created_at or ''),
+                'updated_at': str(fr.updated_at or ''),
+            }
+
+        return jsonify({'requests': [_ser(r) for r in requests_q], 'total': len(requests_q)}), 200
+    except Exception as exc:
+        current_app.logger.error('list_funding_requests error: %s', exc)
+        return jsonify({'requests': [], 'total': 0}), 200
+
+
+@mobile_api.route('/investor/funding-requests', methods=['POST'])
+@require_auth
+def create_funding_request():
+    user = request.current_user
+    data = request.get_json(force=True) or {}
+    deal_id = data.get('deal_id')
+    requested_amount = data.get('requested_amount', 0)
+    notes = data.get('notes', '')
+
+    if not deal_id:
+        return jsonify({'error': 'deal_id is required'}), 400
+
+    try:
+        from LoanMVP.models import Deal
+        from LoanMVP.models.investor_models import FundingRequest
+        deal = Deal.query.get(deal_id)
+        if not deal or deal.user_id != user.id:
+            return jsonify({'error': 'Deal not found'}), 404
+
+        fr = FundingRequest(
+            investor_id=user.id,
+            deal_id=deal_id,
+            requested_amount=float(requested_amount or 0),
+            notes=notes,
+            status='submitted',
+        )
+        db.session.add(fr)
+        deal.submitted_for_funding = True
+        db.session.commit()
+        return jsonify({'id': fr.id, 'status': 'submitted'}), 201
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('create_funding_request error: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+# ---------------------------------------------------------------------------
 # Partner routes
 # ---------------------------------------------------------------------------
 
@@ -442,6 +577,478 @@ def partner_referrals():
         'pending': pending,
         'converted': converted,
     }), 200
+
+
+# ---------------------------------------------------------------------------
+# Processor routes
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/lending/processor/queue', methods=['GET'])
+@require_auth
+def processor_queue():
+    user = request.current_user
+    try:
+        from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
+        from LoanMVP.models.processor_model import ProcessorProfile
+        profile = ProcessorProfile.query.filter_by(user_id=user.id).first()
+        if profile:
+            loans = LoanApplication.query.filter_by(processor_id=profile.id, is_active=True).order_by(LoanApplication.updated_at.desc()).all()
+        else:
+            loans = LoanApplication.query.filter(
+                LoanApplication.status.in_(['processing', 'Processing', 'submitted', 'Submitted', 'in_review', 'In Review'])
+            ).order_by(LoanApplication.updated_at.desc()).limit(50).all()
+
+        def _ser(l):
+            bp = None
+            try: bp = l.borrower_profile
+            except: pass
+            return {
+                'id': l.id,
+                'borrower_name': (getattr(bp, 'full_name', '') or '') if bp else '',
+                'amount': float(l.amount or 0),
+                'loan_type': l.loan_type or '',
+                'status': l.status or '',
+                'milestone_stage': l.milestone_stage or '',
+                'progress_percent': int(l.progress_percent or 0),
+                'property_address': l.property_address or '',
+                'risk_level': l.risk_level or 'Medium',
+                'risk_score': float(l.risk_score or 0),
+                'processor_notes': l.processor_notes or '',
+                'updated_at': str(l.updated_at or ''),
+                'created_at': str(l.created_at or ''),
+            }
+        return jsonify({'loans': [_ser(l) for l in loans], 'total': len(loans)}), 200
+    except Exception as exc:
+        current_app.logger.error('processor_queue: %s', exc)
+        return jsonify({'loans': [], 'total': 0}), 200
+
+
+@mobile_api.route('/lending/processor/conditions', methods=['GET'])
+@require_auth
+def processor_conditions():
+    user = request.current_user
+    try:
+        from LoanMVP.models.underwriter_model import UnderwritingCondition
+        from LoanMVP.models.loan_models import LoanApplication
+        from LoanMVP.models.processor_model import ProcessorProfile
+        profile = ProcessorProfile.query.filter_by(user_id=user.id).first()
+        status_filter = request.args.get('status', 'Open')
+
+        if profile:
+            loan_ids = [l.id for l in LoanApplication.query.filter_by(processor_id=profile.id, is_active=True).all()]
+            if loan_ids:
+                q = UnderwritingCondition.query.filter(
+                    UnderwritingCondition.loan_id.in_(loan_ids)
+                )
+            else:
+                q = UnderwritingCondition.query.filter_by(status='Open')
+        else:
+            q = UnderwritingCondition.query
+
+        if status_filter and status_filter != 'All':
+            q = q.filter_by(status=status_filter)
+        conditions = q.order_by(UnderwritingCondition.created_at.desc()).limit(100).all()
+
+        def _ser(c):
+            loan_addr = ''
+            try:
+                loan = LoanApplication.query.get(c.loan_id)
+                loan_addr = getattr(loan, 'property_address', '') or ''
+            except: pass
+            return {
+                'id': c.id,
+                'loan_id': c.loan_id,
+                'loan_address': loan_addr,
+                'condition_type': c.condition_type or '',
+                'description': c.description or '',
+                'severity': c.severity or 'Standard',
+                'status': c.status or 'Open',
+                'notes': c.notes or '',
+                'requested_by': c.requested_by or '',
+                'cleared_by': c.cleared_by or '',
+                'created_at': str(c.created_at or ''),
+                'cleared_at': str(c.cleared_at or ''),
+            }
+        return jsonify({'conditions': [_ser(c) for c in conditions], 'total': len(conditions)}), 200
+    except Exception as exc:
+        current_app.logger.error('processor_conditions: %s', exc)
+        return jsonify({'conditions': [], 'total': 0}), 200
+
+
+@mobile_api.route('/lending/processor/conditions/<int:condition_id>', methods=['POST'])
+@require_auth
+def update_condition(condition_id):
+    user = request.current_user
+    data = request.get_json(force=True) or {}
+    new_status = data.get('status', 'Cleared')
+    notes = data.get('notes', '')
+    try:
+        from LoanMVP.models.underwriter_model import UnderwritingCondition
+        cond = UnderwritingCondition.query.get(condition_id)
+        if not cond:
+            return jsonify({'error': 'Condition not found'}), 404
+        cond.status = new_status
+        if notes:
+            cond.notes = notes
+        if new_status == 'Cleared':
+            from datetime import datetime
+            cond.cleared_at = datetime.utcnow()
+            cond.cleared_by = user.full_name or user.email or 'Processor'
+        db.session.commit()
+        return jsonify({'id': cond.id, 'status': cond.status}), 200
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('update_condition: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+@mobile_api.route('/lending/processor/loan/<int:loan_id>', methods=['GET'])
+@require_auth
+def processor_loan_detail(loan_id):
+    try:
+        from LoanMVP.models.loan_models import LoanApplication
+        from LoanMVP.models.underwriter_model import UnderwritingCondition
+        from LoanMVP.models.document_models import LoanDocument
+        loan = LoanApplication.query.get(loan_id)
+        if not loan:
+            return jsonify({'error': 'Not found'}), 404
+        bp = None
+        try: bp = loan.borrower_profile
+        except: pass
+        docs = []
+        try:
+            docs = LoanDocument.query.filter_by(loan_application_id=loan_id).all()
+        except: pass
+        conditions = []
+        try:
+            conditions = UnderwritingCondition.query.filter_by(loan_id=loan_id).all()
+        except: pass
+
+        def _doc(d):
+            return {
+                'id': d.id,
+                'filename': getattr(d, 'filename', '') or getattr(d, 'original_filename', '') or '',
+                'doc_type': getattr(d, 'doc_type', '') or getattr(d, 'document_type', '') or '',
+                'status': getattr(d, 'status', '') or '',
+                'uploaded_at': str(getattr(d, 'uploaded_at', '') or getattr(d, 'created_at', '') or ''),
+            }
+
+        def _cond(c):
+            return {
+                'id': c.id,
+                'condition_type': c.condition_type or '',
+                'description': c.description or '',
+                'severity': c.severity or 'Standard',
+                'status': c.status or 'Open',
+            }
+
+        return jsonify({
+            'loan': {
+                'id': loan.id,
+                'borrower_name': (getattr(bp, 'full_name', '') or '') if bp else '',
+                'amount': float(loan.amount or 0),
+                'loan_type': loan.loan_type or '',
+                'status': loan.status or '',
+                'milestone_stage': loan.milestone_stage or '',
+                'progress_percent': int(loan.progress_percent or 0),
+                'property_address': loan.property_address or '',
+                'risk_level': loan.risk_level or 'Medium',
+                'risk_score': float(loan.risk_score or 0),
+                'ltv': float(loan.ltv or loan.ltv_ratio or 0),
+                'rate': float(loan.rate or 0),
+                'front_end_dti': float(loan.front_end_dti or 0),
+                'back_end_dti': float(loan.back_end_dti or 0),
+                'processor_notes': loan.processor_notes or '',
+                'ai_summary': loan.ai_summary or '',
+                'updated_at': str(loan.updated_at or ''),
+                'created_at': str(loan.created_at or ''),
+            },
+            'documents': [_doc(d) for d in docs],
+            'conditions': [_cond(c) for c in conditions],
+        }), 200
+    except Exception as exc:
+        current_app.logger.error('processor_loan_detail: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Underwriter routes
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/lending/underwriter/queue', methods=['GET'])
+@require_auth
+def underwriter_queue():
+    user = request.current_user
+    try:
+        from LoanMVP.models.loan_models import LoanApplication
+        from LoanMVP.models.underwriter_model import UnderwriterProfile
+        profile = UnderwriterProfile.query.filter_by(user_id=user.id).first()
+        if profile:
+            loans = LoanApplication.query.filter_by(underwriter_id=profile.id, is_active=True).order_by(LoanApplication.updated_at.desc()).all()
+        else:
+            loans = LoanApplication.query.filter(
+                LoanApplication.status.in_(['underwriting', 'Underwriting', 'in_review', 'In Review', 'conditionally_approved'])
+            ).order_by(LoanApplication.risk_score.desc()).limit(50).all()
+
+        def _ser(l):
+            bp = None
+            try: bp = l.borrower_profile
+            except: pass
+            return {
+                'id': l.id,
+                'borrower_name': (getattr(bp, 'full_name', '') or '') if bp else '',
+                'amount': float(l.amount or 0),
+                'loan_type': l.loan_type or '',
+                'status': l.status or '',
+                'milestone_stage': l.milestone_stage or '',
+                'risk_level': l.risk_level or 'Medium',
+                'risk_score': float(l.risk_score or 0),
+                'ltv': float(l.ltv or l.ltv_ratio or 0),
+                'rate': float(l.rate or 0),
+                'front_end_dti': float(l.front_end_dti or 0),
+                'back_end_dti': float(l.back_end_dti or 0),
+                'property_address': l.property_address or '',
+                'ai_summary': l.ai_summary or '',
+                'decision_notes': l.decision_notes or '',
+                'updated_at': str(l.updated_at or ''),
+            }
+        return jsonify({'loans': [_ser(l) for l in loans], 'total': len(loans)}), 200
+    except Exception as exc:
+        current_app.logger.error('underwriter_queue: %s', exc)
+        return jsonify({'loans': [], 'total': 0}), 200
+
+
+@mobile_api.route('/lending/underwriter/loan/<int:loan_id>', methods=['GET'])
+@require_auth
+def underwriter_loan_detail(loan_id):
+    try:
+        from LoanMVP.models.loan_models import LoanApplication
+        from LoanMVP.models.underwriter_model import UnderwritingCondition
+        from LoanMVP.models.document_models import LoanDocument
+        loan = LoanApplication.query.get(loan_id)
+        if not loan:
+            return jsonify({'error': 'Not found'}), 404
+        bp = None
+        try: bp = loan.borrower_profile
+        except: pass
+        conditions = []
+        try:
+            conditions = UnderwritingCondition.query.filter_by(loan_id=loan_id).all()
+        except: pass
+        open_conds = sum(1 for c in conditions if c.status == 'Open')
+        cleared_conds = sum(1 for c in conditions if c.status == 'Cleared')
+
+        return jsonify({
+            'loan': {
+                'id': loan.id,
+                'borrower_name': (getattr(bp, 'full_name', '') or '') if bp else '',
+                'amount': float(loan.amount or 0),
+                'loan_type': loan.loan_type or '',
+                'status': loan.status or '',
+                'milestone_stage': loan.milestone_stage or '',
+                'risk_level': loan.risk_level or 'Medium',
+                'risk_score': float(loan.risk_score or 0),
+                'ltv': float(loan.ltv or loan.ltv_ratio or 0),
+                'rate': float(loan.rate or 0),
+                'front_end_dti': float(loan.front_end_dti or 0),
+                'back_end_dti': float(loan.back_end_dti or 0),
+                'property_address': loan.property_address or '',
+                'property_value': float(loan.property_value or 0),
+                'ai_summary': loan.ai_summary or '',
+                'decision_notes': loan.decision_notes or '',
+                'processor_notes': loan.processor_notes or '',
+                'open_conditions': open_conds,
+                'cleared_conditions': cleared_conds,
+                'total_conditions': len(conditions),
+                'updated_at': str(loan.updated_at or ''),
+                'created_at': str(loan.created_at or ''),
+            },
+            'conditions': [
+                {
+                    'id': c.id,
+                    'condition_type': c.condition_type or '',
+                    'description': c.description or '',
+                    'severity': c.severity or 'Standard',
+                    'status': c.status or 'Open',
+                    'notes': c.notes or '',
+                }
+                for c in conditions
+            ],
+        }), 200
+    except Exception as exc:
+        current_app.logger.error('underwriter_loan_detail: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+@mobile_api.route('/lending/underwriter/loan/<int:loan_id>/decision', methods=['POST'])
+@require_auth
+def underwriter_decision(loan_id):
+    user = request.current_user
+    data = request.get_json(force=True) or {}
+    decision = data.get('decision', '')  # approved | denied | conditional | suspended
+    notes = data.get('notes', '')
+    new_status = {
+        'approved': 'Approved',
+        'denied': 'Denied',
+        'conditional': 'Conditionally Approved',
+        'suspended': 'Suspended',
+    }.get(decision, decision)
+
+    if not new_status:
+        return jsonify({'error': 'decision is required'}), 400
+
+    try:
+        from LoanMVP.models.loan_models import LoanApplication
+        from datetime import datetime
+        loan = LoanApplication.query.get(loan_id)
+        if not loan:
+            return jsonify({'error': 'Not found'}), 404
+        loan.status = new_status
+        loan.decision_notes = notes
+        loan.decision_date = datetime.utcnow()
+        loan.milestone_stage = new_status
+        db.session.commit()
+        return jsonify({'id': loan_id, 'status': new_status}), 200
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('underwriter_decision: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Borrower routes
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/lending/borrower/dashboard', methods=['GET'])
+@require_auth
+def borrower_dashboard():
+    user = request.current_user
+    try:
+        from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
+        from LoanMVP.models.underwriter_model import UnderwritingCondition
+        profile = BorrowerProfile.query.filter_by(user_id=user.id).first()
+        if not profile:
+            return jsonify({'loans': [], 'open_conditions': 0, 'total_loans': 0}), 200
+        loans = LoanApplication.query.filter_by(borrower_profile_id=profile.id, is_active=True).order_by(LoanApplication.updated_at.desc()).all()
+        total_conds = 0
+        for loan in loans:
+            try:
+                open_c = UnderwritingCondition.query.filter_by(loan_id=loan.id, status='Open').count()
+                total_conds += open_c
+            except: pass
+
+        def _ser(l):
+            return {
+                'id': l.id,
+                'amount': float(l.amount or 0),
+                'loan_type': l.loan_type or '',
+                'status': l.status or '',
+                'milestone_stage': l.milestone_stage or '',
+                'progress_percent': int(l.progress_percent or 0),
+                'property_address': l.property_address or '',
+                'rate': float(l.rate or 0),
+                'term_months': int(l.term_months or 0),
+                'updated_at': str(l.updated_at or ''),
+            }
+        return jsonify({
+            'loans': [_ser(l) for l in loans],
+            'total_loans': len(loans),
+            'open_conditions': total_conds,
+        }), 200
+    except Exception as exc:
+        current_app.logger.error('borrower_dashboard: %s', exc)
+        return jsonify({'loans': [], 'open_conditions': 0, 'total_loans': 0}), 200
+
+
+@mobile_api.route('/lending/borrower/loan/<int:loan_id>', methods=['GET'])
+@require_auth
+def borrower_loan_detail(loan_id):
+    user = request.current_user
+    try:
+        from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
+        from LoanMVP.models.underwriter_model import UnderwritingCondition
+        from LoanMVP.models.document_models import LoanDocument
+        profile = BorrowerProfile.query.filter_by(user_id=user.id).first()
+        loan = LoanApplication.query.get(loan_id)
+        if not loan:
+            return jsonify({'error': 'Not found'}), 404
+        if profile and loan.borrower_profile_id != profile.id:
+            return jsonify({'error': 'Not authorized'}), 403
+
+        conditions = []
+        try:
+            conditions = UnderwritingCondition.query.filter_by(loan_id=loan_id).all()
+        except: pass
+        docs = []
+        try:
+            docs = LoanDocument.query.filter_by(loan_application_id=loan_id).all()
+        except: pass
+
+        MILESTONES = [
+            'Application Started', 'Documents Collected', 'Processing',
+            'Underwriting', 'Conditionally Approved', 'Clear to Close', 'Funded'
+        ]
+        current_stage = loan.milestone_stage or 'Application Started'
+        current_idx = next((i for i, m in enumerate(MILESTONES) if m.lower() == current_stage.lower()), 0)
+
+        lo = None
+        try:
+            lop = loan.loan_officer
+            if lop:
+                lo = {
+                    'name': getattr(lop, 'full_name', '') or '',
+                    'email': getattr(lop, 'email', '') or '',
+                    'phone': getattr(lop, 'phone', '') or '',
+                }
+        except: pass
+
+        return jsonify({
+            'loan': {
+                'id': loan.id,
+                'amount': float(loan.amount or 0),
+                'loan_type': loan.loan_type or '',
+                'status': loan.status or '',
+                'milestone_stage': current_stage,
+                'milestone_index': current_idx,
+                'milestones': MILESTONES,
+                'progress_percent': int(loan.progress_percent or 0),
+                'property_address': loan.property_address or '',
+                'property_value': float(loan.property_value or 0),
+                'rate': float(loan.rate or 0),
+                'term_months': int(loan.term_months or 0),
+                'ltv': float(loan.ltv or loan.ltv_ratio or 0),
+                'front_end_dti': float(loan.front_end_dti or 0),
+                'back_end_dti': float(loan.back_end_dti or 0),
+                'ai_summary': loan.ai_summary or '',
+                'updated_at': str(loan.updated_at or ''),
+                'created_at': str(loan.created_at or ''),
+            },
+            'loan_officer': lo,
+            'open_conditions': sum(1 for c in conditions if c.status == 'Open'),
+            'conditions': [
+                {
+                    'id': c.id,
+                    'condition_type': c.condition_type or '',
+                    'description': c.description or '',
+                    'severity': c.severity or 'Standard',
+                    'status': c.status or 'Open',
+                }
+                for c in conditions
+            ],
+            'documents': [
+                {
+                    'id': d.id,
+                    'filename': getattr(d, 'filename', '') or '',
+                    'doc_type': getattr(d, 'doc_type', '') or '',
+                    'status': getattr(d, 'status', '') or '',
+                    'uploaded_at': str(getattr(d, 'uploaded_at', '') or getattr(d, 'created_at', '') or ''),
+                }
+                for d in docs
+            ],
+        }), 200
+    except Exception as exc:
+        current_app.logger.error('borrower_loan_detail: %s', exc)
+        return jsonify({'error': str(exc)}), 500
 
 
 # ---------------------------------------------------------------------------
