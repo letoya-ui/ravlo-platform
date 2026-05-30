@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Your Free Preview Has Ended | Ravlo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #07090e;
+      color: #f0f4ff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wrap {
+      max-width: 580px;
+      margin: 4rem 1.5rem;
+      text-align: center;
+    }
+    .lock {
+      width: 64px;
+      height: 64px;
+      background: #1a1e2e;
+      border: 2px solid #2a3050;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 2rem;
+      font-size: 1.6rem;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+      line-height: 1.2;
+    }
+    .sub {
+      color: #7a88a8;
+      font-size: 1.05rem;
+      line-height: 1.7;
+      max-width: 460px;
+      margin: 0 auto 2.5rem;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+      text-align: left;
+    }
+    .card {
+      background: #111520;
+      border: 1px solid #1e2436;
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .card-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #C9A878;
+      margin-bottom: 0.5rem;
+    }
+    .card h3 {
+      margin: 0 0 0.4rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .card p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #6a7a9a;
+      line-height: 1.5;
+    }
+    .actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      padding: 0.9rem 2rem;
+      background: #C9A878;
+      color: #07090e;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.95rem;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #d4b888; }
+    .btn-ghost {
+      padding: 0.9rem 2rem;
+      background: transparent;
+      color: #7a88a8;
+      border: 1px solid #2a3050;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-ghost:hover { border-color: #C9A878; color: #C9A878; }
+    .brand {
+      margin-top: 3rem;
+      font-size: 0.78rem;
+      color: #2a3050;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="lock">&#128274;</div>
+    <h1>Your free preview has ended.</h1>
+    <p class="sub">
+      You had full access to the Ravlo investor platform. Ready to keep going?
+      Choose a plan below and we&rsquo;ll get you set up.
+    </p>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Core</div>
+        <h3>Individual</h3>
+        <p>Deal analysis, pipeline, and investor tools for solo operators.</p>
+      </div>
+      <div class="card">
+        <div class="card-label">Operator</div>
+        <h3>Active Flow</h3>
+        <p>Advanced tools for investors closing multiple deals.</p>
+      </div>
+      <div class="card">
+        <div class="card-label">Enterprise</div>
+        <h3>Team &amp; Firm</h3>
+        <p>Full platform access for growing teams and investment firms.</p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a href="{{ url_for('marketing.plans') }}" class="btn-primary">See Plans &amp; Pricing</a>
+      <a href="{{ url_for('auth.logout') }}" class="btn-ghost">Sign Out</a>
+    </div>
+
+    <div class="brand">Ravlo &mdash; Powering the future of investing.</div>
+  </div>
+</body>
+</html>

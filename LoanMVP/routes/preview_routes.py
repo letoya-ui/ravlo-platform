@@ -1,11 +1,12 @@
 # LoanMVP/routes/preview_routes.py
 """
 Preview account routes.
-- Investors on subscription='preview' can browse the platform freely.
-- This blueprint handles: subscription requests, admin approval, and preview provisioning.
+- Investors on subscription='preview' can browse the platform freely for 2 weeks.
+- Founders (approved subscribers) get 3 weeks free trial.
+- This blueprint handles: subscription requests, admin approval, provisioning, and trial expiry.
 Auto-registered by app.py dynamic blueprint loader.
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 import secrets
 
 from flask import (
@@ -23,13 +24,23 @@ from LoanMVP.models.admin import SubscriptionRequest
 preview_bp = Blueprint("preview", __name__, url_prefix="/preview")
 
 _ADMIN_ROLES = {"admin", "platform_admin", "master_admin", "lending_admin", "executive"}
+_PREVIEW_TRIAL_DAYS = 14
+_FOUNDERS_TRIAL_DAYS = 21
 
 
 def _is_admin(user):
     return (getattr(user, "role", "") or "").strip().lower() in _ADMIN_ROLES
 
 
-# ─── Investor: submit subscription request ────────────────────────────────────
+# ─── Trial expired page ──────────────────────────────────────────────────────────
+
+@preview_bp.route("/trial-expired")
+@login_required
+def trial_expired():
+    return render_template("layouts/trial_expired.html")
+
+
+# ─── Investor: submit subscription request ──────────────────────────────────────────────
 
 @preview_bp.route("/request-subscription", methods=["POST"])
 @login_required
@@ -43,7 +54,7 @@ def request_subscription():
         user_id=current_user.id, status="pending"
     ).first()
     if existing:
-        flash("You already have a pending request — we\'ll be in touch soon.", "info")
+        flash("You already have a pending request — we'll be in touch soon.", "info")
         return redirect(url_for("investor.command_center"))
 
     message = (request.form.get("message") or "").strip()
@@ -60,7 +71,7 @@ def request_subscription():
 
     _notify_admin_of_request(current_user, plan_requested, message)
 
-    flash("Request submitted! We\'ll be in touch within 24 hours.", "success")
+    flash("Request submitted! We'll be in touch within 24 hours.", "success")
     return redirect(url_for("preview.subscription_requested"))
 
 
@@ -70,7 +81,7 @@ def subscription_requested():
     return render_template("investor/subscription_requested.html", title="Request Submitted")
 
 
-# ─── Admin: list requests ─────────────────────────────────────────────────────
+# ─── Admin: list requests ─────────────────────────────────────────────────────────────
 
 @preview_bp.route("/admin/subscription-requests")
 @login_required
@@ -105,7 +116,7 @@ def admin_subscription_requests():
     )
 
 
-# ─── Admin: approve ───────────────────────────────────────────────────────────
+# ─── Admin: approve ────────────────────────────────────────────────────────────────────
 
 @preview_bp.route("/admin/subscription-requests/<int:req_id>/approve", methods=["POST"])
 @login_required
@@ -123,6 +134,9 @@ def approve_subscription_request(req_id):
     plan = (request.form.get("plan") or req.plan_requested or "Core").strip().title()
     investor.subscription_plan = plan
 
+    # Founders get 3 weeks free trial from approval date
+    investor.trial_ends_at = datetime.utcnow() + timedelta(days=_FOUNDERS_TRIAL_DAYS)
+
     req.status = "approved"
     req.reviewed_by = current_user.id
     req.reviewed_at = datetime.utcnow()
@@ -137,11 +151,11 @@ def approve_subscription_request(req_id):
     db.session.commit()
     _notify_investor_approved(investor, plan)
 
-    flash(f"{investor.full_name} upgraded to {plan}.", "success")
+    flash(f"{investor.full_name} upgraded to {plan} (3-week free trial started).", "success")
     return redirect(url_for("preview.admin_subscription_requests"))
 
 
-# ─── Admin: deny ──────────────────────────────────────────────────────────────
+# ─── Admin: deny ───────────────────────────────────────────────────────────────────────
 
 @preview_bp.route("/admin/subscription-requests/<int:req_id>/deny", methods=["POST"])
 @login_required
@@ -161,7 +175,7 @@ def deny_subscription_request(req_id):
     return redirect(url_for("preview.admin_subscription_requests"))
 
 
-# ─── Admin: grant preview access ──────────────────────────────────────────────
+# ─── Admin: grant preview access ──────────────────────────────────────────────────────
 
 @preview_bp.route("/admin/grant-preview", methods=["POST"])
 @login_required
@@ -178,11 +192,14 @@ def grant_preview_access():
         flash("Email is required.", "warning")
         return redirect(url_for("preview.admin_subscription_requests"))
 
+    trial_end = datetime.utcnow() + timedelta(days=_PREVIEW_TRIAL_DAYS)
+
     existing = User.query.filter(func.lower(User.email) == email).first()
     if existing:
         existing.subscription = "preview"
+        existing.trial_ends_at = trial_end
         db.session.commit()
-        flash(f"Preview access granted to {email}.", "success")
+        flash(f"Preview access granted to {email} (2-week trial).", "success")
         return redirect(url_for("preview.admin_subscription_requests"))
 
     temp_password = secrets.token_urlsafe(12)
@@ -193,6 +210,7 @@ def grant_preview_access():
         email=email,
         role="investor",
         subscription="preview",
+        trial_ends_at=trial_end,
         is_active=True,
         invite_accepted=True,
         onboarding_complete=True,
@@ -212,11 +230,11 @@ def grant_preview_access():
 
     _send_preview_welcome(email, first_name, temp_password)
 
-    flash(f"Preview account created for {email}. Welcome email sent.", "success")
+    flash(f"Preview account created for {email}. Welcome email sent (2-week trial).", "success")
     return redirect(url_for("preview.admin_subscription_requests"))
 
 
-# ─── Email helpers ────────────────────────────────────────────────────────────
+# ─── Email helpers ───────────────────────────────────────────────────────────────────
 
 def _notify_admin_of_request(investor, plan_requested, message):
     try:
@@ -252,7 +270,8 @@ def _notify_investor_approved(investor, plan):
             recipients=[investor.email],
             body=(
                 f"Hi {investor.full_name},\n\n"
-                f"Your subscription request has been approved — you\'re now on the {plan} plan.\n\n"
+                f"Your subscription request has been approved — you're now on the {plan} plan.\n"
+                f"You have a 3-week free trial starting today.\n\n"
                 f"Log in: {url_for('investor.command_center', _external=True)}\n\n"
                 f"The Ravlo Team"
             ),
@@ -269,16 +288,16 @@ def _send_preview_welcome(email, first_name, temp_password):
         login_url = url_for("auth.login", _external=True)
         reset_url = url_for("auth.forgot_password", _external=True)
         msg = MailMessage(
-            subject="You\'ve been invited to preview Ravlo",
+            subject="You've been invited to preview Ravlo",
             recipients=[email],
             body=(
                 f"Hi {first_name or 'there'},\n\n"
-                f"You\'ve been given free preview access to Ravlo — the investor OS for real estate capital, deal analysis, and funding.\n\n"
+                f"You've been given 2 weeks of free preview access to Ravlo — the investor OS for real estate capital, deal analysis, and funding.\n\n"
                 f"Log in: {login_url}\n"
                 f"Email: {email}\n"
                 f"Temporary password: {temp_password}\n\n"
                 f"Change your password after logging in: {reset_url}\n\n"
-                f"When you\'re ready for full access, click \'Request Full Access\' from your dashboard.\n\n"
+                f"When you're ready for full access, click 'Request Full Access' from your dashboard.\n\n"
                 f"The Ravlo Team"
             ),
         )

@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
 from sqlalchemy import func
@@ -11,6 +11,8 @@ from LoanMVP.models.user_model import User
 
 
 marketing_bp = Blueprint("marketing", __name__, url_prefix="/")
+
+_PREVIEW_TRIAL_DAYS = 14
 
 # ---------------------------------------------------------
 # Shared page metadata
@@ -174,7 +176,6 @@ def _owner_admin_exists() -> bool:
 def _workspace_recovery_mode() -> bool:
     if db.session.query(User.id).first() is None:
         return True
-
     return _single_admin_mode_enabled() and not _owner_admin_exists()
 
 
@@ -419,7 +420,6 @@ def lending_os_request_preview():
         flash("First name and email are required.", "warning")
         return redirect(url_for("marketing.lending_os") + "#request-preview")
 
-    # Record the lead regardless of whether account already exists
     lead = LicenseApplication(
         company_name=company or email,
         contact_name=f"{first_name} {last_name}".strip() or email,
@@ -430,10 +430,12 @@ def lending_os_request_preview():
     )
     db.session.add(lead)
 
+    trial_end = datetime.utcnow() + timedelta(days=_PREVIEW_TRIAL_DAYS)
     existing = User.query.filter(func.lower(User.email) == email).first()
     temp_password = None
     if existing:
         existing.subscription = "preview"
+        existing.trial_ends_at = trial_end
     else:
         temp_password = secrets.token_urlsafe(12)
         new_user = User(
@@ -443,6 +445,7 @@ def lending_os_request_preview():
             email=email,
             role="loan_officer",
             subscription="preview",
+            trial_ends_at=trial_end,
             is_active=True,
             invite_accepted=True,
             onboarding_complete=True,
@@ -474,7 +477,7 @@ def _send_lending_os_preview_welcome(email, first_name, temp_password):
             recipients=[email],
             body=(
                 f"Hi {first_name or 'there'},\n\n"
-                f"You've been given free preview access to Ravlo Lending OS.\n\n"
+                f"You have 2 weeks of free preview access to Ravlo Lending OS.\n\n"
                 f"Log in now: {login_url}\n"
                 f"Email: {email}\n"
                 f"{creds_line}\n"
@@ -509,7 +512,7 @@ def _notify_admin_lending_os_lead(first_name, last_name, email, company, phone):
                 f"Email: {email}\n"
                 f"Company: {company or 'N/A'}\n"
                 f"Phone: {phone or 'N/A'}\n\n"
-                f"Preview access was automatically granted and welcome email sent."
+                f"Preview access granted (2-week trial). Welcome email sent."
             ),
         )
         mail.send(msg)

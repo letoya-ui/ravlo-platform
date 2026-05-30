@@ -46,24 +46,25 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, default=None)
 
+    # Trial / preview expiry
+    # Set to now+14d for preview accounts, now+21d when a subscription is approved (founders).
+    trial_ends_at = db.Column(db.DateTime, nullable=True)
+
     # Borrower timeline
     timeline_status = db.Column(db.String(50), default="application_submitted")
-   
+
     # ===============================
-    # 🔗 Relationships
+    # Relationships
     # ===============================
 
-    # Company relationship
     company = db.relationship("Company", back_populates="users", foreign_keys=[company_id])
 
-    # Borrower
     borrower_profile = db.relationship(
         "BorrowerProfile",
         back_populates="user",
         foreign_keys="[BorrowerProfile.user_id]"
     )
 
-    # Loan officer
     loan_officer_profile = db.relationship(
         "LoanOfficerProfile",
         back_populates="user",
@@ -71,7 +72,6 @@ class User(UserMixin, db.Model):
         cascade="all, delete"
     )
 
-    # Investor
     investor_profile = db.relationship(
         "InvestorProfile",
         back_populates="user",
@@ -80,7 +80,6 @@ class User(UserMixin, db.Model):
         foreign_keys="[InvestorProfile.user_id]"
     )
 
-    # Messaging
     messages_sent = db.relationship(
         "Message",
         foreign_keys="Message.sender_id",
@@ -95,21 +94,18 @@ class User(UserMixin, db.Model):
         lazy=True
     )
 
-    # CRM
     crm_notes = db.relationship(
         "CRMNote",
         back_populates="user",
         lazy=True
     )
 
-    # Admin: invites sent
     invites_sent = db.relationship(
         "UserInvite",
         back_populates="inviter",
         lazy=True
     )
 
-    # Admin: access requests reviewed
     access_requests = db.relationship(
         "AccessRequest",
         back_populates="reviewer",
@@ -138,7 +134,7 @@ class User(UserMixin, db.Model):
     )
 
     # ===============================
-    # 🧩 Methods
+    # Methods
     # ===============================
 
     def __repr__(self):
@@ -151,6 +147,20 @@ class User(UserMixin, db.Model):
         if not self.password_hash or not isinstance(self.password_hash, str):
             return False
         return check_password_hash(self.password_hash, password)
+
+    @property
+    def trial_days_remaining(self):
+        """Days left in trial. None if no trial set. 0 if expired."""
+        if not self.trial_ends_at:
+            return None
+        delta = self.trial_ends_at - datetime.utcnow()
+        return max(0, delta.days)
+
+    @property
+    def trial_is_expired(self):
+        if not self.trial_ends_at:
+            return False
+        return datetime.utcnow() > self.trial_ends_at
 
     @property
     def subscription_plan(self):
@@ -181,7 +191,6 @@ class User(UserMixin, db.Model):
         }
         self.subscription = alias_map.get(normalized, normalized or "core")
 
-    # Full name hybrid property
     @hybrid_property
     def full_name(self):
         if self.first_name or self.last_name:

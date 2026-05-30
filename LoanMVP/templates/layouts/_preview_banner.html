@@ -1,10 +1,24 @@
 {#
   Preview account banner — shown on every investor page when subscription == 'preview'.
   Injected by ravlo_base.html before {% block content %}.
+  Shows days remaining with urgency color when <= 3 days left.
 #}
+{% set days_left = current_user.trial_days_remaining %}
+{% if days_left is not none and days_left <= 3 %}
+  {% set _banner_color = '#b45309' %}
+  {% set _border_color = '#f59e0b' %}
+  {% set _badge_color  = '#f59e0b' %}
+  {% set _badge_text   = '#0d0d0d' %}
+{% else %}
+  {% set _banner_color = '#0f172a' %}
+  {% set _border_color = '#3b82f6' %}
+  {% set _badge_color  = '#3b82f6' %}
+  {% set _badge_text   = '#ffffff' %}
+{% endif %}
+
 <div id="ravlo-preview-banner" style="
-  background: linear-gradient(90deg, #0f172a 0%, #1e3a5f 100%);
-  border-bottom: 2px solid #3b82f6;
+  background: linear-gradient(90deg, {{ _banner_color }} 0%, #1e3a5f 100%);
+  border-bottom: 2px solid {{ _border_color }};
   padding: 10px 20px;
   display: flex;
   align-items: center;
@@ -17,8 +31,8 @@
 ">
   <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
     <span style="
-      background: #3b82f6;
-      color: #fff;
+      background: {{ _badge_color }};
+      color: {{ _badge_text }};
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.08em;
@@ -26,8 +40,19 @@
       border-radius: 20px;
       text-transform: uppercase;
     ">Free Preview</span>
+
     <span style="color: #cbd5e1; font-size: 13px; font-weight: 500;">
-      You&rsquo;re exploring the full Ravlo investor platform.
+      {% if days_left is none %}
+        You&rsquo;re exploring the full Ravlo investor platform.
+      {% elif days_left == 0 %}
+        Your free preview expires today.
+      {% elif days_left == 1 %}
+        <strong style="color:{{ _border_color }}">1 day left</strong> in your free preview.
+      {% elif days_left <= 3 %}
+        <strong style="color:{{ _border_color }}">{{ days_left }} days left</strong> in your free preview.
+      {% else %}
+        {{ days_left }} day{{ 's' if days_left != 1 else '' }} left in your free preview.
+      {% endif %}
       Ready to unlock your subscription?
     </span>
   </div>
@@ -36,8 +61,8 @@
     <button
       onclick="document.getElementById('preview-request-modal').style.display='flex'"
       style="
-        background: #3b82f6;
-        color: #fff;
+        background: {{ _badge_color }};
+        color: {{ _badge_text }};
         border: none;
         border-radius: 6px;
         padding: 7px 16px;
@@ -64,7 +89,7 @@
   </div>
 </div>
 
-{# ── Modal ──────────────────────────────────────────────────────────────── #}
+{# ── Modal ───────────────────────────────────────────────────────────────────────── #}
 <div
   id="preview-request-modal"
   style="
@@ -112,9 +137,9 @@
           width:100%; background:#1e293b; border:1px solid #334155;
           color:#f1f5f9; border-radius:6px; padding:9px 12px; font-size:13px;
         ">
-          <option value="Core">Core — Individual investor</option>
-          <option value="Operator">Operator — Active deal flow</option>
-          <option value="Enterprise">Enterprise — Team / firm</option>
+          <option value="Core">Core &mdash; Individual investor</option>
+          <option value="Operator">Operator &mdash; Active deal flow</option>
+          <option value="Enterprise">Enterprise &mdash; Team / firm</option>
         </select>
       </div>
 
