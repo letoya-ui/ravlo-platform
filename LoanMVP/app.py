@@ -81,6 +81,7 @@ def resource_path(relative_path: str) -> str:
 _SCHEMA_COMPAT_COLUMNS = [
     ("user",                       "stripe_customer_id",  "VARCHAR(255)"),
     ("user",                       "university_tier",     "VARCHAR(20)"),
+    ("user",                       "trial_ends_at",       "TIMESTAMP"),
     ("vip_profiles",              "markets_json",       "TEXT"),
     ("deals",                     "local_cost_factor",  "FLOAT"),
     ("deals",                     "local_cost_label",   "VARCHAR(120)"),
@@ -118,6 +119,7 @@ _SCHEMA_COMPAT_COLUMNS = [
 # to one model). Order only matters for foreign-key dependencies; the list
 # here is kept small on purpose.
 _SCHEMA_COMPAT_TABLES = [
+    "subscription_requests",
     "cost_observations",
     "vip_profiles",
     "vip_contacts",
@@ -135,7 +137,6 @@ _SCHEMA_COMPAT_TABLES = [
     "realtor_listing_presentations",
     "vip_client_sessions",
     "canva_connections",
-    "subscription_requests",
 ]
 
 _SCHEMA_COMPAT_INDEXES = [
@@ -452,8 +453,8 @@ def create_app():
         body = (
             "User-agent: *\n"
             "\n"
-            # ── Public marketing pages are crawlable by default ───────────
-            # ── Block all private / authenticated app areas ───────────
+            # ── Public marketing pages are crawlable by default ──────────
+            # ── Block all private / authenticated app areas ──────────────
             "Disallow: /admin/\n"
             "Disallow: /executive/\n"
             "Disallow: /system/\n"
@@ -629,6 +630,29 @@ def create_app():
     @app.before_request
     def make_session_permanent():
         session.permanent = True
+
+    _TRIAL_EXEMPT_PREFIXES = ("auth.", "marketing.", "public_pages.", "preview.")
+    _TRIAL_EXEMPT_EXACT = {"static", "favicon", "marketing_home", "robots_txt", "sitemap_xml", "index"}
+
+    @app.before_request
+    def check_trial_expiry():
+        if not current_user.is_authenticated:
+            return None
+        sub = (getattr(current_user, "subscription", "") or "").strip().lower()
+        if sub != "preview":
+            return None
+        trial_ends_at = getattr(current_user, "trial_ends_at", None)
+        if not trial_ends_at:
+            return None
+        if datetime.utcnow() <= trial_ends_at:
+            return None
+        endpoint = request.endpoint or ""
+        if (
+            any(endpoint.startswith(p) for p in _TRIAL_EXEMPT_PREFIXES)
+            or endpoint in _TRIAL_EXEMPT_EXACT
+        ):
+            return None
+        return redirect(url_for("preview.trial_expired"))
 
     @app.before_request
     def handle_custom_domain():

@@ -1,4 +1,5 @@
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
 from sqlalchemy import func
@@ -7,6 +8,8 @@ from LoanMVP.extensions import db, csrf
 
 from LoanMVP.models.admin import LicenseApplication
 from LoanMVP.models.user_model import User
+
+_LENDING_OS_TRIAL_DAYS = 14
 
 
 marketing_bp = Blueprint("marketing", __name__, url_prefix="/")
@@ -401,6 +404,126 @@ def lending_os():
         hero_image="images/marketing/lending_os_hero.jpg",
     )
 
+
+
+@marketing_bp.route("/lending-os/request-preview", methods=["POST"])
+@csrf.exempt
+def lending_os_request_preview():
+    first_name = (request.form.get("first_name") or "").strip()
+    last_name = (request.form.get("last_name") or "").strip()
+    company = (request.form.get("company") or "").strip()
+    email = (request.form.get("email") or "").strip().lower()
+    phone = (request.form.get("phone") or "").strip()
+
+    if not email:
+        flash("Email is required.", "warning")
+        return redirect(url_for("marketing.lending_os") + "#request-preview")
+
+    # Save lead
+    app_row = LicenseApplication(
+        company_name=company or "—",
+        contact_name=f"{first_name} {last_name}".strip() or email,
+        email=email,
+        phone=phone or None,
+        business_type="lending_os_lead",
+        status="new",
+    )
+    db.session.add(app_row)
+
+    # Create preview account if email not already registered
+    existing = User.query.filter(func.lower(User.email) == email).first()
+    if not existing:
+        temp_password = secrets.token_urlsafe(10)
+        user = User(
+            first_name=first_name or None,
+            last_name=last_name or None,
+            email=email,
+            role="loan_officer",
+            is_active=True,
+            onboarding_complete=True,
+            invite_accepted=True,
+            subscription="preview",
+            trial_ends_at=datetime.utcnow() + timedelta(days=_LENDING_OS_TRIAL_DAYS),
+        )
+        user.set_password(temp_password)
+        db.session.add(user)
+        db.session.commit()
+        _send_lending_os_preview_welcome(user, temp_password)
+    else:
+        db.session.commit()
+
+    _notify_admin_lending_os_lead(first_name, last_name, company, email, phone)
+    return redirect(url_for("marketing.lending_os_preview_thanks"))
+
+
+@marketing_bp.route("/lending-os/preview-requested")
+def lending_os_preview_thanks():
+    return render_template("marketing/lending_os_preview_thanks.html")
+
+
+def _send_lending_os_preview_welcome(user: User, temp_password: str) -> None:
+    try:
+        from LoanMVP.app import mail
+        from flask_mail import Message as MailMessage
+        name = user.first_name or user.email
+        msg = MailMessage(
+            subject="Your Ravlo Lending OS Preview is Ready",
+            recipients=[user.email],
+        )
+        msg.html = f"""
+        <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#0f1117;">
+          <img src="https://ravlohq.com/static/images/ravlo-logo-dark.png"
+               alt="Ravlo" style="height:32px;margin-bottom:28px;">
+          <h2 style="font-size:22px;font-weight:700;margin:0 0 12px;">
+            Welcome to Ravlo Lending OS, {name}!
+          </h2>
+          <p style="font-size:15px;line-height:1.6;color:#374151;">
+            Your free <strong>2-week preview</strong> is ready. Explore role-based dashboards,
+            loan pipelines, borrower intake, and your full lending OS.
+          </p>
+          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:20px 24px;margin:24px 0;">
+            <p style="margin:0 0 6px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">Your login</p>
+            <p style="margin:0 0 4px;font-size:15px;"><strong>Email:</strong> {user.email}</p>
+            <p style="margin:0;font-size:15px;"><strong>Temporary password:</strong> {temp_password}</p>
+          </div>
+          <a href="https://ravlohq.com/auth/login"
+             style="display:inline-block;background:#1a56db;color:#fff;font-weight:600;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:15px;">
+            Log In to Ravlo
+          </a>
+          <p style="margin-top:28px;font-size:13px;color:#9ca3af;">
+            Preview expires in 14 days. Our team will follow up within 2 business hours.
+          </p>
+        </div>
+        """
+        mail.send(msg)
+    except Exception as e:
+        print(f"[lending_os] welcome email failed: {e}")
+
+
+def _notify_admin_lending_os_lead(first_name, last_name, company, email, phone) -> None:
+    try:
+        from LoanMVP.app import mail
+        from flask_mail import Message as MailMessage
+        from LoanMVP.routes.auth import _owner_admin_email
+        admin_email = _owner_admin_email()
+        if not admin_email:
+            return
+        msg = MailMessage(
+            subject=f"[Ravlo] New Lending OS Lead — {email}",
+            recipients=[admin_email],
+        )
+        msg.body = (
+            f"New Lending OS preview request:\n\n"
+            f"Name: {first_name} {last_name}\n"
+            f"Company: {company}\n"
+            f"Email: {email}\n"
+            f"Phone: {phone}\n\n"
+            f"Preview account created. Follow up within 2 hours.\n"
+            f"https://ravlohq.com/admin/dashboard"
+        )
+        mail.send(msg)
+    except Exception as e:
+        print(f"[lending_os] admin notification failed: {e}")
 
 
 @marketing_bp.route("/apply", methods=["GET", "POST"])

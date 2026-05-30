@@ -46,6 +46,9 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, default=None)
 
+    # Preview / trial
+    trial_ends_at = db.Column(db.DateTime, nullable=True)
+
     # Borrower timeline
     timeline_status = db.Column(db.String(50), default="application_submitted")
    
@@ -180,6 +183,19 @@ class User(UserMixin, db.Model):
             "active": "operator",
         }
         self.subscription = alias_map.get(normalized, normalized or "core")
+
+    @property
+    def trial_days_remaining(self):
+        if not self.trial_ends_at:
+            return None
+        delta = self.trial_ends_at - datetime.utcnow()
+        return max(0, delta.days)
+
+    @property
+    def trial_is_expired(self):
+        if not self.trial_ends_at:
+            return False
+        return datetime.utcnow() > self.trial_ends_at
 
     # Full name hybrid property
     @hybrid_property

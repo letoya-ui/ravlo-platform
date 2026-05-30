@@ -1,0 +1,264 @@
+{# Onboarding tutorial popup — shown once per role, dismissed to localStorage #}
+{% if current_user.is_authenticated %}
+{% set _role = (current_user.role or 'investor') | lower %}
+
+{# Role-specific tutorial content #}
+{% set _tutorials = {
+  'investor': {
+    'title': 'Welcome to your Investor OS',
+    'subtitle': "Everything you need to find, analyze, and track deals — in one place.",
+    'steps': [
+      ('Command Center', 'Your home base. See portfolio overview, active deals, and AI-powered insights at a glance.'),
+      ('Deal Analysis', 'Run full deal analyses with AI scoring, renovation estimates, and ROI projections in minutes.'),
+      ('Pipeline', 'Track every deal from prospect to close. Filter by stage, city, or asset type.'),
+      ('Documents & Vault', 'Upload, organize, and share deal documents securely.'),
+    ]
+  },
+  'borrower': {
+    'title': 'Welcome to your Borrower Dashboard',
+    'subtitle': "Track your loan, upload documents, and stay in sync with your lending team.",
+    'steps': [
+      ('Loan Timeline', 'See exactly where your loan stands — from application to closing.'),
+      ('Document Upload', 'Upload required documents right here. Your team gets notified instantly.'),
+      ('Conditions', 'View outstanding conditions and check them off as you complete them.'),
+      ('Messages', 'Message your loan officer directly — no phone tag needed.'),
+    ]
+  },
+  'loan_officer': {
+    'title': 'Welcome to your Loan Officer OS',
+    'subtitle': "Manage your pipeline, borrowers, and closings — all in one dashboard.",
+    'steps': [
+      ('Pipeline View', 'Every loan you own, organized by stage. Spot bottlenecks before they happen.'),
+      ('Borrower Intake', 'Review new applications and kick off the intake process from here.'),
+      ('Conditions Tracker', 'Track outstanding conditions per loan. Never miss a stale file.'),
+      ('Team Visibility', 'See processor and underwriter activity on your loans in real time.'),
+    ]
+  },
+  'processor': {
+    'title': 'Welcome to your Processor Dashboard',
+    'subtitle': "Move loans through processing with clarity, speed, and zero dropped conditions.",
+    'steps': [
+      ('Your Queue', 'Loans assigned to you, sorted by priority and next-action date.'),
+      ('Conditions', 'Manage conditions per file — mark received, waived, or outstanding.'),
+      ('Documents', 'Access all borrower documents and upload processed packages.'),
+      ('Handoff Checklist', 'Use the underwriting handoff checklist to ensure clean submissions.'),
+    ]
+  },
+  'underwriter': {
+    'title': 'Welcome to your Underwriter Dashboard',
+    'subtitle': "Review submissions, clear conditions, and make faster credit decisions.",
+    'steps': [
+      ('Submission Queue', 'All files submitted for underwriting review, with priority flags.'),
+      ('Decision Workflow', 'Approve, suspend, or deny with structured notes and audit trail.'),
+      ('Conditions Management', 'Assign and clear UW conditions tied to each decision.'),
+      ('Document Review', 'Review complete loan packages inline — no downloading required.'),
+    ]
+  },
+  'admin': {
+    'title': 'Welcome to the Admin Dashboard',
+    'subtitle': "Manage users, companies, subscriptions, and platform operations.",
+    'steps': [
+      ('User Management', 'Create, edit, block, and manage every user on the platform.'),
+      ('Companies', 'Manage company accounts, license applications, and team assignments.'),
+      ('Subscriptions', 'Review preview requests, approve upgrades, and manage billing.'),
+      ('System Health', 'Monitor logs, activity, and platform metrics from one view.'),
+    ]
+  },
+  'executive': {
+    'title': 'Welcome to the Executive Dashboard',
+    'subtitle': "Platform-wide visibility across deals, users, revenue, and operations.",
+    'steps': [
+      ('Overview', 'High-level KPIs — active deals, revenue, new signups, and team activity.'),
+      ('Deal Intelligence', 'Aggregated deal data, market trends, and portfolio analytics.'),
+      ('Team Performance', 'Loan officer, processor, and underwriter metrics by team.'),
+      ('Growth Metrics', 'Track user growth, conversion, and retention over time.'),
+    ]
+  },
+  'partner': {
+    'title': 'Welcome to your Partner Workspace',
+    'subtitle': "Your full-service workspace for managing listings, clients, and income.",
+    'steps': [
+      ('Dashboard', 'Your overview — active listings, recent clients, and income at a glance.'),
+      ('Listings', 'Manage properties, listing presentations, and showing schedules.'),
+      ('Clients', 'Track client relationships, notes, and next steps.'),
+      ('Income Tracker', 'Log commissions, track deals in progress, and project earnings.'),
+    ]
+  },
+} %}
+
+{% set _tdata = _tutorials.get(_role, _tutorials['investor']) %}
+
+<div id="onboardingTutorial" class="obt-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="obt-title">
+  <div class="obt-card">
+    <button type="button" class="obt-close" onclick="dismissTutorial()" aria-label="Close tutorial">×</button>
+
+    <div class="obt-header">
+      <div class="obt-eyebrow">Getting Started</div>
+      <h2 class="obt-title" id="obt-title">{{ _tdata.title }}</h2>
+      <p class="obt-sub">{{ _tdata.subtitle }}</p>
+    </div>
+
+    <!-- Step indicators -->
+    <div class="obt-steps" id="obtSteps">
+      {% for step_title, step_desc in _tdata.steps %}
+      <div class="obt-step{% if loop.first %} obt-step--active{% endif %}" data-step="{{ loop.index0 }}">
+        <div class="obt-step-num">{{ loop.index }}</div>
+        <div class="obt-step-body">
+          <p class="obt-step-title">{{ step_title }}</p>
+          <p class="obt-step-desc">{{ step_desc }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Dot nav + actions -->
+    <div class="obt-footer">
+      <div class="obt-dots" id="obtDots">
+        {% for step_title, step_desc in _tdata.steps %}
+        <button type="button" class="obt-dot{% if loop.first %} obt-dot--active{% endif %}"
+                onclick="goToStep({{ loop.index0 }})" aria-label="Step {{ loop.index }}"></button>
+        {% endfor %}
+      </div>
+      <div class="obt-actions">
+        <button type="button" class="obt-btn obt-btn-prev" id="obtPrev" onclick="prevStep()" style="display:none;">← Back</button>
+        <button type="button" class="obt-btn obt-btn-next" id="obtNext" onclick="nextStep()">Next →</button>
+        <button type="button" class="obt-btn obt-btn-done" id="obtDone" onclick="dismissTutorial()" style="display:none;">Let's go →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.obt-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(3px);
+  z-index: 9990;
+  align-items: center;
+  justify-content: center;
+}
+.obt-card {
+  background: #131720;
+  border: 1px solid #2a3045;
+  border-radius: 18px;
+  padding: 40px 36px 28px;
+  max-width: 600px;
+  width: calc(100% - 32px);
+  position: relative;
+  color: #f9fafb;
+  animation: obt-rise .35s cubic-bezier(.22,.68,0,1.2) both;
+}
+@keyframes obt-rise {
+  from { opacity: 0; transform: translateY(24px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+.obt-close {
+  position: absolute; top: 14px; right: 16px;
+  background: none; border: none; color: #6b7280;
+  font-size: 22px; cursor: pointer; line-height: 1;
+}
+.obt-header { margin-bottom: 28px; }
+.obt-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #60a5fa; margin-bottom: 8px; }
+.obt-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+.obt-sub { font-size: 14px; color: #9ca3af; line-height: 1.5; }
+
+.obt-steps { display: flex; flex-direction: column; gap: 0; }
+.obt-step {
+  display: none;
+  gap: 14px;
+  align-items: flex-start;
+  background: #1a1f2e;
+  border: 1px solid #2a3045;
+  border-radius: 12px;
+  padding: 18px 20px;
+  animation: obt-fade .25s ease both;
+}
+.obt-step--active { display: flex; }
+@keyframes obt-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.obt-step-num {
+  min-width: 32px; height: 32px;
+  background: #1d4ed8; color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.obt-step-title { font-size: 15px; font-weight: 700; color: #f9fafb; margin-bottom: 4px; }
+.obt-step-desc { font-size: 13px; color: #9ca3af; line-height: 1.5; }
+
+.obt-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
+.obt-dots { display: flex; gap: 6px; }
+.obt-dot { width: 8px; height: 8px; border-radius: 50%; background: #374151; border: none; cursor: pointer; transition: background .15s; }
+.obt-dot--active { background: #1d4ed8; }
+.obt-actions { display: flex; gap: 8px; }
+.obt-btn {
+  padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; transition: background .15s;
+}
+.obt-btn-prev { background: #1e2535; color: #9ca3af; }
+.obt-btn-prev:hover { background: #253045; }
+.obt-btn-next { background: #1d4ed8; color: #fff; }
+.obt-btn-next:hover { background: #1e40af; }
+.obt-btn-done { background: #059669; color: #fff; }
+.obt-btn-done:hover { background: #047857; }
+
+@media (max-width: 540px) {
+  .obt-card { padding: 28px 16px 20px; }
+  .obt-title { font-size: 18px; }
+}
+</style>
+
+<script>
+(function() {
+  var role = {{ _role | tojson }};
+  var key = 'ravlo_tutorial_v1_' + role;
+  var totalSteps = {{ _tdata.steps | length }};
+  var currentStep = 0;
+
+  function show() {
+    var el = document.getElementById('onboardingTutorial');
+    if (el) el.style.display = 'flex';
+  }
+
+  function updateUI() {
+    document.querySelectorAll('.obt-step').forEach(function(s) {
+      s.classList.toggle('obt-step--active', parseInt(s.dataset.step) === currentStep);
+    });
+    document.querySelectorAll('.obt-dot').forEach(function(d, i) {
+      d.classList.toggle('obt-dot--active', i === currentStep);
+    });
+    var prevBtn = document.getElementById('obtPrev');
+    var nextBtn = document.getElementById('obtNext');
+    var doneBtn = document.getElementById('obtDone');
+    if (prevBtn) prevBtn.style.display = currentStep > 0 ? '' : 'none';
+    if (nextBtn) nextBtn.style.display = currentStep < totalSteps - 1 ? '' : 'none';
+    if (doneBtn) doneBtn.style.display = currentStep === totalSteps - 1 ? '' : 'none';
+  }
+
+  window.goToStep = function(n) {
+    currentStep = Math.max(0, Math.min(n, totalSteps - 1));
+    updateUI();
+  };
+
+  window.nextStep = function() { window.goToStep(currentStep + 1); };
+  window.prevStep = function() { window.goToStep(currentStep - 1); };
+
+  window.dismissTutorial = function() {
+    var el = document.getElementById('onboardingTutorial');
+    if (el) el.style.display = 'none';
+    try { localStorage.setItem(key, '1'); } catch(e) {}
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    try {
+      if (!localStorage.getItem(key)) show();
+    } catch(e) {
+      show();
+    }
+    updateUI();
+  });
+})();
+</script>
+
+{% endif %}

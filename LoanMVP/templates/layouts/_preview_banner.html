@@ -1,148 +1,160 @@
-{#
-  Preview account banner — shown on every investor page when subscription == 'preview'.
-  Injected by ravlo_base.html before {% block content %}.
-#}
-<div id="ravlo-preview-banner" style="
-  background: linear-gradient(90deg, #0f172a 0%, #1e3a5f 100%);
-  border-bottom: 2px solid #3b82f6;
-  padding: 10px 20px;
+{# Preview trial countdown banner — include in any base template for preview users #}
+{% if current_user.is_authenticated and (current_user.subscription or '') == 'preview' %}
+{% set _days_left = current_user.trial_days_remaining %}
+{% if _days_left is not none %}
+<div id="previewBanner" class="preview-banner{% if _days_left <= 3 %} preview-banner--urgent{% endif %}">
+  <span class="preview-banner-text">
+    {% if _days_left == 0 %}
+      Your free preview expires today.
+    {% elif _days_left == 1 %}
+      1 day left in your free preview.
+    {% else %}
+      {{ _days_left }} days left in your free preview.
+    {% endif %}
+    <button type="button" class="preview-banner-cta" onclick="document.getElementById('previewModal').style.display='flex'">
+      Subscribe now →
+    </button>
+  </span>
+  <button type="button" class="preview-banner-close" aria-label="Dismiss" onclick="document.getElementById('previewBanner').style.display='none'">×</button>
+</div>
+
+<!-- Preview upgrade modal -->
+<div id="previewModal" class="preview-modal-overlay" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="preview-modal-card">
+    <button type="button" class="preview-modal-close" onclick="document.getElementById('previewModal').style.display='none'" aria-label="Close">×</button>
+    <div class="preview-modal-eyebrow">Upgrade Your Account</div>
+    <h2 class="preview-modal-title">Keep access to everything you've built.</h2>
+    <p class="preview-modal-sub">Choose a plan to continue — your data stays put.</p>
+
+    <div class="preview-plan-grid">
+      <a class="preview-plan-card" href="{{ url_for('checkout.subscribe', plan='explorer') }}">
+        <p class="preview-plan-name">Core</p>
+        <p class="preview-plan-desc">Investor OS essentials</p>
+        <span class="preview-plan-cta">Choose Core →</span>
+      </a>
+      <a class="preview-plan-card preview-plan-featured" href="{{ url_for('checkout.subscribe', plan='operator') }}">
+        <span class="preview-plan-badge">Most Popular</span>
+        <p class="preview-plan-name">Operator</p>
+        <p class="preview-plan-desc">Full platform access</p>
+        <span class="preview-plan-cta">Choose Operator →</span>
+      </a>
+      <a class="preview-plan-card" href="{{ url_for('marketing.contact') }}">
+        <p class="preview-plan-name">Enterprise</p>
+        <p class="preview-plan-desc">Lending teams &amp; operators</p>
+        <span class="preview-plan-cta">Contact Us →</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Banner */
+.preview-banner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  position: sticky;
-  top: 0;
-  z-index: 999;
-">
-  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-    <span style="
-      background: #3b82f6;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      padding: 3px 10px;
-      border-radius: 20px;
-      text-transform: uppercase;
-    ">Free Preview</span>
-    <span style="color: #cbd5e1; font-size: 13px; font-weight: 500;">
-      You&rsquo;re exploring the full Ravlo investor platform.
-      Ready to unlock your subscription?
-    </span>
-  </div>
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 20px;
+  background: linear-gradient(90deg, #1d4ed8, #2563eb);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  position: relative;
+  z-index: 100;
+}
+.preview-banner--urgent { background: linear-gradient(90deg, #b45309, #d97706); }
+.preview-banner-text { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.preview-banner-cta {
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.3);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .15s;
+}
+.preview-banner-cta:hover { background: rgba(255,255,255,.25); }
+.preview-banner-close {
+  position: absolute;
+  right: 16px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.7);
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
 
-  <div style="display:flex; align-items:center; gap:10px;">
-    <button
-      onclick="document.getElementById('preview-request-modal').style.display='flex'"
-      style="
-        background: #3b82f6;
-        color: #fff;
-        border: none;
-        border-radius: 6px;
-        padding: 7px 16px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        white-space: nowrap;
-      "
-    >Request Full Access</button>
+/* Modal overlay */
+.preview-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.65);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+.preview-modal-card {
+  background: #131720;
+  border: 1px solid #2a3045;
+  border-radius: 18px;
+  padding: 40px 36px 32px;
+  max-width: 680px;
+  width: calc(100% - 32px);
+  text-align: center;
+  position: relative;
+  animation: preview-rise .3s cubic-bezier(.22,.68,0,1.2) both;
+  color: #f9fafb;
+}
+@keyframes preview-rise {
+  from { opacity: 0; transform: translateY(20px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+.preview-modal-close {
+  position: absolute;
+  top: 14px; right: 16px;
+  background: none; border: none;
+  color: #6b7280; font-size: 22px; cursor: pointer; line-height: 1;
+}
+.preview-modal-eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: #f59e0b; margin-bottom: 10px;
+}
+.preview-modal-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+.preview-modal-sub { font-size: 14px; color: #9ca3af; margin-bottom: 28px; }
 
-    <button
-      onclick="document.getElementById('ravlo-preview-banner').style.display='none'"
-      style="
-        background: transparent;
-        color: #64748b;
-        border: none;
-        font-size: 18px;
-        cursor: pointer;
-        line-height: 1;
-        padding: 0 4px;
-      "
-      title="Dismiss"
-    >&times;</button>
-  </div>
-</div>
+.preview-plan-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.preview-plan-card {
+  background: #1a1f2e; border: 1px solid #2a3045; border-radius: 12px;
+  padding: 20px 16px; text-align: left; text-decoration: none; color: inherit;
+  display: block; transition: border-color .15s, transform .15s; position: relative;
+}
+.preview-plan-card:hover { border-color: #4b6bdb; transform: translateY(-2px); }
+.preview-plan-featured { border-color: #d97706 !important; }
+.preview-plan-badge {
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  background: #d97706; color: #fff; font-size: 9px; font-weight: 800;
+  letter-spacing: .08em; text-transform: uppercase; padding: 2px 10px; border-radius: 20px;
+  white-space: nowrap;
+}
+.preview-plan-name { font-size: 14px; font-weight: 700; color: #f9fafb; margin-bottom: 3px; }
+.preview-plan-featured .preview-plan-name { color: #fbbf24; }
+.preview-plan-desc { font-size: 12px; color: #6b7280; margin-bottom: 14px; }
+.preview-plan-cta {
+  display: block; text-align: center; padding: 7px 12px; border-radius: 7px;
+  font-size: 12px; font-weight: 600; background: #1e2d3d;
+  color: #93c5fd; border: 1px solid #2d4a6e; text-decoration: none;
+}
+.preview-plan-featured .preview-plan-cta { background: #d97706; color: #fff; border-color: transparent; }
 
-{# ── Modal ──────────────────────────────────────────────────────────────── #}
-<div
-  id="preview-request-modal"
-  style="
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    z-index: 1050;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  "
-  onclick="if(event.target===this) this.style.display='none'"
->
-  <div style="
-    background: #0f172a;
-    border: 1px solid #1e3a5f;
-    border-radius: 12px;
-    padding: 32px;
-    max-width: 480px;
-    width: 100%;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-  ">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
-      <div>
-        <h3 style="color:#f1f5f9; margin:0 0 4px; font-size:18px; font-weight:700;">Request Full Access</h3>
-        <p style="color:#94a3b8; margin:0; font-size:13px;">Tell us what you&rsquo;re looking for and we&rsquo;ll get you set up.</p>
-      </div>
-      <button
-        onclick="document.getElementById('preview-request-modal').style.display='none'"
-        style="background:transparent; border:none; color:#64748b; font-size:22px; cursor:pointer; line-height:1;"
-      >&times;</button>
-    </div>
-
-    <form
-      method="POST"
-      action="{{ url_for('preview.request_subscription') }}"
-      style="display:flex; flex-direction:column; gap:14px;"
-    >
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-      <div>
-        <label style="color:#94a3b8; font-size:12px; font-weight:600; display:block; margin-bottom:5px;">Plan Interest</label>
-        <select name="plan_requested" style="
-          width:100%; background:#1e293b; border:1px solid #334155;
-          color:#f1f5f9; border-radius:6px; padding:9px 12px; font-size:13px;
-        ">
-          <option value="Core">Core — Individual investor</option>
-          <option value="Operator">Operator — Active deal flow</option>
-          <option value="Enterprise">Enterprise — Team / firm</option>
-        </select>
-      </div>
-
-      <div>
-        <label style="color:#94a3b8; font-size:12px; font-weight:600; display:block; margin-bottom:5px;">Message (optional)</label>
-        <textarea
-          name="message"
-          rows="3"
-          placeholder="What are you looking to accomplish with Ravlo?"
-          style="
-            width:100%; background:#1e293b; border:1px solid #334155;
-            color:#f1f5f9; border-radius:6px; padding:9px 12px;
-            font-size:13px; resize:vertical; box-sizing:border-box;
-          "
-        ></textarea>
-      </div>
-
-      <button type="submit" style="
-        background: #3b82f6;
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        padding: 11px 20px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        margin-top: 4px;
-      ">Submit Request &rarr;</button>
-    </form>
-  </div>
-</div>
+@media (max-width: 600px) {
+  .preview-plan-grid { grid-template-columns: 1fr; }
+  .preview-modal-card { padding: 32px 16px 24px; }
+}
+</style>
+{% endif %}
+{% endif %}
