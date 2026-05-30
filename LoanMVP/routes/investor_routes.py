@@ -4153,9 +4153,9 @@ def api_property_tool_search():
             "error": "Enter a ZIP code, city/state, address, or use your location."
         }), 400
 
-    # Enforce monthly search quota for Core (free) tier
-    sub = (getattr(current_user, "subscription", None) or "").lower()
-    _SEARCH_LIMIT = None if sub in ("pro", "enterprise") else 3
+    # Enforce monthly search quota for Core tier only
+    _effective_plan = _investor_effective_subscription_plan(current_user)
+    _SEARCH_LIMIT = None if _effective_plan in ("Operator", "Enterprise") else 3
     if _SEARCH_LIMIT is not None:
         _ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
         if _ip:
@@ -4167,7 +4167,7 @@ def api_property_tool_search():
             if _ip.deal_finder_search_count >= _SEARCH_LIMIT:
                 return jsonify({
                     "status": "error",
-                    "error": f"You've used all {_SEARCH_LIMIT} Deal Finder searches for this month. Upgrade to Pro for unlimited searches."
+                    "error": f"You've used all {_SEARCH_LIMIT} Deal Finder searches for this month. Upgrade to Operator for unlimited searches."
                 }), 429
 
     raw_limit = payload.get("limit")
