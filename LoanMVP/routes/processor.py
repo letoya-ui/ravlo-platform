@@ -638,6 +638,7 @@ def documents():
 @processor_bp.route("/request-doc/<int:loan_id>", methods=["GET", "POST"])
 @login_required
 @role_required("processor")
+def request_document(loan_id):
     loan = get_loan_or_404(loan_id)
 
     if request.method == "POST":
