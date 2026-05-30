@@ -19,7 +19,7 @@ export default ({ config }) => ({
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'https://ravlohq.com',
     eas: {
-      projectId: process.env.EAS_PROJECT_ID ?? '',
+      projectId: process.env.EAS_PROJECT_ID || config?.extra?.eas?.projectId || '',
     },
   },
 });
