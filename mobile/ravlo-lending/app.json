@@ -8,6 +8,9 @@
     "splash": { "backgroundColor": "#0C1116" },
     "ios": { "supportsTablet": true, "bundleIdentifier": "com.ravlo.lending" },
     "android": { "package": "com.ravlo.lending", "adaptiveIcon": { "backgroundColor": "#0C1116" } },
+    "extra": {
+      "eas": { "projectId": "b8210393-8f43-46eb-bb63-92871f4cb7f0" }
+    },
     "plugins": [
       "expo-secure-store",
       ["expo-notifications", { "color": "#3A5C7A" }],
