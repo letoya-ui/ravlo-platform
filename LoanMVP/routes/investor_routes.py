@@ -11469,6 +11469,7 @@ def deal_architect(deal_id=None):
     arv = None
     estimated_rent = None
     rehab_cost = None
+    design_cost = None
     lot_size = None
     zoning = None
     strategy = ""
@@ -11527,6 +11528,12 @@ def deal_architect(deal_id=None):
         build_preview_url = results.get("build_preview_url", "") or ""
         build_mockups = results.get("build_mockups", []) or []
         build_costs = (results.get("deal_architect", {}) or {}).get("build_costs", {}) or {}
+
+        # Design cost: prefer explicitly saved value, fall back to Design Studio budget
+        _inputs = (getattr(selected_deal, "inputs_json", None) or {})
+        design_cost = _inputs.get("design_cost") or (
+            results.get("design_budget", {}) or {}
+        ).get("total_budget")
         if build_costs.get("budget_id"):
             build_costs = dict(build_costs)
             build_costs["budget_url"] = url_for(
@@ -11576,6 +11583,12 @@ def deal_architect(deal_id=None):
         selected_deal.arv = _to_float(request.form.get("arv")) or selected_deal.arv
         selected_deal.estimated_rent = _to_float(request.form.get("estimated_rent")) or selected_deal.estimated_rent
         selected_deal.rehab_cost = _to_float(request.form.get("rehab_cost")) or getattr(selected_deal, "rehab_cost", None)
+
+        _design_cost_val = _to_float(request.form.get("design_cost"))
+        if _design_cost_val is not None and hasattr(selected_deal, "inputs_json"):
+            _saved_inputs = dict(selected_deal.inputs_json or {})
+            _saved_inputs["design_cost"] = _design_cost_val
+            selected_deal.inputs_json = _saved_inputs
 
         if hasattr(selected_deal, "property_type"):
             selected_deal.property_type = request.form.get("property_type") or selected_deal.property_type
@@ -11657,6 +11670,7 @@ def deal_architect(deal_id=None):
         arv=arv,
         estimated_rent=estimated_rent,
         rehab_cost=rehab_cost,
+        design_cost=design_cost,
         lot_size=lot_size,
         zoning=zoning,
         strategy=strategy,
@@ -11918,6 +11932,14 @@ def deal_architect_analyze():
             comps = safe_json_loads(data.get("comps_json"), default=[])
         comps = comps if isinstance(comps, list) else []
 
+        design_cost = _pick_float("design_cost")
+        if design_cost is None and deal is not None:
+            _dinputs = getattr(deal, "inputs_json", None) or {}
+            design_cost = _dinputs.get("design_cost")
+        if design_cost is None and deal is not None:
+            _dresults = _deal_results(deal)
+            design_cost = (_dresults.get("design_budget") or {}).get("total_budget")
+
         payload = {
             "project_name": _pick_str("project_name", "title", "address", "property_address") or None,
             "description": _pick_str("description", "notes"),
@@ -11931,6 +11953,7 @@ def deal_architect_analyze():
             "zip_code": _pick_str("zip_code", "zip") or None,
             "arv": _pick_float("arv"),
             "monthly_rent": _pick_float("monthly_rent", "estimated_rent"),
+            "design_cost": design_cost,
             "down_payment_pct": _normalize_percentage(data.get("down_payment_pct")) or 0.25,
             "interest_rate": _normalize_percentage(data.get("interest_rate")) or 0.08,
             "hold_years": _pick_int("hold_years") or 1,
@@ -12013,8 +12036,17 @@ def deal_architect_analyze():
                 deal.lot_size = payload["lot_size"]
             if hasattr(deal, "zoning") and payload.get("zoning"):
                 deal.zoning = payload["zoning"]
+            if design_cost is not None and hasattr(deal, "inputs_json"):
+                _di = dict(getattr(deal, "inputs_json", None) or {})
+                _di["design_cost"] = design_cost
+                deal.inputs_json = _di
 
             db.session.commit()
+
+        # Echo design_cost back so the UI can display it without a page reload
+        if design_cost is not None:
+            engine_data = dict(engine_data)
+            engine_data.setdefault("design_cost", design_cost)
 
         return jsonify(engine_data)
 
@@ -12044,8 +12076,10 @@ def deal_architect_strategy():
         arv = float(data.get("arv") or deal.arv or 0)
         estimated_rent = float(data.get("estimated_rent") or deal.estimated_rent or 0)
         rehab_cost = float(data.get("rehab_cost") or deal.rehab_cost or 0)
+        _dinputs = getattr(deal, "inputs_json", None) or {}
+        design_cost = float(data.get("design_cost") or _dinputs.get("design_cost") or 0)
 
-        total_cost = purchase_price + rehab_cost
+        total_cost = purchase_price + rehab_cost + design_cost
         projected_profit = (arv - total_cost) if arv else 0
         rent_ratio = (estimated_rent / purchase_price) if purchase_price > 0 else 0
 
@@ -12101,6 +12135,7 @@ def deal_architect_strategy():
             "arv": arv,
             "estimated_rent": estimated_rent,
             "rehab_cost": rehab_cost,
+            "design_cost": design_cost,
             "projected_profit": round(projected_profit, 2),
             "deal_score": deal_score,
         }
