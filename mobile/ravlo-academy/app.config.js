@@ -2,6 +2,7 @@ export default ({ config }) => ({
   ...config,
   name: 'Ravlo Academy',
   slug: 'ravlo-academy',
+  owner: 'letoyamason',
   version: '1.0.0',
   orientation: 'portrait',
   userInterfaceStyle: 'dark',

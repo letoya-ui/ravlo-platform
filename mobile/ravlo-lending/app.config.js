@@ -2,6 +2,7 @@ export default ({ config }) => ({
   ...config,
   name: 'Ravlo Lending',
   slug: 'ravlo-lending',
+  owner: 'letoyamason',
   version: '1.0.0',
   orientation: 'portrait',
   userInterfaceStyle: 'dark',
