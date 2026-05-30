@@ -260,15 +260,33 @@ def pipeline_summary():
 # ---------------------------------------------------------------------------
 
 def _serialize_deal(deal) -> dict:
+    results = getattr(deal, 'results_json', None) or {}
+    roi = getattr(deal, 'estimated_roi_percent', None)
+    if roi is None and isinstance(results, dict):
+        roi = results.get('roi_percent') or results.get('roi') or 0
+    profit = getattr(deal, 'estimated_profit', None)
+    if profit is None and isinstance(results, dict):
+        profit = results.get('estimated_profit') or results.get('profit') or 0
     return {
         'id': getattr(deal, 'id', None),
-        'name': getattr(deal, 'name', '') or getattr(deal, 'title', '') or '',
-        'amount': float(getattr(deal, 'amount', 0) or getattr(deal, 'investment_amount', 0) or 0),
-        'return_rate': float(getattr(deal, 'return_rate', 0) or getattr(deal, 'expected_return', 0) or 0),
-        'status': getattr(deal, 'status', '') or '',
-        'asset_class': getattr(deal, 'asset_class', '') or getattr(deal, 'deal_type', '') or '',
-        'description': getattr(deal, 'description', '') or '',
+        'title': getattr(deal, 'title', '') or getattr(deal, 'address', '') or 'Untitled Deal',
+        'address': getattr(deal, 'address', '') or '',
+        'city': getattr(deal, 'city', '') or '',
+        'state': getattr(deal, 'state', '') or '',
+        'strategy': getattr(deal, 'strategy', '') or '',
+        'purchase_price': float(getattr(deal, 'purchase_price', 0) or 0),
+        'arv': float(getattr(deal, 'arv', 0) or 0),
+        'rehab_cost': float(getattr(deal, 'rehab_cost', 0) or 0),
+        'estimated_rent': float(getattr(deal, 'estimated_rent', 0) or 0),
+        'deal_score': getattr(deal, 'deal_score', None),
+        'roi_percent': float(roi or 0),
+        'estimated_profit': float(profit or 0),
+        'status': getattr(deal, 'status', 'active') or 'active',
+        'submitted_for_funding': getattr(deal, 'submitted_for_funding', False) or False,
+        'reveal_is_public': getattr(deal, 'reveal_is_public', False) or False,
+        'notes': getattr(deal, 'notes', '') or '',
         'created_at': str(getattr(deal, 'created_at', '') or ''),
+        'updated_at': str(getattr(deal, 'updated_at', '') or ''),
     }
 
 
@@ -279,37 +297,42 @@ def investor_dashboard():
 
     try:
         from LoanMVP.models import Deal
-        from sqlalchemy import func
-        from LoanMVP.extensions import db
+        from sqlalchemy import func as sql_func
     except ImportError:
-        return jsonify({'total_invested': 0.0, 'active_deals': 0, 'total_deals': 0, 'avg_return': 0.0}), 200
+        return jsonify({'total_deals': 0, 'active_deals': 0, 'funded_deals': 0,
+                        'avg_roi': 0.0, 'avg_deal_score': 0.0, 'recent_deals': []}), 200
 
     try:
-        investor_id_col = getattr(Deal, 'investor_id', None)
-        if investor_id_col is not None:
-            base_query = Deal.query.filter_by(investor_id=user.id)
-        else:
-            base_query = Deal.query
+        base = Deal.query.filter_by(user_id=user.id)
+        total_deals = base.count()
+        active_deals = base.filter(Deal.status == 'active').count()
+        funded_deals = base.filter(Deal.submitted_for_funding == True).count()
 
-        total_deals = base_query.count()
-        active_deals = base_query.filter(Deal.status.in_(['active', 'open', 'funded'])).count()
-        total_invested_result = db.session.query(func.sum(Deal.amount)).filter(
-            Deal.investor_id == user.id if investor_id_col is not None else True
-        ).scalar()
-        total_invested = float(total_invested_result or 0)
-        avg_return_result = db.session.query(func.avg(Deal.return_rate)).filter(
-            Deal.investor_id == user.id if investor_id_col is not None else True
-        ).scalar()
-        avg_return = float(avg_return_result or 0)
+        all_deals = base.order_by(Deal.created_at.desc()).all()
+        scores = [d.deal_score for d in all_deals if d.deal_score is not None]
+        rois = [d.estimated_roi_percent for d in all_deals if d.estimated_roi_percent != 0]
+        avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
+        avg_roi = round(sum(rois) / len(rois), 2) if rois else 0.0
+
+        strategy_breakdown: dict = {}
+        for d in all_deals:
+            s = getattr(d, 'strategy', '') or 'Unknown'
+            strategy_breakdown[s] = strategy_breakdown.get(s, 0) + 1
+
+        recent = [_serialize_deal(d) for d in all_deals[:5]]
     except Exception as exc:
         current_app.logger.error('investor_dashboard error: %s', exc)
-        return jsonify({'total_invested': 0.0, 'active_deals': 0, 'total_deals': 0, 'avg_return': 0.0}), 200
+        return jsonify({'total_deals': 0, 'active_deals': 0, 'funded_deals': 0,
+                        'avg_roi': 0.0, 'avg_deal_score': 0.0, 'recent_deals': []}), 200
 
     return jsonify({
-        'total_invested': total_invested,
-        'active_deals': active_deals,
         'total_deals': total_deals,
-        'avg_return': avg_return,
+        'active_deals': active_deals,
+        'funded_deals': funded_deals,
+        'avg_roi': avg_roi,
+        'avg_deal_score': avg_score,
+        'strategy_breakdown': strategy_breakdown,
+        'recent_deals': recent,
     }), 200
 
 
@@ -317,6 +340,10 @@ def investor_dashboard():
 @require_auth
 def investor_deals():
     user = request.current_user
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 20))
+    status_filter = request.args.get('status', '').strip()
+    strategy_filter = request.args.get('strategy', '').strip()
 
     try:
         from LoanMVP.models import Deal
@@ -324,16 +351,30 @@ def investor_deals():
         return jsonify({'deals': [], 'total': 0}), 200
 
     try:
-        investor_id_col = getattr(Deal, 'investor_id', None)
-        if investor_id_col is not None:
-            deals = Deal.query.filter_by(investor_id=user.id).all()
-        else:
-            deals = Deal.query.all()
+        q = Deal.query.filter_by(user_id=user.id)
+        if status_filter and status_filter != 'All':
+            q = q.filter(Deal.status == status_filter)
+        if strategy_filter and strategy_filter != 'All':
+            q = q.filter(Deal.strategy == strategy_filter)
+        q = q.order_by(Deal.created_at.desc())
+        paginated = q.paginate(page=page, per_page=per_page, error_out=False)
+        return jsonify({'deals': [_serialize_deal(d) for d in paginated.items],
+                        'total': paginated.total, 'pages': paginated.pages}), 200
     except Exception as exc:
         current_app.logger.error('investor_deals error: %s', exc)
-        return jsonify({'error': 'Could not retrieve deals'}), 500
+        return jsonify({'error': str(exc)}), 500
 
-    return jsonify({'deals': [_serialize_deal(d) for d in deals], 'total': len(deals)}), 200
+
+@mobile_api.route('/investor/opportunities', methods=['GET'])
+@require_auth
+def investor_opportunities():
+    try:
+        from LoanMVP.models import Deal
+        deals = Deal.query.filter_by(reveal_is_public=True).order_by(Deal.deal_score.desc().nullslast()).limit(20).all()
+        return jsonify({'opportunities': [_serialize_deal(d) for d in deals]}), 200
+    except Exception as exc:
+        current_app.logger.error('investor_opportunities error: %s', exc)
+        return jsonify({'opportunities': []}), 200
 
 
 @mobile_api.route('/investor/deals/<int:deal_id>', methods=['GET'])
