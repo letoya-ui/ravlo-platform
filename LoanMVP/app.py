@@ -23,12 +23,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask_cors import CORS
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
-from flask_login import LoginManager, current_user
+from flask_login import LoginManager, current_user, login_required
 from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from LoanMVP.config import get_config
-from LoanMVP.extensions import db, login_manager, migrate, mail, stripe, csrf
+from LoanMVP.extensions import db, login_manager, migrate, mail, stripe, csrf, limiter
 from LoanMVP.models import User
 from LoanMVP.models.loan_models import BorrowerProfile, LoanNotification
 from LoanMVP.utils.role_helpers import get_role_display, get_request_type_display, get_status_display, get_status_badge
@@ -265,9 +265,14 @@ def create_app():
 
     # Initialize extensions
     cors_origins = app.config.get("CORS_ORIGINS") or []
+    if not cors_origins and not app.debug:
+        app.logger.warning(
+            "CORS_ORIGINS is not configured — CORS will deny all cross-origin requests. "
+            "Set CORS_ORIGINS in your environment."
+        )
     cors.init_app(
         app,
-        origins=cors_origins or None,
+        origins=cors_origins if cors_origins else (None if app.debug else []),
         supports_credentials=app.config.get("CORS_SUPPORTS_CREDENTIALS", True),
     )
     db.init_app(app)
@@ -281,7 +286,7 @@ def create_app():
     )
     app.socketio = socketio
     csrf.init_app(app)
-     
+    limiter.init_app(app)
 
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
@@ -369,6 +374,7 @@ def create_app():
         return render_template("dashboard.html", dashboards=dashboards)
 
     @app.route("/dashboard-index")
+    @login_required
     def index():
         dashboards = [
             # User-facing
@@ -403,6 +409,7 @@ def create_app():
     
 
     @app.route("/api/property/resolve", methods=["POST"])
+    @login_required
     def api_resolve_property():
         payload = request.get_json() or {}
         address = payload.get("address")

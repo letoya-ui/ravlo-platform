@@ -15,11 +15,13 @@ csrf.exempt(mobile_api)
 # ---------------------------------------------------------------------------
 
 def _get_secret():
-    return (
-        os.environ.get('JWT_SECRET_KEY')
-        or os.environ.get('SECRET_KEY')
-        or 'ravlo-jwt-secret-2025'
-    )
+    secret = os.environ.get('JWT_SECRET_KEY') or os.environ.get('SECRET_KEY')
+    if not secret:
+        raise RuntimeError(
+            "JWT_SECRET_KEY (or SECRET_KEY) environment variable must be set. "
+            "A hardcoded fallback is not permitted — mobile tokens would be forgeable."
+        )
+    return secret
 
 
 def _encode_token(user_id: int) -> str:

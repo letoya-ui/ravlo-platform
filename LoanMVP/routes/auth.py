@@ -17,7 +17,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.security import generate_password_hash
 
 from LoanMVP.app import login_manager, mail
-from LoanMVP.extensions import csrf, db
+from LoanMVP.extensions import csrf, db, limiter
 from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm, LoginForm
 from LoanMVP.services.subscriptions import sync_features_with_subscription
 from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
@@ -313,6 +313,7 @@ def _parse_name_parts(full_name: str, first_name: str, last_name: str):
 # LOGIN
 # ============================================================
 @auth_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def login():
     form = LoginForm()
 
@@ -434,6 +435,7 @@ def logout():
 # REGISTER
 # ============================================================
 @auth_bp.route("/register", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def register():
     recovery_mode = _workspace_recovery_mode()
 
@@ -579,9 +581,9 @@ def post_login_redirect():
     if role == "investor" and getattr(current_user, "subscription", "free") == "free":
         return redirect(url_for("investor.choose_plan"))
 
-    # 👇 only allow next for non-admin users
+    # Safe redirect: reject protocol-relative URLs like //evil.com
     next_page = (request.args.get("next") or "").strip()
-    if next_page.startswith("/"):
+    if next_page.startswith("/") and not next_page.startswith("//"):
         return redirect(next_page)
 
     return redirect(url_for(_dashboard_for_role(role)))
@@ -591,6 +593,7 @@ def post_login_redirect():
 # ============================================================
 
 @auth_bp.route("/register_borrower", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def register_borrower():
     if _registration_blocked():
         flash("Borrower registration is disabled for this workspace.", "warning")
@@ -637,8 +640,7 @@ def register_borrower():
         db.session.add(user)
         db.session.commit()
 
-        session.permanent = True
-        login_user(user, remember=True)
+        login_user(user)
 
         flash("Borrower account created successfully.", "success")
         return redirect(url_for("borrower.create_profile"))
@@ -653,6 +655,7 @@ def register_borrower():
 
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])
 @auth_bp.route("/reset_password_request", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def forgot_password():
     form = ResetPasswordRequestForm()
 
