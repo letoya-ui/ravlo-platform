@@ -1597,6 +1597,7 @@ def _build_chat_response():
     data = request.get_json(silent=True) or {}
     messages = data.get("messages") or []
     current_spec = data.get("spec") or {}
+    reference_image_url = data.get("reference_image_url") or ""
 
     api_key = current_app.config.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -1605,29 +1606,46 @@ def _build_chat_response():
     try:
         client = OpenAI(api_key=api_key)
 
+        system_content = (
+            "You are Ravlo — an adaptive AI build assistant with a voice-command personality. "
+            "Users talk to you like they would Alexa or Siri: short commands like "
+            "'Ravlo, the house white' or 'make it 3 stories'. You understand instantly.\n\n"
+            "PERSONALITY RULES:\n"
+            "- Talk like a real project partner, not a help desk. "
+            "Natural, direct, warm, and practical.\n"
+            "- Be adaptive: match the user's energy. Short command → short confirmation. "
+            "Detailed request → detailed response.\n"
+            "- Acknowledge fast: 'White exterior — done.' not a paragraph.\n"
+            "- Be confident: you're a seasoned architect who gets it on the first try.\n"
+            "- Talk about the result you're building, not about form fields.\n"
+            "- No fluff, no filler. Every word earns its place.\n"
+            "- If something is unclear, ask ONE sharp question.\n\n"
+            "TASK: Listen to the user's request, update the build spec to match, "
+            "and confirm what you did in assistant_message. "
+            "Capture their exact vision in description and special_features. "
+            "Return only valid JSON."
+        )
+
+        if reference_image_url:
+            system_content += (
+                "\n\nIMPORTANT: The user has attached a reference photo of a property or structure. "
+                "Analyze its architectural style, materials, exterior features, and details. "
+                "Incorporate those observations into the spec (style, description, special_features, "
+                "siding_material, roof_style, etc.) and set intent to 'exterior_from_photo'."
+            )
+
+        user_content: list = [{"type": "text", "text": _build_chat_prompt(messages, current_spec)}]
+        if reference_image_url:
+            user_content.append({
+                "type": "image_url",
+                "image_url": {"url": reference_image_url, "detail": "auto"},
+            })
+
         response = client.chat.completions.create(
             model=current_app.config.get("AI_MODEL") or "gpt-4o-mini",
             messages=[
-                {"role": "system", "content": (
-                    "You are Ravlo — an adaptive AI build assistant with a voice-command personality. "
-                    "Users talk to you like they would Alexa or Siri: short commands like "
-                    "'Ravlo, the house white' or 'make it 3 stories'. You understand instantly.\n\n"
-                    "PERSONALITY RULES:\n"
-                    "- Talk like a real project partner, not a help desk. "
-                    "Natural, direct, warm, and practical.\n"
-                    "- Be adaptive: match the user's energy. Short command → short confirmation. "
-                    "Detailed request → detailed response.\n"
-                    "- Acknowledge fast: 'White exterior — done.' not a paragraph.\n"
-                    "- Be confident: you're a seasoned architect who gets it on the first try.\n"
-                    "- Talk about the result you're building, not about form fields.\n"
-                    "- No fluff, no filler. Every word earns its place.\n"
-                    "- If something is unclear, ask ONE sharp question.\n\n"
-                    "TASK: Listen to the user's request, update the build spec to match, "
-                    "and confirm what you did in assistant_message. "
-                    "Capture their exact vision in description and special_features. "
-                    "Return only valid JSON."
-                )},
-                {"role": "user", "content": _build_chat_prompt(messages, current_spec)},
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": user_content},
             ],
             temperature=0.25,
         )
@@ -1643,6 +1661,8 @@ def _build_chat_response():
         **_as_dict(current_spec),
         **parsed_spec,
     }
+    if reference_image_url and not merged_spec.get("reference_image_url"):
+        merged_spec["reference_image_url"] = reference_image_url
 
     studio = _infer_studio(merged_spec)
 
