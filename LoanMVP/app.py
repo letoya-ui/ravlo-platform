@@ -74,13 +74,10 @@ def resource_path(relative_path: str) -> str:
 # ---------------------------------------------------------
 # Schema self-heal
 # ---------------------------------------------------------
-# Columns added in recent migrations that must exist for the app to boot,
-# paired with the SQL-level type to add if the migration hasn't run yet.
-# Only additive, nullable columns are safe to self-heal here — destructive
-# or type-changing operations must go through Alembic.
 _SCHEMA_COMPAT_COLUMNS = [
     ("user",                       "stripe_customer_id",  "VARCHAR(255)"),
     ("user",                       "university_tier",     "VARCHAR(20)"),
+    ("user",                       "trial_ends_at",       "TIMESTAMP"),
     ("vip_profiles",              "markets_json",       "TEXT"),
     ("deals",                     "local_cost_factor",  "FLOAT"),
     ("deals",                     "local_cost_label",   "VARCHAR(120)"),
@@ -113,10 +110,6 @@ _SCHEMA_COMPAT_COLUMNS = [
     ("vip_client_sessions",       "updated_at",         "TIMESTAMP"),
 ]
 
-# Tables that must exist at boot. If missing, we ask SQLAlchemy's metadata
-# to create just that table (equivalent to a single `db.create_all()` scoped
-# to one model). Order only matters for foreign-key dependencies; the list
-# here is kept small on purpose.
 _SCHEMA_COMPAT_TABLES = [
     "cost_observations",
     "vip_profiles",
@@ -155,17 +148,7 @@ _SCHEMA_COMPAT_INDEXES = [
 
 
 def _ensure_schema_compat(app):
-    """Best-effort guard against deploys that race ahead of Alembic.
-
-    For each (table, column, type) tuple, if the column is missing we issue
-    `ALTER TABLE ... ADD COLUMN`. For each table in `_SCHEMA_COMPAT_TABLES`,
-    if the table is missing we ask SQLAlchemy to create it from the model
-    metadata. Errors are logged but never raised — at worst we fall back to
-    whatever downstream try/except the callers already have. Running
-    `flask db upgrade` afterward is still the correct long-term path; this
-    is a safety net so a cold deploy doesn't 500 the app while migrations
-    catch up.
-    """
+    """Best-effort guard against deploys that race ahead of Alembic."""
     try:
         import sqlalchemy as sa
         from sqlalchemy import inspect, text
@@ -196,7 +179,6 @@ def _ensure_schema_compat(app):
             except Exception as e:
                 print(f"[schema-compat] failed on {table}.{column}: {e}")
 
-        # Table-level self-heal for tables introduced without a migration.
         for table_name in _SCHEMA_COMPAT_TABLES:
             try:
                 if inspector.has_table(table_name):
@@ -255,16 +237,11 @@ def create_app():
     app.config.from_object(config_class)
     app.config["SOCKETIO_ASYNC_MODE"] = app.config.get("SOCKETIO_ASYNC_MODE") or SOCKETIO_ASYNC_MODE
 
-    # ✅ Make sure secret key comes from config/env
     app.secret_key = app.config.get("SECRET_KEY")
-
-    # ✅ Remove filesystem sessions on Render (ephemeral)
     app.config.pop("SESSION_TYPE", None)
 
-    # Stripe configuration
     stripe.api_key = app.config.get("STRIPE_SECRET_KEY")
 
-    # Initialize extensions
     cors_origins = app.config.get("CORS_ORIGINS") or []
     cors.init_app(
         app,
@@ -282,14 +259,12 @@ def create_app():
     )
     app.socketio = socketio
     csrf.init_app(app)
-     
 
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
-    # Login manager settings
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Please log in to continue."
-     
+
     @login_manager.user_loader
     def load_user(user_id):
         try:
@@ -298,11 +273,7 @@ def create_app():
             print(f"Error loading user: {e}")
             return None
 
-    # Register all route blueprints dynamically
     register_blueprints(app)
-
-    # Best-effort schema self-heal for columns added by recent migrations.
-    # Keeps prod from hard-crashing when a deploy beats the Alembic run.
     _ensure_schema_compat(app)
 
     # -----------------------------------------------------
@@ -340,20 +311,13 @@ def create_app():
                 return redirect(url_for("investor.command_center"))
 
         dashboards = [
-            # User-facing
             ("Investor", "/investor"),
             ("Investor AI", "/investor_ai"),
-       
-            # Partner-facing        
             ("Partner", "/partner"),
-
-            # Internal lending workflow
             ("Loan Officer", "/loan_officer"),
             ("Processor", "/processor"),
             ("Underwriter", "/underwriter"),
             ("Compliance", "/compliance"),
-
-            # System-level dashboards
             ("Admin", "/admin"),
             ("Executive", "/executive"),
             ("Intelligence", "/intelligence"),
@@ -372,20 +336,13 @@ def create_app():
     @app.route("/dashboard-index")
     def index():
         dashboards = [
-            # User-facing
             ("Investor", "/investor"),
             ("Investor AI", "/investor_ai"),
-       
-            # Partner-facing        
             ("Partner", "/partner"),
-
-            # Internal lending workflow
             ("Loan Officer", "/loan_officer"),
             ("Processor", "/processor"),
             ("Underwriter", "/underwriter"),
             ("Compliance", "/compliance"),
-
-            # System-level dashboards
             ("Admin", "/admin"),
             ("Executive", "/executive"),
             ("Intelligence", "/intelligence"),
@@ -401,8 +358,6 @@ def create_app():
         ]
         return render_template("dashboard.html", dashboards=dashboards)
 
-    
-
     @app.route("/api/property/resolve", methods=["POST"])
     def api_resolve_property():
         payload = request.get_json() or {}
@@ -416,9 +371,6 @@ def create_app():
         result = resolve_property(address, city, state)
         return jsonify(result), 200
 
-
-        
-    # Global error handler
     @app.errorhandler(Exception)
     def handle_any_exception(e):
         from werkzeug.exceptions import HTTPException
@@ -445,8 +397,6 @@ def create_app():
         body = (
             "User-agent: *\n"
             "\n"
-            # ── Public marketing pages are crawlable by default ───────────
-            # ── Block all private / authenticated app areas ───────────
             "Disallow: /admin/\n"
             "Disallow: /executive/\n"
             "Disallow: /system/\n"
@@ -472,7 +422,7 @@ def create_app():
             "Disallow: /canva/\n"
             "Disallow: /elena/\n"
             "\n"
-            "Disallow: /academy/\n"         # API/portal endpoints (not marketing page)
+            "Disallow: /academy/\n"
             "Disallow: /university/chat\n"
             "Disallow: /university/portal\n"
             "\n"
@@ -520,7 +470,6 @@ def create_app():
         )
         return Response(xml, mimetype="application/xml")
 
-
     @app.route("/favicon.ico")
     def favicon():
         return send_from_directory(
@@ -531,7 +480,6 @@ def create_app():
 
     @app.context_processor
     def inject_canva_status():
-        """Expose canva_connected to every template."""
         try:
             from flask_login import current_user
             if current_user and current_user.is_authenticated:
@@ -564,7 +512,6 @@ def create_app():
             response.headers["Vary"] = ", ".join(sorted(vary_values))
         return response
 
-    # Context processors
     @app.context_processor
     def inject_notifications():
         unread = 0
@@ -585,11 +532,10 @@ def create_app():
             unread = 0
 
         return dict(unread_count=unread)
-    
-    
+
     @app.context_processor
     def inject_role_helpers():
-        return dict(get_role_display=get_role_display)  
+        return dict(get_role_display=get_role_display)
 
     @app.context_processor
     def inject_ui_helpers():
@@ -598,8 +544,8 @@ def create_app():
             get_request_type_display=get_request_type_display,
             get_status_display=get_status_display,
             get_status_badge=get_status_badge,
-        ) 
-   
+        )
+
     @app.context_processor
     def inject_datetime():
         return dict(datetime=datetime)
@@ -610,7 +556,7 @@ def create_app():
             return "${:,.0f}".format(int(value))
         except (ValueError, TypeError):
             return "$0"
-   
+
     def safe_url_for(endpoint, **values):
         try:
             return url_for(endpoint, **values)
@@ -623,24 +569,35 @@ def create_app():
     def make_session_permanent():
         session.permanent = True
 
+    # Redirect expired preview users to the trial-ended wall.
+    # Only fires for authenticated preview accounts whose trial_ends_at has passed.
+    _TRIAL_EXEMPT_PREFIXES = ("auth.", "marketing.", "public_pages.", "preview.trial_expired")
+    _TRIAL_EXEMPT_EXACT = {"static", "favicon", "marketing_home", "robots_txt", "sitemap_xml", "index"}
+
+    @app.before_request
+    def check_trial_expiry():
+        if not current_user.is_authenticated:
+            return None
+        sub = (getattr(current_user, "subscription", "") or "").strip().lower()
+        if sub != "preview":
+            return None
+        trial_ends_at = getattr(current_user, "trial_ends_at", None)
+        if not trial_ends_at:
+            return None
+        if datetime.utcnow() <= trial_ends_at:
+            return None
+        endpoint = request.endpoint or ""
+        if (
+            any(endpoint.startswith(p) for p in _TRIAL_EXEMPT_PREFIXES)
+            or endpoint in _TRIAL_EXEMPT_EXACT
+        ):
+            return None
+        return redirect(url_for("preview.trial_expired"))
+
     @app.before_request
     def handle_custom_domain():
-        """Serve VIP realtor pages when traffic arrives on a custom domain.
-
-        When `bonniesellsochomes.com` (or any custom domain stored in
-        VIPProfile.custom_domain) resolves to this server, Flask would
-        normally route to the marketing home page.  This hook intercepts
-        the request before routing and renders the correct public page.
-
-        Supported paths on custom domains:
-          GET  /             → realtor landing page
-          POST /contact      → lead-capture form
-          GET  /sitemap.xml  → per-realtor sitemap
-          GET  /blog         → blog post list
-          GET  /blog/<slug>  → individual blog post
-        """
+        """Serve VIP realtor pages when traffic arrives on a custom domain."""
         host = request.host.split(":")[0].lower()
-        # Skip for localhost / known internal hosts
         if host in ("localhost", "127.0.0.1", "0.0.0.0"):
             return None
 
@@ -713,16 +670,13 @@ def register_blueprints(app):
                     obj = getattr(mod, attr)
 
                     if isinstance(obj, Blueprint):
-                        # Force prefix to be applied
                         prefix = obj.url_prefix or f"/{obj.name}"
-
-                        # Register blueprint with explicit prefix
                         app.register_blueprint(obj, url_prefix=prefix)
-
                         print(f"Registered blueprint: {obj.name} -> {prefix}")
 
             except Exception as e:
                 print(f"Failed to load {file}: {e}")
+
 
 # ---------------------------------------------------------
 # ENTRY POINT
