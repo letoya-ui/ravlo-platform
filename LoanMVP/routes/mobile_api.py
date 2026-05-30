@@ -591,6 +591,144 @@ def update_progress(course_id):
     return jsonify({'progress': _serialize_progress(progress)}), 200
 
 
+@mobile_api.route('/academy/lesson-progress', methods=['GET'])
+@require_auth
+def get_lesson_progress():
+    user = request.current_user
+    try:
+        from LoanMVP.models.training_models import AcademyLessonProgress
+        rows = AcademyLessonProgress.query.filter_by(user_id=user.id).all()
+        return jsonify({
+            'completed': [{'module_id': r.module_id, 'lesson_index': r.lesson_index} for r in rows]
+        }), 200
+    except Exception as exc:
+        current_app.logger.error('get_lesson_progress: %s', exc)
+        return jsonify({'completed': []}), 200
+
+
+@mobile_api.route('/academy/lesson/complete', methods=['POST'])
+@require_auth
+def complete_lesson():
+    user = request.current_user
+    data = request.get_json(force=True) or {}
+    module_id = data.get('module_id', '')
+    lesson_index = data.get('lesson_index')
+    undo = bool(data.get('undo', False))
+
+    if not module_id or lesson_index is None:
+        return jsonify({'error': 'module_id and lesson_index required'}), 400
+
+    try:
+        from LoanMVP.models.training_models import AcademyLessonProgress
+        if undo:
+            AcademyLessonProgress.query.filter_by(
+                user_id=user.id, module_id=module_id, lesson_index=lesson_index
+            ).delete()
+            db.session.commit()
+            return jsonify({'ok': True, 'completed': False}), 200
+
+        existing = AcademyLessonProgress.query.filter_by(
+            user_id=user.id, module_id=module_id, lesson_index=lesson_index
+        ).first()
+        if not existing:
+            row = AcademyLessonProgress(user_id=user.id, module_id=module_id, lesson_index=lesson_index)
+            db.session.add(row)
+            db.session.commit()
+        return jsonify({'ok': True, 'completed': True}), 200
+    except Exception as exc:
+        current_app.logger.error('complete_lesson: %s', exc)
+        db.session.rollback()
+        return jsonify({'error': str(exc)}), 500
+
+
+@mobile_api.route('/academy/business-plan', methods=['POST'])
+@require_auth
+def academy_business_plan():
+    user = request.current_user
+    data = request.get_json(force=True) or {}
+    answers = data.get('answers', {})
+    tier = getattr(user, 'university_tier', None) or 'elite'
+
+    prompt = f"""You are Ravlo Academy's business plan generator. The user is a real estate professional.
+
+Their profile:
+- Role: {answers.get('role', 'Real estate professional')}
+- Primary goal: {answers.get('goal', 'Grow my business')}
+- Main challenge: {answers.get('challenge', 'Finding leads')}
+- Market/location: {answers.get('market', 'Not specified')}
+- Experience level: {answers.get('experience', 'Not specified')}
+- Academy tier: {tier}
+
+Create a focused 90-day action plan with:
+1. Clear business objective (1-2 sentences)
+2. Three priority actions for the first 30 days
+3. Three priority actions for days 31-60
+4. Three priority actions for days 61-90
+5. One key metric to track each month
+6. One accountability step
+
+Be specific, actionable, and tailored to their role and goal. Keep it concise and motivating."""
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY', ''))
+        message = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=1200,
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+        reply = message.content[0].text
+        return jsonify({'plan': reply}), 200
+    except Exception as exc:
+        current_app.logger.error('academy_business_plan: %s', exc)
+        return jsonify({'error': 'Could not generate plan. Please try again.'}), 500
+
+
+@mobile_api.route('/academy/chat', methods=['POST'])
+@require_auth
+def academy_chat():
+    """Academy AI Coach — real estate education context chat."""
+    user = request.current_user
+    data = request.get_json(force=True) or {}
+    messages_in = data.get('messages', [])
+    tier = data.get('tier') or getattr(user, 'university_tier', None) or 'starter'
+
+    first_name = getattr(user, 'first_name', '') or 'there'
+    system_prompt = (
+        f"You are Ravlo AI Coach, an expert real estate educator inside the Ravlo Academy platform. "
+        f"You are speaking with {first_name}, a {tier}-tier member. "
+        f"Your expertise covers: residential and commercial real estate, mortgage lending, real estate investing, "
+        f"BRRRR strategy, deal analysis, cap rates, DSCR, creative financing, syndication, "
+        f"and real estate business growth strategies. "
+        f"Give clear, educational, actionable answers. Use examples and numbers where helpful. "
+        f"Be encouraging but professional. Keep responses focused and not too long unless detail is needed."
+    )
+
+    messages = [
+        {'role': m['role'], 'content': m['content']}
+        for m in messages_in
+        if m.get('role') in ('user', 'assistant') and m.get('content')
+    ]
+
+    if not messages:
+        return jsonify({'error': 'No messages provided'}), 400
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY', ''))
+        response = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=1024,
+            system=system_prompt,
+            messages=messages,
+        )
+        reply = response.content[0].text if response.content else ''
+        return jsonify({'reply': reply}), 200
+    except Exception as exc:
+        current_app.logger.error('academy_chat: %s', exc)
+        return jsonify({'error': 'AI coach temporarily unavailable. Please try again.'}), 500
+
+
 # ---------------------------------------------------------------------------
 # Ravlo AI chat route
 # ---------------------------------------------------------------------------

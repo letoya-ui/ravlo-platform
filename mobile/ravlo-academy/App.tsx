@@ -13,15 +13,17 @@ import { useAuthStore } from './src/store/authStore';
 import { registerForPushNotifications, useNotificationListeners } from './src/services/notifications';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
-import CourseListScreen from './src/screens/CourseListScreen';
-import CourseDetailScreen from './src/screens/CourseDetailScreen';
+import LearnScreen from './src/screens/LearnScreen';
+import ModuleDetailScreen from './src/screens/ModuleDetailScreen';
+import LessonScreen from './src/screens/LessonScreen';
 import ProgressScreen from './src/screens/ProgressScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import RavloAIScreen from './src/screens/RavloAIScreen';
+import BusinessPlanScreen from './src/screens/BusinessPlanScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 
 const Tab = createBottomTabNavigator();
-const CourseStack = createStackNavigator();
+const LearnStack = createStackNavigator();
 const RootStack = createStackNavigator();
 
 const TAB_OPTIONS = {
@@ -31,12 +33,13 @@ const TAB_OPTIONS = {
   headerShown: false,
 };
 
-function CourseNavigator() {
+function LearnNavigator() {
   return (
-    <CourseStack.Navigator screenOptions={{ headerShown: false }}>
-      <CourseStack.Screen name="CourseList" component={CourseListScreen} />
-      <CourseStack.Screen name="CourseDetail" component={CourseDetailScreen} />
-    </CourseStack.Navigator>
+    <LearnStack.Navigator screenOptions={{ headerShown: false }}>
+      <LearnStack.Screen name="LearnHome" component={LearnScreen} />
+      <LearnStack.Screen name="ModuleDetail" component={ModuleDetailScreen} />
+      <LearnStack.Screen name="Lesson" component={LessonScreen} />
+    </LearnStack.Navigator>
   );
 }
 
@@ -49,19 +52,24 @@ function MainTabs() {
         options={{ tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} /> }}
       />
       <Tab.Screen
-        name="Courses"
-        component={CourseNavigator}
+        name="Learn"
+        component={LearnNavigator}
         options={{ tabBarIcon: ({ color, size }) => <Ionicons name="book-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Coach"
+        component={RavloAIScreen}
+        options={{ tabBarLabel: 'AI Coach', tabBarIcon: ({ color, size }) => <Ionicons name="sparkles-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Plan"
+        component={BusinessPlanScreen}
+        options={{ tabBarLabel: 'Biz Plan', tabBarIcon: ({ color, size }) => <Ionicons name="document-text-outline" size={size} color={color} /> }}
       />
       <Tab.Screen
         name="Progress"
         component={ProgressScreen}
         options={{ tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart-outline" size={size} color={color} /> }}
-      />
-      <Tab.Screen
-        name="RavloAI"
-        component={RavloAIScreen}
-        options={{ tabBarLabel: 'Ravlo AI', tabBarIcon: ({ color, size }) => <Ionicons name="sparkles-outline" size={size} color={color} /> }}
       />
       <Tab.Screen
         name="Profile"
