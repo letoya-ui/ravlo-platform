@@ -1,0 +1,148 @@
+{#
+  Preview account banner — shown on every investor page when subscription == 'preview'.
+  Injected by ravlo_base.html before {% block content %}.
+#}
+<div id="ravlo-preview-banner" style="
+  background: linear-gradient(90deg, #0f172a 0%, #1e3a5f 100%);
+  border-bottom: 2px solid #3b82f6;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+">
+  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+    <span style="
+      background: #3b82f6;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 3px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+    ">Free Preview</span>
+    <span style="color: #cbd5e1; font-size: 13px; font-weight: 500;">
+      You&rsquo;re exploring the full Ravlo investor platform.
+      Ready to unlock your subscription?
+    </span>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:10px;">
+    <button
+      onclick="document.getElementById('preview-request-modal').style.display='flex'"
+      style="
+        background: #3b82f6;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 7px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      "
+    >Request Full Access</button>
+
+    <button
+      onclick="document.getElementById('ravlo-preview-banner').style.display='none'"
+      style="
+        background: transparent;
+        color: #64748b;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        line-height: 1;
+        padding: 0 4px;
+      "
+      title="Dismiss"
+    >&times;</button>
+  </div>
+</div>
+
+{# ── Modal ──────────────────────────────────────────────────────────────── #}
+<div
+  id="preview-request-modal"
+  style="
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1050;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  "
+  onclick="if(event.target===this) this.style.display='none'"
+>
+  <div style="
+    background: #0f172a;
+    border: 1px solid #1e3a5f;
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  ">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+      <div>
+        <h3 style="color:#f1f5f9; margin:0 0 4px; font-size:18px; font-weight:700;">Request Full Access</h3>
+        <p style="color:#94a3b8; margin:0; font-size:13px;">Tell us what you&rsquo;re looking for and we&rsquo;ll get you set up.</p>
+      </div>
+      <button
+        onclick="document.getElementById('preview-request-modal').style.display='none'"
+        style="background:transparent; border:none; color:#64748b; font-size:22px; cursor:pointer; line-height:1;"
+      >&times;</button>
+    </div>
+
+    <form
+      method="POST"
+      action="{{ url_for('preview.request_subscription') }}"
+      style="display:flex; flex-direction:column; gap:14px;"
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div>
+        <label style="color:#94a3b8; font-size:12px; font-weight:600; display:block; margin-bottom:5px;">Plan Interest</label>
+        <select name="plan_requested" style="
+          width:100%; background:#1e293b; border:1px solid #334155;
+          color:#f1f5f9; border-radius:6px; padding:9px 12px; font-size:13px;
+        ">
+          <option value="Core">Core — Individual investor</option>
+          <option value="Operator">Operator — Active deal flow</option>
+          <option value="Enterprise">Enterprise — Team / firm</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="color:#94a3b8; font-size:12px; font-weight:600; display:block; margin-bottom:5px;">Message (optional)</label>
+        <textarea
+          name="message"
+          rows="3"
+          placeholder="What are you looking to accomplish with Ravlo?"
+          style="
+            width:100%; background:#1e293b; border:1px solid #334155;
+            color:#f1f5f9; border-radius:6px; padding:9px 12px;
+            font-size:13px; resize:vertical; box-sizing:border-box;
+          "
+        ></textarea>
+      </div>
+
+      <button type="submit" style="
+        background: #3b82f6;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 11px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 4px;
+      ">Submit Request &rarr;</button>
+    </form>
+  </div>
+</div>

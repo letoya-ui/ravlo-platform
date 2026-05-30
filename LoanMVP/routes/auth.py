@@ -578,7 +578,9 @@ def post_login_redirect():
 
     # Investors who have never explicitly selected a plan (DB value still the
     # default "free") are sent to the subscription selection step.
-    if role == "investor" and getattr(current_user, "subscription", "free") == "free":
+    # "preview" accounts bypass this and land on the dashboard with a banner.
+    _sub = (getattr(current_user, "subscription", "") or "").strip().lower()
+    if role == "investor" and _sub in ("free", ""):
         return redirect(url_for("investor.choose_plan"))
 
     # Safe redirect: reject protocol-relative URLs like //evil.com
@@ -677,7 +679,7 @@ def forgot_password():
                 f"Hi {_full_name_from_user(user)},\n\n"
                 f"Click the link below to reset your password. This link expires in 1 hour.\n\n"
                 f"{reset_link}\n\n"
-                f"If you didn’t request this, you can safely ignore this email.\n"
+                f"If you didn't request this, you can safely ignore this email.\n"
             ),
         )
 

@@ -135,6 +135,7 @@ _SCHEMA_COMPAT_TABLES = [
     "realtor_listing_presentations",
     "vip_client_sessions",
     "canva_connections",
+    "subscription_requests",
 ]
 
 _SCHEMA_COMPAT_INDEXES = [
@@ -451,8 +452,8 @@ def create_app():
         body = (
             "User-agent: *\n"
             "\n"
-            # ── Public marketing pages are crawlable by default ──────────
-            # ── Block all private / authenticated app areas ──────────────
+            # ── Public marketing pages are crawlable by default ───────────
+            # ── Block all private / authenticated app areas ───────────
             "Disallow: /admin/\n"
             "Disallow: /executive/\n"
             "Disallow: /system/\n"
