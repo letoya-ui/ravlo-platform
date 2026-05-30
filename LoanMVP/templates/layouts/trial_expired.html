@@ -2,150 +2,342 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Your Free Preview Has Ended | Ravlo</title>
+  <title>Continue with Ravlo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      margin: 0;
       font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #07090e;
+      background: #05070d;
       color: #f0f4ff;
       min-height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── Blurred dashboard backdrop ────────────────────────────────── */
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      opacity: 0.07;
+      pointer-events: none;
+      user-select: none;
+    }
+    .backdrop-nav {
+      background: #0d1120;
+      border-right: 1px solid #1a2040;
+      padding: 2rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .backdrop-nav-item {
+      height: 12px;
+      border-radius: 6px;
+      background: #2a3560;
+    }
+    .backdrop-nav-item:nth-child(1) { width: 60%; }
+    .backdrop-nav-item:nth-child(2) { width: 80%; }
+    .backdrop-nav-item:nth-child(3) { width: 70%; }
+    .backdrop-nav-item:nth-child(4) { width: 55%; }
+    .backdrop-nav-item:nth-child(5) { width: 75%; }
+    .backdrop-main {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .backdrop-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+    .backdrop-card {
+      background: #0d1120;
+      border: 1px solid #1a2040;
+      border-radius: 12px;
+      height: 100px;
+    }
+    .backdrop-chart {
+      background: #0d1120;
+      border: 1px solid #1a2040;
+      border-radius: 12px;
+      height: 180px;
+    }
+
+    /* ── Gradient overlay ─────────────────────────────────────── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(5,7,13,0.82) 0%, rgba(5,7,13,0.96) 100%);
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 1.5rem;
     }
-    .wrap {
-      max-width: 580px;
-      margin: 4rem 1.5rem;
+
+    /* ── Modal card ───────────────────────────────────────────── */
+    .modal {
+      background: #0c0f1a;
+      border: 1px solid #1e2540;
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      max-width: 780px;
+      width: 100%;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(201,168,120,0.08);
+      animation: rise 0.4s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(24px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0)  scale(1); }
+    }
+
+    .modal-eyebrow {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #C9A878;
+      margin-bottom: 0.75rem;
       text-align: center;
     }
-    .lock {
-      width: 64px;
-      height: 64px;
-      background: #1a1e2e;
-      border: 2px solid #2a3050;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 2rem;
-      font-size: 1.6rem;
-    }
-    h1 {
-      font-size: 2rem;
+    .modal-title {
+      font-size: 1.75rem;
       font-weight: 800;
-      margin-bottom: 0.75rem;
+      text-align: center;
       line-height: 1.2;
-    }
-    .sub {
-      color: #7a88a8;
-      font-size: 1.05rem;
-      line-height: 1.7;
-      max-width: 460px;
-      margin: 0 auto 2.5rem;
-    }
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2.5rem;
-      text-align: left;
-    }
-    .card {
-      background: #111520;
-      border: 1px solid #1e2436;
-      border-radius: 12px;
-      padding: 1.25rem;
-    }
-    .card-label {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: #C9A878;
       margin-bottom: 0.5rem;
     }
-    .card h3 {
-      margin: 0 0 0.4rem;
-      font-size: 1.1rem;
-      font-weight: 700;
-    }
-    .card p {
-      margin: 0;
-      font-size: 0.85rem;
+    .modal-sub {
+      text-align: center;
       color: #6a7a9a;
-      line-height: 1.5;
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
     }
-    .actions {
-      display: flex;
+
+    /* ── Plan cards ─────────────────────────────────────────────── */
+    .plans {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
       gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
+      margin-bottom: 1.75rem;
     }
-    .btn-primary {
-      padding: 0.9rem 2rem;
+    @media (max-width: 640px) {
+      .plans { grid-template-columns: 1fr; }
+      .modal-title { font-size: 1.4rem; }
+    }
+
+    .plan-card {
+      background: #101422;
+      border: 1px solid #1e2740;
+      border-radius: 14px;
+      padding: 1.5rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .plan-card:hover {
+      border-color: #C9A878;
+      transform: translateY(-3px);
+    }
+    .plan-card.featured {
+      border-color: #C9A878;
+      background: #12162a;
+    }
+
+    .plan-badge {
+      position: absolute;
+      top: -11px;
+      left: 50%;
+      transform: translateX(-50%);
       background: #C9A878;
       color: #07090e;
-      border-radius: 10px;
-      text-decoration: none;
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .plan-name {
+      font-size: 0.72rem;
       font-weight: 700;
-      font-size: 0.95rem;
-      transition: background 0.2s;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #C9A878;
+      margin-bottom: 0.4rem;
     }
-    .btn-primary:hover { background: #d4b888; }
-    .btn-ghost {
-      padding: 0.9rem 2rem;
-      background: transparent;
-      color: #7a88a8;
-      border: 1px solid #2a3050;
+    .plan-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+    .plan-features {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      flex: 1;
+    }
+    .plan-features li {
+      font-size: 0.83rem;
+      color: #8090b0;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      line-height: 1.4;
+    }
+    .plan-features li::before {
+      content: '✓';
+      color: #C9A878;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .plan-btn {
+      display: block;
+      width: 100%;
+      padding: 0.75rem 1rem;
       border-radius: 10px;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 700;
       text-decoration: none;
-      font-weight: 600;
-      font-size: 0.95rem;
-      transition: border-color 0.2s, color 0.2s;
+      transition: background 0.2s, color 0.2s;
+      cursor: pointer;
     }
-    .btn-ghost:hover { border-color: #C9A878; color: #C9A878; }
-    .brand {
-      margin-top: 3rem;
-      font-size: 0.78rem;
-      color: #2a3050;
+    .plan-btn-primary {
+      background: #C9A878;
+      color: #07090e;
     }
+    .plan-btn-primary:hover { background: #d4b888; }
+    .plan-btn-outline {
+      background: transparent;
+      color: #8090b0;
+      border: 1px solid #2a3560;
+    }
+    .plan-btn-outline:hover {
+      border-color: #C9A878;
+      color: #C9A878;
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    .modal-footer {
+      text-align: center;
+      font-size: 0.82rem;
+      color: #3a4870;
+    }
+    .modal-footer a {
+      color: #5a6890;
+      text-decoration: none;
+    }
+    .modal-footer a:hover { color: #8090b0; }
+    .sep { margin: 0 0.5rem; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="lock">&#128274;</div>
-    <h1>Your free preview has ended.</h1>
-    <p class="sub">
-      You had full access to the Ravlo investor platform. Ready to keep going?
-      Choose a plan below and we&rsquo;ll get you set up.
-    </p>
 
-    <div class="cards">
-      <div class="card">
-        <div class="card-label">Core</div>
-        <h3>Individual</h3>
-        <p>Deal analysis, pipeline, and investor tools for solo operators.</p>
+  <!-- Blurred dashboard hint in background -->
+  <div class="backdrop" aria-hidden="true">
+    <div class="backdrop-nav">
+      <div class="backdrop-nav-item"></div>
+      <div class="backdrop-nav-item"></div>
+      <div class="backdrop-nav-item"></div>
+      <div class="backdrop-nav-item"></div>
+      <div class="backdrop-nav-item"></div>
+    </div>
+    <div class="backdrop-main">
+      <div class="backdrop-row">
+        <div class="backdrop-card"></div>
+        <div class="backdrop-card"></div>
+        <div class="backdrop-card"></div>
       </div>
-      <div class="card">
-        <div class="card-label">Operator</div>
-        <h3>Active Flow</h3>
-        <p>Advanced tools for investors closing multiple deals.</p>
-      </div>
-      <div class="card">
-        <div class="card-label">Enterprise</div>
-        <h3>Team &amp; Firm</h3>
-        <p>Full platform access for growing teams and investment firms.</p>
+      <div class="backdrop-chart"></div>
+      <div class="backdrop-row">
+        <div class="backdrop-card"></div>
+        <div class="backdrop-card"></div>
+        <div class="backdrop-card"></div>
       </div>
     </div>
-
-    <div class="actions">
-      <a href="{{ url_for('marketing.plans') }}" class="btn-primary">See Plans &amp; Pricing</a>
-      <a href="{{ url_for('auth.logout') }}" class="btn-ghost">Sign Out</a>
-    </div>
-
-    <div class="brand">Ravlo &mdash; Powering the future of investing.</div>
   </div>
+
+  <!-- Overlay + modal -->
+  <div class="overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+
+      <div class="modal-eyebrow">Ravlo</div>
+      <h1 class="modal-title" id="modal-title">Your free preview has ended.</h1>
+      <p class="modal-sub">Pick a plan to keep going &mdash; your work is saved and ready.</p>
+
+      <div class="plans">
+
+        <!-- Core -->
+        <div class="plan-card">
+          <div class="plan-name">Core</div>
+          <div class="plan-title">Individual</div>
+          <ul class="plan-features">
+            <li>Deal Finder &amp; analysis tools</li>
+            <li>Investment pipeline</li>
+            <li>Market data &amp; comps</li>
+            <li>Renovation &amp; budget studios</li>
+          </ul>
+          <a href="{{ url_for('checkout.subscribe', plan='explorer') }}" class="plan-btn plan-btn-outline">
+            Subscribe &rarr;
+          </a>
+        </div>
+
+        <!-- Operator (featured) -->
+        <div class="plan-card featured">
+          <div class="plan-badge">Most Popular</div>
+          <div class="plan-name">Operator</div>
+          <div class="plan-title">Active Investor</div>
+          <ul class="plan-features">
+            <li>Everything in Core</li>
+            <li>Advanced deal flow tools</li>
+            <li>AI-powered deal insights</li>
+            <li>Priority support</li>
+          </ul>
+          <a href="{{ url_for('checkout.subscribe', plan='operator') }}" class="plan-btn plan-btn-primary">
+            Subscribe &rarr;
+          </a>
+        </div>
+
+        <!-- Enterprise -->
+        <div class="plan-card">
+          <div class="plan-name">Enterprise</div>
+          <div class="plan-title">Team &amp; Firm</div>
+          <ul class="plan-features">
+            <li>Everything in Operator</li>
+            <li>Multi-user team access</li>
+            <li>Custom workflows</li>
+            <li>Dedicated onboarding</li>
+          </ul>
+          <a href="{{ url_for('marketing.contact') }}" class="plan-btn plan-btn-outline">
+            Talk to us &rarr;
+          </a>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        Not ready yet?
+        <a href="{{ url_for('auth.logout') }}">Sign out</a>
+        <span class="sep">&middot;</span>
+        <a href="{{ url_for('marketing.plans') }}">Compare all plans</a>
+      </div>
+
+    </div>
+  </div>
+
 </body>
 </html>

@@ -1,8 +1,8 @@
 # LoanMVP/routes/preview_routes.py
 """
 Preview account routes.
-- Investors on subscription='preview' can browse the platform freely for 2 weeks.
-- Founders (approved subscribers) get 3 weeks free trial.
+- Investors on subscription='preview' can browse the platform freely for 1 week.
+- Subscription trial (1 more week) is handled by Stripe after subscribing.
 - This blueprint handles: subscription requests, admin approval, provisioning, and trial expiry.
 Auto-registered by app.py dynamic blueprint loader.
 """
@@ -24,15 +24,14 @@ from LoanMVP.models.admin import SubscriptionRequest
 preview_bp = Blueprint("preview", __name__, url_prefix="/preview")
 
 _ADMIN_ROLES = {"admin", "platform_admin", "master_admin", "lending_admin", "executive"}
-_PREVIEW_TRIAL_DAYS = 14
-_FOUNDERS_TRIAL_DAYS = 21
+_PREVIEW_TRIAL_DAYS = 7  # 1 week free preview; Stripe handles the subscription trial week
 
 
 def _is_admin(user):
     return (getattr(user, "role", "") or "").strip().lower() in _ADMIN_ROLES
 
 
-# ─── Trial expired page ──────────────────────────────────────────────────────────
+# ─── Trial expired ────────────────────────────────────────────────────────────
 
 @preview_bp.route("/trial-expired")
 @login_required
@@ -133,9 +132,7 @@ def approve_subscription_request(req_id):
 
     plan = (request.form.get("plan") or req.plan_requested or "Core").strip().title()
     investor.subscription_plan = plan
-
-    # Founders get 3 weeks free trial from approval date
-    investor.trial_ends_at = datetime.utcnow() + timedelta(days=_FOUNDERS_TRIAL_DAYS)
+    # trial_ends_at is intentionally not set here — Stripe handles the subscription trial
 
     req.status = "approved"
     req.reviewed_by = current_user.id
@@ -151,7 +148,7 @@ def approve_subscription_request(req_id):
     db.session.commit()
     _notify_investor_approved(investor, plan)
 
-    flash(f"{investor.full_name} upgraded to {plan} (3-week free trial started).", "success")
+    flash(f"{investor.full_name} upgraded to {plan}.", "success")
     return redirect(url_for("preview.admin_subscription_requests"))
 
 
@@ -199,7 +196,7 @@ def grant_preview_access():
         existing.subscription = "preview"
         existing.trial_ends_at = trial_end
         db.session.commit()
-        flash(f"Preview access granted to {email} (2-week trial).", "success")
+        flash(f"Preview access granted to {email} (1-week trial).", "success")
         return redirect(url_for("preview.admin_subscription_requests"))
 
     temp_password = secrets.token_urlsafe(12)
@@ -230,7 +227,7 @@ def grant_preview_access():
 
     _send_preview_welcome(email, first_name, temp_password)
 
-    flash(f"Preview account created for {email}. Welcome email sent (2-week trial).", "success")
+    flash(f"Preview account created for {email}. Welcome email sent (1-week trial).", "success")
     return redirect(url_for("preview.admin_subscription_requests"))
 
 
@@ -270,8 +267,7 @@ def _notify_investor_approved(investor, plan):
             recipients=[investor.email],
             body=(
                 f"Hi {investor.full_name},\n\n"
-                f"Your subscription request has been approved — you're now on the {plan} plan.\n"
-                f"You have a 3-week free trial starting today.\n\n"
+                f"Your subscription request has been approved — you're now on the {plan} plan.\n\n"
                 f"Log in: {url_for('investor.command_center', _external=True)}\n\n"
                 f"The Ravlo Team"
             ),
@@ -292,7 +288,7 @@ def _send_preview_welcome(email, first_name, temp_password):
             recipients=[email],
             body=(
                 f"Hi {first_name or 'there'},\n\n"
-                f"You've been given 2 weeks of free preview access to Ravlo — the investor OS for real estate capital, deal analysis, and funding.\n\n"
+                f"You have 1 week of free preview access to Ravlo — the investor OS for real estate capital, deal analysis, and funding.\n\n"
                 f"Log in: {login_url}\n"
                 f"Email: {email}\n"
                 f"Temporary password: {temp_password}\n\n"
