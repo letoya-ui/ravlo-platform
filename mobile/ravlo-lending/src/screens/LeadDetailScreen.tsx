@@ -1,193 +1,284 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Linking, ActivityIndicator } from 'react-native';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  TextInput, ActivityIndicator, Alert, Linking, Modal,
+  RefreshControl,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
+import { useAuthStore } from '../store/authStore';
 import { api } from '../services/api';
 
-const LEAD_STATUSES = ['New', 'Contacted', 'Active', 'In Review', 'Pending', 'Closed', 'Lost', 'Converted'];
+const LEAD_STATUSES = ['New', 'Contacted', 'Active', 'Pending', 'Qualified', 'Closed', 'Unqualified'];
 
 const STATUS_COLORS: Record<string, string> = {
-  New: Colors.info, Active: Colors.success, Contacted: Colors.softGlow,
-  Pending: Colors.warning, Closed: Colors.steel, Lost: '#EF4444', Converted: Colors.success,
+  New: Colors.info,
+  Contacted: Colors.softGlow,
+  Active: Colors.success,
+  Pending: Colors.warning,
+  Qualified: Colors.blueprint,
+  Closed: Colors.steel,
+  Unqualified: Colors.danger,
 };
 
+interface LeadDetail {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+  status: string;
+  created_at: string;
+  notes: Array<{ id: number; content: string; created_at: string }>;
+  borrowers: Array<{ id: number; full_name: string; loan_type: string; loan_amount: number; status: string }>;
+}
+
 export default function LeadDetailScreen({ route, navigation }: any) {
-  const [lead, setLead] = useState<any>(route.params?.lead || null);
-  const [detail, setDetail] = useState<any>(null);
-  const [note, setNote] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const { leadId, name } = route.params;
+  const { token } = useAuthStore();
+  const [lead, setLead] = useState<LeadDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [submittingNote, setSubmittingNote] = useState(false);
+  const [statusModal, setStatusModal] = useState(false);
 
-  const fetchDetail = useCallback(async () => {
-    if (!lead?.id) return;
+  const fetchLead = useCallback(async () => {
     try {
-      const res = await api.get(`/mobile/lending/leads/${lead.id}`);
-      setDetail(res.data.lead);
-    } catch (e) { console.error(e); }
-  }, [lead?.id]);
+      const res = await api.get(`/mobile/lending/leads/${leadId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setLead(res.data);
+    } catch {
+      Alert.alert('Error', 'Could not load lead details.');
+    } finally {
+      setLoading(false);
+    }
+  }, [leadId, token]);
 
-  useEffect(() => { fetchDetail(); }, [fetchDetail]);
+  useEffect(() => { fetchLead(); }, [fetchLead]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchLead();
+    setRefreshing(false);
+  }, [fetchLead]);
 
   const updateStatus = async (newStatus: string) => {
     try {
-      await api.post(`/mobile/lending/leads/${lead.id}/status`, { status: newStatus });
-      setLead((prev: any) => ({ ...prev, status: newStatus }));
-      setDetail((prev: any) => prev ? { ...prev, status: newStatus } : prev);
-      setShowStatusPicker(false);
-    } catch { Alert.alert('Error', 'Could not update status'); }
+      await api.post(`/mobile/lending/leads/${leadId}/status`, { status: newStatus }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setLead(prev => prev ? { ...prev, status: newStatus } : prev);
+    } catch {
+      Alert.alert('Error', 'Could not update status.');
+    }
+    setStatusModal(false);
   };
 
   const addNote = async () => {
-    if (!note.trim()) return;
-    setSaving(true);
+    if (!noteText.trim()) return;
+    setSubmittingNote(true);
     try {
-      const res = await api.post(`/mobile/lending/leads/${lead.id}/note`, { content: note.trim() });
-      setDetail((prev: any) => prev ? { ...prev, notes: [...(prev.notes || []), res.data.note] } : prev);
-      setNote('');
-    } catch { Alert.alert('Error', 'Could not save note'); }
-    setSaving(false);
+      const res = await api.post(`/mobile/lending/leads/${leadId}/note`, { content: noteText.trim() }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const newNote = res.data.note;
+      setLead(prev => prev ? { ...prev, notes: [newNote, ...prev.notes] } : prev);
+      setNoteText('');
+    } catch {
+      Alert.alert('Error', 'Could not add note.');
+    } finally {
+      setSubmittingNote(false);
+    }
   };
 
-  const currentLead = detail || lead;
-  const color = STATUS_COLORS[currentLead?.status] || Colors.steel;
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator color={Colors.blueprint} style={{ flex: 1 }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!lead) return null;
+
+  const statusColor = STATUS_COLORS[lead.status] || Colors.steel;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.nav}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={22} color={Colors.blueprint} />
-          <Text style={styles.backText}>Leads</Text>
+          <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
+        <Text style={styles.navTitle} numberOfLines={1}>{lead.name}</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Header */}
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.blueprint} />}
+      >
+        {/* Profile header */}
         <View style={styles.profileCard}>
-          <View style={[styles.avatar, { backgroundColor: color + '33' }]}>
-            <Text style={[styles.avatarText, { color }]}>
-              {(currentLead?.name || '?').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
+          <View style={styles.avatarLarge}>
+            <Text style={styles.avatarText}>
+              {(lead.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)}
             </Text>
           </View>
-          <Text style={styles.name}>{currentLead?.name || 'Unknown Lead'}</Text>
-          <TouchableOpacity style={[styles.statusBadge, { backgroundColor: color + '22', borderColor: color }]} onPress={() => setShowStatusPicker(!showStatusPicker)}>
-            <Text style={[styles.statusText, { color }]}>{currentLead?.status || 'New'}</Text>
-            <Ionicons name="chevron-down" size={12} color={color} />
-          </TouchableOpacity>
-          {showStatusPicker && (
-            <View style={styles.statusPicker}>
-              {LEAD_STATUSES.map(s => (
-                <TouchableOpacity key={s} style={styles.statusOption} onPress={() => updateStatus(s)}>
-                  <View style={[styles.dot, { backgroundColor: STATUS_COLORS[s] || Colors.steel }]} />
-                  <Text style={styles.statusOptionText}>{s}</Text>
-                  {currentLead?.status === s && <Ionicons name="checkmark" size={14} color={Colors.blueprint} />}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>{lead.name}</Text>
+            <TouchableOpacity
+              style={[styles.statusPill, { backgroundColor: statusColor + '22', borderColor: statusColor }]}
+              onPress={() => setStatusModal(true)}
+            >
+              <Text style={[styles.statusText, { color: statusColor }]}>{lead.status}</Text>
+              <Ionicons name="chevron-down" size={12} color={statusColor} />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Contact actions */}
-        <View style={styles.actionRow}>
-          {currentLead?.phone && (
-            <TouchableOpacity style={styles.actionBtn} onPress={() => Linking.openURL(`tel:${currentLead.phone}`)}>
-              <Ionicons name="call-outline" size={20} color={Colors.blueprint} />
-              <Text style={styles.actionText}>Call</Text>
-            </TouchableOpacity>
-          )}
-          {currentLead?.email && (
-            <TouchableOpacity style={styles.actionBtn} onPress={() => Linking.openURL(`mailto:${currentLead.email}`)}>
-              <Ionicons name="mail-outline" size={20} color={Colors.blueprint} />
-              <Text style={styles.actionText}>Email</Text>
-            </TouchableOpacity>
-          )}
-          {currentLead?.phone && (
-            <TouchableOpacity style={styles.actionBtn} onPress={() => Linking.openURL(`sms:${currentLead.phone}`)}>
-              <Ionicons name="chatbubble-outline" size={20} color={Colors.blueprint} />
-              <Text style={styles.actionText}>Text</Text>
-            </TouchableOpacity>
-          )}
+        {/* Actions */}
+        <View style={styles.actionsRow}>
+          <ActionBtn icon="call-outline" label="Call" color={Colors.success} onPress={() => lead.phone && Linking.openURL(`tel:${lead.phone}`)} />
+          <ActionBtn icon="mail-outline" label="Email" color={Colors.info} onPress={() => lead.email && Linking.openURL(`mailto:${lead.email}`)} />
+          <ActionBtn icon="chatbubble-outline" label="Text" color={Colors.warning} onPress={() => lead.phone && Linking.openURL(`sms:${lead.phone}`)} />
         </View>
 
         {/* Info card */}
-        <View style={styles.card}>
-          {currentLead?.email && <InfoRow icon="mail-outline" label="Email" value={currentLead.email} />}
-          {currentLead?.phone && <InfoRow icon="call-outline" label="Phone" value={currentLead.phone} />}
-          {currentLead?.message && <InfoRow icon="chatbubble-ellipses-outline" label="Message" value={currentLead.message} />}
-          <InfoRow icon="time-outline" label="Added" value={fmtDate(currentLead?.created_at)} />
+        <View style={styles.infoCard}>
+          <InfoRow icon="mail-outline" label="Email" value={lead.email} />
+          <InfoRow icon="call-outline" label="Phone" value={lead.phone} />
+          {lead.message ? <InfoRow icon="chatbox-outline" label="Message" value={lead.message} /> : null}
+          <InfoRow icon="calendar-outline" label="Added" value={new Date(lead.created_at).toLocaleDateString()} />
         </View>
+
+        {/* Borrowers */}
+        {lead.borrowers.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Borrowers</Text>
+            {lead.borrowers.map(b => (
+              <View key={b.id} style={styles.borrowerCard}>
+                <Text style={styles.borrowerName}>{b.full_name}</Text>
+                <Text style={styles.borrowerSub}>{b.loan_type} · {b.status}</Text>
+                {b.loan_amount > 0 && (
+                  <Text style={styles.borrowerAmount}>
+                    ${b.loan_amount.toLocaleString()}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </>
+        )}
 
         {/* Notes */}
         <Text style={styles.sectionTitle}>Notes</Text>
-        {(detail?.notes || []).map((n: any) => (
-          <View key={n.id} style={styles.noteCard}>
-            <Text style={styles.noteText}>{n.content}</Text>
-            <Text style={styles.noteDate}>{fmtDate(n.created_at)}</Text>
-          </View>
-        ))}
         <View style={styles.noteInputRow}>
-          <TextInput style={styles.noteInput} placeholder="Add a note…" placeholderTextColor={Colors.textMuted}
-            value={note} onChangeText={setNote} multiline />
-          <TouchableOpacity style={[styles.noteSubmit, !note.trim() && styles.noteSubmitDisabled]}
-            onPress={addNote} disabled={!note.trim() || saving}>
-            {saving ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={16} color="#fff" />}
+          <TextInput
+            style={styles.noteInput}
+            placeholder="Add a note…"
+            placeholderTextColor={Colors.textMuted}
+            value={noteText}
+            onChangeText={setNoteText}
+            multiline
+          />
+          <TouchableOpacity style={styles.noteSend} onPress={addNote} disabled={submittingNote || !noteText.trim()}>
+            {submittingNote
+              ? <ActivityIndicator size="small" color={Colors.white} />
+              : <Ionicons name="send" size={18} color={Colors.white} />}
           </TouchableOpacity>
         </View>
+        {lead.notes.map(n => (
+          <View key={n.id} style={styles.noteCard}>
+            <Text style={styles.noteContent}>{n.content}</Text>
+            <Text style={styles.noteDate}>{new Date(n.created_at).toLocaleString()}</Text>
+          </View>
+        ))}
       </ScrollView>
+
+      {/* Status picker modal */}
+      <Modal visible={statusModal} transparent animationType="fade" onRequestClose={() => setStatusModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setStatusModal(false)}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Update Status</Text>
+            {LEAD_STATUSES.map(s => {
+              const c = STATUS_COLORS[s] || Colors.steel;
+              return (
+                <TouchableOpacity key={s} style={[styles.modalOption, lead.status === s && styles.modalOptionActive]} onPress={() => updateStatus(s)}>
+                  <View style={[styles.dot, { backgroundColor: c }]} />
+                  <Text style={[styles.modalOptionText, { color: lead.status === s ? Colors.textPrimary : Colors.textSecondary }]}>{s}</Text>
+                  {lead.status === s && <Ionicons name="checkmark" size={16} color={Colors.blueprint} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
 
+function ActionBtn({ icon, label, color, onPress }: any) {
+  return (
+    <TouchableOpacity style={[styles.actionBtn, { borderColor: color }]} onPress={onPress} activeOpacity={0.75}>
+      <Ionicons name={icon} size={20} color={color} />
+      <Text style={[styles.actionLabel, { color }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 function InfoRow({ icon, label, value }: { icon: any; label: string; value: string }) {
+  if (!value) return null;
   return (
     <View style={styles.infoRow}>
-      <Ionicons name={icon} size={16} color={Colors.textMuted} />
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue} numberOfLines={2}>{value}</Text>
+      <Ionicons name={icon} size={15} color={Colors.textMuted} style={styles.infoIcon} />
+      <View style={styles.infoBody}>
+        <Text style={styles.infoLabel}>{label}</Text>
+        <Text style={styles.infoValue}>{value}</Text>
+      </View>
     </View>
   );
 }
 
-function fmtDate(raw: string) {
-  if (!raw || raw === 'None') return '—';
-  try {
-    const d = new Date(raw), now = new Date();
-    const diff = Math.round((now.getTime() - d.getTime()) / 86400000);
-    if (diff === 0) return 'Today'; if (diff === 1) return 'Yesterday';
-    if (diff < 7) return `${diff}d ago`;
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
-  } catch { return '—'; }
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  nav: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  backText: { ...Typography.body, color: Colors.blueprint },
-  scroll: { padding: Spacing.lg, paddingBottom: 80 },
-  profileCard: { alignItems: 'center', marginBottom: Spacing.lg, gap: Spacing.sm },
-  avatar: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontWeight: '800', fontSize: 24 },
-  name: { ...Typography.h2, color: Colors.textPrimary },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: Radii.full, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
+  nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
+  backBtn: { padding: 8 },
+  navTitle: { ...Typography.h3, color: Colors.textPrimary, flex: 1, textAlign: 'center' },
+  scroll: { padding: Spacing.lg, paddingBottom: Spacing.xxl },
+  profileCard: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg },
+  avatarLarge: { width: 60, height: 60, borderRadius: 30, backgroundColor: Colors.blueprint + '33', alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
+  avatarText: { ...Typography.h3, color: Colors.blueprint },
+  profileInfo: { flex: 1 },
+  profileName: { ...Typography.h3, color: Colors.textPrimary, marginBottom: 6 },
+  statusPill: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', borderWidth: 1, borderRadius: Radii.full, paddingHorizontal: 10, paddingVertical: 4 },
   statusText: { fontSize: 12, fontWeight: '700' },
-  statusPicker: { width: '100%', backgroundColor: Colors.surface, borderRadius: Radii.md, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
-  statusOption: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  statusOptionText: { ...Typography.body, color: Colors.textPrimary, flex: 1 },
-  actionRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
-  actionBtn: { flex: 1, backgroundColor: Colors.surface, borderRadius: Radii.md, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', padding: Spacing.md, gap: 4 },
-  actionText: { ...Typography.caption, color: Colors.textSecondary },
-  card: { backgroundColor: Colors.surface, borderRadius: Radii.md, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginBottom: Spacing.lg, gap: Spacing.sm },
-  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
-  infoLabel: { ...Typography.caption, color: Colors.textMuted, width: 56 },
-  infoValue: { ...Typography.caption, color: Colors.textSecondary, flex: 1 },
-  sectionTitle: { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing.sm },
-  noteCard: { backgroundColor: Colors.surface, borderRadius: Radii.sm, borderWidth: 1, borderColor: Colors.border, padding: Spacing.sm, marginBottom: Spacing.sm },
-  noteText: { ...Typography.bodySmall, color: Colors.textSecondary },
-  noteDate: { ...Typography.caption, color: Colors.textMuted, marginTop: 2, fontSize: 10 },
-  noteInputRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-end', marginTop: Spacing.sm },
-  noteInput: { flex: 1, backgroundColor: Colors.surface, borderRadius: Radii.md, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, ...Typography.body, color: Colors.textPrimary, maxHeight: 100 } as any,
-  noteSubmit: { backgroundColor: Colors.blueprint, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  noteSubmitDisabled: { opacity: 0.4 },
+  actionsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
+  actionBtn: { flex: 1, flexDirection: 'column', alignItems: 'center', gap: 6, borderWidth: 1.5, borderRadius: Radii.md, paddingVertical: Spacing.sm },
+  actionLabel: { fontSize: 11, fontWeight: '600' },
+  infoCard: { backgroundColor: Colors.surface, borderRadius: Radii.md, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.lg, overflow: 'hidden' },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  infoIcon: { marginRight: Spacing.sm, marginTop: 2 },
+  infoBody: { flex: 1 },
+  infoLabel: { ...Typography.caption, color: Colors.textMuted },
+  infoValue: { ...Typography.bodySmall, color: Colors.textPrimary, marginTop: 2 },
+  sectionTitle: { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing.sm, marginTop: Spacing.sm },
+  borrowerCard: { backgroundColor: Colors.surface, borderRadius: Radii.md, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.sm },
+  borrowerName: { ...Typography.bodySmall, color: Colors.textPrimary, fontWeight: '600' },
+  borrowerSub: { ...Typography.caption, color: Colors.textMuted, marginTop: 2 },
+  borrowerAmount: { ...Typography.bodySmall, color: Colors.success, marginTop: 4, fontWeight: '600' },
+  noteInputRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
+  noteInput: { flex: 1, backgroundColor: Colors.surface, borderRadius: Radii.md, borderWidth: 1, borderColor: Colors.border, color: Colors.textPrimary, padding: Spacing.sm, ...Typography.bodySmall, minHeight: 44 },
+  noteSend: { width: 44, height: 44, borderRadius: Radii.md, backgroundColor: Colors.blueprint, alignItems: 'center', justifyContent: 'center' },
+  noteCard: { backgroundColor: Colors.surface, borderRadius: Radii.md, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.sm },
+  noteContent: { ...Typography.bodySmall, color: Colors.textPrimary },
+  noteDate: { ...Typography.caption, color: Colors.textMuted, marginTop: 4 },
+  modalOverlay: { flex: 1, backgroundColor: '#00000088', justifyContent: 'center', alignItems: 'center' },
+  modalBox: { backgroundColor: Colors.surface, borderRadius: Radii.lg, padding: Spacing.lg, width: '80%', borderWidth: 1, borderColor: Colors.border },
+  modalTitle: { ...Typography.h3, color: Colors.textPrimary, marginBottom: Spacing.md },
+  modalOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, gap: Spacing.sm },
+  modalOptionActive: { opacity: 1 },
+  modalOptionText: { flex: 1, ...Typography.body },
+  dot: { width: 10, height: 10, borderRadius: 5 },
 });

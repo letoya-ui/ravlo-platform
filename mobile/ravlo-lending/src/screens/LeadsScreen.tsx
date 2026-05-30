@@ -6,164 +6,192 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
+import { useAuthStore } from '../store/authStore';
 import { api } from '../services/api';
 
-const STATUSES = ['All', 'New', 'Active', 'Contacted', 'Pending', 'Closed'];
+const STATUSES = ['All', 'New', 'Contacted', 'Active', 'Pending', 'Closed'];
 
 const STATUS_COLORS: Record<string, string> = {
   New: Colors.info,
-  Active: Colors.success,
   Contacted: Colors.softGlow,
+  Active: Colors.success,
   Pending: Colors.warning,
+  Qualified: Colors.blueprint,
   Closed: Colors.steel,
-  Lost: '#EF4444',
-  Converted: Colors.success,
+  Unqualified: Colors.danger,
 };
 
+function relativeDate(dateStr: string) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return d.toLocaleDateString();
+}
+
+interface Lead {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  status: string;
+  created_at: string;
+}
+
 export default function LeadsScreen({ navigation }: any) {
-  const [leads, setLeads] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
+  const { token } = useAuthStore();
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('All');
+  const [activeStatus, setActiveStatus] = useState('All');
   const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const timer = useRef<any>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetch = useCallback(async (p: number, s: string, st: string, replace: boolean) => {
+  const fetchLeads = useCallback(async (p = 1, q = search, s = activeStatus, reset = false) => {
     setLoading(true);
     try {
-      const res = await api.get('/mobile/lending/leads', { params: { page: p, per_page: 25, search: s, status: st } });
-      const { leads: newLeads, total: t, pages: pg } = res.data;
-      setLeads(prev => replace ? newLeads : [...prev, ...newLeads]);
-      setTotal(t); setPages(pg); setPage(p);
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  }, []);
+      const res = await api.get('/mobile/lending/leads', {
+        params: { page: p, search: q, status: s },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const newLeads = res.data.leads || [];
+      setLeads(prev => (reset || p === 1) ? newLeads : [...prev, ...newLeads]);
+      setTotal(res.data.total || 0);
+      setPage(p);
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, [token, search, activeStatus]);
 
-  useEffect(() => { fetch(1, '', 'All', true); }, [fetch]);
+  useEffect(() => {
+    fetchLeads(1, search, activeStatus, true);
+  }, [activeStatus]);
 
-  const onSearch = (val: string) => {
-    setSearch(val);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => fetch(1, val, status, true), 400);
-  };
-
-  const onStatus = (s: string) => {
-    setStatus(s);
-    fetch(1, search, s, true);
+  const onSearchChange = (text: string) => {
+    setSearch(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchLeads(1, text, activeStatus, true), 400);
   };
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetch(1, search, status, true);
+    await fetchLeads(1, search, activeStatus, true);
     setRefreshing(false);
-  }, [fetch, search, status]);
+  }, [fetchLeads, search, activeStatus]);
 
-  const loadMore = () => { if (!loading && page < pages) fetch(page + 1, search, status, false); };
-
-  const fmtDate = (raw: string) => {
-    if (!raw || raw === 'None') return '';
-    try {
-      const d = new Date(raw), now = new Date();
-      const diff = Math.round((now.getTime() - d.getTime()) / 86400000);
-      if (diff === 0) return 'Today';
-      if (diff === 1) return 'Yesterday';
-      if (diff < 7) return `${diff}d ago`;
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    } catch { return ''; }
+  const onEndReached = () => {
+    if (!loading && leads.length < total) {
+      fetchLeads(page + 1, search, activeStatus, false);
+    }
   };
+
+  const initials = (name: string) =>
+    name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Leads</Text>
-        <Text style={styles.count}>{total} total</Text>
+        <Text style={styles.subtitle}>{total} total</Text>
       </View>
 
-      <View style={styles.searchBar}>
-        <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
-        <TextInput style={styles.searchInput} placeholder="Search leads…" placeholderTextColor={Colors.textMuted}
-          value={search} onChangeText={onSearch} autoCapitalize="none" autoCorrect={false} />
-        {search.length > 0 && <TouchableOpacity onPress={() => onSearch('')}><Ionicons name="close-circle" size={18} color={Colors.textMuted} /></TouchableOpacity>}
+      <View style={styles.searchRow}>
+        <Ionicons name="search-outline" size={16} color={Colors.textMuted} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search name, email, phone…"
+          placeholderTextColor={Colors.textMuted}
+          value={search}
+          onChangeText={onSearchChange}
+        />
       </View>
 
-      <FlatList horizontal data={STATUSES} keyExtractor={i => i} showsHorizontalScrollIndicator={false}
-        style={styles.tabs} contentContainerStyle={{ gap: Spacing.sm, paddingHorizontal: Spacing.lg }}
+      <FlatList
+        horizontal
+        data={STATUSES}
+        keyExtractor={s => s}
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterList}
+        contentContainerStyle={styles.filterContent}
         renderItem={({ item }) => (
-          <TouchableOpacity style={[styles.tab, status === item && styles.tabActive]} onPress={() => onStatus(item)}>
-            <Text style={[styles.tabText, status === item && styles.tabTextActive]}>{item}</Text>
+          <TouchableOpacity
+            style={[styles.filterChip, activeStatus === item && styles.filterChipActive]}
+            onPress={() => setActiveStatus(item)}
+          >
+            <Text style={[styles.filterText, activeStatus === item && styles.filterTextActive]}>
+              {item}
+            </Text>
           </TouchableOpacity>
         )}
       />
 
       <FlatList
-        data={leads} keyExtractor={i => String(i.id)}
-        contentContainerStyle={styles.list}
+        data={leads}
+        keyExtractor={l => String(l.id)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.blueprint} />}
-        onEndReached={loadMore} onEndReachedThreshold={0.3}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.2}
+        ListFooterComponent={loading && !refreshing ? <ActivityIndicator color={Colors.blueprint} style={{ margin: 16 }} /> : null}
+        contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
           const color = STATUS_COLORS[item.status] || Colors.steel;
-          const initials = (item.name || '?').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
           return (
-            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('LeadDetail', { lead: item })} activeOpacity={0.75}>
-              <View style={[styles.avatar, { backgroundColor: color + '33' }]}>
-                <Text style={[styles.avatarText, { color }]}>{initials}</Text>
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => navigation.navigate('LeadDetail', { leadId: item.id, name: item.name })}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.avatar, { backgroundColor: Colors.blueprint + '33' }]}>
+                <Text style={styles.avatarText}>{initials(item.name || '?')}</Text>
               </View>
-              <View style={styles.rowContent}>
-                <View style={styles.rowTop}>
-                  <Text style={styles.name} numberOfLines={1}>{item.name || 'Unknown'}</Text>
-                  <Text style={styles.dateText}>{fmtDate(item.updated_at)}</Text>
-                </View>
-                <Text style={styles.email} numberOfLines={1}>{item.email || item.phone || '—'}</Text>
+              <View style={styles.cardBody}>
+                <Text style={styles.cardName}>{item.name}</Text>
+                <Text style={styles.cardEmail} numberOfLines={1}>{item.email}</Text>
+              </View>
+              <View style={styles.cardRight}>
                 <View style={[styles.statusBadge, { backgroundColor: color + '22', borderColor: color }]}>
                   <Text style={[styles.statusText, { color }]}>{item.status}</Text>
                 </View>
+                <Text style={styles.cardDate}>{relativeDate(item.created_at)}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
             </TouchableOpacity>
           );
         }}
-        ListEmptyComponent={!loading ? (
-          <View style={styles.empty}>
-            <Ionicons name="people-outline" size={40} color={Colors.textMuted} />
-            <Text style={styles.emptyText}>No leads found</Text>
-          </View>
-        ) : null}
-        ListFooterComponent={loading && page > 1 ? <ActivityIndicator color={Colors.blueprint} style={{ margin: 16 }} /> : null}
       />
-      {loading && page === 1 && (
-        <View style={styles.loadingOverlay}><ActivityIndicator color={Colors.blueprint} size="large" /></View>
-      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
   title: { ...Typography.h2, color: Colors.textPrimary },
-  count: { ...Typography.caption, color: Colors.textMuted },
-  searchBar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginHorizontal: Spacing.lg, marginBottom: Spacing.sm, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: Radii.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
-  searchInput: { flex: 1, ...Typography.body, color: Colors.textPrimary, padding: 0 } as any,
-  tabs: { maxHeight: 40, marginBottom: Spacing.sm },
-  tab: { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radii.full, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
-  tabActive: { backgroundColor: Colors.blueprint, borderColor: Colors.blueprint },
-  tabText: { ...Typography.caption, color: Colors.textMuted, fontWeight: '600' },
-  tabTextActive: { color: '#fff' },
-  list: { paddingHorizontal: Spacing.lg, paddingBottom: 100, gap: Spacing.sm },
-  row: { flexDirection: 'row', gap: Spacing.md, backgroundColor: Colors.surface, borderRadius: Radii.md, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, alignItems: 'center' },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontWeight: '700', fontSize: 16 },
-  rowContent: { flex: 1, gap: 3 },
-  rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  name: { ...Typography.body, color: Colors.textPrimary, fontWeight: '600', flex: 1 },
-  email: { ...Typography.caption, color: Colors.textMuted },
-  dateText: { ...Typography.caption, color: Colors.textMuted, fontSize: 10 },
-  statusBadge: { alignSelf: 'flex-start', borderRadius: Radii.full, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, marginTop: 2 },
-  statusText: { fontSize: 10, fontWeight: '600' },
-  empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: Spacing.sm },
-  emptyText: { ...Typography.body, color: Colors.textMuted },
-  loadingOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background + 'CC' },
+  subtitle: { ...Typography.bodySmall, color: Colors.textMuted },
+  searchRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: Spacing.lg, marginBottom: Spacing.sm, backgroundColor: Colors.surface, borderRadius: Radii.md, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.sm },
+  searchIcon: { marginRight: Spacing.xs },
+  searchInput: { flex: 1, height: 40, color: Colors.textPrimary, ...Typography.bodySmall },
+  filterList: { maxHeight: 44 },
+  filterContent: { paddingHorizontal: Spacing.lg, gap: Spacing.sm },
+  filterChip: { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radii.full, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
+  filterChipActive: { backgroundColor: Colors.blueprint, borderColor: Colors.blueprint },
+  filterText: { ...Typography.caption, color: Colors.textMuted },
+  filterTextActive: { color: Colors.white, fontWeight: '600' },
+  listContent: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.xl },
+  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radii.md, padding: Spacing.md, marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.border },
+  avatar: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.sm },
+  avatarText: { ...Typography.label, color: Colors.blueprint },
+  cardBody: { flex: 1, minWidth: 0 },
+  cardName: { ...Typography.bodySmall, color: Colors.textPrimary, fontWeight: '600' },
+  cardEmail: { ...Typography.caption, color: Colors.textMuted, marginTop: 2 },
+  cardRight: { alignItems: 'flex-end', gap: 4 },
+  statusBadge: { borderRadius: Radii.full, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  statusText: { fontSize: 10, fontWeight: '700' },
+  cardDate: { ...Typography.caption, color: Colors.textMuted },
 });

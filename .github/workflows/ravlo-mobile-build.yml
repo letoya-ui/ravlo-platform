@@ -76,14 +76,11 @@ jobs:
         working-directory: mobile/${{ matrix.app }}
         run: npm ci
 
-      - name: Set EAS project env vars
+      - name: Initialize EAS project (create if missing)
         working-directory: mobile/${{ matrix.app }}
-        run: |
-          case "${{ matrix.app }}" in
-            ravlo-lending)  echo "EAS_PROJECT_ID_LENDING=${{ secrets.EAS_PROJECT_ID_LENDING }}"   >> $GITHUB_ENV ;;
-            ravlo-investor) echo "EAS_PROJECT_ID_INVESTOR=${{ secrets.EAS_PROJECT_ID_INVESTOR }}" >> $GITHUB_ENV ;;
-            ravlo-academy)  echo "EAS_PROJECT_ID_ACADEMY=${{ secrets.EAS_PROJECT_ID_ACADEMY }}"   >> $GITHUB_ENV ;;
-          esac
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas init --non-interactive --force
 
       - name: EAS Build (preview)
         if: github.event_name == 'push' || inputs.profile == 'preview'

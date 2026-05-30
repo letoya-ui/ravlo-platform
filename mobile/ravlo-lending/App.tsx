@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -27,6 +27,7 @@ import LeadDetailScreen from './src/screens/LeadDetailScreen';
 import BorrowersScreen from './src/screens/BorrowersScreen';
 import TasksScreen from './src/screens/TasksScreen';
 import MessagesScreen from './src/screens/MessagesScreen';
+import MessageThreadScreen from './src/screens/MessageThreadScreen';
 import MoreScreen from './src/screens/MoreScreen';
 
 const Tab = createBottomTabNavigator();
@@ -35,6 +36,8 @@ const RootStack = createStackNavigator();
 
 const ADMIN_ROLES = ['admin', 'platform_admin', 'master_admin', 'lending_admin', 'executive'];
 const LO_ROLES = ['loan_officer', 'processor', 'underwriter'];
+
+// ─── Stack navigators ──────────────────────────────────────────────
 
 function LoanNavigator() {
   return (
@@ -61,8 +64,10 @@ function MoreNavigator() {
       <Stack.Screen name="MoreMenu" component={MoreScreen} />
       <Stack.Screen name="Tasks" component={TasksScreen} />
       <Stack.Screen name="Messages" component={MessagesScreen} />
+      <Stack.Screen name="MessageThread" component={MessageThreadScreen} />
       <Stack.Screen name="RavloAI" component={RavloAIScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="DocumentUpload" component={DocumentUploadScreen} />
     </Stack.Navigator>
   );
 }
@@ -77,73 +82,102 @@ function AdminNavigator() {
   );
 }
 
-function MainTabs() {
-  return (
-    <Tab.Navigator screenOptions={({ route }) => ({
-      headerShown: false,
-      tabBarStyle: styles.tabBar,
-      tabBarActiveTintColor: Colors.blueprint,
-      tabBarInactiveTintColor: Colors.textMuted,
-      tabBarIcon: ({ color, size }) => {
-        const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
-          Dashboard: 'grid-outline', Loans: 'documents-outline',
-          RavloAI: 'sparkles-outline', Profile: 'person-outline',
-        };
-        return <Ionicons name={icons[route.name] || 'grid-outline'} size={size} color={color} />;
-      },
-    })}>
-      <Tab.Screen name="Dashboard" component={DashboardScreen} />
-      <Tab.Screen name="Loans" component={LoanNavigator} />
-      <Tab.Screen name="RavloAI" component={RavloAIScreen} options={{ tabBarLabel: 'Ravlo AI' }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
-  );
-}
+// ─── Tab sets ──────────────────────────────────────────────────────
+
+const TAB_BAR_OPTIONS = {
+  tabBarStyle: { backgroundColor: Colors.surface, borderTopColor: Colors.border, borderTopWidth: 1 },
+  tabBarActiveTintColor: Colors.blueprint,
+  tabBarInactiveTintColor: Colors.textMuted,
+  headerShown: false,
+};
 
 function LoanOfficerTabs() {
   return (
-    <Tab.Navigator screenOptions={({ route }) => ({
-      headerShown: false,
-      tabBarStyle: styles.tabBar,
-      tabBarActiveTintColor: Colors.blueprint,
-      tabBarInactiveTintColor: Colors.textMuted,
-      tabBarIcon: ({ color, size }) => {
-        const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
-          Dashboard: 'grid-outline', Leads: 'people-outline',
-          Pipeline: 'documents-outline', Borrowers: 'person-outline', More: 'menu-outline',
-        };
-        return <Ionicons name={icons[route.name] || 'grid-outline'} size={size} color={color} />;
-      },
-    })}>
-      <Tab.Screen name="Dashboard" component={DashboardScreen} />
-      <Tab.Screen name="Leads" component={LeadNavigator} />
-      <Tab.Screen name="Pipeline" component={LoanNavigator} options={{ tabBarLabel: 'Pipeline' }} />
-      <Tab.Screen name="Borrowers" component={BorrowersScreen} />
-      <Tab.Screen name="More" component={MoreNavigator} />
+    <Tab.Navigator screenOptions={TAB_BAR_OPTIONS}>
+      <Tab.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Leads"
+        component={LeadNavigator}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Pipeline"
+        component={LoanNavigator}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="layers-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Borrowers"
+        component={BorrowersScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="person-circle-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="More"
+        component={MoreNavigator}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="ellipsis-horizontal-outline" size={size} color={color} /> }}
+      />
     </Tab.Navigator>
   );
 }
 
 function AdminTabs() {
   return (
-    <Tab.Navigator screenOptions={({ route }) => ({
-      headerShown: false,
-      tabBarStyle: styles.tabBar,
-      tabBarActiveTintColor: Colors.blueprint,
-      tabBarInactiveTintColor: Colors.textMuted,
-      tabBarIcon: ({ color, size }) => {
-        const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
-          OwnerHome: 'stats-chart-outline', Users: 'people-outline',
-          Activity: 'pulse-outline', RavloAI: 'sparkles-outline', Profile: 'person-outline',
-        };
-        return <Ionicons name={icons[route.name] || 'grid-outline'} size={size} color={color} />;
-      },
-    })}>
-      <Tab.Screen name="OwnerHome" component={AdminNavigator} options={{ tabBarLabel: 'Overview' }} />
-      <Tab.Screen name="Users" component={AdminUsersScreen} />
-      <Tab.Screen name="Activity" component={AdminActivityScreen} />
-      <Tab.Screen name="RavloAI" component={RavloAIScreen} options={{ tabBarLabel: 'Ravlo AI' }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+    <Tab.Navigator screenOptions={TAB_BAR_OPTIONS}>
+      <Tab.Screen
+        name="OwnerHome"
+        component={AdminNavigator}
+        options={{ tabBarLabel: 'Overview', tabBarIcon: ({ color, size }) => <Ionicons name="stats-chart-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Users"
+        component={AdminUsersScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Activity"
+        component={AdminActivityScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="pulse-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="RavloAI"
+        component={RavloAIScreen}
+        options={{ tabBarLabel: 'Ravlo AI', tabBarIcon: ({ color, size }) => <Ionicons name="sparkles-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} /> }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+function MainTabs() {
+  return (
+    <Tab.Navigator screenOptions={TAB_BAR_OPTIONS}>
+      <Tab.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Loans"
+        component={LoanNavigator}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="documents-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="RavloAI"
+        component={RavloAIScreen}
+        options={{ tabBarLabel: 'Ravlo AI', tabBarIcon: ({ color, size }) => <Ionicons name="sparkles-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} /> }}
+      />
     </Tab.Navigator>
   );
 }
@@ -156,6 +190,8 @@ function RoleBasedTabs() {
   return <MainTabs />;
 }
 
+// ─── Root App ──────────────────────────────────────────────────────
+
 export default function App() {
   const { token, loadToken } = useAuthStore();
   const [onboardingDone, setOnboardingDone] = React.useState<boolean | null>(null);
@@ -165,7 +201,9 @@ export default function App() {
       try {
         const done = await AsyncStorage.getItem('ravlo_onboarding_done');
         setOnboardingDone(done === 'true');
-      } catch { setOnboardingDone(true); }
+      } catch {
+        setOnboardingDone(true);
+      }
       await loadToken();
     };
     init();
@@ -175,8 +213,14 @@ export default function App() {
     if (!token) return;
     registerForPushNotifications('lending');
     const cleanup = useNotificationListeners(
-      (n) => Alert.alert(n.request.content.title || 'Ravlo Lending', n.request.content.body || ''),
-      (r) => console.log('Notification tapped:', r.notification.request.content)
+      (notification) => {
+        const title = notification.request.content.title || 'Ravlo Lending';
+        const body = notification.request.content.body || '';
+        Alert.alert(title, body);
+      },
+      (response) => {
+        console.log('Notification tapped:', response.notification.request.content);
+      }
     );
     return cleanup;
   }, [token]);
@@ -206,5 +250,4 @@ export default function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  tabBar: { backgroundColor: Colors.surface, borderTopColor: Colors.border, borderTopWidth: 1 },
 });
