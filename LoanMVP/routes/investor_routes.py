@@ -8562,6 +8562,7 @@ def design_studio_chat():
         data = request.get_json(silent=True) or {}
         messages = data.get("messages") or []
         current_config = data.get("config") or {}
+        reference_image_url = data.get("reference_image_url") or ""
 
         api_key = current_app.config.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -8610,16 +8611,30 @@ def design_studio_chat():
             "The engine_intent.engine_prompt is what the image engine will receive, so make it exact and visual."
         )
 
+        if reference_image_url:
+            system_prompt += (
+                "\n\nIMPORTANT: The user has attached a reference photo. "
+                "Analyze its visual elements — colors, style, materials, furniture, lighting, textures — "
+                "and incorporate those details into the design interpretation, description, and engine_prompt."
+            )
+
         user_prompt = (
             f"Current config: {json.dumps(current_config)}\n\n"
             f"Conversation:\n{json.dumps(messages)}"
         )
 
+        user_content: list = [{"type": "text", "text": user_prompt}]
+        if reference_image_url:
+            user_content.append({
+                "type": "image_url",
+                "image_url": {"url": reference_image_url, "detail": "auto"},
+            })
+
         response = client.chat.completions.create(
             model=current_app.config.get("AI_MODEL") or "gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
+                {"role": "user", "content": user_content},
             ],
             temperature=0.3,
         )

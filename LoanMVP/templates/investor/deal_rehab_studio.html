@@ -145,7 +145,16 @@
 
     <div class="design-chat-composer">
       <textarea id="designChatInput" rows="3" placeholder="Example: 'Ravlo, luxury modern kitchen, white marble waterfall island, matte black fixtures, brass pendant lights, herringbone backsplash'"></textarea>
+      <div id="designChatPhotoPreview" class="chat-photo-preview">
+        <img id="designChatPhotoThumb" src="" alt="Attached photo">
+        <span id="designChatPhotoName">Photo attached</span>
+        <button type="button" class="chat-photo-clear" id="designChatPhotoClear" title="Remove photo">×</button>
+      </div>
       <div class="cta-row">
+        <label for="designChatPhotoInput" class="chat-photo-btn" title="Attach a reference photo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </label>
+        <input type="file" id="designChatPhotoInput" accept="image/*" style="display:none">
         <button type="button" class="ravlo-btn ghost" id="askDesignBtn">Ask Ravlo</button>
         <button type="button" class="ravlo-btn primary" id="applyDesignBtn">Apply & Generate</button>
       </div>
@@ -523,6 +532,15 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
 .design-chat-composer{display:grid;gap:12px;margin-top:14px}
 .design-chat-composer textarea{width:100%;resize:vertical;min-height:80px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
 .cta-row{display:flex;gap:12px;flex-wrap:wrap}
+.chat-photo-attach-row{display:flex;align-items:center;gap:8px}
+.chat-photo-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);cursor:pointer;color:#b8c5d6;font-size:1rem;transition:background .15s;flex-shrink:0}
+.chat-photo-btn:hover{background:rgba(255,255,255,.12)}
+.chat-photo-preview{display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;border:1px solid rgba(122,184,255,.22);background:rgba(122,184,255,.06);margin-top:2px}
+.chat-photo-preview img{width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,.12);flex-shrink:0}
+.chat-photo-preview span{flex:1;font-size:.8rem;color:#b8c5d6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-photo-clear{background:none;border:none;color:#7ab8ff;cursor:pointer;font-size:1.1rem;padding:0 4px;line-height:1;opacity:.7}
+.chat-photo-clear:hover{opacity:1}
+.design-chat-message .chat-thumb{max-width:180px;border-radius:10px;margin-top:6px;display:block;border:1px solid rgba(255,255,255,.1)}
 @media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two,.build-package-strip,.mode-toggle{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.budget-line-row,.budget-summary>div{flex-direction:column}.room-slot-grid{grid-template-columns:repeat(3,1fr)}.build-package-assets{grid-template-columns:repeat(2,minmax(0,1fr))}.design-chat-message.user,.design-chat-message.assistant{margin-left:0;margin-right:0}}
 </style>
 <script>
@@ -556,6 +574,11 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
   const askDesignBtn = document.getElementById('askDesignBtn');
   const applyDesignBtn = document.getElementById('applyDesignBtn');
   const designChatStatus = document.getElementById('designChatStatus');
+  const designChatPhotoInput = document.getElementById('designChatPhotoInput');
+  const designChatPhotoPreview = document.getElementById('designChatPhotoPreview');
+  const designChatPhotoThumb = document.getElementById('designChatPhotoThumb');
+  const designChatPhotoName = document.getElementById('designChatPhotoName');
+  const designChatPhotoClear = document.getElementById('designChatPhotoClear');
   const descriptionField = document.getElementById('description');
   const notesField = document.getElementById('notes');
   const styleField = document.getElementById('style');
@@ -568,6 +591,36 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
   let budgetStudioUrl = '';
   let designMessages = [];
   let currentDesignEngineIntent = {};
+  let pendingDesignPhoto = null;
+
+  if (designChatPhotoInput) {
+    designChatPhotoInput.addEventListener('change', () => {
+      const file = designChatPhotoInput.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Photo must be under 5 MB.');
+        designChatPhotoInput.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        pendingDesignPhoto = e.target.result;
+        if (designChatPhotoThumb) designChatPhotoThumb.src = pendingDesignPhoto;
+        if (designChatPhotoName) designChatPhotoName.textContent = file.name;
+        if (designChatPhotoPreview) designChatPhotoPreview.style.display = 'flex';
+      };
+      reader.readAsDataURL(file);
+      designChatPhotoInput.value = '';
+    });
+  }
+
+  if (designChatPhotoClear) {
+    designChatPhotoClear.addEventListener('click', () => {
+      pendingDesignPhoto = null;
+      if (designChatPhotoPreview) designChatPhotoPreview.style.display = 'none';
+      if (designChatPhotoThumb) designChatPhotoThumb.src = '';
+    });
+  }
 
   const roomSlotMap = {
     living_room: 'living room',
@@ -889,11 +942,33 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
 
   async function sendDesignChatMessage() {
     const message = safeText(designChatInput?.value);
-    if (!message) return null;
+    const photoUrl = pendingDesignPhoto;
+    if (!message && !photoUrl) return null;
 
-    appendDesignMessage('user', message);
-    designMessages.push({ role: 'user', content: message });
-    designChatInput.value = '';
+    if (message) {
+      appendDesignMessage('user', message);
+      designMessages.push({ role: 'user', content: message });
+      designChatInput.value = '';
+    }
+
+    if (photoUrl) {
+      const photoNode = document.createElement('div');
+      photoNode.className = 'design-chat-message user';
+      photoNode.innerHTML = '<strong>You</strong>';
+      const thumb = document.createElement('img');
+      thumb.src = photoUrl;
+      thumb.className = 'chat-thumb';
+      thumb.alt = 'Reference photo';
+      photoNode.appendChild(thumb);
+      if (designChatThread) {
+        designChatThread.appendChild(photoNode);
+        designChatThread.scrollTop = designChatThread.scrollHeight;
+      }
+      if (!message) designMessages.push({ role: 'user', content: '[Reference photo attached]' });
+      pendingDesignPhoto = null;
+      if (designChatPhotoPreview) designChatPhotoPreview.style.display = 'none';
+      if (designChatPhotoThumb) designChatPhotoThumb.src = '';
+    }
 
     if (askDesignBtn) {
       askDesignBtn.disabled = true;
@@ -902,6 +977,9 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
     if (applyDesignBtn) applyDesignBtn.disabled = true;
 
     try {
+      const body = { messages: designMessages, config: gatherDesignConfig() };
+      if (photoUrl) body.reference_image_url = photoUrl;
+
       const response = await fetch("{{ url_for('investor.design_studio_chat') }}", {
         method: 'POST',
         headers: {
@@ -910,10 +988,7 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
           'X-Requested-With': 'XMLHttpRequest'
         },
         credentials: 'same-origin',
-        body: JSON.stringify({
-          messages: designMessages,
-          config: gatherDesignConfig()
-        })
+        body: JSON.stringify(body)
       });
 
       const data = await response.json();
