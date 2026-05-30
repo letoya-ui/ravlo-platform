@@ -92,6 +92,11 @@
         </div>
       </header>
 
+      {# Preview account banner — shown for investors on the free preview tier #}
+      {% if current_user.is_authenticated and current_user.role == 'investor' and (current_user.subscription or '') == 'preview' %}
+        {% include "layouts/_preview_banner.html" %}
+      {% endif %}
+
       <section class="ravlo-content">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
