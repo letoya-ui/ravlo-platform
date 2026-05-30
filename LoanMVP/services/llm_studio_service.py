@@ -136,9 +136,17 @@ def dalle_generate_images(payload: dict) -> dict:
                 n=1,
                 size="1024x1024",
                 quality="hd",
-                response_format="b64_json",
             )
-            images_b64[mode] = resp.data[0].b64_json
+            item = resp.data[0]
+            b64 = getattr(item, "b64_json", None)
+            if not b64:
+                url = getattr(item, "url", None)
+                if url:
+                    import base64 as _b64
+                    import urllib.request
+                    with urllib.request.urlopen(url) as r:
+                        b64 = _b64.b64encode(r.read()).decode()
+            images_b64[mode] = b64
             log.info("DALL-E 3 generated %s OK", mode)
         except Exception as exc:
             log.error("DALL-E 3 failed for mode=%s: %s", mode, exc)
