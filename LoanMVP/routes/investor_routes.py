@@ -106,10 +106,7 @@ try:
 except Exception:
     InvestorActivity = None
 
-try:
-    from LoanMVP.models.partner_models import PartnerRequest
-except Exception:
-    PartnerRequest = None
+from LoanMVP.models.partner_models import PartnerRequest
 
 # -------------------------
 # AI / Assistants
@@ -4291,6 +4288,19 @@ def api_property_tool_search():
             db.session.commit()
 
         searches_used = getattr(_ip, "deal_finder_search_count", None) if _SEARCH_LIMIT is not None else None
+
+        search_errors = meta.get("search_errors") or []
+        if search_errors:
+            current_app.logger.warning("Deal Finder search errors: %s", search_errors)
+
+        # Surface provider errors to the user when they produce empty results
+        if not results and search_errors:
+            return jsonify({
+                "status": "error",
+                "error": search_errors[0],
+                "results": [],
+                "count": 0,
+            }), 502
 
         return jsonify({
             "status": "ok",

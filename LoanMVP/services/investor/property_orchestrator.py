@@ -226,6 +226,7 @@ class PropertyIntelligenceOrchestrator:
         self.asset_type = _normalize_asset_type(asset_type)
         self.budget = budget or ProviderBudget()
         self._mashvisor = self._init_mashvisor()
+        self._search_errors: List[str] = []
 
     def _init_mashvisor(self):
         try:
@@ -894,7 +895,9 @@ class PropertyIntelligenceOrchestrator:
                 status="Active",
                 limit=min(limit, 25),
             )
-        except Exception:
+        except Exception as exc:
+            _log.warning("[search_candidates] RentCast listings failed: %s", exc)
+            self._search_errors.append(str(exc))
             listings = []
 
         results: List[CanonicalProperty] = []
@@ -1878,6 +1881,7 @@ class PropertyIntelligenceOrchestrator:
             "zip": zip_code,
             "address": address,
             "engine_ready": any(r.get("deal_score") is not None for r in results),
+            "search_errors": self._search_errors or None,
             "budget_remaining": {
                 "rentcast_search": self.budget.rentcast_search,
                 "attom_detail": self.budget.attom_detail,

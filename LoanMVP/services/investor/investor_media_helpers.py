@@ -8,7 +8,11 @@ import base64
 import requests
 from io import BytesIO
 from urllib.parse import urlparse, parse_qs
-from PIL import Image
+try:
+    from PIL import Image as _PILImage
+    Image = _PILImage
+except ImportError:
+    Image = None  # Pillow not installed — photo-resize features disabled
 
 logger = logging.getLogger(__name__)
 
