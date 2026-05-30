@@ -1,145 +1,138 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  RefreshControl,
-  Alert,
-  ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
-import { api } from '../services/api';
+import { useAuthStore } from '../store/authStore';
+import { useProgressStore } from '../store/progressStore';
+import { MODULES, canAccessModule } from '../data/modules';
 
-interface CourseProgress {
-  id: number;
-  course_id: number;
-  completed: boolean;
-  percent_complete: number;
-  last_accessed: string;
-}
+export default function ProgressScreen({ navigation }: any) {
+  const { user } = useAuthStore();
+  const { load, loaded, completed, moduleProgress } = useProgressStore();
+  const [refreshing, setRefreshing] = React.useState(false);
+  const tier = user?.university_tier || null;
 
-interface ProgressData {
-  progress: CourseProgress[];
-  courses_completed: number;
-  completion_rate: number;
-}
-
-export default function ProgressScreen() {
-  const [data, setData] = useState<ProgressData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const fetchProgress = useCallback(async () => {
-    try {
-      const res = await api.get('/mobile/academy/progress');
-      setData(res.data);
-    } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.error || 'Could not load progress.');
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    if (!loaded) load();
   }, []);
-
-  useEffect(() => { fetchProgress(); }, [fetchProgress]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchProgress();
+    await load();
     setRefreshing(false);
-  }, [fetchProgress]);
+  }, []);
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centered}><ActivityIndicator size="large" color={Colors.blueprint} /></View>
-      </SafeAreaView>
-    );
-  }
+  const accessibleModules = MODULES.filter(m => canAccessModule(tier, m.id));
+  const totalLessons = accessibleModules.reduce((a, m) => a + m.lessons.length, 0);
+  const totalCompleted = completed.filter(c =>
+    accessibleModules.some(m => m.id === c.module_id)
+  ).length;
+  const overallPct = totalLessons > 0 ? Math.round((totalCompleted / totalLessons) * 100) : 0;
 
-  const total = data?.progress.length ?? 0;
-  const completed = data?.courses_completed ?? 0;
-  const rate = data?.completion_rate ?? 0;
+  const completedModules = accessibleModules.filter(m => moduleProgress(m.id, m.lessons.length) === 100).length;
+  const inProgressModules = accessibleModules.filter(m => {
+    const p = moduleProgress(m.id, m.lessons.length);
+    return p > 0 && p < 100;
+  }).length;
 
   return (
     <SafeAreaView style={styles.container}>
-      <FlatList
-        data={data?.progress || []}
-        keyExtractor={(item) => String(item.id ?? item.course_id)}
-        contentContainerStyle={styles.list}
+      <View style={styles.header}>
+        <Text style={styles.title}>My Progress</Text>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.blueprint} />}
-        ListHeaderComponent={(
-          <View>
-            <Text style={styles.title}>My Progress</Text>
-            <View style={styles.statsRow}>
-              <StatCard
-                label="Completed"
-                value={String(completed)}
-                icon="checkmark-circle-outline"
-                color={Colors.success}
-              />
-              <StatCard
-                label="Total Started"
-                value={String(total)}
-                icon="book-outline"
-                color={Colors.blueprint}
-              />
-              <StatCard
-                label="Rate"
-                value={`${rate.toFixed(0)}%`}
-                icon="bar-chart-outline"
-                color={Colors.info}
-              />
-            </View>
-            <Text style={styles.sectionTitle}>Course Progress</Text>
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Summary stats */}
+        <View style={styles.statsRow}>
+          <StatCard value={totalCompleted} label={'Lessons\nDone'} color={Colors.success} icon="checkmark-circle-outline" />
+          <StatCard value={completedModules} label={'Modules\nComplete'} color={Colors.blueprint} icon="trophy-outline" />
+          <StatCard value={inProgressModules} label={'In\nProgress'} color={Colors.warning} icon="time-outline" />
+        </View>
+
+        {/* Overall */}
+        <View style={styles.overallCard}>
+          <View style={styles.overallTop}>
+            <Text style={styles.overallTitle}>Overall Completion</Text>
+            <Text style={styles.overallPct}>{overallPct}%</Text>
           </View>
-        )}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="bar-chart-outline" size={48} color={Colors.textMuted} />
-            <Text style={styles.emptyText}>No progress recorded yet</Text>
-            <Text style={styles.emptySubText}>Start a course to track your progress</Text>
+          <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarFill, { width: `${overallPct}%` }]} />
           </View>
-        }
-        renderItem={({ item }) => {
-          const pct = Math.min(item.percent_complete, 100);
-          const barColor = item.completed ? Colors.success : Colors.blueprint;
+          <Text style={styles.overallSub}>{totalCompleted} of {totalLessons} lessons across {accessibleModules.length} modules</Text>
+        </View>
+
+        {/* Per-module breakdown */}
+        <Text style={styles.sectionTitle}>Module Breakdown</Text>
+        {MODULES.map(m => {
+          const accessible = canAccessModule(tier, m.id);
+          const p = moduleProgress(m.id, m.lessons.length);
+          const doneLessons = Math.round((p / 100) * m.lessons.length);
+
           return (
-            <View style={styles.progressCard}>
-              <View style={styles.progressHeader}>
-                <View style={styles.courseInfo}>
-                  <Text style={styles.courseId}>Course #{item.course_id}</Text>
-                  {item.last_accessed ? (
-                    <Text style={styles.lastAccessed}>
-                      Last: {new Date(item.last_accessed).toLocaleDateString()}
-                    </Text>
-                  ) : null}
+            <TouchableOpacity
+              key={m.id}
+              style={[styles.moduleCard, !accessible && styles.moduleCardLocked]}
+              onPress={() => accessible && navigation.navigate('Learn', { screen: 'ModuleDetail', params: { moduleId: m.id } })}
+              activeOpacity={accessible ? 0.75 : 1}
+            >
+              <View style={styles.moduleTop}>
+                <View style={[styles.moduleIcon, { backgroundColor: m.color + (accessible ? '22' : '11') }]}>
+                  <Ionicons name={m.icon as any} size={18} color={accessible ? m.color : Colors.textMuted} />
                 </View>
-                <View style={[styles.completionBadge, { backgroundColor: item.completed ? Colors.success + '22' : Colors.border }]}>
-                  {item.completed ? (
-                    <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                <View style={styles.moduleInfo}>
+                  <Text style={[styles.moduleTitle, !accessible && styles.lockedTitle]}>{m.title}</Text>
+                  <Text style={styles.moduleSub}>
+                    {accessible ? `${doneLessons}/${m.lessons.length} lessons` : 'Locked — upgrade to access'}
+                  </Text>
+                </View>
+                {accessible ? (
+                  p === 100 ? (
+                    <Ionicons name="trophy" size={18} color={Colors.success} />
                   ) : (
-                    <Text style={styles.pctLabel}>{pct.toFixed(0)}%</Text>
+                    <Text style={[styles.modulePct, { color: m.color }]}>{p}%</Text>
+                  )
+                ) : (
+                  <Ionicons name="lock-closed-outline" size={16} color={Colors.textMuted} />
+                )}
+              </View>
+
+              {accessible && (
+                <View style={styles.moduleProgressRow}>
+                  <View style={[styles.progressBarBg, { flex: 1 }]}>
+                    <View style={[styles.progressBarFill, { width: `${p}%`, backgroundColor: m.color }]} />
+                  </View>
+                  {p === 100 && (
+                    <View style={styles.completeBadge}>
+                      <Text style={styles.completeBadgeText}>Complete</Text>
+                    </View>
                   )}
                 </View>
-              </View>
-              <View style={styles.barBg}>
-                <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: barColor }]} />
-              </View>
-            </View>
+              )}
+
+              {accessible && p > 0 && p < 100 && (
+                <Text style={styles.resumeHint}>Tap to continue →</Text>
+              )}
+            </TouchableOpacity>
           );
-        }}
-      />
+        })}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-function StatCard({ label, value, icon, color }: { label: string; value: string; icon: any; color: string }) {
+function StatCard({ value, label, color, icon }: { value: number; label: string; color: string; icon: any }) {
   return (
     <View style={[styles.statCard, { borderColor: color + '44' }]}>
-      <Ionicons name={icon} size={20} color={color} />
+      <View style={[styles.statIcon, { backgroundColor: color + '18' }]}>
+        <Ionicons name={icon} size={16} color={color} />
+      </View>
       <Text style={[styles.statValue, { color }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -148,39 +141,42 @@ function StatCard({ label, value, icon, color }: { label: string; value: string;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { padding: Spacing.lg, paddingBottom: Spacing.xl },
-  title: { ...Typography.h2, color: Colors.textPrimary, marginBottom: Spacing.lg },
+  header: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
+  title: { ...Typography.h2, color: Colors.textPrimary },
+  scroll: { padding: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.xxl },
   statsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
   statCard: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.md,
-    padding: Spacing.sm,
-    alignItems: 'center',
-    borderWidth: 1,
-    gap: 4,
+    flex: 1, backgroundColor: Colors.surface, borderRadius: Radii.md, padding: Spacing.md,
+    alignItems: 'center', gap: 4, borderWidth: 1,
   },
-  statValue: { fontSize: 20, fontWeight: '800' },
-  statLabel: { ...Typography.caption, color: Colors.textMuted, textAlign: 'center' },
+  statIcon: { width: 32, height: 32, borderRadius: Radii.sm, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  statValue: { fontSize: 22, fontWeight: '800' },
+  statLabel: { fontSize: 9, color: Colors.textMuted, fontWeight: '600', textAlign: 'center' },
+  overallCard: {
+    backgroundColor: Colors.surface, borderRadius: Radii.md, padding: Spacing.lg,
+    borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.lg,
+  },
+  overallTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
+  overallTitle: { ...Typography.body, color: Colors.textPrimary, fontWeight: '700' },
+  overallPct: { fontSize: 22, fontWeight: '800', color: Colors.blueprint },
+  progressBarBg: { height: 6, backgroundColor: Colors.border, borderRadius: Radii.full, overflow: 'hidden' },
+  progressBarFill: { height: '100%', backgroundColor: Colors.blueprint, borderRadius: Radii.full },
+  overallSub: { ...Typography.caption, color: Colors.textMuted, marginTop: Spacing.sm },
   sectionTitle: { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing.md },
-  progressCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radii.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  moduleCard: {
+    backgroundColor: Colors.surface, borderRadius: Radii.md, padding: Spacing.md,
+    marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.border,
   },
-  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
-  courseInfo: { flex: 1 },
-  courseId: { ...Typography.body, color: Colors.textPrimary, fontWeight: '600' },
-  lastAccessed: { ...Typography.caption, color: Colors.textMuted },
-  completionBadge: { width: 32, height: 32, borderRadius: Radii.full, alignItems: 'center', justifyContent: 'center' },
-  pctLabel: { ...Typography.caption, color: Colors.textMuted, fontWeight: '700' },
-  barBg: { height: 6, backgroundColor: Colors.border, borderRadius: Radii.full, overflow: 'hidden' },
-  barFill: { height: '100%', borderRadius: Radii.full },
-  empty: { alignItems: 'center', paddingTop: Spacing.xl, gap: Spacing.sm },
-  emptyText: { ...Typography.body, color: Colors.textMuted },
-  emptySubText: { ...Typography.bodySmall, color: Colors.textMuted, textAlign: 'center' },
+  moduleCardLocked: { opacity: 0.6 },
+  moduleTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
+  moduleIcon: { width: 36, height: 36, borderRadius: Radii.sm, alignItems: 'center', justifyContent: 'center' },
+  moduleInfo: { flex: 1 },
+  moduleTitle: { ...Typography.bodySmall, color: Colors.textPrimary, fontWeight: '700' },
+  lockedTitle: { color: Colors.textMuted },
+  moduleSub: { ...Typography.caption, color: Colors.textMuted, marginTop: 2 },
+  modulePct: { fontSize: 14, fontWeight: '800' },
+  moduleProgressRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  completeBadge: { backgroundColor: Colors.success + '22', borderRadius: Radii.full, paddingHorizontal: 8, paddingVertical: 2 },
+  completeBadgeText: { fontSize: 9, fontWeight: '700', color: Colors.success },
+  resumeHint: { ...Typography.caption, color: Colors.blueprint, marginTop: Spacing.xs },
 });
