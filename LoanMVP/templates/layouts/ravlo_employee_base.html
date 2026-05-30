@@ -18,6 +18,8 @@
   {% block head %}{% endblock %}
 </head>
 <body class="re-body role-{{ current_user.role if current_user.is_authenticated else 'guest' }}">
+  {% include "layouts/_preview_banner.html" %}
+  {% include "layouts/_onboarding_tutorial.html" %}
 
   <div class="re-shell">
 

@@ -403,6 +403,107 @@ def lending_os():
 
 
 
+@marketing_bp.route("/lending-os/request-preview", methods=["POST"])
+@csrf.exempt
+def lending_os_request_preview():
+    first_name = (request.form.get("first_name") or "").strip()
+    last_name = (request.form.get("last_name") or "").strip()
+    company = (request.form.get("company") or "").strip()
+    email = (request.form.get("email") or "").strip().lower()
+    phone = (request.form.get("phone") or "").strip()
+
+    if not email:
+        flash("Email is required.", "warning")
+        return redirect(url_for("marketing.lending_os") + "#request-preview")
+
+    # Save lead — no account created; admin invites them via the invite system
+    existing = LicenseApplication.query.filter(
+        func.lower(LicenseApplication.email) == email,
+        LicenseApplication.business_type == "lending_os_lead",
+    ).first()
+    if not existing:
+        app_row = LicenseApplication(
+            company_name=company or "—",
+            contact_name=f"{first_name} {last_name}".strip() or email,
+            email=email,
+            phone=phone or None,
+            business_type="lending_os_lead",
+            status="new",
+        )
+        db.session.add(app_row)
+        db.session.commit()
+
+    _notify_admin_lending_os_lead(first_name, last_name, company, email, phone)
+    _send_lending_os_lead_confirmation(first_name, email)
+    return redirect(url_for("marketing.lending_os_preview_thanks"))
+
+
+@marketing_bp.route("/lending-os/preview-requested")
+def lending_os_preview_thanks():
+    return render_template("marketing/lending_os_preview_thanks.html")
+
+
+def _send_lending_os_lead_confirmation(first_name: str, email: str) -> None:
+    """Confirmation email to the prospect — lets them know we got their request."""
+    try:
+        from LoanMVP.app import mail
+        from flask_mail import Message as MailMessage
+        name = first_name or "there"
+        msg = MailMessage(
+            subject="We received your Ravlo Lending OS request",
+            recipients=[email],
+        )
+        msg.html = f"""
+        <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#0f1117;">
+          <img src="https://ravlohq.com/static/images/ravlo-logo-dark.png"
+               alt="Ravlo" style="height:32px;margin-bottom:28px;">
+          <h2 style="font-size:22px;font-weight:700;margin:0 0 12px;">
+            Hey {name}, we got your request!
+          </h2>
+          <p style="font-size:15px;line-height:1.6;color:#374151;">
+            Thanks for your interest in Ravlo Lending OS. A member of our team will reach out
+            within <strong>2 business hours</strong> to walk you through the platform and set up
+            your team's access.
+          </p>
+          <p style="font-size:15px;line-height:1.6;color:#374151;margin-top:16px;">
+            In the meantime, feel free to reply to this email with any questions.
+          </p>
+          <p style="margin-top:28px;font-size:13px;color:#9ca3af;">
+            — The Ravlo Team
+          </p>
+        </div>
+        """
+        mail.send(msg)
+    except Exception as e:
+        print(f"[lending_os] lead confirmation email failed: {e}")
+
+
+def _notify_admin_lending_os_lead(first_name, last_name, company, email, phone) -> None:
+    try:
+        from LoanMVP.app import mail
+        from flask_mail import Message as MailMessage
+        from LoanMVP.routes.auth import _owner_admin_email
+        admin_email = _owner_admin_email()
+        if not admin_email:
+            return
+        msg = MailMessage(
+            subject=f"[Ravlo] New Lending OS Lead — {email}",
+            recipients=[admin_email],
+        )
+        msg.body = (
+            f"New Lending OS lead:\n\n"
+            f"Name: {first_name} {last_name}\n"
+            f"Company: {company}\n"
+            f"Email: {email}\n"
+            f"Phone: {phone}\n\n"
+            f"Follow up within 2 hours, then invite them via the admin invite system.\n"
+            f"https://ravlohq.com/admin/dashboard"
+        )
+        mail.send(msg)
+    except Exception as e:
+        print(f"[lending_os] admin notification failed: {e}")
+
+
 @marketing_bp.route("/apply", methods=["GET", "POST"])
 @csrf.exempt
 def apply():

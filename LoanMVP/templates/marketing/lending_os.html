@@ -13,7 +13,7 @@
         </p>
 
         <div class="mk-hero-actions">
-          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Request a Demo</a>
+          <a href="#request-preview" class="mk-btn mk-btn-primary">Get Free Preview Access</a>
           <a href="#founders-access" class="mk-btn mk-btn-ghost">See Founders Access</a>
         </div>
 
@@ -296,7 +296,7 @@
         </ul>
 
         <div class="mk-hero-actions">
-          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Request Founders Access</a>
+          <a href="#request-preview" class="mk-btn mk-btn-primary">Get Free Preview Access</a>
         </div>
       </article>
 
@@ -393,10 +393,99 @@
       </p>
 
       <div class="mk-hero-actions" style="justify-content:center;">
-        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Request a Demo</a>
+        <a href="#request-preview" class="mk-btn mk-btn-primary">Get Free Preview Access</a>
         <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">See the Platform</a>
       </div>
     </div>
   </div>
 </section>
+
+{# ── Lead capture section ── #}
+<section id="request-preview" class="mk-section los-form-section">
+  <div class="mk-container">
+    <div class="los-form-wrap">
+      <div class="los-form-header">
+        <div class="mk-eyebrow">Free 2-Week Preview</div>
+        <h2 class="mk-title-lg">Start exploring Lending OS today.</h2>
+        <p class="mk-copy-lg">
+          Drop your info and we'll create your preview account instantly.
+          No credit card, no commitment — just the full platform in your hands.
+        </p>
+      </div>
+
+      <form class="los-form" method="POST" action="{{ url_for('marketing.lending_os_request_preview') }}">
+        <div class="los-form-row">
+          <div class="los-form-group">
+            <label for="los-first">First Name</label>
+            <input id="los-first" type="text" name="first_name" placeholder="Jane" autocomplete="given-name">
+          </div>
+          <div class="los-form-group">
+            <label for="los-last">Last Name</label>
+            <input id="los-last" type="text" name="last_name" placeholder="Smith" autocomplete="family-name">
+          </div>
+        </div>
+        <div class="los-form-row">
+          <div class="los-form-group">
+            <label for="los-email">Work Email <span style="color:#e05252;">*</span></label>
+            <input id="los-email" type="email" name="email" placeholder="jane@yourcompany.com" required autocomplete="email">
+          </div>
+          <div class="los-form-group">
+            <label for="los-company">Company</label>
+            <input id="los-company" type="text" name="company" placeholder="ABC Lending" autocomplete="organization">
+          </div>
+        </div>
+        <div class="los-form-row">
+          <div class="los-form-group">
+            <label for="los-phone">Phone (optional)</label>
+            <input id="los-phone" type="tel" name="phone" placeholder="(555) 000-0000" autocomplete="tel">
+          </div>
+          <div class="los-form-group los-form-submit-col">
+            <button type="submit" class="mk-btn mk-btn-primary los-submit-btn">
+              Get My Preview Access →
+            </button>
+          </div>
+        </div>
+        <p class="los-form-note">
+          We'll email your login credentials within minutes.
+          Your preview is active for 14 days, no strings attached.
+        </p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<style>
+.los-form-section { padding: 72px 0; }
+.los-form-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--mk-surface, #fff);
+  border: 1px solid var(--mk-border, #e5e7eb);
+  border-radius: 16px;
+  padding: 48px;
+}
+.los-form-header { margin-bottom: 32px; }
+.los-form { display: flex; flex-direction: column; gap: 20px; }
+.los-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.los-form-group { display: flex; flex-direction: column; gap: 6px; }
+.los-form-group label { font-size: 13px; font-weight: 600; color: var(--mk-text-secondary, #6b7280); text-transform: uppercase; letter-spacing: .05em; }
+.los-form-group input {
+  padding: 10px 14px;
+  border: 1px solid var(--mk-border, #d1d5db);
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  background: var(--mk-bg, #fff);
+  color: var(--mk-text, #111827);
+  transition: border-color .15s;
+}
+.los-form-group input:focus { outline: none; border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,.12); }
+.los-form-submit-col { justify-content: flex-end; }
+.los-submit-btn { width: 100%; padding: 12px 20px; font-size: 15px; }
+.los-form-note { font-size: 13px; color: var(--mk-text-secondary, #6b7280); margin-top: 4px; }
+@media (max-width: 640px) {
+  .los-form-wrap { padding: 28px 20px; }
+  .los-form-row { grid-template-columns: 1fr; }
+}
+</style>
 {% endblock %}

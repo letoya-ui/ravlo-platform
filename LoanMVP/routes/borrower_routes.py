@@ -122,11 +122,32 @@ def safe_float(value, default=0.0):
         return default
 
 
+_ALLOWED_EXTENSIONS = {'.pdf', '.png', '.jpg', '.jpeg', '.docx', '.xlsx'}
+_MIME_SIGNATURES = {
+    b'%PDF': '.pdf',
+    b'\x89PNG': '.png',
+    b'\xff\xd8\xff': '.jpg',
+    b'PK\x03\x04': None,  # zip container: covers .docx/.xlsx — check ext
+}
+
 def save_uploaded_file(file_storage):
-    filename = secure_filename(file_storage.filename)
-    save_path = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
+    original = file_storage.filename or ""
+    ext = os.path.splitext(secure_filename(original))[1].lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise ValueError(f"File type '{ext or 'unknown'}' is not allowed. Accepted: pdf, png, jpg, jpeg, docx, xlsx")
+    header = file_storage.stream.read(12)
+    file_storage.stream.seek(0)
+    if header[:4] == b'%PDF' and ext != '.pdf':
+        raise ValueError("File content does not match the declared extension.")
+    if header[:8] == b'\x89PNG\r\n\x1a\n' and ext not in {'.png'}:
+        raise ValueError("File content does not match the declared extension.")
+    if header[:3] == b'\xff\xd8\xff' and ext not in {'.jpg', '.jpeg'}:
+        raise ValueError("File content does not match the declared extension.")
+    import uuid
+    safe_name = f"{uuid.uuid4().hex}{ext}"
+    save_path = os.path.join(current_app.config["UPLOAD_FOLDER"], safe_name)
     file_storage.save(save_path)
-    return filename
+    return safe_name
 
 
 # =========================================================
@@ -620,7 +641,11 @@ def upload_document():
         document_name = request.form.get("document_name") or document_type
 
         if file and file.filename:
-            filename = save_uploaded_file(file)
+            try:
+                filename = save_uploaded_file(file)
+            except ValueError as e:
+                flash(str(e), "danger")
+                return redirect(url_for("borrower.documents"))
 
             doc = LoanDocument(
                 borrower_profile_id=borrower.id,
@@ -722,7 +747,11 @@ def upload_condition(cond_id):
         flash("No file uploaded.", "warning")
         return redirect(url_for("borrower.conditions"))
 
-    filename = save_uploaded_file(file)
+    try:
+        filename = save_uploaded_file(file)
+    except ValueError as e:
+        flash(str(e), "danger")
+        return redirect(url_for("borrower.conditions"))
 
     new_doc = LoanDocument(
         borrower_profile_id=borrower.id,

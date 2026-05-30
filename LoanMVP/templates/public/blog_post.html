@@ -98,7 +98,7 @@
   <h1>{{ post.title }}</h1>
 
   <div class="post-body">
-    {{ post.body | safe if post.body else '<p>Coming soon.</p>' }}
+    {% if post.body %}{{ post.body }}{% else %}<p>Coming soon.</p>{% endif %}
   </div>
 
   <div class="cta-box">

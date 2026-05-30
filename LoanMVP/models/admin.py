@@ -135,3 +135,20 @@ class LicenseInviteEvent(db.Model):
     ip_address = db.Column(db.String(50))
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class SubscriptionRequest(db.Model):
+    __tablename__ = "subscription_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    status = db.Column(db.String(50), nullable=False, default="pending")
+    plan_requested = db.Column(db.String(50), nullable=True, default="Core")
+    message = db.Column(db.Text, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user = db.relationship("User", foreign_keys=[user_id], lazy=True)
+    reviewer = db.relationship("User", foreign_keys=[reviewed_by], lazy=True)

@@ -111,9 +111,9 @@ class Config:
     REMEMBER_COOKIE_SECURE = True
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = "Lax"
-    SESSION_PROTECTION = "basic"
+    SESSION_PROTECTION = "strong"
     SESSION_REFRESH_EACH_REQUEST = True
-    WTF_CSRF_TIME_LIMIT = None  # session expiry handles token lifetime; 2h limit breaks mobile tabs
+    WTF_CSRF_TIME_LIMIT = 3600  # 1-hour CSRF token expiry
     PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME", "https")
  
     # DATABASE
