@@ -16,13 +16,17 @@ import DashboardScreen from './src/screens/DashboardScreen';
 import DealsScreen from './src/screens/DealsScreen';
 import DealDetailScreen from './src/screens/DealDetailScreen';
 import OpportunitiesScreen from './src/screens/OpportunitiesScreen';
-import PartnerScreen from './src/screens/PartnerScreen';
-import ProfileScreen from './src/screens/ProfileScreen';
+import PortfolioScreen from './src/screens/PortfolioScreen';
+import DealAnalyzerScreen from './src/screens/DealAnalyzerScreen';
+import FundingScreen from './src/screens/FundingScreen';
+import PartnerHubScreen from './src/screens/PartnerHubScreen';
 import RavloAIScreen from './src/screens/RavloAIScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 
 const Tab = createBottomTabNavigator();
-const Stack = createStackNavigator();
+const DealStack = createStackNavigator();
+const CapitalStack = createStackNavigator();
 const RootStack = createStackNavigator();
 
 const TAB_OPTIONS = {
@@ -34,10 +38,19 @@ const TAB_OPTIONS = {
 
 function DealNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="DealList" component={DealsScreen} />
-      <Stack.Screen name="DealDetail" component={DealDetailScreen} />
-    </Stack.Navigator>
+    <DealStack.Navigator screenOptions={{ headerShown: false }}>
+      <DealStack.Screen name="DealList" component={DealsScreen} />
+      <DealStack.Screen name="DealDetail" component={DealDetailScreen} />
+    </DealStack.Navigator>
+  );
+}
+
+function CapitalNavigator() {
+  return (
+    <CapitalStack.Navigator screenOptions={{ headerShown: false }}>
+      <CapitalStack.Screen name="FundingList" component={FundingScreen} />
+      <CapitalStack.Screen name="Opportunities" component={OpportunitiesScreen} />
+    </CapitalStack.Navigator>
   );
 }
 
@@ -47,7 +60,7 @@ function MainTabs() {
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
-        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} /> }}
+        options={{ tabBarLabel: 'Home', tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} /> }}
       />
       <Tab.Screen
         name="Deals"
@@ -55,14 +68,29 @@ function MainTabs() {
         options={{ tabBarIcon: ({ color, size }) => <Ionicons name="layers-outline" size={size} color={color} /> }}
       />
       <Tab.Screen
-        name="Opportunities"
-        component={OpportunitiesScreen}
-        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="search-outline" size={size} color={color} /> }}
+        name="Analyzer"
+        component={DealAnalyzerScreen}
+        options={{ tabBarLabel: 'Analyze', tabBarIcon: ({ color, size }) => <Ionicons name="calculator-outline" size={size} color={color} /> }}
       />
       <Tab.Screen
-        name="RavloAI"
+        name="Portfolio"
+        component={PortfolioScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="briefcase-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Capital"
+        component={CapitalNavigator}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="cash-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="AI"
         component={RavloAIScreen}
         options={{ tabBarLabel: 'Ravlo AI', tabBarIcon: ({ color, size }) => <Ionicons name="sparkles-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Partners"
+        component={PartnerHubScreen}
+        options={{ tabBarLabel: 'Partners', tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} /> }}
       />
       <Tab.Screen
         name="Profile"

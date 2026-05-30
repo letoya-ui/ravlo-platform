@@ -398,6 +398,141 @@ def deal_detail(deal_id):
 
 
 # ---------------------------------------------------------------------------
+# Investor — portfolio & investments
+# ---------------------------------------------------------------------------
+
+@mobile_api.route('/investor/portfolio', methods=['GET'])
+@require_auth
+def investor_portfolio():
+    """Return Investment records for the authenticated investor."""
+    user = request.current_user
+    try:
+        from LoanMVP.models.investor_models import Investment, InvestorProfile
+        profile = InvestorProfile.query.filter_by(user_id=user.id).first()
+        if not profile:
+            return jsonify({'investments': [], 'stats': {}}), 200
+        investments = Investment.query.filter_by(investor_profile_id=profile.id).order_by(Investment.created_at.desc()).all()
+
+        def _ser(inv):
+            profit = getattr(inv, 'projected_profit', None)
+            roi = getattr(inv, 'projected_roi', None)
+            return {
+                'id': inv.id,
+                'title': getattr(inv, 'title', '') or getattr(inv, 'property_address', '') or 'Untitled',
+                'strategy': getattr(inv, 'strategy', '') or '',
+                'address': getattr(inv, 'property_address', '') or '',
+                'city': getattr(inv, 'city', '') or '',
+                'state': getattr(inv, 'state', '') or '',
+                'status': getattr(inv, 'status', 'pipeline') or 'pipeline',
+                'stage': getattr(inv, 'stage', '') or '',
+                'purchase_price': int(getattr(inv, 'purchase_price', 0) or 0),
+                'rehab_budget': int(getattr(inv, 'rehab_budget', 0) or 0),
+                'arv': int(getattr(inv, 'arv', 0) or 0),
+                'monthly_rent': int(getattr(inv, 'monthly_rent', 0) or 0),
+                'loan_amount': int(getattr(inv, 'loan_amount', 0) or 0),
+                'projected_profit': int(profit or 0),
+                'projected_roi': float(roi or 0),
+                'notes': getattr(inv, 'notes', '') or '',
+                'created_at': str(getattr(inv, 'created_at', '') or ''),
+            }
+
+        serialized = [_ser(i) for i in investments]
+
+        total_invested = sum(i['purchase_price'] + i['rehab_budget'] for i in serialized)
+        total_arv = sum(i['arv'] for i in serialized)
+        total_profit = sum(i['projected_profit'] for i in serialized)
+        by_status = {}
+        by_strategy = {}
+        for i in serialized:
+            by_status[i['status']] = by_status.get(i['status'], 0) + 1
+            if i['strategy']:
+                by_strategy[i['strategy']] = by_strategy.get(i['strategy'], 0) + 1
+
+        return jsonify({
+            'investments': serialized,
+            'stats': {
+                'total': len(serialized),
+                'total_invested': total_invested,
+                'total_arv': total_arv,
+                'total_profit': total_profit,
+                'by_status': by_status,
+                'by_strategy': by_strategy,
+            }
+        }), 200
+    except Exception as exc:
+        current_app.logger.error('investor_portfolio error: %s', exc)
+        return jsonify({'investments': [], 'stats': {}}), 200
+
+
+@mobile_api.route('/investor/funding-requests', methods=['GET'])
+@require_auth
+def list_funding_requests():
+    user = request.current_user
+    try:
+        from LoanMVP.models.investor_models import FundingRequest
+        from LoanMVP.models import Deal
+        requests_q = FundingRequest.query.filter_by(investor_id=user.id).order_by(FundingRequest.created_at.desc()).all()
+
+        def _ser(fr):
+            deal = None
+            try:
+                deal = Deal.query.get(fr.deal_id)
+            except Exception:
+                pass
+            return {
+                'id': fr.id,
+                'deal_id': fr.deal_id,
+                'deal_title': (getattr(deal, 'title', '') or getattr(deal, 'address', '') or 'Deal') if deal else 'Deal',
+                'requested_amount': float(fr.requested_amount or 0),
+                'status': fr.status or 'submitted',
+                'notes': fr.notes or '',
+                'created_at': str(fr.created_at or ''),
+                'updated_at': str(fr.updated_at or ''),
+            }
+
+        return jsonify({'requests': [_ser(r) for r in requests_q], 'total': len(requests_q)}), 200
+    except Exception as exc:
+        current_app.logger.error('list_funding_requests error: %s', exc)
+        return jsonify({'requests': [], 'total': 0}), 200
+
+
+@mobile_api.route('/investor/funding-requests', methods=['POST'])
+@require_auth
+def create_funding_request():
+    user = request.current_user
+    data = request.get_json(force=True) or {}
+    deal_id = data.get('deal_id')
+    requested_amount = data.get('requested_amount', 0)
+    notes = data.get('notes', '')
+
+    if not deal_id:
+        return jsonify({'error': 'deal_id is required'}), 400
+
+    try:
+        from LoanMVP.models import Deal
+        from LoanMVP.models.investor_models import FundingRequest
+        deal = Deal.query.get(deal_id)
+        if not deal or deal.user_id != user.id:
+            return jsonify({'error': 'Deal not found'}), 404
+
+        fr = FundingRequest(
+            investor_id=user.id,
+            deal_id=deal_id,
+            requested_amount=float(requested_amount or 0),
+            notes=notes,
+            status='submitted',
+        )
+        db.session.add(fr)
+        deal.submitted_for_funding = True
+        db.session.commit()
+        return jsonify({'id': fr.id, 'status': 'submitted'}), 201
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('create_funding_request error: %s', exc)
+        return jsonify({'error': str(exc)}), 500
+
+
+# ---------------------------------------------------------------------------
 # Partner routes
 # ---------------------------------------------------------------------------
 
