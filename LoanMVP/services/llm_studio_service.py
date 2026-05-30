@@ -112,7 +112,7 @@ def dalle_generate_images(payload: dict) -> dict:
         "images_base64": {"blueprint": "...", "exterior_front": "...", ...},
         "job_id": "<uuid>",
         "seed": 0,
-        "meta": {"provider": "openai/dall-e-3"},
+        "meta": {"provider": "openai/gpt-image-1"},
         "ok": True,
       }
     """
@@ -131,11 +131,11 @@ def dalle_generate_images(payload: dict) -> dict:
         prompt = _dalle_prompt(mode, payload)
         try:
             resp = client.images.generate(
-                model="dall-e-3",
+                model="gpt-image-1",
                 prompt=prompt,
                 n=1,
                 size="1024x1024",
-                quality="hd",
+                quality="high",
             )
             item = resp.data[0]
             b64 = getattr(item, "b64_json", None)
@@ -147,9 +147,9 @@ def dalle_generate_images(payload: dict) -> dict:
                     with urllib.request.urlopen(url) as r:
                         b64 = _b64.b64encode(r.read()).decode()
             images_b64[mode] = b64
-            log.info("DALL-E 3 generated %s OK", mode)
+            log.info("gpt-image-1 generated %s OK", mode)
         except Exception as exc:
-            log.error("DALL-E 3 failed for mode=%s: %s", mode, exc)
+            log.error("gpt-image-1 failed for mode=%s: %s", mode, exc)
             errors.append(f"{mode}: {exc}")
             images_b64[mode] = None
 
@@ -158,7 +158,7 @@ def dalle_generate_images(payload: dict) -> dict:
         "job_id": uuid.uuid4().hex,
         "seed": 0,
         "meta": {
-            "provider": "openai/dall-e-3",
+            "provider": "openai/gpt-image-1",
             "errors": errors,
         },
         "ok": not errors or any(v for v in images_b64.values()),
