@@ -1,153 +1,135 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Continue with Ravlo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #05070d;
-      color: #f0f4ff;
+      font-family: Inter, system-ui, sans-serif;
+      background: #0a0d14;
+      color: #f9fafb;
       min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
       position: relative;
     }
 
-    /* ── Blurred dashboard backdrop ────────────────────────────────── */
+    /* ── Fake blurred dashboard backdrop ── */
     .backdrop {
       position: fixed;
       inset: 0;
-      display: grid;
-      grid-template-columns: 220px 1fr;
       opacity: 0.07;
       pointer-events: none;
-      user-select: none;
+      z-index: 0;
     }
-    .backdrop-nav {
-      background: #0d1120;
-      border-right: 1px solid #1a2040;
-      padding: 2rem 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-    }
-    .backdrop-nav-item {
-      height: 12px;
-      border-radius: 6px;
-      background: #2a3560;
-    }
-    .backdrop-nav-item:nth-child(1) { width: 60%; }
-    .backdrop-nav-item:nth-child(2) { width: 80%; }
-    .backdrop-nav-item:nth-child(3) { width: 70%; }
-    .backdrop-nav-item:nth-child(4) { width: 55%; }
-    .backdrop-nav-item:nth-child(5) { width: 75%; }
-    .backdrop-main {
-      padding: 2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-    .backdrop-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-    }
-    .backdrop-card {
-      background: #0d1120;
-      border: 1px solid #1a2040;
-      border-radius: 12px;
-      height: 100px;
-    }
-    .backdrop-chart {
-      background: #0d1120;
-      border: 1px solid #1a2040;
-      border-radius: 12px;
-      height: 180px;
-    }
+    .bd-nav { height: 60px; background: #1e2535; border-bottom: 1px solid #2d3448; display: flex; align-items: center; padding: 0 24px; gap: 12px; }
+    .bd-nav-dot { width: 8px; height: 8px; border-radius: 50%; background: #4b5563; }
+    .bd-nav-bar { height: 10px; border-radius: 4px; background: #374151; }
+    .bd-body { display: grid; grid-template-columns: 220px 1fr; height: calc(100vh - 60px); }
+    .bd-sidebar { background: #141826; padding: 20px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .bd-sidebar-item { height: 36px; border-radius: 8px; background: #1e2535; }
+    .bd-sidebar-item.active { background: #253055; }
+    .bd-main { padding: 28px; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto auto 1fr; gap: 16px; }
+    .bd-card { background: #1e2535; border-radius: 12px; border: 1px solid #2d3448; }
+    .bd-card.tall { grid-column: span 2; }
+    .bd-card.full { grid-column: span 3; }
 
-    /* ── Gradient overlay ─────────────────────────────────────── */
-    .overlay {
+    .radial-overlay {
       position: fixed;
       inset: 0;
-      background: radial-gradient(ellipse at center, rgba(5,7,13,0.82) 0%, rgba(5,7,13,0.96) 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
+      background: radial-gradient(ellipse at center, rgba(10,13,20,.6) 0%, rgba(10,13,20,.95) 75%);
+      z-index: 1;
+      pointer-events: none;
     }
 
-    /* ── Modal card ───────────────────────────────────────────── */
-    .modal {
-      background: #0c0f1a;
-      border: 1px solid #1e2540;
-      border-radius: 20px;
-      padding: 2.5rem 2rem;
-      max-width: 780px;
+    /* ── Modal ── */
+    .modal-wrap {
+      position: relative;
+      z-index: 10;
       width: 100%;
-      box-shadow: 0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(201,168,120,0.08);
-      animation: rise 0.4s cubic-bezier(0.16,1,0.3,1) both;
+      max-width: 860px;
+      padding: 24px;
+      animation: rise .4s cubic-bezier(.22,.68,0,1.2) both;
     }
+
     @keyframes rise {
-      from { opacity: 0; transform: translateY(24px) scale(0.97); }
-      to   { opacity: 1; transform: translateY(0)  scale(1); }
+      from { opacity: 0; transform: translateY(28px) scale(.97); }
+      to   { opacity: 1; transform: translateY(0)    scale(1); }
+    }
+
+    .modal-card {
+      background: #131720;
+      border: 1px solid #2a3045;
+      border-radius: 20px;
+      padding: 48px 40px 40px;
+      text-align: center;
     }
 
     .modal-eyebrow {
-      font-size: 0.72rem;
+      display: inline-block;
+      font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.12em;
+      letter-spacing: .1em;
       text-transform: uppercase;
-      color: #C9A878;
-      margin-bottom: 0.75rem;
-      text-align: center;
-    }
-    .modal-title {
-      font-size: 1.75rem;
-      font-weight: 800;
-      text-align: center;
-      line-height: 1.2;
-      margin-bottom: 0.5rem;
-    }
-    .modal-sub {
-      text-align: center;
-      color: #6a7a9a;
-      font-size: 0.95rem;
-      margin-bottom: 2rem;
+      color: #f59e0b;
+      background: rgba(245,158,11,.1);
+      border: 1px solid rgba(245,158,11,.25);
+      border-radius: 20px;
+      padding: 4px 14px;
+      margin-bottom: 20px;
     }
 
-    /* ── Plan cards ─────────────────────────────────────────────── */
-    .plans {
+    .modal-title {
+      font-size: 30px;
+      font-weight: 800;
+      color: #f9fafb;
+      margin-bottom: 10px;
+      line-height: 1.2;
+    }
+
+    .modal-sub {
+      font-size: 15px;
+      color: #9ca3af;
+      max-width: 460px;
+      margin: 0 auto 36px;
+      line-height: 1.6;
+    }
+
+    /* ── Plan cards ── */
+    .plan-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-      margin-bottom: 1.75rem;
-    }
-    @media (max-width: 640px) {
-      .plans { grid-template-columns: 1fr; }
-      .modal-title { font-size: 1.4rem; }
+      gap: 16px;
+      margin-bottom: 28px;
     }
 
     .plan-card {
-      background: #101422;
-      border: 1px solid #1e2740;
+      background: #1a1f2e;
+      border: 1px solid #2a3045;
       border-radius: 14px;
-      padding: 1.5rem 1.25rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-      position: relative;
-      transition: border-color 0.2s, transform 0.2s;
+      padding: 24px 20px;
+      text-align: left;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color .15s, transform .15s;
+      display: block;
     }
-    .plan-card:hover {
-      border-color: #C9A878;
-      transform: translateY(-3px);
-    }
+
+    .plan-card:hover { border-color: #4b6bdb; transform: translateY(-2px); }
+
     .plan-card.featured {
-      border-color: #C9A878;
-      background: #12162a;
+      border-color: #d97706;
+      background: linear-gradient(160deg, #1f2435 0%, #1a1a2e 100%);
+      position: relative;
     }
 
     .plan-badge {
@@ -155,11 +137,11 @@
       top: -11px;
       left: 50%;
       transform: translateX(-50%);
-      background: #C9A878;
-      color: #07090e;
-      font-size: 0.65rem;
+      background: #d97706;
+      color: #fff;
+      font-size: 10px;
       font-weight: 800;
-      letter-spacing: 0.08em;
+      letter-spacing: .08em;
       text-transform: uppercase;
       padding: 3px 12px;
       border-radius: 20px;
@@ -167,173 +149,184 @@
     }
 
     .plan-name {
-      font-size: 0.72rem;
+      font-size: 16px;
       font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #C9A878;
-      margin-bottom: 0.4rem;
+      color: #f9fafb;
+      margin-bottom: 4px;
     }
-    .plan-title {
-      font-size: 1.2rem;
-      font-weight: 800;
-      margin-bottom: 1rem;
+
+    .plan-card.featured .plan-name { color: #fbbf24; }
+
+    .plan-price {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 14px;
     }
+
     .plan-features {
       list-style: none;
-      padding: 0;
-      margin: 0 0 1.25rem;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
-      flex: 1;
+      gap: 7px;
+      margin-bottom: 20px;
     }
+
     .plan-features li {
-      font-size: 0.83rem;
-      color: #8090b0;
+      font-size: 13px;
+      color: #9ca3af;
       display: flex;
+      gap: 8px;
       align-items: flex-start;
-      gap: 0.5rem;
-      line-height: 1.4;
     }
+
     .plan-features li::before {
-      content: '✓';
-      color: #C9A878;
-      font-weight: 700;
-      flex-shrink: 0;
+      content: "✓";
+      color: #4ade80;
+      font-size: 11px;
       margin-top: 1px;
+      flex-shrink: 0;
     }
 
-    .plan-btn {
+    .plan-cta {
       display: block;
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border-radius: 10px;
       text-align: center;
-      font-size: 0.9rem;
-      font-weight: 700;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
       text-decoration: none;
-      transition: background 0.2s, color 0.2s;
-      cursor: pointer;
-    }
-    .plan-btn-primary {
-      background: #C9A878;
-      color: #07090e;
-    }
-    .plan-btn-primary:hover { background: #d4b888; }
-    .plan-btn-outline {
-      background: transparent;
-      color: #8090b0;
-      border: 1px solid #2a3560;
-    }
-    .plan-btn-outline:hover {
-      border-color: #C9A878;
-      color: #C9A878;
+      transition: background .15s;
     }
 
-    /* ── Footer ──────────────────────────────────────────────────── */
+    .plan-card:not(.featured) .plan-cta {
+      background: #1e2d3d;
+      color: #93c5fd;
+      border: 1px solid #2d4a6e;
+    }
+
+    .plan-card:not(.featured) .plan-cta:hover { background: #253d55; }
+
+    .plan-card.featured .plan-cta {
+      background: #d97706;
+      color: #fff;
+    }
+
+    .plan-card.featured .plan-cta:hover { background: #b45309; }
+
+    /* ── Footer actions ── */
     .modal-footer {
-      text-align: center;
-      font-size: 0.82rem;
-      color: #3a4870;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
     }
+
     .modal-footer a {
-      color: #5a6890;
+      font-size: 13px;
+      color: #6b7280;
       text-decoration: none;
+      transition: color .15s;
     }
-    .modal-footer a:hover { color: #8090b0; }
-    .sep { margin: 0 0.5rem; }
+
+    .modal-footer a:hover { color: #d1d5db; }
+
+    .modal-footer .sign-out { color: #ef4444; }
+    .modal-footer .sign-out:hover { color: #f87171; }
+
+    @media (max-width: 700px) {
+      .plan-grid { grid-template-columns: 1fr; }
+      .modal-card { padding: 36px 20px 28px; }
+      .modal-title { font-size: 22px; }
+    }
   </style>
 </head>
 <body>
 
-  <!-- Blurred dashboard hint in background -->
+  <!-- Fake blurred dashboard backdrop -->
   <div class="backdrop" aria-hidden="true">
-    <div class="backdrop-nav">
-      <div class="backdrop-nav-item"></div>
-      <div class="backdrop-nav-item"></div>
-      <div class="backdrop-nav-item"></div>
-      <div class="backdrop-nav-item"></div>
-      <div class="backdrop-nav-item"></div>
+    <div class="bd-nav">
+      <div class="bd-nav-dot"></div>
+      <div class="bd-nav-bar" style="width:80px;"></div>
+      <div class="bd-nav-bar" style="width:60px;margin-left:auto;"></div>
     </div>
-    <div class="backdrop-main">
-      <div class="backdrop-row">
-        <div class="backdrop-card"></div>
-        <div class="backdrop-card"></div>
-        <div class="backdrop-card"></div>
+    <div class="bd-body">
+      <div class="bd-sidebar">
+        <div class="bd-sidebar-item active"></div>
+        <div class="bd-sidebar-item"></div>
+        <div class="bd-sidebar-item"></div>
+        <div class="bd-sidebar-item"></div>
+        <div class="bd-sidebar-item"></div>
       </div>
-      <div class="backdrop-chart"></div>
-      <div class="backdrop-row">
-        <div class="backdrop-card"></div>
-        <div class="backdrop-card"></div>
-        <div class="backdrop-card"></div>
+      <div class="bd-main">
+        <div class="bd-card" style="height:100px;"></div>
+        <div class="bd-card" style="height:100px;"></div>
+        <div class="bd-card" style="height:100px;"></div>
+        <div class="bd-card tall" style="height:180px;"></div>
+        <div class="bd-card" style="height:180px;"></div>
+        <div class="bd-card full" style="height:220px;"></div>
       </div>
     </div>
   </div>
 
-  <!-- Overlay + modal -->
-  <div class="overlay">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="radial-overlay" aria-hidden="true"></div>
 
-      <div class="modal-eyebrow">Ravlo</div>
-      <h1 class="modal-title" id="modal-title">Your free preview has ended.</h1>
-      <p class="modal-sub">Pick a plan to keep going &mdash; your work is saved and ready.</p>
+  <div class="modal-wrap" role="dialog" aria-modal="true" aria-labelledby="te-title">
+    <div class="modal-card">
 
-      <div class="plans">
+      <div class="modal-eyebrow">Preview Ended</div>
+      <h1 class="modal-title" id="te-title">Your free preview has expired.</h1>
+      <p class="modal-sub">
+        Choose a plan to keep your deals, dashboards, and data — right where you left them.
+      </p>
+
+      <div class="plan-grid">
 
         <!-- Core -->
-        <div class="plan-card">
-          <div class="plan-name">Core</div>
-          <div class="plan-title">Individual</div>
+        <a class="plan-card" href="{{ url_for('checkout.subscribe', plan='explorer') }}">
+          <p class="plan-name">Core</p>
+          <p class="plan-price">Investor OS essentials</p>
           <ul class="plan-features">
-            <li>Deal Finder &amp; analysis tools</li>
-            <li>Investment pipeline</li>
-            <li>Market data &amp; comps</li>
-            <li>Renovation &amp; budget studios</li>
+            <li>Investor command center</li>
+            <li>Deal analysis & pipeline</li>
+            <li>AI deal scoring</li>
+            <li>Document vault</li>
           </ul>
-          <a href="{{ url_for('checkout.subscribe', plan='explorer') }}" class="plan-btn plan-btn-outline">
-            Subscribe &rarr;
-          </a>
-        </div>
+          <span class="plan-cta">Choose Core →</span>
+        </a>
 
         <!-- Operator (featured) -->
-        <div class="plan-card featured">
-          <div class="plan-badge">Most Popular</div>
-          <div class="plan-name">Operator</div>
-          <div class="plan-title">Active Investor</div>
+        <a class="plan-card featured" href="{{ url_for('checkout.subscribe', plan='operator') }}">
+          <span class="plan-badge">Most Popular</span>
+          <p class="plan-name">Operator</p>
+          <p class="plan-price">Full platform access</p>
           <ul class="plan-features">
             <li>Everything in Core</li>
-            <li>Advanced deal flow tools</li>
-            <li>AI-powered deal insights</li>
-            <li>Priority support</li>
+            <li>Renovation budget engine</li>
+            <li>Partner & borrower OS</li>
+            <li>Advanced AI + analytics</li>
           </ul>
-          <a href="{{ url_for('checkout.subscribe', plan='operator') }}" class="plan-btn plan-btn-primary">
-            Subscribe &rarr;
-          </a>
-        </div>
+          <span class="plan-cta">Choose Operator →</span>
+        </a>
 
         <!-- Enterprise -->
-        <div class="plan-card">
-          <div class="plan-name">Enterprise</div>
-          <div class="plan-title">Team &amp; Firm</div>
+        <a class="plan-card" href="{{ url_for('marketing.contact') }}">
+          <p class="plan-name">Enterprise</p>
+          <p class="plan-price">For lending teams & operators</p>
           <ul class="plan-features">
-            <li>Everything in Operator</li>
-            <li>Multi-user team access</li>
-            <li>Custom workflows</li>
-            <li>Dedicated onboarding</li>
+            <li>Full Lending OS</li>
+            <li>Custom user roles</li>
+            <li>White-label options</li>
+            <li>Dedicated support</li>
           </ul>
-          <a href="{{ url_for('marketing.contact') }}" class="plan-btn plan-btn-outline">
-            Talk to us &rarr;
-          </a>
-        </div>
+          <span class="plan-cta">Contact Us →</span>
+        </a>
 
       </div>
 
       <div class="modal-footer">
-        Not ready yet?
-        <a href="{{ url_for('auth.logout') }}">Sign out</a>
-        <span class="sep">&middot;</span>
-        <a href="{{ url_for('marketing.plans') }}">Compare all plans</a>
+        <a href="{{ url_for('auth.logout') }}" class="sign-out">Sign out</a>
+        <span style="color:#374151;">·</span>
+        <a href="{{ url_for('marketing.pricing') }}">Compare all plans</a>
       </div>
 
     </div>

@@ -10,6 +10,7 @@ class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
 
+    # These fields exist in your database but were missing in your model
     address = db.Column(db.String(255), nullable=True)
     city = db.Column(db.String(255), nullable=True)
     state = db.Column(db.String(50), nullable=True)
@@ -109,16 +110,16 @@ class LicenseApplication(db.Model):
     phone = db.Column(db.String(50))
     website = db.Column(db.String(255))
 
-    business_type = db.Column(db.String(100))
+    business_type = db.Column(db.String(100))  # broker, lender, fund, brokerage, enterprise
     team_size = db.Column(db.String(50))
-    plan_interest = db.Column(db.String(100))
+    plan_interest = db.Column(db.String(100))  # individual, team, lender, white_label
 
     monthly_loan_volume = db.Column(db.String(100))
     current_tools = db.Column(db.Text)
     goals = db.Column(db.Text)
     notes = db.Column(db.Text)
 
-    status = db.Column(db.String(50), default="new", nullable=False)
+    status = db.Column(db.String(50), default="new", nullable=False)  # new, contacted, approved, declined
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 class LicenseInviteEvent(db.Model):
@@ -129,7 +130,7 @@ class LicenseInviteEvent(db.Model):
     invite_token = db.Column(db.String(255))
     email = db.Column(db.String(255))
 
-    event_type = db.Column(db.String(50))
+    event_type = db.Column(db.String(50))  # opened
     user_agent = db.Column(db.String(255))
     ip_address = db.Column(db.String(50))
 
@@ -137,23 +138,17 @@ class LicenseInviteEvent(db.Model):
 
 
 class SubscriptionRequest(db.Model):
-    """Tracks preview investors who have requested a full paid subscription."""
     __tablename__ = "subscription_requests"
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
-
-    status = db.Column(db.String(50), nullable=False, default="pending")  # pending | approved | denied
+    status = db.Column(db.String(50), nullable=False, default="pending")
     plan_requested = db.Column(db.String(50), nullable=True, default="Core")
     message = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
-
     reviewed_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     reviewed_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     user = db.relationship("User", foreign_keys=[user_id], lazy=True)
     reviewer = db.relationship("User", foreign_keys=[reviewed_by], lazy=True)
-
-    def __repr__(self):
-        return f"<SubscriptionRequest id={self.id} user_id={self.user_id} status={self.status}>"

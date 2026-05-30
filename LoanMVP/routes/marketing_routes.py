@@ -9,10 +9,10 @@ from LoanMVP.extensions import db, csrf
 from LoanMVP.models.admin import LicenseApplication
 from LoanMVP.models.user_model import User
 
+_LENDING_OS_TRIAL_DAYS = 14
+
 
 marketing_bp = Blueprint("marketing", __name__, url_prefix="/")
-
-_PREVIEW_TRIAL_DAYS = 14
 
 # ---------------------------------------------------------
 # Shared page metadata
@@ -29,7 +29,7 @@ PAGE_META = {
     },
     "about": {
         "title": "About Ravlo",
-        "description": "Learn about Ravlo's mission to give investors a smarter, clearer way to evaluate and execute real estate deals.",
+        "description": "Learn about Ravlo’s mission to give investors a smarter, clearer way to evaluate and execute real estate deals.",
         "template": "marketing/about.html",
         "hero_image": "images/marketing/city_skyline.jpg",
     },
@@ -53,7 +53,7 @@ PAGE_META = {
     },
     "tour": {
         "title": "Product Tour | Ravlo",
-        "description": "Take a tour of Ravlo's investor platform, workflows, deal tools, and studio experiences.",
+        "description": "Take a tour of Ravlo’s investor platform, workflows, deal tools, and studio experiences.",
         "template": "marketing/tour.html",
         "hero_image": "images/marketing/command_center.jpeg",
     },
@@ -83,12 +83,12 @@ PAGE_META = {
     },
     "terms": {
         "title": "Terms of Service | Ravlo",
-        "description": "Read Ravlo's terms of service.",
+        "description": "Read Ravlo’s terms of service.",
         "template": "marketing/terms_launch.html",
     },
     "privacy": {
         "title": "Privacy Policy | Ravlo",
-        "description": "Read Ravlo's privacy policy.",
+        "description": "Read Ravlo’s privacy policy.",
         "template": "marketing/privacy_launch.html",
     },
     "disclaimer": {
@@ -128,7 +128,7 @@ PAGE_META = {
     },
     "mission": {
         "title": "Mission | Ravlo",
-        "description": "See Ravlo's mission to simplify and elevate real estate investing workflows.",
+        "description": "See Ravlo’s mission to simplify and elevate real estate investing workflows.",
         "template": "marketing/mission.html",
         "hero_image": "images/marketing/city_skyline.jpg",
     },
@@ -176,6 +176,7 @@ def _owner_admin_exists() -> bool:
 def _workspace_recovery_mode() -> bool:
     if db.session.query(User.id).first() is None:
         return True
+
     return _single_admin_mode_enabled() and not _owner_admin_exists()
 
 
@@ -393,9 +394,6 @@ def partner_plans():
     return render_marketing_page("partner_plans")
 
 
-# ---------------------------------------------------------
-# LENDING OS
-# ---------------------------------------------------------
 @marketing_bp.route("/lending-os")
 def lending_os():
     return render_template(
@@ -407,57 +405,54 @@ def lending_os():
     )
 
 
+
 @marketing_bp.route("/lending-os/request-preview", methods=["POST"])
 @csrf.exempt
 def lending_os_request_preview():
     first_name = (request.form.get("first_name") or "").strip()
-    last_name  = (request.form.get("last_name")  or "").strip()
-    email      = (request.form.get("email")      or "").strip().lower()
-    company    = (request.form.get("company")    or "").strip()
-    phone      = (request.form.get("phone")      or "").strip()
+    last_name = (request.form.get("last_name") or "").strip()
+    company = (request.form.get("company") or "").strip()
+    email = (request.form.get("email") or "").strip().lower()
+    phone = (request.form.get("phone") or "").strip()
 
-    if not email or not first_name:
-        flash("First name and email are required.", "warning")
+    if not email:
+        flash("Email is required.", "warning")
         return redirect(url_for("marketing.lending_os") + "#request-preview")
 
-    lead = LicenseApplication(
-        company_name=company or email,
+    # Save lead
+    app_row = LicenseApplication(
+        company_name=company or "—",
         contact_name=f"{first_name} {last_name}".strip() or email,
         email=email,
         phone=phone or None,
-        plan_interest="Lending OS Preview",
+        business_type="lending_os_lead",
         status="new",
     )
-    db.session.add(lead)
+    db.session.add(app_row)
 
-    trial_end = datetime.utcnow() + timedelta(days=_PREVIEW_TRIAL_DAYS)
+    # Create preview account if email not already registered
     existing = User.query.filter(func.lower(User.email) == email).first()
-    temp_password = None
-    if existing:
-        existing.subscription = "preview"
-        existing.trial_ends_at = trial_end
-    else:
-        temp_password = secrets.token_urlsafe(12)
-        new_user = User(
+    if not existing:
+        temp_password = secrets.token_urlsafe(10)
+        user = User(
             first_name=first_name or None,
             last_name=last_name or None,
-            username=f"{first_name} {last_name}".strip() or email,
             email=email,
             role="loan_officer",
-            subscription="preview",
-            trial_ends_at=trial_end,
             is_active=True,
-            invite_accepted=True,
             onboarding_complete=True,
+            invite_accepted=True,
+            subscription="preview",
+            trial_ends_at=datetime.utcnow() + timedelta(days=_LENDING_OS_TRIAL_DAYS),
         )
-        new_user.set_password(temp_password)
-        db.session.add(new_user)
+        user.set_password(temp_password)
+        db.session.add(user)
+        db.session.commit()
+        _send_lending_os_preview_welcome(user, temp_password)
+    else:
+        db.session.commit()
 
-    db.session.commit()
-
-    _send_lending_os_preview_welcome(email, first_name, temp_password)
-    _notify_admin_lending_os_lead(first_name, last_name, email, company, phone)
-
+    _notify_admin_lending_os_lead(first_name, last_name, company, email, phone)
     return redirect(url_for("marketing.lending_os_preview_thanks"))
 
 
@@ -466,63 +461,71 @@ def lending_os_preview_thanks():
     return render_template("marketing/lending_os_preview_thanks.html")
 
 
-def _send_lending_os_preview_welcome(email, first_name, temp_password):
+def _send_lending_os_preview_welcome(user: User, temp_password: str) -> None:
     try:
         from LoanMVP.app import mail
         from flask_mail import Message as MailMessage
-        login_url = url_for("auth.login", _external=True)
-        creds_line = f"Temporary password: {temp_password}\n" if temp_password else ""
+        name = user.first_name or user.email
         msg = MailMessage(
-            subject="Your Ravlo Lending OS preview is ready",
-            recipients=[email],
-            body=(
-                f"Hi {first_name or 'there'},\n\n"
-                f"You have 2 weeks of free preview access to Ravlo Lending OS.\n\n"
-                f"Log in now: {login_url}\n"
-                f"Email: {email}\n"
-                f"{creds_line}\n"
-                f"Explore every role — Loan Officer, Processor, Borrower, Underwriter, Admin — "
-                f"and see how Lending OS runs the whole operation.\n\n"
-                f"When you're ready to go live, reply to this email and we'll get your team set up.\n\n"
-                f"The Ravlo Team"
-            ),
+            subject="Your Ravlo Lending OS Preview is Ready",
+            recipients=[user.email],
         )
+        msg.html = f"""
+        <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#0f1117;">
+          <img src="https://ravlohq.com/static/images/ravlo-logo-dark.png"
+               alt="Ravlo" style="height:32px;margin-bottom:28px;">
+          <h2 style="font-size:22px;font-weight:700;margin:0 0 12px;">
+            Welcome to Ravlo Lending OS, {name}!
+          </h2>
+          <p style="font-size:15px;line-height:1.6;color:#374151;">
+            Your free <strong>2-week preview</strong> is ready. Explore role-based dashboards,
+            loan pipelines, borrower intake, and your full lending OS.
+          </p>
+          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:20px 24px;margin:24px 0;">
+            <p style="margin:0 0 6px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">Your login</p>
+            <p style="margin:0 0 4px;font-size:15px;"><strong>Email:</strong> {user.email}</p>
+            <p style="margin:0;font-size:15px;"><strong>Temporary password:</strong> {temp_password}</p>
+          </div>
+          <a href="https://ravlohq.com/auth/login"
+             style="display:inline-block;background:#1a56db;color:#fff;font-weight:600;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:15px;">
+            Log In to Ravlo
+          </a>
+          <p style="margin-top:28px;font-size:13px;color:#9ca3af;">
+            Preview expires in 14 days. Our team will follow up within 2 business hours.
+          </p>
+        </div>
+        """
         mail.send(msg)
-    except Exception as exc:
-        current_app.logger.warning("lending OS preview welcome email failed: %s", exc)
+    except Exception as e:
+        print(f"[lending_os] welcome email failed: {e}")
 
 
-def _notify_admin_lending_os_lead(first_name, last_name, email, company, phone):
+def _notify_admin_lending_os_lead(first_name, last_name, company, email, phone) -> None:
     try:
         from LoanMVP.app import mail
         from flask_mail import Message as MailMessage
-        admin_email = (
-            current_app.config.get("OWNER_ADMIN_EMAIL")
-            or current_app.config.get("MAIL_DEFAULT_SENDER")
-        )
+        from LoanMVP.routes.auth import _owner_admin_email
+        admin_email = _owner_admin_email()
         if not admin_email:
             return
-        full_name = f"{first_name} {last_name}".strip()
         msg = MailMessage(
-            subject=f"[Ravlo] New Lending OS lead — {full_name or email}",
+            subject=f"[Ravlo] New Lending OS Lead — {email}",
             recipients=[admin_email],
-            body=(
-                f"New lead from /lending-os landing page:\n\n"
-                f"Name: {full_name or 'N/A'}\n"
-                f"Email: {email}\n"
-                f"Company: {company or 'N/A'}\n"
-                f"Phone: {phone or 'N/A'}\n\n"
-                f"Preview access granted (2-week trial). Welcome email sent."
-            ),
+        )
+        msg.body = (
+            f"New Lending OS preview request:\n\n"
+            f"Name: {first_name} {last_name}\n"
+            f"Company: {company}\n"
+            f"Email: {email}\n"
+            f"Phone: {phone}\n\n"
+            f"Preview account created. Follow up within 2 hours.\n"
+            f"https://ravlohq.com/admin/dashboard"
         )
         mail.send(msg)
-    except Exception as exc:
-        current_app.logger.warning("lending OS admin notify failed: %s", exc)
+    except Exception as e:
+        print(f"[lending_os] admin notification failed: {e}")
 
 
-# ---------------------------------------------------------
-# APPLY (license application)
-# ---------------------------------------------------------
 @marketing_bp.route("/apply", methods=["GET", "POST"])
 @csrf.exempt
 def apply():
