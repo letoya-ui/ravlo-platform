@@ -18,7 +18,7 @@
     "expo": "~56.0.0",
     "expo-device": "~56.0.4",
     "expo-document-picker": "~56.0.4",
-    "expo-image-picker": "~56.0.4",
+    "expo-image-picker": "~56.0.15",
     "expo-local-authentication": "~56.0.4",
     "expo-notifications": "~56.0.15",
     "expo-secure-store": "~56.0.4",
@@ -28,13 +28,12 @@
     "react-native-reanimated": "4.3.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
-    "react-native-worklets": "~0.8.0",
+    "react-native-worklets": "^0.9.1",
     "zustand": "^4.5.0"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
-    "@types/react": "~19.2.14",
-    "typescript": "~6.0.3"
+    "@types/react": "*",
+    "typescript": "^5.3.0"
   }
 }
-

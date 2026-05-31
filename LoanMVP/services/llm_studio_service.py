@@ -79,23 +79,51 @@ def _dalle_prompt(mode: str, payload: dict) -> str:
     prefix = _MODE_PREFIX.get(mode) or _MODE_PREFIX["exterior_front"]
     parts = [prefix]
 
-    if payload.get("property_type"):
-        parts.append(payload["property_type"].replace("_", " "))
-    if payload.get("style"):
-        parts.append(f"{payload['style'].replace('_', ' ')} architectural style")
-    if payload.get("description"):
-        parts.append(payload["description"][:300])
-    if payload.get("stories") or payload.get("floor_count") or payload.get("number_of_floors"):
-        n = payload.get("stories") or payload.get("floor_count") or payload.get("number_of_floors")
-        parts.append(f"{n}-story")
-    if payload.get("bedrooms"):
-        parts.append(f"{payload['bedrooms']} bedrooms")
-    if payload.get("square_feet_target"):
-        parts.append(f"approximately {payload['square_feet_target']} sq ft")
-    if payload.get("location"):
-        parts.append(f"located in {payload['location']}")
-    if payload.get("special_features"):
-        parts.append(payload["special_features"][:200])
+    if mode == "interior":
+        if payload.get("room_type"):
+            parts.append(f"{payload['room_type'].replace('_', ' ')} room")
+        if payload.get("style"):
+            parts.append(f"{payload['style'].replace('_', ' ')} interior design style")
+        if payload.get("finish_level"):
+            parts.append(f"{payload['finish_level'].replace('_', ' ')} finishes")
+        if payload.get("target_materials"):
+            parts.append(payload["target_materials"][:250])
+        # Pull the full AI-crafted design direction from whichever field is populated
+        creative = (
+            payload.get("engine_prompt")
+            or payload.get("prompt_notes")
+            or payload.get("desired_updates")
+            or payload.get("prompt")
+            or payload.get("description")
+            or ""
+        )
+        if creative:
+            parts.append(creative[:500])
+        if payload.get("notes") or payload.get("design_notes") or payload.get("interior_notes"):
+            notes = (
+                payload.get("notes")
+                or payload.get("design_notes")
+                or payload.get("interior_notes")
+            )
+            parts.append(notes[:200])
+    else:
+        if payload.get("property_type"):
+            parts.append(payload["property_type"].replace("_", " "))
+        if payload.get("style"):
+            parts.append(f"{payload['style'].replace('_', ' ')} architectural style")
+        if payload.get("description"):
+            parts.append(payload["description"][:300])
+        if payload.get("stories") or payload.get("floor_count") or payload.get("number_of_floors"):
+            n = payload.get("stories") or payload.get("floor_count") or payload.get("number_of_floors")
+            parts.append(f"{n}-story")
+        if payload.get("bedrooms"):
+            parts.append(f"{payload['bedrooms']} bedrooms")
+        if payload.get("square_feet_target"):
+            parts.append(f"approximately {payload['square_feet_target']} sq ft")
+        if payload.get("location"):
+            parts.append(f"located in {payload['location']}")
+        if payload.get("special_features"):
+            parts.append(payload["special_features"][:200])
 
     parts.append("presentation-ready, photorealistic")
     parts.append(_NEGATIVE_SUFFIX)
@@ -112,16 +140,19 @@ def dalle_generate_images(payload: dict) -> dict:
         "images_base64": {"blueprint": "...", "exterior_front": "...", ...},
         "job_id": "<uuid>",
         "seed": 0,
-        "meta": {"provider": "openai/dall-e-3"},
+        "meta": {"provider": "openai/gpt-image-1"},
         "ok": True,
       }
     """
     client = _openai_client()
 
+    # Prefer an explicit list; fall back to the single-mode fields used by the
+    # interior/design routes ("output_mode", "mode"), then exterior as last resort.
+    _single = payload.get("output_mode") or payload.get("mode")
     output_modes = (
         payload.get("output_modes")
         or payload.get("outputs")
-        or ["exterior_front"]
+        or ([_single] if _single else ["exterior_front"])
     )
 
     images_b64: dict[str, str | None] = {}
@@ -131,17 +162,25 @@ def dalle_generate_images(payload: dict) -> dict:
         prompt = _dalle_prompt(mode, payload)
         try:
             resp = client.images.generate(
-                model="dall-e-3",
+                model="gpt-image-1",
                 prompt=prompt,
                 n=1,
                 size="1024x1024",
-                quality="hd",
-                response_format="b64_json",
+                quality="high",
             )
-            images_b64[mode] = resp.data[0].b64_json
-            log.info("DALL-E 3 generated %s OK", mode)
+            item = resp.data[0]
+            b64 = getattr(item, "b64_json", None)
+            if not b64:
+                url = getattr(item, "url", None)
+                if url:
+                    import base64 as _b64
+                    import urllib.request
+                    with urllib.request.urlopen(url) as r:
+                        b64 = _b64.b64encode(r.read()).decode()
+            images_b64[mode] = b64
+            log.info("gpt-image-1 generated %s OK", mode)
         except Exception as exc:
-            log.error("DALL-E 3 failed for mode=%s: %s", mode, exc)
+            log.error("gpt-image-1 failed for mode=%s: %s", mode, exc)
             errors.append(f"{mode}: {exc}")
             images_b64[mode] = None
 
@@ -150,7 +189,7 @@ def dalle_generate_images(payload: dict) -> dict:
         "job_id": uuid.uuid4().hex,
         "seed": 0,
         "meta": {
-            "provider": "openai/dall-e-3",
+            "provider": "openai/gpt-image-1",
             "errors": errors,
         },
         "ok": not errors or any(v for v in images_b64.values()),
