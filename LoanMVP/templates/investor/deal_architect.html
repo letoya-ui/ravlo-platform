@@ -102,6 +102,12 @@
           </div>
 
           <div class="field">
+            <label for="design_cost">Design Cost</label>
+            <input id="design_cost" name="design_cost" value="{{ design_cost or '' }}" placeholder="15000">
+            <small class="field-hint muted" style="font-size:.78rem;margin-top:4px;display:block">Interior design, staging, renders &amp; permits — auto-filled from Design Studio when available</small>
+          </div>
+
+          <div class="field">
             <label for="sqft">Square Feet</label>
             <input id="sqft" name="sqft" value="{{ sqft or '' }}" placeholder="2200">
           </div>
@@ -152,6 +158,7 @@
         <div><span>Recommended Strategy</span><strong id="recommendedStrategy">{{ strategy_analysis.get('recommended_type') or deal.recommended_strategy or '—' }}</strong></div>
         <div><span>Cost Low</span><strong id="costLow">{% set _cl = strategy_analysis.get('total_cost_low') %}{% if _cl %}${{ '{:,.0f}'.format(_cl) }}{% else %}—{% endif %}</strong></div>
         <div><span>Cost High</span><strong id="costHigh">{% set _ch = strategy_analysis.get('total_cost_high') %}{% if _ch %}${{ '{:,.0f}'.format(_ch) }}{% else %}—{% endif %}</strong></div>
+        <div><span>Design Cost</span><strong id="designCostDisplay">{% if design_cost %}${{ '{:,.0f}'.format(design_cost) }}{% else %}—{% endif %}</strong></div>
         <div><span>Estimated Value</span><strong id="estimatedValue">{% set _ev = strategy_analysis.get('estimated_value') or arv %}{% if _ev %}${{ '{:,.0f}'.format(_ev) }}{% else %}—{% endif %}</strong></div>
       </div>
 
@@ -271,6 +278,7 @@
   const costLow = document.getElementById('costLow');
   const costHigh = document.getElementById('costHigh');
   const estimatedValue = document.getElementById('estimatedValue');
+  const designCostDisplay = document.getElementById('designCostDisplay');
   const analysisSummary = document.getElementById('analysisSummary');
 
   const generateBuildCostsBtn = document.getElementById('generateBuildCostsBtn');
@@ -469,6 +477,7 @@
         asking_price: parseMoney(document.getElementById('purchase_price')?.value),
         arv: parseMoney(document.getElementById('arv')?.value),
         monthly_rent: parseMoney(document.getElementById('estimated_rent')?.value),
+        design_cost: parseMoney(document.getElementById('design_cost')?.value),
         square_feet_target: parseMoney(document.getElementById('sqft')?.value),
         city: {{ (city or '')|tojson }},
         state: {{ (state or '')|tojson }},
@@ -499,6 +508,8 @@
       const _estValue = data.estimated_value;
       if (costLow) costLow.textContent = _costLow ? formatMoney(_costLow) : '—';
       if (costHigh) costHigh.textContent = _costHigh ? formatMoney(_costHigh) : '—';
+      const _designCost = data.design_cost;
+      if (designCostDisplay && _designCost) designCostDisplay.textContent = formatMoney(_designCost);
       if (estimatedValue) estimatedValue.textContent = _estValue ? formatMoney(_estValue) : '—';
       if (analysisSummary) analysisSummary.textContent = data.summary || data.next_step || 'Analysis complete.';
     } catch (error) {
