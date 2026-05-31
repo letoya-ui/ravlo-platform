@@ -11879,9 +11879,6 @@ def deal_architect_analyze():
             if not deal:
                 return jsonify({"status": "error", "message": "Deal not found"}), 404
 
-        if not RENOVATION_ENGINE_URL:
-            return jsonify({"status": "error", "message": "Renovation engine is not configured"}), 500
-
         def _pick_str(name, *deal_attrs, fallback=""):
             raw = data.get(name)
             if raw is not None and str(raw).strip():
@@ -12006,7 +12003,50 @@ def deal_architect_analyze():
         except Exception:
             cost_ctx = None
 
-        engine_data = _post_renovation_engine_json("/v1/deal_architect", payload, timeout=60) or {}
+        if RENOVATION_ENGINE_URL:
+            engine_data = _post_renovation_engine_json("/v1/deal_architect", payload, timeout=60) or {}
+        else:
+            engine_data = {}
+            try:
+                from LoanMVP.services.llm_studio_service import claude_deal_analysis
+                _claude_result = claude_deal_analysis({
+                    "property_address": payload.get("project_name") or "",
+                    "property_type": payload.get("property_type") or "residential",
+                    "budget": payload.get("asking_price"),
+                    "zoning": payload.get("zoning") or "",
+                    "lot_size": payload.get("lot_size") or "",
+                    "state": payload.get("state") or "",
+                    "zip_code": payload.get("zip_code") or "",
+                    "notes": payload.get("description") or "",
+                    "strategy_goal": "maximize return",
+                })
+                strategies = _claude_result.get("strategies") or []
+                rec_name = _claude_result.get("recommendation") or ""
+                rec = next((s for s in strategies if s.get("name") == rec_name), None) or (strategies[0] if strategies else {})
+                asking = float(payload.get("asking_price") or 0)
+                arv_val = float(payload.get("arv") or asking * 1.2)
+                cap_req = float(rec.get("capital_required") or 0)
+                est_profit = float(rec.get("estimated_profit") or 0)
+                roi = float(rec.get("estimated_roi") or 0)
+                deal_score = max(1, min(100, int(50 + roi * 2))) if roi else 50
+                engine_data = {
+                    "deal_score": deal_score,
+                    "recommended_type": rec.get("type") or rec.get("name") or rec_name,
+                    "recommended_strategy": rec.get("name") or rec_name,
+                    "total_cost_low": round(cap_req * 0.9) if cap_req else None,
+                    "total_cost_high": round(cap_req * 1.1) if cap_req else None,
+                    "estimated_value": arv_val or None,
+                    "estimated_profit": est_profit or None,
+                    "summary": (
+                        rec.get("description") or rec.get("headline") or
+                        _claude_result.get("market_notes") or "Analysis complete."
+                    ),
+                    "strategies": strategies,
+                    "market_notes": _claude_result.get("market_notes") or "",
+                    "meta": {"provider": "anthropic/claude"},
+                }
+            except Exception as _exc:
+                current_app.logger.warning("claude_deal_analysis fallback failed: %s", _exc)
 
         if cost_ctx and isinstance(engine_data, dict):
             try:
