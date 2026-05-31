@@ -35,6 +35,3 @@ run.py
 Procfile
 *.md
 
-# Lock files (EAS will run npm install)
-package-lock.json
-**/package-lock.json
