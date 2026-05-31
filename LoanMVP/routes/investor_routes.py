@@ -16404,37 +16404,173 @@ def investor_send_to_partner():
     """AJAX: create a PartnerConnectionRequest from investor to a partner."""
     data = request.get_json(silent=True) or {}
 
-    partner_id = data.get("partner_id") or None
-    partner_type = data.get("partner_type") or None
-    deal_id = data.get("deal_id") or None
-    saved_property_id = data.get("saved_property_id") or None
-    title = data.get("title") or None
-    message = data.get("message") or None
-    budget = data.get("budget") or None
-    timeline = data.get("timeline") or None
-    request_type = data.get("request_type") or None
+    def _clean_payload_str(key):
+        value = data.get(key)
+        if value is None:
+            return None
+        value = str(value).strip()
+        return value or None
+
+    def _clean_payload_int(key):
+        value = data.get(key)
+        if value in (None, ""):
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _clean_payload_float(key):
+        value = data.get(key)
+        if value in (None, ""):
+            return None
+        try:
+            return float(str(value).replace("$", "").replace(",", "").strip())
+        except (TypeError, ValueError):
+            return None
+
+    partner_id = _clean_payload_int("partner_id")
+    partner_type = _clean_payload_str("partner_type")
+    deal_id = _clean_payload_int("deal_id")
+    explicit_saved_property_id = _clean_payload_int("saved_property_id")
+    saved_property_id = explicit_saved_property_id
+    title = _clean_payload_str("title")
+    message = _clean_payload_str("message")
+    budget = _clean_payload_float("budget")
+    timeline = _clean_payload_str("timeline")
+    request_type = _clean_payload_str("request_type") or (partner_type.lower() if partner_type else None)
+    partner_source = (_clean_payload_str("partner_source") or "ravlo").lower()
+    partner_name = _clean_payload_str("partner_name")
+    partner_company = _clean_payload_str("partner_company")
+    studio_type = _clean_payload_str("studio_type")
+    studio_ref_id = _clean_payload_str("studio_ref_id")
+    package_label = _clean_payload_str("package_label")
+    address = _clean_payload_str("address")
+    city = _clean_payload_str("city")
+    state = _clean_payload_str("state")
+    zip_code = _clean_payload_str("zip")
+    studio_items = data.get("studio_items") if isinstance(data.get("studio_items"), list) else []
 
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    partner = None
+    deal = None
+    saved_property = None
 
-    status = "pending" if partner_id else "awaiting_match"
+    if not message:
+        return jsonify({"status": "error", "message": "Add a short message before sending."}), 400
+
+    if deal_id:
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+        if not deal:
+            return jsonify({"status": "error", "message": "Deal not found for this account."}), 404
+        if not saved_property_id and getattr(deal, "saved_property_id", None):
+            saved_property_id = deal.saved_property_id
+        title = title or deal.address or deal.title or f"Deal #{deal.id}"
+        address = address or getattr(deal, "address", None)
+        city = city or getattr(deal, "city", None)
+        state = state or getattr(deal, "state", None)
+        zip_code = zip_code or getattr(deal, "zip_code", None)
+
+    if saved_property_id:
+        if not ip:
+            if explicit_saved_property_id and not deal:
+                return jsonify({"status": "error", "message": "Investor profile not found."}), 400
+        else:
+            saved_property = SavedProperty.query.filter_by(
+                id=saved_property_id,
+                **_profile_id_filter(SavedProperty, ip.id),
+            ).first()
+            if not saved_property and explicit_saved_property_id and not deal:
+                return jsonify({"status": "error", "message": "Saved property not found for this account."}), 404
+            if not saved_property and deal:
+                saved_property_id = getattr(deal, "saved_property_id", None)
+            if saved_property:
+                title = title or saved_property.address or f"Saved Property #{saved_property.id}"
+                address = address or saved_property.address
+                zip_code = zip_code or getattr(saved_property, "zipcode", None)
+
+    if partner_id:
+        partner = Partner.query.filter_by(id=partner_id).first()
+        if not partner or not getattr(partner, "active", False) or not getattr(partner, "approved", False):
+            return jsonify({"status": "error", "message": "That partner is not available yet."}), 400
+
+    external_lead = None
+    source = "internal" if partner else "fallback_search"
+    if not partner and partner_source in {"google", "external", "yelp"} and partner_name:
+        source = "external"
+        external_lead = ExternalPartnerLead(
+            created_by_user_id=current_user.id,
+            investor_profile_id=ip.id if ip else None,
+            name=partner_name,
+            business_name=partner_company or partner_name,
+            category=partner_type,
+            source=partner_source,
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            notes=f"Created from Send to Partner modal for {package_label or studio_type or 'investor request'}.",
+            raw_json={
+                "source": "send_to_partner_modal",
+                "studio_type": studio_type,
+                "studio_ref_id": studio_ref_id,
+                "package_label": package_label,
+                "studio_items": studio_items[:20],
+            },
+        )
+
+    note_lines = []
+    if package_label or studio_type:
+        note_lines.append(f"Package: {package_label or studio_type}")
+    if studio_type:
+        note_lines.append(f"Studio type: {studio_type}")
+    if studio_ref_id:
+        note_lines.append(f"Studio ref: {studio_ref_id}")
+    if partner_name and not partner:
+        partner_label = partner_name if not partner_company or partner_company == partner_name else f"{partner_name} ({partner_company})"
+        note_lines.append(f"Requested outside partner: {partner_label}")
+    location_text = ", ".join(part for part in [address, city, state, zip_code] if part)
+    if location_text:
+        note_lines.append(f"Property/location: {location_text}")
+    if studio_items:
+        item_lines = []
+        for item in studio_items[:12]:
+            if not isinstance(item, dict):
+                continue
+            label = str(item.get("label") or "").strip()
+            detail = str(item.get("detail") or "").strip()
+            if label and detail:
+                item_lines.append(f"{label}: {detail}")
+            elif label:
+                item_lines.append(label)
+        if item_lines:
+            note_lines.append("Package items: " + "; ".join(item_lines))
+
+    status = "pending" if partner else "awaiting_match"
 
     req = PartnerConnectionRequest(
         investor_user_id=current_user.id,
         investor_profile_id=ip.id if ip else None,
-        partner_id=int(partner_id) if partner_id else None,
+        partner_id=partner.id if partner else None,
+        external_partner_lead_id=external_lead.id if external_lead else None,
         category=partner_type,
-        deal_id=int(deal_id) if deal_id else None,
-        saved_property_id=int(saved_property_id) if saved_property_id else None,
-        title=title,
+        deal_id=deal.id if deal else None,
+        saved_property_id=saved_property.id if saved_property else saved_property_id,
+        title=title or package_label or "Partner Request",
         message=message,
-        budget=float(budget) if budget else None,
+        budget=budget,
         timeline=timeline,
         request_type=request_type,
-        source="internal",
+        source=source,
         status=status,
+        internal_notes="\n".join(note_lines) if note_lines else None,
     )
 
     try:
+        if external_lead:
+            db.session.add(external_lead)
+            db.session.flush()
+            req.external_partner_lead_id = external_lead.id
         db.session.add(req)
         db.session.commit()
     except Exception as exc:
@@ -16443,4 +16579,9 @@ def investor_send_to_partner():
         logging.getLogger(__name__).error("[send-to-partner] DB error: %s", exc)
         return jsonify({"status": "error", "message": "Could not save request"}), 500
 
-    return jsonify({"status": "ok", "request_id": req.id})
+    return jsonify({
+        "status": "ok",
+        "request_id": req.id,
+        "source": source,
+        "status_label": status,
+    })

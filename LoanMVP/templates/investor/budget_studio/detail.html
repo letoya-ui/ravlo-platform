@@ -348,6 +348,9 @@ var _budgetStudioCtx = {
   title:       {{ (budget.project_name or budget.name) | tojson }},
   studioType:  'budget',
   studioRefId: {{ budget.id }},
+  packageLabel: 'Budget Studio Package',
+  defaultPartnerType: 'Contractor',
+  defaultMessage: {{ ('Please review this Budget Studio package for ' ~ (budget.project_name or budget.name or 'this project') ~ ' and send next-step pricing, timeline, and feasibility notes.')|tojson }},
   studioItems: [
     {icon: '💰', label: 'Budget',       detail: {{ (budget.project_name or budget.name) | tojson }}},
     {icon: '📊', label: 'Estimated',    detail: '$' + {{ (budget.estimated_subtotal or 0)|int }}.toLocaleString()},

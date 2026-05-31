@@ -499,6 +499,7 @@
   window.openSendPartnerModal = function (ctx) {
     _ctx = ctx || {};
     _partnerId = null; _partnerName = null; _partnerCo = null;
+    _partnerSrc = 'ravlo';
     _type = null; _wantExternal = false;
 
     // Reset all UI elements
@@ -510,9 +511,9 @@
     document.getElementById('stpSubmitBtn').classList.add('stp-hidden');
     document.getElementById('stpSelected').classList.add('stp-hidden');
     document.getElementById('stpSearchInput').value = '';
-    document.getElementById('stpMessage').value = '';
-    document.getElementById('stpBudget').value = '';
-    document.getElementById('stpTimeline').value = '';
+    document.getElementById('stpMessage').value = _ctx.defaultMessage || '';
+    document.getElementById('stpBudget').value = _ctx.defaultBudget || '';
+    document.getElementById('stpTimeline').value = _ctx.defaultTimeline || '';
     document.getElementById('stpResults').innerHTML = '';
     document.getElementById('stpResults').classList.remove('stp-has-results');
     document.getElementById('stpExternalToggle').checked = false;
@@ -529,7 +530,7 @@
     if (_ctx.studioItems && _ctx.studioItems.length) {
       itemsList.innerHTML = _ctx.studioItems.map(function(item) {
         return '<div class="stp-package-item">' +
-          (item.icon ? '<span class="stp-package-item-icon">' + item.icon + '</span>' : '') +
+          (item.icon ? '<span class="stp-package-item-icon">' + _esc(item.icon) + '</span>' : '') +
           '<span>' + _esc(item.label) + '</span>' +
           (item.detail ? '<span class="stp-package-item-detail">· ' + _esc(item.detail) + '</span>' : '') +
           '</div>';
@@ -554,6 +555,9 @@
     document.getElementById('sendPartnerModal').classList.add('stp-open');
     document.getElementById('sendPartnerModal').setAttribute('aria-hidden','false');
     document.body.style.overflow = 'hidden';
+    if (_ctx.defaultPartnerType) {
+      window.selectPartnerType(_ctx.defaultPartnerType);
+    }
   };
 
   window.closeSendPartnerModal = function () {
@@ -568,7 +572,7 @@
 
   /* ─── type selection ───────────────────────────────── */
   window.selectPartnerType = function (type) {
-    _type = type; _partnerId = null; _wantExternal = false;
+    _type = type; _partnerId = null; _partnerName = null; _partnerCo = null; _partnerSrc = 'ravlo'; _wantExternal = false;
     document.querySelectorAll('.stp-chip').forEach(function(c){
       c.classList.toggle('stp-chip-active', c.dataset.type === type);
     });
@@ -665,7 +669,7 @@
   };
 
   window.clearPartnerSelection = function () {
-    _partnerId = null; _partnerName = null; _partnerCo = null;
+    _partnerId = null; _partnerName = null; _partnerCo = null; _partnerSrc = 'ravlo';
     document.getElementById('stpSelected').classList.add('stp-hidden');
   };
 
@@ -700,6 +704,15 @@
       request_type:     _type ? _type.toLowerCase() : null,
       studio_type:      _ctx.studioType || null,
       studio_ref_id:    _ctx.studioRefId || null,
+      studio_items:     Array.isArray(_ctx.studioItems) ? _ctx.studioItems : [],
+      package_label:    _ctx.packageLabel || null,
+      partner_source:   _partnerSrc || 'ravlo',
+      partner_name:     _partnerName || null,
+      partner_company:  _partnerCo || null,
+      address:          _ctx.address || null,
+      city:             _ctx.city || null,
+      state:            _ctx.state || null,
+      zip:              _ctx.zip || null,
     };
 
     fetch('/investor/send-to-partner', {
@@ -711,7 +724,7 @@
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (data.status === 'ok') { showSuccess(); }
-      else { _resetBtn(btn); alert('Something went wrong. Please try again.'); }
+      else { _resetBtn(btn); alert(data.message || 'Something went wrong. Please try again.'); }
     })
     .catch(function(){ _resetBtn(btn); alert('Network error. Please try again.'); });
   };
