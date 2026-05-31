@@ -1,12 +1,40 @@
-node_modules
-.expo
+**/node_modules
+**/.expo
 android
 ios
 *.log
-venv/
-.venv/
-*.pyc
-__pycache__/
+**/venv/
+**/.venv/
+**/*.pyc
+**/__pycache__/
+
+# Backend — not needed in mobile build
 LoanMVP/
 migrations/
+scripts/
+tests/
+flask_session/
+logs/
+dict/
+.agents/
+.github/
+
+# Other mobile apps
+mobile/ravlo-investor/
+mobile/ravlo-academy/
+
+# Misc repo-root files
+*.bat
+*.spec
+*.iss
+*.sql
+*.py
+requirements.txt
+runtime.txt
+run.py
+Procfile
+*.md
+
+# Lock files (EAS will run npm install)
 package-lock.json
+**/package-lock.json
