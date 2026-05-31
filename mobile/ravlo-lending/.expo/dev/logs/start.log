@@ -918,3 +918,9 @@
 {"_e":"metro:bundling:progress","_t":1780082658240,"id":"1","progress":0.999,"total":1543,"current":1543}
 {"_e":"metro:bundling:done","_t":1780082658477,"id":"1","total":1543,"ms":9867.4705}
 {"_e":"metro:client_log","_t":1780082660771,"level":"warn","data":["InteractionManager has been deprecated and will be removed in a future release. Please refactor long tasks into smaller ones, and  use 'requestIdleCallback' instead."]}
+{"_e":"root:init","_t":1780244748337,"format":"v0-jsonl","version":"56.1.13"}
+{"_e":"env:mode","_t":1780244748338,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1780244748342,"mode":"development","files":["../..\\..\\.env"],"env":{"EAS_PROJECT_ID_LENDING":"b8210393-8f43-46eb-bb63-92871f4cb7f0","EXPO_PUBLIC_API_URL":"https://ravlohq.com","EXPO_TOKEN":"m9HErH2zyX0ZvS5kojZqO14qMmDOi7JT04TFajtx"}}
+{"_e":"devserver:start","_t":1780244748712,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1780244749129,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"metro:instantiate","_t":1780244758390,"atlas":false,"workers":8,"host":"::","port":8081}
