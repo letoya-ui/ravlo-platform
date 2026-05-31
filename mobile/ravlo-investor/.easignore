@@ -9,3 +9,4 @@ venv/
 __pycache__/
 LoanMVP/
 migrations/
+package-lock.json
