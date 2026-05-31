@@ -16177,8 +16177,8 @@ def investor_partner_search():
 
 
 @investor_bp.route("/send-to-partner", methods=["POST"])
-@login_required
 @csrf.exempt
+@login_required
 def investor_send_to_partner():
     """AJAX: create a PartnerConnectionRequest from investor to a partner."""
     data = request.get_json(silent=True) or {}
