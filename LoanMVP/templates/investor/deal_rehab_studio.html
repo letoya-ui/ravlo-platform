@@ -30,13 +30,13 @@
       {% endif %}
 
       {% if deal %}
-      <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn primary">Architect Deal</a>
+      <a href="{{ url_for('investor.deal_architect', deal_id=deal.id, source='design_studio') }}" class="ravlo-btn primary">Design Budget Path</a>
       {% else %}
       <a href="{{ url_for('investor.deal_architect') }}" class="ravlo-btn primary">Architect Deal</a>
       {% endif %}
       <button type="button" class="ravlo-btn ghost hidden" id="downloadCurrentBtn">Download Image</button>
       <button type="button" class="ravlo-btn ghost hidden" id="downloadAllBtn">Download All Images</button>
-      <a href="#" class="ravlo-btn primary hidden" id="continueToDealArchitectBtn">Send to Deal Architect</a>
+      <a href="#" class="ravlo-btn primary hidden" id="continueToDealArchitectBtn">Send to Design Budget Path</a>
       <a href="#" class="ravlo-btn ghost hidden" id="continueToBudgetStudioBtn">Send to Budget Studio</a>
       {% if deal %}
       <button type="button" class="ravlo-btn ghost"
@@ -366,7 +366,7 @@
 
         <a id="resultLink" href="{{ interior_result.get('image_url') or '#' }}" target="_blank" class="ravlo-btn ghost {% if not interior_result or not interior_result.get('image_url') %}hidden{% endif %}">Open Interior</a>
         <button type="button" id="downloadResultBtn" class="ravlo-btn ghost {% if not interior_result or not interior_result.get('image_url') %}hidden{% endif %}">Download Interior</button>
-        <a href="#" id="resultDealArchitectBtn" class="ravlo-btn primary hidden">Send to Deal Architect</a>
+        <a href="#" id="resultDealArchitectBtn" class="ravlo-btn primary hidden">Send to Design Budget Path</a>
       </div>
     </div>
 
@@ -396,6 +396,20 @@
         <h2>Design Budget</h2>
       </div>
       <strong id="budgetStatus">{{ 'Generated' if design_budget else 'Ready' }}</strong>
+    </div>
+    <div class="studio-action-row budget-action-row">
+      <button type="button" class="ravlo-btn primary" id="generateDesignBudgetBtn">
+        {{ 'Refresh Design Budget' if design_budget else 'Generate Design Budget' }}
+      </button>
+      {% if deal %}
+      <a href="{{ url_for('investor.budget_studio', deal_id=deal.id, source='design_studio') }}"
+         class="ravlo-btn ghost {% if not design_budget %}hidden{% endif %}"
+         id="openDesignBudgetBtn">
+        Open Budget Studio
+      </a>
+      {% else %}
+      <a href="#" class="ravlo-btn ghost hidden" id="openDesignBudgetBtn">Open Budget Studio</a>
+      {% endif %}
     </div>
 
     <div id="budgetResult">
@@ -464,6 +478,7 @@
 .result-meta{display:grid;gap:12px;align-content:start}
 .result-meta div{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
 .studio-action-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.budget-action-row{margin:-4px 0 14px}
 .budget-summary{display:grid;gap:10px}
 .budget-summary>div{display:flex;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.03)}
 .budget-summary span,.budget-line-row span{color:#9fb0ca;font-size:13px}
@@ -535,6 +550,8 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
   const interiorStatus = document.getElementById('interiorStatus');
   const budgetStatus = document.getElementById('budgetStatus');
   const budgetResult = document.getElementById('budgetResult');
+  const generateDesignBudgetBtn = document.getElementById('generateDesignBudgetBtn');
+  const openDesignBudgetBtn = document.getElementById('openDesignBudgetBtn');
   const resultMedia = document.getElementById('interiorResultMedia');
   const resultRoom = document.getElementById('resultRoom');
   const resultFloor = document.getElementById('resultFloor');
@@ -565,7 +582,7 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
 
   let currentImageUrl = {{ (interior_result.get('image_url') if interior_result else '')|tojson }};
   let nextUrl = '';
-  let budgetStudioUrl = '';
+  let budgetStudioUrl = {{ (url_for('investor.budget_studio', deal_id=deal.id, source='design_studio') if deal and design_budget else '')|tojson }};
   let designMessages = [];
   let currentDesignEngineIntent = {};
 
@@ -944,13 +961,23 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
     return `$${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (match) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[match]));
+  }
+
   function renderBudget(data) {
     const items = Array.isArray(data.line_items) ? data.line_items : [];
     const rows = items.map((item) => `
       <div class="budget-line-row">
         <div>
-          <strong>${item.name || item.description || item.category || 'Budget Item'}</strong>
-          <span>${item.notes || ''}</span>
+          <strong>${escapeHtml(item.name || item.description || item.category || 'Budget Item')}</strong>
+          <span>${escapeHtml(item.notes || '')}</span>
         </div>
         <b>${money(item.full_price || item.estimated_amount || item.price || item.amount || item.cost_high || item.high || item.cost)}</b>
       </div>
@@ -962,10 +989,11 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
           <span>Estimated Range</span>
           <strong>${money(data.cost_low)} - ${money(data.cost_high)}</strong>
         </div>
-        <p>${data.summary || 'Design budget generated.'}</p>
+        <p>${escapeHtml(data.summary || 'Design budget generated.')}</p>
       </div>
       ${rows ? `<div class="budget-line-list">${rows}</div>` : ''}
     `;
+    if (budgetStatus) budgetStatus.textContent = 'Generated';
   }
 
   function setBlueprintPreviewFromUrl(url) {
@@ -1155,6 +1183,62 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
 
     for (let i = 0; i < urls.length; i += 1) {
       await downloadImage(urls[i], imageFileName(`ravlo-design-${i + 1}`, urls[i]));
+    }
+  });
+
+  generateDesignBudgetBtn?.addEventListener('click', async () => {
+    if (!form) return;
+
+    const family = inferGenerationFamilyFromText();
+    const activeSlot = document.querySelector('.room-slot.is-active');
+    const syncedIntent = syncDesignEngineIntent(currentDesignEngineIntent, gatherDesignConfig());
+    const fd = new FormData(form);
+
+    if (activeSlot) {
+      fd.set('room_type', activeSlot.dataset.roomLabel);
+    }
+
+    fd.set('engine_intent', JSON.stringify(syncedIntent || {}));
+    fd.set('engine_prompt', syncedIntent?.engine_prompt || '');
+    fd.set('prompt_notes', syncedIntent?.prompt_notes || syncedIntent?.engine_prompt || '');
+    fd.set('desired_updates', syncedIntent?.desired_updates || syncedIntent?.engine_prompt || '');
+    applyGenerationFamilyToFormData(fd, family);
+
+    if (budgetStatus) budgetStatus.textContent = 'Generating';
+    generateDesignBudgetBtn.disabled = true;
+    generateDesignBudgetBtn.textContent = 'Generating Budget...';
+
+    try {
+      const response = await fetch("{{ url_for('investor.design_studio_generate_budget') }}", {
+        method: 'POST',
+        body: fd,
+        headers: {
+          'X-CSRFToken': '{{ csrf_token() }}',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+      });
+
+      const data = await response.json();
+      if (!response.ok || data.status !== 'ok') {
+        throw new Error(data.message || 'Design budget generation failed.');
+      }
+
+      renderBudget(data);
+      budgetStudioUrl = data.budget_studio_url || data.budget_url || budgetStudioUrl;
+
+      if (openDesignBudgetBtn && budgetStudioUrl) {
+        openDesignBudgetBtn.href = budgetStudioUrl;
+        openDesignBudgetBtn.classList.remove('hidden');
+      }
+
+      refreshActionButtons();
+    } catch (error) {
+      if (budgetStatus) budgetStatus.textContent = 'Error';
+      alert(error.message || 'Design budget generation failed.');
+    } finally {
+      generateDesignBudgetBtn.disabled = false;
+      generateDesignBudgetBtn.textContent = 'Refresh Design Budget';
     }
   });
 

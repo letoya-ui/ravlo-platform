@@ -12,23 +12,99 @@
 
     <div class="hero-actions">
       {% if deal %}
+        {% if design_only_mode %}
+        <a href="{{ design_studio_url }}" class="ravlo-btn ghost">Open Design Studio</a>
+        <a href="{{ design_budget_url }}" class="ravlo-btn primary">Open Design Budget</a>
+        {% else %}
         <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">Open Build Studio</a>
         <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">Send to Budget Studio</a>
+        {% endif %}
         <button type="button" class="ravlo-btn ghost"
           onclick="openSendPartnerModal({dealId: {{ deal.id }}, title: {{ (property_address or deal.title or 'Deal')|tojson }}, address: {{ (property_address or '')|tojson }}})">
           <i class="lucide lucide-send"></i> Send to Partner
         </button>
       {% endif %}
-      {% if deal and build_project %}
+      {% if deal and build_project and not design_only_mode %}
         <button type="button" class="ravlo-btn primary" id="generateBuildCostsTopBtn">Generate Build Costs</button>
       {% endif %}
     </div>
   </section>
 
+  {% if deal %}
+  <section class="architect-pathways" aria-label="Deal Architect paths">
+    <a href="{{ full_architect_url }}" class="architect-path-card{% if not design_only_mode %} active{% endif %}">
+      <span>Full Deal</span>
+      <strong>Strategy, risk, build, and capital assumptions</strong>
+    </a>
+    <a href="{{ design_architect_url }}" class="architect-path-card{% if design_only_mode %} active{% endif %}">
+      <span>Design Budget</span>
+      <strong>Interior design scope and room-level costs only</strong>
+    </a>
+  </section>
+  {% endif %}
+
   {% if not deal %}
   <section class="ravlo-card pad">
     <div class="empty-state-inline">Select a deal to use Deal Architect.</div>
   </section>
+  {% else %}
+
+  {% if design_only_mode %}
+  <section class="ravlo-card pad design-budget-path">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">DESIGN STUDIO AVENUE</div>
+        <h2>Design Budget Only</h2>
+        <p class="muted">This path stays focused on the room design, finish direction, and interior scope that came from Design Studio.</p>
+      </div>
+      <div class="package-actions">
+        <a href="{{ design_studio_url }}" class="ravlo-btn ghost">Open Design Studio</a>
+        <a href="{{ design_budget_url }}" class="ravlo-btn primary">Open Design Budget</a>
+      </div>
+    </div>
+
+    {% set design_items = design_budget.get('line_items', []) if design_budget else [] %}
+    {% set design_low = design_budget.get('cost_low') if design_budget else none %}
+    {% set design_high = design_budget.get('cost_high') or design_budget.get('total_budget') if design_budget else none %}
+
+    {% if design_budget %}
+    <div class="design-budget-summary">
+      <div>
+        <span>Estimated Design Range</span>
+        <strong>
+          {% if design_low or design_high %}
+            ${{ "{:,.0f}".format((design_low or 0)|float) }} - ${{ "{:,.0f}".format((design_high or 0)|float) }}
+          {% else %}
+            Waiting
+          {% endif %}
+        </strong>
+      </div>
+      <p>{{ design_budget.get('summary') or 'Design Studio generated this budget from room, style, finish, and material inputs.' }}</p>
+    </div>
+
+    {% if design_items %}
+    <div class="cost-line-items">
+      {% for item in design_items %}
+      <div class="cost-line-item">
+        <div class="cost-line-main">
+          <span>{{ item.get('category') or 'Design' }}</span>
+          <strong>{{ item.get('name') or item.get('description') or 'Design budget item' }}</strong>
+          {% if item.get('notes') %}<small>{{ item.get('notes') }}</small>{% endif %}
+        </div>
+        <strong class="cost-line-amount">
+          ${{ "{:,.0f}".format((item.get('full_price') or item.get('estimated_amount') or item.get('price') or item.get('amount') or item.get('cost_high') or item.get('high') or item.get('cost') or 0)|float) }}
+        </strong>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty-state-inline">
+      No Design Studio budget exists yet. Open Design Studio, generate the design budget, then come back here for the design-only cost path.
+    </div>
+    {% endif %}
+  </section>
+
   {% else %}
 
   <section class="architect-grid">
@@ -225,6 +301,8 @@
   {% endif %}
 
   {% endif %}
+
+  {% endif %}
 </div>
 
 <style>
@@ -233,6 +311,16 @@
 .architect-hero-card{grid-template-columns:1fr auto;align-items:start}
 .hero-actions,.form-actions,.package-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
 .architect-grid{grid-template-columns:1.25fr .95fr}
+.architect-pathways{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.architect-path-card{display:grid;gap:4px;padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.025);text-decoration:none;color:inherit}
+.architect-path-card span{color:#9fb0ca;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.architect-path-card strong{color:#eef3ff;line-height:1.35}
+.architect-path-card.active{border-color:rgba(122,184,255,.45);background:rgba(122,184,255,.08)}
+.design-budget-path{display:grid;gap:16px}
+.design-budget-summary{display:grid;gap:10px}
+.design-budget-summary>div{display:flex;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
+.design-budget-summary span{color:#9fb0ca}
+.design-budget-summary p{margin:0;color:#dce7fb;line-height:1.55}
 .form-grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .field{display:grid;gap:8px;margin-bottom:14px}
 .field input,.field select,.field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
@@ -254,7 +342,7 @@
 .cost-line-main small{line-height:1.45}
 .cost-line-amount{color:#eef3ff;white-space:nowrap}
 .hidden{display:none!important}
-@media (max-width:900px){.architect-hero-card,.architect-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions,.form-actions,.package-actions{justify-content:flex-start}.cost-line-item{align-items:flex-start;flex-direction:column}}
+@media (max-width:900px){.architect-hero-card,.architect-grid,.architect-pathways,.form-grid.two{grid-template-columns:1fr}.hero-actions,.form-actions,.package-actions{justify-content:flex-start}.cost-line-item,.design-budget-summary>div{align-items:flex-start;flex-direction:column}}
 </style>
 
 <script>

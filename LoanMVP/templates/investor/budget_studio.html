@@ -4,14 +4,26 @@
 
 {% block page_title %}Budget Studio{% endblock %}
 {% block page_subline %}
+{% if budget_context and budget_context.get("is_design_budget") %}
+Budget the Design Studio scope without full deal assumptions.
+{% else %}
 Build the financial operating system for your deal.
+{% endif %}
 {% endblock %}
+
+{% set budget_context = budget_context|default({}, true) %}
+{% set is_design_budget = budget_context.get("is_design_budget") %}
+{% set budget_label = budget_context.get("label") or ("Design Budget" if is_design_budget else "Deal Budget") %}
 
 {% block topbar_actions %}
   {% if deal %}
     <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Deal Workspace</a>
+    {% if is_design_budget %}
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.design_studio', deal_id=deal.id) }}">Design Studio</a>
+    {% else %}
     <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">Deal Architect</a>
     <a class="ravlo-btn ghost sm" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">Build Studio</a>
+    {% endif %}
     {% if existing_budget %}
       <a class="ravlo-btn primary sm" href="{{ url_for('investor.budget_detail', budget_id=existing_budget.id) }}">Open Budget Tracker</a>
     {% endif %}
@@ -22,6 +34,9 @@ Build the financial operating system for your deal.
 
 {% set seed = results.get("budget_seed", {}) if results else {} %}
 {% set seeded_items = seed.get("suggested_breakdown", []) if seed else [] %}
+{% set budget_context = budget_context|default({}, true) %}
+{% set is_design_budget = budget_context.get("is_design_budget") %}
+{% set budget_label = budget_context.get("label") or ("Design Budget" if is_design_budget else "Deal Budget") %}
 
 <style>
   .studio-shell{
@@ -521,18 +536,29 @@ Build the financial operating system for your deal.
         </div>
 
         <h1 class="studio-title">
-          Budget like an operator, not a spreadsheet.
+          {% if is_design_budget %}Design budget, scoped to the rooms you created.{% else %}Budget like an operator, not a spreadsheet.{% endif %}
         </h1>
 
         <div class="studio-subtitle">
+          {% if is_design_budget %}
+          This view keeps the numbers tied to Design Studio: room-level finishes, furniture, materials, and design scope without pulling in full rehab, build, or capital assumptions.
+          {% else %}
           Budget Studio is Ravlo’s financial planning workspace — a dedicated command layer for deal cost modeling, line item architecture, margin protection, and execution handoff into tracked budgets.
+          {% endif %}
         </div>
 
         <div class="studio-chip-row">
+          {% if is_design_budget %}
+          <span class="studio-chip">Design Studio</span>
+          <span class="studio-chip">Room-Level Costs</span>
+          <span class="studio-chip">Finish Scope</span>
+          <span class="studio-chip">Tracker Ready</span>
+          {% else %}
           <span class="studio-chip">Planning Layer</span>
           <span class="studio-chip">Execution Ready</span>
           <span class="studio-chip">AI Seeded</span>
           <span class="studio-chip">Deal Connected</span>
+          {% endif %}
         </div>
       </div>
 
@@ -547,9 +573,9 @@ Build the financial operating system for your deal.
             <div class="hero-stat-value">${{ "{:,.0f}".format(arv or 0) }}</div>
           </div>
           <div class="hero-stat">
-            <div class="hero-stat-label">Seed Source</div>
+            <div class="hero-stat-label">{% if is_design_budget %}Budget Avenue{% else %}Seed Source{% endif %}</div>
             <div class="hero-stat-value">
-              {% if seeded_items %}AI / Studio Data{% else %}Manual Setup{% endif %}
+              {% if is_design_budget %}Design Studio{% elif seeded_items %}AI / Studio Data{% else %}Manual Setup{% endif %}
             </div>
           </div>
           <div class="hero-stat">
@@ -565,13 +591,13 @@ Build the financial operating system for your deal.
 
   <section class="kpi-grid">
     <div class="kpi-card">
-      <div class="kpi-label">Purchase Price</div>
-      <div class="kpi-value" id="purchasePriceDisplay">${{ "{:,.0f}".format(purchase_price or 0) }}</div>
+      <div class="kpi-label">{% if is_design_budget %}Budget Avenue{% else %}Purchase Price{% endif %}</div>
+      <div class="kpi-value" id="purchasePriceDisplay">{% if is_design_budget %}Design Studio{% else %}${{ "{:,.0f}".format(purchase_price or 0) }}{% endif %}</div>
     </div>
 
     <div class="kpi-card">
-      <div class="kpi-label">After Repair Value</div>
-      <div class="kpi-value" id="arvDisplay">${{ "{:,.0f}".format(arv or 0) }}</div>
+      <div class="kpi-label">{% if is_design_budget %}Scope{% else %}After Repair Value{% endif %}</div>
+      <div class="kpi-value" id="arvDisplay">{% if is_design_budget %}Rooms + Finishes{% else %}${{ "{:,.0f}".format(arv or 0) }}{% endif %}</div>
     </div>
 
     <div class="kpi-card">
@@ -580,8 +606,8 @@ Build the financial operating system for your deal.
     </div>
 
     <div class="kpi-card">
-      <div class="kpi-label">Projected Profit</div>
-      <div class="kpi-value" id="projectedProfitDisplay">$0</div>
+      <div class="kpi-label">{% if is_design_budget %}Deal Economics{% else %}Projected Profit{% endif %}</div>
+      <div class="kpi-value" id="projectedProfitDisplay">{% if is_design_budget %}Not Applied{% else %}$0{% endif %}</div>
     </div>
   </section>
 
@@ -614,9 +640,13 @@ Build the financial operating system for your deal.
         <div class="studio-card-head">
           <div>
             <div class="studio-eyebrow">Line Item Engine</div>
-            <h3>Build Your Cost Architecture</h3>
+            <h3>{% if is_design_budget %}Design Cost Architecture{% else %}Build Your Cost Architecture{% endif %}</h3>
             <p class="studio-note">
+              {% if is_design_budget %}
+              Review room-level design costs, tune the finish allowance, then convert the design plan into a tracked budget when it is ready.
+              {% else %}
               Define the full cost structure for the deal. Add, refine, and sort line items before converting this plan into a live tracked budget.
+              {% endif %}
             </p>
           </div>
           <div class="product-badge">
@@ -658,19 +688,27 @@ Build the financial operating system for your deal.
         <div class="studio-card-head">
           <div>
             <div class="studio-eyebrow">Seeded Intelligence</div>
-            <h3>Budget Inputs Were Prebuilt for You</h3>
+            <h3>{% if is_design_budget %}Design Inputs Were Prebuilt for You{% else %}Budget Inputs Were Prebuilt for You{% endif %}</h3>
             <p class="studio-note">
+              {% if is_design_budget %}
+              Ravlo used the Design Studio room, style, finish level, notes, and generated budget lines to shape this cost structure.
+              {% else %}
               Ravlo used deal strategy, rehab logic, build planning, and AI outputs to shape your starting budget structure.
+              {% endif %}
             </p>
           </div>
           <div class="product-badge">Studio Connected</div>
         </div>
 
         <div class="callout">
-          <strong>How to use this</strong>
-          <p>
-            Review each seeded line item, pressure-test costs, then move the deal into Budget Tracker once the planning layer feels execution-ready.
-          </p>
+            <strong>How to use this</strong>
+            <p>
+              {% if is_design_budget %}
+              Keep this budget scoped to design decisions. Use the full deal path only when you are ready to underwrite rehab, build, funding, and execution risk.
+              {% else %}
+              Review each seeded line item, pressure-test costs, then move the deal into Budget Tracker once the planning layer feels execution-ready.
+              {% endif %}
+            </p>
         </div>
       </section>
       {% endif %}
@@ -679,15 +717,35 @@ Build the financial operating system for your deal.
         <div class="studio-card-head">
           <div>
             <div class="studio-eyebrow">Workflow</div>
-            <h3>Continue the Deal Flow</h3>
+            <h3>{% if is_design_budget %}Continue the Design Flow{% else %}Continue the Deal Flow{% endif %}</h3>
             <p class="studio-note">
+              {% if is_design_budget %}
+              Stay in the design lane, or jump back to the full deal workspace when the project is ready for underwriting.
+              {% else %}
               Budget Studio works best when connected to the full Ravlo studio system.
+              {% endif %}
             </p>
           </div>
         </div>
 
         <div class="workflow-grid">
           {% if deal %}
+          {% if is_design_budget %}
+          <a href="{{ url_for('investor.design_studio', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Design Studio</h4>
+            <p>Return to room concepts, finish direction, and visual design outputs.</p>
+          </a>
+
+          <a href="{{ url_for('investor.deal_architect', deal_id=deal.id, source='design_studio') }}" class="workflow-card">
+            <h4>Design Budget Path</h4>
+            <p>Review the design-only architecture without opening the full underwriting flow.</p>
+          </a>
+
+          <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Deal Workspace</h4>
+            <p>Return to the main deal record when this design is ready to become a larger project.</p>
+          </a>
+          {% else %}
           <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="workflow-card">
             <h4>Deal Architect</h4>
             <p>Set strategy, thesis, and risk posture before finalizing costs.</p>
@@ -703,6 +761,7 @@ Build the financial operating system for your deal.
             <p>Return to the main deal record and view the full operating picture.</p>
           </a>
           {% endif %}
+          {% endif %}
         </div>
       </section>
 
@@ -716,7 +775,11 @@ Build the financial operating system for your deal.
               <div class="studio-eyebrow">Financial Summary</div>
               <h3>Command Panel</h3>
               <p class="studio-note">
+                {% if is_design_budget %}
+                Watch the design budget update without mixing in purchase, ARV, or funding assumptions.
+                {% else %}
                 Watch margin, total cost, and profit update in real time.
+                {% endif %}
               </p>
             </div>
             <div class="product-badge">Live</div>
@@ -724,8 +787,8 @@ Build the financial operating system for your deal.
 
           <div class="summary-stack">
             <div class="summary-row">
-              <span class="summary-label">Purchase Price</span>
-              <strong class="summary-value" id="purchasePriceSummary">${{ "{:,.0f}".format(purchase_price or 0) }}</strong>
+              <span class="summary-label">{% if is_design_budget %}Budget Avenue{% else %}Purchase Price{% endif %}</span>
+              <strong class="summary-value" id="purchasePriceSummary">{% if is_design_budget %}Design Studio{% else %}${{ "{:,.0f}".format(purchase_price or 0) }}{% endif %}</strong>
             </div>
 
             <div class="summary-row">
@@ -734,23 +797,23 @@ Build the financial operating system for your deal.
             </div>
 
             <div class="summary-row">
-              <span class="summary-label">Total Project Cost</span>
-              <strong class="summary-value" id="totalProjectCost">$0</strong>
+              <span class="summary-label">{% if is_design_budget %}Scope Type{% else %}Total Project Cost{% endif %}</span>
+              <strong class="summary-value" id="totalProjectCost">{% if is_design_budget %}Design Only{% else %}$0{% endif %}</strong>
             </div>
 
             <div class="summary-row">
-              <span class="summary-label">ARV</span>
-              <strong class="summary-value" id="arvSummary">${{ "{:,.0f}".format(arv or 0) }}</strong>
+              <span class="summary-label">{% if is_design_budget %}Full Deal Value{% else %}ARV{% endif %}</span>
+              <strong class="summary-value" id="arvSummary">{% if is_design_budget %}Not Applied{% else %}${{ "{:,.0f}".format(arv or 0) }}{% endif %}</strong>
             </div>
 
             <div class="summary-row">
-              <span class="summary-label">Projected Profit</span>
-              <strong class="summary-value total" id="projectedProfit">$0</strong>
+              <span class="summary-label">{% if is_design_budget %}Deal Economics{% else %}Projected Profit{% endif %}</span>
+              <strong class="summary-value total" id="projectedProfit">{% if is_design_budget %}Not Applied{% else %}$0{% endif %}</strong>
             </div>
 
             <div class="summary-row">
-              <span class="summary-label">Margin %</span>
-              <strong class="summary-value total" id="marginPct">0%</strong>
+              <span class="summary-label">{% if is_design_budget %}Margin{% else %}Margin %{% endif %}</span>
+              <strong class="summary-value total" id="marginPct">{% if is_design_budget %}Not Applied{% else %}0%{% endif %}</strong>
             </div>
           </div>
         </section>
@@ -771,14 +834,14 @@ Build the financial operating system for your deal.
           <div class="mini-stack" style="margin-top:12px;">
             <div class="mini-panel">
               <div class="mini-panel-label">Planning Layer</div>
-              <strong>Studio First</strong>
-              <p>This page is for modeling and decision-making before execution begins.</p>
+              <strong>{% if is_design_budget %}Design First{% else %}Studio First{% endif %}</strong>
+              <p>{% if is_design_budget %}This page models design scope before it grows into rehab, build, or financing work.{% else %}This page is for modeling and decision-making before execution begins.{% endif %}</p>
             </div>
 
             <div class="mini-panel">
               <div class="mini-panel-label">Execution Layer</div>
               <strong>Tracked Budget</strong>
-              <p>Once ready, push this into the live budget tracker and manage real execution.</p>
+              <p>{% if is_design_budget %}Once ready, track the design budget as its own execution file.{% else %}Once ready, push this into the live budget tracker and manage real execution.{% endif %}</p>
             </div>
           </div>
         </section>
@@ -792,9 +855,13 @@ Build the financial operating system for your deal.
           </div>
 
           <div class="callout">
-            <strong>Budget Studio is the productized planning layer.</strong>
+            <strong>{% if is_design_budget %}This is the design-only planning layer.{% else %}Budget Studio is the productized planning layer.{% endif %}</strong>
             <p>
+              {% if is_design_budget %}
+              Keep the budget tight to the design work: rooms, finishes, materials, and visual scope. Full deal economics stay in the main Deal Architect path.
+              {% else %}
               Once this cost architecture is right, Ravlo converts it into a real tracked budget with line items, live updates, and execution visibility.
+              {% endif %}
             </p>
           </div>
 
@@ -819,6 +886,7 @@ Build the financial operating system for your deal.
   const SEED_CONTINGENCY = Number({{ (seed.get('contingency') if seed else 0)|tojson }}) || 0;
   const SEED_SOURCE = {{ (seed.get('budget_source') if seed else '')|tojson }};
   const SEED_BUDGET_TYPE = {{ (seed.get('budget_type') if seed else '')|tojson }};
+  const IS_DESIGN_BUDGET = {{ is_design_budget|tojson }};
   let contingencyAmount = SEED_CONTINGENCY;
 
   function formatMoney(value){
@@ -914,9 +982,37 @@ Build the financial operating system for your deal.
     const marginPct = ARV > 0 ? (projectedProfit / ARV) * 100 : 0;
 
     document.getElementById("budgetTotalDisplay").innerText = formatMoney(budgetTotal);
-    document.getElementById("projectedProfitDisplay").innerText = formatMoney(projectedProfit);
-
     document.getElementById("budgetTotal").innerText = formatMoney(budgetTotal);
+
+    if (IS_DESIGN_BUDGET) {
+      const itemLabel = `${items.length} item${items.length === 1 ? "" : "s"}`;
+      document.getElementById("projectedProfitDisplay").innerText = "Not applied";
+      document.getElementById("totalProjectCost").innerText = itemLabel;
+
+      const profitEl = document.getElementById("projectedProfit");
+      profitEl.innerText = "Not applied";
+      profitEl.classList.remove("positive", "negative");
+
+      const profitKpi = document.getElementById("projectedProfitDisplay");
+      profitKpi.classList.remove("positive", "negative");
+
+      const marginEl = document.getElementById("marginPct");
+      marginEl.innerText = "Not applied";
+      marginEl.classList.remove("positive", "negative");
+
+      const health = document.getElementById("budgetHealth");
+      health.classList.remove("good", "watch", "risk");
+      if (budgetTotal > 0) {
+        health.innerText = "Design budget ready - scope is isolated from full deal economics.";
+        health.classList.add("good");
+      } else {
+        health.innerText = "Waiting for design numbers.";
+        health.classList.add("watch");
+      }
+      return;
+    }
+
+    document.getElementById("projectedProfitDisplay").innerText = formatMoney(projectedProfit);
     document.getElementById("totalProjectCost").innerText = formatMoney(totalProjectCost);
 
     const profitEl = document.getElementById("projectedProfit");
@@ -950,8 +1046,8 @@ Build the financial operating system for your deal.
 
   function serializeBudgetPayload(){
     return JSON.stringify({
-      source: SEED_SOURCE || "budget_studio",
-      budget_type: SEED_BUDGET_TYPE || "rehab",
+      source: SEED_SOURCE || (IS_DESIGN_BUDGET ? "design_studio" : "budget_studio"),
+      budget_type: SEED_BUDGET_TYPE || (IS_DESIGN_BUDGET ? "design" : "rehab"),
       contingency: normalizeCost(contingencyAmount),
       items: items.map(item => ({
         name: item.name || "Budget Item",
@@ -982,7 +1078,7 @@ Build the financial operating system for your deal.
     });
   }
 
-  if (items.length === 0 && REHAB_COST > 0){
+  if (!IS_DESIGN_BUDGET && items.length === 0 && REHAB_COST > 0){
     addItem("Rehab Scope", REHAB_COST, "Rehab");
   }
 

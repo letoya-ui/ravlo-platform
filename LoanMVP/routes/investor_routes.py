@@ -458,6 +458,7 @@ def _create_budget_studio_budget_from_lines(
     budget,
     source="design_studio",
     budget_type="design",
+    replace_existing=False,
 ):
     if deal is None or not isinstance(budget, dict):
         return None
@@ -471,25 +472,52 @@ def _create_budget_studio_budget_from_lines(
         profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
         investor_profile_id = getattr(profile, "id", None)
 
-    project_budget = ProjectBudget(
-        borrower_profile_id=None,
-        investor_profile_id=investor_profile_id,
-        loan_app_id=None,
-        deal_id=deal.id,
-        build_project_id=getattr(project, "id", None) if project else None,
-        budget_type=budget_type,
-        name=f"{source.replace('_', ' ').title()} Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
-        project_name=(getattr(project, "project_name", None) if project else None) or deal.title or deal.address,
-        total_amount=0.0,
-        total_budget=0.0,
-        total_cost=0.0,
-        materials_cost=0.0,
-        labor_cost=0.0,
-        contingency=0.0,
-        paid_amount=0.0,
-        notes=f"Created from {source.replace('_', ' ').title()} with exact generated line names and full prices.",
-    )
-    db.session.add(project_budget)
+    project_budget = None
+    if replace_existing and investor_profile_id:
+        project_budget = (
+            ProjectBudget.query
+            .filter_by(
+                deal_id=deal.id,
+                investor_profile_id=investor_profile_id,
+                budget_type=budget_type,
+            )
+            .order_by(ProjectBudget.id.desc())
+            .first()
+        )
+
+    if project_budget:
+        ProjectExpense.query.filter_by(budget_id=project_budget.id).delete(synchronize_session=False)
+        project_budget.build_project_id = getattr(project, "id", None) if project else None
+        project_budget.name = f"{source.replace('_', ' ').title()} Budget - {deal.title or deal.address or f'Deal #{deal.id}'}"
+        project_budget.project_name = (getattr(project, "project_name", None) if project else None) or deal.title or deal.address
+        project_budget.total_amount = 0.0
+        project_budget.total_budget = 0.0
+        project_budget.total_cost = 0.0
+        project_budget.materials_cost = 0.0
+        project_budget.labor_cost = 0.0
+        project_budget.contingency = 0.0
+        project_budget.paid_amount = 0.0
+        project_budget.notes = f"Updated from {source.replace('_', ' ').title()} with exact generated line names and full prices."
+    else:
+        project_budget = ProjectBudget(
+            borrower_profile_id=None,
+            investor_profile_id=investor_profile_id,
+            loan_app_id=None,
+            deal_id=deal.id,
+            build_project_id=getattr(project, "id", None) if project else None,
+            budget_type=budget_type,
+            name=f"{source.replace('_', ' ').title()} Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
+            project_name=(getattr(project, "project_name", None) if project else None) or deal.title or deal.address,
+            total_amount=0.0,
+            total_budget=0.0,
+            total_cost=0.0,
+            materials_cost=0.0,
+            labor_cost=0.0,
+            contingency=0.0,
+            paid_amount=0.0,
+            notes=f"Created from {source.replace('_', ' ').title()} with exact generated line names and full prices.",
+        )
+        db.session.add(project_budget)
     db.session.flush()
 
     total = 0.0
@@ -539,7 +567,7 @@ def _create_budget_studio_budget_from_lines(
         project_budget.recalculate_totals()
         project_budget.total_amount = project_budget.total_budget
 
-    if hasattr(deal, "rehab_cost"):
+    if budget_type != "design" and hasattr(deal, "rehab_cost"):
         deal.rehab_cost = total
 
     return project_budget
@@ -602,6 +630,57 @@ def _budget_studio_seed_from_build_costs(build_costs):
         "contingency": contingency,
         "rehab_cost": total_budget,
         "total_project_budget": total_budget,
+    }
+
+
+def _budget_studio_seed_from_design_budget(design_budget):
+    if not isinstance(design_budget, dict):
+        return {}
+
+    raw_items = design_budget.get("line_items") or []
+    if not isinstance(raw_items, list):
+        return {}
+
+    seeded_items = []
+    for raw_item in raw_items:
+        if not isinstance(raw_item, dict):
+            continue
+
+        amount = _budget_line_full_price(raw_item)
+        seeded_items.append({
+            "name": _budget_line_name(raw_item, fallback="Design budget item"),
+            "description": raw_item.get("description") or raw_item.get("name") or "Design budget item",
+            "category": str(raw_item.get("category") or raw_item.get("section") or "Design").strip() or "Design",
+            "cost": amount,
+            "estimated_amount": amount,
+            "notes": raw_item.get("notes") or raw_item.get("summary") or "",
+            "source": "design_studio",
+        })
+
+    if not seeded_items:
+        return {}
+
+    subtotal = sum(float(item.get("cost") or 0) for item in seeded_items)
+    cost_low = _budget_line_full_price({"total": design_budget.get("cost_low")})
+    cost_high = _budget_line_full_price({
+        "total": (
+            design_budget.get("total_budget")
+            or design_budget.get("total_amount")
+            or design_budget.get("cost_high")
+        )
+    }) or subtotal
+
+    return {
+        "suggested_breakdown": seeded_items,
+        "budget_source": design_budget.get("source") or "design_studio",
+        "budget_type": "design",
+        "subtotal": subtotal,
+        "contingency": 0,
+        "rehab_cost": cost_high,
+        "total_project_budget": cost_high,
+        "design_cost_low": cost_low,
+        "design_cost_high": cost_high,
+        "summary": design_budget.get("summary") or "Design Studio budget generated from room, style, and finish inputs.",
     }
 
 
@@ -7257,6 +7336,7 @@ def design_studio_generate_budget():
                 budget=budget,
                 source="design_studio",
                 budget_type="design",
+                replace_existing=True,
             )
 
             results["design_budget"] = budget
@@ -7269,12 +7349,25 @@ def design_studio_generate_budget():
             db.session.commit()
 
         budget_url = None
+        budget_studio_url = None
         if deal is not None and budget_tracker is not None:
             budget_url = url_for(
                 "investor.budget_detail",
                 budget_id=budget_tracker.id,
             )
+            budget_studio_url = url_for(
+                "investor.budget_studio",
+                deal_id=deal.id,
+                source="design_studio",
+                budget_id=budget_tracker.id,
+            )
             budget["budget_url"] = budget_url
+        elif deal is not None:
+            budget_studio_url = url_for(
+                "investor.budget_studio",
+                deal_id=deal.id,
+                source="design_studio",
+            )
 
         return jsonify({
             "status": "ok",
@@ -7285,7 +7378,8 @@ def design_studio_generate_budget():
             "line_items": budget["line_items"],
             "budget_id": getattr(budget_tracker, "id", None),
             "budget_url": budget_url,
-            "budget_studio_url": budget_url,
+            "budget_detail_url": budget_url,
+            "budget_studio_url": budget_studio_url or budget_url,
             "saved_to_deal": bool(save_to_deal and deal is not None),
         })
 
@@ -11465,6 +11559,20 @@ def deal_architect(deal_id=None):
     build_preview_url = ""
     build_mockups = []
     build_costs = {}
+    build_project = {}
+    build_blueprint_url = ""
+    build_floor2_url = ""
+    build_exterior_url = ""
+    build_project_name = ""
+    build_lot_count = None
+    build_property_type = ""
+    design_budget = {}
+    architect_source = (
+        request.args.get("source")
+        or request.args.get("mode")
+        or ""
+    ).strip().lower()
+    design_only_mode = architect_source in {"design", "design_studio", "design_budget"}
 
     # -------------------------------------------------
     # LOAD DEAL DATA
@@ -11521,6 +11629,20 @@ def deal_architect(deal_id=None):
             )
    
         build_project = results.get("build_project", {}) or {}
+        interior_block = build_project.get("interior", {}) or {}
+        design_budget = (
+            results.get("design_budget")
+            or interior_block.get("budget")
+            or rehab_analysis.get("budget")
+            or {}
+        )
+        if (
+            design_budget
+            and architect_source == ""
+            and not build_project
+            and not strategy_analysis
+        ):
+            design_only_mode = True
 
         build_blueprint_url = (build_project.get("blueprint", {}) or {}).get("image_url")
         build_floor2_url = (build_project.get("blueprint_floor2", {}) or build_project.get("site_plan", {}) or {}).get("image_url")
@@ -11659,6 +11781,12 @@ def deal_architect(deal_id=None):
         build_lot_count=build_lot_count,
         build_property_type=build_property_type,
         build_costs=build_costs,
+        design_budget=design_budget,
+        design_only_mode=design_only_mode,
+        design_architect_url=url_for("investor.deal_architect", deal_id=selected_deal.id, source="design_studio") if selected_deal else None,
+        full_architect_url=url_for("investor.deal_architect", deal_id=selected_deal.id) if selected_deal else None,
+        design_budget_url=url_for("investor.budget_studio", deal_id=selected_deal.id, source="design_studio") if selected_deal else None,
+        design_studio_url=url_for("investor.design_studio", deal_id=selected_deal.id) if selected_deal else None,
     )
 
 
@@ -13003,10 +13131,12 @@ def design_studio_generate():
             deal_architect_url = url_for(
                 "investor.deal_architect",
                 deal_id=deal.id,
+                source="design_studio",
             )
             budget_studio_url = url_for(
                 "investor.budget_studio",
                 deal_id=deal.id,
+                source="design_studio",
             )
 
         return jsonify({
@@ -14006,6 +14136,12 @@ def budget_studio(deal_id=None):
     results = {}
     existing_budget = None
     budget_id = request.args.get("budget_id", type=int)
+    requested_budget_source = (
+        request.args.get("source")
+        or request.args.get("mode")
+        or ""
+    ).strip().lower()
+    design_budget_requested = requested_budget_source in {"design", "design_studio", "design_budget"}
 
     if deal_id is None:
         query_deal_id = request.args.get("deal_id", type=int)
@@ -14027,8 +14163,21 @@ def budget_studio(deal_id=None):
         build_cost_seed = _budget_studio_seed_from_build_costs(
             ((results.get("deal_architect") or {}).get("build_costs") or {})
         )
-        if build_cost_seed.get("suggested_breakdown"):
+        build_project = results.get("build_project", {}) or {}
+        design_budget = (
+            results.get("design_budget")
+            or ((build_project.get("interior") or {}).get("budget") if isinstance(build_project, dict) else {})
+            or ((results.get("rehab_project") or {}).get("budget") if isinstance(results.get("rehab_project"), dict) else {})
+            or {}
+        )
+        design_cost_seed = _budget_studio_seed_from_design_budget(design_budget)
+        if design_budget_requested and design_cost_seed.get("suggested_breakdown"):
+            budget_seed.update(design_cost_seed)
+        elif build_cost_seed.get("suggested_breakdown"):
             budget_seed.update(build_cost_seed)
+        elif design_cost_seed.get("suggested_breakdown"):
+            budget_seed.update(design_cost_seed)
+            design_budget_requested = True
         results["budget_seed"] = budget_seed
 
         ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
@@ -14049,17 +14198,27 @@ def budget_studio(deal_id=None):
                 if existing_budget and existing_budget.investor_profile_id is None:
                     existing_budget.investor_profile_id = ip.id
                     db.session.commit()
+                if existing_budget and str(existing_budget.budget_type or "").lower() == "design":
+                    design_budget_requested = True
 
             if existing_budget is None:
-                existing_budget = (
+                base_budget_query = (
                     ProjectBudget.query
                     .filter_by(
                         deal_id=deal.id,
                         investor_profile_id=ip.id
                     )
                     .order_by(ProjectBudget.id.desc())
-                    .first()
                 )
+                if design_budget_requested:
+                    existing_budget = base_budget_query.filter(ProjectBudget.budget_type == "design").first()
+                else:
+                    existing_budget = base_budget_query.filter(or_(
+                        ProjectBudget.budget_type.is_(None),
+                        ProjectBudget.budget_type != "design",
+                    )).first() or base_budget_query.first()
+                    if existing_budget and str(existing_budget.budget_type or "").lower() == "design":
+                        design_budget_requested = True
 
     purchase_price = float(getattr(deal, "purchase_price", 0) or 0) if deal else 0
     arv = float(getattr(deal, "arv", 0) or 0) if deal else 0
@@ -14077,6 +14236,17 @@ def budget_studio(deal_id=None):
                 "source": "snapshot",
             }
 
+    budget_seed = results.get("budget_seed", {}) if results else {}
+    seed_budget_type = str((budget_seed or {}).get("budget_type") or "").lower()
+    existing_budget_type = str(getattr(existing_budget, "budget_type", "") or "").lower()
+    is_design_budget = design_budget_requested or seed_budget_type == "design" or existing_budget_type == "design"
+    budget_context = {
+        "mode": "design" if is_design_budget else "deal",
+        "label": "Design Budget" if is_design_budget else "Deal Budget",
+        "source": "design_studio" if is_design_budget else ((budget_seed or {}).get("budget_source") or "budget_studio"),
+        "is_design_budget": is_design_budget,
+    }
+
     return render_template(
         "investor/budget_studio.html",
         deal=deal,
@@ -14086,6 +14256,7 @@ def budget_studio(deal_id=None):
         arv=arv,
         rehab_cost=rehab_cost,
         local_cost_index=local_cost_index,
+        budget_context=budget_context,
         page_title="Budget Studio",
         page_subtitle="Control your numbers, track execution, and stay profitable."
     )
@@ -14180,13 +14351,23 @@ def create_budget_from_studio(deal_id):
     source = str(payload.get("source") or "").strip()
     contingency = _budget_line_full_price({"total": payload.get("contingency")})
 
-    budget_type = (
-        "build"
-        if str(strategy).lower() in {"build_studio", "project_build", "build", "new_build"}
-        or "build" in source.lower()
-        or "deal_architect" in source.lower()
-        else "rehab"
-    )
+    strategy_value = str(strategy or "").lower()
+    source_value = source.lower()
+    if strategy_value in {"design", "design_studio", "design_budget"} or "design" in source_value:
+        budget_type = "design"
+    elif (
+        strategy_value in {"build_studio", "project_build", "build", "new_build"}
+        or "build" in source_value
+        or "deal_architect" in source_value
+    ):
+        budget_type = "build"
+    else:
+        budget_type = "rehab"
+
+    budget_notes = {
+        "design": "Created from Design Studio budget architecture.",
+        "build": "Created from Budget Studio build cost architecture.",
+    }.get(budget_type, "Created from Budget Studio.")
 
     budget = ProjectBudget(
         borrower_profile_id=None,
@@ -14204,7 +14385,7 @@ def create_budget_from_studio(deal_id):
         labor_cost=0.0,
         contingency=contingency,
         paid_amount=0.0,
-        notes="Created from Budget Studio build cost architecture." if budget_type == "build" else "Created from Budget Studio.",
+        notes=budget_notes,
     )
     db.session.add(budget)
     db.session.flush()
