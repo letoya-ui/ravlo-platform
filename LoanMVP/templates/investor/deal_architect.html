@@ -157,12 +157,10 @@
       <div class="result-meta">
         <div><span>Recommended Strategy</span><strong id="recommendedStrategy">{{ strategy_analysis.get('recommended_type') or deal.recommended_strategy or '—' }}</strong></div>
 
-        {% if design_cost %}
         <div class="cost-view-toggle">
           <button type="button" class="cost-view-tab active" data-cost-view="both">Build + Design</button>
           <button type="button" class="cost-view-tab" data-cost-view="design">Design Only</button>
         </div>
-        {% endif %}
 
         <div id="costRangeRow" class="{% if not design_cost %}{% endif %}">
           <span id="costRangeLabel">Cost Low</span>
@@ -261,8 +259,8 @@
 .score-card span{color:#9fb0ca}
 .score-card strong{font-size:56px;line-height:1}
 .result-meta{display:grid;gap:12px;align-content:start}
-.result-meta div{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
-.cost-view-toggle{display:flex;gap:0;border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;margin-bottom:4px}
+.result-meta div:not(.cost-view-toggle){display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
+.cost-view-toggle{display:flex;gap:0;border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden}
 .cost-view-tab{flex:1;padding:7px 14px;font-size:.8rem;font-weight:600;background:transparent;color:#9fb0ca;border:none;cursor:pointer;transition:background .15s,color .15s}
 .cost-view-tab.active{background:rgba(255,255,255,.1);color:#eef3ff}
 .analysis-summary{margin-top:14px;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03);color:#dce7fb;line-height:1.55}
