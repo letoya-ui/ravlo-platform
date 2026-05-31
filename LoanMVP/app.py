@@ -137,6 +137,7 @@ _SCHEMA_COMPAT_TABLES = [
     "realtor_listing_presentations",
     "vip_client_sessions",
     "canva_connections",
+    "external_partner_leads",
     "partner_connection_requests",
     "partner_requests",
 ]

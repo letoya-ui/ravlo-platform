@@ -1,7 +1,7 @@
 """add partner_requests table
 
-Revision ID: 20260530_add_partner_requests
-Revises:
+Revision ID: 20260530apr01
+Revises: b2c3d4e5f6a7
 Create Date: 2026-05-30
 
 - partner_requests table for marketplace-originated service requests
@@ -9,6 +9,11 @@ Create Date: 2026-05-30
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.engine.reflection import Inspector
+
+revision = '20260530apr01'
+down_revision = 'b2c3d4e5f6a7'
+branch_labels = None
+depends_on = None
 
 
 def upgrade():
