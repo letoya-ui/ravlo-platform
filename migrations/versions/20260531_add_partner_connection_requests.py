@@ -1,7 +1,7 @@
 """create partner_connection_requests table if not exists
 
-Revision ID: 20260531_add_partner_connection_requests
-Revises:
+Revision ID: 20260531pcr01
+Revises: 20260531epl01
 Create Date: 2026-05-31
 
 - partner_connection_requests table was never created via migration; this
@@ -10,6 +10,11 @@ Create Date: 2026-05-31
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.engine.reflection import Inspector
+
+revision = '20260531pcr01'
+down_revision = '20260531epl01'
+branch_labels = None
+depends_on = None
 
 
 def upgrade():
