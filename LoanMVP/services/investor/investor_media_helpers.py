@@ -8,7 +8,11 @@ import base64
 import requests
 from io import BytesIO
 from urllib.parse import urlparse, parse_qs
-from PIL import Image
+try:
+    from PIL import Image as _PILImage
+    Image = _PILImage
+except ImportError:
+    Image = None  # Pillow not installed — photo-resize features disabled
 
 logger = logging.getLogger(__name__)
 
@@ -498,11 +502,18 @@ def _upload_before_image(image_bytes: bytes, prefix="before") -> str | None:
     return _public_spaces_url(key)
 
 
-def _upload_after_images_from_b64(images_b64: list[str], prefix="after") -> list[str]:
+def _upload_after_images_from_b64(images_b64, prefix="after") -> list[str]:
     urls = []
     client = _get_spaces_client()
 
-    for b64 in images_b64:
+    # images_b64 may be a list ["b64..."] or a dict {"mode": "b64..."} depending
+    # on whether the GPU engine or the OpenAI fallback produced it.
+    if isinstance(images_b64, dict):
+        items = [v for v in images_b64.values() if v]
+    else:
+        items = [b for b in (images_b64 or []) if b]
+
+    for b64 in items:
         try:
             image_bytes = BytesIO(base64.b64decode(b64)).getvalue()
             webp = to_webp_bytes(image_bytes)

@@ -106,10 +106,7 @@ try:
 except Exception:
     InvestorActivity = None
 
-try:
-    from LoanMVP.models.partner_models import PartnerRequest
-except Exception:
-    PartnerRequest = None
+from LoanMVP.models.partner_models import PartnerRequest
 
 # -------------------------
 # AI / Assistants
@@ -4153,9 +4150,9 @@ def api_property_tool_search():
             "error": "Enter a ZIP code, city/state, address, or use your location."
         }), 400
 
-    # Enforce monthly search quota for Core (free) tier
-    sub = (getattr(current_user, "subscription", None) or "").lower()
-    _SEARCH_LIMIT = None if sub in ("pro", "enterprise") else 3
+    # Enforce monthly search quota for Core tier only
+    _effective_plan = _investor_effective_subscription_plan(current_user)
+    _SEARCH_LIMIT = None if _effective_plan in ("Operator", "Enterprise") else 3
     if _SEARCH_LIMIT is not None:
         _ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
         if _ip:
@@ -4167,7 +4164,7 @@ def api_property_tool_search():
             if _ip.deal_finder_search_count >= _SEARCH_LIMIT:
                 return jsonify({
                     "status": "error",
-                    "error": f"You've used all {_SEARCH_LIMIT} Deal Finder searches for this month. Upgrade to Pro for unlimited searches."
+                    "error": f"You've used all {_SEARCH_LIMIT} Deal Finder searches for this month. Upgrade to Operator for unlimited searches."
                 }), 429
 
     raw_limit = payload.get("limit")
@@ -4291,6 +4288,19 @@ def api_property_tool_search():
             db.session.commit()
 
         searches_used = getattr(_ip, "deal_finder_search_count", None) if _SEARCH_LIMIT is not None else None
+
+        search_errors = meta.get("search_errors") or []
+        if search_errors:
+            current_app.logger.warning("Deal Finder search errors: %s", search_errors)
+
+        # Surface provider errors to the user when they produce empty results
+        if not results and search_errors:
+            return jsonify({
+                "status": "error",
+                "error": search_errors[0],
+                "results": [],
+                "count": 0,
+            }), 502
 
         return jsonify({
             "status": "ok",
@@ -8562,6 +8572,7 @@ def design_studio_chat():
         data = request.get_json(silent=True) or {}
         messages = data.get("messages") or []
         current_config = data.get("config") or {}
+        reference_image_url = data.get("reference_image_url") or ""
 
         api_key = current_app.config.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -8610,16 +8621,30 @@ def design_studio_chat():
             "The engine_intent.engine_prompt is what the image engine will receive, so make it exact and visual."
         )
 
+        if reference_image_url:
+            system_prompt += (
+                "\n\nIMPORTANT: The user has attached a reference photo. "
+                "Analyze its visual elements — colors, style, materials, furniture, lighting, textures — "
+                "and incorporate those details into the design interpretation, description, and engine_prompt."
+            )
+
         user_prompt = (
             f"Current config: {json.dumps(current_config)}\n\n"
             f"Conversation:\n{json.dumps(messages)}"
         )
 
+        user_content: list = [{"type": "text", "text": user_prompt}]
+        if reference_image_url:
+            user_content.append({
+                "type": "image_url",
+                "image_url": {"url": reference_image_url, "detail": "auto"},
+            })
+
         response = client.chat.completions.create(
             model=current_app.config.get("AI_MODEL") or "gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
+                {"role": "user", "content": user_content},
             ],
             temperature=0.3,
         )
@@ -11454,6 +11479,7 @@ def deal_architect(deal_id=None):
     arv = None
     estimated_rent = None
     rehab_cost = None
+    design_cost = None
     lot_size = None
     zoning = None
     strategy = ""
@@ -11512,6 +11538,12 @@ def deal_architect(deal_id=None):
         build_preview_url = results.get("build_preview_url", "") or ""
         build_mockups = results.get("build_mockups", []) or []
         build_costs = (results.get("deal_architect", {}) or {}).get("build_costs", {}) or {}
+
+        # Design cost: prefer explicitly saved value, fall back to Design Studio budget
+        _inputs = (getattr(selected_deal, "inputs_json", None) or {})
+        design_cost = _inputs.get("design_cost") or (
+            results.get("design_budget", {}) or {}
+        ).get("total_budget")
         if build_costs.get("budget_id"):
             build_costs = dict(build_costs)
             build_costs["budget_url"] = url_for(
@@ -11561,6 +11593,12 @@ def deal_architect(deal_id=None):
         selected_deal.arv = _to_float(request.form.get("arv")) or selected_deal.arv
         selected_deal.estimated_rent = _to_float(request.form.get("estimated_rent")) or selected_deal.estimated_rent
         selected_deal.rehab_cost = _to_float(request.form.get("rehab_cost")) or getattr(selected_deal, "rehab_cost", None)
+
+        _design_cost_val = _to_float(request.form.get("design_cost"))
+        if _design_cost_val is not None and hasattr(selected_deal, "inputs_json"):
+            _saved_inputs = dict(selected_deal.inputs_json or {})
+            _saved_inputs["design_cost"] = _design_cost_val
+            selected_deal.inputs_json = _saved_inputs
 
         if hasattr(selected_deal, "property_type"):
             selected_deal.property_type = request.form.get("property_type") or selected_deal.property_type
@@ -11642,6 +11680,7 @@ def deal_architect(deal_id=None):
         arv=arv,
         estimated_rent=estimated_rent,
         rehab_cost=rehab_cost,
+        design_cost=design_cost,
         lot_size=lot_size,
         zoning=zoning,
         strategy=strategy,
@@ -11850,9 +11889,6 @@ def deal_architect_analyze():
             if not deal:
                 return jsonify({"status": "error", "message": "Deal not found"}), 404
 
-        if not RENOVATION_ENGINE_URL:
-            return jsonify({"status": "error", "message": "Renovation engine is not configured"}), 500
-
         def _pick_str(name, *deal_attrs, fallback=""):
             raw = data.get(name)
             if raw is not None and str(raw).strip():
@@ -11903,6 +11939,14 @@ def deal_architect_analyze():
             comps = safe_json_loads(data.get("comps_json"), default=[])
         comps = comps if isinstance(comps, list) else []
 
+        design_cost = _pick_float("design_cost")
+        if design_cost is None and deal is not None:
+            _dinputs = getattr(deal, "inputs_json", None) or {}
+            design_cost = _dinputs.get("design_cost")
+        if design_cost is None and deal is not None:
+            _dresults = _deal_results(deal)
+            design_cost = (_dresults.get("design_budget") or {}).get("total_budget")
+
         payload = {
             "project_name": _pick_str("project_name", "title", "address", "property_address") or None,
             "description": _pick_str("description", "notes"),
@@ -11916,6 +11960,7 @@ def deal_architect_analyze():
             "zip_code": _pick_str("zip_code", "zip") or None,
             "arv": _pick_float("arv"),
             "monthly_rent": _pick_float("monthly_rent", "estimated_rent"),
+            "design_cost": design_cost,
             "down_payment_pct": _normalize_percentage(data.get("down_payment_pct")) or 0.25,
             "interest_rate": _normalize_percentage(data.get("interest_rate")) or 0.08,
             "hold_years": _pick_int("hold_years") or 1,
@@ -11968,7 +12013,50 @@ def deal_architect_analyze():
         except Exception:
             cost_ctx = None
 
-        engine_data = _post_renovation_engine_json("/v1/deal_architect", payload, timeout=60) or {}
+        if RENOVATION_ENGINE_URL:
+            engine_data = _post_renovation_engine_json("/v1/deal_architect", payload, timeout=60) or {}
+        else:
+            engine_data = {}
+            try:
+                from LoanMVP.services.llm_studio_service import claude_deal_analysis
+                _claude_result = claude_deal_analysis({
+                    "property_address": payload.get("project_name") or "",
+                    "property_type": payload.get("property_type") or "residential",
+                    "budget": payload.get("asking_price"),
+                    "zoning": payload.get("zoning") or "",
+                    "lot_size": payload.get("lot_size") or "",
+                    "state": payload.get("state") or "",
+                    "zip_code": payload.get("zip_code") or "",
+                    "notes": payload.get("description") or "",
+                    "strategy_goal": "maximize return",
+                })
+                strategies = _claude_result.get("strategies") or []
+                rec_name = _claude_result.get("recommendation") or ""
+                rec = next((s for s in strategies if s.get("name") == rec_name), None) or (strategies[0] if strategies else {})
+                asking = float(payload.get("asking_price") or 0)
+                arv_val = float(payload.get("arv") or asking * 1.2)
+                cap_req = float(rec.get("capital_required") or 0)
+                est_profit = float(rec.get("estimated_profit") or 0)
+                roi = float(rec.get("estimated_roi") or 0)
+                deal_score = max(1, min(100, int(50 + roi * 2))) if roi else 50
+                engine_data = {
+                    "deal_score": deal_score,
+                    "recommended_type": rec.get("type") or rec.get("name") or rec_name,
+                    "recommended_strategy": rec.get("name") or rec_name,
+                    "total_cost_low": round(cap_req * 0.9) if cap_req else None,
+                    "total_cost_high": round(cap_req * 1.1) if cap_req else None,
+                    "estimated_value": arv_val or None,
+                    "estimated_profit": est_profit or None,
+                    "summary": (
+                        rec.get("description") or rec.get("headline") or
+                        _claude_result.get("market_notes") or "Analysis complete."
+                    ),
+                    "strategies": strategies,
+                    "market_notes": _claude_result.get("market_notes") or "",
+                    "meta": {"provider": "anthropic/claude"},
+                }
+            except Exception as _exc:
+                current_app.logger.warning("claude_deal_analysis fallback failed: %s", _exc)
 
         if cost_ctx and isinstance(engine_data, dict):
             try:
@@ -11998,8 +12086,17 @@ def deal_architect_analyze():
                 deal.lot_size = payload["lot_size"]
             if hasattr(deal, "zoning") and payload.get("zoning"):
                 deal.zoning = payload["zoning"]
+            if design_cost is not None and hasattr(deal, "inputs_json"):
+                _di = dict(getattr(deal, "inputs_json", None) or {})
+                _di["design_cost"] = design_cost
+                deal.inputs_json = _di
 
             db.session.commit()
+
+        # Echo design_cost back so the UI can display it without a page reload
+        if design_cost is not None:
+            engine_data = dict(engine_data)
+            engine_data.setdefault("design_cost", design_cost)
 
         return jsonify(engine_data)
 
@@ -12029,8 +12126,10 @@ def deal_architect_strategy():
         arv = float(data.get("arv") or deal.arv or 0)
         estimated_rent = float(data.get("estimated_rent") or deal.estimated_rent or 0)
         rehab_cost = float(data.get("rehab_cost") or deal.rehab_cost or 0)
+        _dinputs = getattr(deal, "inputs_json", None) or {}
+        design_cost = float(data.get("design_cost") or _dinputs.get("design_cost") or 0)
 
-        total_cost = purchase_price + rehab_cost
+        total_cost = purchase_price + rehab_cost + design_cost
         projected_profit = (arv - total_cost) if arv else 0
         rent_ratio = (estimated_rent / purchase_price) if purchase_price > 0 else 0
 
@@ -12086,6 +12185,7 @@ def deal_architect_strategy():
             "arv": arv,
             "estimated_rent": estimated_rent,
             "rehab_cost": rehab_cost,
+            "design_cost": design_cost,
             "projected_profit": round(projected_profit, 2),
             "deal_score": deal_score,
         }
@@ -16117,8 +16217,8 @@ def investor_partner_search():
 
 
 @investor_bp.route("/send-to-partner", methods=["POST"])
-@login_required
 @csrf.exempt
+@login_required
 def investor_send_to_partner():
     """AJAX: create a PartnerConnectionRequest from investor to a partner."""
     data = request.get_json(silent=True) or {}
@@ -16153,7 +16253,13 @@ def investor_send_to_partner():
         status=status,
     )
 
-    db.session.add(req)
-    db.session.commit()
+    try:
+        db.session.add(req)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        import logging
+        logging.getLogger(__name__).error("[send-to-partner] DB error: %s", exc)
+        return jsonify({"status": "error", "message": "Could not save request"}), 500
 
     return jsonify({"status": "ok", "request_id": req.id})

@@ -102,6 +102,12 @@
           </div>
 
           <div class="field">
+            <label for="design_cost">Design Cost</label>
+            <input id="design_cost" name="design_cost" value="{{ design_cost or '' }}" placeholder="15000">
+            <small class="field-hint muted" style="font-size:.78rem;margin-top:4px;display:block">Interior design, staging, renders &amp; permits — auto-filled from Design Studio when available</small>
+          </div>
+
+          <div class="field">
             <label for="sqft">Square Feet</label>
             <input id="sqft" name="sqft" value="{{ sqft or '' }}" placeholder="2200">
           </div>
@@ -150,8 +156,23 @@
 
       <div class="result-meta">
         <div><span>Recommended Strategy</span><strong id="recommendedStrategy">{{ strategy_analysis.get('recommended_type') or deal.recommended_strategy or '—' }}</strong></div>
-        <div><span>Cost Low</span><strong id="costLow">{% set _cl = strategy_analysis.get('total_cost_low') %}{% if _cl %}${{ '{:,.0f}'.format(_cl) }}{% else %}—{% endif %}</strong></div>
-        <div><span>Cost High</span><strong id="costHigh">{% set _ch = strategy_analysis.get('total_cost_high') %}{% if _ch %}${{ '{:,.0f}'.format(_ch) }}{% else %}—{% endif %}</strong></div>
+
+        {% if design_cost %}
+        <div class="cost-view-toggle">
+          <button type="button" class="cost-view-tab active" data-cost-view="both">Build + Design</button>
+          <button type="button" class="cost-view-tab" data-cost-view="design">Design Only</button>
+        </div>
+        {% endif %}
+
+        <div id="costRangeRow" class="{% if not design_cost %}{% endif %}">
+          <span id="costRangeLabel">Cost Low</span>
+          <strong id="costLow">{% set _cl = strategy_analysis.get('total_cost_low') %}{% if _cl %}${{ '{:,.0f}'.format(_cl) }}{% else %}—{% endif %}</strong>
+        </div>
+        <div id="costHighRow">
+          <span>Cost High</span>
+          <strong id="costHigh">{% set _ch = strategy_analysis.get('total_cost_high') %}{% if _ch %}${{ '{:,.0f}'.format(_ch) }}{% else %}—{% endif %}</strong>
+        </div>
+        <div id="designCostRow"><span>Design Cost</span><strong id="designCostDisplay">{% if design_cost %}${{ '{:,.0f}'.format(design_cost) }}{% else %}—{% endif %}</strong></div>
         <div><span>Estimated Value</span><strong id="estimatedValue">{% set _ev = strategy_analysis.get('estimated_value') or arv %}{% if _ev %}${{ '{:,.0f}'.format(_ev) }}{% else %}—{% endif %}</strong></div>
       </div>
 
@@ -241,6 +262,9 @@
 .score-card strong{font-size:56px;line-height:1}
 .result-meta{display:grid;gap:12px;align-content:start}
 .result-meta div{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
+.cost-view-toggle{display:flex;gap:0;border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;margin-bottom:4px}
+.cost-view-tab{flex:1;padding:7px 14px;font-size:.8rem;font-weight:600;background:transparent;color:#9fb0ca;border:none;cursor:pointer;transition:background .15s,color .15s}
+.cost-view-tab.active{background:rgba(255,255,255,.1);color:#eef3ff}
 .analysis-summary{margin-top:14px;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03);color:#dce7fb;line-height:1.55}
 .build-preview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px}
 .build-preview-card{display:grid;gap:10px;padding:12px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);text-decoration:none;color:inherit}
@@ -264,6 +288,11 @@
   const initialBuildCosts = {{ (build_costs or {})|tojson }};
   const csrfToken = {{ csrf_token()|tojson }};
 
+  // Seed raw cost values from server-rendered data so the toggle works on page load
+  let _rawCostLow = {{ strategy_analysis.get('total_cost_low')|tojson }};
+  let _rawCostHigh = {{ strategy_analysis.get('total_cost_high')|tojson }};
+  let _rawDesignCost = {{ design_cost|tojson }};
+
   const analyzeDealBtn = document.getElementById('analyzeDealBtn');
   const analysisStatus = document.getElementById('analysisStatus');
   const dealScore = document.getElementById('dealScore');
@@ -271,7 +300,36 @@
   const costLow = document.getElementById('costLow');
   const costHigh = document.getElementById('costHigh');
   const estimatedValue = document.getElementById('estimatedValue');
+  const designCostDisplay = document.getElementById('designCostDisplay');
+  const costRangeRow = document.getElementById('costRangeRow');
+  const costHighRow = document.getElementById('costHighRow');
+  const designCostRow = document.getElementById('designCostRow');
   const analysisSummary = document.getElementById('analysisSummary');
+
+  function applyCostView(mode) {
+    if (mode === 'design') {
+      // Design only — hide build range, show only design cost
+      if (costRangeRow) costRangeRow.style.display = 'none';
+      if (costHighRow) costHighRow.style.display = 'none';
+      if (designCostRow) designCostRow.style.display = '';
+    } else {
+      // Both — add design cost on top of build range
+      if (costRangeRow) costRangeRow.style.display = '';
+      if (costHighRow) costHighRow.style.display = '';
+      if (designCostRow) designCostRow.style.display = '';
+      const dc = _rawDesignCost || 0;
+      if (costLow && _rawCostLow !== null) costLow.textContent = formatMoney(_rawCostLow + dc);
+      if (costHigh && _rawCostHigh !== null) costHigh.textContent = formatMoney(_rawCostHigh + dc);
+    }
+  }
+
+  document.querySelectorAll('.cost-view-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.cost-view-tab').forEach((t) => t.classList.remove('active'));
+      tab.classList.add('active');
+      applyCostView(tab.dataset.costView);
+    });
+  });
 
   const generateBuildCostsBtn = document.getElementById('generateBuildCostsBtn');
   const generateBuildCostsTopBtn = document.getElementById('generateBuildCostsTopBtn');
@@ -469,6 +527,7 @@
         asking_price: parseMoney(document.getElementById('purchase_price')?.value),
         arv: parseMoney(document.getElementById('arv')?.value),
         monthly_rent: parseMoney(document.getElementById('estimated_rent')?.value),
+        design_cost: parseMoney(document.getElementById('design_cost')?.value),
         square_feet_target: parseMoney(document.getElementById('sqft')?.value),
         city: {{ (city or '')|tojson }},
         state: {{ (state or '')|tojson }},
@@ -494,12 +553,17 @@
       if (analysisStatus) analysisStatus.textContent = 'Analyzed';
       if (dealScore) dealScore.textContent = data.deal_score || '—';
       if (recommendedStrategy) recommendedStrategy.textContent = data.recommended_type || data.recommended_strategy || '—';
-      const _costLow = data.total_cost_low ?? data.cost_low;
-      const _costHigh = data.total_cost_high ?? data.cost_high;
+      _rawCostLow = data.total_cost_low ?? data.cost_low ?? null;
+      _rawCostHigh = data.total_cost_high ?? data.cost_high ?? null;
+      _rawDesignCost = data.design_cost ?? null;
+      if (costLow) costLow.textContent = _rawCostLow !== null ? formatMoney(_rawCostLow) : '—';
+      if (costHigh) costHigh.textContent = _rawCostHigh !== null ? formatMoney(_rawCostHigh) : '—';
+      if (designCostDisplay && _rawDesignCost) designCostDisplay.textContent = formatMoney(_rawDesignCost);
       const _estValue = data.estimated_value;
-      if (costLow) costLow.textContent = _costLow ? formatMoney(_costLow) : '—';
-      if (costHigh) costHigh.textContent = _costHigh ? formatMoney(_costHigh) : '—';
       if (estimatedValue) estimatedValue.textContent = _estValue ? formatMoney(_estValue) : '—';
+      // apply the currently selected cost view after values are loaded
+      const _activeTab = document.querySelector('.cost-view-tab.active');
+      if (_activeTab) applyCostView(_activeTab.dataset.costView);
       if (analysisSummary) analysisSummary.textContent = data.summary || data.next_step || 'Analysis complete.';
     } catch (error) {
       if (analysisStatus) analysisStatus.textContent = 'Error';

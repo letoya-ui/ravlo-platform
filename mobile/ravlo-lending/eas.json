@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 13.0.0"
+    "version": ">= 13.0.0",
+    "promptToConfigurePushNotifications": false
   },
   "build": {
     "development": {
@@ -13,13 +14,15 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://ravlohq.com"
+        "EXPO_PUBLIC_API_URL": "https://ravlohq.com",
+        "EXPO_NO_FINGERPRINT": "1"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://ravlohq.com"
+        "EXPO_PUBLIC_API_URL": "https://ravlohq.com",
+        "EXPO_NO_FINGERPRINT": "1"
       }
     }
   },

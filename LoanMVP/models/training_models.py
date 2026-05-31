@@ -64,3 +64,21 @@ class TrainingJob(db.Model):
 
     def __repr__(self):
         return f"<TrainingJob id={self.id} type={self.job_type} status={self.status}>"
+
+
+class AcademyLessonProgress(db.Model):
+    """Tracks which lessons a user has completed in Ravlo Academy."""
+    __tablename__ = "academy_lesson_progress"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    module_id = db.Column(db.String(50), nullable=False)
+    lesson_index = db.Column(db.Integer, nullable=False)
+    completed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'module_id', 'lesson_index', name='uq_user_module_lesson'),
+    )
+
+    def __repr__(self):
+        return f"<AcademyLessonProgress user={self.user_id} module={self.module_id} lesson={self.lesson_index}>"
