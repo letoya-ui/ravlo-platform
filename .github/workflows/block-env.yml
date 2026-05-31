@@ -1,0 +1,42 @@
+name: Block .env Files
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  scan:
+    name: Scan for committed .env files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for .env files in tracked files
+        run: |
+          found=$(git ls-files | grep -E "(^|/)\.env(\.|$)|(^|/)\.env$" | grep -v "\.example$" | grep -v "\.sample$" || true)
+          if [ -n "$found" ]; then
+            echo "❌ BLOCKED: .env file(s) are tracked in git:"
+            echo "$found"
+            echo ""
+            echo "Remove them with: git rm --cached <file>"
+            echo "Then add them to .gitignore"
+            exit 1
+          fi
+          echo "✅ No .env files tracked in git"
+
+      - name: Check for .env files in this push/PR diff
+        if: github.event_name == 'pull_request'
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          added=$(git diff --name-only --diff-filter=A "$base" "$head" | grep -E "(^|/)\.env(\.|$)|(^|/)\.env$" | grep -v "\.example$" | grep -v "\.sample$" || true)
+          if [ -n "$added" ]; then
+            echo "❌ BLOCKED: This PR adds .env file(s):"
+            echo "$added"
+            exit 1
+          fi
+          echo "✅ No .env files added in this PR"
