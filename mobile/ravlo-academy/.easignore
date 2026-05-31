@@ -3,3 +3,9 @@ node_modules
 android
 ios
 *.log
+venv/
+.venv/
+*.pyc
+__pycache__/
+LoanMVP/
+migrations/
