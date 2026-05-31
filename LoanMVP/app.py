@@ -137,6 +137,8 @@ _SCHEMA_COMPAT_TABLES = [
     "realtor_listing_presentations",
     "vip_client_sessions",
     "canva_connections",
+    "partner_connection_requests",
+    "partner_requests",
 ]
 
 _SCHEMA_COMPAT_INDEXES = [

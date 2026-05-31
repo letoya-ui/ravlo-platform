@@ -16163,7 +16163,13 @@ def investor_send_to_partner():
         status=status,
     )
 
-    db.session.add(req)
-    db.session.commit()
+    try:
+        db.session.add(req)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        import logging
+        logging.getLogger(__name__).error("[send-to-partner] DB error: %s", exc)
+        return jsonify({"status": "error", "message": "Could not save request"}), 500
 
     return jsonify({"status": "ok", "request_id": req.id})
