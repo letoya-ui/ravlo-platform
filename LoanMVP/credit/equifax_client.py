@@ -37,7 +37,7 @@ class EquifaxSoftPull:
             }
         }
 
-        print("Sending payload:", json.dumps(payload, indent=2))
+        # SSN and PII must never be logged
       
         # Extract monthly debts from tradelines (if present)
         monthly_debts = 0

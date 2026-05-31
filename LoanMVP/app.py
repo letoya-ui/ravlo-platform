@@ -23,12 +23,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask_cors import CORS
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
-from flask_login import LoginManager, current_user
+from flask_login import LoginManager, current_user, login_required
 from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from LoanMVP.config import get_config
-from LoanMVP.extensions import db, login_manager, migrate, mail, stripe, csrf
+from LoanMVP.extensions import db, login_manager, migrate, mail, stripe, csrf, limiter
 from LoanMVP.models import User
 from LoanMVP.models.loan_models import BorrowerProfile, LoanNotification
 from LoanMVP.utils.role_helpers import get_role_display, get_request_type_display, get_status_display, get_status_badge
@@ -81,6 +81,7 @@ def resource_path(relative_path: str) -> str:
 _SCHEMA_COMPAT_COLUMNS = [
     ("user",                       "stripe_customer_id",  "VARCHAR(255)"),
     ("user",                       "university_tier",     "VARCHAR(20)"),
+    ("user",                       "trial_ends_at",       "TIMESTAMP"),
     ("vip_profiles",              "markets_json",       "TEXT"),
     ("deals",                     "local_cost_factor",  "FLOAT"),
     ("deals",                     "local_cost_label",   "VARCHAR(120)"),
@@ -118,6 +119,7 @@ _SCHEMA_COMPAT_COLUMNS = [
 # to one model). Order only matters for foreign-key dependencies; the list
 # here is kept small on purpose.
 _SCHEMA_COMPAT_TABLES = [
+    "subscription_requests",
     "cost_observations",
     "vip_profiles",
     "vip_contacts",
@@ -135,6 +137,9 @@ _SCHEMA_COMPAT_TABLES = [
     "realtor_listing_presentations",
     "vip_client_sessions",
     "canva_connections",
+    "external_partner_leads",
+    "partner_connection_requests",
+    "partner_requests",
 ]
 
 _SCHEMA_COMPAT_INDEXES = [
@@ -265,9 +270,14 @@ def create_app():
 
     # Initialize extensions
     cors_origins = app.config.get("CORS_ORIGINS") or []
+    if not cors_origins and not app.debug:
+        app.logger.warning(
+            "CORS_ORIGINS is not configured — CORS will deny all cross-origin requests. "
+            "Set CORS_ORIGINS in your environment."
+        )
     cors.init_app(
         app,
-        origins=cors_origins or None,
+        origins=cors_origins if cors_origins else (None if app.debug else []),
         supports_credentials=app.config.get("CORS_SUPPORTS_CREDENTIALS", True),
     )
     db.init_app(app)
@@ -281,7 +291,7 @@ def create_app():
     )
     app.socketio = socketio
     csrf.init_app(app)
-     
+    limiter.init_app(app)
 
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
@@ -369,6 +379,7 @@ def create_app():
         return render_template("dashboard.html", dashboards=dashboards)
 
     @app.route("/dashboard-index")
+    @login_required
     def index():
         dashboards = [
             # User-facing
@@ -403,6 +414,7 @@ def create_app():
     
 
     @app.route("/api/property/resolve", methods=["POST"])
+    @login_required
     def api_resolve_property():
         payload = request.get_json() or {}
         address = payload.get("address")
@@ -621,6 +633,29 @@ def create_app():
     @app.before_request
     def make_session_permanent():
         session.permanent = True
+
+    _TRIAL_EXEMPT_PREFIXES = ("auth.", "marketing.", "public_pages.", "preview.")
+    _TRIAL_EXEMPT_EXACT = {"static", "favicon", "marketing_home", "robots_txt", "sitemap_xml", "index"}
+
+    @app.before_request
+    def check_trial_expiry():
+        if not current_user.is_authenticated:
+            return None
+        sub = (getattr(current_user, "subscription", "") or "").strip().lower()
+        if sub != "preview":
+            return None
+        trial_ends_at = getattr(current_user, "trial_ends_at", None)
+        if not trial_ends_at:
+            return None
+        if datetime.utcnow() <= trial_ends_at:
+            return None
+        endpoint = request.endpoint or ""
+        if (
+            any(endpoint.startswith(p) for p in _TRIAL_EXEMPT_PREFIXES)
+            or endpoint in _TRIAL_EXEMPT_EXACT
+        ):
+            return None
+        return redirect(url_for("preview.trial_expired"))
 
     @app.before_request
     def handle_custom_domain():

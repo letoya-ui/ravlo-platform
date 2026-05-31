@@ -274,3 +274,32 @@ class PartnerLeadCharge(db.Model):
 
     def __repr__(self):
         return f"<PartnerLeadCharge {self.id} partner={self.partner_id} ${self.amount} {self.status}>"
+
+class PartnerRequest(db.Model):
+    """Marketplace-originated partner service requests from investors."""
+    __tablename__ = "partner_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    investor_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
+
+    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey("deals.id"), nullable=True)
+    saved_property_id = db.Column(db.Integer, db.ForeignKey("saved_properties.id"), nullable=True)
+
+    service_type = db.Column(db.String(100), nullable=False)
+    city = db.Column(db.String(100), nullable=True)
+    state = db.Column(db.String(10), nullable=True)
+    zip_code = db.Column(db.String(20), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+
+    request_status = db.Column(db.String(30), default="requested")
+    # requested | matched | accepted | declined | completed
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    partner = db.relationship("Partner", backref=db.backref("marketplace_requests", lazy="dynamic"))
+
+    def __repr__(self):
+        return f"<PartnerRequest {self.id} {self.service_type} {self.request_status}>"

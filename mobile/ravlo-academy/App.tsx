@@ -13,47 +13,69 @@ import { useAuthStore } from './src/store/authStore';
 import { registerForPushNotifications, useNotificationListeners } from './src/services/notifications';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
-import CourseListScreen from './src/screens/CourseListScreen';
-import CourseDetailScreen from './src/screens/CourseDetailScreen';
+import LearnScreen from './src/screens/LearnScreen';
+import ModuleDetailScreen from './src/screens/ModuleDetailScreen';
+import LessonScreen from './src/screens/LessonScreen';
 import ProgressScreen from './src/screens/ProgressScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import RavloAIScreen from './src/screens/RavloAIScreen';
+import BusinessPlanScreen from './src/screens/BusinessPlanScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 
 const Tab = createBottomTabNavigator();
-const CourseStack = createStackNavigator();
+const LearnStack = createStackNavigator();
 const RootStack = createStackNavigator();
 
-function CourseNavigator() {
+const TAB_OPTIONS = {
+  tabBarStyle: { backgroundColor: Colors.surface, borderTopColor: Colors.border, borderTopWidth: 1 },
+  tabBarActiveTintColor: Colors.blueprint,
+  tabBarInactiveTintColor: Colors.textMuted,
+  headerShown: false,
+};
+
+function LearnNavigator() {
   return (
-    <CourseStack.Navigator screenOptions={{ headerShown: false }}>
-      <CourseStack.Screen name="CourseList" component={CourseListScreen} />
-      <CourseStack.Screen name="CourseDetail" component={CourseDetailScreen} />
-    </CourseStack.Navigator>
+    <LearnStack.Navigator screenOptions={{ headerShown: false }}>
+      <LearnStack.Screen name="LearnHome" component={LearnScreen} />
+      <LearnStack.Screen name="ModuleDetail" component={ModuleDetailScreen} />
+      <LearnStack.Screen name="Lesson" component={LessonScreen} />
+    </LearnStack.Navigator>
   );
 }
 
 function MainTabs() {
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: Colors.blueprint,
-        tabBarInactiveTintColor: Colors.textMuted,
-        tabBarIcon: ({ color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap = 'home-outline';
-          if (route.name === 'Home') iconName = 'home-outline';
-          else if (route.name === 'Courses') iconName = 'book-outline';
-          else if (route.name === 'Progress') iconName = 'bar-chart-outline';
-          else if (route.name === 'Profile') iconName = 'person-outline';
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-      })}
-    >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Courses" component={CourseNavigator} />
-      <Tab.Screen name="Progress" component={ProgressScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+    <Tab.Navigator screenOptions={TAB_OPTIONS}>
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Learn"
+        component={LearnNavigator}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="book-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Coach"
+        component={RavloAIScreen}
+        options={{ tabBarLabel: 'AI Coach', tabBarIcon: ({ color, size }) => <Ionicons name="sparkles-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Plan"
+        component={BusinessPlanScreen}
+        options={{ tabBarLabel: 'Biz Plan', tabBarIcon: ({ color, size }) => <Ionicons name="document-text-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Progress"
+        component={ProgressScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart-outline" size={size} color={color} /> }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} /> }}
+      />
     </Tab.Navigator>
   );
 }
@@ -80,9 +102,10 @@ export default function App() {
     registerForPushNotifications('academy');
     const cleanup = useNotificationListeners(
       (notification) => {
-        const title = notification.request.content.title || 'Ravlo Academy';
-        const body = notification.request.content.body || '';
-        Alert.alert(title, body);
+        Alert.alert(
+          notification.request.content.title || 'Ravlo Academy',
+          notification.request.content.body || '',
+        );
       },
       (response) => {
         console.log('Notification tapped:', response.notification.request.content);
@@ -100,11 +123,7 @@ export default function App() {
           <RootStack.Navigator screenOptions={{ headerShown: false }}>
             {!onboardingDone ? (
               <RootStack.Screen name="Onboarding">
-                {() => (
-                  <OnboardingScreen
-                    onDone={() => setOnboardingDone(true)}
-                  />
-                )}
+                {() => <OnboardingScreen onDone={() => setOnboardingDone(true)} />}
               </RootStack.Screen>
             ) : token ? (
               <RootStack.Screen name="Main" component={MainTabs} />
@@ -118,11 +137,4 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  tabBar: {
-    backgroundColor: Colors.surface,
-    borderTopColor: Colors.border,
-    borderTopWidth: 1,
-  },
-});
+const styles = StyleSheet.create({ root: { flex: 1 } });

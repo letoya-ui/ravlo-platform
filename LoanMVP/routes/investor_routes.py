@@ -106,10 +106,7 @@ try:
 except Exception:
     InvestorActivity = None
 
-try:
-    from LoanMVP.models.partner_models import PartnerRequest
-except Exception:
-    PartnerRequest = None
+from LoanMVP.models.partner_models import PartnerRequest
 
 # -------------------------
 # AI / Assistants
@@ -4232,9 +4229,9 @@ def api_property_tool_search():
             "error": "Enter a ZIP code, city/state, address, or use your location."
         }), 400
 
-    # Enforce monthly search quota for Core (free) tier
-    sub = (getattr(current_user, "subscription", None) or "").lower()
-    _SEARCH_LIMIT = None if sub in ("pro", "enterprise") else 3
+    # Enforce monthly search quota for Core tier only
+    _effective_plan = _investor_effective_subscription_plan(current_user)
+    _SEARCH_LIMIT = None if _effective_plan in ("Operator", "Enterprise") else 3
     if _SEARCH_LIMIT is not None:
         _ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
         if _ip:
@@ -4246,7 +4243,7 @@ def api_property_tool_search():
             if _ip.deal_finder_search_count >= _SEARCH_LIMIT:
                 return jsonify({
                     "status": "error",
-                    "error": f"You've used all {_SEARCH_LIMIT} Deal Finder searches for this month. Upgrade to Pro for unlimited searches."
+                    "error": f"You've used all {_SEARCH_LIMIT} Deal Finder searches for this month. Upgrade to Operator for unlimited searches."
                 }), 429
 
     raw_limit = payload.get("limit")
@@ -4370,6 +4367,19 @@ def api_property_tool_search():
             db.session.commit()
 
         searches_used = getattr(_ip, "deal_finder_search_count", None) if _SEARCH_LIMIT is not None else None
+
+        search_errors = meta.get("search_errors") or []
+        if search_errors:
+            current_app.logger.warning("Deal Finder search errors: %s", search_errors)
+
+        # Surface provider errors to the user when they produce empty results
+        if not results and search_errors:
+            return jsonify({
+                "status": "error",
+                "error": search_errors[0],
+                "results": [],
+                "count": 0,
+            }), 502
 
         return jsonify({
             "status": "ok",
@@ -16298,8 +16308,8 @@ def investor_partner_search():
 
 
 @investor_bp.route("/send-to-partner", methods=["POST"])
-@login_required
 @csrf.exempt
+@login_required
 def investor_send_to_partner():
     """AJAX: create a PartnerConnectionRequest from investor to a partner."""
     data = request.get_json(silent=True) or {}
@@ -16334,7 +16344,13 @@ def investor_send_to_partner():
         status=status,
     )
 
-    db.session.add(req)
-    db.session.commit()
+    try:
+        db.session.add(req)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        import logging
+        logging.getLogger(__name__).error("[send-to-partner] DB error: %s", exc)
+        return jsonify({"status": "error", "message": "Could not save request"}), 500
 
     return jsonify({"status": "ok", "request_id": req.id})

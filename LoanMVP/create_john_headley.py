@@ -123,7 +123,7 @@ def create_john_headley(password: str):
         print("  John Headley — VIP Contractor/Realtor Account")
         print("=" * 55)
         print(f"  Email    : {EMAIL}")
-        print(f"  Password : {password}")
+        print(f"  Password : {'*' * len(password)}")
         print(f"  Role     : partner  (VIP Featured tier)")
         print(f"  VIP type : contractor_realtor")
         print(f"  User     : {'created' if created_user   else 'updated'} (id={user.id})")

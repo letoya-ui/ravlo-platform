@@ -1,0 +1,13 @@
+node_modules/
+.expo/
+.expo-shared/
+android/
+ios/
+*.log
+*.lock
+coverage/
+dist/
+build/
+.cache/
+__pycache__/
+*.py[cod]

@@ -1,0 +1,56 @@
+name: EAS Build — Ravlo Lending
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - production
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile/ravlo-lending/**'
+
+jobs:
+  build:
+    name: Build Ravlo Lending APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/ravlo-lending
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/ravlo-lending/package-lock.json
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Initialize EAS project
+        run: eas init --non-interactive --force
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Run EAS Build
+        run: eas build --platform android --profile ${{ github.event.inputs.profile || 'preview' }} --non-interactive
+        env:
+          EXPO_PUBLIC_API_URL: https://ravlohq.com
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

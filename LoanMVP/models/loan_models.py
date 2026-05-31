@@ -1,6 +1,7 @@
 from datetime import datetime
 from LoanMVP.extensions import db
 from sqlalchemy import JSON
+from LoanMVP.models.encrypted_types import EncryptedString
 
 
 # =========================================================
@@ -51,7 +52,7 @@ class BorrowerProfile(db.Model):
 
     # 🧩 Key 1003 Personal Info
     dob = db.Column(db.Date)
-    ssn = db.Column(db.String(20))
+    ssn = db.Column(EncryptedString())
     citizenship = db.Column(db.String(50))
     marital_status = db.Column(db.String(50))
     dependents = db.Column(db.Integer)

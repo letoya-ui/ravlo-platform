@@ -1,0 +1,62 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Request Submitted | Ravlo{% endblock %}
+{% block page_title %}Access Requested{% endblock %}
+{% block page_subline %}We\'ll be in touch soon.{% endblock %}
+
+{% block content %}
+<div style="max-width:520px; margin:60px auto; text-align:center; padding:0 20px;">
+  <div style="
+    background: #0f172a;
+    border: 1px solid #1e3a5f;
+    border-radius: 16px;
+    padding: 48px 40px;
+  ">
+    <div style="
+      width: 64px; height: 64px;
+      background: #1e3a5f;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 28px;
+    ">&#10003;</div>
+
+    <h2 style="color:#f1f5f9; font-size:22px; font-weight:700; margin:0 0 12px;">Request Submitted!</h2>
+    <p style="color:#94a3b8; font-size:14px; line-height:1.6; margin:0 0 32px;">
+      Thanks for your interest in a full Ravlo subscription.
+      Our team will review your request and reach out within
+      <strong style="color:#f1f5f9;">24 hours</strong>.
+    </p>
+
+    <div style="
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 28px;
+      text-align: left;
+    ">
+      <p style="color:#64748b; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin:0 0 6px;">In the meantime</p>
+      <ul style="color:#cbd5e1; font-size:13px; line-height:1.8; margin:0; padding-left:18px;">
+        <li>Keep exploring your dashboard — everything is available on preview</li>
+        <li>Run Deal Finder searches on target markets</li>
+        <li>Build out your deal pipeline</li>
+        <li>Check out the Resource Center</li>
+      </ul>
+    </div>
+
+    <a
+      href="{{ url_for('investor.command_center') }}"
+      style="
+        display: inline-block;
+        background: #3b82f6;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 8px;
+        padding: 12px 28px;
+        font-size: 14px;
+        font-weight: 600;
+      "
+    >Back to Dashboard &rarr;</a>
+  </div>
+</div>
+{% endblock %}
