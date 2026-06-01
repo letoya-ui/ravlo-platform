@@ -14194,36 +14194,25 @@ def activity():
     )
 
 
-@investor_bp.route("/planning/budget", methods=["GET", "POST"])
-@investor_bp.route("/budget", methods=["GET", "POST"])
+@investor_bp.route("/planning/budget", methods=["GET"])
+@investor_bp.route("/budget", methods=["GET"])
 @login_required
 @role_required("investor")
 def budget():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    assistant = AIAssistant()
-    budget_data = None
-    ai_tip = None
-
-    if request.method == "POST":
-        expenses = request.form.to_dict()
-        income = safe_float(request.form.get("income")) or 0
-        expenses_total = safe_float(request.form.get("expenses")) or 0
-        budget_data = {
-            "income": income,
-            "expenses": expenses_total,
-            "savings": income - expenses_total,
-        }
-        ai_tip = assistant.generate_reply(
-            f"Analyze investor expenses: {expenses}",
-            "investor_budget",
+    budgets = []
+    if ip:
+        budgets = (
+            ProjectBudget.query
+            .filter_by(investor_profile_id=ip.id)
+            .order_by(ProjectBudget.updated_at.desc())
+            .all()
         )
-
     return render_template(
         "investor/budget.html",
         investor=ip,
-        budget_data=budget_data,
-        ai_tip=ai_tip,
-        title="Budget Planner",
+        budgets=budgets,
+        title="My Budgets",
         active_tab="budget"
     )
 
@@ -14376,6 +14365,32 @@ def create_budget():
         if build_project_id:
             budget_type = "build"
 
+        # Parse budget_payload for line items seeded from Budget Studio
+        raw_payload = request.form.get("budget_payload") or ""
+        payload = {}
+        if raw_payload:
+            try:
+                payload = json.loads(raw_payload)
+            except Exception:
+                payload = {}
+
+        payload_items = payload.get("items") or []
+        payload_contingency = payload.get("contingency")
+        payload_type = str(payload.get("budget_type") or "").lower()
+
+        # Payload budget_type overrides the form select when seeded from studio
+        if payload_type in {"rehab", "build", "design", "turn", "capex", "general"}:
+            budget_type = payload_type
+        elif build_project_id:
+            budget_type = "build"
+
+        # Payload contingency overrides the form contingency field when seeded
+        if payload_contingency is not None:
+            try:
+                contingency = float(payload_contingency)
+            except (TypeError, ValueError):
+                pass
+
         budget = ProjectBudget(
             borrower_profile_id=None,
             investor_profile_id=ip.id,
@@ -14395,9 +14410,48 @@ def create_budget():
             notes=request.form.get("notes") or None,
         )
         db.session.add(budget)
+        db.session.flush()
+
+        estimated_total = 0.0
+        created_count = 0
+        for item in payload_items:
+            if not isinstance(item, dict):
+                continue
+            description = str(item.get("name") or item.get("description") or "Budget Item").strip() or "Budget Item"
+            try:
+                estimated_amount = float(item.get("cost") or item.get("estimated_amount") or 0)
+            except (TypeError, ValueError):
+                estimated_amount = 0.0
+            category = str(item.get("category") or "General").strip() or "General"
+            expense = ProjectExpense(
+                budget_id=budget.id,
+                category=category,
+                description=description,
+                vendor=None,
+                estimated_amount=estimated_amount,
+                actual_amount=0.0,
+                paid_amount=0.0,
+                status="planned",
+                notes="Imported from Budget Studio.",
+            )
+            db.session.add(expense)
+            created_count += 1
+            estimated_total += estimated_amount
+
+        if created_count > 0:
+            budget.total_cost = estimated_total
+            budget.total_amount = estimated_total
+            budget.total_budget = estimated_total + float(budget.contingency or 0)
+
+        if hasattr(budget, "recalculate_totals"):
+            budget.recalculate_totals()
+
         db.session.commit()
 
-        flash("Budget created.", "success")
+        if created_count:
+            flash(f"Budget created with {created_count} line item(s).", "success")
+        else:
+            flash("Budget created.", "success")
         return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
     deals = Deal.query.filter_by(
@@ -14766,7 +14820,52 @@ def add_budget_expense(budget_id):
 
     flash("Expense added.", "success")
     return redirect(url_for("investor.budget_detail", budget_id=budget.id))
-    
+
+
+@investor_bp.route("/budget-studio/<int:budget_id>/expense/<int:expense_id>/update", methods=["POST"])
+@login_required
+@role_required("investor")
+def update_budget_expense(budget_id, expense_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+    budget = ProjectBudget.query.filter_by(id=budget_id, investor_profile_id=ip.id).first_or_404()
+    expense = ProjectExpense.query.filter_by(id=expense_id, budget_id=budget.id).first_or_404()
+
+    expense.category = (request.form.get("category") or expense.category or "General").strip()
+    expense.description = (request.form.get("description") or expense.description or "Expense").strip()
+    expense.vendor = (request.form.get("vendor") or "").strip() or None
+    try:
+        expense.estimated_amount = float(request.form.get("estimated_amount") or expense.estimated_amount or 0)
+        expense.actual_amount = float(request.form.get("actual_amount") or 0)
+        expense.paid_amount = float(request.form.get("paid_amount") or 0)
+    except (TypeError, ValueError):
+        pass
+    expense.status = (request.form.get("status") or expense.status or "planned").strip()
+    expense.notes = (request.form.get("notes") or "").strip() or None
+
+    budget.recalculate_totals()
+    db.session.commit()
+
+    flash("Expense updated.", "success")
+    return redirect(url_for("investor.budget_detail", budget_id=budget.id))
+
+
+@investor_bp.route("/budget-studio/<int:budget_id>/expense/<int:expense_id>/delete", methods=["POST"])
+@login_required
+@role_required("investor")
+def delete_budget_expense(budget_id, expense_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+    budget = ProjectBudget.query.filter_by(id=budget_id, investor_profile_id=ip.id).first_or_404()
+    expense = ProjectExpense.query.filter_by(id=expense_id, budget_id=budget.id).first_or_404()
+
+    db.session.delete(expense)
+    db.session.flush()
+    budget.recalculate_totals()
+    db.session.commit()
+
+    flash("Expense removed.", "success")
+    return redirect(url_for("investor.budget_detail", budget_id=budget.id))
+
+
 @investor_bp.route("/deals/<int:deal_id>/rehab/budget", methods=["GET", "POST"])
 @login_required
 @role_required("investor")

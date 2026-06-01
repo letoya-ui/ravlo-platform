@@ -83,6 +83,120 @@ Track projected vs actual construction spend for this build project.
     font-size:.82rem;
   }
 
+  /* ── Budget progress panel ── */
+  .budget-progress-panel{
+    border-radius:22px;
+    padding:20px 22px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.025);
+    display:grid;
+    gap:14px;
+  }
+
+  .budget-progress-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  .budget-progress-head h3{
+    margin:0;
+    font-size:1.02rem;
+    color:#fff;
+    letter-spacing:-.02em;
+  }
+
+  .progress-eyebrow{
+    color:#8ebdff;
+    font-size:.74rem;
+    font-weight:800;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    margin-bottom:4px;
+  }
+
+  .progress-bars{
+    display:grid;
+    gap:10px;
+  }
+
+  .progress-bar-row{
+    display:grid;
+    gap:5px;
+  }
+
+  .progress-bar-labels{
+    display:flex;
+    justify-content:space-between;
+    font-size:.78rem;
+    color:rgba(228,236,246,.62);
+    font-weight:600;
+  }
+
+  .progress-bar-labels .pbar-pct{
+    font-weight:800;
+    color:#8ebdff;
+  }
+
+  .progress-bar-labels .pbar-pct.over{
+    color:#ff9a9a;
+  }
+
+  .progress-track{
+    height:10px;
+    border-radius:999px;
+    background:rgba(255,255,255,.07);
+    overflow:hidden;
+  }
+
+  .progress-fill{
+    height:100%;
+    border-radius:999px;
+    transition:width .4s ease;
+    max-width:100%;
+  }
+
+  .progress-fill.paid{
+    background:linear-gradient(90deg, #0d9488, #34d399);
+  }
+
+  .progress-fill.actual{
+    background:linear-gradient(90deg, #6366f1, #7ab8ff);
+  }
+
+  .variance-alert{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 14px;
+    border-radius:12px;
+    background:rgba(239,68,68,.08);
+    border:1px solid rgba(239,68,68,.22);
+    color:#fca5a5;
+    font-size:.86rem;
+    font-weight:600;
+  }
+
+  .variance-alert.under{
+    background:rgba(52,211,153,.08);
+    border-color:rgba(52,211,153,.22);
+    color:#6ee7b7;
+  }
+
+  .variance-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#ef4444;
+    flex-shrink:0;
+  }
+
+  .variance-dot.under{
+    background:#34d399;
+  }
+
   .budget-grid{
     display:grid;
     grid-template-columns:380px minmax(0,1fr);
@@ -168,6 +282,7 @@ Track projected vs actual construction spend for this build project.
     font-size:.92rem;
   }
 
+  /* ── Table and category groups ── */
   .table-wrap{
     overflow:auto;
     border-radius:18px;
@@ -186,9 +301,10 @@ Track projected vs actual construction spend for this build project.
     background:rgba(255,255,255,.04);
     padding:13px 14px;
     border-bottom:1px solid rgba(255,255,255,.08);
+    white-space:nowrap;
   }
   tbody td{
-    padding:14px;
+    padding:12px 14px;
     border-bottom:1px solid rgba(255,255,255,.06);
     vertical-align:top;
   }
@@ -196,16 +312,98 @@ Track projected vs actual construction spend for this build project.
     background:rgba(255,255,255,.03);
   }
 
+  /* Category group header row */
+  .cat-group-row td{
+    padding:10px 14px 8px;
+    background:rgba(255,255,255,.04);
+    border-bottom:1px solid rgba(255,255,255,.08);
+    border-top:1px solid rgba(255,255,255,.06);
+  }
+
+  .cat-group-row:first-child td{
+    border-top:none;
+  }
+
+  .cat-group-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:.28rem .75rem;
+    border-radius:999px;
+    font-size:.76rem;
+    font-weight:800;
+    letter-spacing:.02em;
+  }
+
+  .cat-group-subtotals{
+    display:inline-flex;
+    gap:20px;
+    margin-left:16px;
+    color:rgba(228,236,246,.55);
+    font-size:.8rem;
+    font-weight:600;
+  }
+
+  .cat-group-subtotals span{
+    color:rgba(228,236,246,.8);
+    font-weight:700;
+  }
+
+  /* Status badges */
   .badge{
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    padding:.35rem .65rem;
+    padding:.32rem .65rem;
     border-radius:999px;
-    font-size:.78rem;
+    font-size:.75rem;
     font-weight:700;
-    background:rgba(91,141,239,.16);
-    color:#bdd3ff;
+    white-space:nowrap;
+  }
+
+  .badge-planned{
+    background:rgba(100,116,139,.18);
+    color:#94a3b8;
+    border:1px solid rgba(100,116,139,.28);
+  }
+  .badge-quoted{
+    background:rgba(59,130,246,.16);
+    color:#93c5fd;
+    border:1px solid rgba(59,130,246,.3);
+  }
+  .badge-ordered{
+    background:rgba(139,92,246,.16);
+    color:#c4b5fd;
+    border:1px solid rgba(139,92,246,.3);
+  }
+  .badge-in_progress{
+    background:rgba(245,158,11,.15);
+    color:#fcd34d;
+    border:1px solid rgba(245,158,11,.28);
+  }
+  .badge-completed{
+    background:rgba(34,197,94,.14);
+    color:#86efac;
+    border:1px solid rgba(34,197,94,.26);
+  }
+  .badge-paid{
+    background:rgba(13,148,136,.16);
+    color:#5eead4;
+    border:1px solid rgba(13,148,136,.28);
+  }
+
+  /* Variance column */
+  .variance-positive{
+    color:#86efac;
+    font-weight:700;
+  }
+  .variance-negative{
+    color:#fca5a5;
+    font-weight:700;
+  }
+  .variance-neutral{
+    color:rgba(228,236,246,.55);
+    font-weight:600;
   }
 
   .empty-state{
@@ -226,6 +424,18 @@ Track projected vs actual construction spend for this build project.
   }
 </style>
 
+{#
+  Precompute stat values for formatted display
+#}
+{% set est_total = summary.estimated_total or 0 %}
+{% set act_total = summary.actual_total or 0 %}
+{% set paid_total = summary.paid_total or 0 %}
+{% set contingency_val = summary.contingency or 0 %}
+{% set total_budget = summary.total_budget or 0 %}
+{% set remaining_bal = summary.remaining_balance or 0 %}
+
+{% macro fmt(n) %}${{ "{:,.0f}".format(n|round|int) }}{% endmacro %}
+
 <div class="budget-wrap">
 
   <section class="budget-hero">
@@ -239,43 +449,101 @@ Track projected vs actual construction spend for this build project.
       </div>
 
       <div>
-        <span class="badge">{{ budget.budget_type|title }}</span>
+        <span class="badge badge-planned" style="font-size:.82rem;padding:.38rem .8rem;">{{ budget.budget_type|title }}</span>
       </div>
     </div>
 
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-label">Estimated Total</div>
-        <div class="stat-value">${{ "{:,.2f}".format(summary.estimated_total or 0) }}</div>
+        <div class="stat-value">{{ fmt(est_total) }}</div>
         <div class="stat-sub">Projected construction cost</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Actual Total</div>
-        <div class="stat-value">${{ "{:,.2f}".format(summary.actual_total or 0) }}</div>
+        <div class="stat-value">{{ fmt(act_total) }}</div>
         <div class="stat-sub">Actual recorded spend</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Paid Total</div>
-        <div class="stat-value">${{ "{:,.2f}".format(summary.paid_total or 0) }}</div>
+        <div class="stat-value">{{ fmt(paid_total) }}</div>
         <div class="stat-sub">Amount already disbursed</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Contingency</div>
-        <div class="stat-value">${{ "{:,.2f}".format(summary.contingency or 0) }}</div>
+        <div class="stat-value">{{ fmt(contingency_val) }}</div>
         <div class="stat-sub">Reserve for overages</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Total Budget</div>
-        <div class="stat-value">${{ "{:,.2f}".format(summary.total_budget or 0) }}</div>
+        <div class="stat-value">{{ fmt(total_budget) }}</div>
         <div class="stat-sub">Estimated + contingency</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Remaining Balance</div>
-        <div class="stat-value">${{ "{:,.2f}".format(summary.remaining_balance or 0) }}</div>
+        <div class="stat-value">{{ fmt(remaining_bal) }}</div>
         <div class="stat-sub">Construction budget available</div>
       </div>
     </div>
   </section>
+
+  <!-- Budget Progress Panel -->
+  {% if total_budget > 0 %}
+  <section class="budget-progress-panel">
+    <div class="budget-progress-head">
+      <div>
+        <div class="progress-eyebrow">Budget Progress</div>
+        <h3>Paid vs. Actual vs. Total Budget</h3>
+      </div>
+      {% set overall_pct = ((act_total / total_budget) * 100)|round(1) if total_budget > 0 else 0 %}
+      <span style="font-size:.88rem;color:rgba(228,236,246,.62);">
+        {{ fmt(act_total) }} spent of {{ fmt(total_budget) }} total
+      </span>
+    </div>
+
+    <div class="progress-bars">
+      <!-- Paid progress -->
+      {% set paid_pct = ((paid_total / total_budget) * 100)|round(1) if total_budget > 0 else 0 %}
+      <div class="progress-bar-row">
+        <div class="progress-bar-labels">
+          <span>Paid</span>
+          <span class="pbar-pct">{{ fmt(paid_total) }} — {{ paid_pct }}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill paid" style="width:{{ [paid_pct, 100]|min }}%;"></div>
+        </div>
+      </div>
+
+      <!-- Actual (spend) progress -->
+      {% set act_pct = ((act_total / total_budget) * 100)|round(1) if total_budget > 0 else 0 %}
+      <div class="progress-bar-row">
+        <div class="progress-bar-labels">
+          <span>Actual Spend</span>
+          <span class="pbar-pct {% if act_total > total_budget %}over{% endif %}">
+            {{ fmt(act_total) }} — {{ act_pct }}%
+          </span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill actual" style="width:{{ [act_pct, 100]|min }}%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variance alert -->
+    {% set overall_variance = act_total - est_total %}
+    {% if overall_variance > 0 %}
+    <div class="variance-alert">
+      <span class="variance-dot"></span>
+      <span>Over budget by <strong>{{ fmt(overall_variance) }}</strong> — actual spend exceeds estimated total.</span>
+    </div>
+    {% elif overall_variance < 0 %}
+    <div class="variance-alert under">
+      <span class="variance-dot under"></span>
+      <span>Under budget by <strong>{{ fmt(overall_variance|abs) }}</strong> — tracking below estimate.</span>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
 
   <section class="budget-grid">
     <aside class="panel">
@@ -343,11 +611,26 @@ Track projected vs actual construction spend for this build project.
       <p>See each build phase line item and monitor estimate-to-actual variance.</p>
 
       {% if items %}
+        {# Group items by category #}
+        {% set ns = namespace(cat_groups={}) %}
+        {% for item in items %}
+          {% set cat = item.category or "General" %}
+          {# We'll render groups directly using a macro-like approach #}
+        {% endfor %}
+
+        {# Build a sorted list of unique categories #}
+        {% set categories = [] %}
+        {% for item in items %}
+          {% set cat = item.category or "General" %}
+          {% if cat not in categories %}
+            {% set _ = categories.append(cat) %}
+          {% endif %}
+        {% endfor %}
+
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Category</th>
                 <th>Description</th>
                 <th>Vendor</th>
                 <th>Status</th>
@@ -358,25 +641,74 @@ Track projected vs actual construction spend for this build project.
               </tr>
             </thead>
             <tbody>
-              {% for item in items %}
-                {% set est = item.estimated_amount or 0 %}
-                {% set act = item.actual_amount or 0 %}
-                {% set variance = act - est %}
-                <tr>
-                  <td>{{ item.category or "General" }}</td>
-                  <td>
-                    <div style="font-weight:700;">{{ item.description or "Expense" }}</div>
-                    {% if item.notes %}
-                      <div class="muted" style="margin-top:5px;">{{ item.notes }}</div>
-                    {% endif %}
+              {% for cat in categories %}
+                {% set cat_items = items | selectattr('category', 'equalto', cat) | list %}
+                {% if not cat_items %}
+                  {# Fallback for items with no category matching "General" #}
+                  {% set cat_items = items | selectattr('category', 'undefined') | list if cat == 'General' else [] %}
+                {% endif %}
+
+                {# Category subtotals #}
+                {% set cat_est = namespace(total=0) %}
+                {% set cat_act = namespace(total=0) %}
+                {% set cat_paid = namespace(total=0) %}
+                {% for item in items %}
+                  {% if (item.category or 'General') == cat %}
+                    {% set cat_est.total = cat_est.total + (item.estimated_amount or 0) %}
+                    {% set cat_act.total = cat_act.total + (item.actual_amount or 0) %}
+                    {% set cat_paid.total = cat_paid.total + (item.paid_amount or 0) %}
+                  {% endif %}
+                {% endfor %}
+
+                {# Category header row #}
+                <tr class="cat-group-row">
+                  <td colspan="7">
+                    <span class="cat-group-badge" style="background:rgba(122,184,255,.1);border:1px solid rgba(122,184,255,.2);color:#7ab8ff;">
+                      {{ cat }}
+                    </span>
+                    <span class="cat-group-subtotals">
+                      Est: <span>{{ fmt(cat_est.total) }}</span>
+                      &nbsp;&nbsp;Actual: <span>{{ fmt(cat_act.total) }}</span>
+                      &nbsp;&nbsp;Paid: <span>{{ fmt(cat_paid.total) }}</span>
+                    </span>
                   </td>
-                  <td>{{ item.vendor or "—" }}</td>
-                  <td><span class="badge">{{ (item.status or "planned").replace("_", " ")|title }}</span></td>
-                  <td>${{ "{:,.2f}".format(est) }}</td>
-                  <td>${{ "{:,.2f}".format(act) }}</td>
-                  <td>${{ "{:,.2f}".format(item.paid_amount or 0) }}</td>
-                  <td>${{ "{:,.2f}".format(variance) }}</td>
                 </tr>
+
+                {# Items in this category #}
+                {% for item in items %}
+                  {% if (item.category or 'General') == cat %}
+                    {% set est = item.estimated_amount or 0 %}
+                    {% set act = item.actual_amount or 0 %}
+                    {% set variance = act - est %}
+                    {% set status_key = (item.status or 'planned').replace(' ', '_') %}
+                    <tr>
+                      <td>
+                        <div style="font-weight:700;">{{ item.description or "Expense" }}</div>
+                        {% if item.notes %}
+                          <div class="muted" style="margin-top:4px;font-size:.82rem;line-height:1.45;">{{ item.notes }}</div>
+                        {% endif %}
+                      </td>
+                      <td style="color:rgba(228,236,246,.72);">{{ item.vendor or "—" }}</td>
+                      <td>
+                        <span class="badge badge-{{ status_key }}">
+                          {{ (item.status or "planned").replace("_", " ")|title }}
+                        </span>
+                      </td>
+                      <td style="font-weight:600;">{{ fmt(est) }}</td>
+                      <td style="font-weight:600;">{{ fmt(act) }}</td>
+                      <td style="font-weight:600;">{{ fmt(item.paid_amount or 0) }}</td>
+                      <td>
+                        {% if variance > 0 %}
+                          <span class="variance-negative">+{{ fmt(variance) }}</span>
+                        {% elif variance < 0 %}
+                          <span class="variance-positive">{{ fmt(variance) }}</span>
+                        {% else %}
+                          <span class="variance-neutral">—</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endif %}
+                {% endfor %}
               {% endfor %}
             </tbody>
           </table>

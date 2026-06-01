@@ -2,309 +2,607 @@
 
 {% block title %}Ravlo • {{ budget.name }}{% endblock %}
 {% block page_title %}{{ budget.name }}{% endblock %}
-{% block page_subline %}Budget control center for this project.{% endblock %}
+{% block page_subline %}Budget control center — track, update, and close out every line item.{% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost sm">Back to Budget Studio</a>
+  {% if budget.deal_id %}
+    <a href="{{ url_for('investor.budget_studio', deal_id=budget.deal_id) }}" class="ravlo-btn ghost sm">Budget Studio</a>
+    <a href="{{ url_for('investor.deal_detail', deal_id=budget.deal_id) }}" class="ravlo-btn ghost sm">Deal Workspace</a>
+  {% else %}
+    <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost sm">Budget Studio</a>
+  {% endif %}
+  <button type="button" class="ravlo-btn ghost sm" onclick="toggleAddExpense()">+ Add Expense</button>
   <button type="button" class="ravlo-btn ghost sm" onclick="openSendPartnerModal(_budgetStudioCtx)">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Package
   </button>
 {% endblock %}
 
 {% block content %}
+
+{% set est        = budget.estimated_subtotal or 0 %}
+{% set actual     = budget.actual_total or 0 %}
+{% set paid       = budget.paid_total or 0 %}
+{% set contingency = budget.contingency_amount or 0 %}
+{% set total_budget = budget.estimated_total_with_contingency or 0 %}
+{% set remaining  = budget.remaining_balance or 0 %}
+{% set variance   = actual - est %}
+{% set burn_rate  = ((paid / total_budget) * 100) if total_budget > 0 else 0 %}
+{% set actual_vs_est = ((actual / est) * 100) if est > 0 else 0 %}
+{% set is_over    = actual > total_budget and total_budget > 0 %}
+{% set is_watch   = actual > est and est > 0 and not is_over %}
+
 <style>
-  .budget-detail-wrap{display:grid;gap:1rem;}
-  .budget-summary-grid{
+  /* ── Shell ─────────────────────────────────────────────────────────────── */
+  .bd-shell{display:grid;gap:22px;padding-bottom:32px;}
+
+  /* ── KPI row ────────────────────────────────────────────────────────────── */
+  .bd-kpi-row{
     display:grid;
     grid-template-columns:repeat(5,minmax(0,1fr));
-    gap:1rem;
+    gap:14px;
   }
-  .budget-panel{
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
+  .bd-kpi{
+    padding:18px 16px;
     border-radius:22px;
-    padding:1rem;
-  }
-  .budget-stat{font-size:1.45rem;font-weight:800;color:#f4f8ff;}
-  .budget-label{font-size:.78rem;color:rgba(230,235,240,.68);margin-bottom:.2rem;}
-  .budget-grid-2{
-    display:grid;
-    grid-template-columns:1.08fr .92fr;
-    gap:1rem;
-  }
-  .budget-form-grid{
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:.8rem;
-  }
-  .budget-input,.budget-select,.budget-textarea{
-    width:100%;
-    padding:.8rem .9rem;
-    border-radius:14px;
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.09);
-    color:#eef4ff;
-  }
-  .budget-textarea{min-height:100px;resize:vertical;}
-  .budget-table{width:100%;border-collapse:collapse;}
-  .budget-table th,.budget-table td{
-    padding:.78rem;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    text-align:left;
-    vertical-align:top;
-  }
-  .budget-pill{
-    display:inline-flex;
-    padding:.3rem .6rem;
-    border-radius:999px;
-    font-size:.78rem;
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.08);
-  }
-  .intel-grid{
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:.8rem;
-  }
-  .intel-card{
-    padding:.9rem;
-    border-radius:18px;
     background:rgba(255,255,255,.03);
     border:1px solid rgba(255,255,255,.08);
   }
-  .intel-value{font-size:1.05rem;font-weight:800;color:#f4f8ff;}
-  .intel-note{margin-top:.35rem;font-size:.82rem;color:rgba(230,235,240,.66);line-height:1.45;}
-  .category-row{
+  .bd-kpi-label{
+    color:rgba(228,236,246,.62);
+    font-size:.72rem;
+    text-transform:uppercase;
+    letter-spacing:.07em;
+    margin-bottom:8px;
+  }
+  .bd-kpi-value{
+    color:#fff;
+    font-size:1.4rem;
+    font-weight:800;
+    letter-spacing:-.03em;
+  }
+  .bd-kpi-value.green{color:#7ee8b1;}
+  .bd-kpi-value.amber{color:#fbbf24;}
+  .bd-kpi-value.red{color:#ff9a9a;}
+  .bd-kpi-sub{
+    margin-top:5px;
+    font-size:.76rem;
+    color:rgba(228,236,246,.45);
+  }
+
+  /* ── Layout ─────────────────────────────────────────────────────────────── */
+  .bd-layout{
     display:grid;
-    grid-template-columns:1.2fr repeat(4,.8fr);
-    gap:.75rem;
-    padding:.85rem 0;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    align-items:center;
+    grid-template-columns:1.15fr .85fr;
+    gap:22px;
+    align-items:start;
   }
-  .bar-wrap{
-    height:10px;
+
+  /* ── Card ────────────────────────────────────────────────────────────────── */
+  .bd-card{
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:24px;
+    padding:22px;
+  }
+  .bd-eyebrow{
+    color:#8ebdff;
+    text-transform:uppercase;
+    font-size:.72rem;
+    font-weight:800;
+    letter-spacing:.08em;
+    margin-bottom:6px;
+  }
+  .bd-card h3{
+    margin:0 0 14px;
+    color:#fff;
+    font-size:1.06rem;
+    letter-spacing:-.02em;
+  }
+
+  /* ── Burn bar ────────────────────────────────────────────────────────────── */
+  .burn-track{
+    height:12px;
     border-radius:999px;
-    background:rgba(255,255,255,.06);
+    background:rgba(255,255,255,.07);
     overflow:hidden;
-    margin-top:.55rem;
+    margin:14px 0 6px;
   }
-  .bar-fill{
+  .burn-fill{
     height:100%;
     border-radius:999px;
-    background:linear-gradient(90deg, rgba(95,160,255,.95), rgba(116,229,186,.95));
+    transition:width .4s ease;
   }
-  .muted-sm{font-size:.82rem;color:rgba(230,235,240,.66);}
-  @media (max-width: 1200px){
-    .budget-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
-    .budget-grid-2,.budget-form-grid{grid-template-columns:1fr;}
+  .burn-fill.green{background:linear-gradient(90deg,#34d399,#7ab8ff);}
+  .burn-fill.amber{background:linear-gradient(90deg,#f59e0b,#fbbf24);}
+  .burn-fill.red  {background:linear-gradient(90deg,#ef4444,#f97316);}
+  .burn-meta{
+    display:flex;
+    justify-content:space-between;
+    font-size:.76rem;
+    color:rgba(228,236,246,.52);
+  }
+
+  /* ── Health badge ────────────────────────────────────────────────────────── */
+  .health-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.48rem .85rem;
+    border-radius:999px;
+    font-size:.82rem;
+    font-weight:800;
+    margin-top:14px;
+  }
+  .health-badge.stable{background:rgba(126,232,177,.12);border:1px solid rgba(126,232,177,.3);color:#7ee8b1;}
+  .health-badge.watch {background:rgba(251,191,36,.1) ;border:1px solid rgba(251,191,36,.28);color:#fbbf24;}
+  .health-badge.over  {background:rgba(255,154,154,.1);border:1px solid rgba(255,154,154,.28);color:#ff9a9a;}
+
+  /* ── Insight grid ────────────────────────────────────────────────────────── */
+  .intel-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .intel-card{
+    padding:14px;
+    border-radius:16px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .intel-label{
+    font-size:.72rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:rgba(228,236,246,.55);
+    margin-bottom:6px;
+  }
+  .intel-value{
+    font-size:1.12rem;
+    font-weight:800;
+    color:#fff;
+    letter-spacing:-.02em;
+  }
+  .intel-value.green{color:#7ee8b1;}
+  .intel-value.red  {color:#ff9a9a;}
+  .intel-note{
+    margin-top:5px;
+    font-size:.78rem;
+    color:rgba(228,236,246,.58);
+    line-height:1.45;
+  }
+
+  /* ── Category breakdown ──────────────────────────────────────────────────── */
+  .cat-row{
+    display:grid;
+    grid-template-columns:1.4fr repeat(4,.9fr) 26px;
+    gap:10px;
+    padding:12px 0;
+    border-bottom:1px solid rgba(255,255,255,.07);
+    align-items:center;
+    font-size:.88rem;
+  }
+  .cat-row.header{
+    font-size:.74rem;
+    font-weight:700;
+    color:rgba(228,236,246,.55);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .cat-pill{
+    display:inline-flex;
+    align-items:center;
+    padding:.28rem .65rem;
+    border-radius:999px;
+    font-size:.78rem;
+    font-weight:700;
+    letter-spacing:.01em;
+  }
+  .cat-mini-bar{
+    height:4px;
+    border-radius:999px;
+    background:rgba(255,255,255,.08);
+    margin-top:5px;
+    overflow:hidden;
+  }
+  .cat-mini-fill{
+    height:100%;
+    border-radius:999px;
+  }
+  .val-green{color:#7ee8b1;}
+  .val-red  {color:#ff9a9a;}
+  .val-amber{color:#fbbf24;}
+  .muted-val{color:rgba(228,236,246,.72);font-weight:700;}
+
+  /* ── Add expense form ────────────────────────────────────────────────────── */
+  .add-expense-panel{
+    display:none;
+    background:rgba(122,184,255,.05);
+    border:1px solid rgba(122,184,255,.18);
+    border-radius:24px;
+    padding:22px;
+  }
+  .add-expense-panel.open{display:block;}
+  .add-form-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+  }
+  .ae-input,.ae-select,.ae-textarea{
+    width:100%;
+    padding:.82rem .9rem;
+    border-radius:14px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.1);
+    color:#eef4ff;
+    font-size:.92rem;
+    outline:none;
+    transition:border-color .16s;
+  }
+  .ae-input:focus,.ae-select:focus,.ae-textarea:focus{
+    border-color:rgba(122,184,255,.42);
+    box-shadow:0 0 0 3px rgba(122,184,255,.1);
+  }
+  .ae-textarea{min-height:80px;resize:vertical;}
+
+  /* ── Expense table ───────────────────────────────────────────────────────── */
+  .exp-table{width:100%;border-collapse:collapse;}
+  .exp-table th{
+    padding:10px 12px;
+    text-align:left;
+    font-size:.72rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:rgba(228,236,246,.5);
+    font-weight:700;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .exp-table td{
+    padding:12px 12px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    vertical-align:top;
+    font-size:.9rem;
+    color:#dfe9f7;
+  }
+  .exp-table tr:last-child td{border-bottom:none;}
+  .exp-table tbody tr:hover td{background:rgba(255,255,255,.015);}
+
+  /* status badges */
+  .s-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:.28rem .65rem;
+    border-radius:999px;
+    font-size:.76rem;
+    font-weight:800;
+    white-space:nowrap;
+  }
+  .s-badge::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;}
+  .s-badge.planned    {background:rgba(148,163,184,.1);border:1px solid rgba(148,163,184,.22);color:#94a3b8;}
+  .s-badge.planned::before{background:#94a3b8;}
+  .s-badge.quoted     {background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.22);color:#60a5fa;}
+  .s-badge.quoted::before{background:#60a5fa;}
+  .s-badge.ordered    {background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.22);color:#a78bfa;}
+  .s-badge.ordered::before{background:#a78bfa;}
+  .s-badge.in_progress{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);color:#fbbf24;}
+  .s-badge.in_progress::before{background:#fbbf24;}
+  .s-badge.completed  {background:rgba(126,232,177,.1);border:1px solid rgba(126,232,177,.25);color:#7ee8b1;}
+  .s-badge.completed::before{background:#7ee8b1;}
+  .s-badge.paid       {background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;}
+  .s-badge.paid::before{background:#34d399;}
+
+  /* row actions */
+  .row-actions{display:flex;gap:6px;align-items:center;}
+  .action-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:30px;height:30px;border-radius:8px;
+    background:transparent;
+    border:1px solid rgba(255,255,255,.08);
+    color:rgba(228,236,246,.45);
+    cursor:pointer;font-size:.78rem;
+    transition:.14s ease;
+    flex-shrink:0;
+  }
+  .action-btn:hover{background:rgba(122,184,255,.12);border-color:rgba(122,184,255,.3);color:#7ab8ff;}
+  .action-btn.del:hover{background:rgba(255,80,80,.1);border-color:rgba(255,80,80,.28);color:#ff9a9a;}
+
+  /* inline edit rows */
+  .edit-row{display:none;}
+  .edit-row.open{display:table-row;}
+  .edit-inner{
+    padding:14px 12px;
+    background:rgba(122,184,255,.05);
+    border-bottom:1px solid rgba(122,184,255,.18);
+  }
+  .edit-form-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+  }
+
+  /* ── Empty state ─────────────────────────────────────────────────────────── */
+  .empty-expenses{
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+    padding:48px 20px;
+    border:1px dashed rgba(255,255,255,.1);
+    border-radius:18px;
+    color:rgba(228,236,246,.5);
+    text-align:center;
+  }
+  .empty-expenses-icon{font-size:2.2rem;margin-bottom:4px;}
+
+  /* ── Notes ───────────────────────────────────────────────────────────────── */
+  .notes-text{
+    color:rgba(228,236,246,.65);
+    font-size:.88rem;
+    line-height:1.65;
+    margin-top:12px;
+    padding:12px 14px;
+    border-radius:12px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.06);
+  }
+
+  /* ── Responsive ──────────────────────────────────────────────────────────── */
+  @media(max-width:1200px){
+    .bd-kpi-row{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .bd-layout{grid-template-columns:1fr;}
+    .intel-grid{grid-template-columns:1fr 1fr;}
+  }
+  @media(max-width:860px){
+    .bd-kpi-row{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .add-form-grid,.edit-form-grid{grid-template-columns:1fr 1fr;}
+    .exp-table th:nth-child(3),.exp-table td:nth-child(3){display:none;}
+  }
+  @media(max-width:600px){
+    .bd-kpi-row{grid-template-columns:1fr 1fr;}
+    .add-form-grid,.edit-form-grid{grid-template-columns:1fr;}
     .intel-grid{grid-template-columns:1fr;}
+    .cat-row{grid-template-columns:1fr 1fr 26px;}
+    .cat-row > *:nth-child(3),.cat-row > *:nth-child(4),.cat-row > *:nth-child(5){display:none;}
   }
 </style>
 
-{% set est = budget.estimated_subtotal or 0 %}
-{% set actual = budget.actual_total or 0 %}
-{% set paid = budget.paid_total or 0 %}
-{% set contingency = budget.contingency_amount or 0 %}
-{% set total_budget = budget.estimated_total_with_contingency or 0 %}
-{% set remaining = budget.remaining_balance or 0 %}
-{% set variance = actual - est %}
-{% set burn_rate = ((paid / total_budget) * 100) if total_budget > 0 else 0 %}
-{% set actual_vs_est = ((actual / est) * 100) if est > 0 else 0 %}
+<div class="bd-shell">
 
-<div class="budget-detail-wrap">
-  <section class="budget-summary-grid">
-    <div class="budget-panel">
-      <div class="budget-label">Estimated</div>
-      <div class="budget-stat">${{ "{:,.2f}".format(est) }}</div>
+  <!-- ── KPI Row ─────────────────────────────────────────────────────────── -->
+  <section class="bd-kpi-row">
+    <div class="bd-kpi">
+      <div class="bd-kpi-label">Estimated</div>
+      <div class="bd-kpi-value">${{ "{:,.0f}".format(est) }}</div>
+      <div class="bd-kpi-sub">Budget plan total</div>
     </div>
-    <div class="budget-panel">
-      <div class="budget-label">Actual</div>
-      <div class="budget-stat">${{ "{:,.2f}".format(actual) }}</div>
+    <div class="bd-kpi">
+      <div class="bd-kpi-label">Actual</div>
+      <div class="bd-kpi-value {% if is_over %}red{% elif is_watch %}amber{% else %}green{% endif %}">
+        ${{ "{:,.0f}".format(actual) }}
+      </div>
+      <div class="bd-kpi-sub">
+        {% if actual > est and est > 0 %}+${{ "{:,.0f}".format(actual - est) }} over estimate{% elif est > 0 %}${{ "{:,.0f}".format(est - actual) }} under estimate{% else %}No actuals yet{% endif %}
+      </div>
     </div>
-    <div class="budget-panel">
-      <div class="budget-label">Paid</div>
-      <div class="budget-stat">${{ "{:,.2f}".format(paid) }}</div>
+    <div class="bd-kpi">
+      <div class="bd-kpi-label">Paid Out</div>
+      <div class="bd-kpi-value">${{ "{:,.0f}".format(paid) }}</div>
+      <div class="bd-kpi-sub">{{ "{:,.1f}".format(burn_rate) }}% of budget</div>
     </div>
-    <div class="budget-panel">
-      <div class="budget-label">Contingency</div>
-      <div class="budget-stat">${{ "{:,.2f}".format(contingency) }}</div>
+    <div class="bd-kpi">
+      <div class="bd-kpi-label">Remaining</div>
+      <div class="bd-kpi-value {% if remaining < 0 %}red{% else %}green{% endif %}">
+        ${{ "{:,.0f}".format(remaining) }}
+      </div>
+      <div class="bd-kpi-sub">After paid spend</div>
     </div>
-    <div class="budget-panel">
-      <div class="budget-label">Total Budget</div>
-      <div class="budget-stat">${{ "{:,.2f}".format(total_budget) }}</div>
+    <div class="bd-kpi">
+      <div class="bd-kpi-label">Total Budget</div>
+      <div class="bd-kpi-value amber">${{ "{:,.0f}".format(total_budget) }}</div>
+      <div class="bd-kpi-sub">incl. ${{ "{:,.0f}".format(contingency) }} contingency</div>
     </div>
   </section>
 
-  <section class="budget-grid-2">
-    <div class="budget-panel">
-      <div class="eyebrow">PROJECT</div>
-      <h3 style="margin:.25rem 0 .4rem;">{{ budget.project_name or budget.name }}</h3>
+  <!-- ── Two-column layout ───────────────────────────────────────────────── -->
+  <div class="bd-layout">
 
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.85rem;">
-        <span class="budget-pill">{{ (budget.budget_type or "budget").replace("_"," ").title() }}</span>
-        {% if budget.deal_id %}<span class="budget-pill">Deal Linked</span>{% endif %}
-        {% if budget.build_project_id %}<span class="budget-pill">Build Linked</span>{% endif %}
-      </div>
+    <!-- Left: Health + Burn -->
+    <div class="bd-card">
+      <div class="bd-eyebrow">Project</div>
+      <h3>{{ budget.project_name or budget.name }}</h3>
 
-      <div class="budget-label">Budget Health</div>
-      <div class="budget-stat" style="font-size:1.2rem;">
-        {% if actual > total_budget and total_budget > 0 %}
-          Over Budget
-        {% elif actual > est and est > 0 %}
-          Watch Closely
-        {% else %}
-          Stable
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <span style="padding:.32rem .7rem;border-radius:999px;font-size:.78rem;font-weight:700;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#dfe9f7;">
+          {{ (budget.budget_type or "budget").replace("_"," ").title() }}
+        </span>
+        {% if budget.deal_id %}
+        <span style="padding:.32rem .7rem;border-radius:999px;font-size:.78rem;font-weight:700;background:rgba(122,184,255,.08);border:1px solid rgba(122,184,255,.18);color:#8ebdff;">
+          Deal Linked
+        </span>
+        {% endif %}
+        {% if budget.build_project_id %}
+        <span style="padding:.32rem .7rem;border-radius:999px;font-size:.78rem;font-weight:700;background:rgba(126,232,177,.08);border:1px solid rgba(126,232,177,.18);color:#7ee8b1;">
+          Build Linked
+        </span>
         {% endif %}
       </div>
 
-      <div class="bar-wrap">
-        <div class="bar-fill" style="width: {{ [burn_rate, 100]|min }}%;"></div>
+      <div style="font-size:.8rem;color:rgba(228,236,246,.55);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Budget Burn Rate</div>
+      <div class="burn-track">
+        <div class="burn-fill {% if is_over %}red{% elif is_watch %}amber{% else %}green{% endif %}"
+             style="width:{{ [burn_rate,100]|min }}%;"></div>
       </div>
-      <div class="muted-sm">{{ "{:,.1f}".format(burn_rate) }}% of budget paid out</div>
+      <div class="burn-meta">
+        <span>${{ "{:,.0f}".format(paid) }} paid</span>
+        <span>{{ "{:,.1f}".format(burn_rate) }}% of ${{ "{:,.0f}".format(total_budget) }}</span>
+      </div>
 
-      <div style="margin-top:1rem;" class="muted-sm">
-        {{ budget.notes or "No notes added yet." }}
-      </div>
+      {% if is_over %}
+        <div class="health-badge over">Over Budget — actuals exceed total budget</div>
+      {% elif is_watch %}
+        <div class="health-badge watch">Watch Closely — actuals running above estimate</div>
+      {% else %}
+        <div class="health-badge stable">Stable — costs within budget range</div>
+      {% endif %}
+
+      {% if budget.notes %}
+      <div class="notes-text">{{ budget.notes }}</div>
+      {% endif %}
     </div>
 
-    <div class="budget-panel">
-      <div class="eyebrow">AI INSIGHTS</div>
-      <h3 style="margin:.25rem 0 .9rem;">Budget intelligence</h3>
-
+    <!-- Right: Insights -->
+    <div class="bd-card">
+      <div class="bd-eyebrow">AI Insights</div>
+      <h3>Budget intelligence</h3>
       <div class="intel-grid">
         <div class="intel-card">
-          <div class="budget-label">Variance</div>
-          <div class="intel-value">${{ "{:,.2f}".format(variance) }}</div>
+          <div class="intel-label">Variance</div>
+          <div class="intel-value {% if variance > 0 %}red{% elif variance < 0 %}green{% endif %}">
+            {% if variance > 0 %}+{% endif %} ${{ "{:,.0f}".format(variance) }}
+          </div>
           <div class="intel-note">
-            {% if variance > 0 %}
-              Actual costs are running above estimated spend.
-            {% elif variance < 0 %}
-              Actual costs are below estimate so far.
-            {% else %}
-              Actual and estimated costs are aligned.
-            {% endif %}
+            {% if variance > 0 %}Actuals are running above estimate.
+            {% elif variance < 0 %}Actuals are below estimate so far.
+            {% else %}Costs and estimate are aligned.{% endif %}
           </div>
         </div>
 
         <div class="intel-card">
-          <div class="budget-label">Remaining</div>
-          <div class="intel-value">${{ "{:,.2f}".format(remaining) }}</div>
+          <div class="intel-label">Actual vs Estimate</div>
+          <div class="intel-value {% if actual_vs_est > 105 %}red{% elif actual_vs_est > 100 %}amber{% endif %}">
+            {{ "{:,.1f}".format(actual_vs_est) if est > 0 else "0.0" }}%
+          </div>
           <div class="intel-note">
-            Amount remaining after paid spend is applied to the budget.
+            {% if actual_vs_est > 110 %}Actuals materially above estimate.
+            {% elif actual_vs_est > 100 %}Actuals slightly above estimate.
+            {% else %}Actuals within or below estimate.{% endif %}
           </div>
         </div>
 
         <div class="intel-card">
-          <div class="budget-label">Actual vs Estimate</div>
-          <div class="intel-value">{{ "{:,.1f}".format(actual_vs_est) if est > 0 else "0.0" }}%</div>
+          <div class="intel-label">Contingency</div>
+          <div class="intel-value amber">${{ "{:,.0f}".format(contingency) }}</div>
           <div class="intel-note">
-            {% if actual_vs_est > 110 %}
-              Current actuals are materially above estimate.
-            {% elif actual_vs_est > 100 %}
-              Actuals are slightly above estimate.
-            {% else %}
-              Actuals remain within or below estimate.
-            {% endif %}
+            {% if contingency <= 0 %}No contingency set yet.
+            {% elif contingency < (est * 0.08) %}Contingency looks light for an active project.
+            {% else %}Contingency appears reasonably sized.{% endif %}
           </div>
         </div>
 
         <div class="intel-card">
-          <div class="budget-label">Contingency Cushion</div>
-          <div class="intel-value">${{ "{:,.2f}".format(contingency) }}</div>
+          <div class="intel-label">Unpaid Balance</div>
+          <div class="intel-value {% if (actual - paid) > 0 %}amber{% endif %}">
+            ${{ "{:,.0f}".format([actual - paid, 0]|max) }}
+          </div>
           <div class="intel-note">
-            {% if contingency <= 0 %}
-              No contingency is set yet.
-            {% elif contingency < (est * 0.08) %}
-              Contingency looks light for an active project.
-            {% else %}
-              Contingency appears reasonably sized.
-            {% endif %}
+            Actuals incurred but not yet paid out.
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section class="budget-panel">
-    <div class="section-head" style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem;">
+  <!-- ── Category breakdown ─────────────────────────────────────────────── -->
+  {% if category_rows %}
+  <section class="bd-card">
+    <div class="bd-eyebrow">Category Breakdown</div>
+    <h3>Where the budget is concentrated</h3>
+
+    <div class="cat-row header">
+      <div>Category</div>
+      <div>Estimated</div>
+      <div>Actual</div>
+      <div>Paid</div>
+      <div>Variance</div>
+      <div></div>
+    </div>
+
+    {% for row in category_rows %}
+    {% set color = {
+      'Site':'#10b981','Foundation':'#6366f1','Structure':'#8b5cf6',
+      'Exterior':'#0ea5e9','Mechanical':'#f59e0b','Interior':'#ec4899',
+      'Finishes':'#7ab8ff','Demo':'#ef4444','Soft Costs':'#94a3b8',
+      'Professional':'#a78bfa','Rooms':'#34d399','Materials':'#60a5fa',
+      'Labor':'#fb923c','Contingency':'#fbbf24','Planning':'#6b7280',
+      'Rehab':'#f97316','General':'#64748b'
+    }.get(row.category, '#64748b') %}
+    {% set row_pct = ((row.actual / row.estimated) * 100) if row.estimated > 0 else 0 %}
+    <div class="cat-row">
       <div>
-        <div class="eyebrow">CATEGORY BREAKDOWN</div>
-        <h3 style="margin:.25rem 0 0;">Where the budget is concentrated</h3>
-      </div>
-    </div>
-
-    {% if category_rows %}
-      <div class="category-row" style="font-weight:700;color:#dfe8f7;">
-        <div>Category</div>
-        <div>Estimated</div>
-        <div>Actual</div>
-        <div>Paid</div>
-        <div>Variance</div>
-      </div>
-
-      {% for row in category_rows %}
-        <div class="category-row">
-          <div>
-            <strong>{{ row.category }}</strong>
-            <div class="muted-sm">{{ row.count }} item{{ '' if row.count == 1 else 's' }}</div>
-          </div>
-          <div>${{ "{:,.2f}".format(row.estimated) }}</div>
-          <div>${{ "{:,.2f}".format(row.actual) }}</div>
-          <div>${{ "{:,.2f}".format(row.paid) }}</div>
-          <div>
-            <span style="color:{% if row.variance > 0 %}#ff9b9b{% else %}#7ef0b2{% endif %};">
-              ${{ "{:,.2f}".format(row.variance) }}
-            </span>
-          </div>
+        <span class="cat-pill" style="background:{{ color }}22;border:1px solid {{ color }}44;color:{{ color }};">
+          {{ row.category }}
+        </span>
+        <div class="cat-mini-bar">
+          <div class="cat-mini-fill" style="width:{{ [row_pct,100]|min }}%;background:{{ color }};"></div>
         </div>
-      {% endfor %}
-    {% else %}
-      <div class="muted-sm">No category data yet.</div>
-    {% endif %}
+        <div style="font-size:.72rem;color:rgba(228,236,246,.4);margin-top:3px;">{{ row.count }} item{{ '' if row.count == 1 else 's' }}</div>
+      </div>
+      <div class="muted-val">${{ "{:,.0f}".format(row.estimated) }}</div>
+      <div class="muted-val">${{ "{:,.0f}".format(row.actual) }}</div>
+      <div class="muted-val">${{ "{:,.0f}".format(row.paid) }}</div>
+      <div>
+        <span class="{% if row.variance > 0 %}val-red{% elif row.variance < 0 %}val-green{% else %}muted-val{% endif %}">
+          {% if row.variance > 0 %}+{% endif %}${{ "{:,.0f}".format(row.variance) }}
+        </span>
+      </div>
+      <div></div>
+    </div>
+    {% endfor %}
   </section>
+  {% endif %}
 
-  <section class="budget-panel">
-    <div class="eyebrow">ADD EXPENSE</div>
-    <h3 style="margin:.25rem 0 .9rem;">New budget item</h3>
+  <!-- ── Add expense form (toggled) ────────────────────────────────────── -->
+  <div id="addExpensePanel" class="add-expense-panel">
+    <div class="bd-eyebrow">Add Expense</div>
+    <h3 style="margin:0 0 16px;">New line item</h3>
 
     <form method="POST" action="{{ url_for('investor.add_budget_expense', budget_id=budget.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-      <div class="budget-form-grid">
-        <input class="budget-input" type="text" name="category" placeholder="Category" required>
-        <input class="budget-input" type="text" name="description" placeholder="Description" required>
-        <input class="budget-input" type="text" name="vendor" placeholder="Vendor">
+      <div class="add-form-grid">
+        <input class="ae-input" type="text" name="category" placeholder="Category (e.g. Mechanical)" required>
+        <input class="ae-input" type="text" name="description" placeholder="Description" required>
+        <input class="ae-input" type="text" name="vendor" placeholder="Vendor (optional)">
 
-        <input class="budget-input" type="number" step="0.01" name="estimated_amount" placeholder="Estimated amount">
-        <input class="budget-input" type="number" step="0.01" name="actual_amount" placeholder="Actual amount">
-        <input class="budget-input" type="number" step="0.01" name="paid_amount" placeholder="Paid amount">
+        <input class="ae-input" type="number" step="1" min="0" name="estimated_amount" placeholder="Estimated ($)">
+        <input class="ae-input" type="number" step="1" min="0" name="actual_amount" placeholder="Actual ($)">
+        <input class="ae-input" type="number" step="1" min="0" name="paid_amount" placeholder="Paid ($)">
 
-        <select class="budget-select" name="status">
+        <select class="ae-select" name="status">
           <option value="planned">Planned</option>
           <option value="quoted">Quoted</option>
-          <option value="approved">Approved</option>
+          <option value="ordered">Ordered</option>
           <option value="in_progress">In Progress</option>
           <option value="completed">Completed</option>
           <option value="paid">Paid</option>
         </select>
       </div>
 
-      <div style="margin-top:.8rem;">
-        <textarea class="budget-textarea" name="notes" placeholder="Notes"></textarea>
+      <div style="margin-top:10px;">
+        <textarea class="ae-textarea" name="notes" placeholder="Notes (optional)"></textarea>
       </div>
 
-      <div style="margin-top:.8rem;">
-        <button type="submit" class="ravlo-btn primary">Add Expense</button>
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+        <button type="submit" class="ravlo-btn primary">Add Line Item</button>
+        <button type="button" class="ravlo-btn ghost" onclick="toggleAddExpense()">Cancel</button>
       </div>
     </form>
-  </section>
+  </div>
 
-  <section class="budget-panel">
-    <div class="eyebrow">EXPENSES</div>
-    <h3 style="margin:.25rem 0 .9rem;">Budget line items</h3>
+  <!-- ── Expense table ─────────────────────────────────────────────────── -->
+  <section class="bd-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap;">
+      <div>
+        <div class="bd-eyebrow">Line Items</div>
+        <h3 style="margin:0;">
+          Budget Expenses
+          <span style="display:inline-flex;align-items:center;padding:.22rem .6rem;border-radius:999px;font-size:.76rem;font-weight:700;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(228,236,246,.7);margin-left:8px;vertical-align:middle;">
+            {{ budget.expenses|length }} item{{ '' if budget.expenses|length == 1 else 's' }}
+          </span>
+        </h3>
+      </div>
+      <button type="button" class="ravlo-btn ghost sm" onclick="toggleAddExpense()">+ Add Expense</button>
+    </div>
 
-    <table class="budget-table">
+    {% if budget.expenses %}
+    <table class="exp-table">
       <thead>
         <tr>
           <th>Category</th>
@@ -314,33 +612,116 @@
           <th>Actual</th>
           <th>Paid</th>
           <th>Status</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         {% for item in budget.expenses %}
-          <tr>
-            <td>{{ item.category }}</td>
-            <td>
-              <strong>{{ item.description }}</strong>
-              {% if item.notes %}
-                <div class="muted-sm" style="margin-top:.25rem;">{{ item.notes }}</div>
-              {% endif %}
-            </td>
-            <td>{{ item.vendor or "—" }}</td>
-            <td>${{ "{:,.2f}".format((item.estimated_amount or 0)|float) }}</td>
-            <td>${{ "{:,.2f}".format((item.actual_amount or 0)|float) }}</td>
-            <td>${{ "{:,.2f}".format((item.paid_amount or 0)|float) }}</td>
-            <td>{{ (item.status or "planned").replace("_"," ").title() }}</td>
-          </tr>
-        {% else %}
-          <tr>
-            <td colspan="7">No expenses added yet.</td>
-          </tr>
+        {% set item_est    = (item.estimated_amount or 0)|float %}
+        {% set item_actual = (item.actual_amount or 0)|float %}
+        {% set item_paid   = (item.paid_amount or 0)|float %}
+        {% set s = (item.status or 'planned').lower().replace(' ','_') %}
+        {% set cat_color = {
+          'Site':'#10b981','Foundation':'#6366f1','Structure':'#8b5cf6',
+          'Exterior':'#0ea5e9','Mechanical':'#f59e0b','Interior':'#ec4899',
+          'Finishes':'#7ab8ff','Demo':'#ef4444','Soft Costs':'#94a3b8',
+          'Professional':'#a78bfa','Rooms':'#34d399','Materials':'#60a5fa',
+          'Labor':'#fb923c','Contingency':'#fbbf24','Planning':'#6b7280',
+          'Rehab':'#f97316','General':'#64748b'
+        }.get(item.category, '#64748b') %}
+
+        <tr id="view-row-{{ item.id }}">
+          <td>
+            <span class="cat-pill" style="background:{{ cat_color }}22;border:1px solid {{ cat_color }}44;color:{{ cat_color }};">
+              {{ item.category }}
+            </span>
+          </td>
+          <td>
+            <strong style="color:#eef4ff;">{{ item.description }}</strong>
+            {% if item.notes %}<div style="margin-top:3px;font-size:.78rem;color:rgba(228,236,246,.5);">{{ item.notes }}</div>{% endif %}
+          </td>
+          <td style="color:rgba(228,236,246,.6);">{{ item.vendor or "—" }}</td>
+          <td class="muted-val">${{ "{:,.0f}".format(item_est) }}</td>
+          <td>
+            <span class="{% if item_actual > item_est and item_est > 0 %}val-red{% else %}muted-val{% endif %}">
+              ${{ "{:,.0f}".format(item_actual) }}
+            </span>
+          </td>
+          <td class="muted-val">${{ "{:,.0f}".format(item_paid) }}</td>
+          <td><span class="s-badge {{ s }}">{{ s.replace('_',' ').title() }}</span></td>
+          <td>
+            <div class="row-actions">
+              <button class="action-btn" type="button" title="Edit" onclick="toggleEditRow({{ item.id }})">✎</button>
+              <form method="POST" action="{{ url_for('investor.delete_budget_expense', budget_id=budget.id, expense_id=item.id) }}"
+                    onsubmit="return confirm('Remove this expense?');" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="action-btn del" type="submit" title="Delete">✕</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Inline edit row -->
+        <tr class="edit-row" id="edit-row-{{ item.id }}">
+          <td colspan="8" style="padding:0;">
+            <div class="edit-inner">
+              <form method="POST" action="{{ url_for('investor.update_budget_expense', budget_id=budget.id, expense_id=item.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="edit-form-grid">
+                  <input class="ae-input" type="text" name="category" value="{{ item.category }}" placeholder="Category">
+                  <input class="ae-input" type="text" name="description" value="{{ item.description }}" placeholder="Description">
+                  <input class="ae-input" type="text" name="vendor" value="{{ item.vendor or '' }}" placeholder="Vendor">
+                  <input class="ae-input" type="number" step="1" min="0" name="estimated_amount" value="{{ item_est|int }}" placeholder="Estimated ($)">
+                  <input class="ae-input" type="number" step="1" min="0" name="actual_amount" value="{{ item_actual|int }}" placeholder="Actual ($)">
+                  <input class="ae-input" type="number" step="1" min="0" name="paid_amount" value="{{ item_paid|int }}" placeholder="Paid ($)">
+                  <select class="ae-select" name="status">
+                    {% for opt in ['planned','quoted','ordered','in_progress','completed','paid'] %}
+                    <option value="{{ opt }}" {% if s == opt %}selected{% endif %}>{{ opt.replace('_',' ').title() }}</option>
+                    {% endfor %}
+                  </select>
+                  <input class="ae-input" type="text" name="notes" value="{{ item.notes or '' }}" placeholder="Notes" style="grid-column:span 2;">
+                </div>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                  <button type="submit" class="ravlo-btn primary sm">Save</button>
+                  <button type="button" class="ravlo-btn ghost sm" onclick="toggleEditRow({{ item.id }})">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
+
+    {% else %}
+    <div class="empty-expenses">
+      <div class="empty-expenses-icon">📋</div>
+      <strong style="color:#eef4ff;">No line items yet</strong>
+      <p style="margin:0;font-size:.88rem;">Click <strong>+ Add Expense</strong> to start tracking costs for this budget.</p>
+    </div>
+    {% endif %}
   </section>
+
 </div>
+
+<script>
+  function toggleAddExpense() {
+    const panel = document.getElementById('addExpensePanel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) {
+      panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+  }
+
+  function toggleEditRow(id) {
+    const editRow = document.getElementById('edit-row-' + id);
+    if (!editRow) return;
+    const isOpen = editRow.classList.contains('open');
+    // Close any other open edit rows first
+    document.querySelectorAll('.edit-row.open').forEach(r => r.classList.remove('open'));
+    if (!isOpen) editRow.classList.add('open');
+  }
+</script>
 
 <script>
 var _budgetStudioCtx = {
@@ -355,7 +736,7 @@ var _budgetStudioCtx = {
     {icon: '💰', label: 'Budget',       detail: {{ (budget.project_name or budget.name) | tojson }}},
     {icon: '📊', label: 'Estimated',    detail: '$' + {{ (budget.estimated_subtotal or 0)|int }}.toLocaleString()},
     {icon: '📋', label: 'Type',         detail: {{ ((budget.budget_type or 'budget').replace('_',' ').title()) | tojson }}},
-    {icon: '📈', label: 'Budget Health',detail: {% if actual > total_budget and total_budget > 0 %}'Over Budget'{% elif actual > est and est > 0 %}'Watch Closely'{% else %}'Stable'{% endif %}}
+    {icon: '📈', label: 'Budget Health',detail: '{% if is_over %}Over Budget{% elif is_watch %}Watch Closely{% else %}Stable{% endif %}'}
   ]
 };
 </script>

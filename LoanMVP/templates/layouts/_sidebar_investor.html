@@ -88,7 +88,6 @@
        class="ravlo-nav-link {% if ep in [
          'investor.budget_studio',
          'investor.create_budget',
-         'investor.budget_detail',
          'investor.add_budget_expense',
          'investor.rehab_budget_tracker',
          'investor.build_budget_tracker'
@@ -96,6 +95,12 @@
        data-tour="budget-studio">
       <i class="lucide lucide-wallet"></i>
       <span>Budget Studio</span>
+    </a>
+
+    <a href="{{ url_for('investor.budget') }}"
+       class="ravlo-nav-link {% if ep in ['investor.budget', 'investor.budget_detail', 'investor.update_budget_expense', 'investor.delete_budget_expense'] %}active{% endif %}">
+      <i class="lucide lucide-layout-list"></i>
+      <span>My Budgets</span>
     </a>
 
     <a href="{{ url_for('investor.build_projects') }}"
