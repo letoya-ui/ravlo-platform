@@ -310,6 +310,63 @@ def _parse_name_parts(full_name: str, first_name: str, last_name: str):
 
 
 # ============================================================
+# WELCOME EMAIL
+# ============================================================
+
+def _send_welcome_email(user) -> None:
+    try:
+        name = _full_name_from_user(user)
+        login_url = url_for("auth.login", _external=True)
+        app_origin = current_app.config.get("APP_ORIGIN", "https://ravlohq.com")
+
+        sender = (
+            current_app.config.get("MAIL_DEFAULT_SENDER")
+            or current_app.config.get("MAIL_USERNAME")
+            or "letoya@ravlohq.com"
+        )
+
+        msg = MailMessage(
+            subject="Welcome to Ravlo — You're In!",
+            sender=sender,
+            recipients=[user.email],
+            html=f"""
+<div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;color:#111;">
+  <div style="background:#0f172a;padding:32px;text-align:center;border-radius:8px 8px 0 0;">
+    <h1 style="color:#ffffff;font-size:28px;margin:0;">Welcome to Ravlo</h1>
+  </div>
+  <div style="background:#ffffff;padding:32px;border:1px solid #e5e7eb;border-radius:0 0 8px 8px;">
+    <p style="font-size:16px;margin-bottom:16px;">Hi {name},</p>
+    <p style="font-size:16px;margin-bottom:16px;">
+      Your Ravlo account is ready. You now have access to the platform &mdash; from deal analysis and renovation
+      planning to lending tools and your personalized dashboard.
+    </p>
+    <p style="margin-bottom:24px;">
+      <a href="{login_url}"
+         style="display:inline-block;background:#2563eb;color:#fff;padding:12px 28px;
+                border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;">
+        Go to My Dashboard
+      </a>
+    </p>
+    <p style="font-size:14px;color:#6b7280;">
+      If you have any questions, just reply to this email &mdash; we&rsquo;re happy to help.
+    </p>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+    <p style="font-size:12px;color:#9ca3af;margin:0;">
+      Ravlo &mdash; Smarter Real Estate Lending &amp; Investing<br/>
+      <a href="{app_origin}" style="color:#9ca3af;">{app_origin}</a>
+    </p>
+  </div>
+</div>
+""",
+        )
+        mail.send(msg)
+    except Exception as exc:
+        current_app.logger.warning(
+            "Welcome email failed for %s: %s", getattr(user, "email", "?"), exc
+        )
+
+
+# ============================================================
 # LOGIN
 # ============================================================
 @auth_bp.route("/login", methods=["GET", "POST"])
@@ -412,6 +469,7 @@ def register_from_invite(token):
         db.session.commit()
 
         login_user(user)
+        _send_welcome_email(user)
         flash("Invite accepted. Complete your profile to continue.", "success")
         return redirect(url_for("auth.complete_profile"))
 
@@ -498,6 +556,7 @@ def register():
         db.session.commit()
 
         login_user(user)
+        _send_welcome_email(user)
 
         if recovery_mode:
             flash("Owner admin account restored. You can now invite or create users again.", "success")
@@ -643,6 +702,7 @@ def register_borrower():
         db.session.commit()
 
         login_user(user)
+        _send_welcome_email(user)
 
         flash("Borrower account created successfully.", "success")
         return redirect(url_for("borrower.create_profile"))
@@ -782,6 +842,9 @@ def request_access():
         db.session.commit()
 
         if auto_approve_beta:
+            beta_user_obj = User.query.filter(func.lower(User.email) == email).first()
+            if beta_user_obj:
+                _send_welcome_email(beta_user_obj)
             token = generate_reset_token(email)
             flash(
                 "Beta access approved! Please set your password to get started.",
@@ -924,6 +987,7 @@ def accept_invite(token):
         db.session.commit()
 
         login_user(user)
+        _send_welcome_email(user)
         flash("Invite accepted. Complete your profile to continue.", "success")
         return redirect(url_for("auth.complete_profile"))
 
