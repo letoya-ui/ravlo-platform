@@ -150,6 +150,83 @@ Build the financial operating system for your deal.
     letter-spacing:-.02em;
   }
 
+  /* ── Quick Start preset bar ── */
+  .quickstart-bar{
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:24px;
+    padding:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,.08);
+  }
+
+  .quickstart-eyebrow{
+    color:#8ebdff;
+    text-transform:uppercase;
+    font-size:.74rem;
+    font-weight:800;
+    letter-spacing:.08em;
+    margin-bottom:4px;
+  }
+
+  .quickstart-bar h3{
+    margin:0 0 14px;
+    color:#fff;
+    font-size:1.02rem;
+    letter-spacing:-.02em;
+  }
+
+  .preset-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .preset-btn{
+    display:inline-flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:3px;
+    padding:.72rem 1rem;
+    border-radius:14px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.1);
+    color:#dfe9f7;
+    cursor:pointer;
+    font-weight:700;
+    font-size:.88rem;
+    transition:.18s ease;
+    text-align:left;
+    line-height:1.2;
+  }
+
+  .preset-btn:hover{
+    background:rgba(122,184,255,.12);
+    border-color:rgba(122,184,255,.35);
+    color:#fff;
+    transform:translateY(-1px);
+    box-shadow:0 6px 18px rgba(122,184,255,.12);
+  }
+
+  .preset-btn.active{
+    background:rgba(122,184,255,.18);
+    border-color:rgba(122,184,255,.55);
+    color:#7ab8ff;
+    box-shadow:0 0 0 2px rgba(122,184,255,.18);
+  }
+
+  .preset-btn-sub{
+    font-size:.74rem;
+    font-weight:500;
+    color:rgba(228,236,246,.55);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+
+  .preset-btn.active .preset-btn-sub{
+    color:rgba(122,184,255,.75);
+  }
+
+  /* ── Line items ── */
   .studio-layout{
     display:grid;
     grid-template-columns:minmax(0, 1.2fr) 380px;
@@ -246,6 +323,7 @@ Build the financial operating system for your deal.
   .kpi-value.positive{ color:#7ee8b1; }
   .kpi-value.negative{ color:#ff9a9a; }
 
+  /* ── Line item editor ── */
   .line-items-shell{
     display:grid;
     gap:14px;
@@ -253,35 +331,223 @@ Build the financial operating system for your deal.
 
   .line-list{
     display:grid;
+    gap:0;
+  }
+
+  /* Category group header */
+  .cat-group-header{
+    display:flex;
+    align-items:center;
     gap:10px;
+    padding:10px 12px 8px;
+    margin-top:12px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+
+  .cat-group-header:first-child{
+    margin-top:0;
+  }
+
+  .cat-pill{
+    display:inline-flex;
+    align-items:center;
+    padding:.28rem .7rem;
+    border-radius:999px;
+    font-size:.76rem;
+    font-weight:800;
+    letter-spacing:.02em;
+  }
+
+  .cat-count{
+    color:rgba(228,236,246,.45);
+    font-size:.78rem;
+    margin-left:2px;
+  }
+
+  .cat-subtotal{
+    margin-left:auto;
+    color:rgba(228,236,246,.72);
+    font-size:.88rem;
+    font-weight:700;
+    letter-spacing:-.01em;
   }
 
   .line-item{
     display:grid;
-    grid-template-columns:1.45fr 170px 130px auto;
-    gap:10px;
-    padding:12px;
-    border-radius:18px;
-    background:rgba(255,255,255,.025);
-    border:1px solid rgba(255,255,255,.08);
+    grid-template-columns:14px 1.45fr 160px 130px auto;
+    gap:8px;
+    padding:10px 12px;
+    border-radius:0;
+    background:rgba(255,255,255,.015);
+    border-bottom:1px solid rgba(255,255,255,.05);
     align-items:center;
+    transition:background .12s;
+  }
+
+  .line-item:hover{
+    background:rgba(255,255,255,.03);
+  }
+
+  .item-cat-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    flex-shrink:0;
   }
 
   .studio-input{
     width:100%;
-    padding:.84rem .92rem;
-    border-radius:14px;
+    padding:.72rem .85rem;
+    border-radius:12px;
     background:#0f141a;
     border:1px solid rgba(255,255,255,.1);
     color:#fff;
-    min-height:48px;
+    min-height:42px;
     outline:none;
     transition:border-color .16s ease, box-shadow .16s ease;
+    font-size:.9rem;
   }
 
   .studio-input:focus{
     border-color:rgba(122,184,255,.42);
     box-shadow:0 0 0 3px rgba(122,184,255,.12);
+  }
+
+  .cost-wrap{
+    position:relative;
+    display:flex;
+    align-items:center;
+  }
+
+  .cost-prefix{
+    position:absolute;
+    left:.75rem;
+    color:rgba(228,236,246,.45);
+    font-size:.9rem;
+    pointer-events:none;
+    font-weight:600;
+  }
+
+  .cost-wrap .studio-input{
+    padding-left:1.6rem;
+  }
+
+  .item-delete{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:32px;
+    height:32px;
+    border-radius:8px;
+    background:transparent;
+    border:1px solid rgba(255,255,255,.07);
+    color:rgba(228,236,246,.35);
+    cursor:pointer;
+    font-size:.82rem;
+    transition:.14s ease;
+    flex-shrink:0;
+  }
+
+  .item-delete:hover{
+    background:rgba(255,80,80,.12);
+    border-color:rgba(255,80,80,.3);
+    color:#ff9a9a;
+  }
+
+  .empty-line-state{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    padding:40px 20px;
+    border-radius:18px;
+    border:1px dashed rgba(255,255,255,.1);
+    color:rgba(228,236,246,.55);
+    text-align:center;
+  }
+
+  .empty-line-icon{
+    font-size:2rem;
+    margin-bottom:4px;
+  }
+
+  .empty-line-state p{
+    margin:0;
+    font-size:.9rem;
+  }
+
+  .contingency-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+    border-radius:14px;
+    background:rgba(251,191,36,.06);
+    border:1px solid rgba(251,191,36,.18);
+    margin-top:8px;
+    flex-wrap:wrap;
+  }
+
+  .contingency-label{
+    color:rgba(228,236,246,.72);
+    font-size:.88rem;
+    font-weight:600;
+    flex:1;
+    min-width:120px;
+  }
+
+  .contingency-pct-wrap{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  .contingency-pct-wrap input{
+    width:70px;
+    padding:.55rem .7rem;
+    border-radius:10px;
+    background:#0f141a;
+    border:1px solid rgba(251,191,36,.3);
+    color:#fbbf24;
+    font-weight:800;
+    font-size:.95rem;
+    outline:none;
+    text-align:center;
+  }
+
+  .contingency-pct-wrap input:focus{
+    border-color:rgba(251,191,36,.6);
+    box-shadow:0 0 0 3px rgba(251,191,36,.1);
+  }
+
+  .contingency-pct-wrap span{
+    color:#fbbf24;
+    font-weight:800;
+    font-size:.92rem;
+  }
+
+  .contingency-amount{
+    color:#fbbf24;
+    font-weight:800;
+    font-size:1.05rem;
+    letter-spacing:-.02em;
+    margin-left:auto;
+    min-width:100px;
+    text-align:right;
+  }
+
+  /* Item count badge */
+  .item-count-badge{
+    display:inline-flex;
+    align-items:center;
+    padding:.28rem .65rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.1);
+    color:rgba(228,236,246,.72);
+    font-size:.76rem;
+    font-weight:700;
+    margin-left:8px;
   }
 
   .studio-toolbar{
@@ -343,6 +609,7 @@ Build the financial operating system for your deal.
     color:#fff;
   }
 
+  /* ── Sidebar ── */
   .summary-stack{
     display:grid;
     gap:12px;
@@ -379,6 +646,101 @@ Build the financial operating system for your deal.
 
   .summary-value.positive{ color:#7ee8b1; }
   .summary-value.negative{ color:#ff9a9a; }
+
+  /* ── Budget burn progress bar ── */
+  .budget-burn-bar-wrap{
+    margin-bottom:16px;
+    padding:14px 0 0;
+  }
+
+  .budget-burn-labels{
+    display:flex;
+    justify-content:space-between;
+    font-size:.78rem;
+    color:rgba(228,236,246,.62);
+    margin-bottom:6px;
+    font-weight:600;
+  }
+
+  #burnPct{
+    color:#8ebdff;
+    font-weight:800;
+  }
+
+  .budget-burn-track{
+    height:10px;
+    border-radius:999px;
+    background:rgba(255,255,255,.07);
+    overflow:hidden;
+    position:relative;
+  }
+
+  .budget-burn-fill{
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg, #34d399, #7ab8ff);
+    transition:width .35s ease;
+    max-width:100%;
+  }
+
+  .budget-burn-legend{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-top:7px;
+    font-size:.74rem;
+    color:rgba(228,236,246,.5);
+  }
+
+  .legend-dot{
+    display:inline-block;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+  }
+
+  .legend-dot.green{ background:#34d399; }
+  .legend-dot.amber{ background:#fbbf24; }
+
+  /* ── Category breakdown mini-list ── */
+  .cat-breakdown-list{
+    display:grid;
+    gap:6px;
+    margin-top:12px;
+  }
+
+  .cat-breakdown-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border-radius:10px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.06);
+  }
+
+  .cat-breakdown-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    flex-shrink:0;
+  }
+
+  .cat-breakdown-name{
+    flex:1;
+    font-size:.82rem;
+    color:rgba(228,236,246,.78);
+    font-weight:600;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .cat-breakdown-amount{
+    font-size:.82rem;
+    font-weight:800;
+    color:#fff;
+  }
 
   .health-card{
     padding:16px;
@@ -515,13 +877,15 @@ Build the financial operating system for your deal.
   }
 
   @media (max-width: 760px){
-    .line-item{ grid-template-columns:1fr; }
+    .line-item{ grid-template-columns:14px 1fr; }
+    .line-item > *:not(:nth-child(1)):not(:nth-child(2)){ grid-column:2; }
   }
 
   @media (max-width: 700px){
     .kpi-grid{ grid-template-columns:1fr; }
     .workflow-grid{ grid-template-columns:1fr; }
     .studio-title{ font-size:1.9rem; }
+    .preset-row{ gap:8px; }
   }
 </style>
 
@@ -543,7 +907,7 @@ Build the financial operating system for your deal.
           {% if is_design_budget %}
           This view keeps the numbers tied to Design Studio: room-level finishes, furniture, materials, and design scope without pulling in full rehab, build, or capital assumptions.
           {% else %}
-          Budget Studio is Ravlo’s financial planning workspace — a dedicated command layer for deal cost modeling, line item architecture, margin protection, and execution handoff into tracked budgets.
+          Budget Studio is Ravlo's financial planning workspace — a dedicated command layer for deal cost modeling, line item architecture, margin protection, and execution handoff into tracked budgets.
           {% endif %}
         </div>
 
@@ -633,6 +997,40 @@ Build the financial operating system for your deal.
   </section>
   {% endif %}
 
+  <!-- Quick Start Preset Bar -->
+  <section class="quickstart-bar">
+    <div class="quickstart-eyebrow">Quick Start</div>
+    <h3>Load a template to get started instantly <span class="item-count-badge" id="itemCountBadge">0 items</span></h3>
+    <div class="preset-row" id="presetRow">
+      <button class="preset-btn" type="button" data-preset="new_build" onclick="loadPreset('new_build')">
+        New Construction
+        <span class="preset-btn-sub">18 items • ~$447K</span>
+      </button>
+      <button class="preset-btn" type="button" data-preset="rehab_flip" onclick="loadPreset('rehab_flip')">
+        Rehab / Flip
+        <span class="preset-btn-sub">15 items • ~$167K</span>
+      </button>
+      <button class="preset-btn" type="button" data-preset="gut_rehab" onclick="loadPreset('gut_rehab')">
+        Gut Rehab
+        <span class="preset-btn-sub">14 items • ~$238K</span>
+      </button>
+      <button class="preset-btn" type="button" data-preset="townhome_dev" onclick="loadPreset('townhome_dev')">
+        Townhome Dev
+        <span class="preset-btn-sub">10 items • ~$645K</span>
+      </button>
+      <button class="preset-btn" type="button" data-preset="design_only" onclick="loadPreset('design_only')">
+        Design Only
+        <span class="preset-btn-sub">10 items • ~$122K</span>
+      </button>
+      {% if seeded_items %}
+      <button class="preset-btn" type="button" data-preset="ai_data" onclick="loadPreset('ai_data')" style="border-color:rgba(122,184,255,.35);background:rgba(122,184,255,.08);color:#7ab8ff;">
+        From AI Data
+        <span class="preset-btn-sub" style="color:rgba(122,184,255,.65);">{{ seeded_items|length }} items seeded</span>
+      </button>
+      {% endif %}
+    </div>
+  </section>
+
   <div class="studio-layout">
     <div class="studio-main">
 
@@ -657,9 +1055,19 @@ Build the financial operating system for your deal.
         <div class="line-items-shell">
           <div id="lineItems" class="line-list"></div>
 
+          <!-- Contingency % control -->
+          <div class="contingency-row">
+            <span class="contingency-label">Contingency Reserve</span>
+            <div class="contingency-pct-wrap">
+              <input type="number" id="contingencyPct" min="0" max="50" step="1" value="10" oninput="updateContingencyFromPct()">
+              <span>%</span>
+            </div>
+            <span class="contingency-amount" id="contingencyDisplay">$0</span>
+          </div>
+
           <div class="studio-toolbar">
             <button class="studio-btn" type="button" onclick="addItem()">+ Add Line Item</button>
-            <button class="studio-btn secondary" type="button" onclick="seedDefaults()">Seed Defaults</button>
+            <button class="studio-btn secondary" type="button" onclick="clearItems()">Clear All</button>
             <button class="studio-btn warn" type="button" onclick="sortItems()">Sort by Cost</button>
 
             {% if deal %}
@@ -785,10 +1193,35 @@ Build the financial operating system for your deal.
             <div class="product-badge">Live</div>
           </div>
 
+          <!-- Budget Burn Progress Bar -->
+          <div class="budget-burn-bar-wrap">
+            <div class="budget-burn-labels">
+              <span>Budget Used</span>
+              <span id="burnPct">0%</span>
+            </div>
+            <div class="budget-burn-track">
+              <div id="burnBar" class="budget-burn-fill" style="width:0%"></div>
+            </div>
+            <div class="budget-burn-legend">
+              <span class="legend-dot green"></span>Sub-total
+              <span class="legend-dot amber" style="margin-left:12px;"></span>Contingency
+            </div>
+          </div>
+
           <div class="summary-stack">
             <div class="summary-row">
               <span class="summary-label">{% if is_design_budget %}Budget Avenue{% else %}Purchase Price{% endif %}</span>
               <strong class="summary-value" id="purchasePriceSummary">{% if is_design_budget %}Design Studio{% else %}${{ "{:,.0f}".format(purchase_price or 0) }}{% endif %}</strong>
+            </div>
+
+            <div class="summary-row">
+              <span class="summary-label">Line Items Subtotal</span>
+              <strong class="summary-value" id="subtotalDisplay">$0</strong>
+            </div>
+
+            <div class="summary-row">
+              <span class="summary-label">Contingency</span>
+              <strong class="summary-value" id="contingencySummary" style="color:#fbbf24;">$0</strong>
             </div>
 
             <div class="summary-row">
@@ -815,6 +1248,19 @@ Build the financial operating system for your deal.
               <span class="summary-label">{% if is_design_budget %}Margin{% else %}Margin %{% endif %}</span>
               <strong class="summary-value total" id="marginPct">{% if is_design_budget %}Not Applied{% else %}0%{% endif %}</strong>
             </div>
+          </div>
+        </section>
+
+        <!-- Category Breakdown -->
+        <section class="studio-card">
+          <div class="studio-card-head">
+            <div>
+              <div class="studio-eyebrow">Cost Breakdown</div>
+              <h3>Top Categories</h3>
+            </div>
+          </div>
+          <div class="cat-breakdown-list" id="catBreakdownList">
+            <div style="color:rgba(228,236,246,.45);font-size:.84rem;padding:8px 0;">No items yet — load a template or add line items.</div>
           </div>
         </section>
 
@@ -878,6 +1324,7 @@ Build the financial operating system for your deal.
 
 <script>
   let items = [];
+  let activePreset = null;
 
   const PURCHASE_PRICE = Number({{ purchase_price|default(0)|tojson }}) || 0;
   const ARV = Number({{ arv|default(0)|tojson }}) || 0;
@@ -887,102 +1334,355 @@ Build the financial operating system for your deal.
   const SEED_SOURCE = {{ (seed.get('budget_source') if seed else '')|tojson }};
   const SEED_BUDGET_TYPE = {{ (seed.get('budget_type') if seed else '')|tojson }};
   const IS_DESIGN_BUDGET = {{ is_design_budget|tojson }};
-  let contingencyAmount = SEED_CONTINGENCY;
 
-  function formatMoney(value){
-    const num = Number(value || 0);
-    return "$" + num.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  // contingencyPct-driven; fallback to seed contingency if available
+  let contingencyPct = 10;
+
+  // ── Category colors ──────────────────────────────────────────────────────
+  const CATEGORY_COLORS = {
+    'Site': '#10b981',
+    'Foundation': '#6366f1',
+    'Structure': '#8b5cf6',
+    'Exterior': '#0ea5e9',
+    'Mechanical': '#f59e0b',
+    'Interior': '#ec4899',
+    'Finishes': '#7ab8ff',
+    'Demo': '#ef4444',
+    'Soft Costs': '#94a3b8',
+    'Professional': '#a78bfa',
+    'Rooms': '#34d399',
+    'Materials': '#60a5fa',
+    'Labor': '#fb923c',
+    'Contingency': '#fbbf24',
+    'Planning': '#6b7280',
+    'General': '#64748b',
+    'Rehab': '#f97316',
+  };
+
+  function categoryColor(cat) {
+    return CATEGORY_COLORS[cat] || '#64748b';
   }
 
-  function normalizeCost(value){
+  // ── Budget Presets ───────────────────────────────────────────────────────
+  const BUDGET_PRESETS = {
+    new_build: {
+      label: "New Construction", budget_type: "build",
+      items: [
+        { name: "Site Work & Excavation", category: "Site", cost: 18000 },
+        { name: "Foundation & Concrete", category: "Foundation", cost: 45000 },
+        { name: "Framing & Lumber", category: "Structure", cost: 65000 },
+        { name: "Roofing", category: "Exterior", cost: 22000 },
+        { name: "Windows & Exterior Doors", category: "Exterior", cost: 28000 },
+        { name: "Plumbing Rough-In", category: "Mechanical", cost: 22000 },
+        { name: "Electrical Rough-In", category: "Mechanical", cost: 18000 },
+        { name: "HVAC System", category: "Mechanical", cost: 24000 },
+        { name: "Insulation", category: "Interior", cost: 12000 },
+        { name: "Drywall & Taping", category: "Interior", cost: 16000 },
+        { name: "Interior Trim & Doors", category: "Interior", cost: 14000 },
+        { name: "Flooring", category: "Finishes", cost: 22000 },
+        { name: "Kitchen Cabinets & Counters", category: "Finishes", cost: 28000 },
+        { name: "Bathroom Finishes", category: "Finishes", cost: 18000 },
+        { name: "Exterior Siding & Trim", category: "Exterior", cost: 20000 },
+        { name: "Landscaping & Final Grade", category: "Site", cost: 12000 },
+        { name: "Permits & Inspections", category: "Soft Costs", cost: 8000 },
+        { name: "GC Overhead & Profit", category: "Soft Costs", cost: 35000 },
+      ]
+    },
+    rehab_flip: {
+      label: "Rehab / Flip", budget_type: "rehab",
+      items: [
+        { name: "Demo & Haul-Away", category: "Demo", cost: 8000 },
+        { name: "Structural Repairs", category: "Structure", cost: 12000 },
+        { name: "Roof Repair / Replacement", category: "Exterior", cost: 14000 },
+        { name: "Plumbing Updates", category: "Mechanical", cost: 12000 },
+        { name: "Electrical Panel & Wiring", category: "Mechanical", cost: 10000 },
+        { name: "HVAC Replacement", category: "Mechanical", cost: 8000 },
+        { name: "Drywall Repairs", category: "Interior", cost: 7000 },
+        { name: "Flooring", category: "Finishes", cost: 14000 },
+        { name: "Kitchen Renovation", category: "Finishes", cost: 22000 },
+        { name: "Bathroom Renovation (x2)", category: "Finishes", cost: 16000 },
+        { name: "Interior Paint", category: "Finishes", cost: 6000 },
+        { name: "Exterior Paint & Curb Appeal", category: "Exterior", cost: 7000 },
+        { name: "Windows", category: "Exterior", cost: 10000 },
+        { name: "Permits & Inspections", category: "Soft Costs", cost: 4000 },
+        { name: "Holding Costs (6 months)", category: "Soft Costs", cost: 9000 },
+      ]
+    },
+    gut_rehab: {
+      label: "Gut Rehab", budget_type: "rehab",
+      items: [
+        { name: "Full Demo to Studs", category: "Demo", cost: 18000 },
+        { name: "Foundation Work", category: "Foundation", cost: 14000 },
+        { name: "Structural / Beam Work", category: "Structure", cost: 16000 },
+        { name: "New Framing / Layout", category: "Structure", cost: 24000 },
+        { name: "Full Plumbing Replacement", category: "Mechanical", cost: 24000 },
+        { name: "Full Electrical Replacement", category: "Mechanical", cost: 20000 },
+        { name: "New HVAC System", category: "Mechanical", cost: 16000 },
+        { name: "Insulation", category: "Interior", cost: 10000 },
+        { name: "Full Drywall", category: "Interior", cost: 18000 },
+        { name: "Flooring Throughout", category: "Finishes", cost: 20000 },
+        { name: "Full Kitchen Build-Out", category: "Finishes", cost: 32000 },
+        { name: "Bathroom Buildouts (x2)", category: "Finishes", cost: 24000 },
+        { name: "Exterior Work", category: "Exterior", cost: 18000 },
+        { name: "Permits & Inspections", category: "Soft Costs", cost: 6000 },
+      ]
+    },
+    townhome_dev: {
+      label: "Townhome Dev", budget_type: "build",
+      items: [
+        { name: "Land Prep & Utilities", category: "Site", cost: 28000 },
+        { name: "Foundation (4 units)", category: "Foundation", cost: 80000 },
+        { name: "Framing (4 units)", category: "Structure", cost: 140000 },
+        { name: "Roofing (4 units)", category: "Exterior", cost: 48000 },
+        { name: "MEP Systems (4 units)", category: "Mechanical", cost: 100000 },
+        { name: "Interior Finishes (4 units)", category: "Finishes", cost: 120000 },
+        { name: "Shared Amenity Area", category: "Site", cost: 22000 },
+        { name: "Permits & Entitlements", category: "Soft Costs", cost: 18000 },
+        { name: "Architecture & Engineering", category: "Soft Costs", cost: 24000 },
+        { name: "GC Overhead & Profit", category: "Soft Costs", cost: 65000 },
+      ]
+    },
+    design_only: {
+      label: "Design Only", budget_type: "design",
+      items: [
+        { name: "Interior Design Fee", category: "Professional", cost: 12000 },
+        { name: "Living Room — Furniture & Finishes", category: "Rooms", cost: 18000 },
+        { name: "Primary Bedroom — Furniture & Finishes", category: "Rooms", cost: 14000 },
+        { name: "Kitchen — Appliances & Hardware", category: "Rooms", cost: 22000 },
+        { name: "Primary Bath — Fixtures & Tile", category: "Rooms", cost: 16000 },
+        { name: "Secondary Bedrooms (x2)", category: "Rooms", cost: 12000 },
+        { name: "Lighting & Fixtures", category: "Materials", cost: 8000 },
+        { name: "Window Treatments", category: "Materials", cost: 6000 },
+        { name: "Art & Accessories", category: "Materials", cost: 4000 },
+        { name: "Installation Labor", category: "Labor", cost: 10000 },
+      ]
+    }
+  };
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function formatMoney(value) {
+    const num = Number(value || 0);
+    return "$" + Math.round(num).toLocaleString();
+  }
+
+  function normalizeCost(value) {
     const num = Number(value);
     return Number.isFinite(num) ? num : 0;
   }
 
-  function addItem(name = "", cost = 0, category = "General"){
+  function escapeHtml(str) {
+    return String(str ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function currentContingencyAmount() {
+    const subtotal = items.reduce((s, i) => s + normalizeCost(i.cost), 0);
+    return subtotal * (contingencyPct / 100);
+  }
+
+  // ── Preset loading ───────────────────────────────────────────────────────
+  function loadPreset(presetKey) {
+    let presetItems = [];
+
+    if (presetKey === 'ai_data') {
+      presetItems = (SEEDED_BREAKDOWN || []).map(item => ({
+        name: item.name || item.description || "Line Item",
+        cost: item.cost ?? item.estimated_amount ?? item.amount ?? 0,
+        category: item.category || "General"
+      }));
+    } else {
+      const preset = BUDGET_PRESETS[presetKey];
+      if (!preset) return;
+      presetItems = preset.items;
+    }
+
+    // Clear current items and load preset
+    items = [];
+    presetItems.forEach(item => {
+      const id = Date.now() + Math.floor(Math.random() * 100000);
+      items.push({
+        id,
+        name: String(item.name || "").trim(),
+        cost: normalizeCost(item.cost),
+        category: String(item.category || "General").trim() || "General"
+      });
+    });
+
+    // Update active preset highlight
+    activePreset = presetKey;
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.preset === presetKey);
+    });
+
+    render();
+  }
+
+  // ── Item CRUD ────────────────────────────────────────────────────────────
+  function addItem(name, cost, category) {
     const id = Date.now() + Math.floor(Math.random() * 1000);
     items.push({
       id,
       name: String(name || "").trim(),
-      cost: normalizeCost(cost),
+      cost: normalizeCost(cost || 0),
       category: String(category || "General").trim() || "General"
     });
     render();
   }
 
-  function updateItem(id, field, value){
+  function updateItem(id, field, value) {
     const item = items.find(i => i.id === id);
     if (!item) return;
-
     if (field === "cost") {
       item[field] = normalizeCost(value);
     } else {
       item[field] = String(value || "");
     }
-
     calculate();
+    if (field === "category") {
+      render(); // re-render groups when category changes
+    }
   }
 
-  function removeItem(id){
+  function removeItem(id) {
     items = items.filter(i => i.id !== id);
     render();
   }
 
-  function sortItems(){
+  function sortItems() {
     items.sort((a, b) => normalizeCost(b.cost) - normalizeCost(a.cost));
     render();
   }
 
-  function seedDefaults(){
-    if (items.length > 0) return;
-    addItem("Permits / Planning", 8000, "Planning");
-    addItem("Labor", 35000, "Labor");
-    addItem("Materials", 45000, "Materials");
-    addItem("Contingency", 12000, "Contingency");
+  function clearItems() {
+    if (items.length > 0 && !confirm("Clear all line items?")) return;
+    items = [];
+    activePreset = null;
+    document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+    render();
   }
 
-  function render(){
-    const container = document.getElementById("lineItems");
-    container.innerHTML = "";
+  function updateContingencyFromPct() {
+    const input = document.getElementById('contingencyPct');
+    contingencyPct = Math.max(0, Math.min(50, parseFloat(input.value) || 0));
+    calculate();
+  }
 
+  // ── Render ───────────────────────────────────────────────────────────────
+  function render() {
+    const container = document.getElementById('lineItems');
+    container.innerHTML = '';
+
+    if (items.length === 0) {
+      container.innerHTML = `<div class="empty-line-state">
+        <div class="empty-line-icon">📋</div>
+        <strong>No line items yet</strong>
+        <p>Load a template above or add items manually.</p>
+      </div>`;
+      calculate();
+      return;
+    }
+
+    // Group items by category
+    const groups = {};
     items.forEach(item => {
-      const row = document.createElement("div");
-      row.className = "line-item";
-      row.innerHTML = `
-        <input class="studio-input"
-               placeholder="Item name"
-               value="${escapeHtml(item.name)}"
-               oninput="updateItem(${item.id}, 'name', this.value)">
-
-        <input class="studio-input"
-               placeholder="Category"
-               value="${escapeHtml(item.category)}"
-               oninput="updateItem(${item.id}, 'category', this.value)">
-
-        <input class="studio-input"
-               type="number"
-               step="0.01"
-               min="0"
-               value="${item.cost}"
-               oninput="updateItem(${item.id}, 'cost', this.value)">
-
-        <button class="studio-btn danger" type="button" onclick="removeItem(${item.id})">Remove</button>
-      `;
-      container.appendChild(row);
+      const cat = item.category || 'General';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(item);
     });
+
+    const allCatKeys = Object.keys(CATEGORY_COLORS);
+
+    Object.entries(groups).forEach(([cat, catItems]) => {
+      const catSubtotal = catItems.reduce((s, i) => s + normalizeCost(i.cost), 0);
+      const color = categoryColor(cat);
+
+      // Category group header
+      const header = document.createElement('div');
+      header.className = 'cat-group-header';
+      header.innerHTML = `
+        <span class="cat-pill" style="background:${color}22;border:1px solid ${color}44;color:${color};">${escapeHtml(cat)}</span>
+        <span class="cat-count">${catItems.length} item${catItems.length === 1 ? '' : 's'}</span>
+        <span class="cat-subtotal">${formatMoney(catSubtotal)}</span>
+      `;
+      container.appendChild(header);
+
+      catItems.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'line-item';
+
+        // Build select options
+        const selectOptions = allCatKeys.map(c =>
+          `<option value="${escapeHtml(c)}"${c === (item.category || 'General') ? ' selected' : ''}>${escapeHtml(c)}</option>`
+        ).join('');
+        // Add custom category if not in list
+        const hasCustom = !allCatKeys.includes(item.category || 'General');
+        const customOption = hasCustom
+          ? `<option value="${escapeHtml(item.category)}" selected>${escapeHtml(item.category)}</option>`
+          : '';
+
+        row.innerHTML = `
+          <span class="item-cat-dot" style="background:${color};"></span>
+          <input class="studio-input item-name" placeholder="Description" value="${escapeHtml(item.name)}" oninput="updateItem(${item.id}, 'name', this.value)">
+          <select class="studio-input item-cat-select" onchange="updateItem(${item.id}, 'category', this.value)">
+            ${selectOptions}${customOption}
+          </select>
+          <div class="cost-wrap">
+            <span class="cost-prefix">$</span>
+            <input class="studio-input item-cost" type="number" step="100" min="0" value="${item.cost}" oninput="updateItem(${item.id}, 'cost', this.value)">
+          </div>
+          <button class="item-delete" type="button" onclick="removeItem(${item.id})" title="Remove">✕</button>
+        `;
+        container.appendChild(row);
+      });
+    });
+
+    // Update item count badge
+    const badge = document.getElementById('itemCountBadge');
+    if (badge) badge.textContent = `${items.length} item${items.length === 1 ? '' : 's'}`;
 
     calculate();
   }
 
-  function calculate(){
+  // ── Calculate ────────────────────────────────────────────────────────────
+  function calculate() {
     const subtotal = items.reduce((sum, item) => sum + normalizeCost(item.cost), 0);
-    const budgetTotal = subtotal + normalizeCost(contingencyAmount);
+    const contingencyAmount = subtotal * (contingencyPct / 100);
+    const budgetTotal = subtotal + contingencyAmount;
     const totalProjectCost = PURCHASE_PRICE + budgetTotal;
     const projectedProfit = ARV - totalProjectCost;
     const marginPct = ARV > 0 ? (projectedProfit / ARV) * 100 : 0;
 
+    // Update contingency display
+    const contDisp = document.getElementById('contingencyDisplay');
+    if (contDisp) contDisp.textContent = formatMoney(contingencyAmount);
+    const contSum = document.getElementById('contingencySummary');
+    if (contSum) contSum.textContent = formatMoney(contingencyAmount);
+
+    // Budget totals
+    const subtotalEl = document.getElementById('subtotalDisplay');
+    if (subtotalEl) subtotalEl.textContent = formatMoney(subtotal);
+
     document.getElementById("budgetTotalDisplay").innerText = formatMoney(budgetTotal);
     document.getElementById("budgetTotal").innerText = formatMoney(budgetTotal);
+
+    // Budget burn bar
+    const burnEl = document.getElementById('burnBar');
+    const burnPctEl = document.getElementById('burnPct');
+    if (burnEl && burnPctEl && budgetTotal > 0) {
+      const subPct = Math.round((subtotal / budgetTotal) * 100);
+      burnEl.style.width = Math.min(subPct, 100) + '%';
+      burnPctEl.textContent = subPct + '% of budget allocated';
+    } else if (burnPctEl) {
+      burnPctEl.textContent = '0%';
+      if (burnEl) burnEl.style.width = '0%';
+    }
+
+    // Category breakdown sidebar
+    updateCategoryBreakdown(subtotal);
 
     if (IS_DESIGN_BUDGET) {
       const itemLabel = `${items.length} item${items.length === 1 ? "" : "s"}`;
@@ -1032,10 +1732,10 @@ Build the financial operating system for your deal.
     const health = document.getElementById("budgetHealth");
     health.classList.remove("good", "watch", "risk");
 
-    if (marginPct >= 18){
+    if (marginPct >= 18) {
       health.innerText = "Healthy margin — strong room for execution.";
       health.classList.add("good");
-    } else if (marginPct >= 8){
+    } else if (marginPct >= 8) {
       health.innerText = "Watch closely — margin is workable but tighter.";
       health.classList.add("watch");
     } else {
@@ -1044,7 +1744,43 @@ Build the financial operating system for your deal.
     }
   }
 
-  function serializeBudgetPayload(){
+  function updateCategoryBreakdown(subtotal) {
+    const listEl = document.getElementById('catBreakdownList');
+    if (!listEl) return;
+
+    if (items.length === 0) {
+      listEl.innerHTML = '<div style="color:rgba(228,236,246,.45);font-size:.84rem;padding:8px 0;">No items yet — load a template or add line items.</div>';
+      return;
+    }
+
+    // Aggregate by category
+    const catTotals = {};
+    items.forEach(item => {
+      const cat = item.category || 'General';
+      catTotals[cat] = (catTotals[cat] || 0) + normalizeCost(item.cost);
+    });
+
+    // Sort descending by amount, show top 8
+    const sorted = Object.entries(catTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+
+    listEl.innerHTML = sorted.map(([cat, amount]) => {
+      const color = categoryColor(cat);
+      const pct = subtotal > 0 ? Math.round((amount / subtotal) * 100) : 0;
+      return `<div class="cat-breakdown-row">
+        <span class="cat-breakdown-dot" style="background:${color};"></span>
+        <span class="cat-breakdown-name">${escapeHtml(cat)}</span>
+        <span class="cat-breakdown-amount">${formatMoney(amount)}</span>
+        <span style="color:rgba(228,236,246,.38);font-size:.76rem;min-width:32px;text-align:right;">${pct}%</span>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Serialize for form submission ────────────────────────────────────────
+  function serializeBudgetPayload() {
+    const subtotal = items.reduce((s, i) => s + normalizeCost(i.cost), 0);
+    const contingencyAmount = subtotal * (contingencyPct / 100);
     return JSON.stringify({
       source: SEED_SOURCE || (IS_DESIGN_BUDGET ? "design_studio" : "budget_studio"),
       budget_type: SEED_BUDGET_TYPE || (IS_DESIGN_BUDGET ? "design" : "rehab"),
@@ -1057,17 +1793,10 @@ Build the financial operating system for your deal.
     });
   }
 
-  function escapeHtml(str){
-    return String(str ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
+  // ── Init ─────────────────────────────────────────────────────────────────
   render();
 
+  // Seed from AI-generated breakdown if available
   if (items.length === 0 && Array.isArray(SEEDED_BREAKDOWN) && SEEDED_BREAKDOWN.length) {
     SEEDED_BREAKDOWN.forEach(item => {
       addItem(
@@ -1078,13 +1807,23 @@ Build the financial operating system for your deal.
     });
   }
 
-  if (!IS_DESIGN_BUDGET && items.length === 0 && REHAB_COST > 0){
+  if (!IS_DESIGN_BUDGET && items.length === 0 && REHAB_COST > 0) {
     addItem("Rehab Scope", REHAB_COST, "Rehab");
+  }
+
+  // Adjust initial contingency pct if SEED_CONTINGENCY is available
+  if (SEED_CONTINGENCY > 0 && items.length > 0) {
+    const subtotal = items.reduce((s, i) => s + normalizeCost(i.cost), 0);
+    if (subtotal > 0) {
+      contingencyPct = Math.round((SEED_CONTINGENCY / subtotal) * 100);
+      const pctInput = document.getElementById('contingencyPct');
+      if (pctInput) pctInput.value = contingencyPct;
+    }
   }
 
   const startTrackingBudgetForm = document.getElementById("startTrackingBudgetForm");
   if (startTrackingBudgetForm) {
-    startTrackingBudgetForm.addEventListener("submit", function(){
+    startTrackingBudgetForm.addEventListener("submit", function () {
       const payloadInput = document.getElementById("budgetPayload");
       if (payloadInput) {
         payloadInput.value = serializeBudgetPayload();
