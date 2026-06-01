@@ -920,8 +920,8 @@ Build the financial operating system for your deal.
           {% else %}
           <span class="studio-chip">Planning Layer</span>
           <span class="studio-chip">Execution Ready</span>
-          <span class="studio-chip">AI Seeded</span>
-          <span class="studio-chip">Deal Connected</span>
+          {% if seeded_items %}<span class="studio-chip">AI Seeded</span>{% endif %}
+          {% if deal %}<span class="studio-chip">Deal Connected</span>{% else %}<span class="studio-chip">Standalone Mode</span>{% endif %}
           {% endif %}
         </div>
       </div>
@@ -1086,6 +1086,17 @@ Build the financial operating system for your deal.
                   </button>
                 </form>
               {% endif %}
+            {% else %}
+              <form method="POST"
+                    action="{{ url_for('investor.create_budget') }}"
+                    id="saveStandaloneBudgetForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="budget_payload" id="standaloneBudgetPayload">
+                <input type="hidden" name="name" id="standaloneBudgetName" value="Project Budget">
+                <button class="studio-btn success" type="submit">
+                  💾 Save as Project Budget
+                </button>
+              </form>
             {% endif %}
           </div>
         </div>
@@ -1169,6 +1180,26 @@ Build the financial operating system for your deal.
             <p>Return to the main deal record and view the full operating picture.</p>
           </a>
           {% endif %}
+          {% else %}
+          <a href="{{ url_for('investor.create_deal') }}" class="workflow-card">
+            <h4>Start a Deal</h4>
+            <p>Create a deal and connect this budget to unlock full underwriting, rehab, and build analysis.</p>
+          </a>
+
+          <a href="{{ url_for('investor.build_studio') }}" class="workflow-card">
+            <h4>Build Studio</h4>
+            <p>Generate a detailed construction spec and auto-seed this budget with real cost breakdowns.</p>
+          </a>
+
+          <a href="{{ url_for('investor.budget') }}" class="workflow-card">
+            <h4>My Budgets</h4>
+            <p>View all saved project budgets and track execution progress across every project.</p>
+          </a>
+
+          <a href="{{ url_for('investor.deals_list') }}" class="workflow-card">
+            <h4>My Deals</h4>
+            <p>Open Budget Studio from any deal for connected analysis and one-click tracker creation.</p>
+          </a>
           {% endif %}
         </div>
       </section>
@@ -1301,19 +1332,33 @@ Build the financial operating system for your deal.
           </div>
 
           <div class="callout">
-            <strong>{% if is_design_budget %}This is the design-only planning layer.{% else %}Budget Studio is the productized planning layer.{% endif %}</strong>
+            <strong>{% if is_design_budget %}This is the design-only planning layer.{% elif deal %}Budget Studio is the productized planning layer.{% else %}Your planning workspace — no deal required.{% endif %}</strong>
             <p>
               {% if is_design_budget %}
               Keep the budget tight to the design work: rooms, finishes, materials, and visual scope. Full deal economics stay in the main Deal Architect path.
-              {% else %}
+              {% elif deal %}
               Once this cost architecture is right, Ravlo converts it into a real tracked budget with line items, live updates, and execution visibility.
+              {% else %}
+              Load a Quick Start template, tune the numbers, then save it as a tracked project budget. You can link it to a deal at any time.
               {% endif %}
             </p>
           </div>
 
           {% if not deal %}
-          <div class="empty-state" style="margin-top:12px;">
-            Open Budget Studio from a deal to connect strategy, rehab, build outputs, and tracked execution.
+          <div style="margin-top:12px;display:grid;gap:8px;">
+            <form method="POST"
+                  action="{{ url_for('investor.create_budget') }}"
+                  id="saveStandaloneBudgetFormSide">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="budget_payload" id="standaloneBudgetPayloadSide">
+              <input type="hidden" name="name" id="standaloneBudgetNameSide" value="Project Budget">
+              <button class="studio-btn success" type="submit" style="width:100%;box-sizing:border-box;">
+                💾 Save as Project Budget
+              </button>
+            </form>
+            <a href="{{ url_for('investor.create_budget') }}" class="studio-btn secondary" style="width:100%;box-sizing:border-box;text-align:center;">
+              Fill in Budget Details
+            </a>
           </div>
           {% endif %}
         </section>
@@ -1781,9 +1826,10 @@ Build the financial operating system for your deal.
   function serializeBudgetPayload() {
     const subtotal = items.reduce((s, i) => s + normalizeCost(i.cost), 0);
     const contingencyAmount = subtotal * (contingencyPct / 100);
+    const presetType = (activePreset && BUDGET_PRESETS[activePreset]) ? BUDGET_PRESETS[activePreset].budget_type : null;
     return JSON.stringify({
       source: SEED_SOURCE || (IS_DESIGN_BUDGET ? "design_studio" : "budget_studio"),
-      budget_type: SEED_BUDGET_TYPE || (IS_DESIGN_BUDGET ? "design" : "rehab"),
+      budget_type: presetType || SEED_BUDGET_TYPE || (IS_DESIGN_BUDGET ? "design" : "rehab"),
       contingency: normalizeCost(contingencyAmount),
       items: items.map(item => ({
         name: item.name || "Budget Item",
@@ -1791,6 +1837,14 @@ Build the financial operating system for your deal.
         category: item.category || "General"
       }))
     });
+  }
+
+  function _autoNameFromPreset() {
+    if (activePreset && BUDGET_PRESETS[activePreset]) {
+      return BUDGET_PRESETS[activePreset].label + " Budget";
+    }
+    const today = new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+    return "Project Budget — " + today;
   }
 
   // ── Init ─────────────────────────────────────────────────────────────────
@@ -1830,6 +1884,21 @@ Build the financial operating system for your deal.
       }
     });
   }
+
+  // Standalone save forms
+  function _wireStandaloneForm(formId, payloadInputId, nameInputId) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    form.addEventListener("submit", function () {
+      const payloadInput = document.getElementById(payloadInputId);
+      if (payloadInput) payloadInput.value = serializeBudgetPayload();
+      const nameInput = document.getElementById(nameInputId);
+      if (nameInput) nameInput.value = _autoNameFromPreset();
+    });
+  }
+
+  _wireStandaloneForm("saveStandaloneBudgetForm", "standaloneBudgetPayload", "standaloneBudgetName");
+  _wireStandaloneForm("saveStandaloneBudgetFormSide", "standaloneBudgetPayloadSide", "standaloneBudgetNameSide");
 </script>
 
 {% endblock %}

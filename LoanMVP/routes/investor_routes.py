@@ -14376,6 +14376,32 @@ def create_budget():
         if build_project_id:
             budget_type = "build"
 
+        # Parse budget_payload for line items seeded from Budget Studio
+        raw_payload = request.form.get("budget_payload") or ""
+        payload = {}
+        if raw_payload:
+            try:
+                payload = json.loads(raw_payload)
+            except Exception:
+                payload = {}
+
+        payload_items = payload.get("items") or []
+        payload_contingency = payload.get("contingency")
+        payload_type = str(payload.get("budget_type") or "").lower()
+
+        # Payload budget_type overrides the form select when seeded from studio
+        if payload_type in {"rehab", "build", "design", "turn", "capex", "general"}:
+            budget_type = payload_type
+        elif build_project_id:
+            budget_type = "build"
+
+        # Payload contingency overrides the form contingency field when seeded
+        if payload_contingency is not None:
+            try:
+                contingency = float(payload_contingency)
+            except (TypeError, ValueError):
+                pass
+
         budget = ProjectBudget(
             borrower_profile_id=None,
             investor_profile_id=ip.id,
@@ -14395,9 +14421,48 @@ def create_budget():
             notes=request.form.get("notes") or None,
         )
         db.session.add(budget)
+        db.session.flush()
+
+        estimated_total = 0.0
+        created_count = 0
+        for item in payload_items:
+            if not isinstance(item, dict):
+                continue
+            description = str(item.get("name") or item.get("description") or "Budget Item").strip() or "Budget Item"
+            try:
+                estimated_amount = float(item.get("cost") or item.get("estimated_amount") or 0)
+            except (TypeError, ValueError):
+                estimated_amount = 0.0
+            category = str(item.get("category") or "General").strip() or "General"
+            expense = ProjectExpense(
+                budget_id=budget.id,
+                category=category,
+                description=description,
+                vendor=None,
+                estimated_amount=estimated_amount,
+                actual_amount=0.0,
+                paid_amount=0.0,
+                status="planned",
+                notes="Imported from Budget Studio.",
+            )
+            db.session.add(expense)
+            created_count += 1
+            estimated_total += estimated_amount
+
+        if created_count > 0:
+            budget.total_cost = estimated_total
+            budget.total_amount = estimated_total
+            budget.total_budget = estimated_total + float(budget.contingency or 0)
+
+        if hasattr(budget, "recalculate_totals"):
+            budget.recalculate_totals()
+
         db.session.commit()
 
-        flash("Budget created.", "success")
+        if created_count:
+            flash(f"Budget created with {created_count} line item(s).", "success")
+        else:
+            flash("Budget created.", "success")
         return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
     deals = Deal.query.filter_by(
