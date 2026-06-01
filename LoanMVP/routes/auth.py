@@ -319,8 +319,15 @@ def _send_welcome_email(user) -> None:
         login_url = url_for("auth.login", _external=True)
         app_origin = current_app.config.get("APP_ORIGIN", "https://ravlohq.com")
 
+        sender = (
+            current_app.config.get("MAIL_DEFAULT_SENDER")
+            or current_app.config.get("MAIL_USERNAME")
+            or "letoya@ravlohq.com"
+        )
+
         msg = MailMessage(
             subject="Welcome to Ravlo — You're In!",
+            sender=sender,
             recipients=[user.email],
             html=f"""
 <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;color:#111;">
