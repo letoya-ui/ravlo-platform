@@ -14831,7 +14831,52 @@ def add_budget_expense(budget_id):
 
     flash("Expense added.", "success")
     return redirect(url_for("investor.budget_detail", budget_id=budget.id))
-    
+
+
+@investor_bp.route("/budget-studio/<int:budget_id>/expense/<int:expense_id>/update", methods=["POST"])
+@login_required
+@role_required("investor")
+def update_budget_expense(budget_id, expense_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+    budget = ProjectBudget.query.filter_by(id=budget_id, investor_profile_id=ip.id).first_or_404()
+    expense = ProjectExpense.query.filter_by(id=expense_id, budget_id=budget.id).first_or_404()
+
+    expense.category = (request.form.get("category") or expense.category or "General").strip()
+    expense.description = (request.form.get("description") or expense.description or "Expense").strip()
+    expense.vendor = (request.form.get("vendor") or "").strip() or None
+    try:
+        expense.estimated_amount = float(request.form.get("estimated_amount") or expense.estimated_amount or 0)
+        expense.actual_amount = float(request.form.get("actual_amount") or 0)
+        expense.paid_amount = float(request.form.get("paid_amount") or 0)
+    except (TypeError, ValueError):
+        pass
+    expense.status = (request.form.get("status") or expense.status or "planned").strip()
+    expense.notes = (request.form.get("notes") or "").strip() or None
+
+    budget.recalculate_totals()
+    db.session.commit()
+
+    flash("Expense updated.", "success")
+    return redirect(url_for("investor.budget_detail", budget_id=budget.id))
+
+
+@investor_bp.route("/budget-studio/<int:budget_id>/expense/<int:expense_id>/delete", methods=["POST"])
+@login_required
+@role_required("investor")
+def delete_budget_expense(budget_id, expense_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+    budget = ProjectBudget.query.filter_by(id=budget_id, investor_profile_id=ip.id).first_or_404()
+    expense = ProjectExpense.query.filter_by(id=expense_id, budget_id=budget.id).first_or_404()
+
+    db.session.delete(expense)
+    db.session.flush()
+    budget.recalculate_totals()
+    db.session.commit()
+
+    flash("Expense removed.", "success")
+    return redirect(url_for("investor.budget_detail", budget_id=budget.id))
+
+
 @investor_bp.route("/deals/<int:deal_id>/rehab/budget", methods=["GET", "POST"])
 @login_required
 @role_required("investor")
