@@ -11,6 +11,7 @@
   {% else %}
     <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost sm">Budget Studio</a>
   {% endif %}
+  <button type="button" class="ravlo-btn ghost sm" onclick="document.getElementById('budgetSettingsPanel').scrollIntoView({behavior:'smooth'})">Settings</button>
   <button type="button" class="ravlo-btn ghost sm" onclick="toggleAddExpense()">+ Add Expense</button>
   <button type="button" class="ravlo-btn ghost sm" onclick="openSendPartnerModal(_budgetStudioCtx)">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Package
@@ -498,6 +499,84 @@
       </div>
     </div>
   </div>
+
+  <!-- ── Budget Settings ──────────────────────────────────────────────────── -->
+  <section class="bd-card" id="budgetSettingsPanel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap;">
+      <div>
+        <div class="bd-eyebrow">Budget Settings</div>
+        <h3 style="margin:0;">Rename, link, or close this budget</h3>
+      </div>
+      {% set b_status = budget.status or 'active' %}
+      {% if b_status == 'closed' %}
+        <span style="padding:.36rem .8rem;border-radius:999px;font-size:.78rem;font-weight:800;background:rgba(148,163,184,.1);border:1px solid rgba(148,163,184,.25);color:#94a3b8;">Closed</span>
+      {% elif b_status == 'archived' %}
+        <span style="padding:.36rem .8rem;border-radius:999px;font-size:.78rem;font-weight:800;background:rgba(255,154,154,.1);border:1px solid rgba(255,154,154,.25);color:#ff9a9a;">Archived</span>
+      {% else %}
+        <span style="padding:.36rem .8rem;border-radius:999px;font-size:.78rem;font-weight:800;background:rgba(126,232,177,.1);border:1px solid rgba(126,232,177,.25);color:#7ee8b1;">Active</span>
+      {% endif %}
+    </div>
+
+    <form method="POST" action="{{ url_for('investor.update_budget', budget_id=budget.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="display:block;font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;color:rgba(228,236,246,.55);margin-bottom:6px;">Budget Name</label>
+          <input class="ae-input" type="text" name="name" value="{{ budget.name }}" placeholder="Budget name" required>
+        </div>
+        <div>
+          <label style="display:block;font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;color:rgba(228,236,246,.55);margin-bottom:6px;">Project Name</label>
+          <input class="ae-input" type="text" name="project_name" value="{{ budget.project_name or '' }}" placeholder="Project name">
+        </div>
+        <div>
+          <label style="display:block;font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;color:rgba(228,236,246,.55);margin-bottom:6px;">Budget Type</label>
+          <select class="ae-select" name="budget_type">
+            {% for t in ['rehab','build','design','turn','capex','general'] %}
+            <option value="{{ t }}" {% if (budget.budget_type or 'rehab') == t %}selected{% endif %}>{{ t.replace('_',' ').title() }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;color:rgba(228,236,246,.55);margin-bottom:6px;">Contingency ($)</label>
+          <input class="ae-input" type="number" step="1" min="0" name="contingency" value="{{ (budget.contingency or 0)|int }}" placeholder="0">
+        </div>
+        <div>
+          <label style="display:block;font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;color:rgba(228,236,246,.55);margin-bottom:6px;">Link to Deal</label>
+          <select class="ae-select" name="deal_id">
+            <option value="">No linked deal</option>
+            {% for deal in deals %}
+            <option value="{{ deal.id }}" {% if budget.deal_id == deal.id %}selected{% endif %}>
+              {{ deal.title or deal.address or ('Deal #' ~ deal.id) }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;color:rgba(228,236,246,.55);margin-bottom:6px;">Status</label>
+          <select class="ae-select" name="status">
+            <option value="active"   {% if (budget.status or 'active') == 'active'   %}selected{% endif %}>Active</option>
+            <option value="closed"   {% if (budget.status or 'active') == 'closed'   %}selected{% endif %}>Closed</option>
+            <option value="archived" {% if (budget.status or 'active') == 'archived' %}selected{% endif %}>Archived</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label style="display:block;font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;color:rgba(228,236,246,.55);margin-bottom:6px;">Notes</label>
+        <textarea class="ae-textarea" name="notes" placeholder="Project notes, assumptions, scope summary...">{{ budget.notes or '' }}</textarea>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+        <button type="submit" class="ravlo-btn primary">Save Settings</button>
+        {% if (budget.status or 'active') != 'archived' %}
+        <button type="submit" name="status" value="archived"
+                onclick="return confirm('Archive this budget? It will be hidden from the main list.')"
+                class="ravlo-btn ghost" style="color:rgba(228,236,246,.5);">Archive</button>
+        {% endif %}
+      </div>
+    </form>
+  </section>
 
   <!-- ── Category breakdown ─────────────────────────────────────────────── -->
   {% if category_rows %}

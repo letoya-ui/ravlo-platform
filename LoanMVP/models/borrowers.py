@@ -95,10 +95,11 @@ class ProjectBudget(db.Model):
     paid_amount = db.Column(db.Float, default=0.0)
 
     notes = db.Column(db.Text)
+    status = db.Column(db.String(32), nullable=False, default="active")
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     borrower = db.relationship("BorrowerProfile", back_populates="budgets")
     investor_profile = db.relationship("InvestorProfile", back_populates="budgets")
     loan_application = db.relationship("LoanApplication", back_populates="project_budgets")
