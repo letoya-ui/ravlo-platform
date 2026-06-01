@@ -615,6 +615,43 @@ def create_app():
     def inject_datetime():
         return dict(datetime=datetime)
 
+    @app.context_processor
+    def inject_trial_popup_data():
+        try:
+            if not current_user.is_authenticated:
+                return dict(trial_popup_day=None, trial_days_remaining=None, trial_activity={})
+            if not getattr(current_user, 'trial_ends_at', None):
+                return dict(trial_popup_day=None, trial_days_remaining=None, trial_activity={})
+            paid_plans = {'pro', 'growth', 'premium', 'enterprise', 'paid', 'active'}
+            sub = (current_user.subscription or 'free').strip().lower()
+            if sub in paid_plans:
+                return dict(trial_popup_day=None, trial_days_remaining=None, trial_activity={})
+            days_remaining = current_user.trial_days_remaining
+            if days_remaining <= 0:
+                popup_day = 15
+            elif days_remaining <= 2:
+                popup_day = 13
+            elif days_remaining <= 5:
+                popup_day = 10
+            else:
+                return dict(trial_popup_day=None, trial_days_remaining=days_remaining, trial_activity={})
+            activity = {'deals': 0, 'saved': 0, 'budgets': 0}
+            try:
+                from LoanMVP.models.investor_models import InvestorProfile
+                from LoanMVP.models.borrowers import ProjectBudget
+                from LoanMVP.models.property import SavedProperty
+                ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+                if ip:
+                    from LoanMVP.models.borrowers import Deal as InvestorDeal
+                    activity['deals'] = InvestorDeal.query.filter_by(investor_profile_id=ip.id).count()
+                    activity['budgets'] = ProjectBudget.query.filter_by(investor_profile_id=ip.id).count()
+                activity['saved'] = SavedProperty.query.filter_by(user_id=current_user.id).count()
+            except Exception:
+                pass
+            return dict(trial_popup_day=popup_day, trial_days_remaining=days_remaining, trial_activity=activity)
+        except Exception:
+            return dict(trial_popup_day=None, trial_days_remaining=None, trial_activity={})
+
     @app.template_filter("currency")
     def currency_format(value):
         try:

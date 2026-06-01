@@ -1,0 +1,310 @@
+{# Trial expiry story popup — shown at day 10, 13, and 15 of trial.
+   Day 10 + 13: dismissible (localStorage). Day 15: forced, no close. #}
+{% if current_user.is_authenticated and trial_popup_day %}
+
+{% set _plans_url = url_for('marketing.plans') %}
+{% set _acts = trial_activity %}
+{% set _days = trial_days_remaining or 0 %}
+
+{# ── Color accent per urgency ─────────────────────────────────────── #}
+{% if trial_popup_day == 15 %}
+  {% set _accent     = '#ef4444' %}
+  {% set _accent_bg  = 'rgba(239,68,68,.12)' %}
+  {% set _accent_bdr = 'rgba(239,68,68,.3)' %}
+  {% set _eyebrow    = 'TRIAL ENDED' %}
+  {% set _title      = 'Your free trial is over' %}
+  {% set _lskey      = '' %}{# no localStorage key — never dismissed #}
+{% elif trial_popup_day == 13 %}
+  {% set _accent     = '#f97316' %}
+  {% set _accent_bg  = 'rgba(249,115,22,.12)' %}
+  {% set _accent_bdr = 'rgba(249,115,22,.3)' %}
+  {% set _eyebrow    = '2 DAYS LEFT' %}
+  {% set _title      = "Don't lose what you've built" %}
+  {% set _lskey      = 'ravlo_trial_d13_dismissed' %}
+{% else %}
+  {% set _accent     = '#fbbf24' %}
+  {% set _accent_bg  = 'rgba(251,191,36,.10)' %}
+  {% set _accent_bdr = 'rgba(251,191,36,.28)' %}
+  {% set _eyebrow    = '5 DAYS LEFT' %}
+  {% set _title      = "You're 10 days into your trial" %}
+  {% set _lskey      = 'ravlo_trial_d10_dismissed' %}
+{% endif %}
+
+<div id="trialExpiryPopup" class="tp-overlay" style="display:none;" role="dialog" aria-modal="true">
+  <div class="tp-card">
+
+    {# Close button — day 10 and 13 only #}
+    {% if trial_popup_day != 15 %}
+    <button type="button" class="tp-close" onclick="dismissTrialPopup()" aria-label="Dismiss">×</button>
+    {% endif %}
+
+    <div class="tp-header">
+      <div class="tp-eyebrow" style="color:{{ _accent }};">{{ _eyebrow }}</div>
+      <h2 class="tp-title">{{ _title }}</h2>
+      <p class="tp-sub">
+        {% if trial_popup_day == 15 %}
+          Your data, deals, and budgets are safe. You just need to unlock access to keep working.
+        {% elif trial_popup_day == 13 %}
+          Everything you've analyzed, built, and saved is still here — for 2 more days.
+        {% else %}
+          Here's a look at what you've done — and what's waiting on the other side.
+        {% endif %}
+      </p>
+    </div>
+
+    {# ── Slides ── #}
+    <div id="tpSteps">
+
+      {# Slide 1 — activity recap #}
+      <div class="tp-step tp-step--active" data-step="0">
+        <div class="tp-step-num" style="background:{{ _accent }};">1</div>
+        <div class="tp-step-body">
+          <p class="tp-step-title">What you've built so far</p>
+          <p class="tp-step-desc">Your Ravlo workspace isn't empty — you've already put it to work.</p>
+          <div class="tp-stat-row">
+            <div class="tp-stat">
+              <span class="tp-stat-n">{{ _acts.get('deals', 0) }}</span>
+              <span class="tp-stat-l">Deals analyzed</span>
+            </div>
+            <div class="tp-stat">
+              <span class="tp-stat-n">{{ _acts.get('saved', 0) }}</span>
+              <span class="tp-stat-l">Properties saved</span>
+            </div>
+            <div class="tp-stat">
+              <span class="tp-stat-n">{{ _acts.get('budgets', 0) }}</span>
+              <span class="tp-stat-l">Budgets created</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Slide 2 — what stays / what stops #}
+      <div class="tp-step" data-step="1">
+        <div class="tp-step-num" style="background:{{ _accent }};">2</div>
+        <div class="tp-step-body">
+          {% if trial_popup_day == 15 %}
+          <p class="tp-step-title">Your work is preserved — access is paused</p>
+          <p class="tp-step-desc">Every deal, budget, analysis, and saved property is still in your account. Upgrading takes two minutes and restores full access immediately.</p>
+          {% else %}
+          <p class="tp-step-title">Everything transfers to your paid plan</p>
+          <p class="tp-step-desc">Deals, budgets, analyses, property saves, and all AI outputs come with you. Nothing resets. Nothing is lost.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Slide 3 — CTA #}
+      <div class="tp-step" data-step="2">
+        <div class="tp-step-num" style="background:{{ _accent }};">3</div>
+        <div class="tp-step-body">
+          {% if trial_popup_day == 15 %}
+          <p class="tp-step-title">Upgrade and get back in</p>
+          <p class="tp-step-desc">Pick a plan, unlock your workspace, and keep moving. Your pipeline is waiting.</p>
+          {% elif trial_popup_day == 13 %}
+          <p class="tp-step-title">Lock in your access now</p>
+          <p class="tp-step-desc">Two days goes fast. Don't wake up locked out mid-deal. Upgrade in under two minutes.</p>
+          {% else %}
+          <p class="tp-step-title">Stay in it</p>
+          <p class="tp-step-desc">You've already seen how Ravlo works. Upgrade before the trial ends and keep everything exactly as it is.</p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>{# /tpSteps #}
+
+    {# ── Footer: dots + actions ── #}
+    <div class="tp-footer">
+      <div class="tp-dots">
+        <button class="tp-dot tp-dot--active" onclick="tpGo(0)" aria-label="Slide 1" style="--ta:{{ _accent }};"></button>
+        <button class="tp-dot" onclick="tpGo(1)" aria-label="Slide 2" style="--ta:{{ _accent }};"></button>
+        <button class="tp-dot" onclick="tpGo(2)" aria-label="Slide 3" style="--ta:{{ _accent }};"></button>
+      </div>
+      <div class="tp-actions">
+        <button class="tp-btn tp-btn-prev" id="tpPrev" onclick="tpPrev()" style="display:none;">← Back</button>
+        <button class="tp-btn tp-btn-next" id="tpNext" onclick="tpNext()">Next →</button>
+        <a href="{{ _plans_url }}" class="tp-btn tp-btn-cta" id="tpCta" style="display:none;background:{{ _accent }};">
+          Upgrade and Keep Access
+        </a>
+        {% if trial_popup_day != 15 %}
+        <button class="tp-btn tp-btn-skip" id="tpSkip" onclick="dismissTrialPopup()" style="display:none;">Remind me later</button>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.tp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.65);
+  backdrop-filter: blur(4px);
+  z-index: 9995;
+  align-items: center;
+  justify-content: center;
+}
+.tp-card {
+  background: #131720;
+  border: 1px solid #2a3045;
+  border-radius: 20px;
+  padding: 40px 36px 28px;
+  max-width: 580px;
+  width: calc(100% - 32px);
+  position: relative;
+  color: #f9fafb;
+  box-shadow: 0 32px 80px rgba(0,0,0,.5);
+  animation: tp-rise .38s cubic-bezier(.22,.68,0,1.15) both;
+}
+@keyframes tp-rise {
+  from { opacity:0; transform:translateY(28px) scale(.96); }
+  to   { opacity:1; transform:none; }
+}
+.tp-close {
+  position: absolute; top: 14px; right: 18px;
+  background: none; border: none; color: #6b7280;
+  font-size: 24px; cursor: pointer; line-height: 1;
+  transition: color .15s;
+}
+.tp-close:hover { color: #d1d5db; }
+
+.tp-header { margin-bottom: 24px; }
+.tp-eyebrow {
+  font-size: 11px; font-weight: 800; letter-spacing: .12em;
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.tp-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; color: #f9fafb; }
+.tp-sub { font-size: 14px; color: #9ca3af; line-height: 1.55; margin: 0; }
+
+/* Steps */
+.tp-step {
+  display: none;
+  gap: 14px;
+  align-items: flex-start;
+  background: #1a1f2e;
+  border: 1px solid #2a3045;
+  border-radius: 14px;
+  padding: 18px 20px;
+  animation: tp-fade .22s ease both;
+}
+.tp-step--active { display: flex; }
+@keyframes tp-fade { from { opacity:0; } to { opacity:1; } }
+
+.tp-step-num {
+  min-width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.tp-step-title { font-size: 15px; font-weight: 700; color: #f9fafb; margin: 0 0 5px; }
+.tp-step-desc  { font-size: 13px; color: #9ca3af; line-height: 1.55; margin: 0; }
+
+/* Activity stat row */
+.tp-stat-row {
+  display: flex; gap: 20px; margin-top: 14px; flex-wrap: wrap;
+}
+.tp-stat {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.tp-stat-n {
+  font-size: 1.5rem; font-weight: 800; color: #f9fafb; letter-spacing: -.03em;
+}
+.tp-stat-l {
+  font-size: .72rem; text-transform: uppercase; letter-spacing: .06em;
+  color: #6b7280; font-weight: 600;
+}
+
+/* Footer */
+.tp-footer {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-top: 22px; gap: 10px; flex-wrap: wrap;
+}
+.tp-dots { display: flex; gap: 7px; }
+.tp-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #374151; border: none; cursor: pointer;
+  transition: background .15s;
+}
+.tp-dot--active { background: var(--ta, #60a5fa); }
+
+.tp-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.tp-btn {
+  padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 700;
+  cursor: pointer; border: none; transition: opacity .15s; text-decoration: none;
+  display: inline-flex; align-items: center;
+}
+.tp-btn-prev { background: #1e2535; color: #9ca3af; }
+.tp-btn-prev:hover { background: #253045; }
+.tp-btn-next { background: #1d4ed8; color: #fff; }
+.tp-btn-next:hover { opacity: .88; }
+.tp-btn-cta  { color: #fff; font-weight: 800; }
+.tp-btn-cta:hover { opacity: .9; color: #fff; }
+.tp-btn-skip { background: transparent; color: #6b7280; font-size: 12px; padding: 6px 10px; }
+.tp-btn-skip:hover { color: #9ca3af; }
+
+@media (max-width: 540px) {
+  .tp-card { padding: 28px 16px 20px; }
+  .tp-title { font-size: 18px; }
+  .tp-stat-row { gap: 14px; }
+}
+</style>
+
+<script>
+(function () {
+  var POPUP_DAY = {{ trial_popup_day | tojson }};
+  var LS_KEY    = {{ _lskey | tojson }};
+  var totalSteps = 3;
+  var cur = 0;
+
+  function show() {
+    var el = document.getElementById('trialExpiryPopup');
+    if (el) el.style.display = 'flex';
+  }
+
+  function updateUI() {
+    document.querySelectorAll('.tp-step').forEach(function (s) {
+      s.classList.toggle('tp-step--active', parseInt(s.dataset.step) === cur);
+    });
+    document.querySelectorAll('.tp-dot').forEach(function (d, i) {
+      d.classList.toggle('tp-dot--active', i === cur);
+    });
+    var prev = document.getElementById('tpPrev');
+    var next = document.getElementById('tpNext');
+    var cta  = document.getElementById('tpCta');
+    var skip = document.getElementById('tpSkip');
+    var isLast = cur === totalSteps - 1;
+    if (prev) prev.style.display = cur > 0 ? '' : 'none';
+    if (next) next.style.display = isLast ? 'none' : '';
+    if (cta)  cta.style.display  = isLast ? '' : 'none';
+    if (skip) skip.style.display = isLast ? '' : 'none';
+  }
+
+  window.tpGo = function (n) {
+    cur = Math.max(0, Math.min(n, totalSteps - 1));
+    updateUI();
+  };
+  window.tpNext = function () { window.tpGo(cur + 1); };
+  window.tpPrev = function () { window.tpGo(cur - 1); };
+
+  window.dismissTrialPopup = function () {
+    var el = document.getElementById('trialExpiryPopup');
+    if (el) el.style.display = 'none';
+    if (LS_KEY) {
+      try { localStorage.setItem(LS_KEY, '1'); } catch (e) {}
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // Day 15: always show (no dismiss)
+    // Day 10/13: show unless dismissed via localStorage
+    var shouldShow = true;
+    if (LS_KEY) {
+      try { if (localStorage.getItem(LS_KEY)) shouldShow = false; } catch (e) {}
+    }
+    if (shouldShow) show();
+    updateUI();
+  });
+})();
+</script>
+
+{% endif %}
