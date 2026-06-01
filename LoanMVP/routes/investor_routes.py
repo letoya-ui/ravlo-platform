@@ -14194,36 +14194,25 @@ def activity():
     )
 
 
-@investor_bp.route("/planning/budget", methods=["GET", "POST"])
-@investor_bp.route("/budget", methods=["GET", "POST"])
+@investor_bp.route("/planning/budget", methods=["GET"])
+@investor_bp.route("/budget", methods=["GET"])
 @login_required
 @role_required("investor")
 def budget():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    assistant = AIAssistant()
-    budget_data = None
-    ai_tip = None
-
-    if request.method == "POST":
-        expenses = request.form.to_dict()
-        income = safe_float(request.form.get("income")) or 0
-        expenses_total = safe_float(request.form.get("expenses")) or 0
-        budget_data = {
-            "income": income,
-            "expenses": expenses_total,
-            "savings": income - expenses_total,
-        }
-        ai_tip = assistant.generate_reply(
-            f"Analyze investor expenses: {expenses}",
-            "investor_budget",
+    budgets = []
+    if ip:
+        budgets = (
+            ProjectBudget.query
+            .filter_by(investor_profile_id=ip.id)
+            .order_by(ProjectBudget.updated_at.desc())
+            .all()
         )
-
     return render_template(
         "investor/budget.html",
         investor=ip,
-        budget_data=budget_data,
-        ai_tip=ai_tip,
-        title="Budget Planner",
+        budgets=budgets,
+        title="My Budgets",
         active_tab="budget"
     )
 
