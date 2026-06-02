@@ -313,24 +313,18 @@ def contact():
             flash("Name, email, and message are required.", "warning")
             return redirect(url_for("marketing.contact"))
 
-        # Save to DB so submissions aren't lost even if email fails
-        existing = LicenseApplication.query.filter(
-            func.lower(LicenseApplication.email) == email,
-            LicenseApplication.business_type == "contact",
-            LicenseApplication.status == "new",
-        ).first()
-        if not existing:
-            notes_body = f"Subject: {subject}\n\n{message}" if subject else message
-            row = LicenseApplication(
-                company_name="—",
-                contact_name=name,
-                email=email,
-                business_type="contact",
-                notes=notes_body,
-                status="new",
-            )
-            db.session.add(row)
-            db.session.commit()
+        # Always persist — each submission has distinct message content
+        notes_body = f"Subject: {subject}\n\n{message}" if subject else message
+        row = LicenseApplication(
+            company_name="—",
+            contact_name=name,
+            email=email,
+            business_type="contact",
+            notes=notes_body,
+            status="new",
+        )
+        db.session.add(row)
+        db.session.commit()
 
         _notify_admin_contact(name, email, subject, message)
         flash("Message sent — we'll be in touch shortly.", "success")
