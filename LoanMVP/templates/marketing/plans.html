@@ -20,10 +20,10 @@
   <div class="mk-container">
     <div class="mk-grid-3">
       <div class="mk-plan">
-        <div class="mk-plan-badge">Free</div>
+        <div class="mk-plan-badge">Starter</div>
         <h3>Core</h3>
-        <div class="mk-plan-price">$0<span style="font-size:1rem;font-weight:700;">/mo</span></div>
-        <div class="mk-plan-note">Capital access, property search, and messaging — no cost to start.</div>
+        <div class="mk-plan-price">$29<span style="font-size:1rem;font-weight:700;">/mo</span></div>
+        <div class="mk-plan-note">Capital access, property search, and messaging — built for early-stage investors.</div>
 
         <div class="mk-list">
           <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Capital access (apply & refinance)</div></div>
@@ -33,7 +33,7 @@
         </div>
 
         <div style="margin-top:20px;">
-          <a href="{{ url_for('marketing.enter') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Get Started Free</a>
+          <a href="{{ url_for('checkout.subscribe', plan='core') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Choose Core</a>
         </div>
       </div>
 

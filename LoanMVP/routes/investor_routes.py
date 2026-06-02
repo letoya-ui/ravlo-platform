@@ -15576,7 +15576,7 @@ def downgrade_plan():
     except Exception:
         current_app.logger.exception("Investor subscription feature sync failed")
     db.session.commit()
-    flash("Subscription updated to Core (Free).", "success")
+    flash("Subscription updated to Core.", "success")
     return redirect(url_for("investor.subscription"))
 
 
