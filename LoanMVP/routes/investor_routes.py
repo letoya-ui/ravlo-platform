@@ -1086,6 +1086,7 @@ def _subscription_catalog():
                 "✔ Unlimited property search",
                 "✔ Partner network",
                 "✔ AI Deal Insights",
+                "✔ Full Academy access (Elite — all modules & AI coaching)",
             ],
         },
         "Enterprise": {
