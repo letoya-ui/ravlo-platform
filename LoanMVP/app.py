@@ -627,7 +627,8 @@ def create_app():
             if sub in paid_plans:
                 return dict(trial_popup_day=None, trial_days_remaining=None, trial_activity={})
             days_remaining = current_user.trial_days_remaining
-            if days_remaining <= 0:
+            is_expired = current_user.trial_is_expired
+            if is_expired:
                 popup_day = 15
             elif days_remaining <= 2:
                 popup_day = 13
