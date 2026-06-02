@@ -2759,13 +2759,34 @@ def insurance_upload_logo():
         flash("Please upload an image file (PNG, JPG, SVG, or WebP).", "warning")
         return redirect(url_for("vip.insurance_dashboard"))
 
-    upload_dir = _os.path.join(current_app.static_folder, "uploads", "logos")
-    _os.makedirs(upload_dir, exist_ok=True)
+    _CONTENT_TYPES = {
+        ".png":  "image/png",
+        ".jpg":  "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".svg":  "image/svg+xml",
+        ".webp": "image/webp",
+    }
 
-    saved_name = f"{_uuid.uuid4().hex}{ext}"
-    file.save(_os.path.join(upload_dir, saved_name))
-
-    logo_url = url_for("static", filename=f"uploads/logos/{saved_name}")
+    try:
+        from LoanMVP.services.investor.investor_media_helpers import (
+            _get_spaces_client,
+            _public_spaces_url,
+            SPACES_BUCKET,
+        )
+        key = f"logos/{_uuid.uuid4().hex}{ext}"
+        client = _get_spaces_client()
+        client.put_object(
+            Bucket=SPACES_BUCKET,
+            Key=key,
+            Body=file.read(),
+            ACL="public-read",
+            ContentType=_CONTENT_TYPES.get(ext, "image/png"),
+        )
+        logo_url = _public_spaces_url(key)
+    except Exception as e:
+        current_app.logger.error("Logo upload to Spaces failed: %s", e)
+        flash("Logo upload failed. Please try again.", "danger")
+        return redirect(url_for("vip.insurance_dashboard"))
 
     if partner:
         partner.logo_url = logo_url
