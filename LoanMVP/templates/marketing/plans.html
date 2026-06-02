@@ -10,6 +10,10 @@
         Start with a simple entry point or move into a more operational setup designed
         for active investors and growing teams.
       </p>
+      <div style="display:inline-flex;align-items:center;gap:10px;margin-top:18px;padding:.65rem 1.25rem;border-radius:999px;background:rgba(122,184,255,.08);border:1px solid rgba(122,184,255,.2);">
+        <span style="font-size:1rem;">✦</span>
+        <span style="font-weight:700;color:#bfe0ff;font-size:.92rem;">2 weeks free on every plan &nbsp;·&nbsp; no credit card required</span>
+      </div>
     </div>
   </div>
 </section>
@@ -20,10 +24,10 @@
   <div class="mk-container">
     <div class="mk-grid-3">
       <div class="mk-plan">
-        <div class="mk-plan-badge">Free</div>
+        <div class="mk-plan-badge">Starter</div>
         <h3>Core</h3>
-        <div class="mk-plan-price">$0<span style="font-size:1rem;font-weight:700;">/mo</span></div>
-        <div class="mk-plan-note">Capital access, property search, and messaging — no cost to start.</div>
+        <div class="mk-plan-price">$29<span style="font-size:1rem;font-weight:700;">/mo</span></div>
+        <div class="mk-plan-note">Capital access, property search, and messaging — built for early-stage investors.</div>
 
         <div class="mk-list">
           <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Capital access (apply & refinance)</div></div>
@@ -33,7 +37,8 @@
         </div>
 
         <div style="margin-top:20px;">
-          <a href="{{ url_for('marketing.enter') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Get Started Free</a>
+          <a href="{{ url_for('checkout.subscribe', plan='core') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Choose Core</a>
+          <p style="margin:10px 0 0;text-align:center;font-size:.78rem;color:rgba(228,236,246,.45);">2 weeks free · no credit card required</p>
         </div>
       </div>
 
@@ -48,6 +53,7 @@
           <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Deal workspace</div></div>
           <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Unlimited property search</div></div>
           <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Partner network</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div class="mk-copy">Full Academy access — all modules &amp; AI coaching</div></div>
         </div>
 
         <div style="margin-top:20px;">

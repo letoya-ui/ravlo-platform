@@ -1,5 +1,5 @@
 """
-Preview account management — grant free 14-day access, handle trial expiry,
+Preview account management — grant free 15-day access, handle trial expiry,
 process subscription requests from preview users.
 """
 
@@ -16,7 +16,7 @@ from LoanMVP.extensions import db, csrf
 from LoanMVP.models.user_model import User
 from LoanMVP.models.admin import SubscriptionRequest
 
-_PREVIEW_TRIAL_DAYS = 14
+_PREVIEW_TRIAL_DAYS = 15
 
 preview_bp = Blueprint("preview", __name__, url_prefix="/preview")
 
@@ -35,7 +35,7 @@ def trial_expired():
 # ---------------------------------------------------------
 
 def grant_preview_access(user: User) -> None:
-    """Set subscription=preview and start the 14-day trial clock."""
+    """Set subscription=preview and start the 15-day trial clock."""
     user.subscription = "preview"
     user.trial_ends_at = datetime.utcnow() + timedelta(days=_PREVIEW_TRIAL_DAYS)
 
@@ -177,7 +177,7 @@ def _send_preview_welcome(user: User, temp_password: str) -> None:
             Log In to Ravlo
           </a>
           <p style="margin-top:28px;font-size:13px;color:#9ca3af;">
-            Your preview expires in 14 days. Questions? Reply to this email — we read everything.
+            Your preview expires in 15 days. Questions? Reply to this email — we read everything.
           </p>
         </div>
         """

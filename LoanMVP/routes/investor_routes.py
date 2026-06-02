@@ -1086,6 +1086,7 @@ def _subscription_catalog():
                 "✔ Unlimited property search",
                 "✔ Partner network",
                 "✔ AI Deal Insights",
+                "✔ Full Academy access (Elite — all modules & AI coaching)",
             ],
         },
         "Enterprise": {
@@ -14200,14 +14201,13 @@ def activity():
 @role_required("investor")
 def budget():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    show_archived = request.args.get("archived") == "1"
     budgets = []
     if ip:
-        budgets = (
-            ProjectBudget.query
-            .filter_by(investor_profile_id=ip.id)
-            .order_by(ProjectBudget.updated_at.desc())
-            .all()
-        )
+        q = ProjectBudget.query.filter_by(investor_profile_id=ip.id)
+        if not show_archived:
+            q = q.filter(db.or_(ProjectBudget.status != "archived", ProjectBudget.status.is_(None)))
+        budgets = q.order_by(ProjectBudget.updated_at.desc()).all()
     return render_template(
         "investor/budget.html",
         investor=ip,
@@ -14630,11 +14630,15 @@ def budget_detail(budget_id):
 
     category_rows.sort(key=lambda x: x["estimated"], reverse=True)
 
+    # Deals for link-to-deal dropdown (standalone budgets)
+    deals = Deal.query.filter_by(investor_profile_id=ip.id).order_by(Deal.updated_at.desc()).all()
+
     return render_template(
         "investor/budget_studio/detail.html",
         investor=ip,
         budget=budget,
         category_rows=category_rows,
+        deals=deals,
         title=budget.name,
         active_tab="budget"
     )
@@ -14863,6 +14867,56 @@ def delete_budget_expense(budget_id, expense_id):
     db.session.commit()
 
     flash("Expense removed.", "success")
+    return redirect(url_for("investor.budget_detail", budget_id=budget.id))
+
+
+@investor_bp.route("/budget-studio/<int:budget_id>/update", methods=["POST"])
+@login_required
+@role_required("investor")
+def update_budget(budget_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+    budget = ProjectBudget.query.filter_by(id=budget_id, investor_profile_id=ip.id).first_or_404()
+
+    name = (request.form.get("name") or "").strip()
+    if name:
+        budget.name = name
+
+    budget.project_name = (request.form.get("project_name") or "").strip() or budget.project_name
+    budget.notes = (request.form.get("notes") or "").strip() or None
+
+    budget_type = (request.form.get("budget_type") or "").strip().lower()
+    if budget_type in {"rehab", "build", "design", "turn", "capex", "general"}:
+        budget.budget_type = budget_type
+
+    contingency_raw = request.form.get("contingency")
+    if contingency_raw is not None and contingency_raw.strip() != "":
+        try:
+            budget.contingency = float(contingency_raw)
+            budget.recalculate_totals()
+        except (TypeError, ValueError):
+            pass
+
+    # Link or unlink deal
+    deal_id_raw = request.form.get("deal_id")
+    if deal_id_raw is not None:
+        if deal_id_raw.strip() == "" or deal_id_raw.strip() == "0":
+            budget.deal_id = None
+        else:
+            try:
+                new_deal_id = int(deal_id_raw)
+                linked_deal = Deal.query.filter_by(id=new_deal_id, investor_profile_id=ip.id).first()
+                if linked_deal:
+                    budget.deal_id = linked_deal.id
+            except (TypeError, ValueError):
+                pass
+
+    # Status (active / closed / archived)
+    new_status = (request.form.get("status") or "").strip().lower()
+    if new_status in {"active", "closed", "archived"}:
+        budget.status = new_status
+
+    db.session.commit()
+    flash("Budget settings saved.", "success")
     return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
 
@@ -15523,7 +15577,7 @@ def downgrade_plan():
     except Exception:
         current_app.logger.exception("Investor subscription feature sync failed")
     db.session.commit()
-    flash("Subscription updated to Core (Free).", "success")
+    flash("Subscription updated to Core.", "success")
     return redirect(url_for("investor.subscription"))
 
 

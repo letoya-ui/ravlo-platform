@@ -6,6 +6,11 @@
 
 {% block topbar_actions %}
   <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost sm">Budget Studio</a>
+  {% if request.args.get('archived') == '1' %}
+    <a href="{{ url_for('investor.budget') }}" class="ravlo-btn ghost sm">Hide Archived</a>
+  {% else %}
+    <a href="{{ url_for('investor.budget', archived='1') }}" class="ravlo-btn ghost sm">Show Archived</a>
+  {% endif %}
   <a href="{{ url_for('investor.create_budget') }}" class="ravlo-btn primary sm">+ New Budget</a>
 {% endblock %}
 
