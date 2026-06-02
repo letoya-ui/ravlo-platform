@@ -4,7 +4,7 @@
 {% block title %}Ravlo • Welcome{% endblock %}
 
 {% block page_title %}Welcome to Ravlo{% endblock %}
-{% block page_subline %}Let’s set up your workspace in under 60 seconds.{% endblock %}
+{% block page_subline %}Let's set up your workspace in under 60 seconds.{% endblock %}
 
 {% block topbar_actions %}
   <button class="ravlo-btn ghost sm" type="button"
@@ -199,7 +199,7 @@
 
     <h2 class="onb-title">👋 Welcome to Ravlo</h2>
     <p class="onb-muted">
-      {{ welcome_ai or "Your Command Center is ready. Choose your investing strategy and notification preferences — then we’ll tailor your workspace." }}
+      {{ welcome_ai or "Your Command Center is ready. Choose your investing strategy and notification preferences — then we'll tailor your workspace." }}
     </p>
 
     <form method="POST" action="{{ url_for('investor.command_center') }}" style="margin-top:14px;">
