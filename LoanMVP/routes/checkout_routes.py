@@ -41,8 +41,11 @@ _PLAN_MAP = {
 
 
 @checkout_bp.route("/subscribe/<plan>")
-@login_required
 def subscribe(plan):
+    # Unauthenticated visitors (likely new users) → register, not login
+    if not current_user.is_authenticated:
+        return redirect(url_for("auth.register", plan=plan))
+
     cfg = _PLAN_MAP.get(plan)
     if not cfg:
         return jsonify({"error": "Unknown plan."}), 404
