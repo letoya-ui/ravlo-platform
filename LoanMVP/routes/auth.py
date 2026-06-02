@@ -316,7 +316,7 @@ def _parse_name_parts(full_name: str, first_name: str, last_name: str):
 def _send_welcome_email(user) -> None:
     try:
         name = _full_name_from_user(user)
-        login_url = url_for("auth.login", _external=True)
+        dashboard_url = url_for("investor.command_center", _external=True)
         app_origin = current_app.config.get("APP_ORIGIN", "https://ravlohq.com")
 
         sender = (
@@ -326,38 +326,104 @@ def _send_welcome_email(user) -> None:
         )
 
         msg = MailMessage(
-            subject="Welcome to Ravlo — You're In!",
+            subject="Welcome to Ravlo — Your 15-Day Trial Has Started",
             sender=sender,
             recipients=[user.email],
-            html=f"""
-<div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;color:#111;">
-  <div style="background:#0f172a;padding:32px;text-align:center;border-radius:8px 8px 0 0;">
-    <h1 style="color:#ffffff;font-size:28px;margin:0;">Welcome to Ravlo</h1>
-  </div>
-  <div style="background:#ffffff;padding:32px;border:1px solid #e5e7eb;border-radius:0 0 8px 8px;">
-    <p style="font-size:16px;margin-bottom:16px;">Hi {name},</p>
-    <p style="font-size:16px;margin-bottom:16px;">
-      Your Ravlo account is ready. You now have access to the platform &mdash; from deal analysis and renovation
-      planning to lending tools and your personalized dashboard.
-    </p>
-    <p style="margin-bottom:24px;">
-      <a href="{login_url}"
-         style="display:inline-block;background:#2563eb;color:#fff;padding:12px 28px;
-                border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;">
-        Go to My Dashboard
-      </a>
-    </p>
-    <p style="font-size:14px;color:#6b7280;">
-      If you have any questions, just reply to this email &mdash; we&rsquo;re happy to help.
-    </p>
-    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
-    <p style="font-size:12px;color:#9ca3af;margin:0;">
-      Ravlo &mdash; Smarter Real Estate Lending &amp; Investing<br/>
-      <a href="{app_origin}" style="color:#9ca3af;">{app_origin}</a>
-    </p>
-  </div>
-</div>
-""",
+            html=f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Inter,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+      <!-- Header -->
+      <tr><td style="background:#0a0f1e;border-radius:12px 12px 0 0;padding:32px 40px;text-align:left;">
+        <img src="https://ravlohq.com/static/images/ravlo-logo-dark.png"
+             alt="Ravlo" style="height:30px;display:block;margin-bottom:24px;">
+        <h1 style="color:#ffffff;font-size:24px;font-weight:700;margin:0 0 8px;">
+          Welcome to Ravlo, {name}!
+        </h1>
+        <p style="color:#94a3b8;font-size:14px;margin:0;">
+          Your 15-day free trial is now active &mdash; no credit card required.
+        </p>
+      </td></tr>
+
+      <!-- Body -->
+      <tr><td style="background:#ffffff;padding:36px 40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
+        <p style="font-size:15px;color:#374151;line-height:1.6;margin:0 0 24px;">
+          You now have full access to the Ravlo Investor OS &mdash; deal analysis, renovation planning,
+          capital tools, and your personalized dashboard. Here&rsquo;s where to start:
+        </p>
+
+        <!-- Steps -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+          <tr>
+            <td style="width:36px;vertical-align:top;padding-top:2px;">
+              <div style="width:28px;height:28px;background:#1a56db;border-radius:50%;text-align:center;
+                          line-height:28px;color:#fff;font-size:13px;font-weight:700;">1</div>
+            </td>
+            <td style="padding-left:12px;padding-bottom:16px;">
+              <strong style="font-size:14px;color:#111827;">Search a property</strong>
+              <p style="font-size:13px;color:#6b7280;margin:2px 0 0;">
+                Use Deal Finder to locate and analyze your next investment target.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="width:36px;vertical-align:top;padding-top:2px;">
+              <div style="width:28px;height:28px;background:#1a56db;border-radius:50%;text-align:center;
+                          line-height:28px;color:#fff;font-size:13px;font-weight:700;">2</div>
+            </td>
+            <td style="padding-left:12px;padding-bottom:16px;">
+              <strong style="font-size:14px;color:#111827;">Run a deal analysis</strong>
+              <p style="font-size:13px;color:#6b7280;margin:2px 0 0;">
+                Build out your numbers with the Deal Workspace &mdash; ARV, rehab costs, ROI.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="width:36px;vertical-align:top;padding-top:2px;">
+              <div style="width:28px;height:28px;background:#1a56db;border-radius:50%;text-align:center;
+                          line-height:28px;color:#fff;font-size:13px;font-weight:700;">3</div>
+            </td>
+            <td style="padding-left:12px;">
+              <strong style="font-size:14px;color:#111827;">Apply for capital</strong>
+              <p style="font-size:13px;color:#6b7280;margin:2px 0 0;">
+                Submit a loan application directly from your dashboard.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- CTA -->
+        <p style="margin:0 0 28px;">
+          <a href="{dashboard_url}"
+             style="display:inline-block;background:#1a56db;color:#ffffff;font-weight:600;
+                    font-size:15px;padding:13px 32px;border-radius:8px;text-decoration:none;">
+            Enter Your Dashboard &rarr;
+          </a>
+        </p>
+
+        <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0;">
+          Your trial runs for 15 days. Questions? Just reply to this email &mdash; we read everything.
+        </p>
+      </td></tr>
+
+      <!-- Footer -->
+      <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;
+                     border-radius:0 0 12px 12px;padding:20px 40px;">
+        <p style="font-size:12px;color:#9ca3af;margin:0;">
+          Ravlo &mdash; Smarter Real Estate Lending &amp; Investing &nbsp;&middot;&nbsp;
+          <a href="{app_origin}" style="color:#9ca3af;text-decoration:none;">{app_origin}</a>
+        </p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>""",
         )
         mail.send(msg)
     except Exception as exc:
@@ -732,15 +798,54 @@ def forgot_password():
         token = generate_reset_token(user.email)
         reset_link = url_for("auth.reset_password", token=token, _external=True)
 
+        name = _full_name_from_user(user)
+        app_origin = current_app.config.get("APP_ORIGIN", "https://ravlohq.com")
         msg = MailMessage(
             subject="Reset your Ravlo password",
             recipients=[user.email],
-            body=(
-                f"Hi {_full_name_from_user(user)},\n\n"
-                f"Click the link below to reset your password. This link expires in 1 hour.\n\n"
-                f"{reset_link}\n\n"
-                f"If you didn’t request this, you can safely ignore this email.\n"
-            ),
+            html=f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Inter,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+      <tr><td style="background:#0a0f1e;border-radius:12px 12px 0 0;padding:28px 40px;">
+        <img src="https://ravlohq.com/static/images/ravlo-logo-dark.png"
+             alt="Ravlo" style="height:28px;display:block;">
+      </td></tr>
+      <tr><td style="background:#ffffff;padding:36px 40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
+        <h2 style="font-size:20px;font-weight:700;color:#111827;margin:0 0 12px;">
+          Reset your password
+        </h2>
+        <p style="font-size:15px;color:#374151;line-height:1.6;margin:0 0 24px;">
+          Hi {name}, we received a request to reset the password for your Ravlo account.
+          Click the button below &mdash; this link expires in 1 hour.
+        </p>
+        <p style="margin:0 0 28px;">
+          <a href="{reset_link}"
+             style="display:inline-block;background:#1a56db;color:#ffffff;font-weight:600;
+                    font-size:15px;padding:13px 32px;border-radius:8px;text-decoration:none;">
+            Reset My Password
+          </a>
+        </p>
+        <p style="font-size:13px;color:#6b7280;margin:0;">
+          If you didn&rsquo;t request this, you can safely ignore this email &mdash;
+          your password won&rsquo;t change.
+        </p>
+      </td></tr>
+      <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;
+                     border-radius:0 0 12px 12px;padding:20px 40px;">
+        <p style="font-size:12px;color:#9ca3af;margin:0;">
+          Ravlo &mdash; Smarter Real Estate Lending &amp; Investing &nbsp;&middot;&nbsp;
+          <a href="{app_origin}" style="color:#9ca3af;text-decoration:none;">{app_origin}</a>
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>""",
         )
 
         try:
