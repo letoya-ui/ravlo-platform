@@ -570,7 +570,7 @@
       <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
         <button type="submit" class="ravlo-btn primary">Save Settings</button>
         {% if (budget.status or 'active') != 'archived' %}
-        <button type="submit" name="status" value="archived"
+        <button type="submit" name="_action" value="archive"
                 onclick="return confirm('Archive this budget? It will be hidden from the main list.')"
                 class="ravlo-btn ghost" style="color:rgba(228,236,246,.5);">Archive</button>
         {% endif %}

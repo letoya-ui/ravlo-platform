@@ -14910,10 +14910,13 @@ def update_budget(budget_id):
             except (TypeError, ValueError):
                 pass
 
-    # Status (active / closed / archived)
-    new_status = (request.form.get("status") or "").strip().lower()
-    if new_status in {"active", "closed", "archived"}:
-        budget.status = new_status
+    # Status — archive button uses _action=archive to avoid shadowing the select
+    if request.form.get("_action") == "archive":
+        budget.status = "archived"
+    else:
+        new_status = (request.form.get("status") or "").strip().lower()
+        if new_status in {"active", "closed", "archived"}:
+            budget.status = new_status
 
     db.session.commit()
     flash("Budget settings saved.", "success")
