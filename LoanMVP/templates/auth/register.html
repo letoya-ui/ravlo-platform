@@ -1,9 +1,17 @@
 {% extends "layouts/ravlo_auth_base.html" %}
 {% block title %}Register • Ravlo{% endblock %}
 
-{% block auth_title %}Register your Ravlo account{% endblock %}
+{% block auth_title %}Start your free trial{% endblock %}
 {% block auth_subtitle %}
-Begin analyzing deals, planning projects, and requesting funding.
+{% if not recovery_mode %}
+<span style="display:inline-flex;align-items:center;gap:8px;padding:.45rem 1rem;border-radius:999px;
+             background:rgba(122,184,255,.1);border:1px solid rgba(122,184,255,.22);
+             font-size:.82rem;font-weight:700;color:#bfe0ff;margin-top:6px;">
+  ✦&nbsp; 15 days free &nbsp;·&nbsp; no credit card required
+</span>
+{% else %}
+Restore owner admin access to this workspace.
+{% endif %}
 {% endblock %}
 
 {% block auth_content %}
@@ -12,6 +20,16 @@ Begin analyzing deals, planning projects, and requesting funding.
 <div class="ravlo-alert warning" style="margin-bottom: 18px;">
 This workspace is in recovery mode. Create the owner admin account with
 <strong>{{ owner_admin_email }}</strong> to restore access.
+</div>
+{% endif %}
+
+{% set plan_param = request.args.get('plan') %}
+{% if plan_param and not recovery_mode %}
+<div style="background:rgba(26,86,219,.08);border:1px solid rgba(26,86,219,.25);
+            border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:.88rem;
+            color:#bfd4f7;line-height:1.5;">
+  <strong style="color:#e0ecff;">You're one step away from your free trial.</strong><br>
+  Create your account below — your 15 days start the moment you sign up. No payment until you decide to upgrade.
 </div>
 {% endif %}
 
