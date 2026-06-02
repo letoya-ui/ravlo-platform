@@ -105,6 +105,7 @@
           <li>Messaging center</li>
           <li>Basic status tracking</li>
           <li>1 included user</li>
+          <li class="academy-feature">Ravlo Academy — 1 seat included</li>
         </ul>
 
         <div class="card-actions">
@@ -132,6 +133,7 @@
           <li>Task and workflow coordination</li>
           <li>Internal team messaging</li>
           <li>Company-level deal oversight</li>
+          <li class="academy-feature">Ravlo Academy — all team members included</li>
         </ul>
 
         <div class="card-actions">
@@ -158,6 +160,7 @@
           <li>Advanced document handling</li>
           <li>Priority onboarding</li>
           <li>Expanded operational support</li>
+          <li class="academy-feature">Ravlo Academy — all team members included</li>
         </ul>
 
         <div class="card-actions">
@@ -184,12 +187,76 @@
           <li>Priority implementation support</li>
           <li>Future integration pathway</li>
           <li>Licensing structure for larger teams</li>
+          <li class="academy-feature">Ravlo Academy — all employees included + custom codes</li>
         </ul>
 
         <div class="card-actions">
           <a href="{{ url_for('marketing.contact') }}" class="ravlo-btn secondary full">Request Enterprise Demo</a>
         </div>
       </article>
+    </div>
+  </section>
+
+  <section class="pricing-section academy-section">
+    <div class="academy-banner glass-card">
+      <div class="academy-banner-left">
+        <div class="pricing-eyebrow">RAVLO ACADEMY — INCLUDED WITH EVERY PLAN</div>
+        <h2>1-on-1 AI coaching and mortgage training for your entire team.</h2>
+        <p>
+          Every Ravlo Lending OS seat comes with full Academy access — no extra charge.
+          Loan officers, processors, underwriters, and admins each get a personalized AI coach,
+          structured mortgage training modules, and deal review tools built for their role.
+        </p>
+        <div class="academy-perks">
+          <div class="academy-perk">
+            <span class="perk-icon">🤖</span>
+            <div>
+              <strong>Unlimited AI Coaching</strong>
+              <p>24/7 coaching tailored to each team member’s role — origination, processing, underwriting, or admin.</p>
+            </div>
+          </div>
+          <div class="academy-perk">
+            <span class="perk-icon">📋</span>
+            <div>
+              <strong>Mortgage Training Modules</strong>
+              <p>Structured learning paths covering loan products, compliance, deal structuring, and client management.</p>
+            </div>
+          </div>
+          <div class="academy-perk">
+            <span class="perk-icon">📊</span>
+            <div>
+              <strong>Deal Review &amp; 90-Day Plans</strong>
+              <p>Walk through live deals with the AI coach and build personalized 90-day production plans for each LO.</p>
+            </div>
+          </div>
+          <div class="academy-perk">
+            <span class="perk-icon">🏢</span>
+            <div>
+              <strong>Company Access Codes</strong>
+              <p>Enterprise plans include custom codes so employees can access Academy without needing a platform seat.</p>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:24px;">
+          <a href="{{ url_for(‘university.portal’) }}" class="ravlo-btn primary">Explore Ravlo Academy →</a>
+          <a href="{{ url_for(‘marketing.contact’) }}" class="ravlo-btn ghost" style="margin-left:12px;">Talk to Us</a>
+        </div>
+      </div>
+      <div class="academy-banner-right">
+        <div class="academy-tier-card">
+          <div class="tier-badge">LENDING TEAM TIER</div>
+          <h3>What your team gets</h3>
+          <ul class="academy-tier-list">
+            <li>Unlimited AI coaching sessions</li>
+            <li>Loan officer modules</li>
+            <li>Commercial lending training</li>
+            <li>Deal review &amp; analysis</li>
+            <li>Personalized 90-day production plan</li>
+            <li>Role-based content (LO, processor, underwriter)</li>
+          </ul>
+          <div class="tier-note">Included at no extra cost with every Lending OS plan.</div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -312,6 +379,13 @@
             <td>—</td>
             <td>Optional</td>
             <td>✓</td>
+          </tr>
+          <tr class="academy-row">
+            <td><strong style="color:#6AB4D4;">Ravlo Academy (AI coaching + training)</strong></td>
+            <td><span style="color:#6AB4D4;">1 seat</span></td>
+            <td><span style="color:#6AB4D4;">All team members</span></td>
+            <td><span style="color:#6AB4D4;">All team members</span></td>
+            <td><span style="color:#6AB4D4;">All + custom codes</span></td>
           </tr>
         </tbody>
       </table>
@@ -859,6 +933,144 @@
 
     .pricing-cta {
       padding: 24px;
+    }
+  }
+
+  /* Academy section */
+  .feature-list li.academy-feature {
+    color: #6AB4D4;
+    font-weight: 600;
+  }
+
+  .feature-list li.academy-feature::before {
+    background: linear-gradient(135deg, #6AB4D4, #9ee7c3);
+  }
+
+  .academy-banner {
+    display: grid;
+    grid-template-columns: 1.4fr .6fr;
+    gap: 32px;
+    padding: 36px 40px;
+    border-color: rgba(106, 180, 212, 0.25);
+  }
+
+  .academy-banner h2 {
+    font-size: clamp(1.6rem, 2.5vw, 2.4rem);
+    letter-spacing: -.02em;
+    margin: 10px 0 14px;
+  }
+
+  .academy-banner > .academy-banner-left > p {
+    color: var(--muted);
+    line-height: 1.7;
+    margin: 0 0 24px;
+    max-width: 680px;
+  }
+
+  .academy-perks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .academy-perk {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .perk-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .academy-perk strong {
+    display: block;
+    font-size: .95rem;
+    margin-bottom: 4px;
+  }
+
+  .academy-perk p {
+    font-size: .84rem;
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .academy-tier-card {
+    background: rgba(106, 180, 212, 0.06);
+    border: 1px solid rgba(106, 180, 212, 0.2);
+    border-radius: var(--radius-lg);
+    padding: 26px;
+    height: 100%;
+  }
+
+  .tier-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(106, 180, 212, 0.12);
+    border: 1px solid rgba(106, 180, 212, 0.25);
+    color: #6AB4D4;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .14em;
+    margin-bottom: 14px;
+  }
+
+  .academy-tier-card h3 {
+    font-size: 1.1rem;
+    margin: 0 0 16px;
+  }
+
+  .academy-tier-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .academy-tier-list li {
+    position: relative;
+    padding-left: 18px;
+    font-size: .9rem;
+    color: #d7e5f3;
+    line-height: 1.5;
+  }
+
+  .academy-tier-list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: .5rem;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #6AB4D4;
+  }
+
+  .tier-note {
+    font-size: .8rem;
+    color: var(--muted);
+    border-top: 1px solid rgba(106, 180, 212, 0.15);
+    padding-top: 14px;
+    margin-top: 4px;
+  }
+
+  .academy-row td {
+    background: rgba(106, 180, 212, 0.04);
+    border-top: 1px solid rgba(106, 180, 212, 0.15) !important;
+  }
+
+  @media (max-width: 980px) {
+    .academy-banner {
+      grid-template-columns: 1fr;
+    }
+
+    .academy-perks {
+      grid-template-columns: 1fr;
     }
   }
 </style>
