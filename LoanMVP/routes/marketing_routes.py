@@ -300,9 +300,68 @@ def tour():
 # ---------------------------------------------------------
 # CONTACT
 # ---------------------------------------------------------
-@marketing_bp.route("/contact")
+@marketing_bp.route("/contact", methods=["GET", "POST"])
+@csrf.exempt
 def contact():
+    if request.method == "POST":
+        name    = (request.form.get("name")    or "").strip()
+        email   = (request.form.get("email")   or "").strip().lower()
+        subject = (request.form.get("subject") or "").strip()
+        message = (request.form.get("message") or "").strip()
+
+        if not name or not email or not message:
+            flash("Name, email, and message are required.", "warning")
+            return redirect(url_for("marketing.contact"))
+
+        # Save to DB so submissions aren't lost even if email fails
+        existing = LicenseApplication.query.filter(
+            func.lower(LicenseApplication.email) == email,
+            LicenseApplication.business_type == "contact",
+            LicenseApplication.status == "new",
+        ).first()
+        if not existing:
+            notes_body = f"Subject: {subject}\n\n{message}" if subject else message
+            row = LicenseApplication(
+                company_name="—",
+                contact_name=name,
+                email=email,
+                business_type="contact",
+                notes=notes_body,
+                status="new",
+            )
+            db.session.add(row)
+            db.session.commit()
+
+        _notify_admin_contact(name, email, subject, message)
+        flash("Message sent — we'll be in touch shortly.", "success")
+        return redirect(url_for("marketing.contact"))
+
     return render_marketing_page("contact")
+
+
+def _notify_admin_contact(name: str, email: str, subject: str, message: str) -> None:
+    try:
+        from LoanMVP.app import mail
+        from flask_mail import Message as MailMessage
+        admin_email = _owner_admin_email()
+        if not admin_email:
+            return
+        subj_line = subject or "(no subject)"
+        msg = MailMessage(
+            subject=f"[Ravlo Contact] {subj_line} — {email}",
+            recipients=[admin_email],
+        )
+        msg.body = (
+            f"New contact form submission:\n\n"
+            f"Name:    {name}\n"
+            f"Email:   {email}\n"
+            f"Subject: {subj_line}\n\n"
+            f"{message}\n\n"
+            f"---\nReview at https://ravlohq.com/admin/dashboard"
+        )
+        mail.send(msg)
+    except Exception as e:
+        current_app.logger.warning("Contact admin notification failed: %s", e)
 
 
 @marketing_bp.route("/lenders-contact")
