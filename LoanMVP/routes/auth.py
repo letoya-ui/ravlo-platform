@@ -1,4 +1,5 @@
 from datetime import datetime
+import html as _html
 import secrets
 from sqlalchemy import func
 from flask import (
@@ -315,9 +316,15 @@ def _parse_name_parts(full_name: str, first_name: str, last_name: str):
 
 def _send_welcome_email(user) -> None:
     try:
-        name = _full_name_from_user(user)
-        dashboard_url = url_for("investor.command_center", _external=True)
-        app_origin = current_app.config.get("APP_ORIGIN", "https://ravlohq.com")
+        name = _html.escape(_full_name_from_user(user))
+        role = (getattr(user, "role", "") or "investor").strip().lower()
+        try:
+            dashboard_url = url_for(_dashboard_for_role(role), _external=True)
+        except Exception:
+            dashboard_url = url_for("auth.login", _external=True)
+        app_origin = _html.escape(current_app.config.get("APP_ORIGIN", "https://ravlohq.com"))
+
+        is_investor = role == "investor"
 
         sender = (
             current_app.config.get("MAIL_DEFAULT_SENDER")
@@ -325,38 +332,15 @@ def _send_welcome_email(user) -> None:
             or "letoya@ravlohq.com"
         )
 
-        msg = MailMessage(
-            subject="Welcome to Ravlo — Your 15-Day Trial Has Started",
-            sender=sender,
-            recipients=[user.email],
-            html=f"""<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:Inter,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 16px;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-
-      <!-- Header -->
-      <tr><td style="background:#0a0f1e;border-radius:12px 12px 0 0;padding:32px 40px;text-align:left;">
-        <img src="https://ravlohq.com/static/images/ravlo-logo-dark.png"
-             alt="Ravlo" style="height:30px;display:block;margin-bottom:24px;">
-        <h1 style="color:#ffffff;font-size:24px;font-weight:700;margin:0 0 8px;">
-          Welcome to Ravlo, {name}!
-        </h1>
-        <p style="color:#94a3b8;font-size:14px;margin:0;">
-          Your 15-day free trial is now active &mdash; no credit card required.
-        </p>
-      </td></tr>
-
-      <!-- Body -->
-      <tr><td style="background:#ffffff;padding:36px 40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
-        <p style="font-size:15px;color:#374151;line-height:1.6;margin:0 0 24px;">
-          You now have full access to the Ravlo Investor OS &mdash; deal analysis, renovation planning,
-          capital tools, and your personalized dashboard. Here&rsquo;s where to start:
-        </p>
-
-        <!-- Steps -->
+        if is_investor:
+            subject = "Welcome to Ravlo — Your 15-Day Trial Has Started"
+            subheading = "Your 15-day free trial is now active &mdash; no credit card required."
+            body_intro = (
+                "You now have full access to the Ravlo Investor OS &mdash; deal analysis, "
+                "renovation planning, capital tools, and your personalized dashboard. "
+                "Here&rsquo;s where to start:"
+            )
+            steps_html = """
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
           <tr>
             <td style="width:36px;vertical-align:top;padding-top:2px;">
@@ -394,20 +378,54 @@ def _send_welcome_email(user) -> None:
               </p>
             </td>
           </tr>
-        </table>
+        </table>"""
+            cta_label = "Enter Your Dashboard &rarr;"
+            footnote = "Your trial runs for 15 days. Questions? Just reply to this email &mdash; we read everything."
+        else:
+            subject = "Welcome to Ravlo — Your Account is Ready"
+            subheading = "Your Ravlo account is set up and ready to go."
+            body_intro = "You now have access to your Ravlo dashboard. Log in any time to get started."
+            steps_html = ""
+            cta_label = "Go to My Dashboard &rarr;"
+            footnote = "Questions? Just reply to this email &mdash; we read everything."
+
+        msg = MailMessage(
+            subject=subject,
+            sender=sender,
+            recipients=[user.email],
+            html=f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Inter,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+      <!-- Header -->
+      <tr><td style="background:#0a0f1e;border-radius:12px 12px 0 0;padding:32px 40px;text-align:left;">
+        <img src="https://ravlohq.com/static/images/ravlo-logo-dark.png"
+             alt="Ravlo" style="height:30px;display:block;margin-bottom:24px;">
+        <h1 style="color:#ffffff;font-size:24px;font-weight:700;margin:0 0 8px;">
+          Welcome to Ravlo, {name}!
+        </h1>
+        <p style="color:#94a3b8;font-size:14px;margin:0;">{subheading}</p>
+      </td></tr>
+
+      <!-- Body -->
+      <tr><td style="background:#ffffff;padding:36px 40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
+        <p style="font-size:15px;color:#374151;line-height:1.6;margin:0 0 24px;">{body_intro}</p>
+        {steps_html}
 
         <!-- CTA -->
         <p style="margin:0 0 28px;">
           <a href="{dashboard_url}"
              style="display:inline-block;background:#1a56db;color:#ffffff;font-weight:600;
                     font-size:15px;padding:13px 32px;border-radius:8px;text-decoration:none;">
-            Enter Your Dashboard &rarr;
+            {cta_label}
           </a>
         </p>
 
-        <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0;">
-          Your trial runs for 15 days. Questions? Just reply to this email &mdash; we read everything.
-        </p>
+        <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0;">{footnote}</p>
       </td></tr>
 
       <!-- Footer -->
@@ -798,8 +816,8 @@ def forgot_password():
         token = generate_reset_token(user.email)
         reset_link = url_for("auth.reset_password", token=token, _external=True)
 
-        name = _full_name_from_user(user)
-        app_origin = current_app.config.get("APP_ORIGIN", "https://ravlohq.com")
+        name = _html.escape(_full_name_from_user(user))
+        app_origin = _html.escape(current_app.config.get("APP_ORIGIN", "https://ravlohq.com"))
         msg = MailMessage(
             subject="Reset your Ravlo password",
             recipients=[user.email],

@@ -278,7 +278,7 @@
   <div class="mk-container">
     <div class="mk-kicker" style="margin-bottom:8px;">Pricing</div>
     <h2 class="mk-title-lg" style="margin-bottom:6px;">Simple plans. Start free.</h2>
-    <p class="mk-copy" style="margin-bottom:28px;">Every plan starts with a 15-day free trial — no credit card required.</p>
+    <p class="mk-copy" style="margin-bottom:28px;">Create a free account and explore Ravlo for 15 days — no credit card needed to get started.</p>
 
     <div class="mk-grid-3">
       <div class="mk-plan">
@@ -287,7 +287,7 @@
         <div class="mk-plan-price">$29<span style="font-size:1rem;font-weight:700;">/mo</span></div>
         <div class="mk-plan-note">Capital access, property search, and messaging — built for early-stage investors.</div>
         <div style="margin-top:16px;">
-          <a href="{{ url_for('checkout.subscribe', plan='core') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Get Started</a>
+          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Start Free Trial</a>
         </div>
       </div>
 
@@ -297,7 +297,7 @@
         <div class="mk-plan-price">$79<span style="font-size:1rem;font-weight:700;">/mo</span></div>
         <div class="mk-plan-note">Full deal workflow, unlimited search, partner access, and Academy.</div>
         <div style="margin-top:16px;">
-          <a href="{{ url_for('checkout.subscribe', plan='pro') }}" class="mk-btn mk-btn-primary" style="width:100%;">Choose Pro</a>
+          <a href="{{ url_for('marketing.plans') }}" class="mk-btn mk-btn-primary" style="width:100%;">See Pro Plan</a>
         </div>
       </div>
 
@@ -313,8 +313,8 @@
     </div>
 
     <p style="text-align:center;margin-top:20px;font-size:.82rem;color:rgba(228,236,246,.4);">
-      All plans include a 15-day free trial &nbsp;·&nbsp; no credit card required &nbsp;·&nbsp;
-      <a href="{{ url_for('marketing.plans') }}" style="color:rgba(122,184,255,.6);text-decoration:none;">Compare plans →</a>
+      Start with a free account &nbsp;·&nbsp; no credit card required &nbsp;·&nbsp;
+      <a href="{{ url_for('marketing.plans') }}" style="color:rgba(122,184,255,.6);text-decoration:none;">Compare all plans →</a>
     </p>
   </div>
 </section>

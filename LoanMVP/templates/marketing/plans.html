@@ -37,8 +37,8 @@
         </div>
 
         <div style="margin-top:20px;">
-          <a href="{{ url_for('checkout.subscribe', plan='core') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Choose Core</a>
-          <p style="margin:10px 0 0;text-align:center;font-size:.78rem;color:rgba(228,236,246,.45);">2 weeks free · no credit card required</p>
+          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Start Free Trial</a>
+          <p style="margin:10px 0 0;text-align:center;font-size:.78rem;color:rgba(228,236,246,.45);">15 days free · no credit card required</p>
         </div>
       </div>
 
@@ -57,7 +57,7 @@
         </div>
 
         <div style="margin-top:20px;">
-          <a href="{{ url_for('checkout.subscribe', plan='pro') }}" class="mk-btn mk-btn-primary" style="width:100%;">Choose Pro</a>
+          <a href="{{ url_for('checkout.subscribe', plan='operator') }}" class="mk-btn mk-btn-primary" style="width:100%;">Choose Pro</a>
         </div>
       </div>
 
