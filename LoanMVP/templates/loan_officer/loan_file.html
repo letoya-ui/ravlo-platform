@@ -264,6 +264,59 @@ Review borrower details, underwriting ratios, documents, timeline, engagement, s
     {% endif %}
   </section>
 
+  <!-- MESSAGES -->
+  <section class="rv-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Borrower Communication</div>
+        <h3>Messages</h3>
+      </div>
+    </div>
+
+    {% if borrower %}
+      <form method="POST" style="margin-bottom:24px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="_action" value="send_message">
+        <div style="display:flex;gap:10px;align-items:flex-end;">
+          <div style="flex:1;">
+            <label style="display:block;margin-bottom:6px;font-size:.82rem;color:var(--muted,#888);">Message to borrower</label>
+            <textarea name="content" rows="3" placeholder="Type a message to {{ borrower.full_name or 'the borrower' }}..."
+                      style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:inherit;resize:vertical;" required></textarea>
+          </div>
+          <button type="submit" class="rv-btn primary sm" style="flex-shrink:0;">
+            <i class="lucide lucide-send"></i>
+            Send
+          </button>
+        </div>
+      </form>
+
+      {% set file_messages = borrower.messages | sort(attribute='timestamp', reverse=True) if borrower.messages else [] %}
+      {% if file_messages %}
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          {% for m in file_messages %}
+            <div style="padding:12px 16px;border-radius:10px;
+                        background:{% if m.sender_type == 'staff' %}rgba(122,184,255,.07){% elif m.sender_type == 'ai' %}rgba(167,139,250,.07){% else %}rgba(255,255,255,.04){% endif %};
+                        border:1px solid {% if m.sender_type == 'staff' %}rgba(122,184,255,.15){% elif m.sender_type == 'ai' %}rgba(167,139,250,.15){% else %}rgba(255,255,255,.08){% endif %};">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <strong style="font-size:.85rem;">
+                  {% if m.sender_type == 'staff' %}{{ m.sender_name or "Staff" }}
+                  {% elif m.sender_type == 'ai' %}Ravlo AI
+                  {% else %}{{ borrower.full_name or "Borrower" }}{% endif %}
+                </strong>
+                <span style="font-size:.78rem;opacity:.55;">{{ m.timestamp.strftime("%b %d, %Y %I:%M %p") if m.timestamp else "" }}</span>
+              </div>
+              <p style="margin:0;font-size:.9rem;line-height:1.5;">{{ m.message }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted">No messages yet for this borrower.</p>
+      {% endif %}
+    {% else %}
+      <p class="muted">No borrower linked to this loan file.</p>
+    {% endif %}
+  </section>
+
   <!-- SCENARIOS -->
   <section class="loanfile-grid-2">
 

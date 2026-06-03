@@ -84,7 +84,7 @@ from LoanMVP.models.ai_models import (
     AIIntakeSummary,
     AIAssistantInteraction,
 )
-from LoanMVP.models.borrowers import BorrowerInteraction
+from LoanMVP.models.borrowers import BorrowerInteraction, BorrowerMessage
 from LoanMVP.models.payment_models import PaymentRecord
 from LoanMVP.models.campaign_model import Campaign
 from LoanMVP.models.user_model import User
@@ -668,7 +668,7 @@ def send_message():
         )
     )
  
-@loan_officer_bp.route("/loan/<int:loan_id>")
+@loan_officer_bp.route("/loan/<int:loan_id>", methods=["GET", "POST"])
 @role_required("loan_officer")
 def loan_file(loan_id):
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
@@ -680,6 +680,23 @@ def loan_file(loan_id):
         return redirect(url_for("loan_officer.dashboard"))
 
     borrower = loan.borrower_profile
+
+    if request.method == "POST" and request.form.get("_action") == "send_message":
+        content = (request.form.get("content") or "").strip()
+        if content and borrower:
+            officer_name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or "Loan Officer"
+            msg = BorrowerMessage(
+                borrower_id=borrower.id,
+                sender_type="staff",
+                sender_name=officer_name,
+                message=content,
+            )
+            db.session.add(msg)
+            db.session.commit()
+            flash("Message sent to borrower.", "success")
+        else:
+            flash("Message cannot be empty.", "warning")
+        return redirect(url_for("loan_officer.loan_file", loan_id=loan_id))
 
     credit = None
     if borrower and getattr(borrower, "credit_profiles", None):
