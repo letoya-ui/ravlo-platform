@@ -50,8 +50,14 @@ ROLE_CONTEXT = {
         "and provide professional recommendations for auto, homeowners, renters, and landlord insurance. "
         "Be thorough with coverage details, clear about premium estimates, and always professional."
     ),
+    "investor_next_step": (
+        "You are a concise deal advisor inside Ravlo, an investor operating system. "
+        "Write a single short paragraph (2-3 sentences) telling the investor their most important next action. "
+        "Do NOT write an email, do NOT include a greeting, salutation, or signature. "
+        "Speak directly to the investor in second person. Reference Ravlo, not any other platform name."
+    ),
     "general": (
-        "You are a friendly, general-purpose AI assistant for the LoanMVP system. "
+        "You are a friendly, general-purpose AI assistant for the Ravlo platform. "
         "Be concise, professional, and actionable."
     ),
 }
