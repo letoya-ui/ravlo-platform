@@ -14,10 +14,10 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column(
-        'project_budgets',
-        sa.Column('status', sa.String(32), nullable=False, server_default='active')
-    )
+    op.execute("""
+        ALTER TABLE project_budgets
+        ADD COLUMN IF NOT EXISTS status VARCHAR(32) NOT NULL DEFAULT 'active'
+    """)
 
 
 def downgrade():

@@ -23,6 +23,8 @@
 
   <div class="re-shell">
 
+    <div class="re-sidebar-backdrop" onclick="document.body.classList.remove('re-sidebar-open')"></div>
+
     <aside class="re-sidebar" id="reSidebar">
       {% if current_user.is_authenticated %}
         {% set _exec_emails = ["letoya@ravlohq.com", "jamaine.caughman@ravlohq.com"] %}
@@ -53,7 +55,7 @@
             aria-label="Toggle navigation"
             onclick="document.body.classList.toggle('re-sidebar-open')"
           >
-            R
+            <i class="lucide lucide-menu"></i>
           </button>
 
           <div>

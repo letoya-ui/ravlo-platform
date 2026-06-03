@@ -1,1 +1,1 @@
-web: flask db upgrade && gunicorn --worker-class eventlet --workers 1 --bind 0.0.0.0:$PORT LoanMVP.app:app
+web: flask db upgrade heads && gunicorn --worker-class eventlet --workers 1 --bind 0.0.0.0:$PORT LoanMVP.app:app

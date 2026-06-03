@@ -423,24 +423,43 @@ body.rl-sidebar-open .rl-overlay{
 
 .re-menu-btn,
 .rl-menu-btn{
-  width:42px;
-  height:42px;
+  width:48px;
+  height:48px;
   display:none;
   align-items:center;
   justify-content:center;
-  border-radius:12px;
-  background:linear-gradient(180deg, rgba(95,168,255,.22), rgba(95,168,255,.10));
-  color:#F4F8FC;
-  border:1px solid rgba(255,255,255,.10);
-  font-weight:800;
-  font-size:1.1rem;
-  letter-spacing:.05em;
+  border-radius:14px;
+  background:linear-gradient(135deg, rgba(122,184,255,.28), rgba(95,140,255,.18));
+  color:#e0f0ff;
+  border:1.5px solid rgba(122,184,255,.38);
+  font-size:1.25rem;
+  box-shadow:0 2px 12px rgba(95,168,255,.22);
+  transition:background .18s, border-color .18s, box-shadow .18s;
+  flex-shrink:0;
 }
 
 .re-menu-btn:hover,
 .rl-menu-btn:hover{
-  background:linear-gradient(180deg, rgba(95,168,255,.32), rgba(95,168,255,.18));
-  border-color:rgba(141,167,194,.28);
+  background:linear-gradient(135deg, rgba(122,184,255,.40), rgba(95,140,255,.28));
+  border-color:rgba(122,184,255,.6);
+  box-shadow:0 4px 18px rgba(95,168,255,.35);
+}
+
+/* Backdrop that dims content when sidebar is open on mobile */
+.re-sidebar-backdrop{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:999;
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+  animation:re-fade-in .22s ease;
+}
+
+@keyframes re-fade-in{
+  from{opacity:0;}
+  to{opacity:1;}
 }
 
 /* =========================================================
@@ -1112,6 +1131,10 @@ tbody tr:hover td,
   .re-menu-btn,
   .rl-menu-btn{
     display:inline-flex;
+  }
+
+  body.re-sidebar-open .re-sidebar-backdrop{
+    display:block;
   }
 
   .re-topbar,
