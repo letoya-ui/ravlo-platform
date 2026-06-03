@@ -320,12 +320,6 @@ def build_loan_officer_dashboard_context(include_ai_summary=True):
 @role_required("loan_officer")
 @loan_officer_onboarding_required 
 def dashboard():
-    # Check if this LO has a VIP profile — send them to VIP
-    from LoanMVP.models.vip_models import VIPProfile
-    vip = VIPProfile.query.filter_by(user_id=current_user.id).first()
-    if vip:
-        return redirect(url_for("vip.loan_officer_dashboard"))
-    # Otherwise fall through to the original dashboard
     redirect_response = enforce_onboarding_flow()
     if redirect_response:
         return redirect_response
