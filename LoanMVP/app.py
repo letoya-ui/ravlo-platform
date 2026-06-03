@@ -112,6 +112,7 @@ _SCHEMA_COMPAT_COLUMNS = [
     ("vip_client_sessions",       "sale_price",         "INTEGER"),
     ("vip_client_sessions",       "notes",              "TEXT"),
     ("vip_client_sessions",       "updated_at",         "TIMESTAMP"),
+    ("project_budgets",           "status",             "VARCHAR(32) NOT NULL DEFAULT 'active'"),
 ]
 
 # Tables that must exist at boot. If missing, we ask SQLAlchemy's metadata
