@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from LoanMVP.extensions import db
+from LoanMVP.models.user_model import User
 
 account_bp = Blueprint("account", __name__, url_prefix="/account")
 
@@ -38,9 +39,9 @@ def settings():
             return redirect(url_for("account.settings"))
 
         # Prevent duplicate email on another user
-        existing_email = type(current_user).query.filter(
-            type(current_user).email == email,
-            type(current_user).id != current_user.id
+        existing_email = User.query.filter(
+            User.email == email,
+            User.id != current_user.id
         ).first()
         if existing_email:
             flash("That email is already in use.", "danger")
@@ -48,9 +49,9 @@ def settings():
 
         # Prevent duplicate username if provided
         if hasattr(current_user, "username") and username:
-            existing_username = type(current_user).query.filter(
-                type(current_user).username == username,
-                type(current_user).id != current_user.id
+            existing_username = User.query.filter(
+                User.username == username,
+                User.id != current_user.id
             ).first()
             if existing_username:
                 flash("That username is already taken.", "danger")
