@@ -700,6 +700,19 @@ def loan_file(loan_id):
     except Exception:
         engagement_score = None
 
+    COLOR_MAP = {
+        "opened":     "#7ab8ff",
+        "viewed":     "#a78bfa",
+        "downloaded": "#34d399",
+        "emailed":    "#f59e0b",
+    }
+    ICON_MAP = {
+        "opened":     "👁",
+        "viewed":     "📋",
+        "downloaded": "⬇",
+        "emailed":    "✉",
+    }
+
     return render_template(
         "loan_officer/loan_file.html",
         loan=loan,
@@ -712,6 +725,8 @@ def loan_file(loan_id):
         ratios=dti_data,
         active_tab="pipeline",
         title=f"Loan #{loan.id}",
+        COLOR_MAP=COLOR_MAP,
+        ICON_MAP=ICON_MAP,
     )
 
 
