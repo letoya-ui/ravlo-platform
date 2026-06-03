@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
 from sqlalchemy import func
 
-from LoanMVP.extensions import db, csrf
+from LoanMVP.extensions import db, csrf, limiter
 
 from LoanMVP.models.admin import LicenseApplication
 from LoanMVP.models.user_model import User
@@ -302,6 +302,7 @@ def tour():
 # ---------------------------------------------------------
 @marketing_bp.route("/contact", methods=["GET", "POST"])
 @csrf.exempt
+@limiter.limit("5 per minute", methods=["POST"])
 def contact():
     if request.method == "POST":
         name    = (request.form.get("name")    or "").strip()
@@ -458,6 +459,7 @@ def lending_os():
 
 @marketing_bp.route("/lending-os/request-preview", methods=["POST"])
 @csrf.exempt
+@limiter.limit("5 per minute")
 def lending_os_request_preview():
     first_name = (request.form.get("first_name") or "").strip()
     last_name = (request.form.get("last_name") or "").strip()
@@ -559,6 +561,7 @@ def _notify_admin_lending_os_lead(first_name, last_name, company, email, phone) 
 
 @marketing_bp.route("/apply", methods=["GET", "POST"])
 @csrf.exempt
+@limiter.limit("5 per minute", methods=["POST"])
 def apply():
     if request.method == "POST":
         company_name = (request.form.get("company_name") or "").strip()
