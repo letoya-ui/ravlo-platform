@@ -25,6 +25,31 @@ def _utcnow():
     return datetime.now(timezone.utc)
 
 
+def _canva_fallback():
+    """Return a role-appropriate dashboard URL so Canva never drops users on the VIP partner page."""
+    role = (getattr(current_user, "role", "") or "").strip().lower()
+    _role_map = {
+        "loan_officer":  "loan_officer.dashboard",
+        "processor":     "processor.dashboard",
+        "underwriter":   "underwriter.dashboard",
+        "admin":         "admin.dashboard",
+        "investor":      "investor.dashboard",
+    }
+    endpoint = _role_map.get(role)
+    if endpoint:
+        try:
+            return url_for(endpoint)
+        except Exception:
+            pass
+    # Realtors and VIP partners stay on VIP
+    if role in ("realtor", "partner_group"):
+        try:
+            return url_for("vip.realtor_dashboard")
+        except Exception:
+            pass
+    return url_for("auth.login")
+
+
 def get_user_canva_connection():
     return CanvaConnection.query.filter_by(user_id=current_user.id).first()
 
@@ -61,7 +86,7 @@ def connect():
         if not client_id:    missing.append("CANVA_CLIENT_ID")
         if not redirect_uri: missing.append("CANVA_REDIRECT_URI")
         flash(f"Canva not configured — missing: {', '.join(missing)}. Ask your admin to set the env vars.", "danger")
-        return redirect(url_for("vip.onboarding"))
+        return redirect(_canva_fallback())
     logging.warning(f"[Canva OAuth] client_id={client_id[:8]}… redirect_uri={redirect_uri}")
 
     # Make session permanent so the cookie survives the cross-site
@@ -84,7 +109,7 @@ def callback():
     error = request.args.get("error")
     if error:
         flash(f"Canva connection failed: {error}", "danger")
-        return redirect(url_for("vip.index"))
+        return redirect(_canva_fallback())
 
     state = request.args.get("state")
     code = request.args.get("code")
@@ -100,11 +125,11 @@ def callback():
         # Only abort if state is completely missing (Canva didn't return one)
         if not state:
             flash("Canva connection failed — missing state parameter.", "danger")
-            return redirect(url_for("vip.onboarding"))
+            return redirect(_canva_fallback())
 
     if not code:
         flash("Missing Canva authorization code.", "danger")
-        return redirect(url_for("vip.index"))
+        return redirect(_canva_fallback())
 
     try:
         token_data = exchange_code_for_tokens(code)
@@ -112,7 +137,7 @@ def callback():
         import logging
         logging.error(f"[Canva OAuth] token exchange failed: {exc}")
         flash(f"Canva token exchange failed: {exc}", "danger")
-        return redirect(url_for("vip.onboarding"))
+        return redirect(_canva_fallback())
 
     connection = CanvaConnection.query.filter_by(user_id=current_user.id).first()
     if not connection:
@@ -151,10 +176,7 @@ def callback():
 
     # Return the user to wherever they came from, or onboarding as fallback
     next_url = session.pop("canva_next", None)
-    try:
-        return redirect(next_url or url_for("vip.onboarding"))
-    except Exception:
-        return redirect(url_for("vip.index"))
+    return redirect(next_url or _canva_fallback())
 
 
 @canva_bp.get("/designs")
@@ -268,7 +290,7 @@ def create_flyer():
             )
             return redirect(url_for("canva.connect"))
         flash(f"Could not create Canva design: {exc}", "danger")
-        return redirect(request.args.get("next") or url_for("vip.index"))
+        return redirect(request.args.get("next") or _canva_fallback())
 
     # Canva returns the editor URL at design.urls.edit_url
     design   = data.get("design") or data
@@ -356,5 +378,5 @@ def disconnect():
         db.session.delete(connection)
         db.session.commit()
     flash("Canva disconnected.", "info")
-    next_url = request.form.get("next") or request.args.get("next") or url_for("vip.index")
+    next_url = request.form.get("next") or request.args.get("next") or _canva_fallback()
     return redirect(next_url)
