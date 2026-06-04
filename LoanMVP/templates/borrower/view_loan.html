@@ -1,39 +1,157 @@
 {% extends "layouts/ravlo_borrower_base.html" %}
-{% block title %}Loan Details • Ravlo{% endblock %}
+{% block title %}Loan #{{ loan.id }} • Ravlo{% endblock %}
 
 {% block page_title %}Loan #{{ loan.id }}{% endblock %}
-{% block page_subline %}
-View your loan details and status.
-{% endblock %}
+{% block page_subline %}View your loan status, documents, and conditions.{% endblock %}
 
 {% block content %}
 
-<section class="ravlo-card" style="padding:24px;max-width:900px;">
+{% set locked_statuses = ["Approved", "Funded", "Closed", "Declined", "Under Review", "Conditions Pending"] %}
+{% set can_edit = (loan.status or "") not in locked_statuses %}
 
-<div class="ravlo-grid-2">
+<div style="max-width:900px;display:grid;gap:20px;">
 
-<div>
-<label class="muted">Loan Type</label>
-<p>{{ loan.loan_type }}</p>
+  {# ── Header row with Edit button ── #}
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <span class="status-badge status-{{ (loan.status or 'draft') | lower | replace(' ', '-') }}">
+        {{ loan.status or "Draft" }}
+      </span>
+    </div>
+    {% if can_edit %}
+    <a href="{{ url_for('borrower.edit_loan', loan_id=loan.id) }}" class="ravlo-btn primary" style="font-size:.87rem;">
+      Edit Loan File
+    </a>
+    {% else %}
+    <span class="muted" style="font-size:.82rem;">Locked — under review</span>
+    {% endif %}
+  </div>
+
+  {# ── Loan Details ── #}
+  <div class="ravlo-card" style="padding:24px;">
+    <h3 style="margin:0 0 18px;font-size:1rem;font-weight:600;">Loan Details</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+      <div>
+        <label class="field-label">Loan Type</label>
+        <p style="margin:4px 0 0;">{{ loan.loan_type or "—" }}</p>
+      </div>
+
+      <div>
+        <label class="field-label">Amount Requested</label>
+        <p style="margin:4px 0 0;">
+          {% if loan.amount %}${{ "{:,.0f}".format(loan.amount) }}{% else %}—{% endif %}
+        </p>
+      </div>
+
+      <div>
+        <label class="field-label">Property Value / ARV</label>
+        <p style="margin:4px 0 0;">
+          {% if loan.property_value %}${{ "{:,.0f}".format(loan.property_value) }}{% else %}—{% endif %}
+        </p>
+      </div>
+
+      <div>
+        <label class="field-label">Loan Term</label>
+        <p style="margin:4px 0 0;">
+          {% if loan.term_months %}{{ loan.term_months }} months{% else %}—{% endif %}
+        </p>
+      </div>
+
+      <div style="grid-column:1/-1;">
+        <label class="field-label">Property Address</label>
+        <p style="margin:4px 0 0;">{{ loan.property_address or "—" }}</p>
+      </div>
+
+      {% if loan.interest_rate %}
+      <div>
+        <label class="field-label">Interest Rate</label>
+        <p style="margin:4px 0 0;">{{ loan.interest_rate }}%</p>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  {# ── Documents ── #}
+  <div class="ravlo-card" style="padding:24px;">
+    <h3 style="margin:0 0 16px;font-size:1rem;font-weight:600;">Documents</h3>
+    {% if documents %}
+    <div style="display:grid;gap:10px;">
+      {% for doc in documents %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);">
+        <div>
+          <div style="font-size:.9rem;font-weight:500;">{{ doc.document_type or doc.filename or "Document" }}</div>
+          <div class="muted" style="font-size:.78rem;margin-top:2px;">
+            Uploaded {{ doc.created_at.strftime("%b %d, %Y") if doc.created_at else "" }}
+            {% if doc.status %} · <span>{{ doc.status }}</span>{% endif %}
+          </div>
+        </div>
+        {% if doc.file_url %}
+        <a href="{{ doc.file_url }}" target="_blank" class="ravlo-btn ghost" style="font-size:.8rem;padding:6px 14px;">View</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted" style="margin:0;font-size:.88rem;">No documents uploaded yet.</p>
+    {% endif %}
+  </div>
+
+  {# ── Conditions ── #}
+  {% if conditions %}
+  <div class="ravlo-card" style="padding:24px;">
+    <h3 style="margin:0 0 16px;font-size:1rem;font-weight:600;">Conditions</h3>
+    <div style="display:grid;gap:10px;">
+      {% for cond in conditions %}
+      <div style="padding:12px 14px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:.88rem;font-weight:500;">{{ cond.condition_type or "Condition" }}</span>
+          {% if cond.status %}
+          <span style="font-size:.75rem;padding:2px 10px;border-radius:20px;
+            background:{% if cond.status == 'satisfied' %}rgba(52,211,153,.15){% else %}rgba(251,191,36,.12){% endif %};
+            color:{% if cond.status == 'satisfied' %}#34d399{% else %}#fbbf24{% endif %};">
+            {{ cond.status | title }}
+          </span>
+          {% endif %}
+        </div>
+        {% if cond.description %}
+        <p class="muted" style="margin:0;font-size:.82rem;">{{ cond.description }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 
-<div>
-<label class="muted">Status</label>
-<p>{{ loan.status }}</p>
-</div>
-
-<div>
-<label class="muted">Amount</label>
-<p>${{ "{:,.0f}".format(loan.amount) }}</p>
-</div>
-
-<div>
-<label class="muted">Property</label>
-<p>{{ loan.property_address }}</p>
-</div>
-
-</div>
-
-</section>
+<style>
+.field-label {
+  display: block;
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted, #888);
+  margin-bottom: 2px;
+}
+.status-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: .8rem;
+  font-weight: 600;
+  background: rgba(122,184,255,.12);
+  color: #7ab8ff;
+}
+.status-badge.status-approved  { background:rgba(52,211,153,.12);  color:#34d399; }
+.status-badge.status-funded    { background:rgba(52,211,153,.18);  color:#34d399; }
+.status-badge.status-declined  { background:rgba(239,68,68,.12);   color:#f87171; }
+.status-badge.status-closed    { background:rgba(148,163,184,.1);  color:#94a3b8; }
+.status-badge.status-draft     { background:rgba(148,163,184,.1);  color:#94a3b8; }
+.status-badge.status-under-review      { background:rgba(251,191,36,.12); color:#fbbf24; }
+.status-badge.status-conditions-pending{ background:rgba(251,191,36,.12); color:#fbbf24; }
+</style>
 
 {% endblock %}
