@@ -1,47 +1,55 @@
-{% extends "layouts/ravlo_employee_base.html" %}
+{% extends base_template %}
 
 {% block title %}Ravlo • My Profile{% endblock %}
 {% block page_title %}My Profile{% endblock %}
 {% block page_subline %}Your Ravlo account information{% endblock %}
 
 {% block content %}
-<div class="re-card pad">
-  <div class="row between mb-20">
-    <div>
-      <h2 class="re-section-title">{{ user.first_name or "" }} {{ user.last_name or "" }}</h2>
-      <p class="re-section-sub">{{ user.email }}</p>
+<div style="max-width:600px;">
+  <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:28px;">
+
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h2 style="margin:0 0 4px;font-size:1.15rem;font-weight:700;">{{ user.first_name or "" }} {{ user.last_name or "" }}</h2>
+        <p style="margin:0;color:var(--muted,#888);font-size:.9rem;">{{ user.email }}</p>
+      </div>
+      <span style="display:inline-block;padding:4px 14px;border-radius:20px;background:rgba(122,184,255,.12);color:#7ab8ff;font-size:.78rem;font-weight:600;">
+        {{ user.role | replace('_', ' ') | title }}
+      </span>
     </div>
 
-    <span class="re-badge neutral">{{ user.role|replace('_', ' ')|title }}</span>
-  </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+      <div>
+        <label style="display:block;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#888);margin-bottom:6px;">First Name</label>
+        <input style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text,#f4f8fc);font-size:.95rem;box-sizing:border-box;cursor:default;"
+               type="text" value="{{ user.first_name or '' }}" disabled>
+      </div>
 
-  <div class="re-form-grid">
-    <div class="re-field">
-      <label class="re-label">First Name</label>
-      <input class="re-input" type="text" value="{{ user.first_name or '' }}" disabled>
+      <div>
+        <label style="display:block;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#888);margin-bottom:6px;">Last Name</label>
+        <input style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text,#f4f8fc);font-size:.95rem;box-sizing:border-box;cursor:default;"
+               type="text" value="{{ user.last_name or '' }}" disabled>
+      </div>
+
+      <div style="grid-column:1/-1;">
+        <label style="display:block;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#888);margin-bottom:6px;">Email</label>
+        <input style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text,#f4f8fc);font-size:.95rem;box-sizing:border-box;cursor:default;"
+               type="email" value="{{ user.email or '' }}" disabled>
+      </div>
+
+      {% if user.username is defined and user.username %}
+      <div style="grid-column:1/-1;">
+        <label style="display:block;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#888);margin-bottom:6px;">Username</label>
+        <input style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text,#f4f8fc);font-size:.95rem;box-sizing:border-box;cursor:default;"
+               type="text" value="{{ user.username or '' }}" disabled>
+      </div>
+      {% endif %}
     </div>
 
-    <div class="re-field">
-      <label class="re-label">Last Name</label>
-      <input class="re-input" type="text" value="{{ user.last_name or '' }}" disabled>
+    <div style="margin-top:24px;display:flex;gap:12px;align-items:center;">
+      <a href="{{ url_for('account.settings') }}" style="padding:10px 22px;border-radius:10px;border:none;background:#3b82f6;color:#fff;font-weight:600;font-size:.9rem;text-decoration:none;display:inline-block;">Edit Profile</a>
+      <a href="{{ url_for('account.security') }}" style="padding:10px 18px;border-radius:10px;border:1px solid rgba(255,255,255,.12);color:var(--muted,#888);font-size:.9rem;text-decoration:none;">Security</a>
     </div>
-
-    <div class="re-field">
-      <label class="re-label">Email</label>
-      <input class="re-input" type="email" value="{{ user.email or '' }}" disabled>
-    </div>
-
-    {% if user.username is defined %}
-    <div class="re-field">
-      <label class="re-label">Username</label>
-      <input class="re-input" type="text" value="{{ user.username or '' }}" disabled>
-    </div>
-    {% endif %}
-  </div>
-
-  <div class="mt-20">
-    <a href="{{ url_for('account.settings') }}" class="btn btn-primary">Edit Profile</a>
-    <a href="{{ url_for('account.security') }}" class="btn btn-secondary">Security</a>
   </div>
 </div>
 {% endblock %}
