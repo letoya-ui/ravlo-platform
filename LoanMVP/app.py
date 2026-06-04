@@ -663,7 +663,7 @@ def create_app():
 
     @app.template_filter("md")
     def markdown_filter(text):
-        """Convert basic markdown to HTML (bold, italic, bullets, line breaks)."""
+        """Convert basic markdown to HTML (bold, italic, bullets, numbered lists, line breaks)."""
         import re, html as _html
         if not text:
             return ""
@@ -674,9 +674,12 @@ def create_app():
         # *italic* and _italic_
         t = re.sub(r'\*(.+?)\*',     r'<em>\1</em>', t)
         t = re.sub(r'_(.+?)_',       r'<em>\1</em>', t)
+        # numbered list lines: "1. item", "2. item", etc.
+        t = re.sub(r'(?m)^\d+\.\s+(.+)$', r'<oli>\1</oli>', t)
+        t = re.sub(r'(<oli>.*?</oli>\n?)+', lambda m: '<ol>' + m.group(0).replace('<oli>', '<li>').replace('</oli>', '</li>') + '</ol>', t)
         # bullet lines: "- item" or "• item"
         t = re.sub(r'(?m)^[\-•]\s+(.+)$', r'<li>\1</li>', t)
-        t = re.sub(r'(<li>.*</li>\n?)+', lambda m: '<ul>' + m.group(0) + '</ul>', t)
+        t = re.sub(r'(<li>.*?</li>\n?)+', lambda m: '<ul>' + m.group(0) + '</ul>', t)
         # paragraph breaks (blank line)
         t = re.sub(r'\n{2,}', '</p><p>', t)
         # single newlines
