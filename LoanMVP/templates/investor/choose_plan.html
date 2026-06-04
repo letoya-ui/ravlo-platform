@@ -6,6 +6,64 @@
 
 {% block content %}
 <style>
+  .trial-banner {
+    max-width: 1020px;
+    margin: 0 auto 22px;
+    padding: 22px 26px;
+    background: linear-gradient(135deg, rgba(122,184,255,.10) 0%, rgba(100,220,180,.08) 100%);
+    border: 1.5px solid rgba(122,184,255,.35);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .trial-banner-icon {
+    font-size: 2rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .trial-banner-body { flex: 1; min-width: 220px; }
+  .trial-banner-body h3 {
+    margin: 0 0 5px;
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: var(--text);
+  }
+  .trial-banner-body p {
+    margin: 0;
+    font-size: .88rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .trial-banner-cta { flex-shrink: 0; }
+  .btn-trial {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: .65rem 1.4rem;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: .92rem;
+    background: linear-gradient(135deg, #7ab8ff 0%, #4de0b0 100%);
+    color: #0a0c10;
+    text-decoration: none;
+    transition: opacity .15s;
+  }
+  .btn-trial:hover { opacity: .88; color: #0a0c10; }
+  .trial-used-note {
+    max-width: 1020px;
+    margin: 0 auto 16px;
+    padding: 12px 18px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 12px;
+    color: var(--muted);
+    font-size: .87rem;
+  }
+</style>
   .choose-plan-wrap {
     max-width: 1020px;
     margin: 0 auto;
@@ -108,6 +166,33 @@
   .choose-plan-notice a { color: #9ed0ff; font-weight: 700; }
   @media (max-width: 700px) { .plan-grid { grid-template-columns: 1fr; } }
 </style>
+
+{% set _trial_used = current_user.trial_ends_at is not none %}
+{% set _sub = (current_user.subscription or '') | lower %}
+{% set _show_trial = not _trial_used and _sub in ('free', '') %}
+
+{% if _show_trial %}
+<div class="trial-banner">
+  <div class="trial-banner-icon">🚀</div>
+  <div class="trial-banner-body">
+    <h3>Try Ravlo Free for 15 Days</h3>
+    <p>Full access to all features — no credit card required. Upgrade to a paid plan anytime during or after your trial.</p>
+  </div>
+  <div class="trial-banner-cta">
+    <form method="POST" action="{{ url_for('investor.activate_trial') }}" style="margin:0;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn-trial">
+        <i class="lucide lucide-zap" style="width:16px;height:16px;"></i>
+        Activate Free Trial
+      </button>
+    </form>
+  </div>
+</div>
+{% elif _trial_used %}
+<div class="trial-used-note">
+  Your 15-day free trial has been used. Choose a plan below to continue with full access.
+</div>
+{% endif %}
 
 <div class="choose-plan-wrap">
 

@@ -15463,6 +15463,35 @@ def payments():
     )
 
 
+@investor_bp.route("/activate-trial", methods=["POST"])
+@login_required
+@role_required("investor")
+def activate_trial():
+    """Self-service 15-day free trial — only works if the investor has never activated one."""
+    from datetime import datetime, timedelta
+    _TRIAL_DAYS = 15
+
+    _sub = (getattr(current_user, "subscription", "") or "").strip().lower()
+    if _sub not in ("free", ""):
+        flash("You already have an active plan. Manage it from your Subscription page.", "info")
+        return redirect(url_for("investor.subscription"))
+
+    if current_user.trial_ends_at is not None:
+        flash("Your free trial has already been used.", "warning")
+        return redirect(url_for("investor.command_center"))
+
+    current_user.subscription = "preview"
+    current_user.trial_ends_at = datetime.utcnow() + timedelta(days=_TRIAL_DAYS)
+    try:
+        from LoanMVP.services.subscriptions import sync_features_with_subscription
+        sync_features_with_subscription(current_user.id)
+    except Exception:
+        current_app.logger.exception("activate_trial sync failed")
+    db.session.commit()
+    flash(f"Your 15-day free trial is now active! Explore everything Ravlo has to offer.", "success")
+    return redirect(url_for("investor.command_center"))
+
+
 @investor_bp.route("/choose-plan", methods=["GET", "POST"])
 @login_required
 @role_required("investor")
