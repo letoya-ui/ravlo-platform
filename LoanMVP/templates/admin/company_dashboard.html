@@ -6,656 +6,547 @@
 
 {% block topbar_actions %}
   <a class="re-btn primary sm" href="{{ url_for('admin.invite_team_member', company_id=company.id) }}">
-    <i class="lucide lucide-user-plus"></i>
-    Invite Team Member
-  </a>
-  <a class="re-btn ghost sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">
-    <i class="lucide lucide-users"></i>
-    View Team
-  </a>
-  <a class="re-btn ghost sm" href="{{ url_for('admin.messages') }}">
-    <i class="lucide lucide-messages-square"></i>
-    Messages
-  </a>
-  <a class="re-btn ghost sm" href="{{ url_for('admin.analytics') }}">
-    <i class="lucide lucide-bar-chart-3"></i>
-    Analytics
+    <i class="lucide lucide-user-plus"></i> Invite
   </a>
   <a class="re-btn ghost sm" href="{{ url_for('admin.company_settings', company_id=company.id) }}">
-    <i class="lucide lucide-settings-2"></i>
-    Workspace Settings
-  </a>
-  <button class="re-btn ghost sm" type="button" id="resetDashboardLayoutBtn">
-    <i class="lucide lucide-rotate-ccw"></i>
-    Reset Layout
-  </button>
-  <a class="re-btn ghost sm" href="{{ url_for('admin.reports') }}">
-    <i class="lucide lucide-file-spreadsheet"></i>
-    Reports
+    <i class="lucide lucide-settings-2"></i> Settings
   </a>
 {% endblock %}
 
 {% block content %}
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-<div class="re-grid" id="companyDashboardRoot" data-dashboard-company="{{ company.id }}">
 
-  <section class="re-card pad" data-widget-key="overview">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">COMPANY WORKSPACE</div>
-        <h3 style="margin:.35rem 0 .2rem;">Company admin command center</h3>
-        <div class="re-card-subtitle">
-          {{ workspace_summary }}
+<div class="cd-wrap" id="companyDashboardRoot" data-dashboard-company="{{ company.id }}">
+
+  {# ── KPI Stats ── #}
+  <div class="cd-kpi-primary" data-widget-key="overview">
+
+    <div class="cd-kpi-card cd-kpi--blue">
+      <div class="cd-kpi-top">
+        <span class="cd-kpi-label">Team Members</span>
+        <span class="cd-kpi-icon"><i class="lucide lucide-users"></i></span>
+      </div>
+      <div class="cd-kpi-val">{{ stats.team_members or 0 }}</div>
+      <div class="cd-kpi-sub">Assigned to {{ company.name }}</div>
+    </div>
+
+    <div class="cd-kpi-card cd-kpi--teal">
+      <div class="cd-kpi-top">
+        <span class="cd-kpi-label">Loan Files</span>
+        <span class="cd-kpi-icon"><i class="lucide lucide-folder-open"></i></span>
+      </div>
+      <div class="cd-kpi-val">{{ stats.loans or 0 }}</div>
+      <div class="cd-kpi-sub">Applications in workspace</div>
+    </div>
+
+    <div class="cd-kpi-card cd-kpi--amber">
+      <div class="cd-kpi-top">
+        <span class="cd-kpi-label">Pending Invites</span>
+        <span class="cd-kpi-icon"><i class="lucide lucide-send"></i></span>
+      </div>
+      <div class="cd-kpi-val">{{ stats.pending_invites or 0 }}</div>
+      <div class="cd-kpi-sub">Not yet accepted</div>
+    </div>
+
+    <div class="cd-kpi-card cd-kpi--purple">
+      <div class="cd-kpi-top">
+        <span class="cd-kpi-label">Requests</span>
+        <span class="cd-kpi-icon"><i class="lucide lucide-inbox"></i></span>
+      </div>
+      <div class="cd-kpi-val">{{ stats.pending_requests or 0 }}</div>
+      <div class="cd-kpi-sub">Pending review</div>
+    </div>
+
+  </div>
+
+  {# Secondary strip #}
+  <div class="cd-kpi-strip" data-widget-key="overview">
+    <div class="cd-strip-stat cd-strip--green">
+      <div class="cd-strip-dot"></div>
+      <div><div class="cd-strip-val">{{ stats.borrowers or 0 }}</div><div class="cd-strip-label">Borrowers</div></div>
+    </div>
+    <div class="cd-strip-div"></div>
+    <div class="cd-strip-stat cd-strip--slate">
+      <div class="cd-strip-dot"></div>
+      <div><div class="cd-strip-val">{{ stats.documents or 0 }}</div><div class="cd-strip-label">Documents</div></div>
+    </div>
+    <div class="cd-strip-div"></div>
+    <div class="cd-strip-stat cd-strip--rose">
+      <div class="cd-strip-dot"></div>
+      <div><div class="cd-strip-val">{{ company.subscription_tier or "Team" }}</div><div class="cd-strip-label">Plan</div></div>
+    </div>
+    <div class="cd-strip-div"></div>
+    <div class="cd-strip-stat cd-strip--indigo">
+      <div class="cd-strip-dot"></div>
+      <div><div class="cd-strip-val">{{ workspace_health }}</div><div class="cd-strip-label">Health</div></div>
+    </div>
+  </div>
+
+  <div class="cd-layout">
+
+    {# ════ MAIN COLUMN ════ #}
+    <div class="cd-main">
+
+      {# Analytics — first thing in main column #}
+      <div class="re-card cd-card" data-widget-key="analytics">
+        <div class="cd-section-head">
+          <div>
+            <div class="cd-eyebrow">ANALYTICS</div>
+            <h3>Workspace Trends</h3>
+            <p class="cd-sub">Company-level activity scoped to your team</p>
+          </div>
+          <a class="re-btn ghost sm" href="{{ url_for('admin.analytics') }}">
+            <i class="lucide lucide-bar-chart-3"></i> Full Analytics
+          </a>
+        </div>
+        <div class="cd-chart-grid">
+          <div>
+            <div class="cd-chart-label">Team Growth</div>
+            <div id="chart_team_growth" style="min-height:220px;"></div>
+          </div>
+          <div>
+            <div class="cd-chart-label">Invite Activity</div>
+            <div id="chart_invite_growth" style="min-height:220px;"></div>
+          </div>
+        </div>
+        <div class="cd-chart-grid" style="margin-top:14px;">
+          <div>
+            <div class="cd-chart-label">Role Mix</div>
+            <div id="chart_role_mix" style="min-height:220px;"></div>
+          </div>
+          <div>
+            <div class="cd-chart-label">Invite Status</div>
+            <div id="chart_invite_status" style="min-height:220px;"></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="re-grid-3 mt-16">
-      <div class="re-stat">
-        <div class="re-stat-label">Team Members</div>
-        <div class="re-stat-value">{{ stats.team_members or 0 }}</div>
-        <div class="re-stat-meta">Users assigned to this company</div>
-      </div>
-
-      <div class="re-stat">
-        <div class="re-stat-label">Pending Invites</div>
-        <div class="re-stat-value">{{ stats.pending_invites or 0 }}</div>
-        <div class="re-stat-meta">Invitations waiting to be accepted</div>
-      </div>
-
-      <div class="re-stat">
-        <div class="re-stat-label">Requests</div>
-        <div class="re-stat-value">{{ stats.requests or 0 }}</div>
-        <div class="re-stat-meta">{{ stats.pending_requests or 0 }} waiting on review</div>
-      </div>
-
-      <div class="re-stat">
-        <div class="re-stat-label">Loan Files</div>
-        <div class="re-stat-value">{{ stats.loans or 0 }}</div>
-        <div class="re-stat-meta">Applications tied to this workspace</div>
-      </div>
-
-      <div class="re-stat">
-        <div class="re-stat-label">Borrowers</div>
-        <div class="re-stat-value">{{ stats.borrowers or 0 }}</div>
-        <div class="re-stat-meta">Profiles in pipeline</div>
-      </div>
-
-      <div class="re-stat">
-        <div class="re-stat-label">Documents</div>
-        <div class="re-stat-value">{{ stats.documents or 0 }}</div>
-        <div class="re-stat-meta">Uploaded file count</div>
-      </div>
-
-      <div class="re-stat">
-        <div class="re-stat-label">Subscription</div>
-        <div class="re-stat-value" style="font-size:1.05rem;">{{ company.subscription_tier or "Team" }}</div>
-        <div class="re-stat-meta">Current workspace plan</div>
-      </div>
-
-      <div class="re-stat">
-        <div class="re-stat-label">Workspace Health</div>
-        <div class="re-stat-value" style="font-size:1.05rem;">{{ workspace_health }}</div>
-        <div class="re-stat-meta">{{ company.billing_status|default("active", true)|replace("_", " ")|title }} billing status</div>
-      </div>
-    </div>
-  </section>
-
-  <section class="re-card pad" data-widget-key="tools">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">ADMIN TOOLS</div>
-        <h3 style="margin:.35rem 0 .2rem;">Workspace Controls</h3>
-        <div class="re-card-subtitle">Everything a company admin needs to operate day to day.</div>
-      </div>
-    </div>
-
-    <div class="quick-action-grid mt-16">
-      <a class="partner-action-card" href="{{ url_for('admin.company_team', company_id=company.id) }}">
-        <div class="partner-action-icon"><i class="lucide lucide-users"></i></div>
-        <div class="partner-action-copy">
-          <h4>Team</h4>
-          <p>Review users, invites, and role assignments for this company.</p>
+      {# Applicant Assignments #}
+      <div class="re-card cd-card" data-widget-key="applicants">
+        <div class="cd-section-head">
+          <div>
+            <div class="cd-eyebrow">APPLICANTS</div>
+            <h3>Assign Loan Officer &amp; Processor</h3>
+            <p class="cd-sub">Route each applicant to the right origination and processing team members</p>
+          </div>
         </div>
-      </a>
-
-      <a class="partner-action-card" href="{{ url_for('system.users') }}">
-        <div class="partner-action-icon"><i class="lucide lucide-user-cog"></i></div>
-        <div class="partner-action-copy">
-          <h4>Users</h4>
-          <p>Manage active accounts scoped to your company workspace.</p>
+        <div class="cd-stat-row" style="margin-top:14px;">
+          <div class="cd-mini-stat">
+            <div class="cd-mini-val">{{ applicant_loans|length }}</div>
+            <div class="cd-mini-label">In View</div>
+          </div>
+          <div class="cd-mini-stat">
+            <div class="cd-mini-val">{{ stats.assigned_loan_officers or 0 }}</div>
+            <div class="cd-mini-label">Officer Assigned</div>
+          </div>
+          <div class="cd-mini-stat">
+            <div class="cd-mini-val">{{ stats.assigned_processors or 0 }}</div>
+            <div class="cd-mini-label">Processor Assigned</div>
+          </div>
         </div>
-      </a>
-
-      <a class="partner-action-card" href="{{ url_for('admin.messages') }}">
-        <div class="partner-action-icon"><i class="lucide lucide-messages-square"></i></div>
-        <div class="partner-action-copy">
-          <h4>Messages</h4>
-          <p>Send internal messages to your company users.</p>
-        </div>
-      </a>
-
-      <a class="partner-action-card" href="{{ url_for('admin.reports') }}">
-        <div class="partner-action-icon"><i class="lucide lucide-file-spreadsheet"></i></div>
-        <div class="partner-action-copy">
-          <h4>Reports</h4>
-          <p>Export team and invite reports for your workspace.</p>
-        </div>
-      </a>
-
-      <a class="partner-action-card" href="{{ url_for('admin.access_requests') }}">
-        <div class="partner-action-icon"><i class="lucide lucide-clipboard-list"></i></div>
-        <div class="partner-action-copy">
-          <h4>Requests</h4>
-          <p>Review access requests related to your company.</p>
-        </div>
-      </a>
-
-      <a class="partner-action-card" href="{{ url_for('admin.analytics') }}">
-        <div class="partner-action-icon"><i class="lucide lucide-bar-chart-3"></i></div>
-        <div class="partner-action-copy">
-          <h4>Analytics</h4>
-          <p>Review company-scoped team, invite, and workflow trends.</p>
-        </div>
-      </a>
-
-      <a class="partner-action-card" href="{{ url_for('admin.company_settings', company_id=company.id) }}">
-        <div class="partner-action-icon"><i class="lucide lucide-settings-2"></i></div>
-        <div class="partner-action-copy">
-          <h4>Settings</h4>
-          <p>Control workspace profile, domain, location, and activation settings.</p>
-        </div>
-      </a>
-    </div>
-  </section>
-
-  <section class="re-card pad" data-widget-key="analytics">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">ANALYTICS</div>
-        <h3 style="margin:.35rem 0 .2rem;">Workspace Trends</h3>
-        <div class="re-card-subtitle">Company-level visibility similar to the platform dashboard, scoped to your team.</div>
-      </div>
-    </div>
-
-    <div class="re-grid-2 mt-16">
-      <div>
-        <div id="chart_team_growth" style="min-height:260px;"></div>
-      </div>
-      <div>
-        <div id="chart_invite_growth" style="min-height:260px;"></div>
-      </div>
-    </div>
-
-    <div class="re-grid-2 mt-16">
-      <div>
-        <div id="chart_role_mix" style="min-height:240px;"></div>
-      </div>
-      <div>
-        <div id="chart_invite_status" style="min-height:240px;"></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="re-card pad" data-widget-key="applicants">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">APPLICANT ASSIGNMENTS</div>
-        <h3 style="margin:.35rem 0 .2rem;">Assign Loan Officer And Processor</h3>
-        <div class="re-card-subtitle">Company admins can route each applicant to the right origination and processing team members.</div>
-      </div>
-    </div>
-
-    <div class="re-grid-3 mt-16">
-      <div class="re-stat">
-        <div class="re-stat-label">Applicants In View</div>
-        <div class="re-stat-value">{{ applicant_loans|length }}</div>
-        <div class="re-stat-meta">Recent files scoped to {{ company.name }}</div>
-      </div>
-
-      <div class="re-stat">
-        <div class="re-stat-label">Officer Assigned</div>
-        <div class="re-stat-value">{{ stats.assigned_loan_officers or 0 }}</div>
-        <div class="re-stat-meta">Applicant files with an assigned loan officer</div>
-      </div>
-
-      <div class="re-stat">
-        <div class="re-stat-label">Processor Assigned</div>
-        <div class="re-stat-value">{{ stats.assigned_processors or 0 }}</div>
-        <div class="re-stat-meta">Applicant files with an assigned processor</div>
-      </div>
-    </div>
-
-    {% if applicant_loans %}
-      <div class="re-table-wrap mt-16">
-        <table class="re-table">
-          <thead>
-            <tr>
-              <th>Applicant</th>
-              <th>Loan</th>
-              <th>Loan Officer</th>
-              <th>Processor</th>
-              <th>Save</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for loan in applicant_loans %}
+        {% if applicant_loans %}
+        <div class="re-table-wrap" style="margin-top:16px;">
+          <table class="re-table">
+            <thead><tr><th>Applicant</th><th>Loan</th><th>Loan Officer</th><th>Processor</th><th>Save</th></tr></thead>
+            <tbody>
+              {% for loan in applicant_loans %}
               {% set borrower = loan.borrower_profile %}
               <tr>
                 <td>
                   <div style="font-weight:600;">{{ borrower.full_name if borrower and borrower.full_name else borrower.email if borrower and borrower.email else "Applicant #" ~ loan.id }}</div>
-                  <div class="re-stat-meta">{{ borrower.email if borrower and borrower.email else loan.property_address or "No email on file" }}</div>
+                  <div class="re-stat-meta">{{ borrower.email if borrower and borrower.email else loan.property_address or "No email" }}</div>
                 </td>
                 <td>
-                  <div>{{ loan.loan_type or "Loan Application" }}</div>
-                  <div class="re-stat-meta">
-                    {{ loan.status or "Pending" }}
-                    {% if loan.created_at %}
-                      • {{ loan.created_at.strftime("%Y-%m-%d") }}
-                    {% endif %}
-                  </div>
+                  <div>{{ loan.loan_type or "Application" }}</div>
+                  <div class="re-stat-meta">{{ loan.status or "Pending" }}{% if loan.created_at %} · {{ loan.created_at.strftime("%m/%d/%y") }}{% endif %}</div>
                 </td>
-                <td colspan="3" style="min-width:520px;">
-                  <form method="POST" action="{{ url_for('admin.assign_company_applicant', company_id=company.id, loan_id=loan.id) }}" class="re-grid-3" style="align-items:end; gap:12px;">
+                <td colspan="3" style="min-width:440px;">
+                  <form method="POST" action="{{ url_for('admin.assign_company_applicant', company_id=company.id, loan_id=loan.id) }}" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <label style="display:block;">
-                      <span class="re-stat-meta" style="display:block; margin-bottom:6px;">Loan Officer</span>
+                    <label>
+                      <span class="re-stat-meta" style="display:block;margin-bottom:5px;">Loan Officer</span>
                       <select name="loan_officer_id" class="re-input" style="width:100%;">
                         <option value="">Unassigned</option>
                         {% for officer in company_loan_officers %}
-                          <option value="{{ officer.id }}" {% if loan.loan_officer_id == officer.id %}selected{% endif %}>
-                            {{ officer.name or officer.email or ("Officer #" ~ officer.id) }}
-                          </option>
+                          <option value="{{ officer.id }}" {% if loan.loan_officer_id == officer.id %}selected{% endif %}>{{ officer.name or officer.email or ("Officer #" ~ officer.id) }}</option>
                         {% endfor %}
                       </select>
                     </label>
-
-                    <label style="display:block;">
-                      <span class="re-stat-meta" style="display:block; margin-bottom:6px;">Processor</span>
+                    <label>
+                      <span class="re-stat-meta" style="display:block;margin-bottom:5px;">Processor</span>
                       <select name="processor_id" class="re-input" style="width:100%;">
                         <option value="">Unassigned</option>
                         {% for processor in company_processors %}
-                          <option value="{{ processor.id }}" {% if loan.processor_id == processor.id %}selected{% endif %}>
-                            {{ processor.full_name or processor.email or ("Processor #" ~ processor.id) }}
-                          </option>
+                          <option value="{{ processor.id }}" {% if loan.processor_id == processor.id %}selected{% endif %}>{{ processor.full_name or processor.email or ("Processor #" ~ processor.id) }}</option>
                         {% endfor %}
                       </select>
                     </label>
-
-                    <button type="submit" class="re-btn primary sm" style="width:100%;">Save Assignment</button>
+                    <button type="submit" class="re-btn primary sm">Save</button>
                   </form>
                 </td>
               </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <div class="re-empty mt-16">No recent applicant files are available for assignment yet.</div>
-    {% endif %}
-
-    {% if not company_loan_officers or not company_processors %}
-      <div class="re-empty mt-16" style="text-align:left;">
-        {% if not company_loan_officers %}
-          <p style="margin:0 0 8px;">Add at least one `loan_officer` user with a linked loan officer profile so applicants can be assigned.</p>
-        {% endif %}
-        {% if not company_processors %}
-          <p style="margin:0;">Add at least one `processor` user with a linked processor profile so applicants can be routed for fulfillment.</p>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <div class="re-empty" style="margin-top:16px;">No applicant files available for assignment.</div>
         {% endif %}
       </div>
-    {% endif %}
-  </section>
 
-  <section class="re-card pad" data-widget-key="compensation">
-    {% set comp = compensation_summary or {} %}
-    {% set comp_totals = comp.get('totals', {}) %}
-    {% set comp_rows = comp.get('rows', []) %}
-    {% set pending_comp = comp.get('pending_requests', []) %}
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">COMPENSATION</div>
-        <h3 style="margin:.35rem 0 .2rem;">Team Pay And Commission View</h3>
-        <div class="re-card-subtitle">Owner/admin visibility into loan officer, processor, and underwriter production for {{ company.name }}.</div>
+      {# Compensation #}
+      <div class="re-card cd-card" data-widget-key="compensation">
+        {% set comp = compensation_summary or {} %}
+        {% set comp_totals = comp.get('totals', {}) %}
+        {% set comp_rows = comp.get('rows', []) %}
+        {% set pending_comp = comp.get('pending_requests', []) %}
+        <div class="cd-section-head">
+          <div>
+            <div class="cd-eyebrow">COMPENSATION</div>
+            <h3>Team Pay &amp; Commission</h3>
+            <p class="cd-sub">Owner/admin visibility into production for {{ company.name }}</p>
+          </div>
+        </div>
+        <div class="cd-stat-row" style="margin-top:14px;">
+          <div class="cd-mini-stat">
+            <div class="cd-mini-val">{{ comp_totals.get('active_loans', 0) }}</div>
+            <div class="cd-mini-label">Active Pipeline</div>
+          </div>
+          <div class="cd-mini-stat">
+            <div class="cd-mini-val">${{ "{:,.0f}".format(comp_totals.get('funded_volume', 0)|float) }}</div>
+            <div class="cd-mini-label">Funded Volume</div>
+          </div>
+          <div class="cd-mini-stat">
+            <div class="cd-mini-val">${{ "{:,.0f}".format(comp_totals.get('estimated_pay', 0)|float) }}</div>
+            <div class="cd-mini-label">Est. Team Pay</div>
+          </div>
+        </div>
+        {% if comp_rows %}
+        <div class="re-table-wrap" style="margin-top:16px;">
+          <table class="re-table">
+            <thead><tr><th>Member</th><th>Role</th><th>Assigned</th><th>Active</th><th>Funded Vol.</th><th>Est. Pay</th><th>Basis</th></tr></thead>
+            <tbody>
+              {% for row in comp_rows %}
+              <tr>
+                <td><div style="font-weight:600;">{{ row.name }}</div><div class="re-stat-meta">{{ row.email or "—" }}</div></td>
+                <td><span class="badge badge-info">{{ row.role }}</span></td>
+                <td>{{ row.assigned_count }}</td>
+                <td>{{ row.active_count }}</td>
+                <td>${{ "{:,.0f}".format(row.funded_volume|float) }}</td>
+                <td>${{ "{:,.0f}".format(row.estimated_pay|float) }}</td>
+                <td><span class="re-stat-meta">{{ row.pay_basis }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <div class="re-empty" style="margin-top:14px;">Add loan officers or processors to see compensation estimates.</div>
+        {% endif %}
       </div>
+
+      {# Team #}
+      <div class="re-card cd-card" data-widget-key="team">
+        <div class="cd-section-head">
+          <div>
+            <div class="cd-eyebrow">TEAM</div>
+            <h3>Team Members</h3>
+            <p class="cd-sub">People assigned to {{ company.name }}</p>
+          </div>
+          <a class="re-btn ghost sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">Manage Team</a>
+        </div>
+        {% if team_members %}
+        <div class="re-table-wrap" style="margin-top:16px;">
+          <table class="re-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
+            <tbody>
+              {% for member in team_members %}
+              <tr>
+                <td>{{ member.full_name or member.username or member.email or "—" }}</td>
+                <td>{{ member.email or "—" }}</td>
+                <td><span class="badge badge-info">{{ get_role_display(member.role) }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <div class="re-empty" style="margin-top:16px;">No team members added yet.</div>
+        {% endif %}
+      </div>
+
     </div>
 
-    <div class="re-grid-3 mt-16">
-      <div class="re-stat">
-        <div class="re-stat-label">Active Pipeline</div>
-        <div class="re-stat-value">{{ comp_totals.get('active_loans', 0) }}</div>
-        <div class="re-stat-meta">Assigned files still moving</div>
-      </div>
+    {# ════ SIDE COLUMN ════ #}
+    <aside class="cd-side">
 
-      <div class="re-stat">
-        <div class="re-stat-label">Funded Volume</div>
-        <div class="re-stat-value" style="font-size:1.35rem;">${{ "{:,.0f}".format(comp_totals.get('funded_volume', 0)|float) }}</div>
-        <div class="re-stat-meta">{{ comp_totals.get('funded_loans', 0) }} funded or closed files</div>
-      </div>
-
-      <div class="re-stat">
-        <div class="re-stat-label">Estimated Team Pay</div>
-        <div class="re-stat-value" style="font-size:1.35rem;">${{ "{:,.0f}".format(comp_totals.get('estimated_pay', 0)|float) }}</div>
-        <div class="re-stat-meta">{{ comp.get('pay_basis_note') }}</div>
-      </div>
-    </div>
-
-    {% if comp_rows %}
-      <div class="re-table-wrap mt-16">
-        <table class="re-table">
-          <thead>
-            <tr>
-              <th>Team Member</th>
-              <th>Role</th>
-              <th>Assigned</th>
-              <th>Active</th>
-              <th>Funded Volume</th>
-              <th>Estimated Pay</th>
-              <th>Basis</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in comp_rows %}
-            <tr>
-              <td>
-                <div style="font-weight:600;">{{ row.name }}</div>
-                <div class="re-stat-meta">{{ row.email or "No email on profile" }}</div>
-              </td>
-              <td><span class="badge badge-info">{{ row.role }}</span></td>
-              <td>{{ row.assigned_count }}</td>
-              <td>{{ row.active_count }}</td>
-              <td>${{ "{:,.0f}".format(row.funded_volume|float) }}</td>
-              <td>${{ "{:,.0f}".format(row.estimated_pay|float) }}</td>
-              <td><span class="re-stat-meta">{{ row.pay_basis }}</span></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <div class="re-empty mt-16">Add loan officers, processors, or underwriters to see compensation estimates.</div>
-    {% endif %}
-
-    <div class="section-head mt-16">
-      <div>
-        <div class="eyebrow">REQUESTS</div>
-        <h3 style="margin:.35rem 0 .2rem;">Pending Commission / Pay Requests</h3>
-      </div>
-    </div>
-
-    {% if pending_comp %}
-      <div class="re-table-wrap mt-16">
-        <table class="re-table">
-          <thead>
-            <tr>
-              <th>Person</th>
-              <th>Type</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Source</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in pending_comp %}
-            <tr>
-              <td>{{ item.person or "Unassigned" }}</td>
-              <td>{{ item.type or "Compensation" }}</td>
-              <td>${{ "{:,.0f}".format(item.amount|float) }}</td>
-              <td><span class="badge badge-neutral">{{ (item.status or "pending")|replace("_", " ")|title }}</span></td>
-              <td><span class="re-stat-meta">{{ item.source }}</span></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <div class="re-empty mt-16">No pending commission or pay requests are waiting right now.</div>
-    {% endif %}
-  </section>
-
-  {% if not team_members and not invites and not loans and not borrowers %}
-    <section class="re-card pad" data-widget-key="empty_state">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">GET STARTED</div>
-          <h3 style="margin:.35rem 0 .2rem;">Your workspace is empty on purpose</h3>
-          <div class="re-card-subtitle">New company admins start with a clean dashboard instead of platform-wide data.</div>
+      {# Workspace Controls — compact action grid #}
+      <div class="re-card cd-card" data-widget-key="tools">
+        <div class="cd-eyebrow" style="margin-bottom:12px;">WORKSPACE CONTROLS</div>
+        <div class="cd-action-grid">
+          <a href="{{ url_for('admin.company_team', company_id=company.id) }}" class="cd-action-tile">
+            <i class="lucide lucide-users"></i><span>Team</span>
+          </a>
+          <a href="{{ url_for('system.users') }}" class="cd-action-tile">
+            <i class="lucide lucide-user-cog"></i><span>Users</span>
+          </a>
+          <a href="{{ url_for('admin.messages') }}" class="cd-action-tile">
+            <i class="lucide lucide-messages-square"></i><span>Messages</span>
+          </a>
+          <a href="{{ url_for('admin.reports') }}" class="cd-action-tile">
+            <i class="lucide lucide-file-spreadsheet"></i><span>Reports</span>
+          </a>
+          <a href="{{ url_for('admin.access_requests') }}" class="cd-action-tile">
+            <i class="lucide lucide-clipboard-list"></i><span>Requests</span>
+          </a>
+          <a href="{{ url_for('admin.analytics') }}" class="cd-action-tile">
+            <i class="lucide lucide-bar-chart-3"></i><span>Analytics</span>
+          </a>
+          <a href="{{ url_for('admin.company_settings', company_id=company.id) }}" class="cd-action-tile">
+            <i class="lucide lucide-settings-2"></i><span>Settings</span>
+          </a>
+          <a href="{{ url_for('admin.invite_team_member', company_id=company.id) }}" class="cd-action-tile cd-action-tile--primary">
+            <i class="lucide lucide-user-plus"></i><span>Invite</span>
+          </a>
         </div>
       </div>
 
-      <div class="re-empty mt-16" style="text-align:left;">
-        <p style="margin:0 0 12px;">Recommended first steps:</p>
-        <p style="margin:0 0 8px;">1. Invite the rest of your Caughman Mason Loan Service team.</p>
-        <p style="margin:0 0 8px;">2. Create your first borrower and loan workflow.</p>
-        <p style="margin:0;">3. Use this dashboard as the company-specific command center going forward.</p>
-      </div>
-    </section>
-  {% endif %}
-
-  <section class="re-card pad" data-widget-key="team">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">TEAM</div>
-        <h3 style="margin:.35rem 0 .2rem;">Recent Team Members</h3>
-        <div class="re-card-subtitle">People currently assigned to {{ company.name }}.</div>
-      </div>
-      <a class="re-btn ghost sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">Manage Team</a>
-    </div>
-
-    {% if team_members %}
-      <div class="re-table-wrap mt-16">
-        <table class="re-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for member in team_members %}
-            <tr>
-              <td>{{ member.full_name or member.username or member.email or "—" }}</td>
-              <td>{{ member.email or "—" }}</td>
-              <td><span class="badge badge-info">{{ get_role_display(member.role) }}</span></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <div class="re-empty mt-16">No team members have been added yet.</div>
-    {% endif %}
-  </section>
-
-  <section class="re-card pad" data-widget-key="invites">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">INVITES</div>
-        <h3 style="margin:.35rem 0 .2rem;">Recent Invites</h3>
-        <div class="re-card-subtitle">Outstanding or accepted invitations for this company.</div>
-      </div>
-    </div>
-
-    {% if invites %}
-      <div class="re-table-wrap mt-16">
-        <table class="re-table">
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for invite in invites %}
-            <tr>
-              <td>{{ invite.email }}</td>
-              <td><span class="badge badge-info">{{ get_role_display(invite.role) }}</span></td>
-              <td><span class="badge badge-neutral">{{ (invite.status or "pending")|replace("_", " ")|title }}</span></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <div class="re-empty mt-16">No invites have been sent yet.</div>
-    {% endif %}
-  </section>
-
-  <section class="re-card pad" data-widget-key="requests">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">REQUESTS</div>
-        <h3 style="margin:.35rem 0 .2rem;">Recent Access Requests</h3>
-        <div class="re-card-subtitle">Requests tied to your company workspace.</div>
-      </div>
-      <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">View Requests</a>
-    </div>
-
-    {% if access_requests %}
-      <div class="re-table-wrap mt-16">
-        <table class="re-table">
-          <thead>
-            <tr>
-              <th>Contact</th>
-              <th>Email</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in access_requests %}
-            <tr>
-              <td>{{ item.contact_name or "—" }}</td>
-              <td>{{ item.email or "—" }}</td>
-              <td><span class="badge badge-neutral">{{ (item.status or "pending")|replace("_", " ")|title }}</span></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <div class="re-empty mt-16">No company-related access requests yet.</div>
-    {% endif %}
-  </section>
-
-  <section class="re-card pad" data-widget-key="messages">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">MESSAGES</div>
-        <h3 style="margin:.35rem 0 .2rem;">Recent Internal Messages</h3>
-        <div class="re-card-subtitle">Latest communication inside your workspace.</div>
-      </div>
-      <a class="re-btn ghost sm" href="{{ url_for('admin.messages') }}">Open Messages</a>
-    </div>
-
-    {% if recent_messages %}
-      <div class="mt-16">
-        {% for msg in recent_messages %}
-          <div class="re-stat" style="margin-bottom:10px;">
-            <div class="re-stat-label">
-              {{ msg.created_at.strftime("%Y-%m-%d %I:%M %p") if msg.created_at else "" }}
-            </div>
-            <div class="re-stat-meta" style="margin-bottom:6px;">
-              {{ msg.sender.full_name or msg.sender.username or msg.sender.email if msg.sender else "Unknown Sender" }}
-              to
-              {{ msg.receiver.full_name or msg.receiver.username or msg.receiver.email if msg.receiver else "Unknown Recipient" }}
-            </div>
-            <div>{{ msg.content }}</div>
+      {# Invites #}
+      <div class="re-card cd-card" data-widget-key="invites">
+        <div class="cd-section-head" style="margin-bottom:14px;">
+          <div>
+            <div class="cd-eyebrow">INVITES</div>
+            <h3 style="margin:4px 0 2px;">Recent Invites</h3>
           </div>
-        {% endfor %}
+        </div>
+        {% if invites %}
+        <div style="display:grid;gap:8px;">
+          {% for invite in invites %}
+          {% set is = (invite.status or 'pending')|lower %}
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+            <div style="width:32px;height:32px;border-radius:50%;background:rgba(122,184,255,.14);color:#7ab8ff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0;">
+              {{ invite.email[0]|upper if invite.email else "?" }}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ invite.email or "—" }}</div>
+              <div style="font-size:.72rem;color:var(--muted,#8a9db5);">{{ get_role_display(invite.role) }}</div>
+            </div>
+            {% if is == 'pending' %}<span class="badge badge-warning">Pending</span>
+            {% elif is in ['approved','accepted'] %}<span class="badge badge-success">{{ is|title }}</span>
+            {% else %}<span class="badge badge-neutral">{{ (invite.status or 'Unknown')|title }}</span>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="re-empty">No invites sent yet.</div>
+        {% endif %}
       </div>
-    {% else %}
-      <div class="re-empty mt-16">No recent internal messages inside this company workspace.</div>
-    {% endif %}
-  </section>
+
+      {# Access Requests #}
+      <div class="re-card cd-card" data-widget-key="requests">
+        <div class="cd-section-head" style="margin-bottom:14px;">
+          <div>
+            <div class="cd-eyebrow">REQUESTS</div>
+            <h3 style="margin:4px 0 2px;">Access Requests</h3>
+          </div>
+          <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">View</a>
+        </div>
+        {% if access_requests %}
+        <div style="display:grid;gap:8px;">
+          {% for item in access_requests %}
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+            <div>
+              <div style="font-size:.83rem;font-weight:600;">{{ item.contact_name or "—" }}</div>
+              <div style="font-size:.72rem;color:var(--muted,#8a9db5);">{{ item.email or "—" }}</div>
+            </div>
+            <span class="badge badge-neutral">{{ (item.status or "pending")|replace("_"," ")|title }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="re-empty">No access requests yet.</div>
+        {% endif %}
+      </div>
+
+      {# Messages #}
+      <div class="re-card cd-card" data-widget-key="messages">
+        <div class="cd-section-head" style="margin-bottom:14px;">
+          <div>
+            <div class="cd-eyebrow">MESSAGES</div>
+            <h3 style="margin:4px 0 2px;">Recent Messages</h3>
+          </div>
+          <a class="re-btn ghost sm" href="{{ url_for('admin.messages') }}">Open</a>
+        </div>
+        {% if recent_messages %}
+        <div style="display:grid;gap:10px;">
+          {% for msg in recent_messages %}
+          <div style="padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+            <div style="font-size:.78rem;color:var(--muted,#8a9db5);margin-bottom:4px;">
+              {{ msg.created_at.strftime("%b %d · %I:%M %p") if msg.created_at else "" }} ·
+              {{ msg.sender.full_name or msg.sender.email if msg.sender else "Unknown" }}
+            </div>
+            <div style="font-size:.86rem;line-height:1.45;">{{ msg.content }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="re-empty">No recent messages.</div>
+        {% endif %}
+      </div>
+
+    </aside>
+  </div>
 
 </div>
+
+<style>
+.cd-wrap { display:grid; gap:16px; min-width:0; }
+
+/* KPI Primary */
+.cd-kpi-primary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.cd-kpi-card {
+  position:relative; overflow:hidden;
+  padding:18px 20px 16px; border-radius:16px;
+  border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.03);
+}
+.cd-kpi-card::before {
+  content:""; position:absolute; top:0; left:0; right:0; height:3px; border-radius:16px 16px 0 0;
+}
+.cd-kpi-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.cd-kpi-label { font-size:.73rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted,#8a9db5); }
+.cd-kpi-icon { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:.95rem; }
+.cd-kpi-val { font-size:2.2rem; font-weight:800; line-height:1; letter-spacing:-.04em; margin-bottom:5px; }
+.cd-kpi-sub { font-size:.76rem; color:var(--muted,#8a9db5); }
+
+.cd-kpi--blue::before  { background:linear-gradient(90deg,#3b82f6,#7ab8ff); }
+.cd-kpi--blue .cd-kpi-icon { background:rgba(122,184,255,.14); color:#7ab8ff; }
+.cd-kpi--blue .cd-kpi-val  { color:#e8f4ff; }
+.cd-kpi--teal::before  { background:linear-gradient(90deg,#059669,#34d399); }
+.cd-kpi--teal .cd-kpi-icon { background:rgba(52,211,153,.12); color:#34d399; }
+.cd-kpi--teal .cd-kpi-val  { color:#d1faf0; }
+.cd-kpi--amber::before { background:linear-gradient(90deg,#d97706,#fbbf24); }
+.cd-kpi--amber .cd-kpi-icon{ background:rgba(251,191,36,.12); color:#fbbf24; }
+.cd-kpi--amber .cd-kpi-val { color:#fef9e7; }
+.cd-kpi--purple::before{ background:linear-gradient(90deg,#7c3aed,#a78bfa); }
+.cd-kpi--purple .cd-kpi-icon{ background:rgba(167,139,250,.14); color:#a78bfa; }
+.cd-kpi--purple .cd-kpi-val { color:#ede9fe; }
+
+/* Secondary strip */
+.cd-kpi-strip { display:flex; align-items:center; padding:14px 22px; border-radius:14px; border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.02); }
+.cd-strip-div { width:1px; height:28px; background:rgba(255,255,255,.08); margin:0 18px; flex-shrink:0; }
+.cd-strip-stat { display:flex; align-items:center; gap:9px; flex:1; min-width:0; }
+.cd-strip-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.cd-strip-val { font-size:1.2rem; font-weight:800; line-height:1; letter-spacing:-.02em; }
+.cd-strip-label { font-size:.72rem; color:var(--muted,#8a9db5); margin-top:3px; }
+.cd-strip--green .cd-strip-dot { background:#4ade80; } .cd-strip--green .cd-strip-val { color:#4ade80; }
+.cd-strip--slate .cd-strip-dot { background:#94a3b8; } .cd-strip--slate .cd-strip-val { color:#94a3b8; }
+.cd-strip--rose  .cd-strip-dot { background:#fb7185; } .cd-strip--rose  .cd-strip-val { color:#fb7185; }
+.cd-strip--indigo.cd-strip-dot { background:#818cf8; } .cd-strip--indigo .cd-strip-val { color:#818cf8; }
+
+/* Layout */
+.cd-layout { display:grid; grid-template-columns:minmax(0,2.2fr) 300px; gap:16px; align-items:start; }
+.cd-main, .cd-side { display:grid; gap:14px; min-width:0; }
+.cd-card { padding:22px 24px; }
+
+/* Shared */
+.cd-eyebrow { font-size:.71rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--muted,#8a9db5); }
+.cd-sub { margin:2px 0 0; font-size:.82rem; color:var(--muted,#8a9db5); }
+.cd-section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.cd-section-head h3 { margin:4px 0 2px; font-size:.95rem; font-weight:700; }
+.cd-chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
+.cd-chart-label { font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted,#8a9db5); margin-bottom:6px; }
+
+/* Mini stats */
+.cd-stat-row { display:flex; gap:16px; flex-wrap:wrap; }
+.cd-mini-stat { flex:1; min-width:80px; padding:12px 14px; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); }
+.cd-mini-val { font-size:1.4rem; font-weight:800; line-height:1; }
+.cd-mini-label { font-size:.72rem; color:var(--muted,#8a9db5); margin-top:4px; }
+
+/* Action grid */
+.cd-action-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+.cd-action-tile {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:7px; padding:14px 8px; border-radius:12px; text-align:center;
+  border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03);
+  font-size:.78rem; font-weight:600; color:var(--text,#f4f8fc); text-decoration:none; transition:.15s;
+}
+.cd-action-tile i { font-size:1.1rem; color:var(--muted,#8a9db5); }
+.cd-action-tile:hover { background:rgba(122,184,255,.08); border-color:rgba(122,184,255,.2); }
+.cd-action-tile--primary { background:rgba(59,130,246,.14); border-color:rgba(59,130,246,.28); }
+.cd-action-tile--primary i { color:#7ab8ff; }
+.cd-action-tile--primary:hover { background:rgba(59,130,246,.22); }
+
+@media (max-width:1100px) { .cd-layout { grid-template-columns:1fr; } }
+@media (max-width:800px)  {
+  .cd-kpi-primary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .cd-chart-grid  { grid-template-columns:1fr; }
+}
+@media (max-width:480px)  { .cd-kpi-primary { grid-template-columns:1fr 1fr; } }
+</style>
+
 <script>
-  (function () {
-    const dashboardRoot = document.getElementById("companyDashboardRoot");
-    const resetDashboardLayoutBtn = document.getElementById("resetDashboardLayoutBtn");
-    const dashboardPrefs = {{ (dashboard_preferences or {})|tojson }};
+(function () {
+  const dashboardRoot = document.getElementById("companyDashboardRoot");
+  const dashboardPrefs = {{ (dashboard_preferences or {})|tojson }};
 
-    function applyDashboardPrefs() {
-      if (!dashboardRoot) return;
-      dashboardRoot.querySelectorAll("[data-widget-key]").forEach((section) => {
-        const key = section.dataset.widgetKey;
-        const visible = dashboardPrefs[key] !== false;
-        section.style.display = visible ? "" : "none";
-      });
-    }
-
-    resetDashboardLayoutBtn?.addEventListener("click", function () {
-      window.location.href = "{{ url_for('admin.company_settings', company_id=company.id) }}";
+  function applyDashboardPrefs() {
+    if (!dashboardRoot) return;
+    dashboardRoot.querySelectorAll("[data-widget-key]").forEach(el => {
+      const key = el.dataset.widgetKey;
+      el.style.display = dashboardPrefs[key] !== false ? "" : "none";
     });
+  }
+  applyDashboardPrefs();
 
-    applyDashboardPrefs();
+  document.getElementById("resetDashboardLayoutBtn")?.addEventListener("click", () => {
+    window.location.href = "{{ url_for('admin.company_settings', company_id=company.id) }}";
+  });
 
-    const roleLabels = {{ (role_labels or [])|tojson }};
-    const roleValues = {{ (role_values or [])|tojson }};
-    const inviteStatusLabels = {{ (invite_status_labels or [])|tojson }};
-    const inviteStatusValues = {{ (invite_status_values or [])|tojson }};
-    const teamGrowthLabels = {{ (team_growth_labels or [])|tojson }};
-    const teamGrowthSeries = {{ (team_growth_series or [])|tojson }};
-    const inviteGrowthLabels = {{ (invite_growth_labels or [])|tojson }};
-    const inviteGrowthSeries = {{ (invite_growth_series or [])|tojson }};
+  const baseOpt = {
+    chart:{ toolbar:{show:false}, foreColor:"#8a9db5", animations:{enabled:true} },
+    grid:{ borderColor:"rgba(255,255,255,.06)" },
+    dataLabels:{ enabled:false },
+    legend:{ labels:{ colors:"#8a9db5" } },
+    theme:{ mode:"dark" }
+  };
 
-    const baseOpt = {
-      chart: { toolbar: { show: false }, foreColor: "#c9d3df" },
-      grid: { borderColor: "#2a2e36" },
-      dataLabels: { enabled: false },
-      legend: { labels: { colors: "#c9d3df" } },
-      theme: { mode: "dark" }
-    };
+  const teamGrowthEl = document.querySelector("#chart_team_growth");
+  if (teamGrowthEl) new ApexCharts(teamGrowthEl, { ...baseOpt,
+    chart:{ ...baseOpt.chart, type:"area", height:220 },
+    stroke:{ curve:"smooth", width:2 },
+    fill:{ type:"gradient", gradient:{ opacityFrom:.35, opacityTo:.02 } },
+    series:[{ name:"Team Members", data:{{ (team_growth_series or [])|tojson }} }],
+    xaxis:{ categories:{{ (team_growth_labels or [])|tojson }} },
+    colors:["#7ab8ff"]
+  }).render();
 
-    const teamGrowthEl = document.querySelector("#chart_team_growth");
-    if (teamGrowthEl) {
-      new ApexCharts(teamGrowthEl, {
-        ...baseOpt,
-        chart: { ...baseOpt.chart, type: "area", height: 260 },
-        stroke: { curve: "smooth", width: 2 },
-        series: [{ name: "Team Members", data: teamGrowthSeries }],
-        xaxis: { categories: teamGrowthLabels },
-        colors: ["#7ab8ff"]
-      }).render();
-    }
+  const inviteGrowthEl = document.querySelector("#chart_invite_growth");
+  if (inviteGrowthEl) new ApexCharts(inviteGrowthEl, { ...baseOpt,
+    chart:{ ...baseOpt.chart, type:"line", height:220 },
+    stroke:{ curve:"smooth", width:3 },
+    series:[{ name:"Invites", data:{{ (invite_growth_series or [])|tojson }} }],
+    xaxis:{ categories:{{ (invite_growth_labels or [])|tojson }} },
+    colors:["#34d399"]
+  }).render();
 
-    const inviteGrowthEl = document.querySelector("#chart_invite_growth");
-    if (inviteGrowthEl) {
-      new ApexCharts(inviteGrowthEl, {
-        ...baseOpt,
-        chart: { ...baseOpt.chart, type: "line", height: 260 },
-        stroke: { curve: "smooth", width: 3 },
-        series: [{ name: "Invites", data: inviteGrowthSeries }],
-        xaxis: { categories: inviteGrowthLabels },
-        colors: ["#43d19e"]
-      }).render();
-    }
+  const roleMixEl = document.querySelector("#chart_role_mix");
+  if (roleMixEl) new ApexCharts(roleMixEl, { ...baseOpt,
+    chart:{ ...baseOpt.chart, type:"donut", height:220 },
+    labels:{{ (role_labels or [])|tojson }},
+    series:{{ (role_values or [1])|tojson }},
+    colors:["#7ab8ff","#34d399","#fbbf24","#fb7185","#a78bfa"],
+    legend:{ position:"bottom", labels:{ colors:"#8a9db5" } }
+  }).render();
 
-    const roleMixEl = document.querySelector("#chart_role_mix");
-    if (roleMixEl) {
-      new ApexCharts(roleMixEl, {
-        ...baseOpt,
-        chart: { ...baseOpt.chart, type: "donut", height: 240 },
-        labels: roleLabels,
-        series: roleValues.length ? roleValues : [1],
-        colors: ["#7ab8ff", "#43d19e", "#ffdf6e", "#fb7185", "#a78bfa"],
-        legend: { position: "bottom", labels: { colors: "#c9d3df" } }
-      }).render();
-    }
-
-    const inviteStatusEl = document.querySelector("#chart_invite_status");
-    if (inviteStatusEl) {
-      new ApexCharts(inviteStatusEl, {
-        ...baseOpt,
-        chart: { ...baseOpt.chart, type: "donut", height: 240 },
-        labels: inviteStatusLabels.length ? inviteStatusLabels : ["Pending"],
-        series: inviteStatusValues.length ? inviteStatusValues : [0],
-        colors: ["#7ab8ff", "#43d19e", "#fb7185", "#ffdf6e"],
-        legend: { position: "bottom", labels: { colors: "#c9d3df" } }
-      }).render();
-    }
-  })();
+  const inviteStatusEl = document.querySelector("#chart_invite_status");
+  if (inviteStatusEl) new ApexCharts(inviteStatusEl, { ...baseOpt,
+    chart:{ ...baseOpt.chart, type:"donut", height:220 },
+    labels:{{ (invite_status_labels or ["Pending"])|tojson }},
+    series:{{ (invite_status_values or [0])|tojson }},
+    colors:["#7ab8ff","#34d399","#fb7185","#fbbf24"],
+    legend:{ position:"bottom", labels:{ colors:"#8a9db5" } }
+  }).render();
+})();
 </script>
 {% endblock %}
