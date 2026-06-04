@@ -17,34 +17,6 @@
 
   <nav class="re-nav">
 
-    <div class="re-nav-section-label">Analytics & Tools</div>
-
-    <a href="{{ url_for('admin.analytics') }}"
-       class="re-nav-link {% if ep == 'admin.analytics' %}active{% endif %}">
-      <i class="icon lucide lucide-bar-chart-3"></i>
-      <span>Analytics</span>
-    </a>
-
-    <a href="{{ url_for('admin.reports') }}"
-       class="re-nav-link {% if ep == 'admin.reports' %}active{% endif %}">
-      <i class="icon lucide lucide-file-spreadsheet"></i>
-      <span>Reports</span>
-    </a>
-
-    {% if not is_company_admin %}
-    <a href="{{ url_for('admin.ai_dashboard') }}"
-       class="re-nav-link {% if ep == 'admin.ai_dashboard' %}active{% endif %}">
-      <i class="icon lucide lucide-sparkles"></i>
-      <span>AI Control</span>
-    </a>
-
-    <a href="{{ url_for('admin.verify_data') }}"
-       class="re-nav-link {% if ep in ['admin.verify_data', 'admin.verify_doc'] %}active{% endif %}">
-      <i class="icon lucide lucide-badge-check"></i>
-      <span>Verify Documents</span>
-    </a>
-    {% endif %}
-
     <div class="re-nav-section-label">Overview</div>
 
     <a href="{% if is_executive_sidebar %}{{ url_for('executive.dashboard') }}{% elif is_company_admin %}{{ url_for('admin.company_dashboard', company_id=current_user.company_id) }}{% else %}{{ url_for('admin.dashboard') }}{% endif %}"
@@ -59,8 +31,25 @@
       <span>Demo Center</span>
     </a>
 
+    {% if not is_company_admin %}
+      <a href="{{ url_for('admin.analytics') }}"
+         class="re-nav-link {% if ep == 'admin.analytics' %}active{% endif %}">
+        <i class="icon lucide lucide-bar-chart-3"></i>
+        <span>Analytics</span>
+      </a>
 
-    <div class="re-nav-section-label">Onboarding</div>
+      <a href="{{ url_for('admin.ai_dashboard') }}"
+         class="re-nav-link {% if ep == 'admin.ai_dashboard' %}active{% endif %}">
+        <i class="icon lucide lucide-sparkles"></i>
+        <span>AI Control</span>
+      </a>
+    {% else %}
+      <a href="{{ url_for('admin.analytics') }}"
+         class="re-nav-link {% if ep == 'admin.analytics' %}active{% endif %}">
+        <i class="icon lucide lucide-bar-chart-3"></i>
+        <span>Analytics</span>
+      </a>
+    {% endif %}    <div class="re-nav-section-label">Onboarding</div>
 
     <a href="{% if is_company_admin %}{{ url_for('admin.company_team', company_id=current_user.company_id) }}{% else %}{{ url_for('admin.requests_dashboard') }}{% endif %}"
        class="re-nav-link {% if ep in ['admin.requests_dashboard', 'admin.request_detail', 'admin.company_team', 'admin.invite_team_member'] %}active{% endif %}">
@@ -92,11 +81,37 @@
       <span>Settings</span>
     </a>
 
-    <a href="{{ url_for('admin.messages') }}"
-       class="re-nav-link {% if ep == 'admin.messages' %}active{% endif %}">
-      <i class="icon lucide lucide-messages-square"></i>
-      <span>Messages</span>
-    </a>
+    {% if not is_company_admin %}
+      <a href="{{ url_for('admin.verify_data') }}"
+         class="re-nav-link {% if ep in ['admin.verify_data', 'admin.verify_doc'] %}active{% endif %}">
+        <i class="icon lucide lucide-badge-check"></i>
+        <span>Verify Documents</span>
+      </a>
+
+      <a href="{{ url_for('admin.messages') }}"
+         class="re-nav-link {% if ep == 'admin.messages' %}active{% endif %}">
+        <i class="icon lucide lucide-messages-square"></i>
+        <span>Messages</span>
+      </a>
+
+      <a href="{{ url_for('admin.reports') }}"
+         class="re-nav-link {% if ep == 'admin.reports' %}active{% endif %}">
+        <i class="icon lucide lucide-file-spreadsheet"></i>
+        <span>Reports</span>
+      </a>
+    {% else %}
+      <a href="{{ url_for('admin.messages') }}"
+         class="re-nav-link {% if ep == 'admin.messages' %}active{% endif %}">
+        <i class="icon lucide lucide-messages-square"></i>
+        <span>Messages</span>
+      </a>
+
+      <a href="{{ url_for('admin.reports') }}"
+         class="re-nav-link {% if ep == 'admin.reports' %}active{% endif %}">
+        <i class="icon lucide lucide-file-spreadsheet"></i>
+        <span>Reports</span>
+      </a>
+    {% endif %}
 
     <div class="re-nav-section-label">Growth</div>
 
