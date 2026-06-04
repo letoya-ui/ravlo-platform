@@ -25,7 +25,7 @@ Manage your current access and upgrade options.
     <form method="POST" class="plan-grid">
 
       <label class="plan-card">
-        <input type="radio" name="plan" value="Basic" {% if (borrower.subscription_plan or "Basic") == "Basic" %}checked{% endif %}>
+        <input type="radio" name="plan" value="Basic" {% if (borrower.subscription_plan or "Basic") not in ["investor_upgrade"] %}checked{% endif %}>
         <div class="plan-card-inner">
           <h3>Borrower Basic</h3>
           <p class="muted">Track your loan, upload documents, review conditions, and message your team.</p>
@@ -33,10 +33,13 @@ Manage your current access and upgrade options.
       </label>
 
       <label class="plan-card">
-        <input type="radio" name="plan" value="Premium" {% if borrower.subscription_plan == "Premium" %}checked{% endif %}>
-        <div class="plan-card-inner">
-          <h3>Investor Upgrade</h3>
-          <p class="muted">Upgrade access for more advanced Ravlo tools and a fuller investment workspace.</p>
+        <input type="radio" name="plan" value="investor_upgrade">
+        <div class="plan-card-inner upgrade-card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <h3 style="margin:0;">Investor Upgrade</h3>
+            <span style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;background:rgba(122,184,255,.18);color:#7ab8ff;padding:2px 10px;border-radius:20px;">Upgrade</span>
+          </div>
+          <p class="muted">Switch your account to full Investor access — deal workspace, property analysis, CRM tools, and more. <strong style="color:var(--text);">Your account type will change from Borrower to Investor.</strong></p>
         </div>
       </label>
 
