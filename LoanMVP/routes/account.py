@@ -8,6 +8,13 @@ from LoanMVP.models.user_model import User
 account_bp = Blueprint("account", __name__, url_prefix="/account")
 
 
+def _base_template():
+    role = (getattr(current_user, "role", "") or "").strip().lower()
+    if role == "borrower":
+        return "layouts/ravlo_borrower_base.html"
+    return "layouts/ravlo_employee_base.html"
+
+
 @account_bp.route("/")
 @login_required
 def index():
@@ -22,6 +29,7 @@ def profile():
         user=current_user,
         active_tab="profile",
         title="My Profile",
+        base_template=_base_template(),
     )
 
 
@@ -72,6 +80,7 @@ def settings():
         user=current_user,
         active_tab="settings",
         title="Account Settings",
+        base_template=_base_template(),
     )
 
 
@@ -110,4 +119,5 @@ def security():
         user=current_user,
         active_tab="security",
         title="Security",
+        base_template=_base_template(),
     )
