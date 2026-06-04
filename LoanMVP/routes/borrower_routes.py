@@ -595,6 +595,70 @@ def loan_view(loan_id):
     )
 
 
+@borrower_bp.route("/loan/<int:loan_id>/edit", methods=["GET", "POST"])
+@login_required
+@role_required("borrower")
+def edit_loan(loan_id):
+    borrower = get_current_borrower()
+    if not borrower:
+        flash("Please complete your borrower profile first.", "warning")
+        return redirect(url_for("borrower.create_profile"))
+
+    loan = LoanApplication.query.get_or_404(loan_id)
+    if loan.borrower_profile_id != borrower.id:
+        return "Unauthorized", 403
+
+    locked_statuses = {"Approved", "Funded", "Closed", "Declined", "Under Review", "Conditions Pending"}
+    if (loan.status or "") in locked_statuses:
+        flash("This loan file is locked for editing because it is currently under review.", "warning")
+        return redirect(url_for("borrower.loan_view", loan_id=loan.id))
+
+    if request.method == "POST":
+        loan.loan_type       = (request.form.get("loan_type") or loan.loan_type or "").strip()
+        loan.property_address = (request.form.get("property_address") or "").strip() or loan.property_address
+
+        amount = request.form.get("amount")
+        if amount:
+            try:
+                loan.amount = float(str(amount).replace(",", ""))
+            except ValueError:
+                pass
+
+        property_value = request.form.get("property_value")
+        if property_value:
+            try:
+                loan.property_value = float(str(property_value).replace(",", ""))
+            except ValueError:
+                pass
+
+        term = request.form.get("term_months")
+        if term:
+            try:
+                loan.term_months = int(term)
+            except ValueError:
+                pass
+
+        loan.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash("Loan file updated successfully.", "success")
+        return redirect(url_for("borrower.loan_view", loan_id=loan.id))
+
+    loan_types = [
+        "Conventional", "FHA", "VA", "USDA", "Jumbo",
+        "Fix & Flip", "Rental / DSCR", "Bridge Loan",
+        "Investor Capital", "New Construction", "Development Capital",
+        "Land Acquisition", "Hard Money", "Other",
+    ]
+    return render_template(
+        "borrower/edit_loan.html",
+        borrower=borrower,
+        loan=loan,
+        loan_types=loan_types,
+        active_tab="loans",
+        title=f"Edit Loan #{loan.id}",
+    )
+
+
 # =========================================================
 # Documents
 # =========================================================
