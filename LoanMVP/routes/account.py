@@ -4,6 +4,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from LoanMVP.extensions import db
 from LoanMVP.models.user_model import User
+from LoanMVP.models.loan_models import BorrowerProfile
+from LoanMVP.models.investor_models import InvestorProfile
 
 account_bp = Blueprint("account", __name__, url_prefix="/account")
 
@@ -70,6 +72,20 @@ def settings():
         current_user.first_name = first_name
         current_user.last_name = last_name
         current_user.email = email
+
+        # Keep profile full_name in sync so dashboards reflect the change
+        full_name = f"{first_name} {last_name}".strip()
+        role = (getattr(current_user, "role", "") or "").strip().lower()
+        if role == "borrower":
+            bp = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+            if bp:
+                bp.full_name = full_name
+                bp.email = email
+        elif role == "investor":
+            ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+            if ip:
+                ip.full_name = full_name
+                ip.email = email
 
         db.session.commit()
         flash("Account settings updated successfully.", "success")
