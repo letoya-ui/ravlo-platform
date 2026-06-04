@@ -2269,6 +2269,10 @@ def submit_capital_application():
     full_name = (request.form.get("full_name") or getattr(investor, "full_name", None) or "").strip()
     loan_type = (request.form.get("loan_type") or "Investor Capital").strip()
 
+    ssn = (request.form.get("ssn") or "").strip()
+    if ssn:
+        investor.ssn = ssn
+
     project_address = (
         request.form.get("project_address")
         or (deal.address if deal else "")
@@ -16741,3 +16745,34 @@ def investor_send_to_partner():
         "source": source,
         "status_label": status,
     })
+
+
+@investor_bp.route("/ai/suggest-description", methods=["POST"])
+@login_required
+@role_required("investor")
+def ai_suggest_description():
+    data = request.get_json(silent=True) or {}
+    loan_type    = (data.get("loan_type") or "").strip()
+    address      = (data.get("address") or "").strip()
+    amount       = (data.get("amount") or "").strip()
+    property_val = (data.get("property_value") or "").strip()
+
+    parts = []
+    if loan_type:    parts.append(f"Loan type: {loan_type}")
+    if address:      parts.append(f"Property address: {address}")
+    if amount:       parts.append(f"Requested amount: ${amount}")
+    if property_val: parts.append(f"Property value / ARV: ${property_val}")
+
+    prompt = (
+        "Write a professional deal summary for a capital application with the following details:\n"
+        + "\n".join(parts or ["General investor capital application."])
+        + "\n\nInclude the strategy, intended use, timeline, and exit plan. "
+        "3-5 sentences, first person, lender-ready."
+    )
+
+    try:
+        assistant = AIAssistant()
+        suggestion = assistant.generate_reply(prompt, "deal_summary_assist")
+        return jsonify({"suggestion": suggestion})
+    except Exception:
+        return jsonify({"suggestion": None, "error": "AI unavailable"}), 500

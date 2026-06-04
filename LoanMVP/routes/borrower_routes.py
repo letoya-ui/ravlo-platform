@@ -9,6 +9,7 @@ from flask import (
     redirect,
     url_for,
     flash,
+    jsonify,
     current_app,
 )
 from flask_login import current_user, login_required
@@ -322,6 +323,10 @@ def apply():
         property_address = (request.form.get("property_address") or "").strip()
         property_value = safe_float(request.form.get("property_value"), None)
         description = (request.form.get("description") or "").strip() or None
+
+        ssn = (request.form.get("ssn") or "").strip()
+        if ssn:
+            borrower.ssn = ssn
 
         try:
             assistant = AIAssistant()
@@ -976,3 +981,34 @@ def consent_credit():
 
     flash("Credit pull consent recorded.", "success")
     return redirect(url_for("borrower.dashboard"))
+
+
+@borrower_bp.route("/ai/suggest-description", methods=["POST"])
+@login_required
+@role_required("borrower")
+def ai_suggest_description():
+    data = request.get_json(silent=True) or {}
+    loan_type    = (data.get("loan_type") or "").strip()
+    address      = (data.get("address") or "").strip()
+    amount       = (data.get("amount") or "").strip()
+    property_val = (data.get("property_value") or "").strip()
+
+    parts = []
+    if loan_type:    parts.append(f"Loan type: {loan_type}")
+    if address:      parts.append(f"Property address: {address}")
+    if amount:       parts.append(f"Requested amount: ${amount}")
+    if property_val: parts.append(f"Property value: ${property_val}")
+
+    prompt = (
+        "Write a professional deal summary for a loan application with the following details:\n"
+        + "\n".join(parts or ["General loan application."])
+        + "\n\nInclude the strategy, intended use, timeline, and exit plan. "
+        "Keep it 3-5 sentences, first person, lender-ready."
+    )
+
+    try:
+        assistant = AIAssistant()
+        suggestion = assistant.generate_reply(prompt, "deal_summary_assist")
+        return jsonify({"suggestion": suggestion})
+    except Exception:
+        return jsonify({"suggestion": None, "error": "AI unavailable"}), 500

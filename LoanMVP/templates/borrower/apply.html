@@ -94,8 +94,38 @@ Submit your deal details to start the funding review process.
           >
         </div>
 
+        <div class="form-group">
+          <label for="ssn">Social Security Number <span style="color:#e05050">*</span></label>
+          <input
+            type="password"
+            name="ssn"
+            id="ssn"
+            class="ravlo-input"
+            placeholder="XXX-XX-XXXX"
+            autocomplete="off"
+            maxlength="11"
+            inputmode="numeric"
+            {% if borrower and borrower.ssn %}value="{{ borrower.ssn }}"{% endif %}
+          >
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+            <span style="font-size:.75rem;color:rgba(255,255,255,.4);">
+              <span style="color:rgba(122,184,255,.7);">&#128274;</span> Encrypted and stored securely. Required for credit authorization.
+            </span>
+            <button type="button" onclick="toggleSSN()" id="ssnToggle"
+              style="font-size:.75rem;background:none;border:none;color:rgba(122,184,255,.8);cursor:pointer;padding:0;">
+              Show
+            </button>
+          </div>
+        </div>
+
         <div class="form-group span-2">
-          <label for="description">Deal Summary</label>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <label for="description" style="margin:0;">Deal Summary</label>
+            <button type="button" id="aiHelpBtn" onclick="borrowerAiSuggest()"
+              style="font-size:.75rem;background:rgba(122,184,255,.12);border:1px solid rgba(122,184,255,.25);color:#7ab8ff;border-radius:8px;padding:4px 12px;cursor:pointer;">
+              ✦ AI Help
+            </button>
+          </div>
           <textarea
             name="description"
             id="description"
@@ -103,6 +133,7 @@ Submit your deal details to start the funding review process.
             rows="6"
             placeholder="Tell us about the property, strategy, timeline, business purpose, rehab scope, exit plan, or anything else that will help your team review the request."
           ></textarea>
+          <div id="aiHelpStatus" style="font-size:.75rem;color:rgba(255,255,255,.4);margin-top:4px;display:none;">Generating suggestion…</div>
         </div>
 
         <!-- CREDIT CONSENT -->
@@ -420,6 +451,63 @@ Submit your deal details to start the funding review process.
 </style>
 
 <script>
+async function borrowerAiSuggest() {
+  const btn    = document.getElementById("aiHelpBtn");
+  const status = document.getElementById("aiHelpStatus");
+  const ta     = document.getElementById("description");
+  const form   = ta?.closest("form");
+  if (!form || !ta) return;
+
+  const loanType  = form.querySelector('[name="loan_type"]')?.value || "";
+  const address   = form.querySelector('[name="property_address"]')?.value || "";
+  const amount    = form.querySelector('[name="amount"]')?.value || "";
+  const propVal   = form.querySelector('[name="property_value"]')?.value || "";
+  const csrfToken = form.querySelector('[name="csrf_token"]')?.value || "";
+
+  btn.disabled = true;
+  status.style.display = "block";
+
+  try {
+    const res = await fetch("/borrower/ai/suggest-description", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ loan_type: loanType, address, amount, property_value: propVal })
+    });
+    const data = await res.json();
+    if (data.suggestion) {
+      ta.value = data.suggestion;
+      ta.focus();
+    }
+  } catch(e) {
+    status.textContent = "Could not reach AI. Please try again.";
+  } finally {
+    btn.disabled = false;
+    status.style.display = "none";
+  }
+}
+
+function toggleSSN() {
+  const field = document.getElementById("ssn");
+  const btn   = document.getElementById("ssnToggle");
+  if (!field) return;
+  if (field.type === "password") {
+    field.type = "text";
+    btn.textContent = "Hide";
+  } else {
+    field.type = "password";
+    btn.textContent = "Show";
+  }
+}
+
+// Auto-format SSN as XXX-XX-XXXX
+document.addEventListener("input", function(e) {
+  if (e.target.id !== "ssn") return;
+  let v = e.target.value.replace(/\D/g, "").slice(0, 9);
+  if (v.length > 5)      v = v.slice(0,3) + "-" + v.slice(3,5) + "-" + v.slice(5);
+  else if (v.length > 3) v = v.slice(0,3) + "-" + v.slice(3);
+  e.target.value = v;
+});
+
 document.addEventListener("DOMContentLoaded", function(){
   const dateField = document.getElementById("consentDate");
   if(dateField){
