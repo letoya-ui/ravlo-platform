@@ -181,6 +181,16 @@ def dalle_generate_images(payload: dict) -> dict:
             log.info("gpt-image-1 generated %s OK", mode)
         except Exception as exc:
             log.error("gpt-image-1 failed for mode=%s: %s", mode, exc)
+            exc_str = str(exc)
+            # Billing hard-limit is unrecoverable for all modes — raise immediately
+            # so callers can surface a clear message rather than silently returning
+            # empty images that produce a confusing "Upload failed" error.
+            if "billing_hard_limit_reached" in exc_str or "billing hard limit" in exc_str.lower():
+                raise RuntimeError(
+                    "Image generation is temporarily unavailable: your OpenAI account billing "
+                    "limit has been reached. Please increase the limit in your OpenAI dashboard "
+                    "and try again."
+                ) from exc
             errors.append(f"{mode}: {exc}")
             images_b64[mode] = None
 
