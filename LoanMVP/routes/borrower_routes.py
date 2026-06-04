@@ -323,6 +323,10 @@ def apply():
         property_value = safe_float(request.form.get("property_value"), None)
         description = (request.form.get("description") or "").strip() or None
 
+        ssn = (request.form.get("ssn") or "").strip()
+        if ssn:
+            borrower.ssn = ssn
+
         try:
             assistant = AIAssistant()
             ai_summary = assistant.generate_reply(

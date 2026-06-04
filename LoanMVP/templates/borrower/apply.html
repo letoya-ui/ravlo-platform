@@ -94,6 +94,30 @@ Submit your deal details to start the funding review process.
           >
         </div>
 
+        <div class="form-group">
+          <label for="ssn">Social Security Number <span style="color:#e05050">*</span></label>
+          <input
+            type="password"
+            name="ssn"
+            id="ssn"
+            class="ravlo-input"
+            placeholder="XXX-XX-XXXX"
+            autocomplete="off"
+            maxlength="11"
+            inputmode="numeric"
+            {% if borrower and borrower.ssn %}value="{{ borrower.ssn }}"{% endif %}
+          >
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+            <span style="font-size:.75rem;color:rgba(255,255,255,.4);">
+              <span style="color:rgba(122,184,255,.7);">&#128274;</span> Encrypted and stored securely. Required for credit authorization.
+            </span>
+            <button type="button" onclick="toggleSSN()" id="ssnToggle"
+              style="font-size:.75rem;background:none;border:none;color:rgba(122,184,255,.8);cursor:pointer;padding:0;">
+              Show
+            </button>
+          </div>
+        </div>
+
         <div class="form-group span-2">
           <label for="description">Deal Summary</label>
           <textarea
@@ -420,6 +444,28 @@ Submit your deal details to start the funding review process.
 </style>
 
 <script>
+function toggleSSN() {
+  const field = document.getElementById("ssn");
+  const btn   = document.getElementById("ssnToggle");
+  if (!field) return;
+  if (field.type === "password") {
+    field.type = "text";
+    btn.textContent = "Hide";
+  } else {
+    field.type = "password";
+    btn.textContent = "Show";
+  }
+}
+
+// Auto-format SSN as XXX-XX-XXXX
+document.addEventListener("input", function(e) {
+  if (e.target.id !== "ssn") return;
+  let v = e.target.value.replace(/\D/g, "").slice(0, 9);
+  if (v.length > 5)      v = v.slice(0,3) + "-" + v.slice(3,5) + "-" + v.slice(5);
+  else if (v.length > 3) v = v.slice(0,3) + "-" + v.slice(3);
+  e.target.value = v;
+});
+
 document.addEventListener("DOMContentLoaded", function(){
   const dateField = document.getElementById("consentDate");
   if(dateField){
