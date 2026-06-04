@@ -660,6 +660,28 @@ def create_app():
             return "${:,.0f}".format(int(value))
         except (ValueError, TypeError):
             return "$0"
+
+    @app.template_filter("md")
+    def markdown_filter(text):
+        """Convert basic markdown to HTML (bold, italic, bullets, line breaks)."""
+        import re, html as _html
+        if not text:
+            return ""
+        t = _html.escape(str(text))
+        # **bold** and __bold__
+        t = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', t)
+        t = re.sub(r'__(.+?)__',     r'<strong>\1</strong>', t)
+        # *italic* and _italic_
+        t = re.sub(r'\*(.+?)\*',     r'<em>\1</em>', t)
+        t = re.sub(r'_(.+?)_',       r'<em>\1</em>', t)
+        # bullet lines: "- item" or "• item"
+        t = re.sub(r'(?m)^[\-•]\s+(.+)$', r'<li>\1</li>', t)
+        t = re.sub(r'(<li>.*</li>\n?)+', lambda m: '<ul>' + m.group(0) + '</ul>', t)
+        # paragraph breaks (blank line)
+        t = re.sub(r'\n{2,}', '</p><p>', t)
+        # single newlines
+        t = re.sub(r'\n', '<br>', t)
+        return '<p>' + t + '</p>'
    
     def safe_url_for(endpoint, **values):
         try:

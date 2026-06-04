@@ -318,7 +318,7 @@ Central system management for users, onboarding, invites, lending operations, an
         </div>
 
         <div id="aiInsight" class="admin-ai-insight">
-          {{ ai_summary or "Loading latest AI insight..." }}
+          {{ (ai_summary or "Loading latest AI insight...") | md | safe }}
         </div>
       </section>
     </section>
