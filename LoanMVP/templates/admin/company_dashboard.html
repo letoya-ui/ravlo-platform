@@ -468,57 +468,97 @@
       </div>
 
       {# Invites #}
-      <div class="re-card cd-card" data-widget-key="invites">
+      <div class="re-card cd-card" data-widget-key="invites" style="overflow:visible;">
         <div class="cd-section-head" style="margin-bottom:14px;">
           <div>
             <div class="cd-eyebrow">INVITES</div>
             <h3 style="margin:4px 0 2px;">Recent Invites</h3>
           </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            {% if stats.pending_invites > 0 %}
+            <span style="padding:2px 8px;border-radius:99px;font-size:.72rem;font-weight:700;background:rgba(251,191,36,.14);color:#fbbf24;border:1px solid rgba(251,191,36,.25);">{{ stats.pending_invites }} pending</span>
+            {% endif %}
+            <a class="re-btn ghost sm" href="{{ url_for('admin.invite_team_member', company_id=company.id) }}" style="white-space:nowrap;">+ Invite</a>
+          </div>
         </div>
         {% if invites %}
-        <div style="display:grid;gap:8px;">
+        <div style="display:grid;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px;">
           {% for invite in invites %}
           {% set is = (invite.status or 'pending')|lower %}
           <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
             <div style="width:32px;height:32px;border-radius:50%;background:rgba(122,184,255,.14);color:#7ab8ff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0;">
               {{ invite.email[0]|upper if invite.email else "?" }}
             </div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ invite.email or "—" }}</div>
-              <div style="font-size:.72rem;color:var(--muted,#8a9db5);">{{ get_role_display(invite.role) }}</div>
+            <div style="flex:1;min-width:0;overflow:hidden;">
+              <div style="font-size:.83rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ invite.email or "—" }}</div>
+              <div style="font-size:.72rem;color:var(--muted,#8a9db5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <span>{{ get_role_display(invite.role) }}</span>
+                {% if invite.created_at %}<span style="color:rgba(138,157,181,.5);">·</span><span>{{ invite.created_at.strftime("%m/%d/%y") }}</span>{% endif %}
+              </div>
             </div>
-            {% if is == 'pending' %}<span class="badge badge-warning">Pending</span>
-            {% elif is in ['approved','accepted'] %}<span class="badge badge-success">{{ is|title }}</span>
-            {% else %}<span class="badge badge-neutral">{{ (invite.status or 'Unknown')|title }}</span>{% endif %}
+            <div style="flex-shrink:0;display:flex;align-items:center;gap:6px;">
+              {% if is == 'pending' %}<span class="badge badge-warning" style="white-space:nowrap;">Pending</span>
+              {% elif is in ['approved','accepted'] %}<span class="badge badge-success" style="white-space:nowrap;">{{ is|title }}</span>
+              {% else %}<span class="badge badge-neutral" style="white-space:nowrap;">{{ (invite.status or 'Unknown')|title }}</span>{% endif %}
+              {% if is != 'accepted' %}
+              <form method="POST" action="{{ url_for('admin.delete_team_invite', company_id=company.id, invite_id=invite.id) }}" style="display:inline;" onsubmit="return confirm('Delete invite for {{ invite.email }}?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" title="Delete invite" style="background:none;border:none;cursor:pointer;padding:4px;color:#ef4444;opacity:.65;line-height:1;font-size:.85rem;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.65">
+                  <i class="lucide lucide-trash-2"></i>
+                </button>
+              </form>
+              {% endif %}
+            </div>
           </div>
           {% endfor %}
         </div>
+        {% if stats.pending_invites > invites|length %}
+        <div style="margin-top:10px;text-align:center;">
+          <a href="{{ url_for('admin.company_team', company_id=company.id) }}" style="font-size:.76rem;color:#7ab8ff;text-decoration:none;">View all {{ stats.pending_invites }} invites →</a>
+        </div>
+        {% endif %}
         {% else %}
           <div class="re-empty">No invites sent yet.</div>
         {% endif %}
       </div>
 
       {# Access Requests #}
-      <div class="re-card cd-card" data-widget-key="requests">
+      <div class="re-card cd-card" data-widget-key="requests" style="overflow:visible;">
         <div class="cd-section-head" style="margin-bottom:14px;">
           <div>
-            <div class="cd-eyebrow">REQUESTS</div>
-            <h3 style="margin:4px 0 2px;">Access Requests</h3>
+            <div class="cd-eyebrow">ACCESS REQUESTS</div>
+            <h3 style="margin:4px 0 2px;">Requests</h3>
           </div>
-          <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">View</a>
+          <div style="display:flex;align-items:center;gap:8px;">
+            {% if stats.pending_requests > 0 %}
+            <span style="padding:2px 8px;border-radius:99px;font-size:.72rem;font-weight:700;background:rgba(239,68,68,.14);color:#f87171;border:1px solid rgba(239,68,68,.25);">{{ stats.pending_requests }} pending</span>
+            {% endif %}
+            <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}" style="white-space:nowrap;">View All</a>
+          </div>
         </div>
         {% if access_requests %}
-        <div style="display:grid;gap:8px;">
+        <div style="display:grid;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px;">
           {% for item in access_requests %}
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
-            <div>
-              <div style="font-size:.83rem;font-weight:600;">{{ item.contact_name or "—" }}</div>
-              <div style="font-size:.72rem;color:var(--muted,#8a9db5);">{{ item.email or "—" }}</div>
+          {% set req_status = (item.status or 'pending')|lower %}
+          {% set req_color = "#22c55e" if req_status == "approved" else "#f87171" if req_status in ["declined","rejected"] else "#fbbf24" %}
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+            <div style="flex:1;min-width:0;overflow:hidden;">
+              <div style="font-size:.83rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.contact_name or item.first_name or "—" }}</div>
+              <div style="font-size:.72rem;color:var(--muted,#8a9db5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.email or "—" }}</div>
+              {% if item.created_at %}<div style="font-size:.68rem;color:rgba(138,157,181,.55);margin-top:2px;">{{ item.created_at.strftime("%m/%d/%y") }}</div>{% endif %}
             </div>
-            <span class="badge badge-neutral">{{ (item.status or "pending")|replace("_"," ")|title }}</span>
+            <span style="flex-shrink:0;padding:2px 8px;border-radius:99px;font-size:.7rem;font-weight:700;background:{{ req_color }}22;color:{{ req_color }};border:1px solid {{ req_color }}44;white-space:nowrap;">
+              {{ req_status|replace("_"," ")|title }}
+            </span>
           </div>
           {% endfor %}
         </div>
+        {% if stats.pending_requests > access_requests|length %}
+        <div style="margin-top:10px;text-align:center;">
+          <a href="{{ url_for('admin.access_requests') }}" style="font-size:.76rem;color:#7ab8ff;text-decoration:none;">View all {{ stats.requests }} requests →</a>
+        </div>
+        {% endif %}
         {% else %}
           <div class="re-empty">No access requests yet.</div>
         {% endif %}

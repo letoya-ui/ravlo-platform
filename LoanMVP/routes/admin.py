@@ -1316,6 +1316,36 @@ def resend_team_invite(company_id, invite_id):
 
     return redirect(url_for("admin.company_team", company_id=company.id))
 
+
+@admin_bp.route("/company/<int:company_id>/team/invites/<int:invite_id>/delete", methods=["POST"])
+@login_required
+@role_required("admin_group")
+@admin_required
+def delete_team_invite(company_id, invite_id):
+    company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
+    invite = UserInvite.query.get_or_404(invite_id)
+    if invite.company_id != company.id:
+        flash("That invite does not belong to this company.", "danger")
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+    if invite.status == "accepted":
+        flash("Accepted invites cannot be deleted; remove the user from the team instead.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+    db.session.delete(invite)
+    db.session.commit()
+    flash("Invite deleted.", "success")
+
+    next_url = request.form.get("next") or request.referrer or ""
+    if next_url and next_url.startswith("/"):
+        return redirect(next_url)
+    return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+
 # =========================================================
 # 📊 SYSTEM REPORTS (CSV EXPORT)
 # =========================================================
