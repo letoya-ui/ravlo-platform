@@ -32,6 +32,55 @@ Your deal pipeline, project planning, and capital readiness in one operating vie
 
 <div class="investor-dashboard">
 
+  <!-- ── Free trial activation banner ── -->
+  {% set _sub = (current_user.subscription or '') | lower %}
+  {% if _sub in ('free', '') and current_user.trial_ends_at is none %}
+  <div class="investor-welcome-banner" style="background:linear-gradient(135deg,rgba(122,184,255,.10) 0%,rgba(100,220,180,.08) 100%);border-color:rgba(122,184,255,.35);">
+    <div class="welcome-banner-body">
+      <div class="welcome-banner-icon">🚀</div>
+      <div class="welcome-banner-copy">
+        <strong>Start your free 15-day trial</strong>
+        <span>Unlock the full Ravlo platform — no credit card required.</span>
+      </div>
+    </div>
+    <div class="welcome-banner-actions">
+      <form method="POST" action="{{ url_for('investor.activate_trial') }}" style="margin:0;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="ravlo-btn primary sm">
+          <i class="lucide lucide-zap"></i> Activate Free Trial
+        </button>
+      </form>
+      <a href="{{ url_for('investor.choose_plan') }}" class="ravlo-btn ghost sm">View Plans</a>
+    </div>
+  </div>
+  {% elif _sub in ('free', '') and current_user.trial_ends_at is not none and current_user.trial_is_expired %}
+  <div class="investor-welcome-banner" style="border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.06);">
+    <div class="welcome-banner-body">
+      <div class="welcome-banner-icon">⏰</div>
+      <div class="welcome-banner-copy">
+        <strong>Your free trial has ended</strong>
+        <span>Choose a plan to keep full access to your investor workspace.</span>
+      </div>
+    </div>
+    <div class="welcome-banner-actions">
+      <a href="{{ url_for('investor.choose_plan') }}" class="ravlo-btn primary sm">Choose a Plan</a>
+    </div>
+  </div>
+  {% elif _sub == 'preview' and current_user.trial_days_remaining is not none %}
+  <div class="investor-welcome-banner" style="border-color:rgba(122,184,255,.25);background:rgba(122,184,255,.05);">
+    <div class="welcome-banner-body">
+      <div class="welcome-banner-icon">⏳</div>
+      <div class="welcome-banner-copy">
+        <strong>{{ current_user.trial_days_remaining }} day{{ 's' if current_user.trial_days_remaining != 1 else '' }} left in your free trial</strong>
+        <span>Upgrade to a paid plan anytime to keep your workspace and data.</span>
+      </div>
+    </div>
+    <div class="welcome-banner-actions">
+      <a href="{{ url_for('investor.choose_plan') }}" class="ravlo-btn primary sm">Upgrade Now</a>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- ── First-visit welcome banner (hidden after tour dismissed) ── -->
   <div id="welcomeBanner" class="investor-welcome-banner" style="display:none">
     <div class="welcome-banner-body">

@@ -719,13 +719,6 @@ def post_login_redirect():
     if role in ["admin", "platform_admin", "master_admin", "lending_admin"]:
         return redirect(url_for("admin.dashboard"))
 
-    # Investors who have never explicitly selected a plan (DB value still the
-    # default "free") are sent to the subscription selection step.
-    # Preview investors go straight to the dashboard — they already have access.
-    _sub = (getattr(current_user, "subscription", "") or "").strip().lower()
-    if role == "investor" and _sub in ("free", ""):
-        return redirect(url_for("investor.choose_plan"))
-
     # Safe redirect: reject protocol-relative URLs like //evil.com
     next_page = (request.args.get("next") or "").strip()
     if next_page.startswith("/") and not next_page.startswith("//"):
