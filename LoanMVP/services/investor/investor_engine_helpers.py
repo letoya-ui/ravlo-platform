@@ -464,4 +464,11 @@ def _engine_or_dalle(path: str, payload: dict, timeout: int = RENDER_TIMEOUT) ->
             )
 
     from LoanMVP.services.llm_studio_service import dalle_generate_images
-    return dalle_generate_images(payload)
+    result = dalle_generate_images(payload)
+    # If every mode failed (ok=False, no images), surface the first error so the
+    # caller gets a meaningful message instead of a silent empty-images dict.
+    if not result.get("ok") and not any(result.get("images_base64", {}).values()):
+        errors = result.get("meta", {}).get("errors") or []
+        msg = errors[0] if errors else "Image generation failed (all output modes failed)"
+        raise RuntimeError(msg)
+    return result
