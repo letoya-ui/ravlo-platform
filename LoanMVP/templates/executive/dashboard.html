@@ -77,7 +77,7 @@ Executive oversight across users, onboarding, invites, lending operations, and p
     <div class="exec-hero-panel exec-hero-stat">
       <div class="label">Executive Summary</div>
       <div class="value">{{ stats.total_users or 0 }}</div>
-      <div class="meta">{{ ai_summary }}</div>
+      <div class="meta">{{ ai_summary | md | safe }}</div>
       <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.analytics') }}">Open Analytics</a>
     </div>
   </section>

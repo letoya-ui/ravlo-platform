@@ -166,7 +166,7 @@ Your deal pipeline, project planning, and capital readiness in one operating vie
         </div>
 
         <div class="next-step-card">
-          <p>{{ next_step_ai or "Review your strongest active deal and move it into the next planning step." }}</p>
+          {{ (next_step_ai or "Review your strongest active deal and move it into the next planning step.") | md | safe }}
         </div>
 
         <div class="capital-progress">

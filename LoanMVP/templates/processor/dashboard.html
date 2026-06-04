@@ -81,7 +81,7 @@ Review submissions, verify documents, clear conditions, and move files toward un
         </div>
       </div>
       <div class="ai-summary">
-        {{ ai_summary or "AI summary unavailable." }}
+        {{ (ai_summary or "AI summary unavailable.") | md | safe }}
       </div>
     </section>
 

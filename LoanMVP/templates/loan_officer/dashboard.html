@@ -92,7 +92,7 @@ Manage leads, capital applications, active loans, and pipeline performance.
     </div>
 
     <div class="ai-summary">
-      {{ ai_summary or "AI summary unavailable." }}
+      {{ (ai_summary or "AI summary unavailable.") | md | safe }}
     </div>
   </section>
 
