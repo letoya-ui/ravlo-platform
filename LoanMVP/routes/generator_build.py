@@ -1007,6 +1007,22 @@ def _find_urls(value, limit=8):
     return urls
 
 
+def _patch_asset_urls_from_flat_upload(payload, uploaded_urls):
+    """Map uploaded URLs back to individual assets using image_indexes."""
+    assets = _as_dict(payload).get("assets")
+    if not isinstance(assets, dict) or not uploaded_urls:
+        return
+    for asset in assets.values():
+        if not isinstance(asset, dict) or asset.get("image_url"):
+            continue
+        indexes = asset.get("image_indexes") or []
+        if indexes and isinstance(indexes[0], int) and indexes[0] < len(uploaded_urls):
+            asset["image_url"] = uploaded_urls[indexes[0]]
+            asset["images"] = [
+                uploaded_urls[i] for i in indexes if isinstance(i, int) and i < len(uploaded_urls)
+            ]
+
+
 def _ensure_generator_image_urls(payload):
     payload = _as_dict(payload)
     image_urls = _find_urls(payload)
@@ -1014,6 +1030,7 @@ def _ensure_generator_image_urls(payload):
     if image_urls:
         payload.setdefault("image_url", image_urls[0])
         payload.setdefault("images", image_urls)
+        _patch_asset_urls_from_flat_upload(payload, image_urls)
         return image_urls
 
     images_b64 = payload.get("images_base64") or payload.get("image_base64_list") or []
@@ -1028,6 +1045,7 @@ def _ensure_generator_image_urls(payload):
         if uploaded:
             payload["image_url"] = uploaded[0]
             payload["images"] = uploaded
+            _patch_asset_urls_from_flat_upload(payload, uploaded)
             return uploaded
 
     return []
@@ -1046,6 +1064,7 @@ def _candidate_payload_blocks(payload):
         "package",
         "data",
         "project",
+        "assets",
     )
 
     while queue:
@@ -1139,6 +1158,7 @@ def _normalize_generator_outputs(payload):
             "plan",
         ),
         "blueprint_floor2": (
+            "blueprint_second",
             "blueprint_floor2_result",
             "blueprint_floor2",
             "second_floor_blueprint",
@@ -1146,6 +1166,7 @@ def _normalize_generator_outputs(payload):
             "second_floor",
         ),
         "blueprint_floor3": (
+            "blueprint_third",
             "blueprint_floor3_result",
             "blueprint_floor3",
             "third_floor_blueprint",
