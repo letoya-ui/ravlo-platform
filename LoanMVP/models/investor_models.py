@@ -1,6 +1,7 @@
 # LoanMVP/models/investor_models.py
 from datetime import datetime
 from LoanMVP.extensions import db
+from LoanMVP.models.encrypted_types import EncryptedString
 
 
 class TimestampMixin:
@@ -32,6 +33,7 @@ class InvestorProfile(db.Model, TimestampMixin):
     employment_status = db.Column(db.String(100))
     annual_income = db.Column(db.Integer)
     credit_score = db.Column(db.Integer)
+    ssn = db.Column(EncryptedString(), nullable=True)
     # Preferences
     strategy = db.Column(db.String(50), nullable=True)
     experience_level = db.Column(db.String(30), nullable=True)

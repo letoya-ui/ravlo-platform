@@ -162,6 +162,28 @@ textarea.ravlo-input{
        placeholder="680">
 </div>
 
+<div class="form-group">
+<label>Social Security Number <span style="color:#e05050">*</span></label>
+<input class="ravlo-input"
+       type="password"
+       name="ssn"
+       id="inv_ssn"
+       placeholder="XXX-XX-XXXX"
+       autocomplete="off"
+       maxlength="11"
+       inputmode="numeric"
+       {% if investor and investor.ssn %}value="{{ investor.ssn }}"{% endif %}>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+  <span style="font-size:.75rem;color:var(--muted);">
+    <span style="color:rgba(122,184,255,.7);">&#128274;</span> Encrypted and stored securely. Required for credit authorization.
+  </span>
+  <button type="button" onclick="toggleInvSSN()" id="invSsnToggle"
+    style="font-size:.75rem;background:none;border:none;color:rgba(122,184,255,.8);cursor:pointer;padding:0;">
+    Show
+  </button>
+</div>
+</div>
+
 </div>
 </section>
 
@@ -216,10 +238,18 @@ textarea.ravlo-input{
 </div>
 
 <div class="form-group">
-<label>Project Description</label>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+  <label style="margin:0;">Project Description</label>
+  <button type="button" id="invAiBtn" onclick="invAiSuggest()"
+    style="font-size:.75rem;background:rgba(122,184,255,.12);border:1px solid rgba(122,184,255,.25);color:#7ab8ff;border-radius:8px;padding:4px 12px;cursor:pointer;">
+    ✦ AI Help
+  </button>
+</div>
 <textarea class="ravlo-input"
           name="project_description"
+          id="inv_project_description"
           placeholder="Renovation scope, timeline, exit strategy">{% if deal %}{{ deal.notes or '' }}{% endif %}</textarea>
+<div id="invAiStatus" style="font-size:.75rem;color:var(--muted);margin-top:4px;display:none;">Generating suggestion…</div>
 </div>
 
 <div class="form-group">
@@ -314,6 +344,57 @@ Submit Capital Application
 </div>
 
 <script>
+
+function toggleInvSSN() {
+  const f = document.getElementById("inv_ssn");
+  const b = document.getElementById("invSsnToggle");
+  if (!f) return;
+  f.type = f.type === "password" ? "text" : "password";
+  b.textContent = f.type === "password" ? "Show" : "Hide";
+}
+
+document.addEventListener("input", function(e) {
+  if (e.target.id !== "inv_ssn") return;
+  let v = e.target.value.replace(/\D/g, "").slice(0, 9);
+  if (v.length > 5)      v = v.slice(0,3) + "-" + v.slice(3,5) + "-" + v.slice(5);
+  else if (v.length > 3) v = v.slice(0,3) + "-" + v.slice(3);
+  e.target.value = v;
+});
+
+async function invAiSuggest() {
+  const btn    = document.getElementById("invAiBtn");
+  const status = document.getElementById("invAiStatus");
+  const ta     = document.getElementById("inv_project_description");
+  const form   = document.getElementById("capitalAppForm");
+  if (!form || !ta) return;
+
+  const loanType   = form.querySelector('[name="loan_type"]')?.value || "";
+  const address    = form.querySelector('[name="project_address"]')?.value || "";
+  const amount     = form.querySelector('[name="amount"]')?.value || "";
+  const propVal    = form.querySelector('[name="property_value"]')?.value || "";
+  const csrfToken  = form.querySelector('[name="csrf_token"]')?.value || "";
+
+  btn.disabled = true;
+  status.style.display = "block";
+
+  try {
+    const res = await fetch("/investor/ai/suggest-description", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ loan_type: loanType, address, amount, property_value: propVal })
+    });
+    const data = await res.json();
+    if (data.suggestion) {
+      ta.value = data.suggestion;
+      ta.focus();
+    }
+  } catch(e) {
+    status.textContent = "Could not reach AI. Please try again.";
+  } finally {
+    btn.disabled = false;
+    status.style.display = "none";
+  }
+}
 
 document.addEventListener("DOMContentLoaded", function(){
 
