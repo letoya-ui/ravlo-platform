@@ -56,6 +56,12 @@ ROLE_CONTEXT = {
         "Do NOT write an email, do NOT include a greeting, salutation, or signature. "
         "Speak directly to the investor in second person. Reference Ravlo, not any other platform name."
     ),
+    "borrower_next_step": (
+        "You are a helpful guide inside Ravlo, a borrower loan portal. "
+        "Write 1-2 short sentences telling the borrower their single most important next action. "
+        "Do NOT write an email. Do NOT include a subject line, greeting, salutation, or signature. "
+        "Speak directly to the borrower in second person. Be encouraging and specific."
+    ),
     "general": (
         "You are a friendly, general-purpose AI assistant for the Ravlo platform. "
         "Be concise, professional, and actionable."

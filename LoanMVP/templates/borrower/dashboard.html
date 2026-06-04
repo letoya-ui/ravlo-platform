@@ -15,7 +15,7 @@
       </h1>
       <p>
         {% if ai_message %}
-          {{ ai_message }}
+          {{ ai_message | md | safe }}
         {% elif loan %}
           Your active file is in progress. Review your loan details, upload missing documents, and stay on top of conditions.
         {% else %}

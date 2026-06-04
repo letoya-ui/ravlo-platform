@@ -26,6 +26,7 @@ from LoanMVP.models.crm_models import Message
 from LoanMVP.models.user_model import User
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.processor_model import ProcessorProfile
+from LoanMVP.models.investor_models import InvestorProfile
 
 borrower_bp = Blueprint("borrower", __name__, url_prefix="/borrower")
 
@@ -924,10 +925,28 @@ def subscription():
 
     if request.method == "POST":
         plan = request.form.get("plan")
+        if plan == "investor_upgrade":
+            # Change role to investor and create InvestorProfile if needed
+            user = User.query.get(current_user.id)
+            user.role = "investor"
+
+            existing = InvestorProfile.query.filter_by(user_id=user.id).first()
+            if not existing:
+                profile = InvestorProfile(
+                    user_id=user.id,
+                    full_name=f"{user.first_name or ''} {user.last_name or ''}".strip() or None,
+                    email=user.email,
+                )
+                db.session.add(profile)
+
+            db.session.commit()
+            flash("Your account has been upgraded to Investor access. Welcome to the Ravlo Investor workspace!", "success")
+            return redirect(url_for("investor.dashboard"))
+
         if plan:
             borrower.subscription_plan = plan
             db.session.commit()
-            flash(f"Subscription updated to {plan}.", "success")
+            flash("Plan updated.", "success")
             return redirect(url_for("borrower.subscription"))
 
     return render_template(
