@@ -68,16 +68,17 @@ class TrainingJob(db.Model):
 
 class UserCourseUnlock(db.Model):
     """Tracks which courses a user has enrolled in beyond their subscription-included course."""
-    __tablename__ = "user_course_unlocks"
+    # Table and column names keep the old 'avenue' names so no DB migration is needed.
+    __tablename__ = "user_avenue_unlocks"
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
-    course_id = db.Column(db.String(50), nullable=False)       # course id: residential, commercial, mortgage, etc.
+    course_id = db.Column('avenue_id', db.String(50), nullable=False)
     stripe_payment_id = db.Column(db.String(255), nullable=True)
     unlocked_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     __table_args__ = (
-        db.UniqueConstraint('user_id', 'course_id', name='uq_user_course'),
+        db.UniqueConstraint('user_id', 'avenue_id', name='uq_user_avenue'),
     )
 
     def __repr__(self):
