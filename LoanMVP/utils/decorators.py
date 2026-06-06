@@ -100,6 +100,10 @@ def role_required(*roles):
 
             user_role = normalize_role(getattr(current_user, "role", ""))
 
+            # platform_admin and master_admin can access every route for oversight and testing
+            if user_role in {"platform_admin", "master_admin"}:
+                return fn(*args, **kwargs)
+
             expanded_roles = set()
             for role in roles:
                 if role == "admin_group":
