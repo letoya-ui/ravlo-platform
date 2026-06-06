@@ -1038,10 +1038,29 @@ def _ensure_generator_image_urls(payload):
         images_b64 = [images_b64]
 
     if images_b64:
-        uploaded = _upload_build_images_from_b64(
-            images_b64,
-            prefix=f"build-generator/{datetime.utcnow().strftime('%Y%m%d')}",
-        )
+        prefix = f"build-generator/{datetime.utcnow().strftime('%Y%m%d')}"
+
+        if isinstance(images_b64, dict):
+            # DALL-E returns a mode-keyed dict — upload preserving key order so we
+            # can map each URL back to its output mode directly.
+            ordered = [(mode, b64) for mode, b64 in images_b64.items() if b64]
+            uploaded = _upload_build_images_from_b64(
+                [b64 for _, b64 in ordered], prefix=prefix
+            )
+            all_urls = []
+            for (mode, _), url in zip(ordered, uploaded):
+                if url:
+                    all_urls.append(url)
+                    # Inject a named output block so _normalize_generator_outputs
+                    # can find each mode by key without falling back to the
+                    # position-based URL list.
+                    payload.setdefault(mode, {"image_url": url, "images": [url]})
+            if all_urls:
+                payload["image_url"] = all_urls[0]
+                payload["images"] = all_urls
+            return all_urls
+
+        uploaded = _upload_build_images_from_b64(images_b64, prefix=prefix)
         if uploaded:
             payload["image_url"] = uploaded[0]
             payload["images"] = uploaded
@@ -1151,6 +1170,7 @@ def _normalize_generator_outputs(payload):
         "blueprint": (
             "blueprint_result",
             "blueprint",
+            "blueprint_first",
             "blueprint_floor1",
             "first_floor_blueprint",
             "floor_plan",
@@ -1193,6 +1213,8 @@ def _normalize_generator_outputs(payload):
         "siteplan": (
             "siteplan_result",
             "siteplan",
+            "siteplan_first",
+            "siteplan_aerial",
             "site_plan",
             "site_plan_result",
             "parcel_plan",
