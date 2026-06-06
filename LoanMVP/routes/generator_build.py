@@ -1047,6 +1047,7 @@ def _ensure_generator_image_urls(payload):
             uploaded = _upload_build_images_from_b64(
                 [b64 for _, b64 in ordered], prefix=prefix
             )
+            provider = (payload.get("meta") or {}).get("provider", "")
             all_urls = []
             for (mode, _), url in zip(ordered, uploaded):
                 if url:
@@ -1054,7 +1055,10 @@ def _ensure_generator_image_urls(payload):
                     # Inject a named output block so _normalize_generator_outputs
                     # can find each mode by key without falling back to the
                     # position-based URL list.
-                    payload.setdefault(mode, {"image_url": url, "images": [url]})
+                    block = {"image_url": url, "images": [url]}
+                    if provider:
+                        block["provider"] = provider
+                    payload.setdefault(mode, block)
             if all_urls:
                 payload["image_url"] = all_urls[0]
                 payload["images"] = all_urls

@@ -334,9 +334,20 @@
     </section>
   </section>
 
+  {# ── Provider helpers ── #}
+  {% set _bp_dalle = 'openai' in (blueprint_result.get('provider') or '') %}
+  {% set _sp_dalle = 'openai' in (siteplan_result.get('provider') or '') %}
+
   <section class="result-stack">
     <article class="ravlo-card pad">
-      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Blueprint - First Floor</h2></div><strong id="blueprintStatus">{{ 'Generated' if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) else 'Waiting' }}</strong></div>
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">OUTPUT</div>
+          <h2>{% if _bp_dalle %}Concept Render — Floor 1{% else %}Blueprint - First Floor{% endif %}</h2>
+          {% if _bp_dalle %}<p style="margin:2px 0 0;font-size:.78rem;color:var(--muted);"><i class="lucide lucide-info" style="width:12px;height:12px;vertical-align:middle;margin-right:3px;"></i>AI concept render — floor plan requires the Renovation Engine</p>{% endif %}
+        </div>
+        <strong id="blueprintStatus">{{ 'Generated' if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) else 'Waiting' }}</strong>
+      </div>
       <div class="result-media plan-media" id="blueprintMedia">{% if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) %}<img src="{{ blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') }}" alt="First floor blueprint">{% else %}<div class="empty-state-inline">First floor blueprint will appear here.</div>{% endif %}</div>
     </article>
 
@@ -351,7 +362,14 @@
     </article>
 
     <article class="ravlo-card pad">
-      <div class="section-head"><div><div class="eyebrow">OUTPUT</div><h2>Site Plan</h2></div><strong id="siteplanStatus">{{ 'Generated' if siteplan_result and siteplan_result.get('image_url') else 'Waiting' }}</strong></div>
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">OUTPUT</div>
+          <h2>{% if _sp_dalle %}Aerial Concept{% else %}Site Plan{% endif %}</h2>
+          {% if _sp_dalle %}<p style="margin:2px 0 0;font-size:.78rem;color:var(--muted);"><i class="lucide lucide-info" style="width:12px;height:12px;vertical-align:middle;margin-right:3px;"></i>AI concept render — technical site plan requires the Renovation Engine</p>{% endif %}
+        </div>
+        <strong id="siteplanStatus">{{ 'Generated' if siteplan_result and siteplan_result.get('image_url') else 'Waiting' }}</strong>
+      </div>
       <div class="result-media plan-media" id="siteplanMedia">{% if siteplan_result and siteplan_result.get('image_url') %}<img src="{{ siteplan_result.get('image_url') }}" alt="Site plan">{% else %}<div class="empty-state-inline">Site plan will appear here.</div>{% endif %}</div>
     </article>
 
