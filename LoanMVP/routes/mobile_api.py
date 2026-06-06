@@ -84,9 +84,25 @@ def _serialize_user(user) -> dict:
     first = getattr(user, 'first_name', '') or ''
     last = getattr(user, 'last_name', '') or ''
 
-    # Resolve chosen_course: prefer the new field, fall back to deriving from legacy tier
-    chosen_course = getattr(user, 'chosen_course', None)
     university_tier = getattr(user, 'university_tier', None)
+
+    # Load course enrollments from unlock table (chosen course = first entry with no payment)
+    chosen_course = None
+    unlocked_courses: list[str] = []
+    try:
+        from LoanMVP.models.training_models import UserCourseUnlock
+        unlocks = UserCourseUnlock.query.filter_by(user_id=getattr(user, 'id', None)).order_by(UserCourseUnlock.id).all()
+        all_course_ids = [u.course_id for u in unlocks]
+        # First unlock with no Stripe payment = the subscription-included chosen course
+        for u in unlocks:
+            if not u.stripe_payment_id:
+                chosen_course = u.course_id
+                break
+        unlocked_courses = all_course_ids
+    except Exception:
+        pass
+
+    # Fall back to legacy tier mapping if no unlock record exists
     if not chosen_course and university_tier:
         _TIER_TO_COURSE = {
             'lending': 'mortgage',
@@ -95,15 +111,6 @@ def _serialize_user(user) -> dict:
             'elite': 'residential',
         }
         chosen_course = _TIER_TO_COURSE.get(university_tier)
-
-    # Load paid course enrollments
-    unlocked_courses: list[str] = []
-    try:
-        from LoanMVP.models.training_models import UserCourseUnlock
-        unlocks = UserCourseUnlock.query.filter_by(user_id=getattr(user, 'id', None)).all()
-        unlocked_courses = [u.course_id for u in unlocks]
-    except Exception:
-        pass
 
     return {
         'id': getattr(user, 'id', None),
@@ -1291,11 +1298,21 @@ def choose_course():
     if course_id not in VALID_COURSES:
         return jsonify({'error': f'Invalid course. Must be one of: {", ".join(sorted(VALID_COURSES))}'}), 400
 
-    if getattr(user, 'chosen_course', None):
-        return jsonify({'error': 'Course already chosen', 'chosen_course': user.chosen_course}), 409
+    # Check if user already has a chosen course (unlock with no payment)
+    try:
+        from LoanMVP.models.training_models import UserCourseUnlock
+        existing_chosen = UserCourseUnlock.query.filter_by(
+            user_id=user.id, stripe_payment_id=None
+        ).first()
+        if existing_chosen:
+            return jsonify({'error': 'Course already chosen', 'chosen_course': existing_chosen.course_id}), 409
+    except Exception as exc:
+        current_app.logger.error('choose_course check error: %s', exc)
 
     try:
-        user.chosen_course = course_id
+        from LoanMVP.models.training_models import UserCourseUnlock
+        unlock = UserCourseUnlock(user_id=user.id, course_id=course_id, stripe_payment_id=None)
+        db.session.add(unlock)
         db.session.commit()
         return jsonify({'ok': True, 'chosen_course': course_id, 'user': _serialize_user(user)}), 200
     except Exception as exc:
