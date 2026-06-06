@@ -47,6 +47,16 @@ _MODE_PREFIX = {
         "top-down orthographic view, room layout visible, no text labels, no dimensions, "
         "no title block, no watermarks"
     ),
+    "blueprint_floor2": (
+        "Precise architectural floor-plan blueprint, second floor plan, clean black lines on white paper, "
+        "top-down orthographic view, upper floor room layout visible, no text labels, no dimensions, "
+        "no title block, no watermarks"
+    ),
+    "blueprint_floor3": (
+        "Precise architectural floor-plan blueprint, third floor plan, clean black lines on white paper, "
+        "top-down orthographic view, upper floor room layout visible, no text labels, no dimensions, "
+        "no title block, no watermarks"
+    ),
     "siteplan": (
         "Clean architectural site plan, bird's-eye aerial view, property boundary, "
         "building footprint, driveway, landscaping, no text labels, no watermarks"
@@ -69,6 +79,21 @@ _MODE_PREFIX = {
     ),
 }
 
+# Aliases so _dalle_prompt resolves floor-2/3 mode name variants to the right prefix
+_MODE_ALIASES = {
+    "blueprint_second": "blueprint_floor2",
+    "blueprint_third": "blueprint_floor3",
+    "blueprint_floor1": "blueprint",
+    "blueprint_first": "blueprint",
+    "first_floor_blueprint": "blueprint",
+    "second_floor_blueprint": "blueprint_floor2",
+    "third_floor_blueprint": "blueprint_floor3",
+    "exterior": "exterior_front",
+    "exterior_from_blueprint": "exterior_front",
+    "exterior_from_photo": "exterior_front",
+    "site_plan": "siteplan",
+}
+
 _NEGATIVE_SUFFIX = (
     "No collage, no grid, no multiple views in one image, no text overlays, "
     "no watermarks, no labels, no dimension lines, single coherent image only."
@@ -76,7 +101,8 @@ _NEGATIVE_SUFFIX = (
 
 
 def _dalle_prompt(mode: str, payload: dict) -> str:
-    prefix = _MODE_PREFIX.get(mode) or _MODE_PREFIX["exterior_front"]
+    resolved = _MODE_ALIASES.get(mode, mode)
+    prefix = _MODE_PREFIX.get(resolved) or _MODE_PREFIX.get(mode) or _MODE_PREFIX["exterior_front"]
     parts = [prefix]
 
     if mode == "interior":
@@ -155,29 +181,49 @@ def dalle_generate_images(payload: dict) -> dict:
         or ([_single] if _single else ["exterior_front"])
     )
 
-    # When both an exterior and a blueprint are requested, generate the exterior
-    # first so the blueprint can be derived from it — keeping both images
+    # When both an exterior and any blueprint mode are requested, generate the
+    # exterior first so blueprints can be derived from it — keeping all images
     # architecturally consistent (same house).
     _exterior_modes = ("exterior_front", "exterior")
-    _needs_derivation = "blueprint" in output_modes and any(m in output_modes for m in _exterior_modes)
+    _blueprint_modes = ("blueprint", "blueprint_floor2", "blueprint_floor3",
+                        "blueprint_second", "blueprint_third", "blueprint_first",
+                        "blueprint_floor1")
+    _needs_derivation = any(m in output_modes for m in _blueprint_modes) and \
+                        any(m in output_modes for m in _exterior_modes)
     if _needs_derivation:
         ext_mode = next((m for m in _exterior_modes if m in output_modes), None)
-        if ext_mode and output_modes.index(ext_mode) > output_modes.index("blueprint"):
+        first_bp_idx = min(
+            (output_modes.index(m) for m in _blueprint_modes if m in output_modes),
+            default=len(output_modes),
+        )
+        if ext_mode and output_modes.index(ext_mode) > first_bp_idx:
             output_modes.remove(ext_mode)
             output_modes.insert(0, ext_mode)
 
     images_b64: dict[str, str | None] = {}
     errors: list[str] = []
 
+    _floor_labels = {
+        "blueprint": "first floor",
+        "blueprint_first": "first floor",
+        "blueprint_floor1": "first floor",
+        "blueprint_floor2": "second floor",
+        "blueprint_second": "second floor",
+        "blueprint_floor3": "third floor",
+        "blueprint_third": "third floor",
+    }
+
     for mode in output_modes:
-        # Blueprint — derive from the exterior image when available so both
+        # Blueprint modes — derive from the exterior image when available so all
         # outputs show the same house design.
-        if mode == "blueprint" and _needs_derivation:
+        if mode in _blueprint_modes and _needs_derivation:
             ext_b64 = next(
                 (images_b64.get(m) for m in _exterior_modes if images_b64.get(m)),
                 None,
             )
             if ext_b64:
+                floor_label = _floor_labels.get(mode, "")
+                floor_str = f"{floor_label} " if floor_label else ""
                 try:
                     import base64 as _b64
                     import io
@@ -187,7 +233,7 @@ def dalle_generate_images(payload: dict) -> dict:
                         model="gpt-image-1",
                         image=image_file,
                         prompt=(
-                            "Precise architectural floor-plan blueprint of this exact house. "
+                            f"Precise architectural {floor_str}floor-plan blueprint of this exact house. "
                             "Top-down orthographic view, clean black lines on white paper, "
                             "room layout visible, walls as thick lines, openings for doors and "
                             "windows, no text labels, no dimensions, no title block, no watermarks, "
