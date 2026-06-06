@@ -149,16 +149,70 @@ def dalle_generate_images(payload: dict) -> dict:
     # Prefer an explicit list; fall back to the single-mode fields used by the
     # interior/design routes ("output_mode", "mode"), then exterior as last resort.
     _single = payload.get("output_mode") or payload.get("mode")
-    output_modes = (
+    output_modes = list(
         payload.get("output_modes")
         or payload.get("outputs")
         or ([_single] if _single else ["exterior_front"])
     )
 
+    # When both an exterior and a blueprint are requested, generate the exterior
+    # first so the blueprint can be derived from it — keeping both images
+    # architecturally consistent (same house).
+    _exterior_modes = ("exterior_front", "exterior")
+    _needs_derivation = "blueprint" in output_modes and any(m in output_modes for m in _exterior_modes)
+    if _needs_derivation:
+        ext_mode = next((m for m in _exterior_modes if m in output_modes), None)
+        if ext_mode and output_modes.index(ext_mode) > output_modes.index("blueprint"):
+            output_modes.remove(ext_mode)
+            output_modes.insert(0, ext_mode)
+
     images_b64: dict[str, str | None] = {}
     errors: list[str] = []
 
     for mode in output_modes:
+        # Blueprint — derive from the exterior image when available so both
+        # outputs show the same house design.
+        if mode == "blueprint" and _needs_derivation:
+            ext_b64 = next(
+                (images_b64.get(m) for m in _exterior_modes if images_b64.get(m)),
+                None,
+            )
+            if ext_b64:
+                try:
+                    import base64 as _b64
+                    import io
+                    image_file = io.BytesIO(_b64.b64decode(ext_b64))
+                    image_file.name = "exterior.png"
+                    resp = client.images.edit(
+                        model="gpt-image-1",
+                        image=image_file,
+                        prompt=(
+                            "Precise architectural floor-plan blueprint of this exact house. "
+                            "Top-down orthographic view, clean black lines on white paper, "
+                            "room layout visible, walls as thick lines, openings for doors and "
+                            "windows, no text labels, no dimensions, no title block, no watermarks, "
+                            "single plan only."
+                        ),
+                        n=1,
+                        size="1024x1024",
+                    )
+                    item = resp.data[0]
+                    b64 = getattr(item, "b64_json", None)
+                    if not b64:
+                        url = getattr(item, "url", None)
+                        if url:
+                            import urllib.request
+                            import base64 as _b64m
+                            with urllib.request.urlopen(url) as r:
+                                b64 = _b64m.b64encode(r.read()).decode()
+                    images_b64[mode] = b64
+                    log.info("gpt-image-1 derived blueprint from exterior OK")
+                    continue
+                except Exception as exc:
+                    log.warning(
+                        "gpt-image-1 blueprint-from-exterior failed, falling back to independent: %s", exc
+                    )
+
         prompt = _dalle_prompt(mode, payload)
         try:
             resp = client.images.generate(
