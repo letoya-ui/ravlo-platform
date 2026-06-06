@@ -1331,6 +1331,654 @@ export const MODULES: Module[] = [
       },
     ],
   },
+  // ─────────────────────────────────────────────────────────────────────────
+  // UNDERWRITING & PROCESSING
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'underwriting',
+    title: 'Underwriting & Processing',
+    description: 'Master loan file analysis, AUS, income/asset/credit review, compliance, and fraud detection for residential and commercial loans.',
+    icon: 'documents-outline',
+    color: '#2E86AB',
+    tiers: ['lending', 'elite'],
+    creditHours: 14,
+    lessons: [
+      {
+        title: 'Loan File Review & Documentation',
+        duration: '20 min',
+        content: `The loan file is the foundation of every mortgage transaction. As an underwriter or processor, your job is to collect, organize, and analyze a complete file before it moves forward.\n\n**The Processor's Role**\nThe processor builds and organizes the file before it goes to underwriting:\n- Order appraisal, title, flood cert\n- Verify employment (VOE)\n- Request missing documentation\n- Ensure TRID timing is met\n- Communicate with the borrower and LO\n\n**The Underwriter's Role**\nThe underwriter makes the credit decision. They evaluate:\n- Creditworthiness (the 4 Cs: Capacity, Capital, Collateral, Credit)\n- Compliance with loan program guidelines\n- Investor overlays (lender-specific restrictions beyond agency guidelines)\n- Risk layering — multiple marginal factors together can sink an otherwise approvable loan\n\n**Standard Loan File Components**\n1. Uniform Residential Loan Application (Form 1003)\n2. Tri-merge credit report\n3. Income documentation (pay stubs, W-2s, tax returns)\n4. Asset statements (60 days bank/retirement/investment)\n5. Property (purchase contract, appraisal, title)\n6. Insurance (hazard, flood if applicable)\n7. Government disclosures (LE, CD, HMDA)\n\n**File Organization**\nStandard sections: Application → Income → Assets → Credit → Property → Title → Insurance → Compliance\n\nA well-organized file speeds underwriting and reduces conditions. Disorganized files create delays and damaged relationships with underwriters.`,
+        keyPoints: [
+          'Processor builds the file; underwriter makes the credit decision',
+          'Complete documentation upfront reduces conditions and speeds closing',
+          'Risk layering: multiple marginal factors together can disqualify an approvable loan',
+          'File organization directly impacts approval speed and underwriter relationships',
+        ],
+        quiz: [
+          {
+            question: 'What is the primary role of the processor in the loan process?',
+            options: ['Make the credit decision', 'Build and organize the complete file before underwriting', 'Issue the final approval letter', 'Order the appraisal after underwriting'],
+            correctIndex: 1,
+            explanation: 'The processor is the file builder — they gather, organize, and verify documentation so the underwriter can make a clean credit decision.',
+          },
+          {
+            question: 'What does "risk layering" mean in underwriting?',
+            options: ['Using multiple loan products', 'Stacking multiple marginal risk factors that together can disqualify an otherwise approvable loan', 'Using multiple lenders on one transaction', 'Reviewing the file in separate phases'],
+            correctIndex: 1,
+            explanation: 'One marginal factor may be acceptable — but low credit + high DTI + low reserves together create compounding risk that most programs won\'t accept.',
+          },
+          {
+            question: 'Which of the following does NOT belong in a standard loan file?',
+            options: ['Tri-merge credit report', 'Hazard insurance', 'Borrower\'s medical records', 'Purchase contract'],
+            correctIndex: 2,
+            explanation: 'Medical history is protected under HIPAA and cannot be considered in credit decisions. Including it creates ECOA and fair lending exposure.',
+          },
+        ],
+      },
+      {
+        title: 'Automated Underwriting Systems (AUS)',
+        duration: '18 min',
+        content: `Automated Underwriting Systems — primarily Fannie Mae's Desktop Underwriter (DU) and Freddie Mac's Loan Product Advisor (LPA) — have transformed mortgage underwriting. Understanding how to read and leverage AUS findings is a core skill.\n\n**How AUS Works**\nThe lender submits loan data; AUS runs it against the GSE's proprietary risk model and returns a recommendation:\n- **Approve/Eligible (DU)** or **Accept (LPA)**: Meets automated criteria — reduced documentation required\n- **Refer with Caution**: High risk — requires manual underwriting or is ineligible\n- **Out of Scope**: Doesn't fit AUS parameters (typically non-conforming/jumbo)\n\n**DU vs. LPA Key Differences**\n- Student loan treatment: DU uses 1% if IBR payment is $0; LPA uses actual IBR payment (often better)\n- Self-employed income: slight flexibility differences\n- Rental income: DU may allow appraiser's market rent schedule; LPA prefers actual leases\n\nLenders often run both and submit the more favorable finding.\n\n**What Approve/Eligible Unlocks**\n- Fewer years of tax returns\n- Reduced asset verification\n- Lower reserve requirements\n- Verbal VOE instead of written in some cases\n- Streamlined income documentation\n\n**When Manual Underwriting Is Required**\n- Borrower with no credit score (non-traditional credit)\n- Recent bankruptcy or foreclosure below waiting period minimums\n- FHA loans for borrowers below certain thresholds\n- Any loan that gets Refer/Caution from AUS\n\nManual underwriting requires more conservative DTI ratios, more documentation, and stronger compensating factors.`,
+        keyPoints: [
+          'DU (Fannie) and LPA (Freddie) are the two primary AUS platforms — run both',
+          'Approve/Eligible unlocks reduced documentation requirements for the lender',
+          'LPA often handles IBR student loans more favorably than DU',
+          'Refer/Caution or no credit score triggers mandatory manual underwriting',
+        ],
+        quiz: [
+          {
+            question: 'What does an AUS "Approve/Eligible" finding mean?',
+            options: ['The loan automatically closes without underwriter review', 'The loan meets automated risk criteria and may have reduced documentation requirements', 'The loan requires full manual underwriting', 'The borrower is guaranteed approval'],
+            correctIndex: 1,
+            explanation: 'Approve/Eligible is the GSE\'s risk model green light — it unlocks rep-and-warrant relief for lenders and reduces documentation burdens.',
+          },
+          {
+            question: 'When running both DU and LPA, which system\'s finding should you use?',
+            options: ['Always DU — Fannie Mae is the larger GSE', 'Always LPA — Freddie Mac is more conservative', 'Whichever gives a more favorable finding for the borrower', 'Both must be submitted together'],
+            correctIndex: 2,
+            explanation: 'Lenders have flexibility to run both and use the better outcome — a difference in how student loans or income is calculated can change a borderline loan.',
+          },
+          {
+            question: 'Which scenario always requires manual underwriting?',
+            options: ['750 credit score borrower', 'Investment property purchase', 'Borrower with no traditional credit score', 'Jumbo loan application'],
+            correctIndex: 2,
+            explanation: 'AUS systems rely on credit score data to generate a risk model output — without a score, the system cannot produce a finding and the file must be manually underwritten.',
+          },
+        ],
+      },
+      {
+        title: 'Income Analysis — W-2 & Salaried Borrowers',
+        duration: '22 min',
+        content: `Income analysis is the most scrutinized element of mortgage underwriting. For W-2 employees the calculation seems straightforward — but nuances around variable income, multiple jobs, and declining earnings create real complexity.\n\n**Base Salary**\nAlways use gross monthly income (before taxes):\n- Annual salary ÷ 12 = gross monthly income\n- Hourly: rate × average hours × 52 ÷ 12\n\nVerify the salary matches across: application, pay stub, VOE, and tax return W-2 boxes.\n\n**Overtime, Bonus & Commission**\nVariable income requires a documented 2-year history:\n- Average the last 2 years from W-2s + YTD from most recent pay stub\n- If declining year-over-year: use the lower year — never average a declining trend\n- Commission income >25% of total income: treat as self-employed (Schedule C analysis)\n\n**Part-Time & Second Job Income**\n- Must show 2-year history at same employer or same type of work\n- Seasonal employment: same employer 2+ years with documented likelihood to continue\n\n**DTI Calculation**\nFront-end DTI: PITIA ÷ Gross Monthly Income\nBack-end DTI: All monthly obligations ÷ Gross Monthly Income\n\n- Conventional max: 45% back-end (up to 50% with AUS approval + compensating factors)\n- FHA max: 43% back-end (up to 57% with strong AUS approval)\n\n**W-2 Income Red Flags**\n- Year-over-year income decline\n- Large gap between W-2 and YTD pay stub (undisclosed unpaid leave)\n- Employer is a relative or entity the borrower owns (self-employment risk)\n- Bonus/commission in YTD not reflected in prior W-2 history`,
+        keyPoints: [
+          'Always use gross income — never take-home/net pay',
+          'Overtime and bonus require 2-year history; declining trends use the lower year only',
+          'Commission >25% of income triggers self-employment income treatment',
+          'DTI uses all monthly obligations — housing + all revolving and installment debts',
+        ],
+        quiz: [
+          {
+            question: 'How is annual base salary converted to monthly qualifying income?',
+            options: ['Net (take-home) pay × 12 months', 'Gross annual salary ÷ 12', 'Average of last 3 years\' W-2 income ÷ 36', 'Most recent month\'s pay stub × 12'],
+            correctIndex: 1,
+            explanation: 'Gross income before taxes is always used — all monthly debt obligations are also pre-tax, so the comparison must be gross-to-gross.',
+          },
+          {
+            question: 'A borrower earned $10,000 bonus in Year 1 and $6,000 in Year 2. Which figure is used?',
+            options: ['$10,000 (higher year)', '$8,000 (2-year average)', '$6,000 (lower/most recent)', 'Bonus income cannot be included at all'],
+            correctIndex: 2,
+            explanation: 'Declining income shows a negative trend — using the lower year is the conservative and appropriate approach. Averaging a decline overstates reliable income.',
+          },
+          {
+            question: 'What triggers treating income as self-employed rather than W-2?',
+            options: ['The borrower works from home', 'Commission exceeds 25% of total income', 'The borrower has more than one employer', 'The employer is out of state'],
+            correctIndex: 1,
+            explanation: 'When commission dominates, the borrower\'s income is fundamentally variable and business-dependent — Schedule C self-employment rules apply.',
+          },
+        ],
+      },
+      {
+        title: 'Income Analysis — Self-Employed & Complex Income',
+        duration: '25 min',
+        content: `Self-employed borrowers present the most documentation-intensive income analysis. The core challenge: the same tax deductions that minimize their tax bill also minimize their qualifying income.\n\n**Who Is Self-Employed?**\n- 25%+ ownership of a business\n- Independent contractor (1099)\n- Sole proprietor, partner, or LLC/S-Corp member\n- Commission income >25% of total income\n\n**Schedule C (Sole Proprietor)**\nQualifying income = Net Profit + Non-cash add-backs\n\nKey add-backs:\n- Depreciation (Form 4562 / Line 13)\n- Depletion\n- Business use of home (Line 30)\n- Amortization and casualty losses\n- Non-recurring losses\n\nFormula: (Year 1 Schedule C net + Year 2 Schedule C net + add-backs) ÷ 24 = Monthly income\n\nIf the business shows a net loss, that loss offsets all other income.\n\n**S-Corp & Partnership (Schedule E / K-1)**\nQualifying = W-2 wages from business + pro-rata share of net income\n- Must own 25%+ to count entity income or loss\n- Add back entity-level non-cash items: depreciation, depletion, amortization\n- Business loss offsets personal income proportionally\n\n**Bank Statement Programs (Non-QM)**\n24 months of business bank statements ÷ 24 = average monthly gross\nApply expense factor (typically 50% for service businesses, lower for retail)\n= Monthly qualifying income\n\nNo tax returns needed — qualifies borrowers whose deductions destroy their taxable income.\n\n**Year-Over-Year Rule**\n- Increasing income: average the 2 years\n- Declining income: use the lower year and document why\n- Greater than 25% decline: may be ineligible without compensating factors`,
+        keyPoints: [
+          'Add back non-cash expenses (depreciation, amortization) to Schedule C net income',
+          'Declining self-employed income: use the lower year — never average a decline',
+          'S-Corp borrowers need both W-2 wages and K-1 pro-rata share analyzed',
+          'Bank statement programs bypass tax returns using an expense factor on deposits',
+        ],
+        quiz: [
+          {
+            question: 'For a sole proprietor, what expenses are added back to Schedule C net income?',
+            options: ['All business expenses', 'Health insurance premiums only', 'Non-cash items: depreciation, depletion, and amortization', 'The borrower\'s personal tax liability'],
+            correctIndex: 2,
+            explanation: 'Non-cash expenses were deducted on the tax return but don\'t represent actual cash outflow — adding them back gives a more accurate picture of available income.',
+          },
+          {
+            question: 'A self-employed borrower earned $90,000 net in Year 1 and $65,000 in Year 2. Which income is used?',
+            options: ['$90,000 (higher year)', '$77,500 (average)', '$65,000 (lower/most recent)', 'Lender\'s choice'],
+            correctIndex: 2,
+            explanation: 'Declining income signals a negative trend. Using the lower year is required — the averaged figure would overstate income the borrower is unlikely to sustain.',
+          },
+          {
+            question: 'What is the typical expense factor applied to business bank statement deposits for qualifying income?',
+            options: ['10%', '25%', '50%', '75%'],
+            correctIndex: 2,
+            explanation: 'The 50% factor assumes roughly half of gross deposits represent business expenses. Some programs adjust this by industry — retail may use a higher expense factor.',
+          },
+        ],
+      },
+      {
+        title: 'Asset Verification & Source of Funds',
+        duration: '18 min',
+        content: `Assets are verified to confirm the borrower has funds for down payment, closing costs, prepaids, and reserves. Every dollar must be sourced and seasoned.\n\n**Asset Types and How They Count**\n- Checking/savings: 100% — most liquid, most reliable\n- Retirement (vested): 60–70% — assumes penalty and tax on early withdrawal\n- Brokerage/investment: 100% at current value\n- Gift funds: allowed on primary residence with documentation; restricted on investment property\n- Proceeds from asset sale: document with bill of sale, closing statement\n\n**Seasoning Requirements**\nStandard: 60 days (2 months) of bank statements\n- All funds must be in the account for 60 days to be considered "seasoned"\n- Large deposits within the 60-day window must be sourced\n\n**What Triggers a Large Deposit Flag?**\nGeneral rule: any deposit greater than 50% of gross monthly income requires a written explanation and documentation.\n\nAcceptable sources: payroll, tax refund, sale of asset (with HUD-1), gift (with letter + donor statement + transfer proof), account-to-account transfer (with both statements)\n\nRed flags: large round-number cash deposits, transfers from unknown accounts, deposits inconsistent with income pattern\n\n**Reserves**\nReserves = assets remaining after down payment and closing costs\n- Conventional: 2–6 months PITIA\n- Jumbo: 6–12+ months\n- Investment property: 2–6 months per owned property\n\nRetirement accounts count at 60–70% for reserves (not for down payment on most programs).\n\n**Gift Fund Requirements**\n- Gift letter: donor relationship, amount, statement that no repayment is required\n- Donor bank statement showing withdrawal\n- Evidence of transfer to borrower's account\n- Investment property: gift funds generally not permitted for down payment`,
+        keyPoints: [
+          'Source all deposits >50% of gross monthly income within the 60-day window',
+          'Retirement accounts count at 60–70% — assumes penalty and tax at liquidation',
+          'Gift funds require: letter + donor bank statement + proof of transfer',
+          'Reserves are measured after subtracting down payment and all closing costs',
+        ],
+        quiz: [
+          {
+            question: 'A borrower has $5,000 monthly gross income. What deposit amount triggers sourcing?',
+            options: ['Any deposit over $1,000', 'Any deposit over $2,500 (50% of gross income)', 'Any deposit over $5,000', 'Only cash deposits regardless of amount'],
+            correctIndex: 1,
+            explanation: 'The 50%-of-gross-income threshold identifies deposits that are large relative to the borrower\'s income pattern and could represent undisclosed borrowed funds.',
+          },
+          {
+            question: 'At what percentage do retirement account balances count toward qualifying reserves?',
+            options: ['100%', '80%', '60–70%', '50%'],
+            correctIndex: 2,
+            explanation: 'The 30–40% haircut accounts for income taxes and early withdrawal penalties — lenders can\'t count money the IRS would claim if the account were liquidated.',
+          },
+          {
+            question: 'What three items are required to use gift funds for a down payment?',
+            options: ['Gift letter only', 'Gift letter + donor\'s credit report + bank statement', 'Gift letter + donor bank statement showing withdrawal + proof of transfer to borrower', 'Verbal confirmation from the donor'],
+            correctIndex: 2,
+            explanation: 'All three elements together prove the gift is genuine, the money existed, and it actually transferred — any missing piece can stall or kill the closing.',
+          },
+        ],
+      },
+      {
+        title: 'Credit Analysis & Risk Assessment',
+        duration: '20 min',
+        content: `Credit analysis is the underwriter's clearest window into a borrower's repayment behavior. Reading a credit report accurately and identifying red flags is foundational underwriting skill.\n\n**Tri-Merge Credit Report**\nLenders pull from all three bureaus (Experian, Equifax, TransUnion). The middle score of the three is used. For joint borrowers: use the lower of the two borrowers' middle scores.\n\n**Program Minimum Credit Scores**\n- Conventional: 620 minimum (740+ for best pricing tier)\n- FHA: 580 for 3.5% down; 500–579 for 10% down\n- VA: No GSE minimum (lenders typically overlay 620)\n- Jumbo: Typically 720+\n\n**Derogatory Event Waiting Periods**\n| Event | Conventional | FHA | VA |\n|-------|-------------|-----|----||\n| Ch.7 Bankruptcy | 4 years | 2 years | 2 years |\n| Ch.13 Bankruptcy | 2 years from discharge | 1 year from discharge | 1 year |\n| Foreclosure | 7 years | 3 years | 2 years |\n| Short Sale | 4 years | 3 years | 2 years |\n\n**Collections and Judgments**\n- Conventional (per DU): collections under $2,000 aggregate may not require payoff\n- FHA: non-medical collections over $2,000 aggregate must be included in DTI or paid\n- Judgments: must be paid before closing on ALL programs — no exceptions\n\n**Disputed Accounts**\nDisputed accounts with negative information must be resolved before conventional approval. Disputed positive accounts are fine. FHA handles disputed accounts differently — check current guidelines.\n\n**Re-established Credit**\nAfter a derogatory event, borrowers typically need:\n- 3–4 open and active tradelines\n- 12–24 months of clean payment history post-event`,
+        keyPoints: [
+          'For joint borrowers: use the lower of the two middle scores',
+          'Waiting periods vary significantly by program — FHA and VA are more lenient than conventional',
+          'Judgments must be paid before closing on every loan program without exception',
+          'Disputed negative accounts must be resolved before most conventional approvals',
+        ],
+        quiz: [
+          {
+            question: 'Two borrowers apply jointly. Their middle scores are 718 and 682. Which score qualifies the loan?',
+            options: ['718 (higher score)', '700 (average)', '682 (lower middle score)', 'Both scores are submitted separately'],
+            correctIndex: 2,
+            explanation: 'Each borrower\'s middle score is identified first, then the lower of those two is used — this ensures the lender underwrites to the weaker credit profile.',
+          },
+          {
+            question: 'How long must a borrower wait after a Chapter 7 bankruptcy for a conventional loan?',
+            options: ['2 years', '4 years', '7 years', 'No waiting period with compensating factors'],
+            correctIndex: 1,
+            explanation: 'Conventional requires 4 years from Ch.7 discharge. FHA and VA are more lenient at 2 years — why many post-bankruptcy borrowers start with government programs.',
+          },
+          {
+            question: 'An unpaid civil judgment appears on the credit report. What must happen before closing?',
+            options: ['Write an explanation letter', 'Nothing — judgments are informational', 'The judgment must be paid or on a verified court-approved payment plan', 'The lender decides case by case'],
+            correctIndex: 2,
+            explanation: 'Unpaid judgments are senior liens against the borrower — every loan program requires they be resolved before closing to protect the lender\'s secured position.',
+          },
+        ],
+      },
+      {
+        title: 'Appraisal Review for Underwriters',
+        duration: '22 min',
+        content: `The appraisal establishes property value and confirms eligibility for financing. Underwriters must read appraisals critically — not just accept the number, but evaluate methodology, comp selection, and property condition.\n\n**What the Underwriter Reviews**\n- Subject property description (accurate? matches contract and MLS?)\n- Neighborhood analysis (stable, declining, or improving market?)\n- Comparable selection (proximity, age, similarity)\n- Adjustments (are they market-supported and reasonable?)\n- Final reconciled value (adequately supported by the data?)\n- Property condition rating\n\n**Condition Ratings (URAR — Conventional)**\n- C1: New construction, never occupied\n- C2: No deferred maintenance, minimal wear\n- C3: Well-maintained, minor deferred maintenance\n- C4: Adequate condition, some deferred maintenance\n- C5: Obvious deferred maintenance — may require repair\n- C6: Substantial damage — generally ineligible for conventional financing\n\n**Appraisal Red Flags**\n- Comps more than 1 mile away in urban area without explanation\n- Comps older than 6 months in an active market\n- Net adjustments >15% or gross adjustments >25% on any single comp\n- Value lands exactly at or just above contract price ("hits the number")\n- Declining market trend without corresponding adjustments\n- Appraiser used the same comp in multiple assignments (possible coordination)\n\n**FHA & VA Minimum Property Requirements (MPR)**\nFHA/VA appraisers also inspect for habitability:\n- No peeling paint on pre-1978 homes (lead hazard)\n- Working utilities (heat, plumbing, electricity)\n- Safe access (stairs, railings, egress windows)\n- Roof with 2+ years remaining life\n- No active pest infestation\n\nRequired repairs become loan conditions — must be completed before closing.`,
+        keyPoints: [
+          'C5–C6 condition properties are typically ineligible for conventional financing',
+          'Net adjustments >15% or gross >25% on a single comp raise reliability concerns',
+          'FHA/VA appraisers enforce Minimum Property Requirements — required repairs are conditions',
+          '"Hitting the number" exactly at contract price is a red flag for appraiser bias',
+        ],
+        quiz: [
+          {
+            question: 'Which property condition rating typically disqualifies a home for conventional financing?',
+            options: ['C3', 'C4', 'C5', 'C6'],
+            correctIndex: 3,
+            explanation: 'C6 indicates substantial damage requiring major repairs — conventional lenders will not finance these. C5 may or may not be acceptable depending on the nature of the deferred maintenance.',
+          },
+          {
+            question: 'A single comparable has gross adjustments of 30%. What does this indicate?',
+            options: ['The comp is ideal — minimal differences', 'The comp is too dissimilar to be fully reliable', 'The appraisal automatically fails review', 'Adjustments above 25% are always acceptable if explained'],
+            correctIndex: 1,
+            explanation: 'The more a comp must be adjusted, the less reliable it is as a value indicator — high gross adjustments signal the comp and subject are fundamentally different properties.',
+          },
+          {
+            question: 'For an FHA loan, what property condition must be corrected before closing?',
+            options: ['Dated appliances', 'Peeling paint on a pre-1978 home', 'Single-car garage in a 2-car market', 'Older HVAC system in working condition'],
+            correctIndex: 1,
+            explanation: 'Lead paint on pre-1978 homes is a federal health and safety requirement — FHA mandates it be remediated (scraped and repainted) before the loan can close.',
+          },
+        ],
+      },
+      {
+        title: 'Compliance — TRID, RESPA & Fair Lending',
+        duration: '20 min',
+        content: `Compliance is non-negotiable. Violations expose lenders to regulatory fines, buybacks, and reputational damage. Processors and underwriters are often the last line of defense.\n\n**TRID — Know Before You Owe**\nTwo mandatory disclosures:\n- **Loan Estimate (LE)**: Delivered within 3 business days of application — must reflect actual loan terms\n- **Closing Disclosure (CD)**: Delivered at least 3 business days before consummation\n\n**Fee Tolerance Buckets**\n- Zero tolerance: Origination charges, transfer taxes, own-title insurance — cannot increase from LE to CD\n- 10% tolerance: Third-party services on the LE provider list\n- Unlimited tolerance: Prepaid interest, homeowner's insurance, services borrower selected independently\n\n**Valid Changed Circumstances** (allow LE revision)\n- Acts of God or natural disaster\n- New information received after LE (e.g., appraisal value significantly different)\n- Rate lock extension or expiration\n- Borrower-initiated loan product change\n\n**RESPA — Real Estate Settlement Procedures Act**\nProhibits:\n- Kickbacks or unearned referral fees between settlement providers\n- Requiring borrowers to use a specific title company, attorney, or other service\n- Excessive escrow requirements\n\n**Fair Lending Laws**\n- ECOA: No discrimination based on race, color, religion, national origin, sex, marital status, age, or public assistance status\n- Fair Housing Act: Covers all residential real estate transactions\n- HMDA: Lenders report loan-level data used by regulators to detect discrimination patterns\n\n**Red Flags for Fair Lending**\n- Steering: offering worse terms to protected class borrowers\n- Redlining: avoiding lending in certain neighborhoods based on demographics\n- Disparate impact: neutral policies that disproportionately harm protected classes`,
+        keyPoints: [
+          'LE within 3 business days of application; CD at least 3 business days before closing',
+          'Zero-tolerance fees (origination charges) cannot increase from LE to CD — ever',
+          'RESPA prohibits kickbacks and requiring borrowers to use specific settlement providers',
+          'HMDA data is used by regulators to detect patterns of discrimination',
+        ],
+        quiz: [
+          {
+            question: 'How many business days before closing must the Closing Disclosure be delivered?',
+            options: ['1 business day', '2 business days', '3 business days', '5 business days'],
+            correctIndex: 2,
+            explanation: 'The 3-business-day CD waiting period is federal law — changes to APR exceeding 0.125% or the loan product after CD delivery restart the clock.',
+          },
+          {
+            question: 'Which fee category has zero tolerance from Loan Estimate to Closing Disclosure?',
+            options: ['Title insurance selected by borrower', 'Homeowner\'s insurance premium', 'Origination charges (points and lender fees)', 'Recording fees'],
+            correctIndex: 2,
+            explanation: 'Origination charges are entirely within the lender\'s control — borrowers must be able to rely on them. Any increase requires a valid changed circumstance.',
+          },
+          {
+            question: 'Which federal law prohibits requiring borrowers to use a lender-chosen title company?',
+            options: ['TILA', 'ECOA', 'RESPA', 'HMDA'],
+            correctIndex: 2,
+            explanation: 'RESPA prohibits tying arrangements — borrowers must be free to shop for settlement services, and lenders cannot incentivize or require specific vendors.',
+          },
+        ],
+      },
+      {
+        title: 'Fraud Detection & Red Flags',
+        duration: '18 min',
+        content: `Mortgage fraud costs lenders billions annually and can expose processors and underwriters to criminal liability. Every file should be reviewed with healthy skepticism.\n\n**Income Fraud Red Flags**\n- Pay stubs with unusual fonts, inconsistent spacing, or round earnings numbers\n- Employer not verifiable through public sources (no website, disconnected phone)\n- Bank deposits don't reflect the claimed income level\n- YTD income inconsistent with the position or industry\n\n**Asset Fraud Red Flags**\n- Large round-number deposits shortly before application ("parking" borrowed funds)\n- Bank statements with inconsistent fonts or altered balance figures\n- Account balance far exceeds income trajectory\n- Retirement statements from obscure custodians with no online presence\n\n**Occupancy Fraud Red Flags**\n- Property is far from borrower's employer with no reasonable explanation\n- Borrower already owns a home in the same market\n- Implausible commute for the stated employment\n- Lease agreement found on the subject property before closing\n\n**Identity Fraud Red Flags**\n- SSN doesn't match reported date of birth or credit report data\n- Photo ID information doesn't align with application\n- Thin credit file inconsistent with stated income and employment history\n- Prior address history on credit report doesn't match application\n\n**Appraisal Fraud Red Flags**\n- Value lands exactly at contract price without clear support\n- Comps far outside normal market area without explanation\n- Short flip: seller acquired property recently at significantly lower price\n\n**Fraud Detection Tools**\n- 4506-C: Compare borrower-submitted tax returns against IRS transcripts — most powerful tool\n- SSA-89: Verify SSN with Social Security Administration\n- Verbal VOE: Call employer directly using a number found independently, not from the application\n- LexisNexis/Kroll/Inco IDEX: Identity and background verification`,
+        keyPoints: [
+          'The 4506-C (IRS transcript) is the most powerful income fraud detection tool',
+          'Never use the phone number on the application for VOE — find the employer\'s number independently',
+          'Round-number large deposits just before application are a classic borrowed-funds red flag',
+          'Occupancy fraud: property far from employer + borrower already has a nearby primary home',
+        ],
+        quiz: [
+          {
+            question: 'What is the most effective tool for detecting income document fraud?',
+            options: ['Calling the borrower directly', 'IRS Form 4506-C (tax transcript comparison)', 'Reviewing the pay stub carefully', 'Running the credit report'],
+            correctIndex: 1,
+            explanation: 'The 4506-C compares the borrower\'s submitted return against what was actually filed with the IRS — fabricated returns show up as mismatches or unfiled returns.',
+          },
+          {
+            question: 'When conducting a Verbal VOE, where should you get the employer\'s phone number?',
+            options: ['From the borrower\'s application', 'From the pay stub header', 'Independently — from a public directory, not any document provided by the borrower', 'From the employer\'s HR department after borrower provides permission'],
+            correctIndex: 2,
+            explanation: 'If the employer is fabricated, the number on the application leads to a co-conspirator. An independently verified number ensures you\'re reaching the real company.',
+          },
+          {
+            question: 'A borrower applies for a primary residence but already owns a home two miles away. This is a red flag for:',
+            options: ['Income fraud', 'Appraisal fraud', 'Occupancy fraud', 'Identity fraud'],
+            correctIndex: 2,
+            explanation: 'Claiming primary residence qualifies the borrower for better rates and lower down payment — occupancy fraud to exploit these benefits is one of the most common mortgage fraud schemes.',
+          },
+        ],
+      },
+      {
+        title: 'Processing Workflow & Condition Management',
+        duration: '20 min',
+        content: `Efficient processing is about managing a complex multi-party workflow — borrower, LO, underwriter, appraiser, title, and the calendar — simultaneously. Organization and communication are the job.\n\n**Standard Processing Timeline (30-Day Close)**\nDay 1–2: Application received, LE issued, initial file review\nDay 3–5: Order appraisal, title, flood cert, VOE\nDay 5–10: Chase outstanding borrower documents\nDay 10–14: Appraisal received, complete file submitted to underwriting\nDay 14–21: Underwriting decision — approval with conditions\nDay 21–25: Clear conditions, schedule closing\nDay 25–28: CD issued (3-day clock starts)\nDay 28–30: Closing and funding\n\n**Managing the Borrower**\n- Initial briefing: explain the process, timeline, and what you need\n- "Don't touch your finances" talk: no large purchases, new accounts, job changes, or large deposits\n- Milestone notifications keep borrowers calm and reduce inbound calls\n\n**Condition Types**\n- **PTD (Prior to Document)**: Must clear before closing docs are drawn — these are the critical path\n- **PTF (Prior to Funding)**: Must clear before the wire is sent\n- **PTP (Prior to Purchase)**: Investor condition — loan can close but investor won\'t buy the loan until resolved\n\n**Condition Tracking**\nOrganize conditions by type. PTD conditions are always the priority. Build a tracker: condition, required document, date requested, date received, cleared date.\n\n**The Pre-Underwriting Memo**\nA narrative summary submitted with the file:\n- Loan purpose and program\n- Borrower profile: income, assets, credit highlights\n- Key strengths\n- Known issues and how they\'re addressed\n\nNot required but builds underwriter relationships, speeds decisions, and reduces conditions on clean files.`,
+        keyPoints: [
+          'PTD conditions are the critical path — nothing can close without them cleared',
+          '"Don\'t touch your finances" briefing prevents last-minute disqualifying changes',
+          'Submit a complete, organized file — conditions are the primary source of delay',
+          'A pre-UW memo builds credibility with underwriters and speeds the review',
+        ],
+        quiz: [
+          {
+            question: 'Which type of condition must be cleared before closing documents can be drawn?',
+            options: ['Prior to Purchase (PTP)', 'Prior to Funding (PTF)', 'Prior to Document (PTD)', 'All condition types clear simultaneously'],
+            correctIndex: 2,
+            explanation: 'PTD conditions are the critical path — the title company cannot prepare closing documents until PTD conditions are cleared. Prioritize these above all others.',
+          },
+          {
+            question: 'What should processors tell borrowers about their finances during the loan process?',
+            options: ['Feel free to make any changes — the approval is already in', 'Do not make large purchases, open new credit, change jobs, or move large sums', 'Only major changes over $10,000 need to be reported', 'Changes are fine as long as the credit score stays above minimum'],
+            correctIndex: 1,
+            explanation: 'Any financial change can trigger a re-underwrite — a new car loan, job change, or unexplained large deposit can delay or kill a loan at the closing table.',
+          },
+          {
+            question: 'What is the purpose of a Pre-Underwriting Memo written by the processor?',
+            options: ['Required by TRID for compliance', 'Replaces income documentation for clean files', 'Provides a narrative summary of strengths and issues to speed the underwriter\'s review', 'Must be signed by the borrower'],
+            correctIndex: 2,
+            explanation: 'A well-written pre-UW memo tells the story of the file. Underwriters appreciate the context and it often results in fewer conditions and faster decisions.',
+          },
+        ],
+      },
+    ],
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // CONSTRUCTION MANAGEMENT & ESTIMATING
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'construction',
+    title: 'Construction Management & Estimating',
+    description: 'Learn cost estimating, material takeoffs, bidding, project scheduling, contracts, permits, and how lenders underwrite construction budgets.',
+    icon: 'construct-outline',
+    color: '#E07B39',
+    tiers: ['elite'],
+    creditHours: 13,
+    lessons: [
+      {
+        title: 'Introduction to Construction Estimating',
+        duration: '18 min',
+        content: `Construction estimating is the process of forecasting the cost to complete a project before a single nail is driven. For investors, realtors, and developers, accurate estimates are the difference between a profitable deal and a financial disaster.\n\n**Why Estimates Matter**\n- Determine feasibility before acquisition\n- Set the budget for financing (construction loan draw schedule)\n- Create the basis for contractor bids and negotiation\n- Establish the contingency reserve needed\n\n**Types of Estimates**\n\n**Conceptual Estimate (Order of Magnitude)**\nEarly-stage estimate based on high-level scope. Often $/sq ft:\n- Light cosmetic renovation: $15–40/sq ft\n- Mid-level renovation: $40–80/sq ft\n- Full gut rehab: $80–150/sq ft\n- New construction: $150–350/sq ft depending on market and finish level\n\n**Preliminary Estimate**\nBased on schematic drawings. More line-item breakdown. Accuracy: ±20–30%\n\n**Detailed (Quantity Survey) Estimate**\nBased on full construction documents. Line-item material and labor takeoffs. Accuracy: ±5–10%\n\n**The Estimating Process**\n1. Review scope of work and drawings\n2. Perform quantity takeoffs (measure everything)\n3. Price materials (supplier quotes or cost data)\n4. Price labor (subcontractor bids or labor units × wage)\n5. Add overhead and profit\n6. Add contingency (10–20% depending on project risk)\n\n**CSI MasterFormat**\nThe Construction Specifications Institute divides all construction work into 50 divisions. Common ones:\n- Division 3: Concrete\n- Division 4: Masonry\n- Division 6: Wood and Plastics (framing, finish)\n- Division 9: Finishes (drywall, paint, flooring)\n- Division 22–23: Plumbing and HVAC\n- Division 26: Electrical`,
+        keyPoints: [
+          'Conceptual estimates use $/sq ft; detailed estimates use full quantity takeoffs',
+          'Full gut rehab typically costs $80–150/sq ft; new construction $150–350/sq ft+',
+          'Add 10–20% contingency — renovation projects almost always encounter unknowns',
+          'CSI MasterFormat organizes all construction work into 50 standardized divisions',
+        ],
+        quiz: [
+          {
+            question: 'What is the most accurate type of construction estimate?',
+            options: ['Conceptual (order of magnitude)', 'Preliminary (schematic)', 'Detailed quantity survey estimate', 'Rule-of-thumb $/sq ft'],
+            correctIndex: 2,
+            explanation: 'A detailed quantity survey using full construction documents achieves ±5–10% accuracy — far superior to early-stage conceptual estimates which can vary by 30%+.',
+          },
+          {
+            question: 'What contingency percentage should be added to most renovation estimates?',
+            options: ['0–2% — estimates should be exact', '3–5% for minor projects only', '10–20% depending on project risk', '30–40% for all projects'],
+            correctIndex: 2,
+            explanation: 'Construction projects almost always encounter unknowns — hidden rot, outdated electrical, subcontractor issues. A 10–20% contingency protects the budget and the deal.',
+          },
+          {
+            question: 'What is the typical cost range for a full gut rehabilitation (per square foot)?',
+            options: ['$10–30/sq ft', '$30–50/sq ft', '$80–150/sq ft', '$200–400/sq ft'],
+            correctIndex: 2,
+            explanation: 'A full gut rehab — down to studs with new mechanical, electrical, plumbing, and finishes — typically runs $80–150/sq ft depending on market and finish quality.',
+          },
+        ],
+      },
+      {
+        title: 'Material Takeoffs & Quantity Surveying',
+        duration: '22 min',
+        content: `A material takeoff (MTO) is the process of measuring and quantifying every material needed for a project. It is the foundation of an accurate estimate.\n\n**Why Takeoffs Matter**\nWithout accurate quantities, you can't get accurate pricing. Every over- or under-measure translates directly to lost margin or unbid scope.\n\n**Basic Takeoff Units**\n- Linear feet (LF): baseboards, framing lumber, piping\n- Square feet (SF): drywall, flooring, roofing, insulation\n- Square yards (SY): carpet (divide SF by 9)\n- Cubic yards (CY): concrete, excavation, fill (1 CY = 27 cubic feet)\n- Each (EA): doors, windows, fixtures, cabinets\n- Tons: roofing shingles (1 square = 100 SF = 3 bundles = ¼ ton)\n\n**Takeoff Process — Room by Room**\nFor interior renovations, go room by room:\n1. Measure the room (length × width = floor SF)\n2. Calculate wall area: perimeter × ceiling height − openings\n3. List every item to be replaced or installed\n4. Quantify each item\n\n**Waste Factors**\nAlways add waste to material quantities:\n- Drywall: 10% waste\n- Flooring (straight lay): 10% waste; diagonal lay: 15%\n- Tile: 10–15% waste (more for complex patterns)\n- Lumber: 10–15% depending on cuts\n- Roofing: 10–15% for waste and starter courses\n\n**Common Mistakes in Takeoffs**\n- Forgetting to add waste factors\n- Not accounting for door and window deductions in drywall\n- Measuring finished dimensions instead of rough dimensions for framing\n- Not including accessories (nails, screws, adhesive, underlayment)\n\n**Digital Takeoff Tools**\nModern estimators use digital tools:\n- PlanSwift\n- Bluebeam Revu\n- On-Screen Takeoff\n- Stack (cloud-based)\n\nThese tools let you scale PDFs and mark up quantities directly on digital plans.`,
+        keyPoints: [
+          'Takeoff units vary by material: LF for framing, SF for drywall/flooring, CY for concrete',
+          'Always add waste factors: 10% for drywall, 10–15% for flooring and tile',
+          'Go room by room — floor, walls, ceiling, then individual items (doors, windows, cabinets)',
+          'Accessories (nails, adhesive, underlayment) are frequently missed in takeoffs',
+        ],
+        quiz: [
+          {
+            question: 'A room is 12 ft × 14 ft with 9 ft ceilings, two doors (3×7), and one window (3×4). What is the wall area (before deductions)?',
+            options: ['432 sq ft', '468 sq ft', '468 sq ft minus 34 sq ft for openings = 434 sq ft', 'Cannot be calculated without a floor plan'],
+            correctIndex: 2,
+            explanation: 'Perimeter = (12+14)×2 = 52 LF. Wall area = 52×9 = 468 SF. Deductions: 2 doors (3×7=21 SF each = 42 SF) + 1 window (3×4=12 SF) = 54 SF. Net wall area ≈ 414 SF.',
+          },
+          {
+            question: 'What waste factor should be added to flooring installed in a straight lay pattern?',
+            options: ['0–2%', '5%', '10%', '20%'],
+            correctIndex: 2,
+            explanation: 'A 10% waste factor accounts for cuts, irregular room shapes, and damaged pieces. Diagonal or pattern installations require 15% due to additional cuts.',
+          },
+          {
+            question: 'Concrete is measured in:',
+            options: ['Square feet', 'Linear feet', 'Cubic yards', 'Tons'],
+            correctIndex: 2,
+            explanation: 'Concrete is a volume material measured in cubic yards (1 CY = 27 cubic feet). A 4-inch thick 10×10 slab = 1,000 SF × 0.33 ft ÷ 27 = approximately 12.3 CY.',
+          },
+        ],
+      },
+      {
+        title: 'Labor Costs & Subcontractor Pricing',
+        duration: '20 min',
+        content: `Labor is typically 30–50% of total construction cost. Understanding how to estimate it accurately — and how to evaluate subcontractor bids — is essential for any project.\n\n**Labor Pricing Methods**\n\n**Unit Price Method**\nThe most common: assign a labor cost per unit of work.\n- Install drywall: $1.50–3.00/SF installed and finished\n- Frame interior wall: $3–5/LF\n- Install hardwood flooring: $3–5/SF installed\n- Rough plumbing per fixture: $400–800\n- Electrical outlet: $100–200 installed\n\n**Time and Materials (T&M)**\nLabor hourly rates + material cost. Used when scope is uncertain.\n- Carpenter: $35–75/hr depending on market\n- Electrician: $65–125/hr\n- Plumber: $75–150/hr\n- General laborer: $20–40/hr\n\n**Lump Sum Subcontractor Bids**\nThe most common method for major trades (HVAC, electrical, plumbing, roofing):\n- You describe the scope\n- Sub provides an all-in price\n- You compare bids\n\n**Getting and Evaluating Bids**\nAlways get minimum 3 bids for any significant scope:\n1. Low bid: investigate — may indicate misunderstood scope or corner-cutting\n2. Middle bid: often the most balanced\n3. High bid: sometimes reflects superior quality or full scope understanding\n\nNever choose by price alone. Evaluate: license and insurance, references, experience with similar projects, ability to meet schedule.\n\n**Scope of Work**\nEvery subcontractor bid must be based on an identical written scope of work. Without it, you're comparing apples to oranges. The scope defines: exactly what work is included, materials specified, timeline, and exclusions.\n\n**Subcontractor Overhead and Profit**\nTrade contractors typically build in 15–25% overhead and profit. When building your estimate, this is already in their bid — your job is to add your own OH&P on top as the GC or project manager.`,
+        keyPoints: [
+          'Labor is 30–50% of project cost — unit pricing is the most reliable estimation method',
+          'Always get 3 bids minimum — low bid often means misunderstood scope or quality cuts',
+          'Every bid must be based on an identical written scope of work — no scope = no comparison',
+          'Trade subs include 15–25% OH&P in their bids; the GC adds overhead and profit on top',
+        ],
+        quiz: [
+          {
+            question: 'What is the most reliable method for estimating labor costs for defined scopes?',
+            options: ['Time and materials (T&M)', 'Unit price method (cost per SF, LF, or EA)', 'Multiplying material cost by 2', 'Subtracting 20% from the highest bid'],
+            correctIndex: 1,
+            explanation: 'Unit pricing assigns a known labor cost per measurable unit — predictable, comparable, and the industry standard for defined scopes of work.',
+          },
+          {
+            question: 'When comparing three bids for roofing, the low bid is 40% below the others. What should you do?',
+            options: ['Accept it — that\'s the market price', 'Reject it immediately', 'Investigate — compare scope, verify license and insurance, check references', 'Average all three bids'],
+            correctIndex: 2,
+            explanation: 'A dramatically low bid usually means misunderstood scope, missing items, uninsured contractor, or lower quality materials. Investigate before rejecting or accepting.',
+          },
+          {
+            question: 'Why must every subcontractor bid be based on the same written scope of work?',
+            options: ['It\'s required by law for all construction projects', 'Without identical scope, bids are not comparable — you may be comparing different amounts of work', 'It protects the sub from change orders', 'Written scopes reduce the need for permits'],
+            correctIndex: 1,
+            explanation: 'Without a defined scope, one sub may include demolition while another doesn\'t — price differences don\'t reflect skill level, they reflect different assumptions about the work.',
+          },
+        ],
+      },
+      {
+        title: 'Bid Packages & Proposal Writing',
+        duration: '18 min',
+        content: `A bid package is the set of documents you send to subcontractors or suppliers to solicit pricing. A well-organized bid package gets better bids, faster — and protects you legally if disputes arise.\n\n**Bid Package Components**\n1. **Cover letter / Invitation to Bid**: Project overview, bid due date, contact info\n2. **Scope of Work**: Detailed description of what the sub is responsible for\n3. **Plans and Specifications**: Drawings (if available), material specifications\n4. **Schedule**: Project start date, milestones, required completion\n5. **Bid Form**: Standardized form for the sub to fill in prices (line items + lump sum)\n6. **Contract Terms**: Payment terms, lien waiver requirements, insurance requirements\n\n**Writing a Scope of Work**\nThe scope is the most critical document. A good scope:\n- Defines exactly what IS included\n- Defines what is NOT included (exclusions)\n- Specifies materials (brand, model, grade)\n- Addresses access, working hours, debris removal\n- Notes any special conditions (occupied building, phased work, HOA restrictions)\n\n**Proposal Structure (for writing your own bids to owners)**\n1. Executive Summary: project description, proposed approach, why you're qualified\n2. Scope of Work: what you will deliver\n3. Exclusions: what is NOT included\n4. Assumptions: conditions your price depends on (e.g., "assumes no asbestos")\n5. Pricing Summary: total price, payment schedule\n6. Timeline: projected schedule\n7. Terms: warranty, change order process, governing law\n\n**Bid Leveling**\nWhen you receive multiple bids, "level" them before comparing:\n- Create a line-by-line spreadsheet\n- Check what each sub included vs. excluded\n- Add the cost of exclusions to normalize the bids\n- Compare apples to apples\n\n**Bid Security**\nFor larger projects, owners may require:\n- Bid bond: guarantees the bidder will enter into contract if selected (typically 5–10% of bid)\n- Performance bond: guarantees project completion\n- Payment bond: guarantees subs and suppliers will be paid`,
+        keyPoints: [
+          'A complete bid package includes scope, plans, schedule, bid form, and contract terms',
+          'Scope of work must specify inclusions AND exclusions — ambiguity creates disputes',
+          'Bid leveling normalizes bids by adding the cost of what each sub excluded',
+          'Bid bonds guarantee the contractor will sign the contract if selected',
+        ],
+        quiz: [
+          {
+            question: 'What is bid leveling?',
+            options: ['Averaging all bids to find a fair price', 'Normalizing bids by adding the cost of exclusions so all bids cover the same scope', 'Choosing the bid closest to the budget', 'Requiring all bidders to revise their prices to the same number'],
+            correctIndex: 1,
+            explanation: 'Without leveling, you\'re comparing bids that include different scopes — a $50,000 bid that excludes demolition and a $60,000 bid that includes it aren\'t really comparable.',
+          },
+          {
+            question: 'Why must a scope of work define exclusions as well as inclusions?',
+            options: ['Exclusions reduce the contract price', 'Exclusions are required by law', 'Undefined scope creates disputes — the contractor assumes their exclusions are the owner\'s responsibility', 'Exclusions allow the sub to charge more'],
+            correctIndex: 2,
+            explanation: 'Every undefined item will become a dispute or a change order. Explicit exclusions set clear expectations before work begins and protect all parties.',
+          },
+          {
+            question: 'A bid bond guarantees:',
+            options: ['Project quality', 'That subcontractors will be paid', 'That the bidder will enter into contract if selected', 'That the project will be completed on time'],
+            correctIndex: 2,
+            explanation: 'A bid bond protects the owner from a contractor who wins the bid but then refuses to sign the contract — the bond compensates the owner for re-bidding costs.',
+          },
+        ],
+      },
+      {
+        title: 'Markup vs. Margin & Pricing for Profit',
+        duration: '20 min',
+        content: `The most common financial mistake contractors make is confusing markup with margin. Understanding the difference — and how to price jobs for actual profit — is foundational to building a sustainable construction business.\n\n**Markup vs. Margin**\n\n**Markup** = additional percentage added ON TOP of cost\nSelling Price = Cost × (1 + Markup %)\n\n**Margin (Gross Profit Margin)** = profit as a percentage OF the selling price\nMargin % = (Profit ÷ Selling Price) × 100\n\nExample with $10,000 in costs:\n- 25% markup: Selling Price = $10,000 × 1.25 = $12,500. Profit = $2,500. Margin = 20%\n- 25% margin: Selling Price = $10,000 ÷ 0.75 = $13,333. Profit = $3,333. Margin = 25%\n\nA contractor who says "I want 25% profit" but uses 25% markup is actually making 20% margin.\n\n**Overhead Recovery**\nOverhead includes all costs not directly tied to a project:\n- Office rent and utilities\n- Vehicle expenses\n- Insurance (general liability, workers comp)\n- Tools and equipment\n- Admin staff\n- Marketing\n- Owner salary (not charged to projects)\n\nAnnual overhead ÷ Annual revenue target = overhead rate\nIf overhead is $200,000 and target revenue is $1M: overhead rate = 20%\n\n**Building Your Markup**\nMarkup must cover overhead AND profit:\n- Overhead rate: 20%\n- Net profit target: 10%\n- Required gross profit margin: 30%\n- Markup to achieve 30% margin: 1 ÷ (1 − 0.30) − 1 = 42.8% markup\n\n**Common Industry Margins**\n- General contractor (residential): 15–25% gross margin\n- Specialty trades: 20–35% gross margin\n- Design-build firms: 25–40%\n- Luxury/high-end: 30–50%`,
+        keyPoints: [
+          '25% markup = 20% margin — they are not the same number',
+          'Markup is applied ON TOP of cost; margin is measured AS A PERCENT of selling price',
+          'Overhead rate = annual overhead ÷ annual revenue target — must be recovered in every job',
+          'To achieve a desired margin: selling price = cost ÷ (1 − desired margin)',
+        ],
+        quiz: [
+          {
+            question: 'A contractor has $80,000 in job costs and applies a 30% markup. What is the selling price?',
+            options: ['$104,000', '$110,000', '$114,300', '$120,000'],
+            correctIndex: 0,
+            explanation: '$80,000 × 1.30 = $104,000. The gross margin on this job is ($24,000 ÷ $104,000) = 23.1% — not 30%. Many contractors underestimate their profit target by confusing markup and margin.',
+          },
+          {
+            question: 'A contractor wants a 25% gross profit margin. Their job cost is $60,000. What is the selling price?',
+            options: ['$75,000', '$80,000', '$85,000', '$90,000'],
+            correctIndex: 1,
+            explanation: 'Selling Price = Cost ÷ (1 − Margin) = $60,000 ÷ 0.75 = $80,000. Profit = $20,000. $20,000 ÷ $80,000 = 25% margin.',
+          },
+          {
+            question: 'If annual overhead is $180,000 and annual revenue target is $900,000, what is the overhead rate?',
+            options: ['10%', '15%', '20%', '25%'],
+            correctIndex: 2,
+            explanation: '$180,000 ÷ $900,000 = 20%. Every job bid must recover 20% of its revenue toward overhead before a single dollar of profit is earned.',
+          },
+        ],
+      },
+      {
+        title: 'Project Scheduling & Critical Path Method',
+        duration: '18 min',
+        content: `A construction schedule is the plan for who does what and when. Without one, trades step on each other, inspections fail, and projects go over budget. Scheduling is project management.\n\n**Why Scheduling Matters**\n- Coordinates trade sequencing (can't drywall before rough inspections)\n- Manages construction loan draw timing (draws tied to completion milestones)\n- Identifies the critical path — delays on it delay the project\n- Sets owner and contractor expectations\n\n**Construction Sequence (Residential Renovation)**\n1. Demolition\n2. Structural repairs\n3. Rough framing\n4. Rough mechanical (plumbing, electrical, HVAC)\n5. Insulation\n6. Rough inspections (framing, MEP)\n7. Drywall (hang, tape, mud, sand)\n8. Prime paint\n9. Finish carpentry (doors, trim, cabinets)\n10. Finish mechanical (fixtures, switches, outlets)\n11. Finish flooring\n12. Paint — finish coats\n13. Punch list\n14. Final inspection\n\n**The Critical Path Method (CPM)**\nThe critical path = the longest sequence of dependent tasks that determines the minimum project duration.\n\n- Tasks on the critical path have zero float (delay = project delay)\n- Tasks off the critical path have float (can slip without affecting finish date)\n- Compressing the schedule (crashing) requires adding resources to critical path tasks\n\n**Gantt Charts**\nThe most common scheduling tool. Each task is a horizontal bar showing:\n- Start date\n- Duration\n- End date\n- Dependencies (what must finish before this starts)\n\nTools: Microsoft Project, Smartsheet, Buildertrend, CoConstruct, or even Excel.\n\n**Schedule Milestones for Draw Requests**\nLenders tie construction loan draws to measurable completion milestones:\n- Foundation complete\n- Framing complete\n- Rough MEP complete and inspected\n- Drywall complete\n- Substantial completion\n- Final inspection/CO`,
+        keyPoints: [
+          'Rough inspections must happen before drywall — never close walls before inspection',
+          'Critical path tasks have zero float — any delay extends the project completion date',
+          'Construction loan draws are tied to completion milestones — schedule drives funding',
+          'Gantt charts show task duration, dependencies, and critical path visually',
+        ],
+        quiz: [
+          {
+            question: 'What does "critical path" mean in project scheduling?',
+            options: ['The most expensive sequence of tasks', 'The longest sequence of dependent tasks that determines the minimum project duration', 'Tasks that have the most float time', 'Tasks only the GC can perform'],
+            correctIndex: 1,
+            explanation: 'Any delay to a critical path task delays the entire project. Off-path tasks have float — they can slip without affecting the finish date.',
+          },
+          {
+            question: 'Why must rough mechanical (plumbing, electrical, HVAC) be installed before drywall?',
+            options: ['It\'s cheaper to do it that way', 'Inspectors need access to verify all rough work before walls are closed', 'Drywall contractors require it', 'Trade unions require this sequence'],
+            correctIndex: 1,
+            explanation: 'Building inspectors must visually verify all in-wall work before it\'s covered. Closing walls before inspection means costly tear-out if the inspector finds issues.',
+          },
+          {
+            question: 'Construction loan draws are typically tied to:',
+            options: ['Calendar dates only', 'Measurable project completion milestones verified by an inspector', 'The contractor\'s invoice due dates', 'The lender\'s monthly statement cycle'],
+            correctIndex: 1,
+            explanation: 'Lenders protect themselves by only releasing funds when verified milestones are complete — this ensures the collateral (the building) is progressing in value.',
+          },
+        ],
+      },
+      {
+        title: 'Contracts, Change Orders & Scope Creep',
+        duration: '22 min',
+        content: `Contracts are the legal framework of every construction project. Understanding the key contract types, how to handle changes, and how to prevent scope creep is essential for protecting your business and your projects.\n\n**Common Contract Types**\n\n**Lump Sum (Stipulated Sum)**\nContractor agrees to complete defined scope for a fixed price. Owner bears no cost risk for contractor's efficiency. Contractor bears risk for unforeseen conditions.\n\n**Cost Plus a Fee**\nOwner pays actual costs plus a contractor fee (fixed dollar or percentage). Owner bears cost risk; contractor is less incentivized to minimize costs.\n\n**Cost Plus with Guaranteed Maximum Price (GMP)**\nHybrid: owner pays actual costs up to a maximum. Savings below GMP are shared.\n\n**Time and Materials (T&M)**\nOwner pays labor hours + materials + markup. Used for undefined scope or emergency work.\n\n**AIA Contract Documents**\nThe American Institute of Architects publishes industry-standard contract forms:\n- A101: Standard Agreement Between Owner and Contractor (lump sum)\n- A102: Standard Agreement (cost plus with GMP)\n- A201: General Conditions (covers responsibilities, disputes, changes, claims)\n\n**Change Orders**\nA change order (CO) is a written amendment to the contract that modifies scope, price, or schedule.\n\nKey change order rules:\n- All changes must be in writing — verbal agreements don't protect anyone\n- Price and schedule impact must be agreed BEFORE work proceeds\n- The contract should define the markup allowed on change order work\n- Document the basis: is the CO due to owner request, unforeseen conditions, or design error?\n\n**Scope Creep**\nThe gradual expansion of project scope without corresponding contract amendments. The most common cause of contractor underpayment and project disputes.\n\nPrevent it by:\n- Defining exclusions explicitly in the original contract\n- Requiring a signed CO before performing any out-of-scope work\n- Tracking all field decisions and design changes in writing\n- Holding a weekly project meeting with the owner and documenting decisions`,
+        keyPoints: [
+          'Lump sum contracts fix price — contractor bears risk for unforeseen conditions',
+          'All changes must be in writing with agreed price and schedule impact before work starts',
+          'Scope creep is the most common cause of contractor underpayment — prevent it with written COs',
+          'AIA A201 General Conditions governs disputes, claims, and change procedures for most projects',
+        ],
+        quiz: [
+          {
+            question: 'In a lump sum contract, who bears the financial risk of unforeseen site conditions?',
+            options: ['The owner', 'The contractor', 'Risk is shared 50/50', 'The architect'],
+            correctIndex: 1,
+            explanation: 'In a lump sum contract, the contractor commits to a fixed price — unexpected conditions (hidden rot, soil issues, code violations) come out of the contractor\'s profit unless a specific carve-out exists.',
+          },
+          {
+            question: 'When should change order work begin?',
+            options: ['Immediately when the owner requests it verbally', 'After work is complete and price is negotiated', 'After a written change order is signed with agreed price and schedule impact', 'Whenever the GC deems it appropriate'],
+            correctIndex: 2,
+            explanation: 'Performing work without a signed CO is one of the most common contractor mistakes — recovering payment for undocumented changes is very difficult after the fact.',
+          },
+          {
+            question: 'What is scope creep?',
+            options: ['A slow increase in material prices over time', 'The gradual expansion of project scope without corresponding written contract amendments', 'A lender adding conditions to a construction loan', 'A building inspector expanding the inspection scope'],
+            correctIndex: 1,
+            explanation: 'Scope creep erodes profit one "small favor" at a time — by the end of the project, the contractor has delivered far more than the contract price covered.',
+          },
+        ],
+      },
+      {
+        title: 'Permits, Inspections & Code Compliance',
+        duration: '16 min',
+        content: `Permits and inspections are the government's mechanism for ensuring construction meets safety standards. For investors and developers, understanding the permitting process prevents costly delays and liability.\n\n**Why Permits Matter**\n- Legal protection: work done without permits creates liability at resale\n- Insurance: unpermitted work may void homeowner's insurance\n- Financing: lenders and appraisers flag unpermitted additions\n- Safety: code requirements exist because buildings failed before these standards existed\n\n**Permit Types**\n- Building permit: structural changes, additions, new construction\n- Electrical permit: panel upgrades, new circuits, service changes\n- Plumbing permit: new supply or drain lines, fixture additions\n- Mechanical permit: HVAC system changes, new equipment\n- Demolition permit: structural demolition\n\n**The Permitting Process**\n1. Submit application with plans (architectural drawings for major work)\n2. Plan review (1–4 weeks depending on jurisdiction and project complexity)\n3. Permit issued — post it on site (required by most jurisdictions)\n4. Begin work\n5. Call inspections at required stages (rough framing, rough MEP, insulation, final)\n6. Receive approval at each stage\n7. Final inspection → Certificate of Occupancy (CO) or Final Certificate\n\n**Key Building Codes**\n- International Building Code (IBC): commercial construction\n- International Residential Code (IRC): one- and two-family dwellings\n- National Electrical Code (NEC / NFPA 70): electrical work\n- International Plumbing Code (IPC) / International Mechanical Code (IMC)\n\nLocal jurisdictions adopt and amend these model codes — always verify local amendments.\n\n**Certificate of Occupancy (CO)**\nIssued when the final inspection passes and the building is deemed safe for occupancy. Without a CO:\n- Tenants cannot legally occupy the space\n- The property may be unmortgageable\n- Investors cannot sell without disclosure of the missing CO\n\n**Common Permit Problems**\n- Work started without permit: stop-work order, fines, mandatory demolition of non-compliant work\n- Inspector finds violations: correction notice, re-inspection required\n- Expired permit: must renew (with fees) or re-apply`,
+        keyPoints: [
+          'Unpermitted work creates liability at resale, insurance gaps, and financing problems',
+          'Call for inspections at each required stage — do not close walls before rough inspection',
+          'Certificate of Occupancy is required for legal occupancy and mortgageability',
+          'Research local code amendments — model codes are adopted differently in each jurisdiction',
+        ],
+        quiz: [
+          {
+            question: 'What is a Certificate of Occupancy (CO)?',
+            options: ['A permit to begin construction', 'A document issued after final inspection confirming the building is safe for occupancy', 'An HOA approval for renovation work', 'A contractor\'s license certification'],
+            correctIndex: 1,
+            explanation: 'A CO is issued after all inspections pass and confirms the building meets code for occupancy. Without it, the space cannot be legally occupied and may be unmortgageable.',
+          },
+          {
+            question: 'What are the consequences of starting construction without a permit?',
+            options: ['No consequences if the work is done correctly', 'A warning letter only', 'Stop-work order, fines, and potentially mandatory demolition of non-compliant work', 'Only required to pay a small late permit fee'],
+            correctIndex: 2,
+            explanation: 'Jurisdictions take unpermitted work seriously — inspectors have authority to require tear-out and rebuild of all work done without proper permits.',
+          },
+          {
+            question: 'Which inspection must happen BEFORE drywall can be installed?',
+            options: ['Final inspection', 'Insulation inspection only', 'Rough framing and rough MEP (mechanical, electrical, plumbing) inspections', 'Foundation inspection'],
+            correctIndex: 2,
+            explanation: 'Rough framing and all rough MEP must be inspected and approved before walls are closed — inspectors need visual access to verify compliance.',
+          },
+        ],
+      },
+      {
+        title: 'Construction Draws & Lien Waivers',
+        duration: '18 min',
+        content: `Construction loans fund the project through a draw schedule — money is released in stages as work is completed. Understanding how draws work — and protecting your project with lien waivers — is critical for both investors and contractors.\n\n**Construction Loan Draw Process**\n1. Work is completed to a milestone\n2. Contractor submits a draw request (Application for Payment, AIA G702/G703 format)\n3. Owner (or lender's inspector) verifies the work is complete\n4. Lender releases funds — typically within 1–3 business days\n5. Contractor pays subcontractors and suppliers\n\n**AIA G702/G703 — Application for Payment**\n- G702: Summary of contract value, work completed, retainage, and amount due\n- G703: Continuation sheet showing breakdown by CSI division or schedule of values\n\nThe Schedule of Values allocates the total contract across all line items. Each draw request tracks completion percentages by line item.\n\n**Retainage**\nLenders and owners typically withhold 5–10% of each draw as retainage. It is released:\n- At substantial completion, or\n- At final completion after the punch list is cleared\n\nRetainage protects against incomplete work at the end of the project.\n\n**Lien Rights**\nA construction lien (mechanic's lien) gives contractors, subcontractors, and suppliers a legal claim against the property if they are not paid. Liens can:\n- Cloud title and block sale or refinancing\n- Force owners to pay twice (once to GC, once to unpaid subs)\n\n**Lien Waiver Types**\n- **Preliminary Notice**: Required in many states before a sub or supplier can file a lien — must be sent early in the project\n- **Conditional Waiver**: Waives lien rights conditioned on payment clearing\n- **Unconditional Waiver**: Permanently waives lien rights — only sign after funds clear\n\n**Best Practice for Owners and Investors**\nNever release payment to a GC without receiving lien waivers from all subs and suppliers for the prior draw. A GC who is paid but fails to pay their subs leaves the owner exposed to sub-lien claims.`,
+        keyPoints: [
+          'Construction draws are released in stages tied to verified completion milestones',
+          'Retainage (5–10%) is withheld from each draw and released at substantial completion',
+          'Unconditional lien waivers are permanent — only sign after payment clears your account',
+          'Collect lien waivers from all subs and suppliers before releasing payment to the GC',
+        ],
+        quiz: [
+          {
+            question: 'What is retainage in a construction draw schedule?',
+            options: ['The contractor\'s profit margin', 'A 5–10% holdback from each draw released after project completion', 'The lender\'s origination fee', 'The owner\'s down payment on the construction loan'],
+            correctIndex: 1,
+            explanation: 'Retainage incentivizes the contractor to finish the project and address punch list items — it\'s the last check, so it gets the most attention.',
+          },
+          {
+            question: 'When is it safe to sign an Unconditional Lien Waiver?',
+            options: ['At the time of the draw request', 'After the owner approves the draw', 'Only after the payment check has fully cleared your bank account', 'Before work begins on the next phase'],
+            correctIndex: 2,
+            explanation: 'An unconditional waiver permanently releases lien rights — signing before funds clear means you have no recourse if the check bounces or payment is stopped.',
+          },
+          {
+            question: 'Why should owners collect lien waivers from all subcontractors, not just the GC?',
+            options: ['It\'s required by RESPA', 'If the GC is paid but fails to pay subs, the subs can file liens against the property — the owner pays twice', 'Subs provide better quality work when lien waivers are collected', 'Lenders require it for insurance purposes'],
+            correctIndex: 1,
+            explanation: 'The owner\'s contract is with the GC — but subs have direct lien rights against the property. A dishonest or insolvent GC leaves owners exposed to double payment.',
+          },
+        ],
+      },
+      {
+        title: 'Renovation Underwriting for Investors & Lenders',
+        duration: '20 min',
+        content: `When investors and lenders evaluate a renovation project, they're underwriting the construction budget just as carefully as the purchase price. A credible, detailed budget is your most important tool for securing financing and protecting returns.\n\n**What Lenders Look For in a Renovation Budget**\n- Detailed line-item breakdown (not a single lump sum)\n- Cost reasonableness (does it match market rates?)\n- Contingency (usually 10–15% required)\n- Timeline (feasibility of the completion schedule)\n- Contractor qualifications (licensed, insured, experienced)\n- Draw schedule aligned with construction milestones\n\n**The Scope of Work Document**\nLenders want a written scope that matches the budget. For hard money and fix-and-flip loans:\n- Line items must tie to each room or system\n- Materials must be specified (grade/quality)\n- Labor and material broken out where possible\n- Timeline realistic for the scope\n\n**ARV Analysis**\nAfter-Repair Value = the appraised value after renovations are complete\n- Appraiser uses comparable sales that reflect the proposed finish level\n- Over-improving for the neighborhood lowers ROI — match finish level to the comp market\n- Sweat equity is not recognized by appraisers — value comes from comparable sales, not effort\n\n**Investor Math — Does the Deal Work?**\nARV − (Purchase Price + Renovation Cost + Holding Costs + Selling Costs) = Profit\n\n70% Rule (fix and flip shortcut):\nMaximum Allowable Offer (MAO) = ARV × 70% − Renovation Cost\n\nExample: ARV $300,000, rehab $50,000\nMAO = $300,000 × 0.70 − $50,000 = $160,000\n\n**Lender Draw Inspection**\nFor construction loans, lenders send an inspector before each draw to verify:\n- Percentage of work complete matches draw request\n- Materials on-site are accounted for\n- No material deviations from approved scope\n- No stop-work orders or liens filed\n\n**Common Budget Mistakes**\n- Underestimating mechanical (HVAC, electrical, plumbing) — always the biggest surprise\n- Forgetting carrying costs (loan interest, utilities, insurance during renovation)\n- No contingency for unknown conditions\n- Budget based on contractor estimates only — get a second opinion on major line items`,
+        keyPoints: [
+          'Lenders require detailed line-item budgets — a lump sum figure will not get approved',
+          '70% Rule: MAO = ARV × 70% − Renovation Cost — the investor\'s quick feasibility check',
+          'Match finish quality to comp market — over-improving does not increase appraised value',
+          'Mechanical (HVAC, plumbing, electrical) is consistently underestimated — pad these line items',
+        ],
+        quiz: [
+          {
+            question: 'Using the 70% Rule, a property has an ARV of $250,000 and estimated renovation of $40,000. What is the Maximum Allowable Offer?',
+            options: ['$135,000', '$175,000', '$150,000', '$210,000'],
+            correctIndex: 0,
+            explanation: 'MAO = $250,000 × 0.70 − $40,000 = $175,000 − $40,000 = $135,000. This is the most an investor should pay while maintaining adequate profit margin.',
+          },
+          {
+            question: 'A lender\'s draw inspector finds the renovation is 40% complete but the draw request claims 60%. What happens?',
+            options: ['The draw is approved for 60% as submitted', 'The lender releases only the draw amount corresponding to verified 40% completion', 'The loan is immediately called due', 'The contractor is fined'],
+            correctIndex: 1,
+            explanation: 'Draw amounts are tied to verified completion — lenders only release funds for work that is confirmed complete. Overclaiming draws is a form of construction loan fraud.',
+          },
+          {
+            question: 'Why does over-improving a property for the neighborhood not increase its appraised value?',
+            options: ['Appraisers penalize luxury finishes in modest neighborhoods', 'Appraised value is based on comparable sales, not the cost of improvements — the market sets the ceiling', 'Lenders restrict high-finish renovations', 'Contractors charge extra for premium materials in modest markets'],
+            correctIndex: 1,
+            explanation: 'An appraiser finds value in what comparable homes in the neighborhood sell for. If no comparable sold for $400,000, a $100,000 kitchen won\'t push the value there.',
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 // Avenue IDs map directly to module IDs
@@ -1340,8 +1988,8 @@ export const ALL_AVENUE_IDS = MODULES.map(m => m.id);
 export const LEGACY_TIER_ACCESS: Record<string, string[]> = {
   starter: ['residential', 'mortgage'],
   pro: ['residential', 'commercial', 'mortgage', 'realtor_growth', 'investing'],
-  elite: ['residential', 'commercial', 'mortgage', 'realtor_growth', 'investing', 'deal_structuring'],
-  lending: ['residential', 'mortgage'],
+  elite: ['residential', 'commercial', 'mortgage', 'realtor_growth', 'investing', 'deal_structuring', 'underwriting', 'construction'],
+  lending: ['residential', 'mortgage', 'underwriting'],
 };
 
 export const AVENUE_PRICES: Record<string, number> = {
@@ -1351,6 +1999,8 @@ export const AVENUE_PRICES: Record<string, number> = {
   realtor_growth: 49,
   investing: 49,
   deal_structuring: 79,
+  underwriting: 49,
+  construction: 49,
 };
 
 export const ALL_ACCESS_PRICE = 149;
