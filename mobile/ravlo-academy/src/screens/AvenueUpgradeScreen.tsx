@@ -40,8 +40,8 @@ export default function AvenueUpgradeScreen({ navigation }: any) {
 
   const handleAllAccess = () => {
     Alert.alert(
-      'All Access — All 6 Avenues',
-      `Get unlimited access to every avenue, lesson, and certificate for $${ALL_ACCESS_PRICE}/month. Save over 40% vs. buying individually.`,
+      'All Access — All 8 Avenues',
+      `Get unlimited access to every avenue, lesson, and certificate for $${ALL_ACCESS_PRICE}/month. Save over 50% vs. buying individually.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -76,7 +76,7 @@ export default function AvenueUpgradeScreen({ navigation }: any) {
             <Text style={styles.allAccessDesc}>Every avenue, every lesson, every certificate. Accreditation-ready curriculum.</Text>
             <View style={styles.allAccessMeta}>
               <Ionicons name="book-outline" size={13} color={Colors.white} />
-              <Text style={styles.allAccessMetaText}>6 avenues · 40+ lessons · 51 credit hours</Text>
+              <Text style={styles.allAccessMetaText}>8 avenues · 60+ lessons · 78 credit hours</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.allAccessBtn} onPress={handleAllAccess} activeOpacity={0.85}>
