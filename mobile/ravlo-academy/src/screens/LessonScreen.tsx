@@ -140,27 +140,106 @@ export default function LessonScreen({ route, navigation }: any) {
     }
   };
 
+  const renderInline = (text: string, baseStyle: any, boldStyle: any) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/);
+    if (parts.length === 1) return <Text style={baseStyle}>{text}</Text>;
+    return (
+      <Text style={baseStyle}>
+        {parts.map((part, j) =>
+          part.startsWith('**') && part.endsWith('**')
+            ? <Text key={j} style={boldStyle}>{part.slice(2, -2)}</Text>
+            : <Text key={j}>{part}</Text>
+        )}
+      </Text>
+    );
+  };
+
   const renderContent = (text: string) => {
     const lines = text.split('\n');
-    return lines.map((line, i) => {
-      if (line.startsWith('**') && line.endsWith('**')) {
-        return (
-          <Text key={i} style={styles.boldLine}>{line.replace(/\*\*/g, '')}</Text>
-        );
+    const elements: React.ReactNode[] = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // Table block — collect all pipe rows, skip separator, render as grid
+      if (line.startsWith('|')) {
+        const tableLines: string[] = [];
+        while (i < lines.length && lines[i].startsWith('|')) {
+          tableLines.push(lines[i]);
+          i++;
+        }
+        const rows = tableLines
+          .filter(l => !/^\|[\s\-:|]+\|$/.test(l))
+          .map(l => l.split('|').slice(1, -1).map(c => c.trim()));
+        if (rows.length > 0) {
+          const [headerRow, ...dataRows] = rows;
+          elements.push(
+            <View key={`tbl-${i}`} style={styles.tableWrapper}>
+              <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                {headerRow.map((cell, ci) => (
+                  <Text key={ci} style={[styles.tableCell, styles.tableCellHeader]}>{cell}</Text>
+                ))}
+              </View>
+              {dataRows.map((row, ri) => (
+                <View key={ri} style={[styles.tableRow, ri % 2 !== 0 && styles.tableRowAlt]}>
+                  {row.map((cell, ci) => (
+                    <Text key={ci} style={styles.tableCell}>{cell}</Text>
+                  ))}
+                </View>
+              ))}
+            </View>
+          );
+        }
+        continue;
       }
-      if (line.startsWith('- ')) {
-        return (
-          <View key={i} style={styles.bulletRow}>
-            <Text style={styles.bullet}>•</Text>
-            <Text style={styles.bulletText}>{line.slice(2)}</Text>
+
+      // Section header — full-line **text** with no nested bold
+      if (
+        line.startsWith('**') && line.endsWith('**') &&
+        line.length > 4 && !line.slice(2, -2).includes('**')
+      ) {
+        elements.push(
+          <View key={i} style={styles.sectionHeaderRow}>
+            <View style={[styles.sectionHeaderBar, { backgroundColor: course.color }]} />
+            <Text style={[styles.sectionHeader, { color: course.color }]}>
+              {line.slice(2, -2)}
+            </Text>
           </View>
         );
+        i++;
+        continue;
       }
-      if (line.trim() === '') return <View key={i} style={{ height: Spacing.sm }} />;
-      return (
-        <Text key={i} style={styles.bodyText}>{line}</Text>
+
+      // Bullet point with inline bold support
+      if (line.startsWith('- ')) {
+        elements.push(
+          <View key={i} style={styles.bulletRow}>
+            <View style={[styles.bulletDot, { backgroundColor: course.color }]} />
+            {renderInline(line.slice(2), styles.bulletText, styles.bulletBold)}
+          </View>
+        );
+        i++;
+        continue;
+      }
+
+      // Blank line spacer
+      if (line.trim() === '') {
+        elements.push(<View key={i} style={{ height: Spacing.sm }} />);
+        i++;
+        continue;
+      }
+
+      // Paragraph — supports inline bold
+      elements.push(
+        <View key={i}>
+          {renderInline(line, styles.bodyText, styles.inlineBold)}
+        </View>
       );
-    });
+      i++;
+    }
+
+    return elements;
   };
 
   const renderQuiz = () => {
@@ -455,10 +534,23 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.lg,
   },
   bodyText: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 24 },
-  boldLine: { ...Typography.bodySmall, color: Colors.textPrimary, fontWeight: '700', lineHeight: 24 },
-  bulletRow: { flexDirection: 'row', gap: 8, marginVertical: 2 },
-  bullet: { color: Colors.textMuted, marginTop: 2, fontSize: 14 },
+  inlineBold: { fontWeight: '700', color: Colors.textPrimary },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'stretch', marginTop: 20, marginBottom: 10 },
+  sectionHeaderBar: { width: 3, borderRadius: 2, marginRight: 10 },
+  sectionHeader: { ...Typography.bodySmall, fontWeight: '800', fontSize: 14, flex: 1 },
+  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginVertical: 3 },
+  bulletDot: { width: 6, height: 6, borderRadius: 3, marginTop: 9, flexShrink: 0 },
   bulletText: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 22, flex: 1 },
+  bulletBold: { fontWeight: '700', color: Colors.textPrimary },
+  tableWrapper: {
+    marginVertical: Spacing.md, borderRadius: Radii.sm, overflow: 'hidden',
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: Colors.border },
+  tableHeaderRow: { backgroundColor: Colors.border + '60' },
+  tableRowAlt: { backgroundColor: Colors.background },
+  tableCell: { flex: 1, padding: 8, ...Typography.caption, color: Colors.textSecondary, lineHeight: 18 },
+  tableCellHeader: { fontWeight: '700', color: Colors.textPrimary },
   sectionTitle: { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing.md },
   keyPointsCard: {
     backgroundColor: Colors.surface, borderRadius: Radii.md,
