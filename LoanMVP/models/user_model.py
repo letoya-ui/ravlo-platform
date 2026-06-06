@@ -34,7 +34,8 @@ class User(UserMixin, db.Model):
     ica_accepted = db.Column(db.Boolean, default=False)
     onboarding_step = db.Column(db.String(50), default="ica")
     subscription = db.Column(db.String(50), default="free")
-    university_tier = db.Column(db.String(20), nullable=True)  # elite | lending | pro | starter
+    university_tier = db.Column(db.String(20), nullable=True)  # elite | lending | pro | starter (legacy)
+    chosen_avenue = db.Column(db.String(50), nullable=True)   # the one free avenue chosen at onboarding
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     is_blocked = db.Column(db.Boolean, default=False, nullable=False)
     blocked_at = db.Column(db.DateTime, nullable=True)

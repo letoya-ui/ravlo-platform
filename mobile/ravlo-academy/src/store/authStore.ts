@@ -13,6 +13,8 @@ interface User {
   role: string;
   subscription: string;
   university_tier: string | null;
+  chosen_avenue: string | null;
+  unlocked_avenues: string[];
   onboarding_complete: boolean;
 }
 
@@ -30,6 +32,7 @@ interface AuthState {
   enableBiometric: () => Promise<void>;
   disableBiometric: () => Promise<void>;
   authenticateWithBiometric: () => Promise<boolean>;
+  setChosenAvenue: (avenueId: string) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -171,5 +174,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await SecureStore.deleteItemAsync('ravlo_token');
     delete api.defaults.headers.common['Authorization'];
     set({ user: null, token: null });
+  },
+
+  setChosenAvenue: (avenueId: string) => {
+    set(state => ({
+      user: state.user ? { ...state.user, chosen_avenue: avenueId } : state.user,
+    }));
   },
 }));

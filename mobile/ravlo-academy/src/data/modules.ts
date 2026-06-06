@@ -1,8 +1,16 @@
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
 export interface Lesson {
   title: string;
   duration: string;
   content: string;
   keyPoints: string[];
+  quiz: QuizQuestion[];
 }
 
 export interface Module {
@@ -13,6 +21,7 @@ export interface Module {
   color: string;
   lessons: Lesson[];
   tiers: string[];
+  creditHours: number;
 }
 
 export const MODULES: Module[] = [
@@ -23,6 +32,7 @@ export const MODULES: Module[] = [
     icon: 'home-outline',
     color: '#3BAF7A',
     tiers: ['starter', 'pro', 'elite', 'lending'],
+    creditHours: 6,
     lessons: [
       {
         title: 'Listing Strategy & Pricing',
@@ -33,6 +43,26 @@ export const MODULES: Module[] = [
           'Aggressive pricing creates multiple offer scenarios',
           'Price reductions signal weakness — price right from day one',
           'Use absorption rate data to back your recommendation',
+        ],
+        quiz: [
+          {
+            question: 'What is the recommended timeframe for comps in a Comparative Market Analysis?',
+            options: ['6 months', '90 days', '12 months', '30 days'],
+            correctIndex: 1,
+            explanation: 'Comps within 90 days reflect current market conditions most accurately. In slow markets you may extend to 120 days.',
+          },
+          {
+            question: 'Which pricing strategy is best for triggering multiple offers in a low-inventory market?',
+            options: ['At-market pricing', 'Value range pricing', 'Aggressive pricing (2–3% below market)', 'Above-market pricing'],
+            correctIndex: 2,
+            explanation: 'Aggressive pricing creates urgency and competition, often driving the final sale price above asking.',
+          },
+          {
+            question: '"Buying the listing" refers to:',
+            options: ['Purchasing your own listing', 'Pricing too high to get the contract, then reducing price', 'Buying MLS data', 'Underpricing for a quick sale'],
+            correctIndex: 1,
+            explanation: 'Overpricing to win the listing then chasing the market down with reductions signals weakness and costs the seller time and money.',
+          },
         ],
       },
       {
@@ -45,6 +75,26 @@ export const MODULES: Module[] = [
           'Show homes in clusters using anchoring technique',
           'Ask listing agents what terms the seller values most',
         ],
+        quiz: [
+          {
+            question: 'How long should an initial buyer consultation take?',
+            options: ['10–15 minutes', '30 minutes', '45–60 minutes', '90+ minutes'],
+            correctIndex: 2,
+            explanation: 'Investing 45–60 minutes upfront ensures you understand the buyer\'s needs, budget, and decision-making process before showing a single property.',
+          },
+          {
+            question: 'What is the "anchoring technique" when showing homes?',
+            options: ['Show the best home first', 'Show one home at a time', 'Start with a baseline, include a dream home, end with the best value match', 'Show all homes in ascending price order'],
+            correctIndex: 2,
+            explanation: 'Anchoring helps buyers calibrate quickly by experiencing the range — baseline, dream, then the best fit.',
+          },
+          {
+            question: 'Beyond price, what can differentiate an offer in a competitive market?',
+            options: ['Requesting more repairs', 'Lower earnest money', 'Escalation clauses, flexible closing dates, and strong earnest money', 'Longer inspection period'],
+            correctIndex: 2,
+            explanation: 'Sellers often value certainty and flexibility over raw price — knowing what the seller needs lets you craft a more competitive offer.',
+          },
+        ],
       },
       {
         title: 'Negotiation Frameworks',
@@ -55,6 +105,26 @@ export const MODULES: Module[] = [
           'Know your BATNA and assess the other side\'s',
           'Use mirroring and labeled empathy to open conversations',
           'Anchor with specific reasons, not arbitrary numbers',
+        ],
+        quiz: [
+          {
+            question: 'What does BATNA stand for?',
+            options: ['Best Available Transaction and Negotiation Agreement', 'Best Alternative To a Negotiated Agreement', 'Bargaining Advantage Through Networked Actions', 'Basic Approach To Negotiation Advantage'],
+            correctIndex: 1,
+            explanation: 'Knowing your BATNA (and the other side\'s) reveals who has more leverage and how far you can push.',
+          },
+          {
+            question: 'In the FBI Tactical Empathy Framework, "mirroring" means:',
+            options: ['Copying the other party\'s body language', 'Repeating the last 2–3 words of what they said', 'Using their words against them', 'Making the same offer twice'],
+            correctIndex: 1,
+            explanation: 'Mirroring invites the other party to elaborate, giving you more information without revealing your position.',
+          },
+          {
+            question: 'When presenting a counter-offer, you should:',
+            options: ['Always counter at your maximum', 'Never counter at your maximum — leave room', 'Always accept the first offer', 'Counter only if you have multiple buyers'],
+            correctIndex: 1,
+            explanation: 'Leaving room in a counter allows for continued negotiation and signals flexibility while protecting your true limit.',
+          },
         ],
       },
       {
@@ -67,6 +137,26 @@ export const MODULES: Module[] = [
           'Compare sale prices, not list prices',
           'Lead CMA presentation with conclusion, support with evidence',
         ],
+        quiz: [
+          {
+            question: 'Which type of prices should you primarily compare in a CMA?',
+            options: ['List prices of active listings', 'Pending sales prices', 'Sold prices within 90 days', 'Zillow Zestimate values'],
+            correctIndex: 2,
+            explanation: 'Sale prices are facts; list prices are opinions. Always underwrite to what the market actually paid.',
+          },
+          {
+            question: 'What is the acceptable square footage difference for CMA comps?',
+            options: ['5%', '10%', '20%', '50%'],
+            correctIndex: 2,
+            explanation: 'Comps within 20% of subject square footage are close enough to adjust accurately without distorting the analysis.',
+          },
+          {
+            question: 'When presenting a CMA, what should you lead with?',
+            options: ['All 20 pages of raw data', 'The conclusion, supported by evidence', 'The Zillow estimate', 'Comparable list prices'],
+            correctIndex: 1,
+            explanation: 'Sellers trust a clear recommendation backed by data — leading with the conclusion builds credibility faster than burying it in data.',
+          },
+        ],
       },
       {
         title: 'Open House Optimization',
@@ -77,6 +167,26 @@ export const MODULES: Module[] = [
           'Arrive 45 min early for staging and setup',
           'Always ask if visitors are working with an agent',
           'Follow up with every sign-in within 2 hours',
+        ],
+        quiz: [
+          {
+            question: 'What is the primary goal of an open house?',
+            options: ['Capture buyer leads', 'Sell the house', 'Network with neighbors', 'Generate social media content'],
+            correctIndex: 1,
+            explanation: 'Most agents focus on lead generation, but the primary goal is always to sell the listed property first.',
+          },
+          {
+            question: 'How early should you arrive before an open house?',
+            options: ['5–10 minutes', '15–20 minutes', '45 minutes', 'The day before'],
+            correctIndex: 2,
+            explanation: '45 minutes allows time for staging touch-ups, lighting, temperature, and proper visitor sign-in setup.',
+          },
+          {
+            question: 'When should you follow up with open house sign-ins?',
+            options: ['Within 2 hours', 'Within 24 hours', 'Within 48 hours', 'At the end of the week'],
+            correctIndex: 0,
+            explanation: 'Immediate follow-up within 2 hours shows professionalism and catches buyers while the property is fresh in their mind.',
+          },
         ],
       },
       {
@@ -89,6 +199,26 @@ export const MODULES: Module[] = [
           'Segment database by timeline: A/B/C/D lists',
           'Every follow-up touchpoint must provide specific value',
         ],
+        quiz: [
+          {
+            question: 'How much more likely are leads contacted within 5 minutes to convert vs. after 30 minutes?',
+            options: ['10x', '50x', '100x', '5x'],
+            correctIndex: 2,
+            explanation: 'NAR research confirms that speed-to-lead dramatically increases conversion — every minute of delay costs you.',
+          },
+          {
+            question: 'In the 5x5x5 follow-up framework, what happens in the first 5 days?',
+            options: ['5 calls', '5 emails', '5 texts', '5 appointments'],
+            correctIndex: 2,
+            explanation: 'Text-first outreach in the first 5 days has higher open and response rates than calls or emails in the initial contact phase.',
+          },
+          {
+            question: 'An "A List" lead in database segmentation is ready to transact within:',
+            options: ['6–12 months', '90–180 days', '0–90 days', 'Over a year'],
+            correctIndex: 2,
+            explanation: 'A List contacts get weekly personal outreach — they are in the buying/selling window now and need your attention most.',
+          },
+        ],
       },
     ],
   },
@@ -99,6 +229,7 @@ export const MODULES: Module[] = [
     icon: 'business-outline',
     color: '#4C8ED9',
     tiers: ['pro', 'elite'],
+    creditHours: 8,
     lessons: [
       {
         title: 'Office & Retail Leasing',
@@ -109,6 +240,26 @@ export const MODULES: Module[] = [
           'TIA and free rent are key items to negotiate aggressively',
           'Retail: traffic, co-tenancy, and demographics drive success',
           'Track direct vacancy and sublease availability separately',
+        ],
+        quiz: [
+          {
+            question: 'In a Triple Net (NNN) lease, who pays property taxes, insurance, and maintenance?',
+            options: ['The landlord', 'The tenant', 'Split 50/50', 'Depends on state law'],
+            correctIndex: 1,
+            explanation: 'NNN tenants pay base rent plus all operating expenses — the landlord receives a net income stream with minimal obligations.',
+          },
+          {
+            question: 'What is Tenant Improvement Allowance (TIA) primarily used for?',
+            options: ['Moving expenses', 'Building out the leased space to the tenant\'s requirements', 'Paying the first month\'s rent', 'Security deposit'],
+            correctIndex: 1,
+            explanation: 'TIA is the landlord\'s contribution toward customizing the raw space — negotiating it aggressively can save tenants significant capital.',
+          },
+          {
+            question: 'Which post-COVID trend most impacted office leasing?',
+            options: ['Elimination of office space entirely', 'Suburban office boom', 'Flight to quality — tenants upgrading to Class A at similar rents as old Class B', 'Increased demand for small offices'],
+            correctIndex: 2,
+            explanation: 'Hybrid work created surplus lower-quality space while demand for premium amenities and flexible layouts drove Class A occupancy.',
+          },
         ],
       },
       {
@@ -121,6 +272,26 @@ export const MODULES: Module[] = [
           'Always underwrite actual T12 NOI, never seller pro formas',
           'Cap rates correlate with risk, location quality, and interest rates',
         ],
+        quiz: [
+          {
+            question: 'What is the formula for Net Operating Income (NOI)?',
+            options: ['Gross Rent − Mortgage Payments', 'Gross Potential Rent − Vacancy − Operating Expenses', 'Purchase Price × Cap Rate', 'NOI ÷ Cap Rate'],
+            correctIndex: 1,
+            explanation: 'NOI excludes debt service and capital expenditures — it measures the property\'s earning power independent of financing.',
+          },
+          {
+            question: 'A property has $300,000 NOI and a 6% cap rate. What is its value?',
+            options: ['$1,800,000', '$3,000,000', '$5,000,000', '$18,000,000'],
+            correctIndex: 2,
+            explanation: 'Value = NOI ÷ Cap Rate = $300,000 ÷ 0.06 = $5,000,000.',
+          },
+          {
+            question: 'Why is "pro forma" NOI risky to underwrite to?',
+            options: ['It\'s certified by an accountant', 'It\'s projected/stabilized income based on assumptions — always verify actual trailing 12-month financials', 'It includes debt service', 'It\'s government-standardized'],
+            correctIndex: 1,
+            explanation: 'Pro forma NOI assumes ideal conditions. Savvy buyers underwrite T12 actuals and stress-test from there.',
+          },
+        ],
       },
       {
         title: 'Investment Sales',
@@ -131,6 +302,26 @@ export const MODULES: Module[] = [
           'OM is your marketing document — quality reflects on the deal',
           'Price by NOI and cap rate, not comparable sales alone',
           'Always use NDAs before releasing financial information',
+        ],
+        quiz: [
+          {
+            question: 'What is an Offering Memorandum (OM) in commercial investment sales?',
+            options: ['A court filing for foreclosure', 'A marketing package with financials, photos, and location analysis', 'The purchase agreement', 'A bank loan application'],
+            correctIndex: 1,
+            explanation: 'The OM is your primary marketing tool — its quality signals the professionalism of the deal and attracts the right buyer pool.',
+          },
+          {
+            question: 'How should commercial properties be priced?',
+            options: ['By comparable sales alone', 'By square footage', 'By NOI and appropriate cap rate range based on market evidence', 'By the age of the building'],
+            correctIndex: 2,
+            explanation: 'In commercial, you\'re pricing cash flow, not bricks — cap rate and NOI together tell the story of value.',
+          },
+          {
+            question: 'Why must NDAs be used before releasing financials?',
+            options: ['Legally required in all states', 'Tenant and financial data are sensitive — disclosure can harm the seller competitively', 'To prevent competing buyers', 'NDAs guarantee a higher sale price'],
+            correctIndex: 1,
+            explanation: 'Competitors, tenants, or lenders learning a property is for sale can create operational problems and weaken negotiating position.',
+          },
         ],
       },
       {
@@ -143,6 +334,26 @@ export const MODULES: Module[] = [
           'Boot (uninvested proceeds) is taxable in the year of exchange',
           'Any real property for any real property = like-kind',
         ],
+        quiz: [
+          {
+            question: 'How many days does an investor have to identify a replacement property in a 1031 exchange?',
+            options: ['30 days', '45 days', '90 days', '180 days'],
+            correctIndex: 1,
+            explanation: '45 days to identify, 180 days to close — these deadlines are fixed with very limited exceptions.',
+          },
+          {
+            question: 'What is "boot" in a 1031 exchange?',
+            options: ['The required down payment', 'Cash or non-like-kind property received — it is taxable', 'Earnest money deposit', 'A property eligible for exchange'],
+            correctIndex: 1,
+            explanation: 'Boot triggers immediate taxation. To fully defer taxes, all proceeds must be reinvested in like-kind property.',
+          },
+          {
+            question: 'Who must hold the exchange proceeds?',
+            options: ['The buyer\'s attorney', 'The seller', 'A Qualified Intermediary', 'The title company'],
+            correctIndex: 2,
+            explanation: 'The IRS requires a QI to hold funds — if the seller touches the money at any point, the exchange is disqualified.',
+          },
+        ],
       },
       {
         title: 'Tenant & Landlord Rep',
@@ -153,6 +364,26 @@ export const MODULES: Module[] = [
           'Compare options on Total Cost of Occupancy, not just base rent',
           'Landlord rep: manage broker community as a key source of deals',
           'Dual agency in commercial is legal but requires full disclosure',
+        ],
+        quiz: [
+          {
+            question: 'What is Total Cost of Occupancy (TCO)?',
+            options: ['Just the monthly base rent', '(Base Rent × Years) + NNN Costs − TIA − Free Rent Value', 'The landlord\'s profit margin', 'The tenant\'s moving costs'],
+            correctIndex: 1,
+            explanation: 'TCO provides an apples-to-apples comparison of competing spaces over the full lease term — base rent alone is misleading.',
+          },
+          {
+            question: 'What is the purpose of an RFP in tenant representation?',
+            options: ['Requesting a price reduction after signing', 'Sending standardized requirements to multiple landlords to create competitive tension', 'Applying for a zoning permit', 'Filing a lease renewal'],
+            correctIndex: 1,
+            explanation: 'Competitive tension through an RFP process typically produces better economics than negotiating with a single landlord.',
+          },
+          {
+            question: 'Commercial dual agency requires:',
+            options: ['Automatic government disclosure', 'Full disclosure to both parties and documentation — it is legal but creates conflicts', 'Extra commission from both sides', 'Prior state board approval'],
+            correctIndex: 1,
+            explanation: 'While dual agency is legal in most states, the inherent conflict of representing both sides demands full transparency.',
+          },
         ],
       },
       {
@@ -165,6 +396,26 @@ export const MODULES: Module[] = [
           'Supply pipeline takes 2-4 years — today\'s starts predict future vacancy',
           'Use CoStar for institutional-quality market data',
         ],
+        quiz: [
+          {
+            question: 'For industrial real estate, what is a critical demand driver?',
+            options: ['School district ratings', 'Retail sales per square foot', 'E-commerce penetration and port activity', 'Office employment growth'],
+            correctIndex: 2,
+            explanation: 'Industrial demand is driven by logistics, distribution, and manufacturing — e-commerce growth and port proximity are key indicators.',
+          },
+          {
+            question: 'What metric best describes how fast properties are absorbing in a market?',
+            options: ['Asking rent per square foot', 'Absorption rate', 'Building age', 'Permit count'],
+            correctIndex: 1,
+            explanation: 'Net absorption measures how much space tenants are actually occupying vs. vacating — the clearest demand signal.',
+          },
+          {
+            question: 'How long does it typically take from approval to delivery of a new commercial building?',
+            options: ['6–12 months', '1–2 years', '2–4 years', '5–7 years'],
+            correctIndex: 2,
+            explanation: 'Long construction timelines mean today\'s pipeline data predicts future competitive supply 2–4 years out.',
+          },
+        ],
       },
     ],
   },
@@ -175,6 +426,7 @@ export const MODULES: Module[] = [
     icon: 'card-outline',
     color: '#E6A23C',
     tiers: ['starter', 'pro', 'elite', 'lending'],
+    creditHours: 12,
     lessons: [
       {
         title: 'SBA 7(a) & 504 Programs',
@@ -185,6 +437,26 @@ export const MODULES: Module[] = [
           '504: 50/40/10 structure with fixed long-term rate',
           'Owner-occupancy required: 51% existing, 60% new construction',
           'SBA requires significantly more documentation than conventional',
+        ],
+        quiz: [
+          {
+            question: 'What is the maximum SBA 7(a) loan amount?',
+            options: ['$1 million', '$2.5 million', '$5 million', '$10 million'],
+            correctIndex: 2,
+            explanation: 'SBA 7(a) goes up to $5M with competitive terms — the low down payment (10%) is its main advantage over conventional commercial loans.',
+          },
+          {
+            question: 'What is the typical SBA 504 loan structure?',
+            options: ['100% SBA financing', '50% bank + 40% SBA + 10% borrower', '80% bank + 20% SBA', '70% bank + 30% borrower'],
+            correctIndex: 1,
+            explanation: 'The 50/40/10 structure preserves borrower working capital while giving lenders security through the layered structure.',
+          },
+          {
+            question: 'What owner-occupancy percentage is required for an existing building with SBA financing?',
+            options: ['25%', '51%', '75%', '100%'],
+            correctIndex: 1,
+            explanation: 'SBA requires at least 51% owner-occupancy for existing buildings (60% for new construction) to qualify as an owner-occupied business loan.',
+          },
         ],
       },
       {
@@ -197,6 +469,26 @@ export const MODULES: Module[] = [
           'Bridge rates are SOFR + 300-600bps — expensive but fast and flexible',
           'Always underwrite a clear bridge loan exit strategy',
         ],
+        quiz: [
+          {
+            question: 'CMBS loans are characterized as:',
+            options: ['Recourse, short-term, variable rate', 'Non-recourse, typically 10-year fixed with severe prepayment penalties', 'Government-backed with flexible terms', 'Only available for residential properties'],
+            correctIndex: 1,
+            explanation: 'CMBS non-recourse structure protects the borrower personally, but the severe prepayment penalties make them inflexible for short-hold strategies.',
+          },
+          {
+            question: 'Bridge loans are best suited for:',
+            options: ['Stabilized, long-term holds', 'Transitional properties needing renovation or lease-up', 'Owner-occupied primary residences', 'Government agencies'],
+            correctIndex: 1,
+            explanation: 'Bridge loans fill the gap when a property doesn\'t yet qualify for permanent financing — they\'re short-term and expensive by design.',
+          },
+          {
+            question: 'A bridge loan exit strategy should be:',
+            options: ['Identified after closing', 'Not required by lenders', 'Clearly defined before approval — refinance, sell, or equity raise', 'Optional for experienced borrowers'],
+            correctIndex: 2,
+            explanation: 'Lenders will not approve a bridge loan without understanding how and when it will be paid off — the exit is part of the underwriting.',
+          },
+        ],
       },
       {
         title: 'DSCR & Underwriting',
@@ -207,6 +499,26 @@ export const MODULES: Module[] = [
           'Global DSCR includes borrower personal income and all debts',
           'Always include management fee and reserves even if not current costs',
           'Stress test DSCR with higher vacancy and expenses before committing',
+        ],
+        quiz: [
+          {
+            question: 'What is the DSCR formula?',
+            options: ['NOI ÷ Purchase Price', 'Gross Rent ÷ Mortgage Payment', 'NOI ÷ Annual Debt Service', 'Appraised Value ÷ Loan Amount'],
+            correctIndex: 2,
+            explanation: 'DSCR measures how many times the property\'s income can cover its debt payments — a 1.25x DSCR means the property earns 25% more than the debt cost.',
+          },
+          {
+            question: 'What is the minimum DSCR most commercial lenders require?',
+            options: ['0.90x', '1.00x', '1.20–1.25x', '1.50x'],
+            correctIndex: 2,
+            explanation: 'The 1.20–1.25x minimum provides a buffer against vacancy increases and expense surprises without over-constraining the deal.',
+          },
+          {
+            question: 'Why include a management fee even if the property is self-managed?',
+            options: ['It\'s legally required', 'To accurately reflect true operating costs and stress-test deal sustainability', 'Only required for properties over $1M', 'Self-managed properties don\'t need it'],
+            correctIndex: 1,
+            explanation: 'If you sell or can\'t manage anymore, the new owner pays management fees — underwriting without it creates an inflated NOI.',
+          },
         ],
       },
       {
@@ -219,6 +531,26 @@ export const MODULES: Module[] = [
           'The binding constraint is whichever gives the smaller loan — LTV or DSCR',
           'As-stabilized value allows more proceeds but with holdback reserves',
         ],
+        quiz: [
+          {
+            question: 'LTC (Loan-to-Cost) is primarily used for:',
+            options: ['Stabilized income properties', 'Single-family homes', 'Construction and value-add deals', 'Government-backed loans only'],
+            correctIndex: 2,
+            explanation: 'LTC ensures the borrower has real equity in a project from day one — it\'s used when appraised value doesn\'t yet exist.',
+          },
+          {
+            question: 'If LTV supports a $3.75M loan but DSCR only supports $2.9M, what does the lender offer?',
+            options: ['$3,750,000', '$3,325,000 (the average)', '$2,900,000', 'They decline the loan'],
+            correctIndex: 2,
+            explanation: 'The binding constraint wins — whichever test produces the smaller loan amount is what the lender will offer.',
+          },
+          {
+            question: '"As-stabilized value" in appraisal means:',
+            options: ['The current market value', 'The projected value after renovation and lease-up', 'The bank\'s internal assessed value', 'Replacement cost of the building'],
+            correctIndex: 1,
+            explanation: 'As-stabilized value allows lenders to size a larger loan, but they typically hold back portions until improvements are verified.',
+          },
+        ],
       },
       {
         title: 'Rate Locks & Interest Rate Risk',
@@ -229,6 +561,26 @@ export const MODULES: Module[] = [
           'In rising rate environments: lock early and lock longer',
           'Float-down options provide downside protection at a cost',
           'Rate = Index + Margin for adjustable-rate products',
+        ],
+        quiz: [
+          {
+            question: 'In a rising rate environment, what lock strategy is recommended?',
+            options: ['Float as long as possible', 'Lock early and lock longer', 'Never lock — always float', 'Wait for the Federal Reserve announcement'],
+            correctIndex: 1,
+            explanation: 'When rates are trending up, locking in secures the current rate — the cost of a longer lock is far less than the cost of a rate spike.',
+          },
+          {
+            question: 'What is a float-down option?',
+            options: ['Converting a fixed rate to variable', 'A provision allowing the borrower to capture a lower rate if rates drop during the lock', 'A penalty for floating too long', 'An option to delay closing'],
+            correctIndex: 1,
+            explanation: 'Float-down options cost 0.125–0.25% but provide downside protection — you lock in protection while retaining some upside.',
+          },
+          {
+            question: 'The formula for an ARM loan rate is:',
+            options: ['Prime Rate × Margin', 'Loan Amount ÷ Term', 'Index + Margin', 'DSCR + Spread'],
+            correctIndex: 2,
+            explanation: 'The index (SOFR, Prime, Treasury) floats with the market; the margin is fixed by the lender at origination.',
+          },
         ],
       },
       {
@@ -241,6 +593,26 @@ export const MODULES: Module[] = [
           'Private lenders are individuals — more flexible, found through networks',
           'DSCR loans: qualify on property income only, no tax returns',
         ],
+        quiz: [
+          {
+            question: 'Hard money loans are primarily underwritten based on:',
+            options: ['Borrower credit score', 'Borrower income and employment', 'The property\'s After Repair Value (ARV)', 'The borrower\'s net worth'],
+            correctIndex: 2,
+            explanation: 'Hard money is asset-based lending — the deal must make sense on paper even if the borrower has no credit history.',
+          },
+          {
+            question: 'What does ARV stand for?',
+            options: ['Annual Rental Value', 'After Repair Value', 'Adjusted Real Value', 'Asset Replacement Value'],
+            correctIndex: 1,
+            explanation: 'ARV is the projected market value after all renovations are complete — it\'s the ceiling for hard money loan sizing.',
+          },
+          {
+            question: 'DSCR non-QM loans qualify borrowers based on:',
+            options: ['W-2 income only', 'Property cash flow — no tax returns required', '3 years of bank statements', '2 years of self-employment income'],
+            correctIndex: 1,
+            explanation: 'DSCR loans are ideal for investors with complex income structures — the property pays for itself in the underwriting model.',
+          },
+        ],
       },
       {
         title: 'Conventional, FHA & VA',
@@ -251,6 +623,26 @@ export const MODULES: Module[] = [
           'VA: 0% down, no PMI, best rate for eligible veterans',
           'Conventional: best rate for 680+ credit with 20%+ down',
           'Jumbo requires stronger reserves and lower DTI than conforming',
+        ],
+        quiz: [
+          {
+            question: 'When should a veteran always explore VA loans?',
+            options: ['Only if they have poor credit', 'Before considering any other loan type — 0% down, no PMI', 'Only for second homes', 'After being declined by conventional lenders'],
+            correctIndex: 1,
+            explanation: 'VA loans offer the best combination of rate, terms, and down payment for eligible veterans — always check VA eligibility first.',
+          },
+          {
+            question: 'FHA\'s annual MIP for 30-year loans with less than 10% down:',
+            options: ['Can be cancelled at 80% LTV', 'Is permanent for the life of the loan', 'Expires after 5 years', 'Is not required for first-time buyers'],
+            correctIndex: 1,
+            explanation: 'Unlike PMI, FHA MIP on loans with <10% down is permanent — refinancing into conventional once you have 20% equity is the common strategy.',
+          },
+          {
+            question: 'Jumbo loans (above conforming limits) typically require:',
+            options: ['Lower credit scores than conforming', 'Government backing', 'Higher credit scores, larger down payments, and more reserves', 'FHA insurance'],
+            correctIndex: 2,
+            explanation: 'Without government backing, jumbo lenders manage their own risk — stricter guidelines reflect the larger loan amounts at stake.',
+          },
         ],
       },
       {
@@ -263,6 +655,26 @@ export const MODULES: Module[] = [
           '2-1 buydown: 2% lower year 1, 1% lower year 2 — seller often pays',
           'Point break-even: point cost ÷ monthly savings = payback months',
         ],
+        quiz: [
+          {
+            question: 'A 5/1 ARM means the rate is fixed for:',
+            options: ['1 year, then adjusts every 5 years', '5 years, then adjusts annually', '5 months, then adjusts monthly', '5% rate plus one origination point'],
+            correctIndex: 1,
+            explanation: 'The first number is always the fixed period in years; the second is the adjustment frequency in years after that.',
+          },
+          {
+            question: 'In a 2-1 buydown, what is the rate in Year 2?',
+            options: ['2% below note rate', 'At the full note rate', '1% below note rate', 'It adjusts to market rate'],
+            correctIndex: 2,
+            explanation: '2-1 buydown: Year 1 is 2% below, Year 2 is 1% below, Year 3+ is at the full note rate.',
+          },
+          {
+            question: 'How do you calculate the break-even period for paying discount points?',
+            options: ['Multiply points by monthly payment', 'Divide point cost by monthly payment savings', 'Add points to the rate', 'Divide monthly savings by the loan amount'],
+            correctIndex: 1,
+            explanation: 'Break-even = total point cost ÷ monthly savings. If you plan to keep the loan longer than the break-even period, points make sense.',
+          },
+        ],
       },
       {
         title: 'Borrower Qualification',
@@ -273,6 +685,26 @@ export const MODULES: Module[] = [
           'Self-employed income: 2-year average of Schedule C net — deductions reduce qualifying',
           'Source and season all down payment/closing cost funds — 60 days bank statements',
           'Middle FICO score used; 43-50% max back-end DTI',
+        ],
+        quiz: [
+          {
+            question: 'What are the 4 Cs of mortgage underwriting?',
+            options: ['Cash, Credit, Collateral, Construction', 'Capacity, Capital, Collateral, Credit', 'Cost, Credit, Cash, Compliance', 'Coverage, Capacity, Cash, Closing'],
+            correctIndex: 1,
+            explanation: 'Every mortgage is underwritten through these four lenses — weakness in any C can disqualify or limit the loan.',
+          },
+          {
+            question: 'How is self-employed income typically calculated for mortgage qualification?',
+            options: ['Current year\'s gross revenue', '2-year average of Schedule C net income', 'The higher of the last 2 years\' income', 'Gross income before deductions'],
+            correctIndex: 1,
+            explanation: 'Lenders use net Schedule C income — the same deductions that reduce your taxes also reduce your qualifying income.',
+          },
+          {
+            question: 'What is the minimum bank statement seasoning period for down payment funds?',
+            options: ['30 days', '60 days', '90 days', '6 months'],
+            correctIndex: 1,
+            explanation: '60 days of bank statements is the standard — large unexplained recent deposits will require a paper trail.',
+          },
         ],
       },
       {
@@ -285,6 +717,26 @@ export const MODULES: Module[] = [
           'Appraisal low value: renegotiate price, challenge appraisal, or switch lenders',
           'Final VOE required within 10 days of closing — verify employment is still active',
         ],
+        quiz: [
+          {
+            question: 'Under TRID, when must the Closing Disclosure be delivered to the borrower?',
+            options: ['At least 1 business day before closing', 'At closing', 'At least 3 business days before closing', '7 days before closing'],
+            correctIndex: 2,
+            explanation: 'The 3-business-day waiting period after the CD is mandatory — changes to APR >0.125% restart the clock.',
+          },
+          {
+            question: 'What should borrowers NEVER do during the loan process?',
+            options: ['Submit additional income documentation', 'Open new credit accounts or make large purchases', 'Provide updated bank statements', 'Verify employment information'],
+            correctIndex: 1,
+            explanation: 'New debt or large deposits can disqualify a loan that was already approved — coach borrowers to freeze all financial activity until after closing.',
+          },
+          {
+            question: 'When must the final Verbal Verification of Employment (VOE) be completed?',
+            options: ['At the time of application', '30 days before closing', 'Within 10 days of closing', 'On the day of closing'],
+            correctIndex: 2,
+            explanation: 'A final VOE within 10 days confirms the borrower is still employed — losing a job before closing would require new underwriting.',
+          },
+        ],
       },
     ],
   },
@@ -295,6 +747,7 @@ export const MODULES: Module[] = [
     icon: 'trending-up-outline',
     color: '#9B59B6',
     tiers: ['pro', 'elite'],
+    creditHours: 7,
     lessons: [
       {
         title: 'SOI System',
@@ -305,6 +758,26 @@ export const MODULES: Module[] = [
           '33-touch program: 12 market updates + 4 seasonal cards + personal calls',
           'A+ contacts refer actively — nurture them weekly',
           'Client events create natural annual reconnection with entire database',
+        ],
+        quiz: [
+          {
+            question: 'How many contacts should a well-built Sphere of Influence (SOI) include?',
+            options: ['20–50', '50–100', '200–500', '1,000+'],
+            correctIndex: 2,
+            explanation: '200–500 contacts gives you enough depth to generate consistent referrals while staying manageable for personal outreach.',
+          },
+          {
+            question: 'The 33-touch program includes how many monthly market updates per year?',
+            options: ['4', '6', '12', '24'],
+            correctIndex: 2,
+            explanation: '12 monthly market updates (one per month) keep you top of mind as a market expert throughout the year.',
+          },
+          {
+            question: 'An A+ contact in your SOI is someone who:',
+            options: ['You\'ve met recently', 'Actively refers you — nurture intensely', 'Is ready to transact in 90 days', 'Is a past client from 5+ years ago'],
+            correctIndex: 1,
+            explanation: 'A+ contacts are your highest-value relationship asset — they generate business without being asked. Protect and nurture these relationships weekly.',
+          },
         ],
       },
       {
@@ -317,6 +790,26 @@ export const MODULES: Module[] = [
           'Automate birthdays, anniversaries, and monthly market reports',
           '3-30-3: 3 min after each call, 30 min daily pipeline review, 3 hr monthly audit',
         ],
+        quiz: [
+          {
+            question: 'What is the most important factor in CRM effectiveness?',
+            options: ['The software brand you choose', 'How many contacts are loaded', 'Using it consistently every day', 'Having automation set up'],
+            correctIndex: 2,
+            explanation: 'A simple CRM used every day beats a sophisticated one used sporadically — discipline is the differentiator.',
+          },
+          {
+            question: 'The "3-30-3" CRM rule means:',
+            options: ['3 calls per day, 30 contacts per week, 3 meetings per month', '3 min after each interaction, 30 min daily pipeline review, 3 hr monthly audit', '3% response rate, 30-day follow-up, 3 closings per month', '3 texts, 30 emails, 3 calls per lead'],
+            correctIndex: 1,
+            explanation: 'The 3-30-3 rhythm keeps your database current and your pipeline visible — small consistent habits prevent lost opportunities.',
+          },
+          {
+            question: 'Which tag categories should every CRM contact have?',
+            options: ['Transaction type and deal size', 'SOI, past client, active buyer/seller, investor, referral partner', 'Income level and credit score', 'State and zip code only'],
+            correctIndex: 1,
+            explanation: 'Status-based tags allow you to target communication precisely — sending the wrong message to the wrong person wastes both parties\' time.',
+          },
+        ],
       },
       {
         title: 'Social Media & Video Strategy',
@@ -327,6 +820,26 @@ export const MODULES: Module[] = [
           '4 content pillars: Market Education, Local Life, Client Stories, Behind-the-Scenes',
           'First 3 seconds must hook the viewer — lead with the topic',
           '1-3-1 system: 1 YouTube video → 3 clips → 1 blog post',
+        ],
+        quiz: [
+          {
+            question: 'Which platform generates the most long-term search traffic for real estate content?',
+            options: ['TikTok', 'Instagram', 'YouTube', 'Snapchat'],
+            correctIndex: 2,
+            explanation: 'YouTube videos rank on Google — a neighborhood tour from 3 years ago can still drive leads today.',
+          },
+          {
+            question: 'What is the "1-3-1" content system?',
+            options: ['1 listing, 3 tours, 1 closing per week', '1 YouTube video → 3 short clips → 1 blog post', '1 photo, 3 captions, 1 hashtag per day', '1 post per day on 3 different platforms'],
+            correctIndex: 1,
+            explanation: 'The 1-3-1 system maximizes content output from minimum effort — one production session creates a week of content across platforms.',
+          },
+          {
+            question: 'What are the four content pillars for real estate social media?',
+            options: ['Listings, Prices, Events, Team', 'Market Education, Local Life, Client Stories, Behind the Scenes', 'Buyers, Sellers, Investors, Renters', 'Home Tours, Tips, Stats, Giveaways'],
+            correctIndex: 1,
+            explanation: 'Rotating through these four pillars builds authority, relatability, trust, and human connection — the ingredients of a referral-generating brand.',
+          },
         ],
       },
       {
@@ -339,6 +852,26 @@ export const MODULES: Module[] = [
           'Farming ROI takes 12-24 months — commit fully or skip it',
           'Combine physical (mail, door knocks) and digital (geo-targeted ads) farming',
         ],
+        quiz: [
+          {
+            question: 'What is the ideal size of a geographic farm?',
+            options: ['50–100 homes', '100–200 homes', '200–500 homes', '1,000+ homes'],
+            correctIndex: 2,
+            explanation: '200–500 homes is manageable for one agent while generating enough transaction volume to justify the marketing investment.',
+          },
+          {
+            question: 'What annual turnover rate makes a farm economically viable?',
+            options: ['1–2%', '3–4%', '5–8%+', '10–15%'],
+            correctIndex: 2,
+            explanation: 'At 5–8% turnover, a 300-home farm generates 15–24 potential transactions annually — enough to build a meaningful business.',
+          },
+          {
+            question: 'How long does geographic farming typically take to generate consistent returns?',
+            options: ['1–3 months', '6–9 months', '12–24 months', '3–5 years'],
+            correctIndex: 2,
+            explanation: 'Consistency over 12–24 months is what separates successful farmers from those who quit too early — the market needs to know and trust you first.',
+          },
+        ],
       },
       {
         title: 'Team Building',
@@ -349,6 +882,26 @@ export const MODULES: Module[] = [
           'You keep listings — it\'s your highest leverage activity',
           'Buyer agents: 40-60% of their commissions, 90-day ramp with minimum targets',
           'Agents leave for culture, not splits — invest in weekly meetings and mentorship',
+        ],
+        quiz: [
+          {
+            question: 'At what GCI level should most agents consider building a team?',
+            options: ['$50,000+', '$100,000+', '$200,000+', '$500,000+'],
+            correctIndex: 2,
+            explanation: 'At $200K+ GCI you have the revenue to cover team overhead while still profiting — building earlier risks underfunding the team\'s growth.',
+          },
+          {
+            question: 'What is typically the first hire for a growing real estate team?',
+            options: ['Administrative assistant', 'Transaction coordinator', 'Buyer\'s agent', 'Marketing manager'],
+            correctIndex: 2,
+            explanation: 'A buyer\'s agent allows you to focus on your highest-leverage activity (listings) while team production scales.',
+          },
+          {
+            question: 'What percentage of commissions do buyer agents on a team typically receive?',
+            options: ['20–30%', '40–60%', '70–80%', '90–100%'],
+            correctIndex: 1,
+            explanation: '40–60% is the market standard — the team leader provides lead generation, systems, and mentorship in exchange for the commission split.',
+          },
         ],
       },
       {
@@ -361,6 +914,26 @@ export const MODULES: Module[] = [
           'Evaluate real cost of splits — better tools often beat higher percentages',
           'Ask about lead gen: provided vs. self-generated changes the calculus entirely',
         ],
+        quiz: [
+          {
+            question: 'In a "cap model" brokerage, what happens after the agent reaches their annual cap?',
+            options: ['They earn 50% of commissions', 'They stop earning commissions until next year', 'They keep 100% of commissions for the rest of the year', 'Their split decreases to 30%'],
+            correctIndex: 2,
+            explanation: 'The cap model rewards high producers — once you\'ve paid your annual fee, every subsequent commission is yours entirely.',
+          },
+          {
+            question: 'For new agents, what matters most when selecting a brokerage?',
+            options: ['Highest commission split', 'Training, mentorship, and accessible support', 'The most recognizable brand', 'Technology and lead generation'],
+            correctIndex: 1,
+            explanation: 'A new agent who learns the business properly is worth far more in year 3 than one who had a high split in year 1 with no coaching.',
+          },
+          {
+            question: 'An agent at 70% with 20 closings vs. 60% with 28 closings — which earns more?',
+            options: ['The 70% agent (14 deal-equivalents)', 'The 60% agent (16.8 deal-equivalents)', 'They earn the same', 'Cannot be determined without knowing commission amounts'],
+            correctIndex: 1,
+            explanation: 'Better tools and training that generate more volume often outperform higher splits — count deal-equivalents, not split percentages.',
+          },
+        ],
       },
     ],
   },
@@ -371,6 +944,7 @@ export const MODULES: Module[] = [
     icon: 'trending-up-outline',
     color: '#E35D5D',
     tiers: ['pro', 'elite'],
+    creditHours: 8,
     lessons: [
       {
         title: 'BRRRR Strategy',
@@ -381,6 +955,26 @@ export const MODULES: Module[] = [
           'Refinance at 75% LTV should recover most or all invested capital',
           'Add 20% contingency to all rehab budgets — always',
           'Property must be stabilized (6-12 months tenancy) before cash-out refi',
+        ],
+        quiz: [
+          {
+            question: 'What does BRRRR stand for?',
+            options: ['Build, Renovate, Rent, Refinance, Repeat', 'Buy, Rehab, Rent, Refinance, Repeat', 'Buy, Renovate, Resell, Refinance, Return', 'Build, Rent, Rehab, Refinance, Return'],
+            correctIndex: 1,
+            explanation: 'BRRRR is a wealth-building cycle that recycles the same capital across multiple properties — the goal is to pull out most or all of your invested cash.',
+          },
+          {
+            question: 'What should the all-in cost (purchase + rehab) be relative to ARV?',
+            options: ['50–60% of ARV', '75–80% of ARV', '90–95% of ARV', 'Equal to ARV'],
+            correctIndex: 1,
+            explanation: 'At 75–80% of ARV, a 75% LTV refinance recovers most of your invested capital — the margin is your profit and safety buffer.',
+          },
+          {
+            question: 'How long should a property typically be stabilized before a BRRRR cash-out refinance?',
+            options: ['Immediately after renovation', '30 days', '3 months', '6–12 months'],
+            correctIndex: 3,
+            explanation: 'Most lenders require 6–12 months of seasoned tenancy before allowing a cash-out refinance — rushing this step can disqualify the loan.',
+          },
         ],
       },
       {
@@ -393,6 +987,26 @@ export const MODULES: Module[] = [
           'Management fee (8-12%) and reserves ($300-800/unit) must be included',
           'Model both as-is and as-stabilized NOI for value-add deals',
         ],
+        quiz: [
+          {
+            question: 'In multifamily underwriting, should you use current rents or market rents for GPI?',
+            options: ['Current rents — what the property actually earns today', 'Market rents — you\'re buying the property\'s potential', 'An average of current and market rents', 'Rents from 2 years ago for trending purposes'],
+            correctIndex: 1,
+            explanation: 'You\'re buying the asset\'s income potential, not its current under-market performance — underwriting to market rents shows the true opportunity.',
+          },
+          {
+            question: 'What percentage of EGI should operating expenses represent for a stabilized multifamily?',
+            options: ['10–20%', '20–30%', '35–50%', '60–70%'],
+            correctIndex: 2,
+            explanation: 'If a seller shows operating expenses below 35% of EGI, they\'re almost certainly excluding management fees or reserves — red flag.',
+          },
+          {
+            question: 'If a seller shows a 15% expense ratio on a multifamily, what should you suspect?',
+            options: ['Exceptional management', 'Management fees and reserves are not being included', 'No maintenance needed', 'The seller is being overly conservative'],
+            correctIndex: 1,
+            explanation: 'A 15% expense ratio is nearly impossible for a real property — management (8–12%) alone would exceed that. Always underwrite your own expenses.',
+          },
+        ],
       },
       {
         title: 'Market Selection',
@@ -403,6 +1017,26 @@ export const MODULES: Module[] = [
           'Single-industry markets have boom/bust cycles — avoid or hedge carefully',
           'Landlord-friendly laws (TX, FL) reduce operational risk vs. regulated markets',
           'Cash flow vs. appreciation: hold both for stability + wealth building',
+        ],
+        quiz: [
+          {
+            question: 'What annual population growth rate is considered strong for real estate investment?',
+            options: ['Less than 0.1%', '0.1–0.5%', 'Greater than 1%', 'Greater than 5%'],
+            correctIndex: 2,
+            explanation: 'The US average is ~0.5% — markets growing at >1% annually have above-average demand that supports rent growth and appreciation.',
+          },
+          {
+            question: 'Why are single-industry markets (Detroit, Houston) considered higher risk?',
+            options: ['Too many properties available', 'Unfavorable landlord laws', 'Vulnerable to industry cycles — boom and bust', 'Higher insurance costs'],
+            correctIndex: 2,
+            explanation: 'When one industry dominates, job losses in that sector create vacancy waves across the entire market — diversified economies are far more resilient.',
+          },
+          {
+            question: 'Midwest and South markets are generally characterized as:',
+            options: ['Appreciation markets with low cap rates', 'Cash flow markets with higher cap rates and less appreciation', 'Markets with no rental demand', 'Suitable only for commercial investing'],
+            correctIndex: 1,
+            explanation: 'Savvy investors hold cash flow markets for stability and income while holding coastal appreciation markets for long-term wealth building.',
+          },
         ],
       },
       {
@@ -415,6 +1049,26 @@ export const MODULES: Module[] = [
           'MLS: 60+ day stale listings often signal motivated sellers',
           'Speed wins deals — analyze in 10 minutes, offer within 24 hours',
         ],
+        quiz: [
+          {
+            question: 'What is "driving for dollars"?',
+            options: ['Driving for Uber to fund investments', 'Driving neighborhoods to identify distressed properties by their outward appearance', 'A direct mail marketing method', 'Using a vehicle to transport cash to closings'],
+            correctIndex: 1,
+            explanation: 'Visible distress (overgrown yards, tarps, boarded windows) signals a potentially motivated seller — skip trace the owner and make contact.',
+          },
+          {
+            question: 'What is the typical response rate for direct mail targeting motivated sellers?',
+            options: ['10–20%', '5–10%', '0.5–2%', 'Less than 0.1%'],
+            correctIndex: 2,
+            explanation: 'Plan for 1,000+ mailers per deal at 0.5–2% response — the economics work because you\'re buying at a steep discount.',
+          },
+          {
+            question: 'For MLS deal sourcing, which listings often indicate a motivated seller?',
+            options: ['New listings at full asking price', 'Open house listings', '60+ day stale listings or price-reduced properties', 'Luxury properties above $1M'],
+            correctIndex: 2,
+            explanation: 'Days on market and price reductions signal motivation — the longer a property sits, the more willing the seller becomes.',
+          },
+        ],
       },
       {
         title: 'Property Management',
@@ -425,6 +1079,26 @@ export const MODULES: Module[] = [
           'Tenant screening: 620+ credit, 3× income, no evictions',
           'Apply screening criteria consistently — Fair Housing compliance',
           'Preventive maintenance saves 10x the cost of deferred repairs',
+        ],
+        quiz: [
+          {
+            question: 'When should you strongly consider hiring a professional property manager?',
+            options: ['1–2 properties within 10 miles', '3–4 properties within 20 miles', '5+ properties or out-of-state', '10+ properties or outside the country'],
+            correctIndex: 2,
+            explanation: 'At 5+ properties, self-management becomes a full-time job — a PM at 8–12% of rents frees you to find and close more deals.',
+          },
+          {
+            question: 'What is the standard income-to-rent ratio for tenant screening?',
+            options: ['2× monthly rent', '3× monthly rent', '5× monthly rent', '10× monthly rent'],
+            correctIndex: 1,
+            explanation: '3× gross monthly income provides enough cushion to ensure the tenant can pay rent and still meet other living expenses.',
+          },
+          {
+            question: 'Fair Housing Act compliance requires:',
+            options: ['Accepting all applicants regardless of income', 'Applying screening criteria consistently to all applicants', 'Prioritizing veterans and elderly applicants', 'Removing all screening criteria'],
+            correctIndex: 1,
+            explanation: 'You can have strict screening standards — you just must apply them uniformly regardless of protected class characteristics.',
+          },
         ],
       },
       {
@@ -437,6 +1111,26 @@ export const MODULES: Module[] = [
           '1031: defer all gains by reinvesting in like-kind property within 180 days',
           'Long-term hold >1 year gets preferred capital gains rates',
         ],
+        quiz: [
+          {
+            question: 'Which exit strategy defers capital gains taxes by rolling proceeds into a like-kind property?',
+            options: ['Owner financing', 'Cash-out refinance', '1031 exchange', 'Retail sale on MLS'],
+            correctIndex: 2,
+            explanation: '1031 exchanges defer ALL taxes — gains, depreciation recapture, and state taxes — by reinvesting into qualifying replacement properties.',
+          },
+          {
+            question: 'Assets held less than 1 year are taxed at:',
+            options: ['0–20% long-term capital gains rate', 'Short-term capital gains rate (ordinary income rates)', '25% depreciation recapture rate', 'No tax if reinvested within 6 months'],
+            correctIndex: 1,
+            explanation: 'Short-term gains are taxed as ordinary income — which can be 37% for high earners. Holding past 12 months to qualify for LTCG rates is almost always worth it.',
+          },
+          {
+            question: 'A cash-out refinance is advantageous because:',
+            options: ['It sells the property for maximum value', 'It extracts equity tax-free while retaining ownership', 'It eliminates capital gains taxes permanently', 'It is faster than a 1031 exchange'],
+            correctIndex: 1,
+            explanation: 'Borrowed money is not taxable income — a cash-out refi lets you access equity for reinvestment without triggering a taxable event.',
+          },
+        ],
       },
     ],
   },
@@ -447,6 +1141,7 @@ export const MODULES: Module[] = [
     icon: 'git-network-outline',
     color: '#E6A23C',
     tiers: ['elite'],
+    creditHours: 10,
     lessons: [
       {
         title: 'Creative Financing Overview',
@@ -457,6 +1152,26 @@ export const MODULES: Module[] = [
           'Due-on-sale clause risk: mitigated by keeping loans current',
           'Lease option: control the asset, lock in price, test the deal',
           'Most sophisticated deals layer multiple financing sources',
+        ],
+        quiz: [
+          {
+            question: 'In a "Subject-To" purchase, what happens to the existing mortgage?',
+            options: ['It is paid off at closing', 'It is assumed by the buyer with bank approval', 'The loan stays in place; title transfers but the seller\'s name remains on the mortgage', 'It is converted to lease payments'],
+            correctIndex: 2,
+            explanation: 'Subject-to is a creative way to acquire property with existing financing — no bank approval needed, but the seller remains liable on the mortgage.',
+          },
+          {
+            question: 'The primary risk of a Subject-To purchase is:',
+            options: ['The seller could change the locks', 'The lender could invoke the due-on-sale clause and demand full payoff', 'Title cannot be transferred', 'The interest rate increases automatically'],
+            correctIndex: 1,
+            explanation: 'The due-on-sale clause technically gives lenders the right to demand full payoff on sale — in practice, lenders rarely exercise this if payments remain current.',
+          },
+          {
+            question: 'A lease option gives the buyer:',
+            options: ['Ownership immediately upon signing', 'A long-term land lease with an option to build', 'Control of the asset with a right to purchase at a set price within a set timeframe', 'A government-backed purchase option'],
+            correctIndex: 2,
+            explanation: 'Lease options let investors control and test an asset before committing to full purchase — the option fee is the price of that flexibility.',
+          },
         ],
       },
       {
@@ -469,6 +1184,26 @@ export const MODULES: Module[] = [
           'Always use a professional loan servicer — don\'t collect payments directly',
           'Dodd-Frank limits seller financing to 3 deals/year without MLO licensing',
         ],
+        quiz: [
+          {
+            question: 'What is the primary tax benefit of seller financing for the seller?',
+            options: ['Eliminates all capital gains taxes', 'Spreads capital gains over time via installment sale reporting', 'Creates a tax deduction for the seller', 'Avoids depreciation recapture entirely'],
+            correctIndex: 1,
+            explanation: 'Installment sales report gain only as principal is received — a powerful tax deferral strategy for sellers with significant appreciation.',
+          },
+          {
+            question: 'In a wrap-around mortgage, the seller:',
+            options: ['Pays off the existing mortgage first', 'Receives interest at a higher rate and continues paying the original mortgage at its lower rate', 'Transfers the mortgage to the buyer directly', 'Requires the buyer to refinance immediately'],
+            correctIndex: 1,
+            explanation: 'The spread between the wrap rate and the underlying mortgage rate is the seller\'s profit — they arbitrage their own cheap financing.',
+          },
+          {
+            question: 'Dodd-Frank limits seller financing without MLO licensing to:',
+            options: ['1 transaction per year', '3 transactions per year', '5 transactions per year', '10 transactions per year'],
+            correctIndex: 1,
+            explanation: 'Sellers who do more than 3 seller-financed deals per year are considered mortgage originators under Dodd-Frank and must be licensed.',
+          },
+        ],
       },
       {
         title: 'Joint Ventures',
@@ -479,6 +1214,26 @@ export const MODULES: Module[] = [
           'Preferred return (8-10%) is paid first, then remaining profits split',
           'Operating Agreement is mandatory — never proceed without one',
           'Vet partners through references and start small before scaling',
+        ],
+        quiz: [
+          {
+            question: 'What does a "preferred return" mean in a joint venture?',
+            options: ['The money partner gets to choose the property', 'The money partner receives a set return first before profits are split with the operator', 'The operator earns a higher percentage than normal', 'Profits are paid monthly regardless of performance'],
+            correctIndex: 1,
+            explanation: 'A preferred return (8–10%) protects the passive capital partner by ensuring they\'re made whole before profits are shared.',
+          },
+          {
+            question: 'Why is an Operating Agreement critical in a JV?',
+            options: ['Required by banks for financing', 'It defines ownership, decision-making, capital requirements, waterfall, and exit provisions', 'It replaces the need for title insurance', 'It enforces verbal agreements'],
+            correctIndex: 1,
+            explanation: 'Partnerships fail when expectations aren\'t written down — the Operating Agreement prevents disputes before they start.',
+          },
+          {
+            question: 'How should you vet a JV partner before investing?',
+            options: ['Ask about their experience only', 'Check references, review financial capacity, start small before scaling', 'Require their credit score only', 'JV partners cannot be effectively vetted in advance'],
+            correctIndex: 1,
+            explanation: 'The cost of a bad partner is not just financial — disputes can tie up assets in litigation for years. References and a small test deal are essential.',
+          },
         ],
       },
       {
@@ -491,6 +1246,26 @@ export const MODULES: Module[] = [
           'Waterfall: LP capital return → preferred return → remaining split',
           'Sponsor earns 1-2% acquisition fee + ongoing asset management fee',
         ],
+        quiz: [
+          {
+            question: 'In a syndication, who is the General Partner (GP)?',
+            options: ['The passive investor who provides capital', 'A government licensing body', 'The sponsor who finds deals, raises capital, and manages the asset', 'The senior lender'],
+            correctIndex: 2,
+            explanation: 'The GP drives the deal — they earn acquisition fees, asset management fees, and a promote (share of profits) for their active role.',
+          },
+          {
+            question: 'SEC Regulation D 506(c) allows:',
+            options: ['Non-accredited investors to participate with full disclosure', 'Public advertising of the offering but only accredited investors may invest', 'Unlimited investors without SEC registration', 'Syndications under $5M without any SEC filings'],
+            correctIndex: 1,
+            explanation: '506(c) is the modern fundraising tool — social media and advertising are permitted, but investor verification is required for all participants.',
+          },
+          {
+            question: 'What is the "waterfall" in a real estate syndication?',
+            options: ['The construction schedule', 'The order in which profits are distributed: LP capital return → preferred return → remaining split', 'The minimum investment threshold', 'The process of reporting to the SEC'],
+            correctIndex: 1,
+            explanation: 'The waterfall determines who gets paid in what order — LPs are protected first, then the GP earns their promote on remaining upside.',
+          },
+        ],
       },
       {
         title: 'Distressed Asset Acquisition',
@@ -501,6 +1276,26 @@ export const MODULES: Module[] = [
           'Short sales: 30-120 day lender approval timeline — patience required',
           'REO: sold as-is, no disclosures — factor unknown defects into price',
           'Tax deed: research all liens first — title insurance may be unavailable',
+        ],
+        quiz: [
+          {
+            question: 'In a short sale, what determines the acceptable sale price?',
+            options: ['The buyer\'s offer alone', 'The seller\'s remaining mortgage balance', 'A Broker Price Opinion (BPO) commissioned by the lender', 'The county tax assessment'],
+            correctIndex: 2,
+            explanation: 'The lender orders a BPO to establish minimum acceptable proceeds — the BPO value is the floor, and negotiating below it requires a hardship justification.',
+          },
+          {
+            question: 'REO (bank-owned) properties are sold:',
+            options: ['With full seller disclosures and warranties', 'As-is, with no seller disclosures, by the foreclosing bank', 'Through normal MLS with buyer contingencies', 'Only to investors with cash'],
+            correctIndex: 1,
+            explanation: 'Banks have never occupied the property and disclaim all knowledge — as-is pricing must reflect unknown defects.',
+          },
+          {
+            question: 'Tax deed sales present what key risk?',
+            options: ['Properties cannot be renovated', 'Zoning restrictions apply', 'Title may not be clear and title insurance is often unavailable', 'Properties must be owner-occupied'],
+            correctIndex: 2,
+            explanation: 'A tax deed conveys the right to the property but not necessarily clear title — other liens may remain and title insurance companies often won\'t insure them.',
+          },
         ],
       },
       {
@@ -513,20 +1308,71 @@ export const MODULES: Module[] = [
           'Target absentee owners, high-equity, and probate filings for direct mail',
           'Reputation = deal flow: every clean close generates future opportunities',
         ],
+        quiz: [
+          {
+            question: 'Which attorney network is most valuable for consistent off-market deal flow?',
+            options: ['Real estate transaction attorneys', 'Estate/probate and divorce attorneys who regularly handle real estate', 'Eviction attorneys', 'Patent attorneys'],
+            correctIndex: 1,
+            explanation: 'Estate and divorce attorneys handle distressed real estate situations regularly and can refer deals to reliable investors — build these relationships proactively.',
+          },
+          {
+            question: 'For direct mail targeting, which list typically yields the most motivated sellers?',
+            options: ['All homeowners in a zip code', 'Recent home buyers', 'Absentee owners, high-equity holders, probate filings, and expired listings', 'Homeowners who\'ve lived in the home less than 2 years'],
+            correctIndex: 2,
+            explanation: 'These groups have a motivated reason to sell — absentees want passive income, high-equity owners can sell at a discount and still profit, probates need to liquidate.',
+          },
+          {
+            question: 'What is the primary long-term source of off-market deal flow?',
+            options: ['Direct mail campaigns', 'Door knocking', 'Reputation — every clean, professional close generates future deal flow', 'Social media advertising'],
+            correctIndex: 2,
+            explanation: 'In real estate networks, word travels fast — being known as reliable, fast, and fair is the most durable and cost-effective deal source.',
+          },
+        ],
       },
     ],
   },
 ];
 
-export const MODULE_TIER_ACCESS: Record<string, string[]> = {
+// Avenue IDs map directly to module IDs
+export const ALL_AVENUE_IDS = MODULES.map(m => m.id);
+
+// Legacy tier fallback (used for platform roles like loan_officer, investor, etc.)
+export const LEGACY_TIER_ACCESS: Record<string, string[]> = {
   starter: ['residential', 'mortgage'],
   pro: ['residential', 'commercial', 'mortgage', 'realtor_growth', 'investing'],
   elite: ['residential', 'commercial', 'mortgage', 'realtor_growth', 'investing', 'deal_structuring'],
   lending: ['residential', 'mortgage'],
 };
 
-export function canAccessModule(tier: string | null, moduleId: string): boolean {
-  if (!tier) return false;
-  const allowed = MODULE_TIER_ACCESS[tier] || [];
-  return allowed.includes(moduleId);
+export const AVENUE_PRICES: Record<string, number> = {
+  residential: 49,
+  commercial: 49,
+  mortgage: 49,
+  realtor_growth: 49,
+  investing: 49,
+  deal_structuring: 79,
+};
+
+export const ALL_ACCESS_PRICE = 149;
+
+/**
+ * Determine if a user can access a module based on the new avenue model.
+ * - chosen_avenue: the one free avenue selected at onboarding
+ * - unlocked_avenues: additional avenues unlocked via payment
+ * - legacy_tier: fallback for platform users who predate the avenue model
+ */
+export function canAccessModule(
+  chosenAvenue: string | null,
+  unlockedAvenues: string[],
+  moduleId: string,
+  legacyTier?: string | null,
+): boolean {
+  if (chosenAvenue === moduleId) return true;
+  if (unlockedAvenues.includes(moduleId)) return true;
+  // Legacy tier support for platform-role users
+  if (legacyTier) {
+    const legacyAllowed = LEGACY_TIER_ACCESS[legacyTier] || [];
+    if (legacyAllowed.includes(moduleId)) return true;
+  }
+  return false;
 }

@@ -66,6 +66,45 @@ class TrainingJob(db.Model):
         return f"<TrainingJob id={self.id} type={self.job_type} status={self.status}>"
 
 
+class UserAvenueUnlock(db.Model):
+    """Tracks which avenues a user has paid to unlock beyond their free chosen avenue."""
+    __tablename__ = "user_avenue_unlocks"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    avenue_id = db.Column(db.String(50), nullable=False)       # module id: residential, commercial, mortgage, etc.
+    stripe_payment_id = db.Column(db.String(255), nullable=True)
+    unlocked_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'avenue_id', name='uq_user_avenue'),
+    )
+
+    def __repr__(self):
+        return f"<UserAvenueUnlock user={self.user_id} avenue={self.avenue_id}>"
+
+
+class AcademyLessonScore(db.Model):
+    """Tracks quiz scores for individual lessons."""
+    __tablename__ = "academy_lesson_scores"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    module_id = db.Column(db.String(50), nullable=False)
+    lesson_index = db.Column(db.Integer, nullable=False)
+    score = db.Column(db.Integer, nullable=False)              # 0-100 percentage
+    attempts = db.Column(db.Integer, default=1, nullable=False)
+    passed = db.Column(db.Boolean, default=False, nullable=False)
+    completed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'module_id', 'lesson_index', name='uq_user_lesson_score'),
+    )
+
+    def __repr__(self):
+        return f"<AcademyLessonScore user={self.user_id} module={self.module_id} lesson={self.lesson_index} score={self.score}>"
+
+
 class AcademyLessonProgress(db.Model):
     """Tracks which lessons a user has completed in Ravlo Academy."""
     __tablename__ = "academy_lesson_progress"

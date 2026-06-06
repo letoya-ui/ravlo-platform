@@ -1,17 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
 import { useProgressStore } from '../store/progressStore';
 import { MODULES } from '../data/modules';
+import { useAuthStore } from '../store/authStore';
 
 export default function ModuleDetailScreen({ route, navigation }: any) {
   const { moduleId } = route.params;
   const module = MODULES.find(m => m.id === moduleId);
   const { isComplete, moduleProgress, load, loaded } = useProgressStore();
+  const { user } = useAuthStore();
+  const [showCertificate, setShowCertificate] = useState(false);
 
   useEffect(() => {
     if (!loaded) load();
@@ -80,10 +83,15 @@ export default function ModuleDetailScreen({ route, navigation }: any) {
           </TouchableOpacity>
         )}
         {progress === 100 && (
-          <View style={[styles.completedBanner]}>
-            <Ionicons name="trophy-outline" size={18} color={Colors.success} />
-            <Text style={styles.completedText}>Module Complete!</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.completedBanner}
+            onPress={() => setShowCertificate(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="ribbon-outline" size={18} color={Colors.success} />
+            <Text style={styles.completedText}>Avenue Complete — View Certificate</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.success} />
+          </TouchableOpacity>
         )}
 
         {/* Lessons List */}
@@ -112,6 +120,43 @@ export default function ModuleDetailScreen({ route, navigation }: any) {
           );
         })}
       </ScrollView>
+
+      {/* Certificate Modal */}
+      <Modal visible={showCertificate} transparent animationType="fade">
+        <View style={styles.certOverlay}>
+          <View style={styles.certCard}>
+            <TouchableOpacity style={styles.certClose} onPress={() => setShowCertificate(false)}>
+              <Ionicons name="close" size={22} color={Colors.textMuted} />
+            </TouchableOpacity>
+
+            <View style={[styles.certIcon, { backgroundColor: module!.color + '22' }]}>
+              <Ionicons name="ribbon" size={36} color={module!.color} />
+            </View>
+
+            <Text style={styles.certLabel}>CERTIFICATE OF COMPLETION</Text>
+            <Text style={styles.certName}>{user?.full_name || 'Learner'}</Text>
+            <Text style={styles.certHas}>has successfully completed</Text>
+            <Text style={[styles.certModule, { color: module!.color }]}>{module!.title}</Text>
+            <Text style={styles.certDetails}>
+              {module!.lessons.length} lessons · {module!.creditHours} credit hours
+            </Text>
+            <Text style={styles.certDate}>Ravlo Academy · {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
+
+            <TouchableOpacity
+              style={[styles.certShareBtn, { backgroundColor: module!.color }]}
+              onPress={() => {
+                Share.share({
+                  message: `I just completed ${module!.title} on Ravlo Academy! ${module!.creditHours} credit hours earned. #RavloAcademy`,
+                });
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="share-outline" size={16} color={Colors.white} />
+              <Text style={styles.certShareText}>Share Achievement</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -185,4 +230,26 @@ const styles = StyleSheet.create({
   lessonTitle: { ...Typography.bodySmall, color: Colors.textPrimary, fontWeight: '600' },
   lessonTitleDone: { color: Colors.textMuted, textDecorationLine: 'line-through' },
   lessonDuration: { ...Typography.caption, color: Colors.textMuted, marginTop: 2 },
+
+  // Certificate modal
+  certOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: Spacing.xl,
+  },
+  certCard: {
+    backgroundColor: Colors.surface, borderRadius: Radii.lg, padding: Spacing.xl,
+    width: '100%', alignItems: 'center', borderWidth: 1, borderColor: Colors.border,
+  },
+  certClose: { position: 'absolute', top: Spacing.md, right: Spacing.md, padding: 4 },
+  certIcon: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.md },
+  certLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1.5, color: Colors.textMuted, marginBottom: Spacing.md },
+  certName: { ...Typography.h2, color: Colors.textPrimary, textAlign: 'center', marginBottom: 4 },
+  certHas: { ...Typography.body, color: Colors.textMuted, marginBottom: 4 },
+  certModule: { ...Typography.h3, textAlign: 'center', marginBottom: 4 },
+  certDetails: { ...Typography.caption, color: Colors.textMuted, marginBottom: 4 },
+  certDate: { ...Typography.caption, color: Colors.textMuted, marginBottom: Spacing.lg },
+  certShareBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    paddingHorizontal: Spacing.xl, paddingVertical: 12, borderRadius: Radii.md,
+  },
+  certShareText: { ...Typography.bodySmall, color: Colors.white, fontWeight: '700' },
 });
