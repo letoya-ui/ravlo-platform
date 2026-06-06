@@ -7,38 +7,38 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
 import { useAuthStore } from '../store/authStore';
 import { useProgressStore } from '../store/progressStore';
-import { MODULES, canAccessModule } from '../data/modules';
+import { COURSES, canAccessCourse } from '../data/modules';
 
 export default function LearnScreen({ navigation }: any) {
   const { user } = useAuthStore();
   const { load, loaded, moduleProgress } = useProgressStore();
-  const chosenAvenue = user?.chosen_avenue || null;
-  const unlockedAvenues = user?.unlocked_avenues || [];
+  const chosenCourse = user?.chosen_course || null;
+  const unlockedCourses = user?.unlocked_courses || [];
   const legacyTier = user?.university_tier || null;
 
   useEffect(() => {
     if (!loaded) load();
   }, []);
 
-  const accessibleModules = MODULES.filter(
-    m => canAccessModule(chosenAvenue, unlockedAvenues, m.id, legacyTier)
+  const accessibleCourses = COURSES.filter(
+    m => canAccessCourse(chosenCourse, unlockedCourses, m.id, legacyTier)
   );
-  const lockedModules = MODULES.filter(
-    m => !canAccessModule(chosenAvenue, unlockedAvenues, m.id, legacyTier)
+  const lockedCourseList = COURSES.filter(
+    m => !canAccessCourse(chosenCourse, unlockedCourses, m.id, legacyTier)
   );
 
-  const totalLessons = accessibleModules.reduce((acc, m) => acc + m.lessons.length, 0);
+  const totalLessons = accessibleCourses.reduce((acc, m) => acc + m.lessons.length, 0);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Academy</Text>
-          <Text style={styles.subtitle}>{accessibleModules.length} avenues · {totalLessons} lessons</Text>
+          <Text style={styles.subtitle}>{accessibleCourses.length} courses · {totalLessons} lessons</Text>
         </View>
         <TouchableOpacity
           style={styles.unlockBtn}
-          onPress={() => navigation.navigate('AvenueUpgrade')}
+          onPress={() => navigation.navigate('CourseUpgrade')}
           activeOpacity={0.8}
         >
           <Ionicons name="lock-open-outline" size={14} color={Colors.blueprint} />
@@ -47,23 +47,23 @@ export default function LearnScreen({ navigation }: any) {
       </View>
 
       <FlatList
-        data={[...accessibleModules, ...lockedModules]}
+        data={[...accessibleCourses, ...lockedCourseList]}
         keyExtractor={m => m.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          accessibleModules.length === 0 ? (
+          accessibleCourses.length === 0 ? (
             <View style={styles.chooseHint}>
               <Ionicons name="arrow-down-circle-outline" size={20} color={Colors.textMuted} />
-              <Text style={styles.chooseHintText}>Choose a free avenue below to begin learning.</Text>
+              <Text style={styles.chooseHintText}>Select a course below to begin learning.</Text>
             </View>
           ) : null
         }
         renderItem={({ item }) => {
-          const accessible = canAccessModule(chosenAvenue, unlockedAvenues, item.id, legacyTier);
+          const accessible = canAccessCourse(chosenCourse, unlockedCourses, item.id, legacyTier);
           const progress = moduleProgress(item.id, item.lessons.length);
           const done = Math.round((progress / 100) * item.lessons.length);
-          const isFreeAvenue = item.id === chosenAvenue;
+          const isIncludedCourse = item.id === chosenCourse;
 
           return (
             <TouchableOpacity
@@ -72,7 +72,7 @@ export default function LearnScreen({ navigation }: any) {
                 if (accessible) {
                   navigation.navigate('ModuleDetail', { moduleId: item.id });
                 } else {
-                  navigation.navigate('AvenueUpgrade');
+                  navigation.navigate('CourseUpgrade');
                 }
               }}
               activeOpacity={accessible ? 0.75 : 0.9}
@@ -86,7 +86,7 @@ export default function LearnScreen({ navigation }: any) {
                     <Text style={[styles.cardTitle, !accessible && styles.lockedText]} numberOfLines={1}>
                       {item.title}
                     </Text>
-                    {isFreeAvenue && (
+                    {isIncludedCourse && (
                       <View style={styles.freeBadge}>
                         <Text style={styles.freeBadgeText}>INCLUDED</Text>
                       </View>
@@ -130,11 +130,11 @@ export default function LearnScreen({ navigation }: any) {
               {!accessible && (
                 <TouchableOpacity
                   style={styles.upgradeRow}
-                  onPress={() => navigation.navigate('AvenueUpgrade')}
+                  onPress={() => navigation.navigate('CourseUpgrade')}
                   activeOpacity={0.7}
                 >
                   <Ionicons name="flash-outline" size={12} color={Colors.blueprint} />
-                  <Text style={styles.upgradeText}>Tap to unlock this avenue</Text>
+                  <Text style={styles.upgradeText}>Tap to enroll in this course</Text>
                 </TouchableOpacity>
               )}
             </TouchableOpacity>

@@ -5,33 +5,32 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
-import { MODULES, AVENUE_PRICES, ALL_ACCESS_PRICE, canAccessModule } from '../data/modules';
+import { COURSES, COURSE_PRICES, ALL_ACCESS_PRICE, canAccessCourse } from '../data/modules';
 import { useAuthStore } from '../store/authStore';
 
-export default function AvenueUpgradeScreen({ navigation }: any) {
+export default function CourseUpgradeScreen({ navigation }: any) {
   const { user } = useAuthStore();
-  const chosenAvenue = user?.chosen_avenue || null;
-  const unlockedAvenues = user?.unlocked_avenues || [];
+  const chosenCourse = user?.chosen_course || null;
+  const unlockedCourses = user?.unlocked_courses || [];
   const legacyTier = user?.university_tier || null;
 
-  const lockedModules = MODULES.filter(
-    m => !canAccessModule(chosenAvenue, unlockedAvenues, m.id, legacyTier)
+  const lockedCourses = COURSES.filter(
+    m => !canAccessCourse(chosenCourse, unlockedCourses, m.id, legacyTier)
   );
-  const unlockedModules = MODULES.filter(
-    m => canAccessModule(chosenAvenue, unlockedAvenues, m.id, legacyTier)
+  const unlockedCourseList = COURSES.filter(
+    m => canAccessCourse(chosenCourse, unlockedCourses, m.id, legacyTier)
   );
 
-  const handlePurchase = (moduleId: string, moduleTitle: string, price: number) => {
+  const handlePurchase = (courseId: string, courseTitle: string, price: number) => {
     Alert.alert(
-      `Unlock ${moduleTitle}`,
+      `Enroll in ${courseTitle}`,
       `Get full access to all lessons, quizzes, and your certificate for $${price}/month.\n\nYou'll be taken to our secure checkout.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: `Unlock for $${price}/mo`,
+          text: `Enroll for $${price}/mo`,
           onPress: () => {
-            // TODO: integrate Stripe checkout URL with user email and module as metadata
-            Alert.alert('Coming Soon', 'Stripe checkout integration is being set up. Contact support to unlock this avenue.');
+            Alert.alert('Coming Soon', 'Stripe checkout integration is being set up. Contact support to enroll in this course.');
           },
         },
       ]
@@ -40,14 +39,14 @@ export default function AvenueUpgradeScreen({ navigation }: any) {
 
   const handleAllAccess = () => {
     Alert.alert(
-      'All Access — All 8 Avenues',
-      `Get unlimited access to every avenue, lesson, and certificate for $${ALL_ACCESS_PRICE}/month. Save over 50% vs. buying individually.`,
+      'All Access — All 8 Courses',
+      `Get unlimited access to every course, lesson, and certificate for $${ALL_ACCESS_PRICE}/month. Save over 50% vs. enrolling individually.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: `Get All Access — $${ALL_ACCESS_PRICE}/mo`,
           onPress: () => {
-            Alert.alert('Coming Soon', 'Stripe checkout integration is being set up. Contact support to unlock all avenues.');
+            Alert.alert('Coming Soon', 'Stripe checkout integration is being set up. Contact support to unlock all courses.');
           },
         },
       ]
@@ -60,7 +59,7 @@ export default function AvenueUpgradeScreen({ navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.navTitle}>Unlock More Avenues</Text>
+        <Text style={styles.navTitle}>Enroll in More Courses</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -73,7 +72,7 @@ export default function AvenueUpgradeScreen({ navigation }: any) {
               <Text style={styles.starText}>BEST VALUE</Text>
             </View>
             <Text style={styles.allAccessTitle}>All Access Pass</Text>
-            <Text style={styles.allAccessDesc}>Every avenue, every lesson, every certificate. Accreditation-ready curriculum.</Text>
+            <Text style={styles.allAccessDesc}>Every course, every lesson, every certificate. Accreditation-ready curriculum.</Text>
             <View style={styles.allAccessMeta}>
               <Ionicons name="book-outline" size={13} color={Colors.white} />
               <Text style={styles.allAccessMetaText}>8 avenues · 60+ lessons · 78 credit hours</Text>
@@ -86,22 +85,22 @@ export default function AvenueUpgradeScreen({ navigation }: any) {
         </View>
 
         {/* Current Access */}
-        {unlockedModules.length > 0 && (
+        {unlockedCourseList.length > 0 && (
           <>
             <Text style={styles.sectionLabel}>YOUR ACCESS</Text>
-            {unlockedModules.map(module => (
-              <View key={module.id} style={styles.unlockedCard}>
-                <View style={[styles.iconBox, { backgroundColor: module.color + '22' }]}>
-                  <Ionicons name={module.icon as any} size={20} color={module.color} />
+            {unlockedCourseList.map(course => (
+              <View key={course.id} style={styles.unlockedCard}>
+                <View style={[styles.iconBox, { backgroundColor: course.color + '22' }]}>
+                  <Ionicons name={course.icon as any} size={20} color={course.color} />
                 </View>
                 <View style={styles.cardInfo}>
-                  <Text style={styles.cardTitle}>{module.title}</Text>
-                  <Text style={styles.cardMeta}>{module.lessons.length} lessons · {module.creditHours} credit hrs</Text>
+                  <Text style={styles.cardTitle}>{course.title}</Text>
+                  <Text style={styles.cardMeta}>{course.lessons.length} lessons · {course.creditHours} credit hrs</Text>
                 </View>
                 <View style={styles.accessBadge}>
                   <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
                   <Text style={styles.accessBadgeText}>
-                    {module.id === chosenAvenue ? 'Included' : 'Unlocked'}
+                    {course.id === chosenCourse ? 'Included' : 'Enrolled'}
                   </Text>
                 </View>
               </View>
@@ -110,36 +109,36 @@ export default function AvenueUpgradeScreen({ navigation }: any) {
         )}
 
         {/* Locked Avenues */}
-        {lockedModules.length > 0 && (
+        {lockedCourses.length > 0 && (
           <>
             <Text style={styles.sectionLabel}>UNLOCK MORE</Text>
-            {lockedModules.map(module => (
-              <View key={module.id} style={styles.lockedCard}>
-                <View style={[styles.iconBox, { backgroundColor: module.color + '18' }]}>
-                  <Ionicons name={module.icon as any} size={20} color={module.color} />
+            {lockedCourses.map(course => (
+              <View key={course.id} style={styles.lockedCard}>
+                <View style={[styles.iconBox, { backgroundColor: course.color + '18' }]}>
+                  <Ionicons name={course.icon as any} size={20} color={course.color} />
                 </View>
                 <View style={styles.cardInfo}>
-                  <Text style={styles.cardTitle}>{module.title}</Text>
-                  <Text style={styles.cardDesc} numberOfLines={2}>{module.description}</Text>
-                  <Text style={styles.cardMeta}>{module.lessons.length} lessons · {module.creditHours} credit hrs</Text>
+                  <Text style={styles.cardTitle}>{course.title}</Text>
+                  <Text style={styles.cardDesc} numberOfLines={2}>{course.description}</Text>
+                  <Text style={styles.cardMeta}>{course.lessons.length} lessons · {course.creditHours} credit hrs</Text>
                 </View>
                 <TouchableOpacity
-                  style={[styles.unlockBtn, { backgroundColor: module.color }]}
-                  onPress={() => handlePurchase(module.id, module.title, AVENUE_PRICES[module.id] || 49)}
+                  style={[styles.unlockBtn, { backgroundColor: course.color }]}
+                  onPress={() => handlePurchase(course.id, course.title, COURSE_PRICES[course.id] || 49)}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.unlockBtnText}>${AVENUE_PRICES[module.id] || 49}/mo</Text>
+                  <Text style={styles.unlockBtnText}>${COURSE_PRICES[course.id] || 49}/mo</Text>
                 </TouchableOpacity>
               </View>
             ))}
           </>
         )}
 
-        {lockedModules.length === 0 && (
+        {lockedCourses.length === 0 && (
           <View style={styles.allUnlocked}>
             <Ionicons name="trophy-outline" size={40} color={Colors.success} />
             <Text style={styles.allUnlockedTitle}>You have All Access!</Text>
-            <Text style={styles.allUnlockedText}>Every avenue and lesson in Ravlo Academy is open to you.</Text>
+            <Text style={styles.allUnlockedText}>Every course and lesson in Ravlo Academy is open to you.</Text>
           </View>
         )}
 

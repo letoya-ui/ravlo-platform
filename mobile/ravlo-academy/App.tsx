@@ -21,8 +21,8 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import RavloAIScreen from './src/screens/RavloAIScreen';
 import BusinessPlanScreen from './src/screens/BusinessPlanScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
-import AvenueSelectionScreen from './src/screens/onboarding/AvenueSelectionScreen';
-import AvenueUpgradeScreen from './src/screens/AvenueUpgradeScreen';
+import CourseSelectionScreen from './src/screens/onboarding/CourseSelectionScreen';
+import CourseUpgradeScreen from './src/screens/CourseUpgradeScreen';
 
 const Tab = createBottomTabNavigator();
 const LearnStack = createStackNavigator();
@@ -41,7 +41,7 @@ function LearnNavigator() {
       <LearnStack.Screen name="LearnHome" component={LearnScreen} />
       <LearnStack.Screen name="ModuleDetail" component={ModuleDetailScreen} />
       <LearnStack.Screen name="Lesson" component={LessonScreen} />
-      <LearnStack.Screen name="AvenueUpgrade" component={AvenueUpgradeScreen} />
+      <LearnStack.Screen name="CourseUpgrade" component={CourseUpgradeScreen} />
     </LearnStack.Navigator>
   );
 }
@@ -86,7 +86,7 @@ function MainTabs() {
 export default function App() {
   const { token, user, loadToken } = useAuthStore();
   const [onboardingDone, setOnboardingDone] = React.useState<boolean | null>(null);
-  const [avenueSelected, setAvenueSelected] = React.useState<boolean>(false);
+  const [courseSelected, setCourseSelected] = React.useState<boolean>(false);
 
   useEffect(() => {
     const init = async () => {
@@ -131,9 +131,9 @@ export default function App() {
               </RootStack.Screen>
             ) : !token ? (
               <RootStack.Screen name="Login" component={LoginScreen} />
-            ) : !user?.chosen_avenue && !avenueSelected ? (
-              <RootStack.Screen name="AvenueSelection">
-                {() => <AvenueSelectionScreen onDone={() => setAvenueSelected(true)} />}
+            ) : !user?.chosen_course && !courseSelected ? (
+              <RootStack.Screen name="CourseSelection">
+                {() => <CourseSelectionScreen onDone={() => setCourseSelected(true)} />}
               </RootStack.Screen>
             ) : (
               <RootStack.Screen name="Main" component={MainTabs} />

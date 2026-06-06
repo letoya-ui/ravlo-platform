@@ -7,13 +7,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
 import { useAuthStore } from '../store/authStore';
 import { useProgressStore } from '../store/progressStore';
-import { MODULES, canAccessModule } from '../data/modules';
+import { COURSES, canAccessCourse } from '../data/modules';
 
 export default function ProgressScreen({ navigation }: any) {
   const { user } = useAuthStore();
   const { load, loaded, completed, moduleProgress } = useProgressStore();
   const [refreshing, setRefreshing] = React.useState(false);
-  const tier = user?.university_tier || null;
+  const chosenCourse = user?.chosen_course || null;
+  const unlockedCourses = user?.unlocked_courses || [];
+  const legacyTier = user?.university_tier || null;
 
   useEffect(() => {
     if (!loaded) load();
@@ -25,7 +27,7 @@ export default function ProgressScreen({ navigation }: any) {
     setRefreshing(false);
   }, []);
 
-  const accessibleModules = MODULES.filter(m => canAccessModule(tier, m.id));
+  const accessibleModules = COURSES.filter(m => canAccessCourse(chosenCourse, unlockedCourses, m.id, legacyTier));
   const totalLessons = accessibleModules.reduce((a, m) => a + m.lessons.length, 0);
   const totalCompleted = completed.filter(c =>
     accessibleModules.some(m => m.id === c.module_id)
@@ -65,13 +67,13 @@ export default function ProgressScreen({ navigation }: any) {
           <View style={styles.progressBarBg}>
             <View style={[styles.progressBarFill, { width: `${overallPct}%` }]} />
           </View>
-          <Text style={styles.overallSub}>{totalCompleted} of {totalLessons} lessons across {accessibleModules.length} modules</Text>
+          <Text style={styles.overallSub}>{totalCompleted} of {totalLessons} lessons across {accessibleModules.length} courses</Text>
         </View>
 
         {/* Per-module breakdown */}
-        <Text style={styles.sectionTitle}>Module Breakdown</Text>
-        {MODULES.map(m => {
-          const accessible = canAccessModule(tier, m.id);
+        <Text style={styles.sectionTitle}>Course Breakdown</Text>
+        {COURSES.map(m => {
+          const accessible = canAccessCourse(chosenCourse, unlockedCourses, m.id, legacyTier);
           const p = moduleProgress(m.id, m.lessons.length);
           const doneLessons = Math.round((p / 100) * m.lessons.length);
 
@@ -89,7 +91,7 @@ export default function ProgressScreen({ navigation }: any) {
                 <View style={styles.moduleInfo}>
                   <Text style={[styles.moduleTitle, !accessible && styles.lockedTitle]}>{m.title}</Text>
                   <Text style={styles.moduleSub}>
-                    {accessible ? `${doneLessons}/${m.lessons.length} lessons` : 'Locked — upgrade to access'}
+                    {accessible ? `${doneLessons}/${m.lessons.length} lessons` : 'Not enrolled — choose a course to access'}
                   </Text>
                 </View>
                 {accessible ? (

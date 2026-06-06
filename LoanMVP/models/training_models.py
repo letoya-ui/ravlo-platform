@@ -66,22 +66,22 @@ class TrainingJob(db.Model):
         return f"<TrainingJob id={self.id} type={self.job_type} status={self.status}>"
 
 
-class UserAvenueUnlock(db.Model):
-    """Tracks which avenues a user has paid to unlock beyond their free chosen avenue."""
-    __tablename__ = "user_avenue_unlocks"
+class UserCourseUnlock(db.Model):
+    """Tracks which courses a user has enrolled in beyond their subscription-included course."""
+    __tablename__ = "user_course_unlocks"
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
-    avenue_id = db.Column(db.String(50), nullable=False)       # module id: residential, commercial, mortgage, etc.
+    course_id = db.Column(db.String(50), nullable=False)       # course id: residential, commercial, mortgage, etc.
     stripe_payment_id = db.Column(db.String(255), nullable=True)
     unlocked_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     __table_args__ = (
-        db.UniqueConstraint('user_id', 'avenue_id', name='uq_user_avenue'),
+        db.UniqueConstraint('user_id', 'course_id', name='uq_user_course'),
     )
 
     def __repr__(self):
-        return f"<UserAvenueUnlock user={self.user_id} avenue={self.avenue_id}>"
+        return f"<UserCourseUnlock user={self.user_id} course={self.course_id}>"
 
 
 class AcademyLessonScore(db.Model):

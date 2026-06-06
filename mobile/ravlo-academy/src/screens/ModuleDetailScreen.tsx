@@ -6,12 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
 import { useProgressStore } from '../store/progressStore';
-import { MODULES } from '../data/modules';
+import { COURSES } from '../data/modules';
 import { useAuthStore } from '../store/authStore';
 
 export default function ModuleDetailScreen({ route, navigation }: any) {
   const { moduleId } = route.params;
-  const module = MODULES.find(m => m.id === moduleId);
+  const course = COURSES.find(m => m.id === moduleId);
   const { isComplete, moduleProgress, load, loaded } = useProgressStore();
   const { user } = useAuthStore();
   const [showCertificate, setShowCertificate] = useState(false);
@@ -20,7 +20,7 @@ export default function ModuleDetailScreen({ route, navigation }: any) {
     if (!loaded) load();
   }, []);
 
-  if (!module) {
+  if (!course) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
@@ -30,10 +30,10 @@ export default function ModuleDetailScreen({ route, navigation }: any) {
     );
   }
 
-  const progress = moduleProgress(module.id, module.lessons.length);
-  const doneLessons = Math.round((progress / 100) * module.lessons.length);
+  const progress = moduleProgress(course.id, course.lessons.length);
+  const doneLessons = Math.round((progress / 100) * course.lessons.length);
 
-  const firstIncomplete = module.lessons.findIndex((_, i) => !isComplete(module.id, i));
+  const firstIncomplete = course.lessons.findIndex((_, i) => !isComplete(course.id, i));
   const continueIndex = firstIncomplete === -1 ? 0 : firstIncomplete;
 
   return (
@@ -42,38 +42,38 @@ export default function ModuleDetailScreen({ route, navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.navTitle} numberOfLines={1}>{module.title}</Text>
+        <Text style={styles.navTitle} numberOfLines={1}>{course.title}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Module Header */}
         <View style={styles.headerCard}>
-          <View style={[styles.moduleIcon, { backgroundColor: module.color + '22' }]}>
-            <Ionicons name={module.icon as any} size={28} color={module.color} />
+          <View style={[styles.moduleIcon, { backgroundColor: course.color + '22' }]}>
+            <Ionicons name={course.icon as any} size={28} color={course.color} />
           </View>
-          <Text style={styles.moduleTitle}>{module.title}</Text>
-          <Text style={styles.moduleDesc}>{module.description}</Text>
+          <Text style={styles.moduleTitle}>{course.title}</Text>
+          <Text style={styles.moduleDesc}>{course.description}</Text>
 
           <View style={styles.statsRow}>
-            <StatChip icon="book-outline" label={`${module.lessons.length} lessons`} color={module.color} />
+            <StatChip icon="book-outline" label={`${course.lessons.length} lessons`} color={course.color} />
             <StatChip icon="checkmark-circle-outline" label={`${doneLessons} complete`} color={Colors.success} />
-            <StatChip icon="time-outline" label={getTotalDuration(module.lessons)} color={Colors.info} />
+            <StatChip icon="time-outline" label={getTotalDuration(course.lessons)} color={Colors.info} />
           </View>
 
           <View style={styles.progressSection}>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: module.color }]} />
+              <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: course.color }]} />
             </View>
-            <Text style={[styles.progressPct, { color: module.color }]}>{progress}%</Text>
+            <Text style={[styles.progressPct, { color: course.color }]}>{progress}%</Text>
           </View>
         </View>
 
         {/* Continue Button */}
         {progress < 100 && (
           <TouchableOpacity
-            style={[styles.continueBtn, { backgroundColor: module.color }]}
-            onPress={() => navigation.navigate('Lesson', { moduleId: module.id, lessonIndex: continueIndex })}
+            style={[styles.continueBtn, { backgroundColor: course.color }]}
+            onPress={() => navigation.navigate('Lesson', { moduleId: course.id, lessonIndex: continueIndex })}
             activeOpacity={0.85}
           >
             <Ionicons name="play-circle-outline" size={20} color={Colors.white} />
@@ -89,20 +89,20 @@ export default function ModuleDetailScreen({ route, navigation }: any) {
             activeOpacity={0.8}
           >
             <Ionicons name="ribbon-outline" size={18} color={Colors.success} />
-            <Text style={styles.completedText}>Avenue Complete — View Certificate</Text>
+            <Text style={styles.completedText}>Course Complete — View Certificate</Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.success} />
           </TouchableOpacity>
         )}
 
         {/* Lessons List */}
         <Text style={styles.sectionTitle}>Lessons</Text>
-        {module.lessons.map((lesson, index) => {
-          const complete = isComplete(module.id, index);
+        {course.lessons.map((lesson, index) => {
+          const complete = isComplete(course.id, index);
           return (
             <TouchableOpacity
               key={index}
               style={styles.lessonRow}
-              onPress={() => navigation.navigate('Lesson', { moduleId: module.id, lessonIndex: index })}
+              onPress={() => navigation.navigate('Lesson', { moduleId: course.id, lessonIndex: index })}
               activeOpacity={0.75}
             >
               <View style={[styles.lessonNum, complete && { backgroundColor: Colors.success + '22', borderColor: Colors.success }]}>
@@ -129,24 +129,24 @@ export default function ModuleDetailScreen({ route, navigation }: any) {
               <Ionicons name="close" size={22} color={Colors.textMuted} />
             </TouchableOpacity>
 
-            <View style={[styles.certIcon, { backgroundColor: module!.color + '22' }]}>
-              <Ionicons name="ribbon" size={36} color={module!.color} />
+            <View style={[styles.certIcon, { backgroundColor: course!.color + '22' }]}>
+              <Ionicons name="ribbon" size={36} color={course!.color} />
             </View>
 
             <Text style={styles.certLabel}>CERTIFICATE OF COMPLETION</Text>
             <Text style={styles.certName}>{user?.full_name || 'Learner'}</Text>
             <Text style={styles.certHas}>has successfully completed</Text>
-            <Text style={[styles.certModule, { color: module!.color }]}>{module!.title}</Text>
+            <Text style={[styles.certModule, { color: course!.color }]}>{course!.title}</Text>
             <Text style={styles.certDetails}>
-              {module!.lessons.length} lessons · {module!.creditHours} credit hours
+              {course!.lessons.length} lessons · {course!.creditHours} credit hours
             </Text>
             <Text style={styles.certDate}>Ravlo Academy · {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
 
             <TouchableOpacity
-              style={[styles.certShareBtn, { backgroundColor: module!.color }]}
+              style={[styles.certShareBtn, { backgroundColor: course!.color }]}
               onPress={() => {
                 Share.share({
-                  message: `I just completed ${module!.title} on Ravlo Academy! ${module!.creditHours} credit hours earned. #RavloAcademy`,
+                  message: `I just completed ${course!.title} on Ravlo Academy! ${course!.creditHours} credit hours earned. #RavloAcademy`,
                 });
               }}
               activeOpacity={0.85}

@@ -6,14 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
 import { useProgressStore } from '../store/progressStore';
-import { MODULES, QuizQuestion } from '../data/modules';
+import { COURSES, QuizQuestion } from '../data/modules';
 import { api } from '../services/api';
 
 type QuizState = 'idle' | 'active' | 'passed' | 'failed';
 
 export default function LessonScreen({ route, navigation }: any) {
   const { moduleId, lessonIndex } = route.params;
-  const module = MODULES.find(m => m.id === moduleId);
+  const course = COURSES.find(m => m.id === moduleId);
   const { isComplete, markComplete, markIncomplete } = useProgressStore();
   const [marking, setMarking] = useState(false);
 
@@ -24,7 +24,7 @@ export default function LessonScreen({ route, navigation }: any) {
   const [selected, setSelected] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
 
-  if (!module) {
+  if (!course) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
@@ -34,10 +34,10 @@ export default function LessonScreen({ route, navigation }: any) {
     );
   }
 
-  const lesson = module.lessons[lessonIndex];
+  const lesson = course.lessons[lessonIndex];
   const complete = isComplete(moduleId, lessonIndex);
   const hasPrev = lessonIndex > 0;
-  const hasNext = lessonIndex < module.lessons.length - 1;
+  const hasNext = lessonIndex < course.lessons.length - 1;
   const quiz = lesson.quiz || [];
 
   const handleToggle = async () => {
@@ -239,7 +239,7 @@ export default function LessonScreen({ route, navigation }: any) {
 
         {showFeedback && (
           <TouchableOpacity
-            style={[styles.nextQBtn, { backgroundColor: module.color }]}
+            style={[styles.nextQBtn, { backgroundColor: course.color }]}
             onPress={handleNextQuestion}
             activeOpacity={0.85}
           >
@@ -260,15 +260,15 @@ export default function LessonScreen({ route, navigation }: any) {
           <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.navCenter}>
-          <Text style={styles.navModule} numberOfLines={1}>{module.title}</Text>
-          <Text style={styles.navLesson}>{lessonIndex + 1} of {module.lessons.length}</Text>
+          <Text style={styles.navModule} numberOfLines={1}>{course.title}</Text>
+          <Text style={styles.navLesson}>{lessonIndex + 1} of {course.lessons.length}</Text>
         </View>
         <View style={{ width: 40 }} />
       </View>
 
       {/* Progress dots */}
       <View style={styles.dotsRow}>
-        {module.lessons.map((_, i) => (
+        {course.lessons.map((_, i) => (
           <View
             key={i}
             style={[
@@ -282,7 +282,7 @@ export default function LessonScreen({ route, navigation }: any) {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Lesson header */}
-        <View style={[styles.lessonHeader, { borderLeftColor: module.color }]}>
+        <View style={[styles.lessonHeader, { borderLeftColor: course.color }]}>
           <Text style={styles.lessonTitle}>{lesson.title}</Text>
           <View style={styles.lessonMeta}>
             <Ionicons name="time-outline" size={12} color={Colors.textMuted} />
@@ -316,7 +316,7 @@ export default function LessonScreen({ route, navigation }: any) {
             <View style={styles.keyPointsCard}>
               {lesson.keyPoints.map((point, i) => (
                 <View key={i} style={[styles.keyPointRow, i < lesson.keyPoints.length - 1 && styles.keyPointBorder]}>
-                  <View style={[styles.keyPointDot, { backgroundColor: module.color }]} />
+                  <View style={[styles.keyPointDot, { backgroundColor: course.color }]} />
                   <Text style={styles.keyPointText}>{point}</Text>
                 </View>
               ))}
@@ -338,7 +338,7 @@ export default function LessonScreen({ route, navigation }: any) {
             <Ionicons
               name={complete ? 'checkmark-circle' : (quiz.length > 0 && !complete ? 'help-circle-outline' : 'checkmark-circle-outline')}
               size={20}
-              color={complete ? Colors.white : module.color}
+              color={complete ? Colors.white : course.color}
             />
             <Text style={[styles.completeBtnText, complete && styles.completeBtnTextDone]}>
               {complete ? 'Marked Complete' : quiz.length > 0 ? 'Take Quiz to Complete' : 'Mark as Complete'}
@@ -361,7 +361,7 @@ export default function LessonScreen({ route, navigation }: any) {
             ) : <View style={{ flex: 1 }} />}
 
             <TouchableOpacity
-              style={[styles.navBtnNext, { backgroundColor: module.color }]}
+              style={[styles.navBtnNext, { backgroundColor: course.color }]}
               onPress={handleNext}
               activeOpacity={0.85}
             >

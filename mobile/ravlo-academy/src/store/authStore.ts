@@ -13,8 +13,8 @@ interface User {
   role: string;
   subscription: string;
   university_tier: string | null;
-  chosen_avenue: string | null;
-  unlocked_avenues: string[];
+  chosen_course: string | null;
+  unlocked_courses: string[];
   onboarding_complete: boolean;
 }
 
@@ -32,7 +32,7 @@ interface AuthState {
   enableBiometric: () => Promise<void>;
   disableBiometric: () => Promise<void>;
   authenticateWithBiometric: () => Promise<boolean>;
-  setChosenAvenue: (avenueId: string) => void;
+  setChosenCourse: (courseId: string) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -176,9 +176,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user: null, token: null });
   },
 
-  setChosenAvenue: (avenueId: string) => {
+  setChosenCourse: (courseId: string) => {
     set(state => ({
-      user: state.user ? { ...state.user, chosen_avenue: avenueId } : state.user,
+      user: state.user ? { ...state.user, chosen_course: courseId } : state.user,
     }));
   },
 }));
