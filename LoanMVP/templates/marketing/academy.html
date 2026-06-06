@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Ravlo Academy | AI-Powered Real Estate Education</title>
-<meta name="description" content="AI-powered coaching for realtors, investors, and lenders. Personalized success plans, loan education, and one-on-one AI coaching — built inside the Ravlo ecosystem."/>
+<title>Ravlo Academy | Real Estate Education &amp; Professional Certification</title>
+<meta name="description" content="Structured real estate courses with lessons, quizzes, and certificates. 8 professional courses, 68 lessons, 78 credit hours — built for accreditation. AI coaching included."/>
 <link rel="canonical" href="https://ravlohq.com/academy"/>
-<meta property="og:title" content="Ravlo Academy | AI-Powered Real Estate Education"/>
-<meta property="og:description" content="AI coaching for realtors, investors, and lenders. Get a personalized business plan, master loans, and grow your real estate career with Ravlo Academy."/>
+<meta property="og:title" content="Ravlo Academy | Real Estate Education &amp; Professional Certification"/>
+<meta property="og:description" content="8 professional courses. 68 lessons. 78 credit hours. Quizzes, certificates, and AI coaching — built for realtors, lenders, investors, underwriters, and construction professionals."/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,7 +41,7 @@
   .hero h1 { font-family: var(--serif); font-size: clamp(60px, 10vw, 110px); font-weight: 300; line-height: 0.92; margin-bottom: 8px; letter-spacing: -3px; position: relative; z-index: 1; }
   .hero h1 span { display: block; }
   .hero h1 .accent { color: var(--gold); font-weight: 700; font-style: italic; }
-  .hero-sub { font-size: clamp(15px, 2vw, 18px); color: var(--muted); max-width: 580px; line-height: 1.75; margin: 36px auto 52px; font-weight: 300; position: relative; z-index: 1; }
+  .hero-sub { font-size: clamp(15px, 2vw, 18px); color: var(--muted); max-width: 620px; line-height: 1.75; margin: 36px auto 52px; font-weight: 300; position: relative; z-index: 1; }
   .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; position: relative; z-index: 1; }
   .btn-primary { padding: 16px 44px; border-radius: 8px; border: none; background: linear-gradient(135deg, #D4AF6A, #9A7A3A); color: #080808; font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: 1px; font-family: var(--sans); text-decoration: none; display: inline-block; transition: transform 0.2s, box-shadow 0.2s; }
   .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(212,175,106,0.25); }
@@ -49,7 +49,7 @@
   .btn-outline:hover { background: var(--gold-dim); border-color: rgba(212,175,106,0.5); }
 
   /* STATS */
-  .stats { display: flex; gap: 64px; justify-content: center; flex-wrap: wrap; margin-top: 80px; position: relative; z-index: 1; }
+  .stats { display: flex; gap: 56px; justify-content: center; flex-wrap: wrap; margin-top: 80px; position: relative; z-index: 1; }
   .stat { text-align: center; }
   .stat-num { font-family: var(--serif); font-size: 44px; font-weight: 700; color: var(--gold); line-height: 1; }
   .stat-label { font-size: 11px; color: var(--faint); letter-spacing: 2px; text-transform: uppercase; margin-top: 6px; }
@@ -73,6 +73,23 @@
   .audience-perks li { font-size: 13px; color: #A09888; display: flex; gap: 8px; align-items: flex-start; }
   .audience-perks li::before { content: '✓'; color: var(--gold); flex-shrink: 0; margin-top: 1px; }
 
+  /* HOW A COURSE WORKS */
+  .course-structure { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 48px; }
+  .course-step { padding: 28px 22px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); text-align: center; position: relative; }
+  .course-step-num { font-family: var(--serif); font-size: 11px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 16px; }
+  .course-step-icon { font-size: 28px; margin-bottom: 14px; }
+  .course-step h4 { font-family: var(--serif); font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .course-step p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .course-step-connector { position: absolute; right: -8px; top: 50%; transform: translateY(-50%); color: var(--faint); font-size: 18px; z-index: 1; }
+
+  /* ACCREDITATION BANNER */
+  .accred-banner { margin-top: 48px; padding: 36px 44px; border-radius: 14px; border: 1px solid var(--gold-border); background: var(--gold-dim); display: flex; align-items: center; gap: 32px; }
+  .accred-icon { font-size: 40px; flex-shrink: 0; }
+  .accred-body h4 { font-family: var(--serif); font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .accred-body p { font-size: 14px; color: var(--muted); line-height: 1.65; }
+  .accred-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .accred-pill { font-size: 11px; padding: 4px 12px; border-radius: 20px; border: 1px solid var(--gold-border); color: var(--gold); letter-spacing: 0.5px; font-weight: 600; }
+
   /* FEATURES */
   .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 48px; }
   .feature-card { padding: 28px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); display: flex; gap: 20px; align-items: flex-start; transition: all 0.2s; }
@@ -81,14 +98,27 @@
   .feature-body h4 { font-family: var(--serif); font-size: 20px; font-weight: 700; margin-bottom: 6px; }
   .feature-body p { font-size: 13px; color: var(--muted); line-height: 1.6; }
 
-  /* MODULES */
-  .modules-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 48px; }
-  .module-card { padding: 24px; border-radius: 12px; border: 1px solid; transition: all 0.2s; }
-  .module-card:hover { transform: translateY(-3px); }
-  .module-emoji { font-size: 28px; margin-bottom: 12px; }
-  .module-title { font-family: var(--serif); font-size: 18px; font-weight: 700; margin-bottom: 6px; }
-  .module-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
-  .module-lessons { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
+  /* COURSES */
+  .courses-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 48px; }
+  .course-card { padding: 22px 20px; border-radius: 12px; border: 1px solid; transition: all 0.2s; }
+  .course-card:hover { transform: translateY(-3px); }
+  .course-emoji { font-size: 26px; margin-bottom: 12px; }
+  .course-title { font-family: var(--serif); font-size: 17px; font-weight: 700; margin-bottom: 6px; line-height: 1.2; }
+  .course-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+  .course-meta { display: flex; flex-direction: column; gap: 4px; }
+  .course-meta-row { font-size: 11px; font-weight: 600; letter-spacing: 0.3px; display: flex; align-items: center; gap: 5px; }
+
+  /* CURRICULUM TABLE */
+  .curriculum-table { margin-top: 48px; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; overflow: hidden; }
+  .curriculum-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.04); align-items: center; transition: background 0.15s; }
+  .curriculum-row:hover { background: rgba(255,255,255,0.02); }
+  .curriculum-row:last-child { border-bottom: none; }
+  .curriculum-header { background: rgba(212,175,106,0.06); border-bottom: 1px solid var(--gold-border) !important; }
+  .curriculum-header span { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+  .curriculum-name { font-family: var(--serif); font-size: 16px; font-weight: 700; }
+  .curriculum-name small { display: block; font-family: var(--sans); font-size: 11px; color: var(--muted); font-weight: 400; letter-spacing: 0; margin-top: 2px; }
+  .curriculum-cell { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .curriculum-badge { display: inline-block; font-size: 10px; padding: 3px 10px; border-radius: 20px; font-weight: 700; letter-spacing: 0.5px; }
 
   /* PLAN TIERS */
   .tiers-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 48px; }
@@ -128,18 +158,29 @@
   .footer-bottom p { font-size: 12px; color: var(--faint); }
 
   /* RESPONSIVE */
+  @media (max-width: 1000px) {
+    .courses-grid { grid-template-columns: repeat(2, 1fr); }
+    .course-structure { grid-template-columns: repeat(2, 1fr); }
+    .curriculum-row { grid-template-columns: 2fr 1fr 1fr; }
+    .curriculum-row > *:nth-child(4) { display: none; }
+  }
   @media (max-width: 900px) {
     nav { padding: 16px 20px; }
     .nav-links { display: none; }
-    .audience-grid, .modules-grid, .tiers-grid { grid-template-columns: 1fr; }
+    .audience-grid, .tiers-grid { grid-template-columns: 1fr; }
     .features-grid { grid-template-columns: 1fr; }
     .biz-grid { grid-template-columns: 1fr; }
     .footer-grid { grid-template-columns: 1fr 1fr; }
     .biz-highlight { padding: 36px 24px; }
     .stats { gap: 32px; }
     section { padding: 60px 20px; }
+    .accred-banner { flex-direction: column; text-align: center; padding: 28px; }
   }
   @media (max-width: 600px) {
+    .courses-grid { grid-template-columns: 1fr; }
+    .course-structure { grid-template-columns: 1fr; }
+    .curriculum-row { grid-template-columns: 1fr 1fr; }
+    .curriculum-row > *:nth-child(3), .curriculum-row > *:nth-child(4) { display: none; }
     .footer-grid { grid-template-columns: 1fr; }
     footer { padding: 40px 20px; }
   }
@@ -160,7 +201,8 @@
     <a href="{{ url_for('marketing_home') }}">Home</a>
     <a href="{{ url_for('marketing.lending_os') }}">Lending OS</a>
     <a href="{{ url_for('marketing.partners') }}">Partners</a>
-    <a href="{{ url_for('marketing.plans') }}">Plans</a>
+    <a href="#curriculum">Curriculum</a>
+    <a href="#tiers">Plans</a>
     <a href="{{ url_for('marketing.contact') }}">Contact</a>
   </div>
   <a href="{{ url_for('university.portal') }}" class="nav-cta">Enter Academy →</a>
@@ -168,21 +210,21 @@
 
 <!-- HERO -->
 <div class="hero">
-  <div class="hero-eyebrow">Knowledge · Coaching · Growth</div>
+  <div class="hero-eyebrow">Professional Certification · AI Coaching · Accreditation Ready</div>
   <h1>
     <span>Ravlo</span>
     <span class="accent">Academy</span>
   </h1>
-  <p class="hero-sub">AI-powered education for realtors, investors, and lenders. One-on-one coaching, personalized business plans, and the loan knowledge to move faster on every deal.</p>
+  <p class="hero-sub">Eight professional courses. 68 structured lessons. Quizzes, certificates, and an AI coach — built for realtors, lenders, investors, underwriters, and construction professionals serious about their craft.</p>
   <div class="hero-actions">
-    <a href="{{ url_for('university.portal') }}" class="btn-primary">Start Learning Free</a>
-    <a href="#tiers" class="btn-outline">View Plans</a>
+    <a href="{{ url_for('university.portal') }}" class="btn-primary">Enter Academy</a>
+    <a href="#curriculum" class="btn-outline">View Curriculum</a>
   </div>
   <div class="stats">
-    <div class="stat"><div class="stat-num">6</div><div class="stat-label">Learning Modules</div></div>
-    <div class="stat"><div class="stat-num">AI</div><div class="stat-label">Powered Coaching</div></div>
-    <div class="stat"><div class="stat-num">1:1</div><div class="stat-label">Business Plans</div></div>
-    <div class="stat"><div class="stat-num">3</div><div class="stat-label">Audiences Served</div></div>
+    <div class="stat"><div class="stat-num">8</div><div class="stat-label">Courses</div></div>
+    <div class="stat"><div class="stat-num">68</div><div class="stat-label">Lessons</div></div>
+    <div class="stat"><div class="stat-num">78</div><div class="stat-label">Credit Hours</div></div>
+    <div class="stat"><div class="stat-num">AI</div><div class="stat-label">Coach Included</div></div>
   </div>
 </div>
 
@@ -192,45 +234,238 @@
 <section>
   <div class="section-eyebrow">Who Ravlo Academy Serves</div>
   <h2 class="section-title">Built for every corner of<br/><strong>real estate.</strong></h2>
-  <p class="section-desc">Whether you close deals, fund them, or help investors find them — Academy has a lane built specifically for you.</p>
+  <p class="section-desc">Whether you close deals, fund them, build them, or process them — Academy has a course built specifically for your role.</p>
   <div class="audience-grid">
     <div class="audience-card">
       <div class="audience-icon">🏠</div>
-      <div class="audience-title">Realtors</div>
-      <p class="audience-desc">Grow your client base, master your market, and learn to speak the language of investors.</p>
+      <div class="audience-title">Realtors &amp; Agents</div>
+      <p class="audience-desc">Master residential and commercial real estate, grow your business, and speak the language of every client you serve.</p>
       <ul class="audience-perks">
-        <li>Listing &amp; buyer representation strategies</li>
-        <li>Geographic farming systems</li>
-        <li>SOI &amp; CRM automation</li>
-        <li>Investor client conversion</li>
+        <li>Listing strategy, CMA, and buyer representation</li>
+        <li>SOI systems, CRM, and geographic farming</li>
+        <li>Social media, video, and team building</li>
+        <li>Commercial leasing and investment sales</li>
         <li>AI-powered business growth coaching</li>
       </ul>
     </div>
     <div class="audience-card" style="border-color:rgba(106,180,212,0.3);background:rgba(106,180,212,0.08)">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#6AB4D4,transparent)"></div>
-      <div class="audience-icon">🏗️</div>
-      <div class="audience-title">Investors</div>
-      <p class="audience-desc">Analyze deals faster, structure creative financing, and scale your portfolio with confidence.</p>
+      <div class="audience-icon">💰</div>
+      <div class="audience-title">Lenders &amp; Underwriters</div>
+      <p class="audience-desc">Master every loan product, sharpen underwriting, ensure compliance, and close deals with confidence.</p>
       <ul class="audience-perks">
-        <li>BRRRR &amp; multifamily underwriting</li>
-        <li>Deal sourcing &amp; off-market strategies</li>
-        <li>Creative financing &amp; joint ventures</li>
-        <li>Cap rate &amp; NOI deep dives</li>
-        <li>Personalized portfolio growth plan</li>
+        <li>Conventional, FHA, VA — all loan products</li>
+        <li>AUS (DU &amp; LPA), income and asset analysis</li>
+        <li>TRID, RESPA, Fair Lending compliance</li>
+        <li>Fraud detection and file review</li>
+        <li>Processing workflow and condition management</li>
       </ul>
     </div>
     <div class="audience-card" style="border-color:rgba(106,212,160,0.3);background:rgba(106,212,160,0.08)">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#6AD4A0,transparent)"></div>
-      <div class="audience-icon">💰</div>
-      <div class="audience-title">Lenders</div>
-      <p class="audience-desc">Master every loan product, sharpen your underwriting, and close more deals with confidence.</p>
+      <div class="audience-icon">🏗️</div>
+      <div class="audience-title">Investors &amp; Builders</div>
+      <p class="audience-desc">Analyze deals faster, structure creative financing, manage construction budgets, and scale your portfolio.</p>
       <ul class="audience-perks">
-        <li>Conventional, FHA, VA loan mastery</li>
-        <li>DSCR &amp; commercial underwriting</li>
-        <li>SBA 7(a) &amp; 504 programs</li>
-        <li>Bridge, hard money &amp; CMBS</li>
-        <li>Borrower qualification frameworks</li>
+        <li>BRRRR, multifamily, and deal structuring</li>
+        <li>Construction estimating and project management</li>
+        <li>Lien waivers, draws, and renovation underwriting</li>
+        <li>Joint ventures, syndication, and 1031s</li>
+        <li>Personalized portfolio growth plan</li>
       </ul>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- HOW A COURSE WORKS -->
+<section>
+  <div class="section-eyebrow">How It Works</div>
+  <h2 class="section-title">Structured learning.<br/><strong>Proven results.</strong></h2>
+  <p class="section-desc">Every course follows the same rigorous structure — designed from the ground up for professional certification and future accreditation.</p>
+  <div class="course-structure">
+    <div class="course-step">
+      <div class="course-step-num">Step 01</div>
+      <div class="course-step-icon">📖</div>
+      <h4>Lesson Content</h4>
+      <p>In-depth lessons covering real-world concepts, frameworks, and industry knowledge — not surface-level overviews.</p>
+      <div class="course-step-connector">›</div>
+    </div>
+    <div class="course-step">
+      <div class="course-step-num">Step 02</div>
+      <div class="course-step-icon">✅</div>
+      <h4>Knowledge Check</h4>
+      <p>Each lesson ends with a 3-question quiz. Score 70% or higher to mark the lesson complete — no skipping ahead.</p>
+      <div class="course-step-connector">›</div>
+    </div>
+    <div class="course-step">
+      <div class="course-step-num">Step 03</div>
+      <div class="course-step-icon">📊</div>
+      <h4>Progress Tracking</h4>
+      <p>Track your completion across every lesson. Your dashboard shows exactly where you are and what's left to finish.</p>
+      <div class="course-step-connector">›</div>
+    </div>
+    <div class="course-step">
+      <div class="course-step-num">Step 04</div>
+      <div class="course-step-icon">🎓</div>
+      <h4>Certificate of Completion</h4>
+      <p>Complete every lesson in a course and earn your certificate — shareable, branded, and tied to your credit hours.</p>
+    </div>
+  </div>
+
+  <div class="accred-banner">
+    <div class="accred-icon">🎓</div>
+    <div class="accred-body">
+      <h4>Built for Accreditation</h4>
+      <p>Ravlo Academy is structuring its curriculum to meet the standards required for institutional accreditation. Every course carries defined credit hours, every lesson has learning objectives, and every certificate is issued against a verifiable completion record. We're building this right — from day one.</p>
+      <div class="accred-pills">
+        <span class="accred-pill">Credit Hours Assigned</span>
+        <span class="accred-pill">Quiz-Gated Completion</span>
+        <span class="accred-pill">Verifiable Certificates</span>
+        <span class="accred-pill">Learning Objectives</span>
+        <span class="accred-pill">Structured Curriculum</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CURRICULUM -->
+<section id="curriculum">
+  <div class="section-eyebrow">The Curriculum</div>
+  <h2 class="section-title">Eight courses.<br/><strong>Every professional covered.</strong></h2>
+  <p class="section-desc">From residential sales to construction estimating — our curriculum spans every discipline in real estate, mortgage, and development.</p>
+
+  <div class="courses-grid">
+    <div class="course-card" style="border-color:rgba(59,175,122,0.3);background:rgba(59,175,122,0.07)">
+      <div class="course-emoji">🏠</div>
+      <div class="course-title">Residential Mastery</div>
+      <p class="course-desc">Listings, buyers, negotiation, CMAs, open houses, and lead conversion — the full residential playbook.</p>
+      <div class="course-meta">
+        <div class="course-meta-row" style="color:#3BAF7A">📚 6 lessons · 6 credit hours</div>
+      </div>
+    </div>
+    <div class="course-card" style="border-color:rgba(106,180,212,0.3);background:rgba(106,180,212,0.07)">
+      <div class="course-emoji">🏢</div>
+      <div class="course-title">Commercial Real Estate</div>
+      <p class="course-desc">Cap rates, NOI, 1031 exchanges, investment sales, market analysis, and tenant/landlord rep.</p>
+      <div class="course-meta">
+        <div class="course-meta-row" style="color:#6AB4D4">📚 6 lessons · 8 credit hours</div>
+      </div>
+    </div>
+    <div class="course-card" style="border-color:rgba(106,160,212,0.3);background:rgba(106,160,212,0.07)">
+      <div class="course-emoji">💰</div>
+      <div class="course-title">Mortgage &amp; Lending</div>
+      <p class="course-desc">Conventional, FHA, VA, DSCR, SBA, bridge, hard money, underwriting, ARMs, and loan processing.</p>
+      <div class="course-meta">
+        <div class="course-meta-row" style="color:#6AA0D4">📚 10 lessons · 12 credit hours</div>
+      </div>
+    </div>
+    <div class="course-card" style="border-color:rgba(176,106,212,0.3);background:rgba(176,106,212,0.07)">
+      <div class="course-emoji">📈</div>
+      <div class="course-title">Realtor Business Growth</div>
+      <p class="course-desc">SOI systems, CRM setup, social media &amp; video, geographic farming, team building, and brokerage selection.</p>
+      <div class="course-meta">
+        <div class="course-meta-row" style="color:#B06AD4">📚 6 lessons · 7 credit hours</div>
+      </div>
+    </div>
+    <div class="course-card" style="border-color:rgba(212,106,106,0.3);background:rgba(212,106,106,0.07)">
+      <div class="course-emoji">🏗️</div>
+      <div class="course-title">Real Estate Investing</div>
+      <p class="course-desc">BRRRR strategy, multifamily underwriting, market selection, deal sourcing, property management, and exit strategies.</p>
+      <div class="course-meta">
+        <div class="course-meta-row" style="color:#D46A6A">📚 6 lessons · 8 credit hours</div>
+      </div>
+    </div>
+    <div class="course-card" style="border-color:rgba(212,140,80,0.3);background:rgba(212,140,80,0.07)">
+      <div class="course-emoji">⚡</div>
+      <div class="course-title">Advanced Deal Structuring</div>
+      <p class="course-desc">Creative financing, seller financing &amp; wraps, joint ventures, syndication, distressed assets, and off-market strategies.</p>
+      <div class="course-meta">
+        <div class="course-meta-row" style="color:#D48C50">📚 6 lessons · 10 credit hours</div>
+      </div>
+    </div>
+    <div class="course-card" style="border-color:rgba(46,134,171,0.35);background:rgba(46,134,171,0.08)">
+      <div class="course-emoji">📋</div>
+      <div class="course-title">Underwriting &amp; Processing</div>
+      <p class="course-desc">Loan file review, AUS (DU &amp; LPA), income analysis, asset verification, credit, appraisal, TRID compliance, and fraud detection.</p>
+      <div class="course-meta">
+        <div class="course-meta-row" style="color:#2E86AB">📚 10 lessons · 14 credit hours</div>
+      </div>
+    </div>
+    <div class="course-card" style="border-color:rgba(224,123,57,0.35);background:rgba(224,123,57,0.08)">
+      <div class="course-emoji">🔨</div>
+      <div class="course-title">Construction Management &amp; Estimating</div>
+      <p class="course-desc">Estimating, material takeoffs, labor pricing, bid packages, markup vs. margin, CPM scheduling, permits, draws, and renovation underwriting.</p>
+      <div class="course-meta">
+        <div class="course-meta-row" style="color:#E07B39">📚 10 lessons · 13 credit hours</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CURRICULUM TABLE -->
+  <div class="curriculum-table" style="margin-top:48px">
+    <div class="curriculum-row curriculum-header">
+      <span>Course</span>
+      <span>Lessons</span>
+      <span>Credit Hrs</span>
+      <span>Certificate</span>
+    </div>
+    <div class="curriculum-row">
+      <div class="curriculum-name" style="color:#3BAF7A">Residential Mastery<small>Listings, buyers, negotiation, lead conversion</small></div>
+      <div class="curriculum-cell">6</div>
+      <div class="curriculum-cell">6 hrs</div>
+      <div class="curriculum-cell"><span class="curriculum-badge" style="background:rgba(59,175,122,0.15);color:#3BAF7A">Included</span></div>
+    </div>
+    <div class="curriculum-row">
+      <div class="curriculum-name" style="color:#6AB4D4">Commercial Real Estate<small>Cap rates, NOI, 1031 exchanges, investment sales</small></div>
+      <div class="curriculum-cell">6</div>
+      <div class="curriculum-cell">8 hrs</div>
+      <div class="curriculum-cell"><span class="curriculum-badge" style="background:rgba(106,180,212,0.15);color:#6AB4D4">Included</span></div>
+    </div>
+    <div class="curriculum-row">
+      <div class="curriculum-name" style="color:#6AA0D4">Mortgage &amp; Lending<small>All loan products, underwriting, processing, closing</small></div>
+      <div class="curriculum-cell">10</div>
+      <div class="curriculum-cell">12 hrs</div>
+      <div class="curriculum-cell"><span class="curriculum-badge" style="background:rgba(106,160,212,0.15);color:#6AA0D4">Included</span></div>
+    </div>
+    <div class="curriculum-row">
+      <div class="curriculum-name" style="color:#B06AD4">Realtor Business Growth<small>SOI, CRM, farming, social media, team building</small></div>
+      <div class="curriculum-cell">6</div>
+      <div class="curriculum-cell">7 hrs</div>
+      <div class="curriculum-cell"><span class="curriculum-badge" style="background:rgba(176,106,212,0.15);color:#B06AD4">Included</span></div>
+    </div>
+    <div class="curriculum-row">
+      <div class="curriculum-name" style="color:#D46A6A">Real Estate Investing<small>BRRRR, multifamily, deal sourcing, exit strategies</small></div>
+      <div class="curriculum-cell">6</div>
+      <div class="curriculum-cell">8 hrs</div>
+      <div class="curriculum-cell"><span class="curriculum-badge" style="background:rgba(212,106,106,0.15);color:#D46A6A">Included</span></div>
+    </div>
+    <div class="curriculum-row">
+      <div class="curriculum-name" style="color:#D48C50">Advanced Deal Structuring<small>Creative financing, JVs, syndication, off-market</small></div>
+      <div class="curriculum-cell">6</div>
+      <div class="curriculum-cell">10 hrs</div>
+      <div class="curriculum-cell"><span class="curriculum-badge" style="background:rgba(212,140,80,0.15);color:#D48C50">Included</span></div>
+    </div>
+    <div class="curriculum-row">
+      <div class="curriculum-name" style="color:#2E86AB">Underwriting &amp; Processing<small>AUS, income &amp; asset analysis, compliance, fraud detection</small></div>
+      <div class="curriculum-cell">10</div>
+      <div class="curriculum-cell">14 hrs</div>
+      <div class="curriculum-cell"><span class="curriculum-badge" style="background:rgba(46,134,171,0.15);color:#2E86AB">Included</span></div>
+    </div>
+    <div class="curriculum-row">
+      <div class="curriculum-name" style="color:#E07B39">Construction Management &amp; Estimating<small>Estimating, draws, lien waivers, renovation underwriting</small></div>
+      <div class="curriculum-cell">10</div>
+      <div class="curriculum-cell">13 hrs</div>
+      <div class="curriculum-cell"><span class="curriculum-badge" style="background:rgba(224,123,57,0.15);color:#E07B39">Included</span></div>
+    </div>
+    <div class="curriculum-row" style="background:rgba(212,175,106,0.04);border-top:1px solid var(--gold-border)">
+      <div style="font-family:var(--serif);font-size:15px;font-weight:700;color:var(--gold)">Total</div>
+      <div style="font-weight:700;color:var(--text)">68</div>
+      <div style="font-weight:700;color:var(--text)">78 hrs</div>
+      <div><span class="curriculum-badge" style="background:var(--gold-dim);color:var(--gold)">All 8 Courses</span></div>
     </div>
   </div>
 </section>
@@ -240,95 +475,49 @@
 <!-- FEATURES -->
 <section>
   <div class="section-eyebrow">What's Inside</div>
-  <h2 class="section-title">More than a course.<br/><strong>A coaching system.</strong></h2>
+  <h2 class="section-title">More than a course.<br/><strong>A complete system.</strong></h2>
   <div class="features-grid">
     <div class="feature-card">
-      <div class="feature-icon" style="background:rgba(212,175,106,0.12)">🤖</div>
+      <div class="feature-icon" style="background:rgba(212,175,106,0.12)">📚</div>
+      <div class="feature-body">
+        <h4>Structured Lessons</h4>
+        <p>Every lesson delivers in-depth professional content — not bullet points. Written for practitioners, covering the real-world concepts that actually come up in your deals.</p>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(106,212,160,0.12)">✅</div>
+      <div class="feature-body">
+        <h4>Quiz-Gated Completion</h4>
+        <p>Score 70% or higher on the knowledge check after each lesson to advance. This isn't passive learning — it's verified mastery that means your certificate actually means something.</p>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(106,180,212,0.12)">🎓</div>
+      <div class="feature-body">
+        <h4>Certificates of Completion</h4>
+        <p>Finish every lesson in a course and earn a branded certificate tied to your name, course, credit hours, and completion date. Shareable and verifiable.</p>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(176,106,212,0.12)">🤖</div>
       <div class="feature-body">
         <h4>AI Coach — Always On</h4>
-        <p>Get real answers to real questions 24/7. Your AI coach draws on deep real estate expertise to give you specific, actionable guidance — not generic advice.</p>
+        <p>Your AI coach is available 24/7 to answer questions, explain concepts, and give specific guidance. Not generic advice — real answers based on deep real estate expertise.</p>
       </div>
     </div>
     <div class="feature-card">
-      <div class="feature-icon" style="background:rgba(106,212,160,0.12)">📋</div>
+      <div class="feature-icon" style="background:rgba(212,160,106,0.12)">📋</div>
       <div class="feature-body">
         <h4>Personalized Business Plans</h4>
-        <p>Every member gets a custom 90-day success plan built around their role, goals, and biggest challenges. Your plan evolves as you grow.</p>
-      </div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon" style="background:rgba(106,180,212,0.12)">📚</div>
-      <div class="feature-body">
-        <h4>Structured Learning Modules</h4>
-        <p>Six modules covering residential, commercial, lending, investing, business growth, and advanced deal structuring — with progress tracking built in.</p>
-      </div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon" style="background:rgba(176,106,212,0.12)">💬</div>
-      <div class="feature-body">
-        <h4>Session History &amp; Notes</h4>
-        <p>Every coaching conversation is saved and searchable. Pick up where you left off, revisit key insights, and build a personal knowledge library over time.</p>
-      </div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon" style="background:rgba(212,160,106,0.12)">🎯</div>
-      <div class="feature-body">
-        <h4>Goal-Based Onboarding</h4>
-        <p>Academy learns your role, goals, and biggest challenges at signup — then tailors every recommendation, module, and coaching session to your specific situation.</p>
+        <p>Every member gets a custom 90-day success plan built around their role, goals, and biggest challenges. Built by AI, reviewed by you, executed in the real world.</p>
       </div>
     </div>
     <div class="feature-card">
       <div class="feature-icon" style="background:rgba(212,106,106,0.12)">🔗</div>
       <div class="feature-body">
         <h4>Connected to Ravlo Platform</h4>
-        <p>Academy isn't standalone — it's woven into the Ravlo ecosystem. Learn how to analyze deals, then do it inside Ravlo's studios immediately.</p>
+        <p>Academy is woven into the Ravlo ecosystem. Learn how to analyze deals in the classroom, then execute inside Ravlo's studios — Deal Architect, Renovation Studio, Lending OS.</p>
       </div>
-    </div>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- MODULES -->
-<section>
-  <div class="section-eyebrow">Learning Modules</div>
-  <h2 class="section-title">Six modules.<br/><strong>Every angle covered.</strong></h2>
-  <div class="modules-grid">
-    <div class="module-card" style="border-color:rgba(212,175,106,0.25);background:rgba(212,175,106,0.07)">
-      <div class="module-emoji">🏠</div>
-      <div class="module-title">Residential Mastery</div>
-      <p class="module-desc">Listings, buyers, negotiation, CMAs, and lead conversion — the full residential playbook.</p>
-      <div class="module-lessons" style="color:#D4AF6A">6 Lessons · All Plans</div>
-    </div>
-    <div class="module-card" style="border-color:rgba(106,180,212,0.25);background:rgba(106,180,212,0.07)">
-      <div class="module-emoji">🏢</div>
-      <div class="module-title">Commercial Real Estate</div>
-      <p class="module-desc">Cap rates, NOI, 1031 exchanges, investment sales, and tenant/landlord representation.</p>
-      <div class="module-lessons" style="color:#6AB4D4">6 Lessons · Pro &amp; Elite</div>
-    </div>
-    <div class="module-card" style="border-color:rgba(106,212,160,0.25);background:rgba(106,212,160,0.07)">
-      <div class="module-emoji">💰</div>
-      <div class="module-title">Mortgage &amp; Lending</div>
-      <p class="module-desc">Conventional, FHA, VA, DSCR, SBA, bridge, hard money, underwriting, and loan processing.</p>
-      <div class="module-lessons" style="color:#6AD4A0">10 Lessons · Pro &amp; Elite</div>
-    </div>
-    <div class="module-card" style="border-color:rgba(176,106,212,0.25);background:rgba(176,106,212,0.07)">
-      <div class="module-emoji">📈</div>
-      <div class="module-title">Realtor Business Growth</div>
-      <p class="module-desc">SOI systems, CRM automation, social media, geographic farming, and team building.</p>
-      <div class="module-lessons" style="color:#B06AD4">6 Lessons · All Plans</div>
-    </div>
-    <div class="module-card" style="border-color:rgba(212,106,106,0.25);background:rgba(212,106,106,0.07)">
-      <div class="module-emoji">🏗️</div>
-      <div class="module-title">Real Estate Investing</div>
-      <p class="module-desc">BRRRR, multifamily underwriting, market selection, deal sourcing, and exit strategies.</p>
-      <div class="module-lessons" style="color:#D46A6A">6 Lessons · Pro &amp; Elite</div>
-    </div>
-    <div class="module-card" style="border-color:rgba(212,160,106,0.25);background:rgba(212,160,106,0.07)">
-      <div class="module-emoji">⚡</div>
-      <div class="module-title">Advanced Deal Structuring</div>
-      <p class="module-desc">Creative financing, seller financing, joint ventures, syndication, and off-market strategies.</p>
-      <div class="module-lessons" style="color:#D4A06A">6 Lessons · Elite Only</div>
     </div>
   </div>
 </section>
@@ -345,7 +534,7 @@
         <div class="section-eyebrow">How It Works</div>
         <h3 style="font-family:var(--serif);font-size:32px;font-weight:300;margin-bottom:16px">Built around <strong style="color:var(--gold)">you.</strong></h3>
         <p style="color:var(--muted);font-size:14px;line-height:1.7;margin-bottom:8px">Your AI coach asks the right questions, then builds a fully personalized plan covering your 30-day sprint, 60-day milestones, and 90-day vision — with weekly metrics and an accountability framework.</p>
-        <p style="color:var(--muted);font-size:14px;line-height:1.7">Available to all Academy members and all Ravlo VIP Partners — included in every plan, no upgrade required.</p>
+        <p style="color:var(--muted);font-size:14px;line-height:1.7">Included for all Academy members and all Ravlo VIP Partners — no upgrade required.</p>
         <div style="margin-top:28px">
           <a href="{{ url_for('university.business_plan') }}" class="btn-primary">Get My Business Plan</a>
         </div>
@@ -382,21 +571,22 @@
 
 <!-- TIERS -->
 <section id="tiers">
-  <div class="section-eyebrow">Access Tiers</div>
+  <div class="section-eyebrow">Access Plans</div>
   <h2 class="section-title">Choose your<br/><strong>Academy plan.</strong></h2>
-  <p class="section-desc">Every plan includes access to your AI coach and personalized business plan. Upgrade for deeper modules and advanced deal content.</p>
+  <p class="section-desc">Every plan includes access to your AI coach, a personalized business plan, and your course certificate. Enroll in the courses that match your career.</p>
   <div class="tiers-grid">
     <div class="tier-card" style="border-color:rgba(106,212,160,0.3);background:rgba(106,212,160,0.07)">
       <div class="tier-icon">○</div>
       <div class="tier-name">Starter</div>
       <div class="tier-price" style="color:#6AD4A0">$47</div>
       <div class="tier-price-sub">/month</div>
-      <p class="tier-desc">New to real estate and ready to build a foundation.</p>
+      <p class="tier-desc">New to real estate and ready to build a professional foundation.</p>
       <ul class="tier-perks">
-        <li><span style="color:#6AD4A0">✓</span>Core AI Coaching</li>
-        <li><span style="color:#6AD4A0">✓</span>3 Modules</li>
+        <li><span style="color:#6AD4A0">✓</span>1 Course of Your Choice</li>
+        <li><span style="color:#6AD4A0">✓</span>All Lessons &amp; Quizzes</li>
+        <li><span style="color:#6AD4A0">✓</span>Certificate of Completion</li>
+        <li><span style="color:#6AD4A0">✓</span>AI Coach Access</li>
         <li><span style="color:#6AD4A0">✓</span>Business Plan</li>
-        <li><span style="color:#6AD4A0">✓</span>Session History</li>
       </ul>
       <a href="{{ url_for('checkout.subscribe', plan='academy_starter') }}" class="tier-btn" style="background:linear-gradient(135deg,#6AD4A0,#3A9470);color:#080808">Get Started</a>
     </div>
@@ -406,12 +596,13 @@
       <div class="tier-name">Pro</div>
       <div class="tier-price" style="color:#B06AD4">$97</div>
       <div class="tier-price-sub">/month</div>
-      <p class="tier-desc">Active realtors and investors ready to scale.</p>
+      <p class="tier-desc">Active realtors and investors ready to earn multiple certifications.</p>
       <ul class="tier-perks">
+        <li><span style="color:#B06AD4">✓</span>All 8 Courses</li>
+        <li><span style="color:#B06AD4">✓</span>All Certificates</li>
         <li><span style="color:#B06AD4">✓</span>Unlimited AI Coaching</li>
-        <li><span style="color:#B06AD4">✓</span>All 6 Modules</li>
         <li><span style="color:#B06AD4">✓</span>Business Plan</li>
-        <li><span style="color:#B06AD4">✓</span>Community Access</li>
+        <li><span style="color:#B06AD4">✓</span>78 Credit Hours Total</li>
       </ul>
       <a href="{{ url_for('checkout.subscribe', plan='academy_pro') }}" class="tier-btn" style="background:linear-gradient(135deg,#B06AD4,#7A3A9A);color:#fff">Subscribe</a>
     </div>
@@ -421,10 +612,11 @@
       <div class="tier-name">Elite</div>
       <div class="tier-price" style="color:#D4AF6A">Free</div>
       <div class="tier-price-sub">Ravlo Investors &amp; Partners</div>
-      <p class="tier-desc">Complimentary access for all Ravlo VIP partners.</p>
+      <p class="tier-desc">Complimentary full Academy access for all Ravlo VIP partners.</p>
       <ul class="tier-perks">
-        <li><span style="color:#D4AF6A">✓</span>Everything in Pro</li>
-        <li><span style="color:#D4AF6A">✓</span>Advanced Deal Structuring</li>
+        <li><span style="color:#D4AF6A">✓</span>All 8 Courses</li>
+        <li><span style="color:#D4AF6A">✓</span>All Certificates</li>
+        <li><span style="color:#D4AF6A">✓</span>Unlimited AI Coaching</li>
         <li><span style="color:#D4AF6A">✓</span>Investor Briefings</li>
         <li><span style="color:#D4AF6A">✓</span>Priority Support</li>
       </ul>
@@ -438,10 +630,11 @@
       <div class="tier-price-sub">Ravlo Lending Staff</div>
       <p class="tier-desc">Included with all Ravlo Lending OS team plans.</p>
       <ul class="tier-perks">
-        <li><span style="color:#6AB4D4">✓</span>Full Loan Module</li>
-        <li><span style="color:#6AB4D4">✓</span>Commercial Training</li>
-        <li><span style="color:#6AB4D4">✓</span>Business Plan</li>
-        <li><span style="color:#6AB4D4">✓</span>Team Dashboard</li>
+        <li><span style="color:#6AB4D4">✓</span>Mortgage &amp; Lending Course</li>
+        <li><span style="color:#6AB4D4">✓</span>Underwriting &amp; Processing Course</li>
+        <li><span style="color:#6AB4D4">✓</span>Both Certificates</li>
+        <li><span style="color:#6AB4D4">✓</span>AI Coach &amp; Business Plan</li>
+        <li><span style="color:#6AB4D4">✓</span>26 Credit Hours</li>
       </ul>
       <a href="{{ url_for('marketing.lending_os') }}" class="tier-btn" style="background:linear-gradient(135deg,#6AB4D4,#3A7A9A);color:#080808">View Lending OS</a>
     </div>
@@ -452,10 +645,11 @@
 
 <!-- VIP PARTNER BLOCK -->
 <div class="partner-block">
-  <div style="max-width:600px;margin:0 auto">
+  <div style="max-width:640px;margin:0 auto">
     <div style="font-size:11px;letter-spacing:4px;color:var(--muted);text-transform:uppercase;margin-bottom:16px">For VIP Partners</div>
     <h2 style="font-family:var(--serif);font-size:clamp(36px,5vw,52px);font-weight:300;margin-bottom:20px">Academy is a benefit,<br/><strong style="color:var(--gold)">not an add-on.</strong></h2>
-    <p style="color:var(--muted);font-size:16px;line-height:1.7;margin-bottom:36px">All Ravlo VIP Partners receive Elite Academy access — including unlimited AI coaching, every module, the full business plan system, and investor briefings. No extra cost. No separate signup.</p>
+    <p style="color:var(--muted);font-size:16px;line-height:1.7;margin-bottom:16px">All Ravlo VIP Partners receive Elite Academy access — all 8 courses, every certificate, unlimited AI coaching, and the full 90-day business plan system. No extra cost. No separate signup.</p>
+    <p style="color:var(--muted);font-size:15px;line-height:1.7;margin-bottom:36px">That's 78 credit hours of professional real estate education, fully structured for future accreditation — included in your partnership.</p>
     <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
       <a href="{{ url_for('marketing.partner_plans') }}" class="btn-primary">View Partner Plans</a>
       <a href="{{ url_for('marketing.contact') }}" class="btn-outline">Talk to Us</a>
@@ -474,7 +668,7 @@
           <span class="logo-sub">Academy</span>
         </div>
       </a>
-      <p>AI-powered education for realtors, investors, and lenders — built inside the Ravlo ecosystem.</p>
+      <p>Professional real estate education — 8 courses, 68 lessons, 78 credit hours. Certificates, AI coaching, and accreditation-ready curriculum built inside the Ravlo ecosystem.</p>
     </div>
     <div class="footer-col">
       <h5>Platform</h5>
@@ -486,9 +680,9 @@
     <div class="footer-col">
       <h5>Academy</h5>
       <a href="{{ url_for('university.portal') }}">Enter Academy</a>
+      <a href="#curriculum">Curriculum</a>
       <a href="#tiers">Pricing</a>
       <a href="{{ url_for('marketing.partner_plans') }}">VIP Access</a>
-      <a href="{{ url_for('marketing.contact') }}">Get Help</a>
     </div>
     <div class="footer-col">
       <h5>Company</h5>
