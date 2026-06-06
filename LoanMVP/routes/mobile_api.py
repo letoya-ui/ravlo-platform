@@ -83,6 +83,28 @@ def require_admin(f):
 def _serialize_user(user) -> dict:
     first = getattr(user, 'first_name', '') or ''
     last = getattr(user, 'last_name', '') or ''
+
+    # Resolve chosen_avenue: prefer the new field, fall back to deriving from legacy tier
+    chosen_avenue = getattr(user, 'chosen_avenue', None)
+    university_tier = getattr(user, 'university_tier', None)
+    if not chosen_avenue and university_tier:
+        _TIER_TO_AVENUE = {
+            'lending': 'mortgage',
+            'starter': 'residential',
+            'pro': 'residential',
+            'elite': 'residential',
+        }
+        chosen_avenue = _TIER_TO_AVENUE.get(university_tier)
+
+    # Load paid avenue unlocks
+    unlocked_avenues: list[str] = []
+    try:
+        from LoanMVP.models.training_models import UserAvenueUnlock
+        unlocks = UserAvenueUnlock.query.filter_by(user_id=getattr(user, 'id', None)).all()
+        unlocked_avenues = [u.avenue_id for u in unlocks]
+    except Exception:
+        pass
+
     return {
         'id': getattr(user, 'id', None),
         'email': getattr(user, 'email', ''),
@@ -91,7 +113,9 @@ def _serialize_user(user) -> dict:
         'full_name': f'{first} {last}'.strip(),
         'role': getattr(user, 'role', 'borrower'),
         'subscription': getattr(user, 'subscription', 'free'),
-        'university_tier': getattr(user, 'university_tier', None),
+        'university_tier': university_tier,
+        'chosen_avenue': chosen_avenue,
+        'unlocked_avenues': unlocked_avenues,
         'onboarding_complete': getattr(user, 'onboarding_complete', False),
     }
 
@@ -1246,6 +1270,73 @@ def complete_lesson():
         return jsonify({'ok': True, 'completed': True}), 200
     except Exception as exc:
         current_app.logger.error('complete_lesson: %s', exc)
+        db.session.rollback()
+        return jsonify({'error': str(exc)}), 500
+
+
+VALID_AVENUES = {'residential', 'commercial', 'mortgage', 'realtor_growth', 'investing', 'deal_structuring'}
+
+
+@mobile_api.route('/academy/choose-avenue', methods=['POST'])
+@require_auth
+def choose_avenue():
+    """Set the user's one free learning avenue (can only be set once)."""
+    user = request.current_user
+    data = request.get_json(force=True) or {}
+    avenue_id = (data.get('avenue_id') or '').strip()
+
+    if avenue_id not in VALID_AVENUES:
+        return jsonify({'error': f'Invalid avenue. Must be one of: {", ".join(sorted(VALID_AVENUES))}'}), 400
+
+    if getattr(user, 'chosen_avenue', None):
+        return jsonify({'error': 'Avenue already chosen', 'chosen_avenue': user.chosen_avenue}), 409
+
+    try:
+        user.chosen_avenue = avenue_id
+        db.session.commit()
+        return jsonify({'ok': True, 'chosen_avenue': avenue_id, 'user': _serialize_user(user)}), 200
+    except Exception as exc:
+        current_app.logger.error('choose_avenue error: %s', exc)
+        db.session.rollback()
+        return jsonify({'error': 'Could not save avenue selection'}), 500
+
+
+@mobile_api.route('/academy/lesson/score', methods=['POST'])
+@require_auth
+def record_lesson_score():
+    """Record a quiz score for a lesson. Score must be >=70 to pass."""
+    user = request.current_user
+    data = request.get_json(force=True) or {}
+    module_id = data.get('module_id', '')
+    lesson_index = data.get('lesson_index')
+    score = data.get('score')  # 0-100
+
+    if not module_id or lesson_index is None or score is None:
+        return jsonify({'error': 'module_id, lesson_index, and score required'}), 400
+
+    score = max(0, min(100, int(score)))
+    passed = score >= 70
+
+    try:
+        from LoanMVP.models.training_models import AcademyLessonScore
+        existing = AcademyLessonScore.query.filter_by(
+            user_id=user.id, module_id=module_id, lesson_index=lesson_index
+        ).first()
+        if existing:
+            existing.score = max(existing.score, score)
+            existing.passed = existing.score >= 70
+            existing.attempts += 1
+            existing.completed_at = db.func.now()
+        else:
+            row = AcademyLessonScore(
+                user_id=user.id, module_id=module_id,
+                lesson_index=lesson_index, score=score, passed=passed
+            )
+            db.session.add(row)
+        db.session.commit()
+        return jsonify({'ok': True, 'score': score, 'passed': passed}), 200
+    except Exception as exc:
+        current_app.logger.error('record_lesson_score: %s', exc)
         db.session.rollback()
         return jsonify({'error': str(exc)}), 500
 

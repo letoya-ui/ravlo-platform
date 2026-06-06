@@ -41,6 +41,11 @@ export default function ProfileScreen() {
   const roleLabel = (user?.role || '').replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   const tier = (user?.university_tier || '').toLowerCase();
   const tierColor = TIER_COLORS[tier] || Colors.blueprint;
+  const chosenAvenue = user?.chosen_avenue;
+  const unlockedAvenues = user?.unlocked_avenues || [];
+  const avenueLabel = chosenAvenue
+    ? chosenAvenue.replace('_', ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+    : null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -53,7 +58,15 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.fullName}>{user?.full_name || '—'}</Text>
           <Text style={styles.roleLabel}>{roleLabel}</Text>
-          {user?.university_tier ? (
+          {avenueLabel ? (
+            <View style={[styles.tierBadge, { backgroundColor: Colors.blueprint + '22', borderColor: Colors.blueprint }]}>
+              <Ionicons name="school-outline" size={14} color={Colors.blueprint} />
+              <Text style={[styles.tierText, { color: Colors.blueprint }]}>
+                {avenueLabel}
+                {unlockedAvenues.length > 0 ? ` + ${unlockedAvenues.length} more` : ' · Included'}
+              </Text>
+            </View>
+          ) : user?.university_tier ? (
             <View style={[styles.tierBadge, { backgroundColor: tierColor + '22', borderColor: tierColor }]}>
               <Ionicons name="school-outline" size={14} color={tierColor} />
               <Text style={[styles.tierText, { color: tierColor }]}>
@@ -69,10 +82,12 @@ export default function ProfileScreen() {
           <InfoRow icon="star-outline" label="Subscription" value={user?.subscription || 'Free'} />
           <InfoRow
             icon="school-outline"
-            label="University Tier"
-            value={user?.university_tier
-              ? user.university_tier.charAt(0).toUpperCase() + user.university_tier.slice(1)
-              : 'Not enrolled'}
+            label="Learning Avenue"
+            value={avenueLabel
+              ? `${avenueLabel}${unlockedAvenues.length > 0 ? ` + ${unlockedAvenues.length} unlocked` : ' (Included)'}`
+              : user?.university_tier
+                ? `${user.university_tier.charAt(0).toUpperCase() + user.university_tier.slice(1)} (Legacy)`
+                : 'Not enrolled — choose an avenue to get started'}
           />
           <InfoRow
             icon="checkmark-circle-outline"
