@@ -693,7 +693,11 @@ function RavloAcademy() {
     const newP = { ...progress, quizzes: { ...progress.quizzes } };
     const prev = newP.quizzes[unit.id];
     const isNewPass = passed && (!prev || !prev.passed);
-    newP.quizzes[unit.id] = { score: correct, total: quiz.length, pct, passed };
+    // Keep best score — never regress a passing result
+    const bestPct = prev ? Math.max(prev.pct, pct) : pct;
+    const bestScore = prev ? Math.max(prev.score, correct) : correct;
+    const bestPassed = (prev?.passed) || passed;
+    newP.quizzes[unit.id] = { score: bestScore, total: quiz.length, pct: bestPct, passed: bestPassed, lastPct: pct };
     if (isNewPass) newP.xp = (newP.xp || 0) + XP_PER_QUIZ_PASS;
     // Check course completion
     if (activeCourse) {
@@ -1327,14 +1331,20 @@ function RavloAcademy() {
             </div>
           )}
 
-          {quizSubmitted && result && (
-            <div style={{ marginBottom: 32, padding: "24px", borderRadius: 12, border: `1px solid ${result.passed ? "#6AD4A050" : "#D46A6A50"}`, background: result.passed ? "rgba(106,212,160,0.08)" : "rgba(212,106,106,0.08)", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 48, fontWeight: 700, color: result.passed ? "#6AD4A0" : "#D46A6A" }}>{result.pct}%</div>
-              <div style={{ fontSize: 16, color: result.passed ? "#6AD4A0" : "#D46A6A", fontWeight: 600, marginBottom: 4 }}>{result.passed ? "Passed!" : "Not Passed"}</div>
-              <div style={{ fontSize: 13, color: "#5A5248" }}>{result.score} of {result.total} correct</div>
-              {result.passed && <div style={{ fontSize: 12, color: "#D4AF6A", marginTop: 8 }}>+{XP_PER_QUIZ_PASS} XP earned</div>}
+          {quizSubmitted && result && (() => {
+            const attemptPct = result.lastPct != null ? result.lastPct : result.pct;
+            const attemptPassed = attemptPct >= 70;
+            return (
+            <div style={{ marginBottom: 32, padding: "24px", borderRadius: 12, border: `1px solid ${attemptPassed ? "#6AD4A050" : "#D46A6A50"}`, background: attemptPassed ? "rgba(106,212,160,0.08)" : "rgba(212,106,106,0.08)", textAlign: "center" }}>
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 48, fontWeight: 700, color: attemptPassed ? "#6AD4A0" : "#D46A6A" }}>{attemptPct}%</div>
+              <div style={{ fontSize: 16, color: attemptPassed ? "#6AD4A0" : "#D46A6A", fontWeight: 600, marginBottom: 4 }}>{attemptPassed ? "Passed!" : "Not Passed"}</div>
+              <div style={{ fontSize: 13, color: "#5A5248" }}>{Math.round(attemptPct * result.total / 100)} of {result.total} correct</div>
+              {attemptPassed && !result.passed && <div style={{ fontSize: 12, color: "#D4AF6A", marginTop: 8 }}>+{XP_PER_QUIZ_PASS} XP earned</div>}
+              {!attemptPassed && result.passed && <div style={{ fontSize: 12, color: "#6AD4A0", marginTop: 8 }}>Your best score of {result.pct}% is preserved</div>}
+              {result.pct > attemptPct && <div style={{ fontSize: 11, color: "#5A5248", marginTop: 4 }}>Best: {result.pct}%</div>}
             </div>
-          )}
+            );
+          })()}
 
           {quiz.map((q, qi) => {
             const answered = quizAnswers[qi] !== undefined;
