@@ -47,11 +47,8 @@ def setup():
         user.invite_accepted = True
         user.onboarding_complete = True
 
-        # Set chosen_course so the mobile app skips the CourseSelectionScreen
-        if not getattr(user, "chosen_course", None):
-            user.chosen_course = "residential"
-
         # Unlock all 8 Academy courses so everything shows as accessible in mobile
+        # (first course with no stripe_payment_id is treated as the "chosen" subscription course)
         try:
             from LoanMVP.models.training_models import UserCourseUnlock
             existing = {
@@ -75,7 +72,7 @@ def setup():
         print(f"\n✅  {TEST_EMAIL} configured for full platform access:")
         print(f"    role             = platform_admin  (bypasses all role gates)")
         print(f"    university_tier  = elite           (full Academy access)")
-        print(f"    chosen_course    = {user.chosen_course}")
+        print(f"    chosen_course    = residential (first unlock, no payment = subscription choice)")
         print(f"    All 8 Academy courses unlocked")
         print(f"    onboarding_complete = True")
         print()
