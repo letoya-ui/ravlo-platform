@@ -742,200 +742,1723 @@ export const COURSES: Course[] = [
   },
   {
     id: 'realtor_growth',
-    title: 'Realtor Business Growth',
-    description: 'Build a referral-based real estate business through SOI systems, branding, and scalable lead generation.',
+    title: 'Realtor Professional',
+    description: 'The complete professional curriculum for residential and commercial real estate agents. Master listings, buyers, negotiation, CMA, business growth, and commercial deals — everything you need to build a career and a brand in real estate.',
     icon: 'trending-up-outline',
     color: '#9B59B6',
     tiers: ['pro', 'elite'],
-    creditHours: 7,
+    creditHours: 21,
     lessons: [
       {
-        title: 'SOI System',
-        duration: '20 min',
-        content: `Your Sphere of Influence (SOI) is the single most reliable source of real estate business. Studies consistently show that 70%+ of business comes from people who know you or were referred by someone who does.\n\n**Building Your Database**\nStart by listing every person you know: family, friends, past coworkers, classmates, neighbors, service providers, coaches, religious community. Import contacts from your phone, LinkedIn, email, and social media. A well-built SOI has 200-500 people.\n\n**Categorizing Your SOI**\nNot all contacts are equal. Score them:\n- **A+**: People who actively refer you — nurture intensely\n- **A**: People who know you well and would refer if reminded\n- **B**: People who know you casually — build the relationship\n- **C**: New contacts with potential\n\n**The 33-Touch Program**\nTouch your database 33 times per year through a mix of:\n- 12 monthly market updates (email or mail)\n- 4 seasonal cards (physical mail — stands out)\n- 12 pop-by visits or personal calls to A/A+ contacts\n- 5 value-add touches (newsletter, event invite, referral to their business)\n\n**Converting SOI to Referrals**\nAsk directly, but create a context: "I'm trying to grow my business and I rely on referrals from people I trust. If you know anyone thinking about buying or selling, I'd love an introduction." Then make it easy with a text introduction template they can forward.\n\n**Client Events**\nHosting annual client events (summer cookout, holiday party, educational seminar) deepens relationships and gives you a natural reason to reconnect with your entire database.`,
+        title: 'Listing Strategy & Pricing',
+        duration: '12 min',
+        content: `Pricing a home correctly is the single most important decision in the listing process. Overpriced homes sit. Underpriced homes leave money on the table. The agent who prices with precision wins — both the listing and the sale.
+
+## The Psychology of Pricing
+
+Sellers are emotionally attached to their homes. They overestimate value based on memories, renovations, and personal preference. Your job is to anchor them in reality without losing the relationship. Start every pricing conversation with data, not opinion. When the numbers speak, you don't have to.
+
+The most common mistake new agents make is agreeing with the seller's price to win the listing. This is called 'buying the listing' — and it always ends badly. The home sits, the seller gets frustrated, and you end up reducing the price anyway — but now you've lost credibility.
+
+## Building Your CMA for Pricing
+
+A Comparative Market Analysis (CMA) is the foundation of every listing price recommendation. To build one:
+
+**Step 1 — Pull Active Comparables**
+Find 3-5 homes currently listed within 0.5 miles, similar square footage (±15%), same bedroom/bathroom count, listed within the last 90 days.
+
+**Step 2 — Pull Sold Comparables**
+Find 3-5 homes that have closed within the last 6 months under the same criteria. Sold comps are more important than actives — they represent what buyers actually paid.
+
+**Step 3 — Pull Expired and Withdrawn Listings**
+These tell you where the market said 'no.' If homes at $650K sat and expired, that's a ceiling.
+
+**Step 4 — Adjust for Differences**
+Every comp needs adjustment. A comp with a pool adds value. A comp on a busy road subtracts. Use a standard adjustment grid — most MLSs provide one.
+
+## Pricing Strategies
+
+**Market Value Pricing** — Price at what the comps support. The safest strategy for a balanced market. Generates steady interest and clean offers.
+
+**Competitive Pricing** — Price 2-3% below market value intentionally to generate multiple offers and drive the final sale price above asking. Works best in low-inventory markets.
+
+**Premium Pricing** — Price above comps when the property has a unique feature the market hasn't seen recently (e.g., a fully renovated kitchen in a neighborhood of dated homes). Requires strong marketing and patience.
+
+## The List Price Conversation
+
+Present three numbers to the seller: aggressive, market, and conservative. Then recommend market value with data to back it. Give them ownership of the decision — but make sure they understand the consequences of each.
+
+Always present your pricing in writing. A verbal recommendation is forgotten. A printed CMA with your signature is a professional document.
+
+## Price Reductions
+
+If a home isn't generating showings within 10-14 days, the price is wrong. Build a price reduction schedule into your listing agreement upfront. Sellers are more willing to reduce when they agreed to the process before emotions set in.
+
+The best agents build price reduction triggers into the listing conversation from day one: 'If we don't have X showings in 14 days, we'll revisit pricing.' Set the expectation early.`,
         keyPoints: [
-          'SOI = 200-500 contacts who know you or know someone who does',
-          '33-touch program: 12 market updates + 4 seasonal cards + personal calls',
-          'A+ contacts refer actively — nurture them weekly',
-          'Client events create natural annual reconnection with entire database',
+          'Never \'buy a listing\' by agreeing to an inflated price — it damages your credibility and harms the seller.',
+          'Sold comparables are more valuable than active listings when pricing — they reflect what buyers actually paid.',
+          'Present three pricing scenarios (aggressive, market, conservative) and let data guide the seller to the right number.',
+          'Build price reduction triggers into the listing agreement before the home goes live.',
+          'Precision pricing wins more listings long-term than flattering sellers with high numbers.',
         ],
         quiz: [
           {
-            question: 'How many contacts should a well-built Sphere of Influence (SOI) include?',
-            options: ['20–50', '50–100', '200–500', '1,000+'],
-            correctIndex: 2,
-            explanation: '200–500 contacts gives you enough depth to generate consistent referrals while staying manageable for personal outreach.',
+            question: 'What does \'buying a listing\' mean in real estate?',
+            options: [
+              'Agreeing to an inflated listing price to win the listing from the seller',
+              'Purchasing a home that is currently listed on the MLS',
+              'Offering a seller a guaranteed sale price before listing',
+              'Paying for premium listing placement on real estate portals',
+            ],
+            correctIndex: 0,
+            explanation: 'Buying a listing means telling the seller what they want to hear about price — not what the market supports — in order to win the listing. It almost always results in a price reduction and loss of credibility.',
           },
           {
-            question: 'The 33-touch program includes how many monthly market updates per year?',
-            options: ['4', '6', '12', '24'],
-            correctIndex: 2,
-            explanation: '12 monthly market updates (one per month) keep you top of mind as a market expert throughout the year.',
-          },
-          {
-            question: 'An A+ contact in your SOI is someone who:',
-            options: ['You\'ve met recently', 'Actively refers you — nurture intensely', 'Is ready to transact in 90 days', 'Is a past client from 5+ years ago'],
+            question: 'Which type of comparable is most important when determining list price?',
+            options: [
+              'Active listings currently on the market',
+              'Sold comparables from the last 6 months',
+              'Expired listings from the last year',
+              'Pending sales awaiting closing',
+            ],
             correctIndex: 1,
-            explanation: 'A+ contacts are your highest-value relationship asset — they generate business without being asked. Protect and nurture these relationships weekly.',
+            explanation: 'Sold comparables represent what buyers actually paid — confirmed market value. Active listings are asking prices, not sale prices, and can be inflated.',
+          },
+          {
+            question: 'What is the recommended action if a listing receives no showings within 10-14 days?',
+            options: [
+              'Increase the marketing budget and wait another 30 days',
+              'Revisit the pricing — the list price is likely too high',
+              'Remove the listing and relist at the same price',
+              'Offer buyer agent bonus commission to generate interest',
+            ],
+            correctIndex: 1,
+            explanation: 'No showings in 10-14 days is the clearest market signal that the price is wrong. Marketing can drive awareness, but buyers who see an overpriced home simply move on.',
+          },
+        ],
+      },
+      {
+        title: 'Buyer Representation',
+        duration: '15 min',
+        content: `Representing a buyer is more than finding them a house. It's guiding someone through the largest financial decision of their life while protecting their interests at every step. The agents who do this well build lifelong clients and referral businesses. The ones who don't become order-takers.
+
+## The Buyer Consultation
+
+Every buyer relationship starts with a consultation — not a showing. This is your chance to understand who they are, what they need, and what they can actually afford. It also sets expectations about your role and the process.
+
+Key questions to cover in every buyer consultation:
+- What is driving the move? (Timeline, life event, investment)
+- Have they been pre-approved? For how much?
+- What neighborhoods are they considering and why?
+- Have they seen any homes online they liked? What specifically did they like?
+- What are their non-negotiables vs. nice-to-haves?
+- Do they understand how offers, inspections, and closing work?
+
+Sign a buyer representation agreement before showing any homes. This protects you legally and establishes the professional relationship.
+
+## Understanding Buyer Needs vs. Wants
+
+Buyers often say they want one thing and respond to something different. A buyer who says they need 4 bedrooms may fall in love with a perfect 3-bedroom. A buyer who says location doesn't matter may walk away from a great deal on a busy street.
+
+Your job is to listen beneath the surface. Ask 'why' questions: 'Why do you need 4 bedrooms?' If the answer is 'for a home office,' a 3-bedroom with a flex space solves the problem.
+
+## Property Search Strategy
+
+Don't just send automated MLS alerts and wait. Be proactive:
+
+**Tier your search** — Set up alerts at their price ceiling, 10% below, and 15% below. Sometimes a home priced lower needs work but gives them equity.
+
+**Watch expired and back-on-market listings** — These sellers are often more motivated and the competition is lower.
+
+**Network for off-market deals** — Call other agents in target neighborhoods. A home coming to market next week is a competitive advantage for your buyer.
+
+## Showing Properties Effectively
+
+Limit showings to 4-6 homes per session. More than that and buyers experience decision fatigue — everything blurs together. Always debrief after each showing: 'On a scale of 1-10, how did you feel about that one?' Get them to articulate what they liked and didn't like.
+
+Take notes during showings. Your buyers will forget details by the third house. You shouldn't.
+
+## Writing the Offer
+
+Once your buyer is ready to offer, your job is strategy — not just paperwork. Before writing:
+- Call the listing agent to understand the seller's situation (timeline, other offers, motivation)
+- Review the disclosure documents
+- Pull recent sold comps to validate the price
+- Discuss escalation clauses if multiple offers are expected
+
+Present the offer to your buyer as a strategy, not a form. Explain every term, every contingency, and what they're agreeing to.
+
+## Fiduciary Duties to Buyers
+
+As a buyer's agent, you owe your client:
+- **Loyalty** — Their interests come first, always
+- **Disclosure** — Share everything material you know
+- **Confidentiality** — Never reveal their motivation or maximum price to a seller
+- **Obedience** — Follow their lawful instructions
+- **Reasonable care** — Perform your duties with professional competence`,
+        keyPoints: [
+          'Always conduct a buyer consultation before showing homes — it sets expectations and protects your time.',
+          'Sign a buyer representation agreement upfront to establish the professional and legal relationship.',
+          'Listen for what buyers need beneath what they say they want — ask \'why\' to uncover real priorities.',
+          'Limit showings to 4-6 per session to prevent decision fatigue and get clear feedback.',
+          'Your fiduciary duty to buyers includes loyalty, disclosure, confidentiality, and reasonable care.',
+        ],
+        quiz: [
+          {
+            question: 'What should happen before you show a buyer their first property?',
+            options: [
+              'A pre-approval letter from any lender',
+              'A buyer consultation and signed representation agreement',
+              'A list of at least 10 properties they\'re interested in',
+              'Confirmation that they\'ve toured at least one open house',
+            ],
+            correctIndex: 1,
+            explanation: 'The buyer consultation establishes needs, sets expectations, and gives you the foundation to represent them properly. The representation agreement protects both parties legally.',
+          },
+          {
+            question: 'A buyer says they need 4 bedrooms. What is the best follow-up question?',
+            options: [
+              'Do you have children who will need their own rooms?',
+              'Why do you need 4 bedrooms — what will each room be used for?',
+              'Would you consider a 3-bedroom if the price was right?',
+              'Have you been pre-approved for a home that size?',
+            ],
+            correctIndex: 1,
+            explanation: 'Asking \'why\' uncovers the real need. A buyer needing 4 bedrooms for a home office may be perfectly satisfied with a 3-bedroom plus flex space — opening more options.',
+          },
+          {
+            question: 'Which fiduciary duty requires you to never reveal a buyer\'s maximum price to the seller?',
+            options: [
+              'Loyalty',
+              'Disclosure',
+              'Confidentiality',
+              'Obedience',
+            ],
+            correctIndex: 2,
+            explanation: 'Confidentiality requires you to protect information that could harm your client\'s negotiating position — including their motivation, timeline, and maximum price.',
+          },
+        ],
+      },
+      {
+        title: 'Negotiation Frameworks',
+        duration: '18 min',
+        content: `Negotiation is the highest-value skill a real estate agent can develop. Two agents can represent the same buyer on the same house and get completely different outcomes based purely on how they negotiate. The difference between a good deal and a great deal is rarely luck — it's preparation, strategy, and execution.
+
+## The Foundation: Information is Power
+
+Before you negotiate, gather intelligence. The more you know about the other side, the better positioned you are.
+
+For buyers negotiating with sellers:
+- How long has the home been on market?
+- Have there been price reductions? How many?
+- Why is the seller moving?
+- Are there other offers?
+- What is the seller's ideal closing timeline?
+
+For sellers negotiating with buyers:
+- How long have they been looking?
+- Have they lost other offers?
+- What is their financing situation?
+- Are they flexible on closing date?
+
+Call the other agent before making or responding to any offer. A 5-minute conversation can change your entire strategy.
+
+## Framework 1 — Anchoring
+
+The first number in a negotiation sets the psychological anchor. Whoever names the first number controls the range of the conversation.
+
+As a buyer's agent in a normal market: offer below asking to anchor low. The seller will counter, but your anchor shifts the midpoint.
+
+As a listing agent: your list price is the anchor. Price confidently and don't apologize for it.
+
+## Framework 2 — The Flinch
+
+When you receive a counter-offer that's unfavorable, your first response should never be a number — it should be a reaction. Pause. Let silence do the work. Then say: 'I have to be honest, that's further than I expected. Let me go back to my client.'
+
+This communicates that the number is a problem without giving away your position.
+
+## Framework 3 — Trading Concessions
+
+Never give something without getting something. Every concession should be traded:
+- 'If we come up to $X, we need the closing cost credit removed.'
+- 'We can close in 30 days if the seller leaves the appliances.'
+- 'We'll waive the inspection contingency if you come down $5,000.'
+
+This keeps both sides feeling like the deal is fair and prevents one side from feeling like they're losing.
+
+## Framework 4 — The Nibble
+
+After the major terms are agreed upon, small requests feel less significant. This is the moment to ask for extras: a home warranty, touch-up paint, leaving the outdoor furniture. The deal is emotionally closed and both sides want it done — small asks get easy yeses.
+
+## Handling the Counteroffer
+
+When presenting a counter to your client, never show your own reaction. Present it neutrally: 'The seller came back at $X with these terms. Here's how I'd think about responding.' Then walk them through the strategy — don't just hand them a form.
+
+## When Negotiations Break Down
+
+Sometimes the gap is real and the deal doesn't make sense. Know when to walk away. An agent who walks a client into a bad deal to earn a commission is not an agent — they're a salesperson. Your long-term reputation is worth more than any single transaction.`,
+        keyPoints: [
+          'Information gathering before negotiation is as important as the negotiation itself — call the other agent first.',
+          'Anchoring with the first number controls the psychological range of the negotiation.',
+          'Never give a concession without receiving one — always trade, never surrender.',
+          'The nibble technique works after major terms are set — small asks get easy yeses when both sides want the deal done.',
+          'Know when to walk away — your fiduciary duty is to your client\'s best outcome, not your commission.',
+        ],
+        quiz: [
+          {
+            question: 'What is the purpose of \'anchoring\' in a negotiation?',
+            options: [
+              'To lock both parties into a binding agreement before terms are finalized',
+              'To set the first number and control the psychological range of the negotiation',
+              'To prevent the other party from making a counteroffer',
+              'To establish the minimum acceptable price for your client',
+            ],
+            correctIndex: 1,
+            explanation: 'Anchoring means naming the first number. Whoever anchors first sets the psychological midpoint — subsequent offers tend to cluster around that anchor rather than an objective fair value.',
+          },
+          {
+            question: 'What is the correct response when you receive an unfavorable counter-offer?',
+            options: [
+              'Immediately counter with your client\'s maximum number to show good faith',
+              'Reject the offer in writing within 24 hours',
+              'Pause, express that it\'s further than expected, and return to your client before responding with a number',
+              'Accept the counter to preserve the relationship and move to inspection',
+            ],
+            correctIndex: 2,
+            explanation: 'The flinch technique communicates that the number is a problem without revealing your position. Silence and hesitation create pressure on the other side to soften their stance.',
+          },
+          {
+            question: 'What is the \'nibble\' technique in negotiation?',
+            options: [
+              'Gradually reducing your asking price in small increments to appear flexible',
+              'Making small additional requests after major terms are agreed upon, when both sides want the deal to close',
+              'Asking the other party to reveal their bottom line before making an offer',
+              'Splitting the difference on every term to reach a fast agreement',
+            ],
+            correctIndex: 1,
+            explanation: 'The nibble works because after major terms are set, the deal is emotionally closed. Small requests feel minor in context and both parties are motivated to say yes to keep the deal moving.',
+          },
+        ],
+      },
+      {
+        title: 'CMA Deep Dive',
+        duration: '20 min',
+        content: `A Comparative Market Analysis is the cornerstone of every pricing decision in residential real estate. Every agent knows what a CMA is. Far fewer know how to build one that's actually defensible — one that can survive a skeptical seller, a second opinion from another agent, or an appraiser's review.
+
+## What a CMA Is (and Isn't)
+
+A CMA is a professional opinion of value based on market data. It is not an appraisal — you cannot use it for lending purposes. But it is your most powerful tool for pricing conversations and offer strategy.
+
+## Step 1 — Define the Subject Property
+
+Before pulling comps, document every detail of the subject property:
+- Square footage (living area only — not garage or unfinished basement)
+- Lot size
+- Year built
+- Bedroom and bathroom count
+- Garage spaces
+- Condition (updated, original, needs work)
+- Special features (pool, view, waterfront, finished basement)
+- Location factors (busy road, cul-de-sac, school district quality)
+
+## Step 2 — Pull and Filter Comparables
+
+The ideal comparable is within 0.5 miles, sold within 90 days, and identical in size and configuration. In practice, you almost never find the perfect comp. Here's how to expand your search without losing accuracy:
+
+- **Distance:** Expand to 1 mile if needed, but note neighborhood boundaries
+- **Time:** Go back 12 months if recent sales are limited, but weight newer sales more heavily
+- **Size:** Stay within ±15-20% of subject square footage
+- **Style:** Match single-family to single-family, townhouse to townhouse
+
+Pull 8-10 comps to start, then narrow to your best 3-5.
+
+## Step 3 — Make Adjustments
+
+No two homes are identical. Adjustments account for the differences between each comp and the subject property.
+
+Common adjustments:
+- **Square footage:** $X per square foot above/below subject
+- **Bathrooms:** +/- $5,000-$15,000 per bath depending on market
+- **Garage:** +/- $10,000-$25,000 per space
+- **Pool:** +/- $15,000-$40,000 depending on market
+- **Condition:** +/- $10,000-$50,000 for updated vs. original
+- **Location:** Qualitative — adjust based on buyer demand for specific streets
+
+Adjustments should be grounded in local data. Talk to appraisers in your market to understand what they use.
+
+## Step 4 — Reconcile to a Value
+
+Once adjusted, your comps will produce a range. Don't just average them — weight them:
+- Most recent sales: highest weight
+- Most similar properties: highest weight
+- Outliers (distressed sales, estate sales, builder sales): lowest weight or exclude
+
+Your reconciled value should be a range (e.g., $485,000-$510,000) with a recommended list price within that range.
+
+## Step 5 — Present with Confidence
+
+Present your CMA in person whenever possible. Walk the seller through each comp — show them why you chose it, what adjustments you made, and what conclusion you reached. A printed CMA with your branding, signature, and date is a professional deliverable.
+
+Always end with: 'Based on this analysis, I recommend listing at $X. Here's why that price gets you the best outcome in today's market.'`,
+        keyPoints: [
+          'A CMA is a professional opinion of value — not an appraisal — built on comparable sales data and adjustments.',
+          'Pull 8-10 comps, narrow to 3-5, and weight the most recent and most similar most heavily.',
+          'Adjustments account for differences between comps and the subject property — ground them in local market data.',
+          'Reconcile to a range, then recommend a specific list price with a clear rationale.',
+          'Present your CMA in person — it\'s a professional deliverable, not just a printout.',
+        ],
+        quiz: [
+          {
+            question: 'What is the key difference between a CMA and an appraisal?',
+            options: [
+              'A CMA is more accurate because agents know the local market better than appraisers',
+              'A CMA is a professional opinion of value; an appraisal is a licensed valuation used for lending purposes',
+              'An appraisal uses fewer comparables than a CMA',
+              'A CMA can be used by lenders if prepared by a licensed broker',
+            ],
+            correctIndex: 1,
+            explanation: 'A CMA is an agent\'s professional opinion of value — useful for pricing and offer strategy but not valid for lending. An appraisal is performed by a licensed appraiser and is required by lenders.',
+          },
+          {
+            question: 'When reconciling comparable sales to a final value, which comps should receive the highest weight?',
+            options: [
+              'The highest priced comparables to maximize seller proceeds',
+              'The most recent and most similar comparable sales',
+              'Distressed and estate sales because they represent true market floors',
+              'The comparables furthest from the subject to show the widest range',
+            ],
+            correctIndex: 1,
+            explanation: 'Recent and similar comps most accurately reflect current market conditions for that specific property type. Distressed sales, estate sales, and outliers should be weighted lower or excluded.',
+          },
+          {
+            question: 'What square footage should be used when analyzing a subject property for a CMA?',
+            options: [
+              'Total structure footprint including garage and basement',
+              'Living area only — excluding garage and unfinished spaces',
+              'Total lot size divided by the structure footprint',
+              'The square footage listed on the tax record regardless of accuracy',
+            ],
+            correctIndex: 1,
+            explanation: 'CMA analysis uses heated/cooled living square footage only. Garages, unfinished basements, and outdoor spaces are accounted for separately as adjustments.',
+          },
+        ],
+      },
+      {
+        title: 'Open House Optimization',
+        duration: '10 min',
+        content: `Most agents run open houses wrong. They sit on the couch, answer questions when asked, and hand out flyers. That's not an open house — that's babysitting a property. A professionally run open house is a lead generation event, a buyer qualification session, and a marketing tool all at once.
+
+## Before the Open House
+
+**Marketing (7-10 days out):**
+- Post on MLS, Zillow, Realtor.com, and your social media
+- Email your buyer pipeline about the event
+- Place directional signs the day before (check local ordinances)
+- Door-knock or door-hang the 20 nearest neighbors — they often know buyers
+- Create an event on Facebook and boost it for $20-$50
+
+**Preparation (day of):**
+- Arrive 30-45 minutes early
+- Open all blinds and turn on all lights
+- Stage key rooms: clear counters, set dining table, fresh flowers
+- Print 20+ feature sheets with photos, specs, and your contact info
+- Set up a sign-in sheet or digital sign-in (iPad with a form)
+- Prepare 3-5 talking points about the home's best features
+
+## During the Open House
+
+Greet every visitor at the door. Don't let people wander in unannounced. Introduce yourself, get their name, and ask: 'Have you been to the property before?' and 'Are you currently working with an agent?'
+
+That second question is critical. If they say no — they're a potential buyer lead for your own representation.
+
+**Create urgency without pressure:**
+- 'We've had a lot of interest this week'
+- 'There's another offer expected by Monday'
+- 'This is the only updated home in this price range right now'
+
+All of these are true statements (when they are) that create natural urgency without manipulation.
+
+**For neighbors who visit:**
+They're there to be nosy — and that's fine. They often know buyers. Ask: 'Do you know anyone who's been looking to move into the neighborhood?' They're your best word-of-mouth.
+
+## After the Open House
+
+Follow up the same day. Text or email every signed-in visitor within 2 hours:
+
+'Hi [Name], great meeting you at [Address] today. Happy to answer any questions or set up a private showing. What did you think of the home?'
+
+This simple follow-up separates you from 90% of agents who collect sign-in sheets and never use them.
+
+## Open Houses as Lead Generation
+
+Every open house — whether the home sells or not — is an opportunity to add 5-15 people to your pipeline. Over a year of consistent open houses, that's hundreds of contacts. The agents who build the biggest businesses treat every open house like a networking event, not a chore.`,
+        keyPoints: [
+          'Market the open house 7-10 days out across MLS, social media, and personal outreach to neighbors.',
+          'Greet every visitor at the door and ask if they\'re working with an agent — unrepresented buyers are your leads.',
+          'Create natural urgency with true statements about interest and competing activity.',
+          'Follow up with every signed-in visitor the same day — within 2 hours of the open house ending.',
+          'Treat every open house as a lead generation event regardless of whether the home sells.',
+        ],
+        quiz: [
+          {
+            question: 'Why should you ask open house visitors if they are currently working with an agent?',
+            options: [
+              'To report the visitor to their agent if they attend without permission',
+              'Unrepresented visitors are potential buyer leads you can represent in their own home search',
+              'To determine if the visitor is qualified to purchase the home',
+              'It is required by law to disclose agency relationships at open houses',
+            ],
+            correctIndex: 1,
+            explanation: 'An unrepresented buyer at your open house is a legitimate lead. If they\'re interested in real estate but don\'t have an agent, you have an opportunity to represent them — building your buyer pipeline alongside your listing business.',
+          },
+          {
+            question: 'When is the best time to follow up with open house visitors?',
+            options: [
+              'The following business day with a formal email',
+              'Within one week by mail with a thank-you card',
+              'The same day — within 2 hours of the open house ending',
+              'Only if the visitor specifically requested follow-up',
+            ],
+            correctIndex: 2,
+            explanation: 'Same-day follow-up while the experience is fresh creates the strongest impression and shows professionalism. Most agents never follow up at all — doing so immediately sets you apart.',
+          },
+          {
+            question: 'What is the most effective pre-open house outreach for finding buyers already interested in the neighborhood?',
+            options: [
+              'Posting a paid ad on Instagram targeting the entire city',
+              'Door-knocking or door-hanging the 20 nearest neighbors',
+              'Sending a mass email to your full database',
+              'Calling expired listings in other neighborhoods',
+            ],
+            correctIndex: 1,
+            explanation: 'Neighbors frequently know friends, family, or coworkers who want to live in the area. They\'re the highest-quality, most targeted audience for an open house — and they cost nothing to reach.',
+          },
+        ],
+      },
+      {
+        title: 'Lead Conversion Systems',
+        duration: '22 min',
+        content: `Generating leads is only half the battle. The agents who win are the ones who convert those leads into clients before the competition does. Lead conversion is a system — not a talent. It can be built, measured, and improved.
+
+## The Speed-to-Lead Principle
+
+Studies consistently show that contacting a lead within 5 minutes of their inquiry increases conversion rates by up to 900% compared to waiting 30 minutes. The window is brutally short because leads are often contacting multiple agents at once.
+
+This means you need a system that alerts you the moment a lead comes in — and a response ready to go. If you can't respond personally within 5 minutes, have an automated text go out immediately while you follow up personally within 30 minutes.
+
+## The First Contact Framework
+
+Your first contact sets the tone for the entire relationship. It should:
+1. Acknowledge their inquiry specifically
+2. Establish your expertise immediately
+3. Ask one qualifying question
+4. Give them a reason to respond
+
+Example text for an online lead: 'Hi [Name], I saw you were looking at [Address] — that's a great area. I actually just helped a buyer close two blocks away last month. Are you looking to buy in the next 30-60 days or just exploring options?'
+
+This is specific, credible, and ends with a question that requires a response.
+
+## Lead Qualification — The 4 Questions
+
+Before investing significant time in any lead, qualify them on four dimensions:
+
+1. **Motivation** — Why are they looking? A relocation with a job start date is hotter than 'someday.'
+2. **Timeline** — When do they need to be in a home? Under 90 days = hot lead.
+3. **Pre-approval** — Are they pre-approved or pre-qualified? Have they spoken to a lender?
+4. **Commitment** — Are they working with another agent? Are they open to representation?
+
+A lead who is motivated, has a short timeline, is pre-approved, and is unrepresented is your highest priority. Work backwards from there.
+
+## The Follow-Up Sequence
+
+Most leads don't convert on first contact. Here's a proven 30-day follow-up sequence:
+
+- **Day 1:** Call + text + email
+- **Day 2:** Text with a relevant listing
+- **Day 4:** Email with market update for their target area
+- **Day 7:** Call
+- **Day 14:** Text with a 'just checking in' message
+- **Day 21:** Email with a new listing or price reduction
+- **Day 30:** Final call — 'I want to make sure I'm still a resource for you'
+
+After 30 days of no response, move them to a monthly email list and focus your energy on active leads.
+
+## Building Your CRM
+
+A CRM (Customer Relationship Manager) is the backbone of your lead conversion system. Every lead gets entered with:
+- Source (where they came from)
+- Contact information
+- Qualification status
+- Last contact date
+- Next follow-up date
+- Notes from every interaction
+
+The best CRM is the one you actually use. Start with something simple — even a well-organized spreadsheet — before moving to a paid platform.
+
+## Converting at the Consultation
+
+The goal of every follow-up sequence is to get the lead into a buyer consultation. In that meeting:
+- Review their search criteria and timeline
+- Present your value proposition clearly
+- Show your track record
+- Address objections directly
+- Sign the representation agreement before leaving
+
+The consultation is your closing. Prepare for it like a presentation, not a conversation.`,
+        keyPoints: [
+          'Speed-to-lead is critical — contact new leads within 5 minutes whenever possible.',
+          'Qualify every lead on motivation, timeline, pre-approval status, and commitment before investing significant time.',
+          'Use a structured 30-day follow-up sequence — most leads don\'t convert on first contact.',
+          'A CRM is essential for tracking leads, follow-ups, and conversion — even a spreadsheet beats nothing.',
+          'The buyer consultation is your close — prepare it like a presentation and leave with a signed agreement.',
+        ],
+        quiz: [
+          {
+            question: 'According to the speed-to-lead principle, contacting a lead within how many minutes significantly increases conversion rates?',
+            options: [
+              '1 hour',
+              '30 minutes',
+              '5 minutes',
+              '24 hours',
+            ],
+            correctIndex: 2,
+            explanation: 'Research shows contacting a lead within 5 minutes increases conversion by up to 900% vs. 30 minutes. Leads often contact multiple agents simultaneously — speed determines who wins the relationship.',
+          },
+          {
+            question: 'Which combination represents the highest-priority lead?',
+            options: [
+              'Curious, 12-month timeline, no lender contact, working with another agent',
+              'Motivated, 60-day timeline, pre-approved, unrepresented',
+              'Motivated, 6-month timeline, pre-qualified, unrepresented',
+              'Curious, 30-day timeline, pre-approved, working with another agent',
+            ],
+            correctIndex: 1,
+            explanation: 'The highest-priority lead is motivated (has a real reason to move), has a short timeline (under 90 days), is pre-approved (financially ready), and is unrepresented (available for you to represent).',
+          },
+          {
+            question: 'What is the primary goal of every follow-up touchpoint in a lead conversion sequence?',
+            options: [
+              'To send as many listings as possible to demonstrate activity',
+              'To get the lead into a buyer consultation where you can sign a representation agreement',
+              'To establish that you are busier than other agents in the market',
+              'To collect referrals from the lead before they become a client',
+            ],
+            correctIndex: 1,
+            explanation: 'Every touchpoint in your sequence has one goal — get the meeting. The consultation is where conversion happens. Sending listings and market updates are just reasons to stay in contact until they agree to meet.',
+          },
+        ],
+      },
+      {
+        title: 'Office & Retail Leasing',
+        duration: '20 min',
+        content: `Commercial leasing is a different discipline than residential sales. The vocabulary, the transaction timeline, the client motivations, and the deal structures are all different. Agents who cross over from residential to commercial without understanding these differences make expensive mistakes.
+
+## Lease Types
+
+**Gross Lease (Full Service)**
+The tenant pays a flat monthly rent. The landlord covers all operating expenses — taxes, insurance, maintenance, utilities. Common in office buildings. Simpler for tenants but higher base rent.
+
+**Net Lease**
+The tenant pays base rent plus some or all operating expenses. Three variations:
+- **Single Net (N):** Tenant pays rent + property taxes
+- **Double Net (NN):** Tenant pays rent + taxes + insurance
+- **Triple Net (NNN):** Tenant pays rent + taxes + insurance + maintenance. Most common in retail. Landlord's preferred structure — predictable income with minimal expense exposure.
+
+**Modified Gross**
+A hybrid — tenant pays base rent plus some specified expenses. Terms are negotiated individually.
+
+**Percentage Lease**
+Common in retail, especially malls. Tenant pays base rent plus a percentage of gross sales above a threshold. Aligns landlord and tenant incentives.
+
+## Key Lease Terms to Know
+
+- **Rentable vs. Usable SF:** Rentable includes a proportional share of common areas (lobbies, hallways). Usable is the space the tenant actually occupies. Always clarify which is quoted.
+- **Load Factor / Loss Factor:** The difference between rentable and usable. A 20% load factor means 20% of your rent pays for common areas.
+- **Lease Term:** Most commercial leases run 3-10 years. Longer terms often come with better rates and more TI.
+- **Tenant Improvement Allowance (TI):** Money the landlord provides for tenant buildout. Negotiate this hard — it's one of the most valuable concessions.
+- **Free Rent / Rent Abatement:** Months of free rent at the start of the lease. Common in soft markets or for tenants with strong credit.
+- **CAM (Common Area Maintenance):** Operating expense charges passed to the tenant in NNN leases.
+- **Escalations:** Annual rent increases, typically 2-3% or tied to CPI.
+- **Right of First Refusal:** Tenant's right to match any offer the landlord receives for adjacent space.
+
+## Representing Tenants
+
+As a tenant rep, your job is to find space that fits their operational needs and negotiate the best possible economics. Start with a needs analysis: size requirements, location, parking, visibility, ceiling height, power requirements, and budget.
+
+Request proposals from multiple landlords simultaneously. Competition between landlords is your leverage.
+
+## Representing Landlords
+
+As a landlord rep, your job is to find qualified tenants quickly and negotiate terms that protect the landlord's income and asset. Tenant creditworthiness is paramount — require financial statements and business plans from all serious prospects.`,
+        keyPoints: [
+          'NNN leases are most common in retail — the tenant pays base rent plus taxes, insurance, and maintenance.',
+          'Always clarify rentable vs. usable square footage — the difference (load factor) can significantly impact real occupancy cost.',
+          'Tenant Improvement Allowance and free rent periods are among the most negotiable terms in commercial leasing.',
+          'As a tenant rep, create competition among landlords by requesting proposals simultaneously.',
+          'Tenant creditworthiness is the landlord\'s top priority — always be prepared to provide financials when representing a tenant.',
+        ],
+        quiz: [
+          {
+            question: 'In a Triple Net (NNN) lease, what does the tenant pay in addition to base rent?',
+            options: [
+              'Property taxes only',
+              'Property taxes and insurance only',
+              'Property taxes, insurance, and maintenance',
+              'Base rent only — the landlord covers all operating expenses',
+            ],
+            correctIndex: 2,
+            explanation: 'A Triple Net lease requires the tenant to pay base rent plus the three \'nets\' — property taxes, building insurance, and maintenance/CAM charges. This is the most common structure in retail real estate.',
+          },
+          {
+            question: 'What is a Tenant Improvement Allowance (TI)?',
+            options: [
+              'A monthly credit applied to rent when the tenant makes repairs',
+              'Money provided by the landlord for the tenant to build out or customize their space',
+              'A security deposit held by the landlord for potential damages',
+              'A government grant available to small business tenants',
+            ],
+            correctIndex: 1,
+            explanation: 'TI is one of the most valuable negotiating points in commercial leasing. The landlord provides a dollar amount per square foot for buildout. In a competitive market, a strong tenant can negotiate significant TI that effectively reduces their real occupancy cost.',
+          },
+          {
+            question: 'What is the difference between rentable and usable square footage?',
+            options: [
+              'Rentable is the total building size; usable is the tenant\'s floor only',
+              'Rentable includes the tenant\'s proportional share of common areas; usable is only the space the tenant occupies',
+              'There is no practical difference — both terms refer to the same measurement',
+              'Usable includes storage and mechanical rooms; rentable excludes them',
+            ],
+            correctIndex: 1,
+            explanation: 'Rentable SF adds a proportional share of common areas (lobbies, hallways, bathrooms) to usable SF. The ratio between the two is the load factor. A 1,000 usable SF space with a 20% load factor is quoted as 1,200 rentable SF — and you pay rent on 1,200.',
+          },
+        ],
+      },
+      {
+        title: 'Cap Rate & NOI Analysis',
+        duration: '25 min',
+        content: `Cap rate and NOI are the two most fundamental concepts in commercial real estate valuation. If you want to work with investors — at any level — you need to be fluent in both.
+
+## Net Operating Income (NOI)
+
+NOI is the annual income a property generates after operating expenses, before debt service (mortgage payments) and taxes.
+
+**Formula:**
+NOI = Gross Rental Income - Vacancy - Operating Expenses
+
+**What's included in operating expenses:**
+- Property taxes
+- Insurance
+- Property management fees
+- Maintenance and repairs
+- Utilities (landlord-paid)
+- Landscaping
+- Administrative costs
+
+**What is NOT included:**
+- Mortgage payments (debt service)
+- Depreciation
+- Income taxes
+- Capital expenditures (CapEx) — though savvy investors account for these separately
+
+**Example:**
+A 10-unit apartment building:
+- Gross potential rent: $120,000/year
+- Vacancy (5%): -$6,000
+- Effective gross income: $114,000
+- Operating expenses: -$45,000
+- NOI: $69,000
+
+## Capitalization Rate (Cap Rate)
+
+Cap rate is the expected annual return on a property if purchased with all cash — no financing.
+
+**Formula:**
+Cap Rate = NOI ÷ Purchase Price
+
+**Or to find value:**
+Value = NOI ÷ Cap Rate
+
+**Example:**
+$69,000 NOI ÷ $800,000 purchase price = 8.6% cap rate
+
+If the market cap rate for similar properties is 7%, then:
+$69,000 ÷ 0.07 = $985,714 implied value
+
+This means the property at $800,000 is priced below market value — a potential opportunity.
+
+## What Cap Rates Tell You
+
+**Lower cap rate = higher price relative to income = lower perceived risk**
+Class A properties in Manhattan might trade at 3-4% cap rates. Investors accept lower returns for trophy assets in top markets.
+
+**Higher cap rate = lower price relative to income = higher perceived risk**
+Small multifamily in a secondary market might trade at 8-10%. Higher return demanded for the risk.
+
+Cap rates are market-specific, asset-class-specific, and condition-specific. A 6% cap rate in one market might be a screaming deal — in another, it might be overpriced.
+
+## Common Mistakes
+
+**Pro forma vs. actual NOI:** Sellers often present 'pro forma' (projected) NOI, not actual. Always ask for T-12 (trailing 12 months) income and expense statements and verify against actual rent rolls and leases.
+
+**Understated expenses:** Sellers sometimes exclude management fees (if self-managed), deferred maintenance, or capital reserves. Reconstruct the expense statement from actual data.
+
+**Stabilized vs. actual occupancy:** A property listed at 95% occupancy that has actually been running at 80% is misleading. Pull the actual rent roll.`,
+        keyPoints: [
+          'NOI = Gross Income - Vacancy - Operating Expenses. It excludes mortgage payments and taxes.',
+          'Cap Rate = NOI ÷ Purchase Price. A lower cap rate means higher price relative to income.',
+          'To find implied value: Value = NOI ÷ Market Cap Rate.',
+          'Always verify NOI against actual T-12 financials — pro forma projections can be inflated.',
+          'Cap rates are market and asset-class specific — context matters more than the number itself.',
+        ],
+        quiz: [
+          {
+            question: 'A property has an NOI of $80,000 and sells for $1,000,000. What is the cap rate?',
+            options: [
+              '12.5%',
+              '8%',
+              '80%',
+              '0.8%',
+            ],
+            correctIndex: 1,
+            explanation: 'Cap Rate = NOI ÷ Purchase Price = $80,000 ÷ $1,000,000 = 0.08 = 8%.',
+          },
+          {
+            question: 'Which of the following is NOT included when calculating NOI?',
+            options: [
+              'Property taxes',
+              'Mortgage payments (debt service)',
+              'Property management fees',
+              'Insurance',
+            ],
+            correctIndex: 1,
+            explanation: 'NOI is calculated before debt service. It measures the property\'s income-generating ability independent of how it\'s financed. Mortgage payments are excluded because they vary by buyer and financing terms.',
+          },
+          {
+            question: 'If the market cap rate is 6% and a property has an NOI of $60,000, what is the implied value?',
+            options: [
+              '$360,000',
+              '$600,000',
+              '$1,000,000',
+              '$1,600,000',
+            ],
+            correctIndex: 2,
+            explanation: 'Value = NOI ÷ Cap Rate = $60,000 ÷ 0.06 = $1,000,000.',
+          },
+        ],
+      },
+      {
+        title: 'Investment Sales',
+        duration: '18 min',
+        content: `Investment sales — the buying and selling of income-producing properties — is one of the most lucrative specializations in commercial real estate. Deals are larger, commissions are larger, and the clients (investors) are often repeat buyers who transact frequently.
+
+## The Investment Sales Process
+
+**For Sellers (Listing Side):**
+
+1. **Valuation** — Build a full offering memorandum (OM) with financials, rent roll, lease abstracts, and market analysis. Price is driven by NOI and market cap rates.
+
+2. **Marketing** — Investment properties are marketed to a specific buyer pool, not the general public. Channels include:
+   - CoStar and LoopNet (commercial MLS equivalents)
+   - Direct outreach to known investors in your database
+   - Broker-to-broker networking
+   - Private equity and family office relationships
+
+3. **Qualified Buyer Screening** — Before sharing financials, require a signed NDA and proof of funds or financing capability. Protecting the seller's tenant relationships and financial information is critical.
+
+4. **Letter of Intent (LOI)** — The first formal offer in commercial deals. An LOI outlines price, terms, due diligence period, and closing timeline. It's non-binding but sets the framework.
+
+5. **Purchase & Sale Agreement (PSA)** — The binding contract. Commercial PSAs are more complex than residential — expect attorneys on both sides.
+
+6. **Due Diligence** — Typically 30-90 days. Buyer inspects financials, leases, physical condition, environmental reports, title, and zoning.
+
+7. **Closing** — Commercial closings involve more parties — attorneys, title companies, lenders, and sometimes 1031 exchange intermediaries.
+
+## The Offering Memorandum (OM)
+
+The OM is the marketing document for an investment property. A professional OM includes:
+- Executive summary
+- Investment highlights
+- Financial summary (NOI, cap rate, cash-on-cash return)
+- Rent roll and lease abstracts
+- Property description and photos
+- Market overview
+- Aerial and location maps
+
+The quality of your OM signals the quality of your representation. A poor OM gets ignored by serious buyers.
+
+## Key Investment Metrics Beyond Cap Rate
+
+**Cash-on-Cash Return:** Annual pre-tax cash flow ÷ Total cash invested. Measures return on the actual equity invested, accounting for financing.
+
+**Gross Rent Multiplier (GRM):** Purchase Price ÷ Gross Annual Rents. Quick screening tool — not as precise as cap rate analysis.
+
+**Debt Service Coverage Ratio (DSCR):** NOI ÷ Annual Debt Service. Lenders require minimum 1.20-1.25 DSCR. Below 1.0 means the property doesn't cover its mortgage.`,
+        keyPoints: [
+          'Investment sales follow a distinct process: valuation → OM → buyer screening → LOI → PSA → due diligence → close.',
+          'Require NDAs and proof of funds before sharing financial information with potential buyers.',
+          'The Letter of Intent (LOI) is the first formal offer — non-binding but sets the deal framework.',
+          'A professional Offering Memorandum is essential — its quality reflects directly on your representation.',
+          'Know key metrics beyond cap rate: cash-on-cash return, GRM, and DSCR are all part of investor conversations.',
+        ],
+        quiz: [
+          {
+            question: 'What is a Letter of Intent (LOI) in a commercial transaction?',
+            options: [
+              'A binding purchase contract used in place of a residential sales agreement',
+              'A non-binding document outlining price, terms, and due diligence period before the formal contract',
+              'A lender\'s commitment letter confirming financing terms',
+              'A seller\'s disclosure of all known property defects',
+            ],
+            correctIndex: 1,
+            explanation: 'The LOI is the first formal step in a commercial offer — non-binding but important. It establishes the framework for the PSA and signals serious buyer intent.',
+          },
+          {
+            question: 'What is the minimum DSCR most commercial lenders require?',
+            options: [
+              '0.80 to 0.90',
+              '1.00 exactly',
+              '1.20 to 1.25',
+              '2.00 or higher',
+            ],
+            correctIndex: 2,
+            explanation: 'Lenders require NOI to exceed debt service by 20-25% as a cushion. A DSCR below 1.0 means the property doesn\'t generate enough income to cover its mortgage — most lenders won\'t finance it.',
+          },
+          {
+            question: 'Why should you require a signed NDA and proof of funds before sharing financial details with a prospective buyer?',
+            options: [
+              'It is required by law in all commercial real estate transactions',
+              'To protect the seller\'s tenant relationships and confidential financial information',
+              'To ensure the buyer has already secured financing before reviewing the deal',
+              'To prevent other brokers from accessing the property details',
+            ],
+            correctIndex: 1,
+            explanation: 'Commercial property financials reveal tenant identities, lease terms, and income details. Sharing these without protection exposes the seller to competitive harm. NDAs and proof of funds screen out unqualified and non-serious buyers.',
+          },
+        ],
+      },
+      {
+        title: '1031 Exchanges',
+        duration: '22 min',
+        content: `A 1031 exchange is one of the most powerful wealth-building tools available to real estate investors. It allows an investor to sell an investment property and defer capital gains taxes by reinvesting the proceeds into a like-kind replacement property. Agents who understand 1031s become indispensable to investor clients.
+
+## What Is a 1031 Exchange?
+
+Named after Section 1031 of the Internal Revenue Code, a 1031 exchange allows an investor to sell a property and reinvest the proceeds into another property without paying capital gains tax at the time of sale. The tax is deferred — not eliminated — until the replacement property is eventually sold without another exchange.
+
+Done correctly, an investor can defer taxes indefinitely, building a larger and larger portfolio by continuously rolling equity forward.
+
+## Qualifying Rules
+
+**Like-Kind Property:** Both the relinquished (sold) and replacement property must be 'like-kind' — meaning both must be held for investment or business use. The definition is broad: a single-family rental can exchange into an apartment building, a retail strip center, or raw land.
+
+**Intent:** The property must have been held as an investment, not as personal use or a primary residence.
+
+**Same Taxpayer:** The same entity that sells must be the entity that buys. You cannot sell as an individual and buy in an LLC (without planning).
+
+**Qualified Intermediary (QI):** The exchange must be handled through a Qualified Intermediary — a third party who holds the sale proceeds during the exchange period. The investor cannot touch the money.
+
+## The Critical Timelines
+
+**45-Day Identification Rule:** From the closing date of the relinquished property, the investor has 45 days to identify potential replacement properties in writing to the QI.
+
+**180-Day Exchange Rule:** The investor must close on the replacement property within 180 days of selling the relinquished property (or the tax return due date, whichever comes first).
+
+These timelines are absolute. Missing either deadline disqualifies the exchange and triggers the full tax liability.
+
+## Identification Rules
+
+The investor can identify under three rules:
+- **3 Property Rule:** Identify up to 3 properties of any value
+- **200% Rule:** Identify any number of properties as long as their combined value doesn't exceed 200% of the relinquished property's sale price
+- **95% Rule:** Identify any number of properties but must acquire 95% of their total identified value
+
+Most investors use the 3 Property Rule.
+
+## How Agents Win with 1031s
+
+When an investor client is selling, immediately ask: 'Are you considering a 1031 exchange?' If yes:
+- Connect them with a Qualified Intermediary before closing
+- Start identifying replacement properties early (the 45-day clock starts at closing, not before)
+- Position yourself to represent both the sale AND the acquisition of the replacement property
+- Two commissions. Same client. Same transaction cycle.`,
+        keyPoints: [
+          'A 1031 exchange defers capital gains taxes by rolling sale proceeds into a like-kind replacement property.',
+          'The investor has 45 days to identify replacement properties and 180 days to close — these deadlines are absolute.',
+          'A Qualified Intermediary must hold the proceeds during the exchange — the investor cannot touch the money.',
+          'Both properties must be held for investment or business use — personal residences don\'t qualify.',
+          'Agents who understand 1031s can represent both sides of the exchange — the sale and the acquisition.',
+        ],
+        quiz: [
+          {
+            question: 'How many days does an investor have to identify replacement properties after closing on the relinquished property?',
+            options: [
+              '30 days',
+              '45 days',
+              '90 days',
+              '180 days',
+            ],
+            correctIndex: 1,
+            explanation: 'The 45-day identification rule is one of two critical timelines in a 1031 exchange. From the closing date of the sold property, the investor has exactly 45 days to identify potential replacement properties in writing to the Qualified Intermediary.',
+          },
+          {
+            question: 'What is the role of a Qualified Intermediary in a 1031 exchange?',
+            options: [
+              'To negotiate the purchase price of the replacement property on behalf of the investor',
+              'To hold the sale proceeds during the exchange period so the investor never takes possession of the funds',
+              'To file the 1031 election with the IRS on the investor\'s behalf',
+              'To guarantee that the replacement property qualifies under IRS like-kind rules',
+            ],
+            correctIndex: 1,
+            explanation: 'If the investor touches the money, the exchange is disqualified and the full capital gains tax becomes due. The QI is an independent third party who holds proceeds and facilitates the transfer to the replacement property.',
+          },
+          {
+            question: 'Can a primary residence qualify for a 1031 exchange?',
+            options: [
+              'Yes, if the owner has lived there for at least 2 years',
+              'Yes, if the replacement property is also a primary residence',
+              'No — properties must be held for investment or business use',
+              'Yes, but only for the portion of the home used as a home office',
+            ],
+            correctIndex: 2,
+            explanation: '1031 exchanges apply only to investment and business-use properties. Primary residences don\'t qualify — they may be eligible for a different tax benefit (Section 121 exclusion) but not a 1031 exchange.',
+          },
+        ],
+      },
+      {
+        title: 'Tenant & Landlord Representation',
+        duration: '16 min',
+        content: `In commercial real estate, agency representation is more clearly defined than in residential. You're either representing the tenant or the landlord — and your strategy, loyalty, and communication are shaped entirely by which side you're on.
+
+## Tenant Representation
+
+As a tenant rep, your client is the business or individual looking for space. Your job is to find the best space at the best economics while protecting your client's operational interests.
+
+**The Tenant Rep Process:**
+
+1. **Needs Assessment** — Understand the business: headcount, growth projections, operational requirements, location priorities, budget, and lease term preference.
+
+2. **Market Survey** — Research all available spaces that meet the criteria. Present a shortlist with side-by-side comparisons of economics, location, and terms.
+
+3. **Tour and Shortlist** — Tour top candidates. Get your client to a shortlist of 2-3 options before beginning negotiations.
+
+4. **Request for Proposals (RFP)** — Send RFPs to landlords of shortlisted properties simultaneously. This creates competition and gives you negotiating leverage.
+
+5. **Negotiate** — Compare proposals and negotiate the best economics: rent, TI, free rent, term, renewal options, and termination rights.
+
+6. **Letter of Intent → Lease** — Once terms are agreed, formalize in an LOI before attorneys draft the full lease.
+
+**Tenant Rep Compensation:** In most markets, tenant reps are compensated by the landlord — paid from the landlord's leasing budget. The tenant typically pays nothing. Clarify this upfront.
+
+## Landlord Representation
+
+As a landlord rep (listing broker), your job is to lease vacant space quickly at the best possible rent to the most qualified tenants.
+
+**The Landlord Rep Process:**
+
+1. **Property Analysis** — Understand the asset: vacancy, current tenants, building quality, amenities, and competitive position in the market.
+
+2. **Pricing Strategy** — Set asking rent based on market comps, current vacancy, and landlord's priorities (speed vs. price).
+
+3. **Marketing** — List on LoopNet/CoStar, direct outreach to tenant rep brokers, signage, email campaigns to tenant prospects.
+
+4. **Qualify Prospects** — Review financials, business plans, and references. A bad tenant is worse than vacancy.
+
+5. **Negotiate Leases** — Protect the landlord's NOI: push back on excessive TI requests, limit free rent, secure personal guarantees from smaller tenants.
+
+6. **Execute and Track** — Manage the lease execution process and track lease expirations to re-lease proactively.
+
+## Dual Agency in Commercial Leasing
+
+Dual agency — representing both landlord and tenant in the same transaction — is legal in commercial real estate in most states but requires written disclosure and consent. It creates inherent conflicts: you can't advocate fully for both sides simultaneously. Most experienced commercial brokers avoid it.`,
+        keyPoints: [
+          'Tenant reps are typically paid by the landlord — the tenant rarely pays directly for representation.',
+          'Send RFPs to multiple landlords simultaneously to create competition and maximize negotiating leverage.',
+          'Landlord reps must qualify tenants carefully — a financially weak tenant is worse than vacancy.',
+          'Dual agency in commercial leasing requires written disclosure and creates inherent conflicts of interest.',
+          'The RFP → LOI → Lease sequence is the standard framework for commercial leasing transactions.',
+        ],
+        quiz: [
+          {
+            question: 'Who typically pays the tenant representative\'s commission in a commercial lease transaction?',
+            options: [
+              'The tenant pays a flat fee at lease signing',
+              'The landlord pays from their leasing budget',
+              'The commission is split between tenant and landlord equally',
+              'The government pays through a commercial real estate subsidy program',
+            ],
+            correctIndex: 1,
+            explanation: 'In most commercial markets, tenant rep commissions are paid by the landlord from their leasing budget. This means tenants receive professional representation at no direct cost — a key selling point when prospecting for tenant rep clients.',
+          },
+          {
+            question: 'Why should tenant reps send RFPs to multiple landlords simultaneously?',
+            options: [
+              'It is required by commercial real estate law in most states',
+              'To create competition between landlords and maximize negotiating leverage',
+              'To give the tenant more time to make a decision without pressure',
+              'To ensure at least one landlord will respond within 24 hours',
+            ],
+            correctIndex: 1,
+            explanation: 'When landlords know they\'re competing for a tenant, they make better offers. Simultaneous RFPs are the most effective tool for driving down rent and increasing concessions like TI and free rent.',
+          },
+          {
+            question: 'What is the primary risk of representing both the landlord and tenant in the same commercial lease transaction?',
+            options: [
+              'It is illegal in all states and results in license revocation',
+              'You cannot fully advocate for both sides simultaneously — creating an inherent conflict of interest',
+              'The commission is reduced to half when representing both parties',
+              'The transaction timeline doubles when dual agency is involved',
+            ],
+            correctIndex: 1,
+            explanation: 'Dual agency means you know both sides\' motivations, limits, and priorities. You cannot use that information to fully advocate for either party without harming the other. Disclosure and consent are required, and most experienced brokers avoid it entirely.',
+          },
+        ],
+      },
+      {
+        title: 'Market Analysis',
+        duration: '24 min',
+        content: `In commercial real estate, your ability to read and interpret market data separates advisors from order-takers. Clients pay for insight, not just access. A thorough market analysis tells you where the market is, where it's going, and where the opportunities are.
+
+## Key Market Metrics
+
+**Vacancy Rate:** The percentage of available space not currently leased. A rising vacancy rate signals weakening demand or oversupply. A falling vacancy rate signals strengthening demand.
+
+**Availability Rate vs. Vacancy Rate:**
+- Vacancy = physically empty and available
+- Availability = vacant + space coming to market soon (sublease, expiring leases)
+Availability is a leading indicator — it tells you where vacancy is heading.
+
+**Net Absorption:** The change in occupied space over a period. Positive absorption means more space was leased than vacated — demand is strong. Negative absorption means more space is emptying than filling — the market is softening.
+
+**Asking Rent vs. Effective Rent:** Asking rent is the listed price. Effective rent accounts for concessions (free rent, TI). In a soft market, asking rents may hold while effective rents fall as landlords offer more concessions. Watch both.
+
+**Supply Pipeline:** The amount of new construction underway or planned. A market with 10% vacancy and 5 million SF under construction will see vacancy rise when that supply delivers.
+
+## Economic Drivers by Asset Class
+
+**Office:** Employment growth (especially professional services), remote work trends, corporate relocations, and lease expirations drive office demand.
+
+**Retail:** Consumer spending, population density, traffic counts, anchor tenant health, and e-commerce trends. Retail is the most structurally challenged commercial sector.
+
+**Industrial/Warehouse:** E-commerce growth, supply chain reshoring, port activity, and manufacturing trends drive industrial demand — currently the strongest sector in most markets.
+
+**Multifamily:** Population growth, job creation, affordability relative to homeownership, and household formation rates.
+
+## How to Build a Market Analysis
+
+1. **Define the market and submarket** — Cities have multiple submarkets with different dynamics. Don't analyze 'New York' — analyze 'Midtown Manhattan Class A Office' or 'Brooklyn Industrial.'
+
+2. **Pull current data** — CoStar, CBRE, JLL, and Cushman & Wakefield publish quarterly market reports for major metros. Use them.
+
+3. **Identify trends** — Is vacancy rising or falling? Is absorption positive or negative? Are rents growing or declining?
+
+4. **Identify the cycle position** — Real estate cycles move through recovery, expansion, hypersupply, and recession. Knowing where you are shapes strategy.
+
+5. **Identify opportunities** — Rising markets favor sellers and landlords. Falling markets favor buyers and tenants. Identify which plays make sense right now.
+
+## Presenting Market Analysis to Clients
+
+Don't just hand a client a CoStar report. Synthesize the data into insight: 'The submarket vacancy rate has dropped from 12% to 7% in 18 months. Asking rents are up 15%. If you're going to lease space, do it now before rents rise further.'`,
+        keyPoints: [
+          'Availability rate is a leading indicator of future vacancy — watch it as closely as current vacancy.',
+          'Positive net absorption indicates demand is outpacing supply; negative absorption signals the opposite.',
+          'Effective rent (after concessions) matters more than asking rent in understanding real market conditions.',
+          'Each commercial asset class has different economic drivers — know which metrics matter for each.',
+          'Synthesize data into actionable insight for clients — they pay for your analysis, not just access to reports.',
+        ],
+        quiz: [
+          {
+            question: 'What does positive net absorption indicate about a commercial real estate market?',
+            options: [
+              'More space is being vacated than leased — the market is softening',
+              'More space is being leased than vacated — demand is outpacing supply',
+              'New construction deliveries exceeded net leasing activity',
+              'Asking rents increased faster than the rate of inflation',
+            ],
+            correctIndex: 1,
+            explanation: 'Net absorption measures the change in occupied space. Positive absorption means tenants are taking more space than they\'re giving back — a sign of strong demand. Negative absorption is a warning signal.',
+          },
+          {
+            question: 'Why is the availability rate considered a leading indicator compared to the vacancy rate?',
+            options: [
+              'Availability is calculated quarterly while vacancy is only measured annually',
+              'It includes space coming to market soon (subleases, expiring leases) in addition to currently vacant space',
+              'Availability measures demand while vacancy measures supply',
+              'It is calculated by landlords directly while vacancy is estimated by brokers',
+            ],
+            correctIndex: 1,
+            explanation: 'Availability captures both current vacancy and space that will become available soon. It shows where vacancy is heading — making it a forward-looking indicator rather than a snapshot of today.',
+          },
+          {
+            question: 'Which commercial asset class has been the strongest performer driven by e-commerce and supply chain trends?',
+            options: [
+              'Retail',
+              'Office',
+              'Industrial / Warehouse',
+              'Hospitality',
+            ],
+            correctIndex: 2,
+            explanation: 'Industrial and warehouse space has been the strongest commercial sector in recent years, driven by e-commerce fulfillment demands, supply chain reshoring, and last-mile delivery needs. Retail has been the most challenged sector.',
+          },
+        ],
+      },
+      {
+        title: 'SOI System',
+        duration: '20 min',
+        content: `Your Sphere of Influence (SOI) is the single most valuable asset in your real estate business. Studies consistently show that 60-70% of real estate transactions come from people who know, like, and trust the agent — not from cold leads or advertising.
+
+The problem is that most agents manage their SOI reactively — they call when they need business, not because they've built a system. A reactive SOI generates inconsistent results. A systematic SOI generates predictable income.
+
+## What Your SOI Actually Is
+
+Your SOI includes everyone who knows you:
+- Family and extended family
+- Friends and former classmates
+- Former colleagues (every job you've ever had)
+- Neighbors (past and present)
+- Service providers (doctor, dentist, accountant, hair stylist)
+- Church, civic, or community members
+- Social media connections
+- Past clients
+- People you've met networking
+
+Most new agents have 200-500 people in their SOI without realizing it. Veterans have thousands.
+
+## Building Your SOI Database
+
+The foundation of your SOI system is a database. Every person in your sphere gets entered with:
+- Name and contact information
+- How you know them
+- Last contact date
+- Notes about their life (kids, job, hobbies, home ownership status)
+- Transaction history (if applicable)
+
+Start by exporting your phone contacts, email contacts, and social media connections. You'll be surprised how many people you already know.
+
+## The Contact Frequency Framework
+
+Not everyone in your SOI deserves the same attention. Tier your contacts:
+
+**Tier A — Active Advocates (top 50)**
+These are people who actively refer you, have transacted with you, or are likely to do so soon. Contact monthly: a personal call, handwritten note, or in-person coffee.
+
+**Tier B — Warm Connections (next 150)**
+People who know you well but aren't actively referring. Contact quarterly: a personal text or email with a specific reason to reach out.
+
+**Tier C — Broad Network (everyone else)**
+Contact 3-4 times per year: market updates, holiday cards, community events.
+
+## The 33 Touch Program
+
+A classic SOI system involves 33 touches per year — a mix of calls, texts, emails, handwritten notes, market updates, and in-person interactions. Spread across 12 months, this keeps you top-of-mind without being annoying.
+
+Key principle: every touch should provide value or be personal — never just a sales message. 'I was thinking of you because I saw this article about [their interest]' is infinitely more powerful than 'Just checking in to see if you know anyone looking to buy or sell.'
+
+## The Referral Ask
+
+Most agents never directly ask for referrals. The ones who do get them. A simple, non-awkward ask:
+
+'I'm really focused on growing my business this year through people I know and trust. If you ever come across anyone thinking about buying or selling, I'd love it if you thought of me. I promise to take great care of anyone you send my way.'
+
+Say it once, say it genuinely, and say it to everyone in your Tier A.`,
+        keyPoints: [
+          '60-70% of real estate transactions come from people who already know the agent — your SOI is your most valuable business asset.',
+          'Tier your SOI into A (monthly), B (quarterly), and C (3-4x/year) contacts based on relationship depth.',
+          'Every touch should provide value or be personal — never just a sales message.',
+          'The 33 Touch Program (33 meaningful contacts per year) keeps you top-of-mind without being intrusive.',
+          'Ask for referrals directly, genuinely, and specifically — most agents never ask and leave referrals on the table.',
+        ],
+        quiz: [
+          {
+            question: 'What percentage of real estate transactions typically come from an agent\'s Sphere of Influence?',
+            options: [
+              '20-30%',
+              '40-50%',
+              '60-70%',
+              '80-90%',
+            ],
+            correctIndex: 2,
+            explanation: 'Research consistently shows that the majority of real estate business — typically 60-70% — comes from people who already know, like, and trust the agent. This is why SOI management is the highest ROI activity for most agents.',
+          },
+          {
+            question: 'How often should Tier A SOI contacts (active advocates) be contacted?',
+            options: [
+              'Daily',
+              'Monthly',
+              'Quarterly',
+              'Annually',
+            ],
+            correctIndex: 1,
+            explanation: 'Tier A contacts are your most valuable relationships — active referrers and likely future clients. Monthly contact keeps you top-of-mind without being intrusive. This can be a call, personal note, or coffee meeting.',
+          },
+          {
+            question: 'What is the most effective type of SOI touchpoint?',
+            options: [
+              'A mass email blast about the current market',
+              'A social media post visible to all connections',
+              'A personal, value-driven message specific to that individual',
+              'A generic \'just checking in\' text sent to your entire database',
+            ],
+            correctIndex: 2,
+            explanation: 'Personal, specific touches dramatically outperform mass communications. Referencing something specific about the person — their kids, their job, a shared interest — signals genuine relationship, not just prospecting.',
           },
         ],
       },
       {
         title: 'CRM Setup & Management',
         duration: '16 min',
-        content: `A Customer Relationship Management system is your business operating system. Without one, you're running your business from memory — and memory is unreliable.\n\n**CRM Selection Criteria**\n- Real estate specific vs. general purpose (Salesforce, HubSpot)\n- Contact management, pipeline tracking, task automation\n- Email/text integration\n- Mobile app for on-the-go updates\n- Popular real estate CRMs: Follow Up Boss, LionDesk, KVCore, Chime, Top Producer\n\n**Minimum Viable CRM Setup**\nEven a simple system used consistently beats a sophisticated system used sporadically:\n1. Import all contacts with complete information (phone, email, birthday)\n2. Tag every contact: SOI, past client, active buyer, active seller, investor, referral partner\n3. Set recurring touchpoints for A and A+ contacts\n4. Create pipelines: Leads → Active → Under Contract → Closed\n5. Log every interaction — calls, emails, showings, meetings\n\n**Automation Workflows**\nAutomate repetitive tasks:\n- New lead: immediate text + email + call task created\n- Closing anniversary: automated "happy anniversary" note\n- Birthday: automated card order or email\n- Monthly: market report email to entire database\n\n**CRM Discipline**\nThe 3-30-3 rule: spend 3 minutes updating CRM after each interaction, 30 minutes reviewing your pipeline daily, 3 hours monthly auditing your database for stale contacts.`,
+        content: `A CRM — Customer Relationship Manager — is the operational backbone of a real estate business. Without one, you're running on memory, sticky notes, and missed follow-ups. With one, you have a system that works even when you're not.
+
+## What a Real Estate CRM Needs to Do
+
+At minimum, your CRM must:
+- Store every contact with full details and notes
+- Track the lead source for every contact
+- Set and remind you of follow-up tasks
+- Show you what stage of the pipeline each contact is in
+- Log every interaction (call, text, email, meeting)
+- Flag your hottest leads so nothing falls through the cracks
+
+## The Pipeline Stages
+
+Every contact in your CRM belongs to a stage:
+
+1. **New Lead** — Just came in, not yet contacted
+2. **Attempted Contact** — Reached out, no response
+3. **Connected** — Had a conversation, gathering information
+4. **Qualified** — Meets criteria, has timeline and motivation
+5. **Active** — Actively searching or listing, in process
+6. **Under Contract** — Deal is in contract
+7. **Closed** — Transaction complete
+8. **Past Client** — Move to SOI nurture track
+9. **Long-Term Nurture** — Not ready now, check in periodically
+
+Every contact moves forward or gets re-categorized based on their current status. Nothing sits in 'New Lead' for more than 24 hours.
+
+## Choosing a CRM
+
+For real estate agents, top options include:
+- **Follow Up Boss** — Industry standard for teams, excellent automation
+- **LionDesk** — Affordable, solid texting and email features
+- **kvCORE** — Full platform with IDX website integration
+- **HubSpot Free** — Not real-estate-specific but powerful and free
+- **Google Sheets** — Zero cost, surprisingly effective if used consistently
+
+The best CRM is the one you use every day. Don't over-invest in features you won't use.
+
+## Daily CRM Habits
+
+Your CRM only works if you work it. Build these into your daily routine:
+
+**Morning (15 minutes):** Review today's follow-up tasks. Prioritize hot leads.
+**Midday (10 minutes):** Log all morning calls and interactions.
+**End of day (10 minutes):** Set tomorrow's tasks. Update pipeline stages.
+
+Total: 35 minutes per day. This 35-minute daily investment generates the follow-through that builds a 7-figure real estate business.
+
+## Automations That Save Time
+
+Once comfortable with your CRM, build automations:
+- **New lead auto-text:** Immediate response within 5 minutes of lead coming in
+- **Drip campaign:** 30-day email/text sequence for new leads who don't respond
+- **Anniversary emails:** Auto-send on client closing anniversaries
+- **Market update drip:** Monthly market data email to your full database
+
+Automation handles the volume. Your personal attention handles the relationship.`,
         keyPoints: [
-          'Choose any CRM and use it daily — consistency beats sophistication',
-          'Tag every contact to enable targeted communication',
-          'Automate birthdays, anniversaries, and monthly market reports',
-          '3-30-3: 3 min after each call, 30 min daily pipeline review, 3 hr monthly audit',
+          'A CRM is the operational backbone of a real estate business — it works even when you\'re not.',
+          'Every contact belongs to a pipeline stage — nothing should sit in \'New Lead\' for more than 24 hours.',
+          'The best CRM is the one you use daily — start simple and add complexity as your business grows.',
+          '35 minutes per day of CRM maintenance generates the follow-through that builds a top-producing business.',
+          'Automations handle volume (drip campaigns, auto-texts) so your personal attention can handle relationships.',
         ],
         quiz: [
           {
-            question: 'What is the most important factor in CRM effectiveness?',
-            options: ['The software brand you choose', 'How many contacts are loaded', 'Using it consistently every day', 'Having automation set up'],
+            question: 'What is the maximum amount of time a contact should sit in the \'New Lead\' pipeline stage?',
+            options: [
+              '1 hour',
+              '24 hours',
+              '72 hours',
+              'One week',
+            ],
+            correctIndex: 1,
+            explanation: 'New leads must be contacted quickly — the speed-to-lead principle applies here. If a contact sits in \'New Lead\' for days, you\'ve likely already lost them to another agent. Move every new lead to \'Attempted Contact\' within 24 hours at most.',
+          },
+          {
+            question: 'Which pipeline stage comes immediately after \'Under Contract\'?',
+            options: [
+              'Active',
+              'Qualified',
+              'Closed',
+              'Past Client',
+            ],
             correctIndex: 2,
-            explanation: 'A simple CRM used every day beats a sophisticated one used sporadically — discipline is the differentiator.',
+            explanation: 'The pipeline flows: Active → Under Contract → Closed → Past Client. Once the transaction closes, the contact moves to Past Client and enters the SOI nurture track — they\'re now one of your most valuable referral sources.',
           },
           {
-            question: 'The "3-30-3" CRM rule means:',
-            options: ['3 calls per day, 30 contacts per week, 3 meetings per month', '3 min after each interaction, 30 min daily pipeline review, 3 hr monthly audit', '3% response rate, 30-day follow-up, 3 closings per month', '3 texts, 30 emails, 3 calls per lead'],
+            question: 'What is the primary advantage of CRM automations like drip campaigns and auto-texts?',
+            options: [
+              'They eliminate the need for personal follow-up entirely',
+              'They handle volume and consistency so your personal attention can focus on high-value relationships',
+              'They are required by most state real estate licensing boards',
+              'They guarantee a response from every lead within 24 hours',
+            ],
             correctIndex: 1,
-            explanation: 'The 3-30-3 rhythm keeps your database current and your pipeline visible — small consistent habits prevent lost opportunities.',
-          },
-          {
-            question: 'Which tag categories should every CRM contact have?',
-            options: ['Transaction type and deal size', 'SOI, past client, active buyer/seller, investor, referral partner', 'Income level and credit score', 'State and zip code only'],
-            correctIndex: 1,
-            explanation: 'Status-based tags allow you to target communication precisely — sending the wrong message to the wrong person wastes both parties\' time.',
+            explanation: 'Automations ensure no lead falls through the cracks and maintain consistent touchpoints at scale. This frees your personal energy for the high-value activities — consultations, negotiations, and relationship building — that can\'t be automated.',
           },
         ],
       },
       {
         title: 'Social Media & Video Strategy',
         duration: '24 min',
-        content: `Social media and video are the modern equivalent of door knocking — but scalable. One video can reach thousands; one good Instagram post can generate multiple leads.\n\n**Platform Strategy**\n- **Instagram**: Visual-first. Best for listings, neighborhood content, and behind-the-scenes. Reels get the most reach.\n- **Facebook**: Still dominant for 35+ demographic. Facebook Groups (neighborhood, community) are underutilized gold mines.\n- **YouTube**: Long-form is best for search — neighborhood tours, home-buying guides, market updates. Videos rank on Google.\n- **TikTok**: Fastest reach for younger buyers. Real estate content performs extremely well.\n- **LinkedIn**: Best for luxury, commercial, relocation, and corporate clients.\n\n**Content Pillars**\nCreate content across 4 pillars:\n1. **Market Education** — stats, trends, explainers (establishes expertise)\n2. **Local Life** — restaurants, events, neighborhoods (builds local identity)\n3. **Client Stories** — wins, transformations, testimonials (social proof)\n4. **Behind the Scenes** — your day, your process (humanizes you)\n\n**Video Production Basics**\nYou don't need expensive equipment:\n- Phone on a tripod + ring light = professional look\n- Record in landscape for YouTube, portrait for Reels/TikTok\n- Consistent thumbnail style and posting time builds audience\n- Hook in first 3 seconds — state the topic immediately\n\n**The 1-3-1 Weekly System**\n1 long-form YouTube video → 3 short clips from it → 1 blog post from the transcript. Maximum content from minimum effort.`,
+        content: `Social media is the most cost-effective marketing channel available to real estate agents. Done right, it builds your brand 24/7, positions you as the local expert, and generates inbound leads without cold calling. Done wrong, it's a time drain with no ROI.
+
+## The Core Principle: Document, Don't Create
+
+The biggest obstacle agents cite is not knowing what to post. The answer: document your real life as a real estate professional. You don't need to create content from scratch — you're already doing content-worthy things every day.
+
+- Walked a listing before it goes live? Film a 60-second walkthrough.
+- Just helped a buyer win a multiple-offer situation? Share the story (without identifying details).
+- Attending a neighborhood event? Post a story from there.
+- Saw an interesting market trend? Share your take in 90 seconds.
+
+Authenticity outperforms production quality every time in real estate social media.
+
+## Platform Strategy
+
+**Instagram:** Best for lifestyle, property content, and reaching buyers and sellers aged 25-45. Reels get the most reach. Stories build daily connection.
+
+**Facebook:** Best for community engagement, local groups, and reaching the 40-65 demographic. Facebook Groups for local neighborhoods and community pages are underutilized gold.
+
+**YouTube:** Best for long-form market updates, neighborhood tours, and buyer/seller education. YouTube content has the longest shelf life — a video you post today can generate leads for years.
+
+**TikTok:** Best for reaching first-time buyers aged 20-35. Short, educational, and personality-driven content performs best.
+
+**LinkedIn:** Best for referral relationships with professionals — attorneys, accountants, financial advisors, corporate relocation contacts.
+
+You don't need all five. Pick two and do them well.
+
+## Video Content That Works
+
+Five video types that consistently generate engagement and leads:
+
+1. **Market Update (weekly/monthly):** '3 things you need to know about the [city] real estate market this month.' Short, specific, data-driven.
+
+2. **Neighborhood Tour:** Walk around a neighborhood, talk about why people love it, what it costs to live there, where to eat. Local knowledge = local authority.
+
+3. **Buyer/Seller Tips:** Answer the questions your clients ask you every day. 'How much do I actually need for a down payment?' 'What happens at closing?' Educational content builds trust.
+
+4. **Behind the Scenes:** The unglamorous, real side of real estate. Inspection day, staging a home, a tough negotiation (without details). People connect with authenticity.
+
+5. **Client Stories:** With permission, share the journey. 'My clients looked at 23 homes before we found the right one. Here's how we won it in a multiple-offer situation.'
+
+## Consistency Over Perfection
+
+Posting 3 times per week consistently for a year will outperform posting 30 times in one month and then going silent. The algorithm rewards consistency. Your audience does too.
+
+Create a simple content calendar: Monday = market/tips, Wednesday = behind the scenes, Friday = listing or neighborhood feature. Repeat. Improve over time.`,
         keyPoints: [
-          'YouTube ranks on Google — neighborhood tours get long-term search traffic',
-          '4 content pillars: Market Education, Local Life, Client Stories, Behind-the-Scenes',
-          'First 3 seconds must hook the viewer — lead with the topic',
-          '1-3-1 system: 1 YouTube video → 3 clips → 1 blog post',
+          'Document your real professional life rather than trying to create polished content from scratch — authenticity beats production quality.',
+          'Pick two platforms and do them well rather than spreading thin across all five.',
+          'YouTube has the longest content shelf life — a well-made video generates leads for years.',
+          'Five content types that consistently perform: market updates, neighborhood tours, buyer/seller tips, behind-the-scenes, and client stories.',
+          'Consistency over perfection — posting 3 times a week for a year beats 30 posts in a month then going silent.',
         ],
         quiz: [
           {
-            question: 'Which platform generates the most long-term search traffic for real estate content?',
-            options: ['TikTok', 'Instagram', 'YouTube', 'Snapchat'],
+            question: 'Which social media platform has the longest content shelf life for real estate agents?',
+            options: [
+              'Instagram',
+              'TikTok',
+              'YouTube',
+              'Facebook',
+            ],
             correctIndex: 2,
-            explanation: 'YouTube videos rank on Google — a neighborhood tour from 3 years ago can still drive leads today.',
+            explanation: 'YouTube videos are indexed by search engines and continue to be discovered organically for years after posting. A neighborhood tour or buyer education video posted today can still generate leads two years from now — unlike Instagram or TikTok content that disappears from feeds within days.',
           },
           {
-            question: 'What is the "1-3-1" content system?',
-            options: ['1 listing, 3 tours, 1 closing per week', '1 YouTube video → 3 short clips → 1 blog post', '1 photo, 3 captions, 1 hashtag per day', '1 post per day on 3 different platforms'],
+            question: 'What is the \'document, don\'t create\' content principle?',
+            options: [
+              'Always record client interactions for documentation purposes',
+              'Capture and share your real professional life as it happens rather than creating scripted content from scratch',
+              'Only post content about properties you have listed or sold',
+              'Document your content calendar before posting anything on social media',
+            ],
             correctIndex: 1,
-            explanation: 'The 1-3-1 system maximizes content output from minimum effort — one production session creates a week of content across platforms.',
+            explanation: 'You\'re already doing content-worthy things every day — walkthroughs, negotiations, client wins, market research. Documenting these in real time is faster, more authentic, and more engaging than trying to produce scripted content.',
           },
           {
-            question: 'What are the four content pillars for real estate social media?',
-            options: ['Listings, Prices, Events, Team', 'Market Education, Local Life, Client Stories, Behind the Scenes', 'Buyers, Sellers, Investors, Renters', 'Home Tours, Tips, Stats, Giveaways'],
-            correctIndex: 1,
-            explanation: 'Rotating through these four pillars builds authority, relatability, trust, and human connection — the ingredients of a referral-generating brand.',
+            question: 'Which platform is most effective for reaching first-time homebuyers aged 20-35?',
+            options: [
+              'LinkedIn',
+              'Facebook',
+              'TikTok',
+              'YouTube',
+            ],
+            correctIndex: 2,
+            explanation: 'TikTok\'s user base skews younger — it\'s the primary platform for reaching first-time buyers in their 20s and early 30s. Short, educational, personality-driven content performs best, making buyer education content a natural fit.',
           },
         ],
       },
       {
         title: 'Geographic Farming',
         duration: '18 min',
-        content: `Geographic farming means owning a neighborhood — becoming the go-to agent through consistent presence, value delivery, and market expertise.\n\n**Selecting Your Farm**\nIdeal farm characteristics:\n- 200-500 homes (manageable for one agent)\n- Turnover rate of 5-8%+ per year (100+ transactions if farm is 200 homes at 5%)\n- Low existing agent market share (you can penetrate)\n- Area you can authentically claim expertise in\n\nCheck MLS for last 12 months of activity in the target area before committing.\n\n**The 6-Month Domination Plan**\n- Month 1-2: Introduction mailing (market report + who you are)\n- Month 3: Value delivery (neighborhood guide, area stats)\n- Month 4: Community engagement (sponsor a local event, join neighborhood Facebook group)\n- Month 5: Market update + just sold/listed announcements\n- Month 6: Door knock with branded gift (notepad, magnet, pumpkin in fall)\n\n**Digital Farming**\nComplement physical farming:\n- Run geo-targeted Facebook/Instagram ads to your farm addresses\n- Create a neighborhood-specific Instagram account or hashtag\n- Join/start a neighborhood Facebook Group\n- Build a neighborhood page on your website with local content\n\n**Time to ROI**\nFarming takes 12-24 months before consistent returns. Most agents quit too early. Track: mailings sent, doors knocked, leads generated, deals closed. The key metric is market share growth — aim for 5% in year 1, 10% in year 2, 20% in year 3+.`,
+        content: `Geographic farming is the practice of becoming the dominant real estate agent in a specific, defined area — through consistent marketing, community presence, and market expertise. Done with patience and consistency, it produces the most reliable listing pipeline in the business.
+
+## Choosing Your Farm
+
+Not all neighborhoods are equal for farming. The ideal farm has:
+
+**Annual Turnover Rate of 5-7%+:** If a neighborhood has 500 homes and 25-35 sell per year, there's enough volume to make farming worthwhile. Below 3% turnover, the ROI is too low.
+
+**Not Already Dominated:** Check who currently has the most listings and sales in the area. If one agent has 40% market share, that farm is difficult to penetrate. Look for areas with fragmented market share — no one owns it yet.
+
+**Aligned with Your Target Client:** Farm where your ideal client lives. If you want to work with move-up buyers, farm the neighborhoods they're likely to move from.
+
+**Size:** 400-600 homes is the ideal farm size. Small enough to dominate, large enough to generate volume.
+
+## The Farming Budget
+
+Farming requires consistent financial investment. Rule of thumb: budget $1-2 per home per month for direct mail, plus additional for digital and community presence. A 500-home farm = $500-$1,000/month.
+
+Farming rarely produces results in the first 3 months. Most agents see meaningful listing activity at 12-18 months. This is a long game — budget accordingly.
+
+## Your Farming Touchpoint Mix
+
+**Direct Mail (monthly):** Postcards with market updates, just-listed/sold announcements, and neighborhood-specific content. Consistency matters more than design.
+
+**Door Knocking (quarterly):** Nothing builds name recognition faster than face-to-face contact. Bring a market update report as a reason for the visit.
+
+**Community Presence:** Sponsor the neighborhood newsletter, host a block party, attend HOA meetings, support local school events. Be the face people associate with the neighborhood.
+
+**Digital Farming:** Run Facebook/Instagram ads targeted specifically to the zip codes in your farm. Geo-targeted ads reinforce your mailers at a low cost.
+
+**Just Listed / Just Sold Notifications:** Every transaction in your farm is a marketing opportunity. Mail the entire neighborhood immediately when you list or sell a home nearby.
+
+## Tracking Farm Performance
+
+Track monthly:
+- Your listings in the farm
+- Your sales in the farm
+- Your market share % (your sales ÷ total sales)
+- Contacts added from the farm to your database
+
+Goal: reach 10% market share in year one, 20%+ by year three.`,
         keyPoints: [
-          'Farm 200-500 homes with 5%+ annual turnover for viable economics',
-          'Check MLS agent market share before entering — low concentration is your opening',
-          'Farming ROI takes 12-24 months — commit fully or skip it',
-          'Combine physical (mail, door knocks) and digital (geo-targeted ads) farming',
+          'Choose a farm with 5-7%+ annual turnover, fragmented market share, and 400-600 homes.',
+          'Budget $1-2 per home per month and commit for 12-18 months before expecting significant listing activity.',
+          'Just listed/sold mailers to the entire farm are your highest-ROI touchpoints — use every transaction as a marketing event.',
+          'Community presence (events, HOA, sponsorships) accelerates name recognition beyond what mailers alone can achieve.',
+          'Track market share monthly — goal is 10% in year one, 20%+ by year three.',
         ],
         quiz: [
           {
-            question: 'What is the ideal size of a geographic farm?',
-            options: ['50–100 homes', '100–200 homes', '200–500 homes', '1,000+ homes'],
+            question: 'What annual turnover rate should a geographic farm have to make it worth targeting?',
+            options: [
+              '1-2%',
+              '3-4%',
+              '5-7% or higher',
+              '10% or higher only',
+            ],
             correctIndex: 2,
-            explanation: '200–500 homes is manageable for one agent while generating enough transaction volume to justify the marketing investment.',
+            explanation: 'A farm with less than 3-5% turnover doesn\'t produce enough transactions to justify the consistent marketing investment. At 5-7%+ turnover, a 500-home farm generates 25-35+ sales per year — enough volume to build a meaningful business.',
           },
           {
-            question: 'What annual turnover rate makes a farm economically viable?',
-            options: ['1–2%', '3–4%', '5–8%+', '10–15%'],
+            question: 'What is the ideal size for a geographic farm?',
+            options: [
+              '50-100 homes',
+              '200-300 homes',
+              '400-600 homes',
+              '1,000+ homes',
+            ],
             correctIndex: 2,
-            explanation: 'At 5–8% turnover, a 300-home farm generates 15–24 potential transactions annually — enough to build a meaningful business.',
+            explanation: '400-600 homes is large enough to generate meaningful transaction volume but small enough to dominate with consistent effort and a reasonable budget. Smaller farms don\'t produce enough volume; larger farms are too expensive to cover consistently.',
           },
           {
-            question: 'How long does geographic farming typically take to generate consistent returns?',
-            options: ['1–3 months', '6–9 months', '12–24 months', '3–5 years'],
+            question: 'When is the most impactful time to send a just-sold mailer to your farm?',
+            options: [
+              'On the first of every month regardless of transaction activity',
+              'Only when you achieve a record sale price in the neighborhood',
+              'Immediately after closing on any transaction within the farm area',
+              'Quarterly, bundled with all recent sales at once',
+            ],
             correctIndex: 2,
-            explanation: 'Consistency over 12–24 months is what separates successful farmers from those who quit too early — the market needs to know and trust you first.',
+            explanation: 'Speed and relevance matter. Immediate just-sold mailers reach neighbors while the news is fresh — they\'ve likely already heard about the sale and your mailer confirms your involvement. Bundling them quarterly loses the timely impact.',
           },
         ],
       },
       {
         title: 'Team Building',
         duration: '20 min',
-        content: `Building a real estate team allows you to scale beyond what a single agent can accomplish. But teams require management, culture, and systems — not just bodies.\n\n**When to Build a Team**\nHire when you're consistently turning away business or when administrative tasks are preventing you from generating revenue. Most agents should be at $200K+ GCI before adding overhead.\n\n**First Hire: The Buyer's Agent**\nYour first hire is almost always a buyer's agent. You keep listings (highest leverage activity), they handle buyer showings and contracts. Set a minimum production expectation (e.g., 2 closings/month) with a 90-day ramp period.\n\n**Team Models**\n- **Traditional Team**: Leader on listings, buyer agents on buyers. Lead generation centralized.\n- **Rainmaker Model**: Leader generates all leads, team members convert. High control, limited autonomy.\n- **Partnership Model**: Two or more senior agents share resources, marketing, and admin.\n- **Expansion Model**: Multiple team leaders in different markets under one brand.\n\n**Compensation Structures**\n- Buyer agents: 40-60% of their commissions\n- Showing assistants: flat fee per showing or small salary\n- Transaction coordinator: flat fee per file ($400-$600) or part-time salary\n- ISA (Inside Sales Agent): base salary + lead conversion bonus\n\n**Culture and Retention**\nTop agents leave for culture and growth, not commission splits. Create weekly team meetings, set clear goals, celebrate wins, and provide mentorship. The cost of replacing a producing agent is 3-6 months of their production.`,
+        content: `Building a team is one of the most significant inflection points in a real estate career. Done right, a team multiplies your production and frees you to focus on your highest-value activities. Done wrong, it adds overhead, management burden, and liability without meaningful income growth.
+
+## When to Build a Team
+
+You're ready to build a team when:
+- You're consistently turning away business or referring out leads you can't handle
+- You're doing $6-8M+ in annual volume as a solo agent
+- You have a repeatable, documented lead generation system
+- You're spending significant time on tasks that could be delegated (transaction coordination, administrative work)
+
+Building a team before these conditions are met usually creates problems. Get your own production to a high level first.
+
+## The First Hire: Transaction Coordinator
+
+The first person you hire should not be another agent — it should be a Transaction Coordinator (TC). A TC handles the administrative burden after a contract is signed: coordinating inspections, managing documents, communicating with all parties, and tracking deadlines.
+
+Hiring a TC frees 10-15 hours per transaction back to you — time you can use to generate more business. At $400-600 per closed transaction (part-time or contract TC), this is typically the highest-ROI hire a solo agent can make.
+
+## Team Structures
+
+**The Solo Agent + TC Model:** You + a part-time transaction coordinator. Low overhead, high margin.
+
+**The Duo:** You + one buyer's agent. You handle listings, they handle buyers. Clean and effective for the right partnership.
+
+**The Traditional Team:** Team lead + multiple buyer's agents + TC + possibly an admin. You function as the rainmaker — lead generation and listing appointments. Agents handle execution.
+
+**The Mega Team / Group:** Multiple agents with their own production, shared branding and operations. More complex to manage.
+
+## Agent Compensation Models
+
+**Split-Based:** Agent receives 50-70% of their commissions, team lead retains 30-50%. The team provides leads, training, and marketing.
+
+**Salary + Bonus:** Less common, typically for inside sales agents (ISAs) who convert leads and set appointments.
+
+**Referral Fee:** Solo agents on a referral arrangement — you send leads, they pay 25-35% referral fee at close.
+
+## Building Culture Before You Build a Team
+
+The most important thing you can do before hiring is define your values, your standards, and your expectations. The best agents won't join a team with no clear identity. Culture is your recruiting tool and your retention strategy.
+
+Ask every potential hire: 'What are you trying to build in your career?' If it aligns with where your team is going, you have a potential fit. If it doesn't, don't hire them regardless of their production.`,
         keyPoints: [
-          'First hire: buyer agent when you\'re turning down buyer business at $200K+ GCI',
-          'You keep listings — it\'s your highest leverage activity',
-          'Buyer agents: 40-60% of their commissions, 90-day ramp with minimum targets',
-          'Agents leave for culture, not splits — invest in weekly meetings and mentorship',
+          'Build a team only after you have consistent volume ($6-8M+), a repeatable lead system, and more leads than you can handle.',
+          'Your first hire should be a Transaction Coordinator — it\'s the highest-ROI hire for a solo agent.',
+          'Team structures range from Solo+TC to Mega Teams — start simple and add complexity only when volume demands it.',
+          'The most common compensation model is a 50-70% split to agents with the team lead retaining 30-50%.',
+          'Define your culture and values before hiring — culture is both your recruiting tool and your retention strategy.',
         ],
         quiz: [
           {
-            question: 'At what GCI level should most agents consider building a team?',
-            options: ['$50,000+', '$100,000+', '$200,000+', '$500,000+'],
-            correctIndex: 2,
-            explanation: 'At $200K+ GCI you have the revenue to cover team overhead while still profiting — building earlier risks underfunding the team\'s growth.',
-          },
-          {
-            question: 'What is typically the first hire for a growing real estate team?',
-            options: ['Administrative assistant', 'Transaction coordinator', 'Buyer\'s agent', 'Marketing manager'],
-            correctIndex: 2,
-            explanation: 'A buyer\'s agent allows you to focus on your highest-leverage activity (listings) while team production scales.',
-          },
-          {
-            question: 'What percentage of commissions do buyer agents on a team typically receive?',
-            options: ['20–30%', '40–60%', '70–80%', '90–100%'],
+            question: 'What is the recommended first hire for a solo agent looking to scale?',
+            options: [
+              'A buyer\'s agent to handle showings',
+              'A Transaction Coordinator',
+              'A marketing assistant',
+              'An inside sales agent (ISA)',
+            ],
             correctIndex: 1,
-            explanation: '40–60% is the market standard — the team leader provides lead generation, systems, and mentorship in exchange for the commission split.',
+            explanation: 'A TC frees 10-15 hours per transaction back to the lead agent — hours that can be reinvested in lead generation and new business. It\'s the most direct ROI hire because it removes administrative burden without adding the management complexity of another licensed agent.',
+          },
+          {
+            question: 'At approximately what solo annual volume should a real estate agent consider building a team?',
+            options: [
+              '$1-2 million',
+              '$3-4 million',
+              '$6-8 million',
+              '$15 million or more',
+            ],
+            correctIndex: 2,
+            explanation: 'At $6-8M+ in personal volume, most agents are at or near capacity for what one person can produce alone. At that level, the lead flow and systems exist to support and justify team growth. Building a team before this threshold often adds costs without the volume to cover them.',
+          },
+          {
+            question: 'In the most common team compensation model, what percentage does a buyer\'s agent typically receive?',
+            options: [
+              '100% minus a fixed monthly desk fee',
+              '50-70% of their earned commissions',
+              '25-35% of their earned commissions',
+              'A fixed salary regardless of production',
+            ],
+            correctIndex: 1,
+            explanation: 'The standard team split model gives buyer\'s agents 50-70% of commissions they earn, with the team lead retaining 30-50%. In exchange, the team provides leads, marketing, training, and operational support.',
           },
         ],
       },
       {
         title: 'Brokerage Selection',
         duration: '14 min',
-        content: `Choosing a brokerage is a business decision, not an emotional one. The right brokerage provides leverage: tools, training, brand, and support that accelerate your production.\n\n**What to Evaluate**\n\n**Compensation Structure**\n- Traditional: 50-70% split to agent, decreasing as production increases (cap model)\n- Cap Model: split until you pay a set annual fee ($20-30K), then 100% for the rest of the year\n- 100% Commission: flat fee per transaction, agent keeps everything after the fee\n\n**Training & Support**\n- New agents need coaching and mentorship more than commission percentage\n- Look for structured onboarding, weekly training, and accessible managing broker\n- Mentorship programs (percentage of first deals goes to mentor) can accelerate learning\n\n**Brand Recognition**\nNational brands (KW, RE/MAX, Coldwell Banker, EXP) offer instant credibility in new markets. Boutique independent brokerages offer culture and flexibility but require more personal brand building.\n\n**Technology & Lead Generation**\nWhat technology does the brokerage provide? CRM, website, marketing tools, transaction management? Does the brokerage provide leads, or do you generate your own?\n\n**The True Cost of "Higher Splits"**\nAn agent at 70% with 20 closings = 14 deal-equivalents.\nAn agent at 60% with 28 closings (more support/training) = 16.8 deal-equivalents.\nBetter tools and training often outperform higher splits in the first 3-5 years.`,
+        content: `Choosing a brokerage is one of the most important early-career decisions a real estate agent makes. The right brokerage accelerates your development, provides support when you need it, and gives you a brand that opens doors. The wrong brokerage costs you money, time, and momentum.
+
+## What to Evaluate
+
+**Commission Structure:**
+Brokerages compensate agents through splits and fees. Know the difference:
+
+- **Traditional Split:** You earn a percentage of your commission, the brokerage retains the rest. Common splits range from 50/50 for new agents to 70/30 or better for producers. Some brokerages have a cap — once you pay a maximum amount to the brokerage in a year, you keep 100% for the rest of the year.
+
+- **100% Commission / Flat Fee:** You keep the full commission and pay a flat monthly fee or per-transaction fee to the brokerage. Higher income per deal, but you lose training and support.
+
+- **Hybrid Models (eXp, REAL):** Cloud-based brokerages with attractive splits and revenue share programs but less in-person support.
+
+**Training and Mentorship:**
+For new agents, training quality matters more than commission split. A 70/30 split with excellent training and a mentor will outperform a 90/10 split with no support. Ask specifically:
+- Is there a structured new agent training program?
+- Will I have access to a mentor or team lead?
+- How are new agents supported in their first 6 months?
+
+**Brand Recognition:**
+In some markets, brokerage brand opens doors — especially with listing clients who recognize major national brands. In other markets, the agent's personal brand matters more than the brokerage. Know your market.
+
+**Culture and Community:**
+You will spend a lot of time around these people. A brokerage with a collaborative, supportive culture will make you better. A brokerage of isolated agents competing against each other will not.
+
+**Tools and Technology:**
+What CRM, transaction management, marketing, and lead generation tools does the brokerage provide? Factor the cost of these tools into your evaluation — they have real dollar value.
+
+## When to Switch Brokerages
+
+Switch when:
+- You've outgrown the training and support you needed early on
+- Your split is no longer competitive for your production level
+- The culture doesn't support your growth direction
+- You're building a team and need a brokerage structure that accommodates it
+
+Don't switch for a marginally better split — relationships and reputation take time to rebuild at a new brokerage. Switch for strategic reasons, not opportunistic ones.`,
         keyPoints: [
-          'New agents: training and support matter more than commission percentage',
-          'Cap model: pay a fixed annual fee, then keep 100% — best for high producers',
-          'Evaluate real cost of splits — better tools often beat higher percentages',
-          'Ask about lead gen: provided vs. self-generated changes the calculus entirely',
+          'For new agents, training quality and mentorship matter more than commission split — support accelerates growth.',
+          'Understand the difference between traditional splits, capped splits, and flat-fee/100% commission models.',
+          'Evaluate brokerages on five dimensions: commission structure, training, brand, culture, and tools.',
+          'Cloud-based brokerages offer attractive economics but less in-person support — weigh this based on your experience level.',
+          'Switch brokerages for strategic reasons — culture misalignment, outgrown support, team building — not just for a marginally better split.',
         ],
         quiz: [
           {
-            question: 'In a "cap model" brokerage, what happens after the agent reaches their annual cap?',
-            options: ['They earn 50% of commissions', 'They stop earning commissions until next year', 'They keep 100% of commissions for the rest of the year', 'Their split decreases to 30%'],
-            correctIndex: 2,
-            explanation: 'The cap model rewards high producers — once you\'ve paid your annual fee, every subsequent commission is yours entirely.',
+            question: 'For a brand-new real estate agent, what factor should be prioritized above commission split when selecting a brokerage?',
+            options: [
+              'The highest possible commission split available',
+              'Training quality and access to mentorship',
+              'The brokerage\'s national brand recognition',
+              'The lowest monthly desk fees',
+            ],
+            correctIndex: 1,
+            explanation: 'New agents need guidance, feedback, and structure. A 70/30 split with strong training and a mentor will generate more income in year one than a 90/10 split with no support — because the training helps you close deals you\'d otherwise lose.',
           },
           {
-            question: 'For new agents, what matters most when selecting a brokerage?',
-            options: ['Highest commission split', 'Training, mentorship, and accessible support', 'The most recognizable brand', 'Technology and lead generation'],
+            question: 'What is a \'capped split\' commission structure?',
+            options: [
+              'A structure where the agent\'s commission is capped at a maximum per transaction',
+              'The agent pays a split to the brokerage up to a maximum annual amount, then keeps 100% for the rest of the year',
+              'A structure where the brokerage guarantees the agent a minimum annual income',
+              'A flat monthly fee regardless of transaction volume',
+            ],
             correctIndex: 1,
-            explanation: 'A new agent who learns the business properly is worth far more in year 3 than one who had a high split in year 1 with no coaching.',
+            explanation: 'A capped split (common at brokerages like Keller Williams) means you pay the brokerage a percentage up to a specified annual cap — often $20,000-$30,000. Once you\'ve paid that cap, you keep 100% of commissions for the remainder of the year, incentivizing high production.',
           },
           {
-            question: 'An agent at 70% with 20 closings vs. 60% with 28 closings — which earns more?',
-            options: ['The 70% agent (14 deal-equivalents)', 'The 60% agent (16.8 deal-equivalents)', 'They earn the same', 'Cannot be determined without knowing commission amounts'],
-            correctIndex: 1,
-            explanation: 'Better tools and training that generate more volume often outperform higher splits — count deal-equivalents, not split percentages.',
+            question: 'What is the primary trade-off of a 100% commission flat-fee brokerage model?',
+            options: [
+              'Higher income per deal but less training, mentorship, and in-person support',
+              'Lower income per deal but access to the brokerage\'s full lead pipeline',
+              'No monthly fees but mandatory participation in all brokerage-assigned transactions',
+              'Full commission retention but required to split with the brokerage on referrals',
+            ],
+            correctIndex: 0,
+            explanation: 'Flat-fee/100% commission brokerages offer the best economics per deal but provide minimal training, mentorship, or brand support. This model works well for experienced, self-sufficient agents but can leave new agents without the guidance they need to develop.',
           },
         ],
       },
     ],
+  },
   },
   {
     id: 'investing',
