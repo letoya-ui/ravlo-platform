@@ -501,10 +501,17 @@ function RavloAcademy() {
   const [showHistory, setShowHistory] = useState(false);
   const [historyFilter, setHistoryFilter] = useState("");
 
-  // Quiz state
+  // Quiz state (unit-level)
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [viewCertCourse, setViewCertCourse] = useState(null);
+
+  // Lesson view state
+  const [activeLesson, setActiveLesson] = useState(null); // {lesson, unit, course}
+  const [lessonContent, setLessonContent] = useState(null); // {content, keyPoints, quiz}
+  const [lessonLoading, setLessonLoading] = useState(false);
+  const [lessonQuizAnswers, setLessonQuizAnswers] = useState({});
+  const [lessonQuizSubmitted, setLessonQuizSubmitted] = useState(false);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -791,6 +798,112 @@ function RavloAcademy() {
     setScreen("coach");
     const prompt = `Create my personalized 90-day success plan. My name is ${userName}, I'm a ${onboardingAnswers?.role || ACCESS_TIERS[tier]?.description} with ${ACCESS_TIERS[tier]?.label} access. My #1 goal: ${onboardingAnswers?.goal || "grow my business"}. My biggest challenge: ${onboardingAnswers?.challenge || "consistency"}. Build a complete, specific plan.`;
     setTimeout(() => sendMessage(prompt), 100);
+  };
+
+  // ── Lesson view helpers ───────────────────────────────────────────────────
+  const openLesson = async (lesson, unit, course) => {
+    setActiveLesson({ lesson, unit, course });
+    setLessonContent(null);
+    setLessonQuizAnswers({});
+    setLessonQuizSubmitted(false);
+    setScreen("lesson");
+    setLessonLoading(true);
+    try {
+      const res = await fetch("/academy/lesson-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lesson_id: lesson.id,
+          title: lesson.title,
+          description: lesson.description || "",
+          course_title: course.title,
+          unit_title: unit.title,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setLessonContent(data);
+    } catch (e) {
+      setLessonContent({ error: e.message || "Could not load lesson. Please try again." });
+    } finally {
+      setLessonLoading(false);
+    }
+  };
+
+  const renderInline = (text, baseStyle, boldStyle) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/);
+    if (parts.length === 1) return React.createElement("span", { style: baseStyle }, text);
+    return React.createElement("span", { style: baseStyle },
+      parts.map((p, i) =>
+        p.startsWith("**") && p.endsWith("**")
+          ? React.createElement("span", { key: i, style: boldStyle }, p.slice(2, -2))
+          : React.createElement("span", { key: i }, p)
+      )
+    );
+  };
+
+  const renderLessonContent = (text, courseColor) => {
+    if (!text) return null;
+    const lines = text.split("\n");
+    const elements = [];
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      // Table
+      if (line.startsWith("|")) {
+        const tableLines = [];
+        while (i < lines.length && lines[i].startsWith("|")) { tableLines.push(lines[i]); i++; }
+        const rows = tableLines
+          .filter(l => !/^\|[\s\-:|]+\|$/.test(l))
+          .map(l => l.split("|").slice(1, -1).map(c => c.trim()));
+        if (rows.length > 0) {
+          const [hdr, ...body] = rows;
+          elements.push(
+            React.createElement("div", { key: `tbl-${i}`, style: { margin: "16px 0", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" } },
+              React.createElement("div", { style: { display: "flex", background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.08)" } },
+                hdr.map((c, ci) => React.createElement("div", { key: ci, style: { flex: 1, padding: "8px 12px", fontSize: 11, fontWeight: 700, color: "#C8C0B4" } }, c))
+              ),
+              body.map((row, ri) => React.createElement("div", { key: ri, style: { display: "flex", borderBottom: ri < body.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none", background: ri % 2 ? "rgba(255,255,255,0.01)" : "transparent" } },
+                row.map((c, ci) => React.createElement("div", { key: ci, style: { flex: 1, padding: "8px 12px", fontSize: 11, color: "#7A7268", lineHeight: 1.5 } }, c))
+              ))
+            )
+          );
+        }
+        continue;
+      }
+      // Section header
+      if (line.startsWith("**") && line.endsWith("**") && line.length > 4 && !line.slice(2, -2).includes("**")) {
+        elements.push(
+          React.createElement("div", { key: i, style: { display: "flex", alignItems: "stretch", marginTop: 24, marginBottom: 10 } },
+            React.createElement("div", { style: { width: 3, borderRadius: 2, marginRight: 12, background: courseColor, flexShrink: 0 } }),
+            React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: courseColor, lineHeight: 1.3, paddingTop: 2, paddingBottom: 2 } }, line.slice(2, -2))
+          )
+        );
+        i++; continue;
+      }
+      // Bullet
+      if (line.startsWith("- ")) {
+        elements.push(
+          React.createElement("div", { key: i, style: { display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 6 } },
+            React.createElement("div", { style: { width: 6, height: 6, borderRadius: 3, background: courseColor, flexShrink: 0, marginTop: 7 } }),
+            React.createElement("div", { style: { fontSize: 13, color: "#C8C0B4", lineHeight: 1.6, flex: 1 } },
+              renderInline(line.slice(2), { fontSize: 13, color: "#C8C0B4" }, { fontWeight: 700, color: "#EDE8DF" })
+            )
+          )
+        );
+        i++; continue;
+      }
+      // Spacer
+      if (line.trim() === "") { elements.push(React.createElement("div", { key: i, style: { height: 10 } })); i++; continue; }
+      // Paragraph
+      elements.push(
+        React.createElement("div", { key: i, style: { marginBottom: 4 } },
+          renderInline(line, { fontSize: 13, color: "#9A9288", lineHeight: "1.75", display: "block" }, { fontWeight: 700, color: "#C8C0B4" })
+        )
+      );
+      i++;
+    }
+    return elements;
   };
 
   const t = tier ? ACCESS_TIERS[tier] : null;
@@ -1275,10 +1388,10 @@ function RavloAcademy() {
                           style={{ width: 24, height: 24, borderRadius: 6, border: `1.5px solid ${done ? activeCourse.color : activeCourse.color + "50"}`, background: done ? activeCourse.color : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "all 0.2s" }}>
                           {done && <span style={{ color: "#080808", fontSize: 11, fontWeight: 700 }}>+</span>}
                         </button>
-                        <button onClick={() => startCoach(`Teach me about: "${lesson.title}" from the ${activeCourse.title} course, Unit "${unit.title}". ${lesson.description} Start with the key concepts, then give me real-world examples and actionable steps I can use immediately.`)}
+                        <button onClick={() => openLesson(lesson, unit, activeCourse)}
                           style={{ flex: 1, background: "none", border: "none", textAlign: "left", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", padding: 0 }}>
-                          <div style={{ fontSize: 13, color: done ? activeCourse.color : "#C8C0B4", fontWeight: done ? 600 : 500, textDecoration: done ? "line-through" : "none", opacity: done ? 0.7 : 1 }}>{lesson.title}</div>
-                          <div style={{ fontSize: 11, color: "#3A3530", marginTop: 2 }}>{lesson.duration} - {lesson.description}</div>
+                          <div style={{ fontSize: 13, color: done ? activeCourse.color : "#C8C0B4", fontWeight: done ? 600 : 500, opacity: done ? 0.7 : 1 }}>{lesson.title}</div>
+                          <div style={{ fontSize: 11, color: "#3A3530", marginTop: 2 }}>{lesson.duration} · {lesson.description}</div>
                         </button>
                       </div>
                     );
@@ -1303,6 +1416,197 @@ function RavloAcademy() {
             style={{ marginTop: 12, padding: "15px 28px", borderRadius: 8, border: `1px solid ${activeCourse.color}40`, background: `${activeCourse.color}12`, color: activeCourse.color, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
             AI Overview of Entire Course
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── LESSON VIEW ───────────────────────────────────────────────────────────
+  if (screen === "lesson" && activeLesson) {
+    const { lesson, unit, course } = activeLesson;
+    const courseColor = course.color || "#D4AF6A";
+    const lessonsDone = !!progress.lessons[lesson.id];
+
+    // Prev/next within unit
+    const unitLessons = unit.lessons || [];
+    const lessonIdx = unitLessons.findIndex(l => l.id === lesson.id);
+    const prevLesson = lessonIdx > 0 ? unitLessons[lessonIdx - 1] : null;
+    const nextLesson = lessonIdx < unitLessons.length - 1 ? unitLessons[lessonIdx + 1] : null;
+
+    // Lesson-level quiz handling
+    const lQuiz = lessonContent?.quiz || [];
+    const lAllAnswered = lQuiz.length > 0 && lQuiz.every((_, qi) => lessonQuizAnswers[qi] !== undefined);
+    const lScore = lessonQuizSubmitted
+      ? Math.round(lQuiz.filter((q, qi) => lessonQuizAnswers[qi] === q.correctIndex).length / lQuiz.length * 100)
+      : null;
+    const lPassed = lScore !== null && lScore >= 70;
+
+    const submitLessonQuiz = () => {
+      setLessonQuizSubmitted(true);
+      if (lPassed || lScore >= 70) {
+        const newP = { ...progress, lessons: { ...progress.lessons } };
+        if (!newP.lessons[lesson.id]) {
+          newP.lessons[lesson.id] = true;
+          newP.xp = (newP.xp || 0) + XP_PER_LESSON;
+          saveProgress(newP);
+        }
+      }
+    };
+
+    return (
+      <div style={{ ...S.page, background: "#080808" }}>
+        {/* Sticky header */}
+        <div style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(8,8,8,0.96)", backdropFilter: "blur(10px)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: isMobile ? "12px 16px" : "14px 32px", display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={() => setScreen("course")} style={{ background: "none", border: "none", color: "#5A5248", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif", display: "flex", alignItems: "center", gap: 6, padding: 0 }}>
+            &#8592; <span>{course.title}</span>
+          </button>
+          <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.08)" }} />
+          <div style={{ fontSize: 11, color: "#3A3530", letterSpacing: 1 }}>{unit.title}</div>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+            {lessonsDone && <span style={{ fontSize: 10, color: courseColor, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", background: courseColor + "18", padding: "3px 10px", borderRadius: 20 }}>Completed</span>}
+          </div>
+        </div>
+
+        <div style={{ maxWidth: 760, margin: "0 auto", padding: isMobile ? "32px 16px 60px" : "48px 32px 80px" }}>
+          {/* Lesson header */}
+          <div style={{ borderLeft: `3px solid ${courseColor}`, paddingLeft: 20, marginBottom: 32 }}>
+            <div style={{ fontSize: 10, color: courseColor, fontWeight: 600, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>{unit.title}</div>
+            <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 28 : 38, fontWeight: 700, color: "#EDE8DF", lineHeight: 1.15, margin: "0 0 12px" }}>{lesson.title}</h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: "#5A5248", display: "flex", alignItems: "center", gap: 5 }}>⏱ {lesson.duration}</span>
+              {lQuiz.length > 0 && <span style={{ fontSize: 12, color: "#5A5248" }}>· {lQuiz.length}-question quiz</span>}
+            </div>
+          </div>
+
+          {/* Loading */}
+          {lessonLoading && (
+            <div style={{ textAlign: "center", padding: "60px 0" }}>
+              <div style={{ width: 28, height: 28, border: `2px solid ${courseColor}30`, borderTopColor: courseColor, borderRadius: "50%", animation: "ru-spin 0.8s linear infinite", margin: "0 auto 16px" }} />
+              <div style={{ fontSize: 12, color: "#5A5248", letterSpacing: 2 }}>Loading lesson…</div>
+            </div>
+          )}
+
+          {/* Error */}
+          {!lessonLoading && lessonContent?.error && (
+            <div style={{ padding: "24px", borderRadius: 10, background: "rgba(212,106,106,0.08)", border: "1px solid rgba(212,106,106,0.2)", color: "#D46A6A", fontSize: 13 }}>
+              {lessonContent.error}
+              <button onClick={() => openLesson(lesson, unit, course)} style={{ display: "block", marginTop: 12, fontSize: 12, color: courseColor, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>Try again</button>
+            </div>
+          )}
+
+          {/* Content */}
+          {!lessonLoading && lessonContent && !lessonContent.error && (
+            <>
+              {/* Lesson body */}
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: isMobile ? "20px 16px" : "32px 36px", marginBottom: 28 }}>
+                {renderLessonContent(lessonContent.content, courseColor)}
+              </div>
+
+              {/* Key takeaways */}
+              {lessonContent.keyPoints?.length > 0 && (
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: "#5A5248", textTransform: "uppercase", marginBottom: 14 }}>Key Takeaways</div>
+                  <div style={{ border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, overflow: "hidden" }}>
+                    {lessonContent.keyPoints.map((pt, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "14px 20px", borderBottom: i < lessonContent.keyPoints.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                        <div style={{ width: 7, height: 7, borderRadius: "50%", background: courseColor, flexShrink: 0, marginTop: 6 }} />
+                        <div style={{ fontSize: 13, color: "#C8C0B4", lineHeight: 1.6 }}>{pt}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Lesson quiz */}
+              {lQuiz.length > 0 && (
+                <div style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${courseColor}22`, borderRadius: 12, padding: isMobile ? "20px 16px" : "28px 32px", marginBottom: 28 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: courseColor, textTransform: "uppercase", marginBottom: 20 }}>Knowledge Check</div>
+
+                  {!lessonQuizSubmitted ? (
+                    <>
+                      {lQuiz.map((q, qi) => (
+                        <div key={qi} style={{ marginBottom: 24 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: "#EDE8DF", marginBottom: 12, lineHeight: 1.4 }}>Q{qi + 1}. {q.question}</div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            {q.options.map((opt, oi) => {
+                              const sel = lessonQuizAnswers[qi] === oi;
+                              return (
+                                <button key={oi} onClick={() => setLessonQuizAnswers(prev => ({ ...prev, [qi]: oi }))}
+                                  style={{ textAlign: "left", padding: "12px 16px", borderRadius: 8, border: `1.5px solid ${sel ? courseColor : "rgba(255,255,255,0.08)"}`, background: sel ? courseColor + "15" : "rgba(255,255,255,0.02)", color: sel ? courseColor : "#9A9288", fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 10 }}>
+                                  <span style={{ width: 22, height: 22, borderRadius: 6, border: `1.5px solid ${sel ? courseColor : "rgba(255,255,255,0.12)"}`, background: sel ? courseColor + "20" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, flexShrink: 0, color: sel ? courseColor : "#5A5248" }}>{String.fromCharCode(65 + oi)}</span>
+                                  {opt}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                      <button onClick={submitLessonQuiz} disabled={!lAllAnswered}
+                        style={{ width: "100%", padding: "14px", borderRadius: 8, border: "none", background: lAllAnswered ? courseColor : "rgba(255,255,255,0.06)", color: lAllAnswered ? "#080808" : "#3A3530", fontWeight: 700, fontSize: 14, cursor: lAllAnswered ? "pointer" : "default", fontFamily: "'DM Sans',sans-serif", transition: "all 0.2s" }}>
+                        Submit Answers
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ textAlign: "center", padding: "24px 0 28px", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 24 }}>
+                        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 52, fontWeight: 700, color: lPassed ? "#6AD4A0" : "#D46A6A", lineHeight: 1 }}>{lScore}%</div>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: lPassed ? "#6AD4A0" : "#D46A6A", marginTop: 8 }}>{lPassed ? "Passed — Lesson Complete!" : "Not quite — review and retry"}</div>
+                        <div style={{ fontSize: 12, color: "#5A5248", marginTop: 4 }}>Need 70% to pass</div>
+                      </div>
+                      {lQuiz.map((q, qi) => {
+                        const userAns = lessonQuizAnswers[qi];
+                        const correct = userAns === q.correctIndex;
+                        return (
+                          <div key={qi} style={{ marginBottom: 20, padding: "16px", borderRadius: 8, background: correct ? "rgba(106,212,160,0.06)" : "rgba(212,106,106,0.06)", border: `1px solid ${correct ? "rgba(106,212,160,0.15)" : "rgba(212,106,106,0.15)"}` }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#EDE8DF", marginBottom: 8 }}>Q{qi + 1}. {q.question}</div>
+                            <div style={{ fontSize: 12, color: correct ? "#6AD4A0" : "#D46A6A", marginBottom: 6 }}>
+                              {correct ? "✓ Correct" : `✗ You chose: ${q.options[userAns]} — Correct: ${q.options[q.correctIndex]}`}
+                            </div>
+                            <div style={{ fontSize: 12, color: "#7A7268", lineHeight: 1.5 }}>{q.explanation}</div>
+                          </div>
+                        );
+                      })}
+                      {!lPassed && (
+                        <button onClick={() => { setLessonQuizAnswers({}); setLessonQuizSubmitted(false); }}
+                          style={{ width: "100%", padding: "12px", borderRadius: 8, border: `1px solid ${courseColor}40`, background: "transparent", color: courseColor, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", marginTop: 8 }}>
+                          Retry Quiz
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Ask AI Coach */}
+              <div style={{ textAlign: "center", marginBottom: 32 }}>
+                <button onClick={() => startCoach(`I'm studying "${lesson.title}" in ${course.title}. I just completed the lesson. I want to go deeper — give me advanced insights, real-world examples, and any common mistakes practitioners make with this topic.`)}
+                  style={{ padding: "10px 24px", borderRadius: 8, border: `1px solid ${courseColor}30`, background: "transparent", color: courseColor, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+                  ✦ Ask AI Coach About This Lesson
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Prev / Next navigation */}
+          <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+            {prevLesson ? (
+              <button onClick={() => openLesson(prevLesson, unit, course)}
+                style={{ flex: 1, padding: "13px 16px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)", color: "#9A9288", fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", textAlign: "left" }}>
+                &#8592; {prevLesson.title}
+              </button>
+            ) : <div style={{ flex: 1 }} />}
+            {nextLesson ? (
+              <button onClick={() => openLesson(nextLesson, unit, course)}
+                style={{ flex: 1, padding: "13px 16px", borderRadius: 8, border: `1px solid ${courseColor}30`, background: courseColor + "12", color: courseColor, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", textAlign: "right" }}>
+                {nextLesson.title} &#8594;
+              </button>
+            ) : (
+              <button onClick={() => setScreen("course")}
+                style={{ flex: 1, padding: "13px 16px", borderRadius: 8, border: `1px solid ${courseColor}30`, background: courseColor + "12", color: courseColor, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+                Back to Course ✓
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
