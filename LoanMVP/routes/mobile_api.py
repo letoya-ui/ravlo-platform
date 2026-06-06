@@ -84,24 +84,24 @@ def _serialize_user(user) -> dict:
     first = getattr(user, 'first_name', '') or ''
     last = getattr(user, 'last_name', '') or ''
 
-    # Resolve chosen_avenue: prefer the new field, fall back to deriving from legacy tier
-    chosen_avenue = getattr(user, 'chosen_avenue', None)
+    # Resolve chosen_course: prefer the new field, fall back to deriving from legacy tier
+    chosen_course = getattr(user, 'chosen_course', None)
     university_tier = getattr(user, 'university_tier', None)
-    if not chosen_avenue and university_tier:
-        _TIER_TO_AVENUE = {
+    if not chosen_course and university_tier:
+        _TIER_TO_COURSE = {
             'lending': 'mortgage',
             'starter': 'residential',
             'pro': 'residential',
             'elite': 'residential',
         }
-        chosen_avenue = _TIER_TO_AVENUE.get(university_tier)
+        chosen_course = _TIER_TO_COURSE.get(university_tier)
 
-    # Load paid avenue unlocks
-    unlocked_avenues: list[str] = []
+    # Load paid course enrollments
+    unlocked_courses: list[str] = []
     try:
-        from LoanMVP.models.training_models import UserAvenueUnlock
-        unlocks = UserAvenueUnlock.query.filter_by(user_id=getattr(user, 'id', None)).all()
-        unlocked_avenues = [u.avenue_id for u in unlocks]
+        from LoanMVP.models.training_models import UserCourseUnlock
+        unlocks = UserCourseUnlock.query.filter_by(user_id=getattr(user, 'id', None)).all()
+        unlocked_courses = [u.course_id for u in unlocks]
     except Exception:
         pass
 
@@ -114,8 +114,8 @@ def _serialize_user(user) -> dict:
         'role': getattr(user, 'role', 'borrower'),
         'subscription': getattr(user, 'subscription', 'free'),
         'university_tier': university_tier,
-        'chosen_avenue': chosen_avenue,
-        'unlocked_avenues': unlocked_avenues,
+        'chosen_course': chosen_course,
+        'unlocked_courses': unlocked_courses,
         'onboarding_complete': getattr(user, 'onboarding_complete', False),
     }
 
@@ -1274,31 +1274,34 @@ def complete_lesson():
         return jsonify({'error': str(exc)}), 500
 
 
-VALID_AVENUES = {'residential', 'commercial', 'mortgage', 'realtor_growth', 'investing', 'deal_structuring'}
+VALID_COURSES = {
+    'residential', 'commercial', 'mortgage', 'realtor_growth',
+    'investing', 'deal_structuring', 'underwriting', 'construction',
+}
 
 
-@mobile_api.route('/academy/choose-avenue', methods=['POST'])
+@mobile_api.route('/academy/choose-course', methods=['POST'])
 @require_auth
-def choose_avenue():
-    """Set the user's one free learning avenue (can only be set once)."""
+def choose_course():
+    """Set the user's included course selection (can only be set once)."""
     user = request.current_user
     data = request.get_json(force=True) or {}
-    avenue_id = (data.get('avenue_id') or '').strip()
+    course_id = (data.get('course_id') or '').strip()
 
-    if avenue_id not in VALID_AVENUES:
-        return jsonify({'error': f'Invalid avenue. Must be one of: {", ".join(sorted(VALID_AVENUES))}'}), 400
+    if course_id not in VALID_COURSES:
+        return jsonify({'error': f'Invalid course. Must be one of: {", ".join(sorted(VALID_COURSES))}'}), 400
 
-    if getattr(user, 'chosen_avenue', None):
-        return jsonify({'error': 'Avenue already chosen', 'chosen_avenue': user.chosen_avenue}), 409
+    if getattr(user, 'chosen_course', None):
+        return jsonify({'error': 'Course already chosen', 'chosen_course': user.chosen_course}), 409
 
     try:
-        user.chosen_avenue = avenue_id
+        user.chosen_course = course_id
         db.session.commit()
-        return jsonify({'ok': True, 'chosen_avenue': avenue_id, 'user': _serialize_user(user)}), 200
+        return jsonify({'ok': True, 'chosen_course': course_id, 'user': _serialize_user(user)}), 200
     except Exception as exc:
-        current_app.logger.error('choose_avenue error: %s', exc)
+        current_app.logger.error('choose_course error: %s', exc)
         db.session.rollback()
-        return jsonify({'error': 'Could not save avenue selection'}), 500
+        return jsonify({'error': 'Could not save course selection'}), 500
 
 
 @mobile_api.route('/academy/lesson/score', methods=['POST'])

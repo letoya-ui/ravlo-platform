@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
 import { useAuthStore } from '../store/authStore';
 import { useProgressStore } from '../store/progressStore';
-import { MODULES, canAccessModule } from '../data/modules';
+import { COURSES, canAccessCourse } from '../data/modules';
 
 const QUICK_PROMPTS = [
   'How do I analyze my first rental property?',
@@ -21,7 +21,9 @@ export default function HomeScreen({ navigation }: any) {
   const { user } = useAuthStore();
   const { load, loaded, completed, moduleProgress } = useProgressStore();
   const [refreshing, setRefreshing] = React.useState(false);
-  const tier = user?.university_tier || null;
+  const chosenCourse = user?.chosen_course || null;
+  const unlockedCourses = user?.unlocked_courses || [];
+  const legacyTier = user?.university_tier || null;
 
   useEffect(() => {
     if (!loaded) load();
@@ -33,7 +35,7 @@ export default function HomeScreen({ navigation }: any) {
     setRefreshing(false);
   }, []);
 
-  const accessibleModules = MODULES.filter(m => canAccessModule(tier, m.id));
+  const accessibleModules = COURSES.filter(m => canAccessCourse(chosenCourse, unlockedCourses, m.id, legacyTier));
   const totalLessons = accessibleModules.reduce((a, m) => a + m.lessons.length, 0);
   const totalCompleted = completed.filter(c =>
     accessibleModules.some(m => m.id === c.module_id)
@@ -76,7 +78,7 @@ export default function HomeScreen({ navigation }: any) {
             <Text style={styles.userName}>{user?.first_name || 'Learner'} 👋</Text>
           </View>
           <View style={styles.tierBadge}>
-            <Text style={styles.tierText}>{(tier || 'free').toUpperCase()}</Text>
+            <Text style={styles.tierText}>{(legacyTier || 'member').toUpperCase()}</Text>
           </View>
         </View>
 
@@ -160,8 +162,8 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modulesScroll} contentContainerStyle={styles.modulesRow}>
-          {MODULES.map(m => {
-            const accessible = canAccessModule(tier, m.id);
+          {COURSES.map(m => {
+            const accessible = canAccessCourse(chosenCourse, unlockedCourses, m.id, legacyTier);
             const p = moduleProgress(m.id, m.lessons.length);
             return (
               <TouchableOpacity

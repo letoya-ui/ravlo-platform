@@ -13,7 +13,7 @@ export interface Lesson {
   quiz: QuizQuestion[];
 }
 
-export interface Module {
+export interface Course {
   id: string;
   title: string;
   description: string;
@@ -24,7 +24,7 @@ export interface Module {
   creditHours: number;
 }
 
-export const MODULES: Module[] = [
+export const COURSES: Course[] = [
   {
     id: 'residential',
     title: 'Residential Mastery',
@@ -1981,8 +1981,8 @@ export const MODULES: Module[] = [
   },
 ];
 
-// Avenue IDs map directly to module IDs
-export const ALL_AVENUE_IDS = MODULES.map(m => m.id);
+// Course IDs map directly to module IDs
+export const ALL_COURSE_IDS = COURSES.map(m => m.id);
 
 // Legacy tier fallback (used for platform roles like loan_officer, investor, etc.)
 export const LEGACY_TIER_ACCESS: Record<string, string[]> = {
@@ -1992,7 +1992,7 @@ export const LEGACY_TIER_ACCESS: Record<string, string[]> = {
   lending: ['residential', 'mortgage', 'underwriting'],
 };
 
-export const AVENUE_PRICES: Record<string, number> = {
+export const COURSE_PRICES: Record<string, number> = {
   residential: 49,
   commercial: 49,
   mortgage: 49,
@@ -2005,24 +2005,17 @@ export const AVENUE_PRICES: Record<string, number> = {
 
 export const ALL_ACCESS_PRICE = 149;
 
-/**
- * Determine if a user can access a module based on the new avenue model.
- * - chosen_avenue: the one free avenue selected at onboarding
- * - unlocked_avenues: additional avenues unlocked via payment
- * - legacy_tier: fallback for platform users who predate the avenue model
- */
-export function canAccessModule(
-  chosenAvenue: string | null,
-  unlockedAvenues: string[],
-  moduleId: string,
+export function canAccessCourse(
+  chosenCourse: string | null,
+  unlockedCourses: string[],
+  courseId: string,
   legacyTier?: string | null,
 ): boolean {
-  if (chosenAvenue === moduleId) return true;
-  if (unlockedAvenues.includes(moduleId)) return true;
-  // Legacy tier support for platform-role users
+  if (chosenCourse === courseId) return true;
+  if (unlockedCourses.includes(courseId)) return true;
   if (legacyTier) {
     const legacyAllowed = LEGACY_TIER_ACCESS[legacyTier] || [];
-    if (legacyAllowed.includes(moduleId)) return true;
+    if (legacyAllowed.includes(courseId)) return true;
   }
   return false;
 }

@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../../theme';
-import { MODULES } from '../../data/modules';
+import { COURSES } from '../../data/modules';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 
@@ -13,8 +13,8 @@ interface Props {
   onDone: () => void;
 }
 
-export default function AvenueSelectionScreen({ onDone }: Props) {
-  const { setChosenAvenue } = useAuthStore();
+export default function CourseSelectionScreen({ onDone }: Props) {
+  const { setChosenCourse } = useAuthStore();
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -22,14 +22,13 @@ export default function AvenueSelectionScreen({ onDone }: Props) {
     if (!selected) return;
     setSaving(true);
     try {
-      const res = await api.post('/mobile/academy/choose-avenue', { avenue_id: selected });
-      setChosenAvenue(res.data.chosen_avenue);
+      const res = await api.post('/mobile/academy/choose-course', { course_id: selected });
+      setChosenCourse(res.data.chosen_course);
       onDone();
     } catch (err: any) {
       const msg = err?.response?.data?.error || 'Could not save your selection. Please try again.';
       if (err?.response?.status === 409) {
-        // Already chosen — treat as success
-        setChosenAvenue(selected);
+        setChosenCourse(selected);
         onDone();
         return;
       }
@@ -45,52 +44,49 @@ export default function AvenueSelectionScreen({ onDone }: Props) {
         <View style={styles.iconCircle}>
           <Ionicons name="school-outline" size={32} color={Colors.blueprint} />
         </View>
-        <Text style={styles.title}>Choose Your Learning Path</Text>
+        <Text style={styles.title}>Choose Your Course</Text>
         <Text style={styles.subtitle}>
-          Your subscription includes one avenue to master. Unlock more anytime.
+          Your subscription includes one full course. Additional courses can be unlocked anytime.
         </Text>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      >
-        {MODULES.map(module => {
-          const isSelected = selected === module.id;
+      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+        {COURSES.map(course => {
+          const isSelected = selected === course.id;
           return (
             <TouchableOpacity
-              key={module.id}
-              style={[styles.card, isSelected && { borderColor: module.color, borderWidth: 2 }]}
-              onPress={() => setSelected(module.id)}
+              key={course.id}
+              style={[styles.card, isSelected && { borderColor: course.color, borderWidth: 2 }]}
+              onPress={() => setSelected(course.id)}
               activeOpacity={0.8}
             >
               <View style={styles.cardLeft}>
-                <View style={[styles.iconBox, { backgroundColor: module.color + '22' }]}>
-                  <Ionicons name={module.icon as any} size={22} color={module.color} />
+                <View style={[styles.iconBox, { backgroundColor: course.color + '22' }]}>
+                  <Ionicons name={course.icon as any} size={22} color={course.color} />
                 </View>
                 <View style={styles.cardInfo}>
-                  <Text style={styles.cardTitle}>{module.title}</Text>
-                  <Text style={styles.cardDesc} numberOfLines={2}>{module.description}</Text>
+                  <Text style={styles.cardTitle}>{course.title}</Text>
+                  <Text style={styles.cardDesc} numberOfLines={2}>{course.description}</Text>
                   <View style={styles.metaRow}>
                     <Ionicons name="book-outline" size={11} color={Colors.textMuted} />
-                    <Text style={styles.metaText}>{module.lessons.length} lessons</Text>
+                    <Text style={styles.metaText}>{course.lessons.length} lessons</Text>
                     <View style={styles.metaDot} />
                     <Ionicons name="time-outline" size={11} color={Colors.textMuted} />
-                    <Text style={styles.metaText}>{module.creditHours} credit hrs</Text>
+                    <Text style={styles.metaText}>{course.creditHours} credit hrs</Text>
                   </View>
                 </View>
               </View>
-              <View style={[styles.radio, isSelected && { backgroundColor: module.color, borderColor: module.color }]}>
+              <View style={[styles.radio, isSelected && { backgroundColor: course.color, borderColor: course.color }]}>
                 {isSelected && <Ionicons name="checkmark" size={14} color={Colors.white} />}
               </View>
             </TouchableOpacity>
           );
         })}
 
-        <View style={styles.freeNote}>
+        <View style={styles.enrollNote}>
           <Ionicons name="checkmark-circle-outline" size={16} color={Colors.success} />
-          <Text style={styles.freeNoteText}>
-            Your subscription covers one full avenue — all lessons, quizzes, and your certificate of completion.
+          <Text style={styles.enrollNoteText}>
+            Your subscription covers one full course — all lessons, quizzes, and your certificate of completion.
           </Text>
         </View>
       </ScrollView>
@@ -112,7 +108,7 @@ export default function AvenueSelectionScreen({ onDone }: Props) {
             )
           }
         </TouchableOpacity>
-        <Text style={styles.footerNote}>Additional avenues can be unlocked anytime from the Learn screen.</Text>
+        <Text style={styles.footerNote}>Additional courses can be unlocked anytime from the Learn screen.</Text>
       </View>
     </SafeAreaView>
   );
@@ -152,12 +148,12 @@ const styles = StyleSheet.create({
     width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: Colors.border,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: Spacing.sm,
   },
-  freeNote: {
+  enrollNote: {
     flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm,
     backgroundColor: Colors.success + '11', borderRadius: Radii.md, padding: Spacing.md,
     borderWidth: 1, borderColor: Colors.success + '33', marginTop: Spacing.sm,
   },
-  freeNoteText: { ...Typography.caption, color: Colors.success, flex: 1, lineHeight: 18 },
+  enrollNoteText: { ...Typography.caption, color: Colors.success, flex: 1, lineHeight: 18 },
   footer: {
     padding: Spacing.lg, paddingBottom: Spacing.xl,
     borderTopWidth: 1, borderTopColor: Colors.border,
