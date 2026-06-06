@@ -63,7 +63,7 @@ export default function ProfileScreen() {
               <Ionicons name="school-outline" size={14} color={Colors.blueprint} />
               <Text style={[styles.tierText, { color: Colors.blueprint }]}>
                 {avenueLabel}
-                {unlockedAvenues.length > 0 ? ` + ${unlockedAvenues.length} more` : ' · Free Avenue'}
+                {unlockedAvenues.length > 0 ? ` + ${unlockedAvenues.length} more` : ' · Included'}
               </Text>
             </View>
           ) : user?.university_tier ? (
@@ -84,10 +84,10 @@ export default function ProfileScreen() {
             icon="school-outline"
             label="Learning Avenue"
             value={avenueLabel
-              ? `${avenueLabel}${unlockedAvenues.length > 0 ? ` + ${unlockedAvenues.length} unlocked` : ' (Free)'}`
+              ? `${avenueLabel}${unlockedAvenues.length > 0 ? ` + ${unlockedAvenues.length} unlocked` : ' (Included)'}`
               : user?.university_tier
                 ? `${user.university_tier.charAt(0).toUpperCase() + user.university_tier.slice(1)} (Legacy)`
-                : 'Not enrolled — choose a free avenue'}
+                : 'Not enrolled — choose an avenue to get started'}
           />
           <InfoRow
             icon="checkmark-circle-outline"

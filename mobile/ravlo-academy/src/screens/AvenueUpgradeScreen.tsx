@@ -101,7 +101,7 @@ export default function AvenueUpgradeScreen({ navigation }: any) {
                 <View style={styles.accessBadge}>
                   <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
                   <Text style={styles.accessBadgeText}>
-                    {module.id === chosenAvenue ? 'Free' : 'Unlocked'}
+                    {module.id === chosenAvenue ? 'Included' : 'Unlocked'}
                   </Text>
                 </View>
               </View>

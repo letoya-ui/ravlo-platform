@@ -88,7 +88,7 @@ export default function LearnScreen({ navigation }: any) {
                     </Text>
                     {isFreeAvenue && (
                       <View style={styles.freeBadge}>
-                        <Text style={styles.freeBadgeText}>FREE</Text>
+                        <Text style={styles.freeBadgeText}>INCLUDED</Text>
                       </View>
                     )}
                   </View>

@@ -47,7 +47,7 @@ export default function AvenueSelectionScreen({ onDone }: Props) {
         </View>
         <Text style={styles.title}>Choose Your Learning Path</Text>
         <Text style={styles.subtitle}>
-          Master one avenue free — you can unlock more anytime.
+          Your subscription includes one avenue to master. Unlock more anytime.
         </Text>
       </View>
 
@@ -88,9 +88,9 @@ export default function AvenueSelectionScreen({ onDone }: Props) {
         })}
 
         <View style={styles.freeNote}>
-          <Ionicons name="gift-outline" size={16} color={Colors.success} />
+          <Ionicons name="checkmark-circle-outline" size={16} color={Colors.success} />
           <Text style={styles.freeNoteText}>
-            Your chosen avenue is completely free — all lessons, quizzes, and your certificate of completion.
+            Your subscription covers one full avenue — all lessons, quizzes, and your certificate of completion.
           </Text>
         </View>
       </ScrollView>
@@ -112,7 +112,7 @@ export default function AvenueSelectionScreen({ onDone }: Props) {
             )
           }
         </TouchableOpacity>
-        <Text style={styles.footerNote}>You can unlock additional avenues later from any module screen.</Text>
+        <Text style={styles.footerNote}>Additional avenues can be unlocked anytime from the Learn screen.</Text>
       </View>
     </SafeAreaView>
   );
