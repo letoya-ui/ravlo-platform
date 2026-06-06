@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ravlo Academy — Partnership One-Pager</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #0a0a0a;
+    --white: #f8f5f0;
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --charcoal: #1c1c1c;
+    --mid: #3a3a3a;
+    --soft: #8a8a8a;
+    --rule: #2a2a2a;
+  }
+
+  @page {
+    size: letter;
+    margin: 0;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--black);
+    color: var(--white);
+    width: 8.5in;
+    min-height: 11in;
+    margin: 0 auto;
+    padding: 0.55in 0.6in 0.5in;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 90% 90%, rgba(201,168,76,0.04) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  /* Decorative left bar */
+  body::after {
+    content: '';
+    position: absolute;
+    left: 0.35in;
+    top: 0.55in;
+    bottom: 0.5in;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--gold), transparent 80%);
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.32in;
+    padding-bottom: 0.22in;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .logo-block {}
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: var(--white);
+    line-height: 1;
+  }
+
+  .logo span {
+    color: var(--gold);
+  }
+
+  .logo-sub {
+    font-size: 9.5px;
+    font-weight: 300;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--soft);
+    margin-top: 4px;
+  }
+
+  .header-right {
+    text-align: right;
+  }
+
+  .partnership-badge {
+    display: inline-block;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    margin-bottom: 8px;
+  }
+
+  .header-contact {
+    font-size: 9px;
+    color: var(--soft);
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  .header-contact a { color: var(--gold); text-decoration: none; }
+
+  /* ─── HERO STATEMENT ─── */
+  .hero {
+    margin-bottom: 0.28in;
+  }
+
+  .hero-headline {
+    font-family: 'Playfair Display', serif;
+    font-size: 34px;
+    font-weight: 900;
+    line-height: 1.1;
+    color: var(--white);
+    max-width: 5.5in;
+    margin-bottom: 12px;
+  }
+
+  .hero-headline em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .hero-body {
+    font-size: 11px;
+    font-weight: 300;
+    color: #b0a898;
+    line-height: 1.65;
+    max-width: 5.2in;
+  }
+
+  /* ─── THREE COLUMNS ─── */
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.2in;
+    margin-bottom: 0.25in;
+  }
+
+  .col {
+    padding: 0.18in 0.16in;
+    border: 1px solid var(--rule);
+    position: relative;
+  }
+
+  .col::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gold);
+  }
+
+  .col-label {
+    font-size: 7.5px;
+    font-weight: 500;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+
+  .col-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+
+  .col-body {
+    font-size: 9.5px;
+    font-weight: 300;
+    color: #a09888;
+    line-height: 1.6;
+  }
+
+  /* ─── AVENUES GRID ─── */
+  .section-label {
+    font-size: 7.5px;
+    font-weight: 500;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+
+  .avenues {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 0.25in;
+  }
+
+  .avenue-pill {
+    background: var(--charcoal);
+    border: 1px solid var(--rule);
+    padding: 8px 10px;
+    position: relative;
+  }
+
+  .avenue-num {
+    font-size: 7px;
+    color: var(--gold);
+    font-weight: 500;
+    letter-spacing: 1px;
+    margin-bottom: 3px;
+  }
+
+  .avenue-name {
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--white);
+    line-height: 1.3;
+  }
+
+  .avenue-meta {
+    font-size: 7.5px;
+    color: var(--soft);
+    font-weight: 300;
+    margin-top: 2px;
+  }
+
+  /* ─── STATS ROW ─── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 1px solid var(--rule);
+    margin-bottom: 0.25in;
+  }
+
+  .stat {
+    padding: 0.14in 0.14in;
+    border-right: 1px solid var(--rule);
+    text-align: center;
+  }
+
+  .stat:last-child { border-right: none; }
+
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 8px;
+    font-weight: 300;
+    color: var(--soft);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  /* ─── BOTTOM TWO COLS ─── */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 0.2in;
+    margin-bottom: 0.2in;
+  }
+
+  .partnership-block {
+    padding: 0.16in;
+    border: 1px solid var(--rule);
+    position: relative;
+  }
+
+  .partnership-block::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(to right, var(--gold), transparent);
+  }
+
+  .partner-list {
+    list-style: none;
+    margin-top: 8px;
+  }
+
+  .partner-list li {
+    font-size: 9.5px;
+    font-weight: 300;
+    color: #a09888;
+    line-height: 1.5;
+    padding: 5px 0;
+    border-bottom: 1px solid #1e1e1e;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .partner-list li:last-child { border-bottom: none; }
+
+  .partner-list li::before {
+    content: '→';
+    color: var(--gold);
+    font-size: 9px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .cta-block {
+    padding: 0.16in;
+    background: linear-gradient(135deg, #1a1508, #0f0d06);
+    border: 1px solid rgba(201,168,76,0.3);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .cta-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+
+  .cta-body {
+    font-size: 9px;
+    font-weight: 300;
+    color: #a09888;
+    line-height: 1.6;
+    flex-grow: 1;
+    margin-bottom: 14px;
+  }
+
+  .cta-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .cta-pill {
+    background: var(--gold);
+    color: var(--black);
+    font-size: 8.5px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 7px 14px;
+  }
+
+  .cta-url {
+    font-size: 8.5px;
+    color: var(--gold);
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  /* ─── FOOTER ─── */
+  .footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-left {
+    font-size: 8px;
+    color: var(--soft);
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  .footer-right {
+    font-size: 8px;
+    color: var(--soft);
+    font-weight: 300;
+  }
+
+  .footer-right span {
+    color: var(--gold);
+  }
+
+  @media print {
+    body {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      background: var(--black) !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo-block">
+      <div class="logo">RAVLO<span>.</span>ACADEMY</div>
+      <div class="logo-sub">AI-Powered Real Estate Coaching</div>
+    </div>
+    <div class="header-right">
+      <div class="partnership-badge">Partnership Inquiry</div>
+      <div class="header-contact">
+        ravlohq.com/academy<br>
+        New York, NY &nbsp;·&nbsp; <span style="color:var(--gold)">Expanding to Florida 2026</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1 class="hero-headline">The real estate industry has a<br><em>pipeline problem.</em><br>We built the solution.</h1>
+    <p class="hero-body">Ravlo Academy is an AI-powered real estate coaching platform covering every avenue of the industry — from licensing to lending, investing to construction. We exist to lower the barrier to entry for underserved communities and equip the next generation of real estate professionals with the knowledge, tools, and credentials to build wealth.</p>
+  </div>
+
+  <!-- THREE COLUMNS -->
+  <div class="columns">
+    <div class="col">
+      <div class="col-label">The Problem</div>
+      <div class="col-title">Access has always been the barrier</div>
+      <div class="col-body">Traditional real estate education is expensive, geographically limited, and designed for people who already have resources. Communities that could benefit most from real estate wealth-building are consistently left out.</div>
+    </div>
+    <div class="col">
+      <div class="col-label">Our Solution</div>
+      <div class="col-title">AI coaching that meets students where they are</div>
+      <div class="col-body">Ravlo Academy delivers personalized, on-demand real estate coaching through AI — available 24/7, adaptive to each student's progress, and structured toward real credentials and career outcomes.</div>
+    </div>
+    <div class="col">
+      <div class="col-label">The Opportunity</div>
+      <div class="col-title">A partnership that creates careers</div>
+      <div class="col-body">We're seeking workforce development partners, school districts, and community organizations to co-deliver Ravlo Academy to students who are ready to build real estate careers — and real estate wealth.</div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num">8</div>
+      <div class="stat-label">Learning Avenues</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">78</div>
+      <div class="stat-label">Lessons</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">101</div>
+      <div class="stat-label">Credit Hours</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">AI</div>
+      <div class="stat-label">Personalized Coach</div>
+    </div>
+  </div>
+
+  <!-- AVENUES -->
+  <div class="section-label">Curriculum — 8 Avenues of Real Estate Mastery</div>
+  <div class="avenues">
+    <div class="avenue-pill">
+      <div class="avenue-num">01</div>
+      <div class="avenue-name">Residential Mastery</div>
+      <div class="avenue-meta">6 lessons · 6 hrs</div>
+    </div>
+    <div class="avenue-pill">
+      <div class="avenue-num">02</div>
+      <div class="avenue-name">Commercial Real Estate</div>
+      <div class="avenue-meta">6 lessons · 8 hrs</div>
+    </div>
+    <div class="avenue-pill">
+      <div class="avenue-num">03</div>
+      <div class="avenue-name">Mortgage &amp; Lending</div>
+      <div class="avenue-meta">10 lessons · 12 hrs</div>
+    </div>
+    <div class="avenue-pill">
+      <div class="avenue-num">04</div>
+      <div class="avenue-name">Realtor Professional</div>
+      <div class="avenue-meta">18 lessons · 21 hrs</div>
+    </div>
+    <div class="avenue-pill">
+      <div class="avenue-num">05</div>
+      <div class="avenue-name">Real Estate Investing</div>
+      <div class="avenue-meta">12 lessons · 18 hrs</div>
+    </div>
+    <div class="avenue-pill">
+      <div class="avenue-num">06</div>
+      <div class="avenue-name">Advanced Deal Structuring</div>
+      <div class="avenue-meta">6 lessons · 9 hrs</div>
+    </div>
+    <div class="avenue-pill">
+      <div class="avenue-num">07</div>
+      <div class="avenue-name">Underwriting &amp; Processing</div>
+      <div class="avenue-meta">10 lessons · 14 hrs</div>
+    </div>
+    <div class="avenue-pill">
+      <div class="avenue-num">08</div>
+      <div class="avenue-name">Construction Management</div>
+      <div class="avenue-meta">10 lessons · 13 hrs</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM GRID -->
+  <div class="bottom-grid">
+    <div class="partnership-block">
+      <div class="section-label">Partnership Opportunities</div>
+      <ul class="partner-list">
+        <li><strong style="color:var(--white)">Workforce Development Centers</strong> — Refer job seekers into structured real estate career pathways with completion certificates and AI coaching support.</li>
+        <li><strong style="color:var(--white)">High Schools &amp; CTE Programs</strong> — Bring real estate as a career track to students before graduation. Builds financial literacy and career readiness.</li>
+        <li><strong style="color:var(--white)">Community Organizations</strong> — Co-brand cohort programs for community members pursuing real estate licensing and wealth-building.</li>
+        <li><strong style="color:var(--white)">Pre-Apprenticeship Programs</strong> — Integrate Ravlo Academy as the educational component of registered real estate apprenticeship tracks.</li>
+      </ul>
+    </div>
+    <div class="cta-block">
+      <div>
+        <div class="cta-title">Let's build something that lasts.</div>
+        <div class="cta-body">We're at the ground floor — which means partners who come in now help shape the program, the curriculum, and the communities we serve together. This is a long-term relationship, not a vendor arrangement.</div>
+      </div>
+      <div class="cta-line">
+        <div class="cta-pill">Start a Conversation</div>
+        <div class="cta-url">ravlohq.com</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-left">Ravlo Academy is a division of Ravlo — a six-division real estate technology company · New York, NY</div>
+    <div class="footer-right">Building toward state accreditation · <span>ravlohq.com/academy</span></div>
+  </footer>
+
+</body>
+</html>

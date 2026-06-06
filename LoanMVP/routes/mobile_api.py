@@ -1404,25 +1404,144 @@ Be specific, actionable, and tailored to their role and goal. Keep it concise an
         return jsonify({'error': 'Could not generate plan. Please try again.'}), 500
 
 
+def _get_model_for_tier(tier: str) -> str:
+    """Map subscription tier to Claude model."""
+    return {
+        'all-access': 'claude-opus-4-8',
+        'elite': 'claude-opus-4-8',
+        'lending': 'claude-opus-4-8',
+        'pro': 'claude-sonnet-4-6',
+    }.get(tier, 'claude-haiku-4-5-20251001')
+
+
+def _build_coach_trigger_context(trigger: str, lesson_title: str, quiz_score: int,
+                                  missed_concepts: list, completed_count: int,
+                                  course_name: str) -> str:
+    """Build trigger-specific instructions appended to the system prompt."""
+    if trigger == 'post_lesson_pass':
+        return (
+            f'\n\nTRIGGER: Student just completed and passed "{lesson_title}" '
+            f'with a score of {quiz_score}%.\n\n'
+            f'Your job:\n'
+            f'1. Briefly celebrate the win (1 sentence, genuine not cheesy)\n'
+            f'2. Reinforce the 1-2 most important takeaways from this lesson\n'
+            f'3. Preview what\'s coming next and why it matters\n'
+            f'4. Ask one engaging question to deepen their thinking\n\n'
+            f'Keep it under 150 words total.'
+        )
+    if trigger == 'post_lesson_fail':
+        concepts_str = (
+            f'Concepts they struggled with: {", ".join(missed_concepts)}\n'
+            if missed_concepts else ''
+        )
+        return (
+            f'\n\nTRIGGER: Student just failed the quiz for "{lesson_title}" '
+            f'with a score of {quiz_score}%. They need to score 70% to pass.\n'
+            f'{concepts_str}\n'
+            f'Your job:\n'
+            f'1. Be encouraging — failing a quiz is normal, not a setback\n'
+            f'2. Identify the core concept they likely misunderstood\n'
+            f'3. Re-explain it in plain language with a real-world example\n'
+            f'4. Tell them exactly what to focus on before retaking\n'
+            f'5. Do NOT make them feel bad\n\n'
+            f'Keep it supportive and under 200 words.'
+        )
+    if trigger == 'quiz_miss_explainer':
+        return (
+            f'\n\nTRIGGER: Student asked for help understanding a specific question they missed '
+            f'on the "{lesson_title}" quiz.\n\n'
+            f'Your job:\n'
+            f'1. Explain the correct concept clearly\n'
+            f'2. Use a real-world example from real estate practice\n'
+            f'3. Give them a memory anchor — a simple way to remember it\n'
+            f'4. Confirm understanding with a follow-up question\n\n'
+            f'Be a tutor, not a textbook.'
+        )
+    if trigger == 'progress_checkin':
+        return (
+            f'\n\nTRIGGER: Student opened the AI Coach tab (not post-lesson). '
+            f'They have completed {completed_count} lessons and are currently in {course_name}.\n\n'
+            f'Your job:\n'
+            f'1. Acknowledge where they are in their journey\n'
+            f'2. If they\'re mid-course, motivate them to finish\n'
+            f'3. If they just started a course, tell them what to expect\n'
+            f'4. Suggest the next best action (next lesson, revisit a concept, etc.)\n'
+            f'5. Keep it brief — this is a check-in, not a lecture\n\n'
+            f'Under 100 words. Conversational tone.'
+        )
+    if trigger == 'business_plan':
+        return (
+            f'\n\nTRIGGER: Student is generating their 90-day business plan.\n\n'
+            f'Use their completed courses and current focus to make the plan hyper-specific.\n\n'
+            f'Generate a structured 90-day plan with:\n'
+            f'- Week 1-2: Foundation actions\n'
+            f'- Week 3-6: Build phase\n'
+            f'- Week 7-10: Execute phase\n'
+            f'- Week 11-13: Review and scale\n'
+            f'Make every action specific to real estate, not generic business advice.'
+        )
+    # general_chat (default)
+    return (
+        f'\n\nTRIGGER: Student initiated a general conversation with the AI Coach.\n\n'
+        f'You have full context of their progress above. Use it naturally — '
+        f'reference their current course when relevant, connect answers to '
+        f'lessons they\'ve completed, and flag lessons coming up that are '
+        f'relevant to their questions.\n\n'
+        f'Never answer in a vacuum. Always ground your response in their '
+        f'specific stage of learning.'
+    )
+
+
+def _build_coach_system_prompt(first_name: str, tier: str, trigger: str, progress: dict) -> str:
+    """Build a fully context-aware system prompt for the AI Coach."""
+    current_course = progress.get('currentCourse') or {}
+    current_lesson = progress.get('currentLesson') or {}
+    last_quiz = progress.get('lastQuiz') or {}
+
+    course_name = current_course.get('name', 'their current course')
+    completed_count = progress.get('completedLessonCount', 0)
+    completed_courses = progress.get('completedCourses', [])
+    lesson_title = (
+        last_quiz.get('lessonTitle')
+        or current_lesson.get('title')
+        or 'their current lesson'
+    )
+    quiz_score = int(last_quiz.get('score', 0))
+    missed_concepts = last_quiz.get('missedConcepts', []) or []
+
+    base = (
+        f'You are Ravlo AI Coach — an expert real estate coaching AI built into Ravlo Academy. '
+        f'You are speaking with {first_name}. '
+        f'You are encouraging, direct, and practical. You connect every concept to real-world '
+        f'application. You never give generic advice — everything is grounded in real estate.'
+    )
+    student_context = (
+        f'\n\nSTUDENT CONTEXT:'
+        f'\n- Current Course: {course_name} ({completed_count} lessons completed total)'
+        f'\n- Current Lesson: {current_lesson.get("title", "N/A")}'
+        f'\n- Courses Completed: {", ".join(completed_courses) if completed_courses else "None yet"}'
+        f'\n- Subscription Tier: {tier}'
+    )
+    trigger_context = _build_coach_trigger_context(
+        trigger, lesson_title, quiz_score, missed_concepts,
+        completed_count, course_name,
+    )
+    return base + student_context + trigger_context
+
+
 @mobile_api.route('/academy/chat', methods=['POST'])
 @require_auth
 def academy_chat():
-    """Academy AI Coach — real estate education context chat."""
+    """Academy AI Coach — lesson-aware coaching system with dynamic context injection."""
     user = request.current_user
     data = request.get_json(force=True) or {}
     messages_in = data.get('messages', [])
     tier = data.get('tier') or getattr(user, 'university_tier', None) or 'starter'
+    trigger = data.get('trigger') or 'general_chat'
+    progress = data.get('progress') or {}
 
     first_name = getattr(user, 'first_name', '') or 'there'
-    system_prompt = (
-        f"You are Ravlo AI Coach, an expert real estate educator inside the Ravlo Academy platform. "
-        f"You are speaking with {first_name}, a {tier}-tier member. "
-        f"Your expertise covers: residential and commercial real estate, mortgage lending, real estate investing, "
-        f"BRRRR strategy, deal analysis, cap rates, DSCR, creative financing, syndication, "
-        f"and real estate business growth strategies. "
-        f"Give clear, educational, actionable answers. Use examples and numbers where helpful. "
-        f"Be encouraging but professional. Keep responses focused and not too long unless detail is needed."
-    )
+    system_prompt = _build_coach_system_prompt(first_name, tier, trigger, progress)
 
     messages = [
         {'role': m['role'], 'content': m['content']}
@@ -1433,11 +1552,13 @@ def academy_chat():
     if not messages:
         return jsonify({'error': 'No messages provided'}), 400
 
+    model = _get_model_for_tier(tier)
+
     try:
         import anthropic
         client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY', ''))
         response = client.messages.create(
-            model='claude-haiku-4-5-20251001',
+            model=model,
             max_tokens=1024,
             system=system_prompt,
             messages=messages,

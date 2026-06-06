@@ -422,319 +422,909 @@ export const COURSES: Course[] = [
   {
     id: 'mortgage',
     title: 'Mortgage & Lending',
-    description: 'Master loan products, underwriting, and deal structuring for residential and commercial financing.',
+    description: 'The complete professional curriculum for loan officers, mortgage brokers, and MLOs. Master every loan product, underwriting fundamentals, borrower qualification, rate strategy, and the full loan process from application to closing.',
     icon: 'card-outline',
     color: '#E6A23C',
     tiers: ['starter', 'pro', 'elite', 'lending'],
     creditHours: 12,
     lessons: [
       {
+        title: 'Conventional, FHA & VA Loans',
+        duration: '18 min',
+        content: `The three most common residential loan products are conventional, FHA, and VA. Every loan officer must know these inside and out — not just the guidelines, but when each product is the right fit for a specific borrower. Recommending the wrong product costs your borrower money and can cost you the relationship.
+
+**Conventional Loans**
+
+Conventional loans are not government-backed. They conform to guidelines set by Fannie Mae and Freddie Mac (conforming loans) or exceed those limits (jumbo loans).
+
+**Key conventional loan parameters:**
+- **Minimum credit score:** 620 (most lenders require 640+)
+- **Down payment:** 3% minimum (first-time buyers), 5% standard
+- **Debt-to-income (DTI):** Up to 45-50% with compensating factors
+- **Loan limits (2024):** $766,550 for most areas; higher in high-cost markets
+- **Mortgage insurance:** Required if down payment is below 20% (PMI). Cancellable once equity reaches 20%.
+
+**Best for:** Borrowers with strong credit (700+), stable income, and the ability to put 10-20% down. Also the go-to product for investment properties and second homes.
+
+**FHA Loans**
+
+FHA loans are insured by the Federal Housing Administration. They're designed for borrowers who don't meet conventional standards.
+
+**Key FHA parameters:**
+- **Minimum credit score:** 580 for 3.5% down; 500-579 for 10% down
+- **Down payment:** 3.5% minimum
+- **DTI:** Up to 57% in some cases
+- **Loan limits:** Lower than conventional — varies by county
+- **Mortgage insurance:** Upfront MIP (1.75% of loan amount, financed into loan) + annual MIP (0.55-1.05% depending on LTV and term). MIP is required for the life of the loan if down payment is under 10%.
+
+**Best for:** First-time buyers with lower credit scores, limited savings, or higher DTI ratios. Not ideal for borrowers who can qualify conventional — the lifetime MIP makes FHA more expensive long-term.
+
+**VA Loans**
+
+VA loans are guaranteed by the Department of Veterans Affairs and available only to eligible veterans, active-duty service members, and surviving spouses.
+
+**Key VA parameters:**
+- **Minimum credit score:** No official minimum (VA sets none); most lenders require 580-620
+- **Down payment:** 0% — no down payment required
+- **DTI:** Flexible; VA uses residual income analysis
+- **Loan limits:** No limit for eligible borrowers with full entitlement
+- **Mortgage insurance:** None — replaced by a one-time VA Funding Fee (1.25-3.3% depending on usage and down payment; waived for disabled veterans)
+
+**Best for:** Any eligible veteran or active-duty member. The $0 down and no PMI make it the best product available for those who qualify. Never steer an eligible VA borrower toward a conventional or FHA loan without a compelling reason.
+
+**Choosing the Right Product**
+
+A simple decision framework:
+1. Is the borrower VA-eligible? → Start with VA
+2. Does the borrower have 620+ credit and 5% down? → Conventional
+3. Does the borrower have lower credit or limited down payment? → FHA
+4. Does the loan exceed conforming limits? → Jumbo conventional
+
+Always run the numbers on multiple scenarios before recommending a product. The lowest payment isn't always the cheapest loan over time.`,
+        keyPoints: [
+          'VA loans are the best product for eligible veterans — $0 down, no PMI, and flexible credit. Always check VA eligibility first.',
+          'FHA MIP is required for the life of the loan if the down payment is under 10% — this makes FHA more expensive long-term than conventional for qualified borrowers.',
+          'Conventional PMI is cancellable once equity reaches 20% — a key advantage over FHA for borrowers who qualify.',
+          'FHA allows credit scores as low as 580 for 3.5% down — making it the product for borrowers who can\'t qualify conventional.',
+          'Always run multiple product scenarios before recommending — the right product depends on credit, down payment, and long-term cost.',
+        ],
+        quiz: [
+          {
+            question: 'A borrower is a U.S. Army veteran with a 610 credit score and no down payment saved. Which loan product should you recommend first?',
+            options: ['FHA loan', 'Conventional loan', 'VA loan', 'USDA loan'],
+            correctIndex: 2,
+            explanation: 'VA loans require no down payment and have no official minimum credit score — most lenders approve at 580-620. For any eligible veteran, VA is always the first product to evaluate because of the $0 down and no PMI advantages.',
+          },
+          {
+            question: 'What is the key disadvantage of FHA mortgage insurance compared to conventional PMI?',
+            options: ['FHA MIP costs more per month than conventional PMI in all scenarios', 'FHA MIP is required for the life of the loan if the down payment is under 10%, while conventional PMI can be cancelled at 20% equity', 'FHA MIP is paid upfront in cash and cannot be financed', 'FHA MIP applies to all FHA loans regardless of credit score'],
+            correctIndex: 1,
+            explanation: 'This is the most important FHA vs. conventional comparison for borrowers. If a borrower qualifies for both, the ability to cancel PMI on a conventional loan (vs. lifetime MIP on FHA) can save tens of thousands over the life of the loan.',
+          },
+          {
+            question: 'What is the minimum down payment for an FHA loan with a 580 credit score?',
+            options: ['0%', '3%', '3.5%', '10%'],
+            correctIndex: 2,
+            explanation: 'Borrowers with a 580+ credit score qualify for FHA\'s minimum 3.5% down payment. Borrowers with 500-579 credit scores can still get FHA financing but must put 10% down. Below 500, FHA financing is not available.',
+          },
+        ],
+      },
+      {
+        title: 'DSCR & Investment Property Lending',
+        duration: '25 min',
+        content: `DSCR loans — Debt Service Coverage Ratio loans — have become the dominant product for real estate investors. Unlike conventional loans, DSCR loans qualify the borrower based on the property's income, not the borrower's personal income. For investors with complex income structures or large portfolios, DSCR lending is a game-changer.
+
+**What is DSCR?**
+
+DSCR measures a property's ability to cover its debt obligations:
+
+**DSCR = Gross Rental Income ÷ Total Monthly Debt Service (PITIA)**
+
+PITIA = Principal + Interest + Taxes + Insurance + HOA (if applicable)
+
+**Example:**
+- Monthly rent: $2,400
+- Monthly PITIA: $1,800
+- DSCR = $2,400 ÷ $1,800 = 1.33
+
+A DSCR of 1.0 means the property exactly covers its debt. Most lenders require 1.20-1.25 minimum. Some lenders offer below-1.0 DSCR products (called 'no-ratio' or 'DSCR < 1') for strong borrowers, but at higher rates.
+
+**DSCR Loan Key Parameters**
+
+- **Minimum credit score:** 620-680 depending on lender
+- **Down payment:** 20-25% for single-family; 25-30% for 2-4 units and small multifamily
+- **Loan amounts:** $100K to $3M+ depending on lender
+- **Property types:** SFR, 2-4 units, condos, small multifamily (5-10 units with some lenders)
+- **Documentation:** No personal income tax returns required — property rent schedule or lease used instead
+- **Reserves:** Most lenders require 6-12 months PITIA in reserves post-closing
+
+**How Rental Income is Calculated**
+
+Lenders use one of two methods to determine the rental income used in the DSCR calculation:
+
+**1. Lease Agreement:** If the property is already leased, the current lease rent is used.
+
+**2. Market Rent (1007/1025 Appraisal):** If vacant or being purchased, the appraiser provides a market rent estimate. Lenders typically use 75% of market rent to account for vacancy.
+
+**DSCR vs. Conventional Investment Loans**
+
+| Feature | DSCR | Conventional Investment |
+|---------|------|------------------------|
+| Income documentation | Property income only | Personal tax returns required |
+| Max properties financed | Unlimited (varies by lender) | 10 (Fannie Mae) |
+| Rate | Higher (0.5-1.5% above conventional) | Lower |
+| Qualification | Property cash flow | Personal DTI |
+| Best for | Investors with complex income or large portfolios | Investors with simple W-2 income and small portfolios |
+
+**Pricing DSCR Loans**
+
+DSCR loans carry higher rates than conventional loans because they are typically non-QM (non-qualified mortgage) products. Pricing factors:
+- **DSCR ratio:** Higher DSCR = better rate
+- **LTV:** Lower LTV = better rate
+- **Credit score:** Higher score = better rate
+- **Property type:** SFR prices better than 2-4 units
+- **Loan purpose:** Purchase prices better than cash-out refinance
+
+**Common DSCR Scenarios**
+
+**Scenario 1 — New Purchase:** Investor buying a $350K rental. Market rent = $2,200/month. Projected PITIA = $1,750. DSCR = 1.26. Qualifies at most lenders.
+
+**Scenario 2 — Portfolio Expansion:** Investor with 12 properties can't get more conventional financing (Fannie 10-property limit). DSCR lenders have no portfolio limits — investor can continue scaling.
+
+**Scenario 3 — Self-Employed Investor:** Investor shows low taxable income due to depreciation and deductions. Can't qualify conventional. DSCR uses only the property income — personal returns irrelevant.`,
+        keyPoints: [
+          'DSCR = Gross Rental Income ÷ PITIA. Most lenders require a minimum of 1.20-1.25.',
+          'DSCR loans require no personal income documentation — qualification is based solely on property cash flow.',
+          'DSCR loans are ideal for investors with large portfolios, complex income, or who have hit the Fannie Mae 10-property limit.',
+          'Rates are higher than conventional (0.5-1.5% above) because DSCR products are typically non-QM.',
+          'Lenders use either an existing lease or an appraiser\'s market rent estimate to calculate DSCR — typically at 75% of market rent.',
+        ],
+        quiz: [
+          {
+            question: 'A property generates $2,600/month in rent with a PITIA of $2,000/month. What is the DSCR?',
+            options: ['0.77', '1.10', '1.30', '1.50'],
+            correctIndex: 2,
+            explanation: 'DSCR = Gross Rental Income ÷ PITIA = $2,600 ÷ $2,000 = 1.30. This exceeds the typical 1.20-1.25 minimum requirement and would qualify at most DSCR lenders.',
+          },
+          {
+            question: 'Why is DSCR lending particularly valuable for self-employed real estate investors?',
+            options: ['DSCR loans offer the lowest available interest rates for investment properties', 'DSCR loans don\'t require personal income documentation — qualification is based on the property\'s rental income', 'Self-employed borrowers receive a lower down payment requirement with DSCR loans', 'DSCR loans are backed by the FHA which guarantees approval for self-employed borrowers'],
+            correctIndex: 1,
+            explanation: 'Self-employed investors often show low taxable income due to deductions and depreciation. Conventional loans require personal tax returns that show this low income, disqualifying them. DSCR lenders don\'t care about personal income — only whether the property covers its own debt.',
+          },
+          {
+            question: 'What is the typical conventional loan limit on the number of financed investment properties a borrower can have?',
+            options: ['5 properties', '10 properties (Fannie Mae guideline)', '20 properties', 'There is no limit on conventional investment properties'],
+            correctIndex: 1,
+            explanation: 'Fannie Mae limits borrowers to 10 financed properties (including their primary residence). Once investors hit this cap, DSCR and other non-QM products become essential for continuing to grow their portfolio.',
+          },
+        ],
+      },
+      {
         title: 'SBA 7(a) & 504 Programs',
         duration: '20 min',
-        content: `SBA loans are government-backed financing programs designed to help small businesses access capital. Two primary programs for real estate: 7(a) and 504.\n\n**SBA 7(a) — Flexible Working Capital & Real Estate**\n- Maximum loan: $5 million\n- Rates: WSJ Prime + 2.75% (variable) or fixed options\n- Terms: up to 25 years for real estate, 10 years for equipment\n- Use cases: purchase, renovation, refinance, business acquisition\n- Down payment: typically 10% (vs. 25-30% conventional)\n- Key requirement: owner-occupancy (51% for existing, 60% for new construction)\n\n**SBA 504 — Fixed-Rate Long-Term Real Estate**\n- Structure: 50% conventional bank + 40% SBA debenture + 10% borrower\n- Maximum SBA portion: $5.5 million ($5.5M for energy projects)\n- Rate: fixed, tied to 5- and 10-year Treasury\n- Terms: 20 or 25 years\n- Use: owner-occupied commercial real estate and equipment\n- Advantage: fixed long-term rate, low down payment, preservation of working capital\n\n**Eligibility Requirements**\n- For-profit business in the US\n- Tangible net worth < $15 million AND average net income < $5 million over 2 years\n- Cannot be publicly traded\n- No other financing sources available on reasonable terms\n\n**The SBA Packaging Process**\nSBA loans require more documentation than conventional: 3 years tax returns (personal and business), financial statements, business plan for startups, debt schedule, and environmental questionnaire for real estate.`,
+        content: `SBA loans are among the most powerful financing tools available for small business owners and commercial real estate buyers. Understanding these programs positions you as a resource for business owner clients who are often overlooked by loan officers who only know residential products.
+
+**SBA 7(a) Loan Program**
+
+The SBA 7(a) is the most flexible and widely used SBA program. It's a general-purpose business loan guaranteed by the Small Business Administration.
+
+**Key parameters:**
+- **Maximum loan amount:** $5 million
+- **SBA guarantee:** Up to 85% for loans ≤$150K; 75% for loans >$150K
+- **Use of proceeds:** Working capital, equipment, real estate purchase, refinancing business debt, business acquisition
+- **Terms:** Up to 10 years for equipment/working capital; up to 25 years for real estate
+- **Down payment:** Typically 10% for real estate; higher for business acquisitions
+- **Rates:** Variable (Prime + 2.25-4.75%) or fixed; capped by SBA
+- **Collateral:** Required to the extent available; SBA does not decline loans solely for insufficient collateral
+
+**Best for:** Small businesses needing flexible financing — working capital, business purchases, mixed-use properties, or situations where conventional financing isn't available.
+
+**SBA 504 Loan Program**
+
+The SBA 504 is specifically designed for fixed assets — primarily commercial real estate and major equipment purchases.
+
+**Structure (the 504 is a three-party deal):**
+- **50%** — First mortgage from a conventional lender (bank)
+- **40%** — Second mortgage from a Certified Development Company (CDC), backed by SBA guarantee
+- **10%** — Borrower down payment (sometimes 15-20% for special-use properties or startups)
+
+**Key parameters:**
+- **Maximum SBA portion:** $5.5 million (up to $5.5M for manufacturing or energy-efficient projects)
+- **Use of proceeds:** Owner-occupied commercial real estate, heavy equipment, building improvements
+- **Terms:** 10, 20, or 25 years on the SBA portion
+- **Rates:** Fixed rate on the CDC portion, set monthly; highly competitive
+- **Owner-occupancy requirement:** Borrower must occupy at least 51% of existing buildings; 60% of new construction
+
+**Best for:** Small business owners buying the building they operate from. The low down payment (10%) and fixed long-term rate make it one of the best commercial real estate financing options available.
+
+**7(a) vs. 504 — Key Differences**
+
+| Feature | SBA 7(a) | SBA 504 |
+|---------|----------|----------|
+| Use | Flexible — real estate, working capital, equipment, acquisitions | Fixed assets only — real estate and major equipment |
+| Down payment | 10-30% | 10% typically |
+| Rate | Variable or fixed; higher | Fixed; very competitive on CDC portion |
+| Structure | Single loan | Three-party (bank + CDC + borrower) |
+| Max loan | $5M | $5M+ (CDC portion) |
+
+**Eligibility Requirements for Both Programs**
+
+- Must be a for-profit business
+- Must meet SBA size standards (generally under 500 employees or under $7.5M in annual revenue, varies by industry)
+- Must be U.S.-based
+- Owner must have reasonable personal credit (680+ preferred)
+- Business must demonstrate ability to repay
+- Must have exhausted conventional financing options (or show conventional is unavailable)
+
+**Your Role as the Loan Officer**
+
+SBA loans are more complex and time-consuming than conventional loans — typically 60-90 days to close. Most require an SBA-approved lender (Preferred Lenders can approve without SBA review, speeding the process). Know which lenders in your network are SBA preferred lenders.`,
         keyPoints: [
-          '7(a): flexible up to $5M, 10% down for owner-occupied RE',
-          '504: 50/40/10 structure with fixed long-term rate',
-          'Owner-occupancy required: 51% existing, 60% new construction',
-          'SBA requires significantly more documentation than conventional',
+          'SBA 7(a) is flexible — use it for working capital, business acquisitions, equipment, or real estate.',
+          'SBA 504 is structured as a three-party deal (50% bank + 40% CDC/SBA + 10% borrower) and is best for owner-occupied commercial real estate.',
+          'The 504\'s fixed rate on the SBA portion and 10% down payment make it one of the most competitive commercial real estate products available.',
+          'SBA 504 requires the borrower to occupy at least 51% of an existing building or 60% of new construction.',
+          'SBA loans typically take 60-90 days to close — set expectations with clients early in the process.',
         ],
         quiz: [
           {
-            question: 'What is the maximum SBA 7(a) loan amount?',
-            options: ['$1 million', '$2.5 million', '$5 million', '$10 million'],
-            correctIndex: 2,
-            explanation: 'SBA 7(a) goes up to $5M with competitive terms — the low down payment (10%) is its main advantage over conventional commercial loans.',
-          },
-          {
-            question: 'What is the typical SBA 504 loan structure?',
-            options: ['100% SBA financing', '50% bank + 40% SBA + 10% borrower', '80% bank + 20% SBA', '70% bank + 30% borrower'],
+            question: 'A small business owner wants to purchase the building their company operates from with only 10% down. Which SBA program is most appropriate?',
+            options: ['SBA 7(a)', 'SBA 504', 'SBA Microloan', 'SBA Express'],
             correctIndex: 1,
-            explanation: 'The 50/40/10 structure preserves borrower working capital while giving lenders security through the layered structure.',
+            explanation: 'The SBA 504 is specifically designed for owner-occupied commercial real estate with a 10% down payment structure. The 50% first mortgage + 40% CDC loan + 10% borrower structure makes it the premier product for this scenario.',
           },
           {
-            question: 'What owner-occupancy percentage is required for an existing building with SBA financing?',
-            options: ['25%', '51%', '75%', '100%'],
+            question: 'In an SBA 504 transaction, what does the Certified Development Company (CDC) portion represent?',
+            options: ['50% of the project cost — the conventional first mortgage', '40% of the project cost, backed by an SBA guarantee', '10% of the project cost — the borrower\'s down payment', 'The full loan amount guaranteed by the federal government'],
             correctIndex: 1,
-            explanation: 'SBA requires at least 51% owner-occupancy for existing buildings (60% for new construction) to qualify as an owner-occupied business loan.',
+            explanation: 'The SBA 504 structure splits financing three ways: 50% conventional first mortgage (bank), 40% CDC second mortgage (SBA-backed), and 10% borrower down payment. The CDC/SBA portion carries a fixed rate set monthly and is highly competitive.',
           },
-        ],
-      },
-      {
-        title: 'CMBS & Bridge Lending',
-        duration: '22 min',
-        content: `Commercial Mortgage-Backed Securities (CMBS) and bridge loans serve different parts of the commercial real estate capital stack.\n\n**CMBS Overview**\nCMBS are bonds backed by commercial mortgages. Lenders originate loans, pool them, and sell them as securities. This allows lenders to recycle capital and often offer competitive rates.\n\nCMBS characteristics:\n- Non-recourse (property is collateral, not borrower personally)\n- Typically 10-year fixed rate with 25-30 year amortization or interest-only\n- Prepayment penalties are severe: defeasance or yield maintenance\n- Serviced by a special servicer when in default\n- Reporting requirements: quarterly financials, annual inspections\n\n**When to Use CMBS**\nBest for stabilized assets with predictable cash flow: anchored retail, multifamily, office with strong lease terms. Not ideal for value-add or transitional properties.\n\n**Bridge Loans**\nBridge loans are short-term (6–36 months), higher-rate loans for transitional situations:\n- Acquiring a property with occupancy below permanent financing thresholds (85%+)\n- Completing a renovation or lease-up\n- Buying quickly without time for full underwriting\n- Taking advantage of an opportunity before longer-term financing can close\n\nBridge loan rates: typically SOFR + 300–600 bps (significantly above CMBS). The higher rate compensates for transitional risk.\n\n**Exit Strategy**\nEvery bridge loan needs a clear exit: refinance into CMBS or agency, sell the asset, or pay off with equity raise. Lenders will ask about exit strategy before approving.`,
-        keyPoints: [
-          'CMBS is non-recourse with severe prepayment penalties',
-          'Use CMBS for stabilized assets, bridge for transitional/value-add',
-          'Bridge rates are SOFR + 300-600bps — expensive but fast and flexible',
-          'Always underwrite a clear bridge loan exit strategy',
-        ],
-        quiz: [
           {
-            question: 'CMBS loans are characterized as:',
-            options: ['Recourse, short-term, variable rate', 'Non-recourse, typically 10-year fixed with severe prepayment penalties', 'Government-backed with flexible terms', 'Only available for residential properties'],
+            question: 'Which SBA program would be most appropriate for a business needing both working capital and real estate financing in a single loan?',
+            options: ['SBA 504', 'SBA 7(a)', 'Neither — SBA programs cannot combine use of proceeds', 'SBA Microloan'],
             correctIndex: 1,
-            explanation: 'CMBS non-recourse structure protects the borrower personally, but the severe prepayment penalties make them inflexible for short-hold strategies.',
-          },
-          {
-            question: 'Bridge loans are best suited for:',
-            options: ['Stabilized, long-term holds', 'Transitional properties needing renovation or lease-up', 'Owner-occupied primary residences', 'Government agencies'],
-            correctIndex: 1,
-            explanation: 'Bridge loans fill the gap when a property doesn\'t yet qualify for permanent financing — they\'re short-term and expensive by design.',
-          },
-          {
-            question: 'A bridge loan exit strategy should be:',
-            options: ['Identified after closing', 'Not required by lenders', 'Clearly defined before approval — refinance, sell, or equity raise', 'Optional for experienced borrowers'],
-            correctIndex: 2,
-            explanation: 'Lenders will not approve a bridge loan without understanding how and when it will be paid off — the exit is part of the underwriting.',
-          },
-        ],
-      },
-      {
-        title: 'DSCR & Underwriting',
-        duration: '25 min',
-        content: `Debt Service Coverage Ratio (DSCR) is the single most important metric in commercial real estate underwriting. It measures a property's ability to service its debt from operating income.\n\n**DSCR Formula**\nDSCR = NOI ÷ Annual Debt Service\n\nExample:\n- NOI: $300,000\n- Annual debt service (P+I): $240,000\n- DSCR = 1.25x\n\n**Lender Requirements**\n- Most commercial lenders: minimum 1.20x–1.25x DSCR\n- SBA: typically 1.25x global DSCR (property + borrower income vs. all debt)\n- Agency (Fannie/Freddie): 1.25x–1.35x for multifamily\n- Conservative lenders: 1.30x or higher\n\n**Global DSCR**\nFor SBA and some other lenders, they underwrite the borrower's global cash flow: business income + real estate NOI − all personal and business debt payments. This is why personal tax returns matter even for commercial loans.\n\n**Stress Testing**\nSophisticated underwriters stress DSCR by modeling:\n- 10-15% vacancy increase\n- 5-10% expense increase\n- Rate increase scenarios for variable rate debt\n\nIf the property still meets DSCR at stressed assumptions, it's a conservative investment.\n\n**Common Underwriting Adjustments**\n- Management fee: 3-8% of gross rents (even if self-managed)\n- Reserves: $0.10-$0.25/sq ft annual reserve for capex\n- Vacancy: never underwrite at 0% — always include market-rate vacancy`,
-        keyPoints: [
-          'DSCR = NOI ÷ Annual Debt Service — minimum 1.20-1.25x for most lenders',
-          'Global DSCR includes borrower personal income and all debts',
-          'Always include management fee and reserves even if not current costs',
-          'Stress test DSCR with higher vacancy and expenses before committing',
-        ],
-        quiz: [
-          {
-            question: 'What is the DSCR formula?',
-            options: ['NOI ÷ Purchase Price', 'Gross Rent ÷ Mortgage Payment', 'NOI ÷ Annual Debt Service', 'Appraised Value ÷ Loan Amount'],
-            correctIndex: 2,
-            explanation: 'DSCR measures how many times the property\'s income can cover its debt payments — a 1.25x DSCR means the property earns 25% more than the debt cost.',
-          },
-          {
-            question: 'What is the minimum DSCR most commercial lenders require?',
-            options: ['0.90x', '1.00x', '1.20–1.25x', '1.50x'],
-            correctIndex: 2,
-            explanation: 'The 1.20–1.25x minimum provides a buffer against vacancy increases and expense surprises without over-constraining the deal.',
-          },
-          {
-            question: 'Why include a management fee even if the property is self-managed?',
-            options: ['It\'s legally required', 'To accurately reflect true operating costs and stress-test deal sustainability', 'Only required for properties over $1M', 'Self-managed properties don\'t need it'],
-            correctIndex: 1,
-            explanation: 'If you sell or can\'t manage anymore, the new owner pays management fees — underwriting without it creates an inflated NOI.',
-          },
-        ],
-      },
-      {
-        title: 'LTV, LTC & Loan Sizing',
-        duration: '18 min',
-        content: `Loan-to-Value (LTV) and Loan-to-Cost (LTC) are the primary constraints on commercial loan sizing, along with DSCR.\n\n**Loan-to-Value (LTV)**\nLTV = Loan Amount ÷ Appraised Value\n\nLenders cap LTV to protect against value declines:\n- Multifamily (Fannie/Freddie): up to 80% LTV\n- Commercial (bank): typically 65-75% LTV\n- SBA 7(a): up to 90% LTV\n- Hard money: 65-70% of ARV\n\n**Loan-to-Cost (LTC)**\nLTC = Loan Amount ÷ Total Project Cost (purchase + renovation)\n\nUsed for construction and value-add deals where appraisal is based on projected value, not current value. Lenders use LTC to ensure borrower has meaningful equity in the deal from day one.\n\n**Which Constrains the Loan?**\nBoth LTV and DSCR are applied simultaneously — the lower resulting loan amount wins. Example:\n- Based on LTV (75%): $3,750,000 loan\n- Based on DSCR (1.25x): $2,900,000 loan\n- Lender will offer: $2,900,000\n\n**As-Is vs. As-Stabilized Value**\nFor value-add deals, appraisers provide both: current "as-is" value and projected "as-stabilized" value after renovation/lease-up. Lenders may lend against stabilized value but typically hold back proceeds in a reserve to be released as work is completed.`,
-        keyPoints: [
-          'LTV is capped by asset type: 65-80% conventional, up to 90% SBA',
-          'LTC applies to construction/value-add based on total project cost',
-          'The binding constraint is whichever gives the smaller loan — LTV or DSCR',
-          'As-stabilized value allows more proceeds but with holdback reserves',
-        ],
-        quiz: [
-          {
-            question: 'LTC (Loan-to-Cost) is primarily used for:',
-            options: ['Stabilized income properties', 'Single-family homes', 'Construction and value-add deals', 'Government-backed loans only'],
-            correctIndex: 2,
-            explanation: 'LTC ensures the borrower has real equity in a project from day one — it\'s used when appraised value doesn\'t yet exist.',
-          },
-          {
-            question: 'If LTV supports a $3.75M loan but DSCR only supports $2.9M, what does the lender offer?',
-            options: ['$3,750,000', '$3,325,000 (the average)', '$2,900,000', 'They decline the loan'],
-            correctIndex: 2,
-            explanation: 'The binding constraint wins — whichever test produces the smaller loan amount is what the lender will offer.',
-          },
-          {
-            question: '"As-stabilized value" in appraisal means:',
-            options: ['The current market value', 'The projected value after renovation and lease-up', 'The bank\'s internal assessed value', 'Replacement cost of the building'],
-            correctIndex: 1,
-            explanation: 'As-stabilized value allows lenders to size a larger loan, but they typically hold back portions until improvements are verified.',
-          },
-        ],
-      },
-      {
-        title: 'Rate Locks & Interest Rate Risk',
-        duration: '14 min',
-        content: `Interest rate risk management is a critical skill for mortgage professionals. Rates can move significantly during the loan process, affecting both affordability and deal viability.\n\n**Rate Lock Basics**\nA rate lock guarantees a specific interest rate for a defined period. Standard residential locks: 15, 30, 45, or 60 days. Commercial: 30-60 days standard, up to 120-180 days for complex deals.\n\nRate lock pricing: shorter locks are cheaper (or free); longer locks cost more in the form of higher rate or upfront fees.\n\n**Float-Down Options**\nSome lenders offer float-down provisions: the borrower can capture a lower rate if rates decrease during the lock period. Usually costs 0.125-0.25% of the loan amount.\n\n**Lock-In Strategy**\n- If rates are rising: lock early, lock longer\n- If rates are falling: float (don't lock), capture the lower rate at closing\n- When volatile: lock on the first good day, don't try to time the bottom\n\n**Index + Margin**\nARMs and commercial floating-rate loans use: Rate = Index + Margin\n- Common indexes: SOFR (replaced LIBOR), Prime Rate, 5-year Treasury\n- Margin is fixed; index floats\n\n**Hedging Tools (Commercial)**\nFor large commercial deals: interest rate caps (limits maximum rate exposure), swaps (converts floating to fixed), and collars (both cap and floor). These are structured finance tools that add cost but reduce risk for long-term holds.`,
-        keyPoints: [
-          'Longer rate locks cost more — factor into pricing comparison',
-          'In rising rate environments: lock early and lock longer',
-          'Float-down options provide downside protection at a cost',
-          'Rate = Index + Margin for adjustable-rate products',
-        ],
-        quiz: [
-          {
-            question: 'In a rising rate environment, what lock strategy is recommended?',
-            options: ['Float as long as possible', 'Lock early and lock longer', 'Never lock — always float', 'Wait for the Federal Reserve announcement'],
-            correctIndex: 1,
-            explanation: 'When rates are trending up, locking in secures the current rate — the cost of a longer lock is far less than the cost of a rate spike.',
-          },
-          {
-            question: 'What is a float-down option?',
-            options: ['Converting a fixed rate to variable', 'A provision allowing the borrower to capture a lower rate if rates drop during the lock', 'A penalty for floating too long', 'An option to delay closing'],
-            correctIndex: 1,
-            explanation: 'Float-down options cost 0.125–0.25% but provide downside protection — you lock in protection while retaining some upside.',
-          },
-          {
-            question: 'The formula for an ARM loan rate is:',
-            options: ['Prime Rate × Margin', 'Loan Amount ÷ Term', 'Index + Margin', 'DSCR + Spread'],
-            correctIndex: 2,
-            explanation: 'The index (SOFR, Prime, Treasury) floats with the market; the margin is fixed by the lender at origination.',
+            explanation: 'The SBA 7(a) is flexible and allows multiple uses of proceeds in a single loan — including real estate, working capital, equipment, and business acquisition. The 504 is limited to fixed assets only and cannot include working capital.',
           },
         ],
       },
       {
         title: 'Hard Money & Private Lending',
         duration: '16 min',
-        content: `Hard money and private lending are asset-based financing — the property is the primary collateral, and underwriting focuses on the deal, not the borrower's creditworthiness.\n\n**Hard Money Characteristics**\n- Rates: 10-15% (sometimes higher)\n- Terms: 6-24 months\n- LTV: 60-70% of ARV (After Repair Value)\n- Points: 2-4 points origination\n- Approval speed: 5-15 days (sometimes faster)\n- Use case: fix-and-flip, distressed acquisitions, bridge situations\n\n**The Math of Hard Money**\nExample: $200,000 ARV, 65% LTV = $130,000 loan\n- Purchase: $90,000\n- Renovation: $30,000 = $120,000 total cost\n- Loan: $130,000 (covers purchase + rehab + reserve)\n- Rate: 12%, 1-year term = $15,600 interest\n- 3 points: $3,900\n- Total financing cost: ~$19,500\n\n**Private Lending**\nPrivate lenders are individuals (not institutions) lending their own capital. Often more flexible than hard money companies, with negotiated terms. Found through real estate networks, attorney introductions, and real estate investor associations.\n\n**DSCR Loans (Long-Term Rental)**\nDSCR loans are a newer product — qualifying based solely on property cash flow, not borrower income. No tax returns, no employment verification. DSCR ≥ 1.0 typically required; rates 1-2% above conventional. Ideal for investors with multiple properties or non-W2 income.`,
+        content: `Hard money and private lending occupy a critical niche in real estate finance. They're not for everyone — but for the right borrower in the right situation, they're the only product that makes a deal work. Loan officers who understand this market serve investors far better than those who only know conventional products.
+
+**What is Hard Money Lending?**
+
+Hard money loans are short-term, asset-based loans made by private lenders — not banks. The lender's primary focus is the value of the asset (the property), not the borrower's creditworthiness or income.
+
+**Key characteristics:**
+- **Term:** 6-24 months (short-term bridge financing)
+- **Rates:** 9-14%+ depending on market, lender, and deal
+- **Points:** 1-4 origination points (1 point = 1% of loan amount)
+- **LTV:** Typically 65-75% of ARV (After-Repair Value) for fix-and-flip; 65-70% of current value for bridge
+- **Speed:** Can close in 5-14 days — the primary advantage over conventional
+- **Credit:** Minimum requirements are low (typically 580-620); some lenders have no minimum
+- **Income:** Not required — asset-based qualification
+
+**After-Repair Value (ARV)**
+
+For fix-and-flip loans, hard money lenders lend based on the ARV — what the property will be worth after renovation — not just the current value.
+
+**Example:**
+- Purchase price: $150,000
+- Renovation cost: $50,000
+- ARV: $275,000
+- Lender lends 70% of ARV = $192,500
+- Borrower can finance both purchase and renovation within the loan
+
+**Private Lending**
+
+Private lenders are individuals (not institutions) who lend their own capital. They may be:
+- Wealthy individuals seeking better returns than traditional investments
+- Family or friends of the borrower
+- Experienced investors who also lend
+
+Private lenders often offer more flexible terms than hard money companies because it's a personal relationship. Rates may be lower (7-10%) and terms more negotiable.
+
+**When Hard Money Makes Sense**
+
+- **Fix-and-flip:** Short renovation timeline, quick resale — hard money funds the deal, refinanced or paid off at sale
+- **Bridge financing:** Borrower needs to close quickly before permanent financing is arranged
+- **Distressed properties:** Conventional lenders won't lend on properties in poor condition; hard money lenders will
+- **Credit or income issues:** Borrower can't qualify conventional but has a strong deal and equity position
+- **Time-sensitive deals:** Auction purchases, REO deals, seller deadlines
+
+**When Hard Money Does NOT Make Sense**
+
+- Long-term holds — the high rate destroys cash flow over time
+- Stable conventional-eligible properties — no reason to pay premium rates
+- Borrowers without a clear exit strategy (sale or refinance)
+
+**Your Role as a Loan Officer**
+
+Build relationships with 3-5 hard money lenders in your market. Know their specific niches (fix-and-flip vs. bridge vs. commercial), their speed, and their requirements. When an investor client brings you a deal that conventional can't finance, you can immediately offer a solution rather than turning them away.`,
         keyPoints: [
-          'Hard money: 65-70% LTV of ARV, 10-15% rate, 2-4 points',
-          'Asset-based: deal quality matters more than borrower credit',
-          'Private lenders are individuals — more flexible, found through networks',
-          'DSCR loans: qualify on property income only, no tax returns',
+          'Hard money loans are asset-based — qualification focuses on property value, not borrower income or credit.',
+          'Hard money lends on ARV (After-Repair Value) for fix-and-flip deals, often covering both purchase and renovation costs.',
+          'Speed (5-14 day close) is hard money\'s primary advantage over conventional financing.',
+          'Hard money makes sense for fix-and-flip, bridge financing, distressed properties, and time-sensitive deals — not for long-term holds.',
+          'Build relationships with 3-5 hard money lenders so you always have a solution for investor clients whose deals conventional can\'t finance.',
         ],
         quiz: [
           {
-            question: 'Hard money loans are primarily underwritten based on:',
-            options: ['Borrower credit score', 'Borrower income and employment', 'The property\'s After Repair Value (ARV)', 'The borrower\'s net worth'],
+            question: 'A fix-and-flip investor purchases a property for $180,000, plans $40,000 in renovations, and expects an ARV of $300,000. A hard money lender offers 70% LTV on ARV. What is the maximum loan amount?',
+            options: ['$126,000', '$154,000', '$210,000', '$240,000'],
             correctIndex: 2,
-            explanation: 'Hard money is asset-based lending — the deal must make sense on paper even if the borrower has no credit history.',
+            explanation: 'Hard money lender offers 70% of ARV = 70% × $300,000 = $210,000. This covers the $180,000 purchase and $30,000 of the $40,000 renovation (borrower funds the remaining $10,000 renovation plus any fees).',
           },
           {
-            question: 'What does ARV stand for?',
-            options: ['Annual Rental Value', 'After Repair Value', 'Adjusted Real Value', 'Asset Replacement Value'],
+            question: 'What is the primary advantage of hard money lending over conventional financing?',
+            options: ['Lower interest rates and origination fees', 'Speed — hard money can close in 5-14 days compared to 30-45 days for conventional', 'No down payment required for qualified borrowers', 'Hard money loans can be used as long-term 30-year financing'],
             correctIndex: 1,
-            explanation: 'ARV is the projected market value after all renovations are complete — it\'s the ceiling for hard money loan sizing.',
+            explanation: 'Speed is the defining advantage of hard money. Investors competing for deals — at auction, with motivated sellers, or against cash buyers — use hard money because it closes nearly as fast as cash. The higher rate is the cost of that speed.',
           },
           {
-            question: 'DSCR non-QM loans qualify borrowers based on:',
-            options: ['W-2 income only', 'Property cash flow — no tax returns required', '3 years of bank statements', '2 years of self-employment income'],
+            question: 'Why is hard money NOT appropriate for a long-term buy-and-hold rental property?',
+            options: ['Hard money lenders do not allow properties to be rented', 'The high interest rates (9-14%+) destroy cash flow when held long-term', 'Hard money loans require repayment in full within 30 days', 'Hard money is only available for commercial properties, not residential rentals'],
             correctIndex: 1,
-            explanation: 'DSCR loans are ideal for investors with complex income structures — the property pays for itself in the underwriting model.',
-          },
-        ],
-      },
-      {
-        title: 'Conventional, FHA & VA',
-        duration: '18 min',
-        content: `These three loan programs cover the majority of residential purchase and refinance transactions. Understanding the key differences helps you match borrowers to the right product.\n\n**Conventional Loans**\n- Conforming: meets Fannie Mae/Freddie Mac guidelines, maximum loan limits vary by county\n- Jumbo: above conforming limits, stricter requirements (720+ credit, 20%+ down, larger reserves)\n- PMI required below 20% down (0.5-1.5% annually, cancellable at 80% LTV)\n- Rates: typically lowest for well-qualified borrowers\n\n**FHA Loans**\n- 3.5% down with 580+ credit score; 10% down with 500-579\n- MIP: 1.75% upfront (added to loan) + 0.55% annual (for 30-year term with <10% down, now permanent)\n- FHA appraisals are more stringent — property must meet HUD Minimum Property Standards\n- Loan limits vary by county and area\n- Ideal for first-time buyers with limited savings or lower credit\n\n**VA Loans**\n- 0% down, no PMI, competitive rates\n- Available to eligible veterans, active duty, and surviving spouses\n- VA Funding Fee: 2.15-3.3% (waived for service-connected disability)\n- Certificate of Eligibility (COE) required\n- VA appraisal (MPR inspection) required\n- No maximum loan amount (though lenders have limits above conforming)\n\n**Program Comparison Quick Guide**\n- Low down payment, lower credit: FHA\n- Military/veteran: always check VA first\n- Strong credit, 10-20% down: Conventional\n- High price point: Jumbo conventional`,
-        keyPoints: [
-          'FHA: 3.5% down, but permanent MIP — refinance out when you can',
-          'VA: 0% down, no PMI, best rate for eligible veterans',
-          'Conventional: best rate for 680+ credit with 20%+ down',
-          'Jumbo requires stronger reserves and lower DTI than conforming',
-        ],
-        quiz: [
-          {
-            question: 'When should a veteran always explore VA loans?',
-            options: ['Only if they have poor credit', 'Before considering any other loan type — 0% down, no PMI', 'Only for second homes', 'After being declined by conventional lenders'],
-            correctIndex: 1,
-            explanation: 'VA loans offer the best combination of rate, terms, and down payment for eligible veterans — always check VA eligibility first.',
-          },
-          {
-            question: 'FHA\'s annual MIP for 30-year loans with less than 10% down:',
-            options: ['Can be cancelled at 80% LTV', 'Is permanent for the life of the loan', 'Expires after 5 years', 'Is not required for first-time buyers'],
-            correctIndex: 1,
-            explanation: 'Unlike PMI, FHA MIP on loans with <10% down is permanent — refinancing into conventional once you have 20% equity is the common strategy.',
-          },
-          {
-            question: 'Jumbo loans (above conforming limits) typically require:',
-            options: ['Lower credit scores than conforming', 'Government backing', 'Higher credit scores, larger down payments, and more reserves', 'FHA insurance'],
-            correctIndex: 2,
-            explanation: 'Without government backing, jumbo lenders manage their own risk — stricter guidelines reflect the larger loan amounts at stake.',
+            explanation: 'Hard money is a short-term bridge tool, not a permanent financing solution. At 10-14% interest, a rental property that would cash flow positively at a 7% conventional rate becomes deeply negative. Hard money must have a clear, near-term exit — sale or refinance.',
           },
         ],
       },
       {
         title: 'ARMs & Buydowns',
         duration: '14 min',
-        content: `Adjustable-Rate Mortgages and buydowns are tools to lower initial payments or manage rate risk.\n\n**Adjustable-Rate Mortgages (ARMs)**\nARM structure: initial fixed period + adjustment period\n- 5/1 ARM: Fixed for 5 years, adjusts annually thereafter\n- 7/1 ARM: Fixed 7 years, annual adjustments\n- 10/1 ARM: Fixed 10 years, annual adjustments\n\nRate caps protect borrowers:\n- Initial cap: maximum change at first adjustment (typically 2%)\n- Periodic cap: maximum change per adjustment period (2%)\n- Lifetime cap: maximum total increase (5-6%)\n\n**When ARMs Make Sense**\n- Borrower plans to sell or refinance before the fixed period ends\n- Investor properties — lower rate means better cash flow\n- Rates are elevated and likely to decrease\n\n**Temporary Buydowns**\nA temporary buydown reduces the rate for the initial years of the loan:\n- 2-1 Buydown: Rate is 2% below note rate in year 1, 1% below in year 2, at note rate thereafter\n- 1-0 Buydown: Rate is 1% below note rate in year 1, at note rate thereafter\n- Seller or builder often pays for the buydown as a concession\n- Cost: roughly 1% of loan per year of subsidy\n\n**Permanent Buydown (Points)**\nPaying discount points at closing to reduce the permanent interest rate:\n- 1 point = 1% of loan amount\n- Each point typically buys down 0.25% in rate\n- Break-even: divide point cost by monthly savings to find payback period`,
+        content: `In a high-rate environment, ARMs and buydowns become essential tools for helping borrowers manage payment affordability. Loan officers who only sell 30-year fixed products leave money on the table and fail clients who could benefit from these structures.
+
+**Adjustable-Rate Mortgages (ARMs)**
+
+An ARM has a fixed rate for an initial period, then adjusts periodically based on a market index plus a margin.
+
+**Common ARM structures:**
+- **5/1 ARM:** Fixed for 5 years, then adjusts annually
+- **7/1 ARM:** Fixed for 7 years, then adjusts annually
+- **10/1 ARM:** Fixed for 10 years, then adjusts annually
+- **5/6 ARM:** Fixed for 5 years, then adjusts every 6 months
+
+**ARM pricing components:**
+- **Index:** The benchmark rate (SOFR is now standard, replacing LIBOR)
+- **Margin:** The lender's fixed spread above the index (typically 2.25-3%)
+- **Caps:** Limits on how much the rate can change
+  - Initial cap: Maximum change at first adjustment (typically 2%)
+  - Periodic cap: Maximum change per adjustment period (typically 2%)
+  - Lifetime cap: Maximum change over the life of the loan (typically 5-6%)
+
+**Example:** A 5/1 ARM at 6.5% with 2/2/5 caps means:
+- Fixed at 6.5% for years 1-5
+- Year 6: Can go up or down a maximum of 2%
+- Each subsequent year: Can change a maximum of 2%
+- Over the life of the loan: Cannot exceed 6.5% + 5% = 11.5%
+
+**When ARMs make sense:**
+- Borrower plans to sell or refinance before the initial fixed period ends
+- Rate differential is significant (1%+ below 30-year fixed)
+- High-balance loans where the payment savings are substantial
+- Move-up buyers who expect to sell within 5-7 years
+
+**Temporary Buydowns**
+
+A temporary buydown reduces the borrower's interest rate for a specific period at the beginning of the loan. The difference is typically funded by the seller, builder, or sometimes the lender.
+
+**Common buydown structures:**
+
+**2-1 Buydown:**
+- Year 1: Rate reduced by 2% below note rate
+- Year 2: Rate reduced by 1% below note rate
+- Year 3+: Full note rate applies
+
+**1-0 Buydown:**
+- Year 1: Rate reduced by 1%
+- Year 2+: Full note rate applies
+
+**Example — 2-1 Buydown:**
+- Note rate: 7.5%
+- Year 1 payment at 5.5%: $1,136
+- Year 2 payment at 6.5%: $1,264
+- Year 3+ payment at 7.5%: $1,398
+- Seller funds the difference — approximately $4,000-$8,000 depending on loan size
+
+**Permanent Buydowns (Points):**
+Paying discount points to permanently lower the rate. 1 point = 1% of loan amount = approximately 0.25% rate reduction (varies by lender and market).
+
+**When to recommend points:** If the borrower plans to stay in the home long enough for the monthly savings to exceed the upfront cost (the break-even analysis). A $4,000 point purchase that saves $100/month has a 40-month break-even. If they'll stay longer, it makes sense.
+
+**Presenting ARMs and Buydowns to Borrowers**
+
+Always present in writing with a clear comparison of payment scenarios. Show the worst case on ARMs (maximum rate at lifetime cap). Never obscure the risk — an informed borrower who chooses an ARM is far better than a borrower who feels deceived when the rate adjusts.`,
         keyPoints: [
-          'ARM caps: 2% initial / 2% periodic / 5-6% lifetime — protect borrowers',
-          'ARMs make sense when selling or refinancing before adjustment period',
-          '2-1 buydown: 2% lower year 1, 1% lower year 2 — seller often pays',
-          'Point break-even: point cost ÷ monthly savings = payback months',
+          'ARMs have a fixed initial period then adjust based on an index + margin — caps limit how much the rate can change.',
+          'ARMs work best for borrowers who plan to sell or refinance before the fixed period ends — typically 5-7 years.',
+          'A 2-1 buydown reduces the rate by 2% in year one and 1% in year two — typically funded by the seller or builder.',
+          'Permanent buydown break-even analysis: divide the point cost by monthly savings to find how long the borrower must stay for it to make financial sense.',
+          'Always present ARM scenarios with the worst-case rate (lifetime cap) — never obscure the risk of rate adjustment.',
         ],
         quiz: [
           {
-            question: 'A 5/1 ARM means the rate is fixed for:',
-            options: ['1 year, then adjusts every 5 years', '5 years, then adjusts annually', '5 months, then adjusts monthly', '5% rate plus one origination point'],
-            correctIndex: 1,
-            explanation: 'The first number is always the fixed period in years; the second is the adjustment frequency in years after that.',
-          },
-          {
-            question: 'In a 2-1 buydown, what is the rate in Year 2?',
-            options: ['2% below note rate', 'At the full note rate', '1% below note rate', 'It adjusts to market rate'],
+            question: 'A 5/1 ARM has 2/2/5 caps and a starting rate of 5.5%. What is the maximum rate this loan can ever reach?',
+            options: ['7.5%', '9.5%', '10.5%', '11.5%'],
             correctIndex: 2,
-            explanation: '2-1 buydown: Year 1 is 2% below, Year 2 is 1% below, Year 3+ is at the full note rate.',
+            explanation: 'The lifetime cap of 5 means the rate can never exceed the starting rate + 5% = 5.5% + 5% = 10.5%. This is the worst-case scenario that must always be disclosed to borrowers considering an ARM.',
           },
           {
-            question: 'How do you calculate the break-even period for paying discount points?',
-            options: ['Multiply points by monthly payment', 'Divide point cost by monthly payment savings', 'Add points to the rate', 'Divide monthly savings by the loan amount'],
+            question: 'In a 2-1 buydown, what is the interest rate in year two if the note rate is 7%?',
+            options: ['5%', '6%', '6.5%', '7%'],
             correctIndex: 1,
-            explanation: 'Break-even = total point cost ÷ monthly savings. If you plan to keep the loan longer than the break-even period, points make sense.',
+            explanation: 'A 2-1 buydown reduces the rate by 2% in year one and 1% in year two. With a 7% note rate: Year 1 = 5%, Year 2 = 6%, Year 3+ = 7%.',
+          },
+          {
+            question: 'A borrower pays $5,000 in discount points to reduce their monthly payment by $80. What is the break-even period?',
+            options: ['25 months', '40 months', '62.5 months (approximately 5 years and 2 months)', '80 months'],
+            correctIndex: 2,
+            explanation: 'Break-even = Point cost ÷ Monthly savings = $5,000 ÷ $80 = 62.5 months. If the borrower stays longer than 62.5 months, the points save money. If they sell or refinance before then, the points were not cost-effective.',
           },
         ],
       },
       {
         title: 'Borrower Qualification',
         duration: '20 min',
-        content: `Qualifying a borrower requires analyzing the four Cs of credit: Capacity, Capital, Collateral, and Credit.\n\n**Capacity — Income Analysis**\nW-2 Employees: Use 2-year average of gross income. Overtime and bonus included if 2-year history documented.\n\nSelf-Employed: Use 2-year average of Schedule C net income (after depreciation add-back for real estate investors). This is where many self-employed borrowers struggle — deductions that reduce taxes also reduce qualifying income.\n\nRental Income: 75% of gross rents (or lease amounts) less documented expenses. For new rental properties, use appraiser's market rent schedule.\n\n**Capital — Assets & Down Payment**\nSource and season all funds: bank statements for 60 days minimum. Large unexplained deposits must be documented (gift letter if from family, business document if from sale).\n\nReserves: lenders want 2-6 months PITI in reserves after down payment and closing costs.\n\n**Collateral — Property Analysis**\nAppraisal must support contract price. For conventional loans, PMI and LTV are calculated on the lesser of purchase price or appraised value.\n\n**Credit**\n- FICO scores from all 3 bureaus; middle score used for qualification\n- 620+ minimum for most conventional; 580+ for FHA; 620+ typical for VA\n- DTI limits: 43-50% back-end DTI for most programs\n- Recent collections, judgments, and late payments require explanation letters`,
+        content: `Every mortgage qualification comes down to four pillars: credit, income, assets, and property. A weakness in any one pillar can kill a deal — or it can be compensated for by strength in another. Master loan officers don't just check boxes — they see the whole picture and find the path to approval.
+
+**Pillar 1 — Credit**
+
+**Credit score ranges and their impact:**
+- 760+: Best pricing, all products available
+- 720-759: Very good; minimal pricing adjustment
+- 680-719: Good; some pricing adjustments
+- 640-679: Fair; limited products, pricing adjustments
+- 580-639: Minimum for FHA; very limited conventional options
+- Below 580: FHA with 10% down; very few options
+
+**Key credit factors beyond the score:**
+- **Payment history:** 35% of FICO score — recent lates are devastating
+- **Credit utilization:** Keep revolving balances below 30% of limit; below 10% for best scores
+- **Derogatory marks:** Bankruptcies (2-4 years from discharge for most loans), foreclosures (3-7 years), short sales (2-4 years)
+- **Collections and judgments:** Must be addressed before closing on most products
+
+**Rapid Rescore:** If a borrower's score is just below a threshold, a rapid rescore can update credit information in 3-5 business days — potentially moving them into a better pricing tier. Cost: $25-50 per trade line.
+
+**Pillar 2 — Income**
+
+**W-2 Salaried borrowers:**
+- Use base salary; overtime and bonus income averaged over 2 years if consistent
+- Required docs: 2 years W-2s, 30 days pay stubs, possibly last 2 years tax returns
+
+**Self-employed borrowers:**
+- Use 2-year average of net income from Schedule C (sole proprietor) or K-1 distributions (S-corp/partnership)
+- Required docs: 2 years personal and business tax returns
+- Key challenge: Many self-employed borrowers write off significant expenses, reducing taxable income — which reduces qualifying income
+
+**Other income types:**
+- Social Security/pension: Gross up 25% if non-taxable
+- Child support/alimony: Must continue for 3+ years
+- Rental income: 75% of gross rent (to account for vacancy) minus PITIA
+- Part-time/second job: Must have 2-year history
+
+**Debt-to-Income (DTI) Ratios**
+
+**Front-end DTI (Housing ratio):** Monthly housing payment ÷ Gross monthly income
+- Conventional: ≤28% preferred
+- FHA: ≤31% preferred
+
+**Back-end DTI (Total DTI):** All monthly debt payments ÷ Gross monthly income
+- Conventional: ≤45% (up to 50% with compensating factors via DU/LP)
+- FHA: ≤43% (up to 57% in some DU approvals)
+- VA: No official DTI limit; residual income analysis used
+
+**Pillar 3 — Assets**
+
+Borrowers must document sufficient assets for:
+- Down payment
+- Closing costs
+- Reserves (typically 2-6 months PITIA post-closing)
+
+**Asset documentation:** 2 months bank statements (all pages). Large deposits (over 50% of monthly income) must be sourced and explained.
+
+**Gift funds:** Allowed for down payment on primary residences with proper gift letter and documentation. Investment properties generally do not allow gift funds.
+
+**Pillar 4 — Property**
+
+The property must appraise at or above the purchase price and meet lender condition requirements. Common property issues:
+- Peeling paint on FHA/VA loans (requires remediation before closing)
+- Working utilities required at time of appraisal
+- Foundation issues, roof condition, safety hazards
+- Non-warrantable condos (investor concentration, litigation, deferred maintenance)
+
+**Building the Full Picture**
+
+When a borrower has a weakness — low score, high DTI, limited assets — your job is to find compensating factors or alternative products. Strong reserves compensate for high DTI. Low LTV compensates for lower credit. DSCR loans compensate for complex income. There is almost always a path — your job is to find it.`,
         keyPoints: [
-          '4 Cs: Capacity (income), Capital (assets), Collateral, Credit',
-          'Self-employed income: 2-year average of Schedule C net — deductions reduce qualifying',
-          'Source and season all down payment/closing cost funds — 60 days bank statements',
-          'Middle FICO score used; 43-50% max back-end DTI',
+          'The four pillars of qualification are credit, income, assets, and property — weakness in one can often be offset by strength in another.',
+          'Credit score thresholds directly impact pricing and product availability — know where the key breakpoints are.',
+          'Self-employed borrowers qualify on net taxable income — heavy deductions that reduce taxes also reduce qualifying income.',
+          'Back-end DTI is the primary qualifying ratio — conventional allows up to 45-50%, FHA up to 57% in some cases.',
+          'Large deposits in bank statements must be sourced and explained — unexplained deposits can delay or kill a loan.',
         ],
         quiz: [
           {
-            question: 'What are the 4 Cs of mortgage underwriting?',
-            options: ['Cash, Credit, Collateral, Construction', 'Capacity, Capital, Collateral, Credit', 'Cost, Credit, Cash, Compliance', 'Coverage, Capacity, Cash, Closing'],
-            correctIndex: 1,
-            explanation: 'Every mortgage is underwritten through these four lenses — weakness in any C can disqualify or limit the loan.',
+            question: 'A borrower has a gross monthly income of $8,000 and total monthly debt payments of $3,200 (including the proposed housing payment). What is their back-end DTI?',
+            options: ['25%', '32%', '40%', '50%'],
+            correctIndex: 2,
+            explanation: 'Back-end DTI = Total monthly debt ÷ Gross monthly income = $3,200 ÷ $8,000 = 0.40 = 40%. This is within conventional guidelines (≤45-50%) and would generally qualify.',
           },
           {
-            question: 'How is self-employed income typically calculated for mortgage qualification?',
-            options: ['Current year\'s gross revenue', '2-year average of Schedule C net income', 'The higher of the last 2 years\' income', 'Gross income before deductions'],
+            question: 'Why do self-employed borrowers often qualify for less than their actual earnings suggest?',
+            options: ['Self-employed borrowers are automatically assigned a higher risk factor by Fannie Mae', 'Mortgage qualification uses net taxable income from tax returns — business deductions reduce qualifying income', 'Self-employed borrowers must use only one year of income for qualification', 'Banks require self-employed borrowers to have a co-signer regardless of income'],
             correctIndex: 1,
-            explanation: 'Lenders use net Schedule C income — the same deductions that reduce your taxes also reduce your qualifying income.',
+            explanation: 'Self-employed borrowers use Schedule C net income (sole proprietor) or K-1 distributions (S-corp). The more they write off for tax purposes, the lower their qualifying income. Many successful business owners pay very little in taxes — and qualify for far less mortgage than their lifestyle suggests.',
           },
           {
-            question: 'What is the minimum bank statement seasoning period for down payment funds?',
-            options: ['30 days', '60 days', '90 days', '6 months'],
+            question: 'What is a \'rapid rescore\' and when is it most valuable?',
+            options: ['A credit repair service that removes negative items from a borrower\'s credit report', 'A service that updates credit information within 3-5 days — most valuable when a borrower\'s score is just below a pricing threshold', 'A fast-track underwriting process that approves loans without a full credit review', 'A lender tool that estimates a borrower\'s credit score without a hard pull'],
             correctIndex: 1,
-            explanation: '60 days of bank statements is the standard — large unexplained recent deposits will require a paper trail.',
+            explanation: 'Rapid rescore updates credit information (paid-down balances, corrected errors, removed collections) in 3-5 business days instead of 30-60 days. It\'s most valuable when a borrower is just below a pricing or qualifying threshold — moving from 679 to 680 or 719 to 720 can meaningfully improve their rate.',
+          },
+        ],
+      },
+      {
+        title: 'Rate Locks & Interest Rate Risk',
+        duration: '14 min',
+        content: `Interest rate risk is real — rates can move 0.25-0.5% in a single day during volatile markets. A borrower who locks at the right time saves thousands. A borrower who floats too long can lose their payment qualification or face a budget-busting rate increase. Rate lock strategy is a critical service you provide.
+
+**How Rate Locks Work**
+
+A rate lock is a lender commitment to hold a specific interest rate for a borrower for a defined period — typically 15, 30, 45, or 60 days — while the loan processes.
+
+**Key terms:**
+- **Lock period:** The number of days the rate is guaranteed
+- **Lock expiration:** If the loan doesn't close before the lock expires, the rate may need to be extended (at cost) or re-locked at current market rates
+- **Lock cost:** Longer locks cost more — typically built into the rate (a 60-day lock may be priced 0.125-0.25% higher than a 30-day lock)
+
+**When to Lock**
+
+Timing the lock is a judgment call — rates can go up or down. But loan officers should never try to time the market on behalf of a client without explicit discussion and agreement.
+
+**Standard guidance:**
+- On a purchase: Lock when the purchase contract is signed and the rate is acceptable to the borrower
+- On a refinance: Lock when the rate produces the borrower's desired payment/savings and you have a clear path to close within the lock period
+- In a rising rate environment: Lock early — the cost of waiting exceeds the cost of a longer lock period
+- In a falling rate environment: Float longer — but always have a trigger: 'If rates move above X, we lock immediately'
+
+**Float-Down Options**
+
+Some lenders offer float-down options — if rates drop after locking, the borrower can exercise the float-down to capture the lower rate (typically within 0.25-0.5% of the original lock rate, with conditions).
+
+Float-down options cost money — either a fee or a slightly higher starting rate. They're most valuable in uncertain rate environments where rates could go either way.
+
+**Lock Extensions**
+
+If a loan doesn't close before the lock expiration:
+- **Extension fee:** Typically 0.125-0.375% of loan amount per 7-15 day extension
+- **Re-lock:** If rates have moved significantly, re-locking at current market rate may be cheaper than extending
+
+Lock expirations are often caused by delays in appraisal, title, borrower document collection, or lender underwriting backlogs. Managing the timeline proactively prevents expensive extensions.
+
+**Your Responsibility**
+
+Clearly document every rate lock discussion with the borrower in writing. When you recommend locking or floating, explain your reasoning and the risks. Never make a lock/float decision for a borrower without their informed consent — the rate risk belongs to them, not you.
+
+Always monitor lock expiration dates in your pipeline. A missed expiration is expensive and embarrassing — it's 100% preventable with a simple tracking system.`,
+        keyPoints: [
+          'A rate lock guarantees a specific rate for a defined period — longer locks cost more but provide more protection.',
+          'In a rising rate environment, lock early — the cost of a longer lock period is almost always less than the cost of a rate increase.',
+          'Float-down options allow borrowers to capture lower rates after locking — useful in uncertain markets but always cost money.',
+          'Lock extensions are expensive — manage the loan timeline proactively to prevent them.',
+          'Document all lock/float discussions in writing — the interest rate risk belongs to the borrower, not the loan officer.',
+        ],
+        quiz: [
+          {
+            question: 'In a rising interest rate environment, when should a borrower typically lock their rate?',
+            options: ['At the last possible moment to keep the option to get a lower rate', 'As early as possible — the cost of a longer lock period is less than the cost of a rate increase', 'Only after the appraisal is completed and reviewed', 'After the underwriter issues initial approval'],
+            correctIndex: 1,
+            explanation: 'When rates are rising, every day of floating increases the risk of a higher rate at closing. The premium for a longer lock period is typically much less than the cost of even a 0.25% rate increase — especially on larger loan amounts.',
+          },
+          {
+            question: 'What is a float-down option on a mortgage rate lock?',
+            options: ['A way to extend the rate lock period at no additional cost', 'A provision that allows the borrower to capture a lower rate if rates fall after the lock is in place', 'An option to remove PMI if the property appreciates before closing', 'A lender program that reduces the rate each year the borrower makes on-time payments'],
+            correctIndex: 1,
+            explanation: 'A float-down option protects borrowers in uncertain rate environments — if rates fall after locking, they can exercise the float-down to capture the improvement (within defined parameters). The option costs money upfront, either as a fee or in the form of a slightly higher locked rate.',
+          },
+          {
+            question: 'Who ultimately bears the interest rate risk when a loan officer recommends floating rather than locking?',
+            options: ['The lender — they are responsible for the rate quoted to the borrower', 'The borrower — the loan officer should document the discussion and get explicit borrower consent', 'The loan officer personally — they advised the borrower to float', 'The interest rate risk is shared equally between the borrower and lender'],
+            correctIndex: 1,
+            explanation: 'The borrower owns the interest rate risk. A loan officer can advise but must document the discussion and ensure the borrower understands and accepts the risk of floating. This protects both the borrower and the loan officer if rates move unfavorably.',
+          },
+        ],
+      },
+      {
+        title: 'LTV, LTC & Loan Sizing',
+        duration: '18 min',
+        content: `LTV and LTC are foundational metrics in mortgage lending. Every loan officer uses these ratios daily — for pricing, qualification, product selection, and risk assessment. Understanding them deeply separates professionals from order-takers.
+
+**Loan-to-Value (LTV)**
+
+LTV measures the loan amount as a percentage of the property's current appraised value.
+
+**Formula:**
+LTV = Loan Amount ÷ Appraised Value × 100
+
+**Example:**
+- Purchase price: $400,000
+- Down payment: $40,000 (10%)
+- Loan amount: $360,000
+- LTV = $360,000 ÷ $400,000 = 90%
+
+**Why LTV matters:**
+- **Pricing:** Lower LTV = lower risk to lender = better rate and terms
+- **PMI threshold:** Conventional loans above 80% LTV require PMI
+- **Product eligibility:** Many products have maximum LTV limits
+- **Appraisal gap risk:** If the property appraises below purchase price, LTV increases — potentially disqualifying the borrower
+
+**LTV thresholds to know:**
+- 97% LTV: Max for conventional first-time buyer programs
+- 96.5% LTV: Max for FHA (3.5% down)
+- 90% LTV: PMI required; some products unavailable
+- 80% LTV: No PMI on conventional; best pricing tier
+- 75% LTV: Best pricing on investment properties
+- 70% LTV: Typical hard money max
+
+**Combined LTV (CLTV)**
+
+CLTV includes all liens against the property — first mortgage + any second mortgage or HELOC.
+
+**Example:**
+- First mortgage: $320,000
+- HELOC: $40,000
+- Property value: $450,000
+- CLTV = ($320,000 + $40,000) ÷ $450,000 = 80%
+
+CLTV is used for HELOCs, second mortgages, and refinances with subordinate financing.
+
+**Loan-to-Cost (LTC)**
+
+LTC is used in construction and renovation lending. It measures the loan as a percentage of the total project cost — not just the property value.
+
+**Formula:**
+LTC = Loan Amount ÷ Total Project Cost × 100
+
+**Total project cost includes:**
+- Land cost (or current value)
+- Hard construction costs (materials, labor)
+- Soft costs (permits, architect fees, engineering)
+- Contingency reserve (typically 5-10%)
+
+**Example:**
+- Land value: $100,000
+- Construction costs: $300,000
+- Soft costs: $30,000
+- Total project cost: $430,000
+- Loan amount: $322,500
+- LTC = $322,500 ÷ $430,000 = 75%
+
+**LTC limits:** Construction lenders typically lend 65-80% LTC. Some lenders also cap at a percentage of ARV — whichever is lower.
+
+**Choosing Between LTV and LTC**
+
+Use **LTV** for stabilized properties with a clear market value (purchase or refinance of existing property).
+
+Use **LTC** for construction, ground-up development, or major renovation where the completed value hasn't been established yet.
+
+**LTV in Risk Assessment**
+
+From a lender's perspective, LTV is the single most important risk metric. If a borrower defaults, the lender must sell the property to recover the loan. A 65% LTV loan leaves 35% cushion for market decline, carrying costs, and selling expenses. A 95% LTV loan leaves almost no cushion.
+
+This is why lower LTV loans get better rates — it's pure risk math.`,
+        keyPoints: [
+          'LTV = Loan Amount ÷ Appraised Value — the primary risk metric for residential lending.',
+          'Conventional loans above 80% LTV require PMI — crossing the 80% threshold is a key pricing and cost milestone.',
+          'CLTV includes all liens — first mortgage plus any subordinate financing — used for HELOCs and second mortgages.',
+          'LTC = Loan Amount ÷ Total Project Cost — used for construction and renovation lending where the property value isn\'t yet established.',
+          'Lower LTV = lower lender risk = better pricing — understanding this logic helps you explain rate differences to borrowers.',
+        ],
+        quiz: [
+          {
+            question: 'A borrower gets a $340,000 loan on a home appraised at $425,000. What is the LTV?',
+            options: ['75%', '80%', '85%', '90%'],
+            correctIndex: 1,
+            explanation: 'LTV = $340,000 ÷ $425,000 = 0.80 = 80%. This borrower is right at the PMI threshold — at exactly 80% LTV, they avoid PMI on a conventional loan. Going above this (even by $1) would require PMI.',
+          },
+          {
+            question: 'What is the primary difference between LTV and LTC?',
+            options: ['LTV is used for commercial loans; LTC is used for residential loans', 'LTV uses the appraised property value; LTC uses total project cost — LTC is used in construction and renovation lending', 'LTC includes the borrower\'s personal net worth; LTV does not', 'There is no practical difference — the terms are interchangeable'],
+            correctIndex: 1,
+            explanation: 'LTC is the appropriate metric when a property is being built or substantially renovated and doesn\'t yet have an established market value. It measures the loan against what it costs to complete the project, not what the finished product will be worth.',
+          },
+          {
+            question: 'A borrower has a first mortgage of $280,000 and a HELOC of $45,000 on a home worth $400,000. What is the CLTV?',
+            options: ['70%', '75%', '81.25%', '87.5%'],
+            correctIndex: 2,
+            explanation: 'CLTV = (First mortgage + HELOC) ÷ Property value = ($280,000 + $45,000) ÷ $400,000 = $325,000 ÷ $400,000 = 81.25%. This exceeds 80% CLTV, which would typically require PMI or affect HELOC availability.',
+          },
+        ],
+      },
+      {
+        title: 'CMBS & Bridge Lending',
+        duration: '22 min',
+        content: `CMBS and bridge loans represent two distinct ends of the commercial lending spectrum — one is for stabilized, long-term holds; the other is for transitional properties and short-term strategies. Loan officers serving commercial clients need both in their toolkit.
+
+**CMBS Loans (Commercial Mortgage-Backed Securities)**
+
+CMBS loans are commercial mortgages that are pooled together and sold to investors as bonds. Because the loans are securitized (sold off), the original lender no longer holds the risk — which changes how the loans are structured and serviced.
+
+**Key CMBS characteristics:**
+- **Loan amounts:** Typically $2M-$50M+ (some lenders go smaller)
+- **LTV:** 65-75% for most property types
+- **DSCR:** Minimum 1.20-1.25x
+- **Terms:** 5, 7, or 10-year fixed rate
+- **Amortization:** 25-30 years
+- **Rates:** Typically competitive — priced off Treasury yields + spread
+- **Non-recourse:** Most CMBS loans are non-recourse (lender can only seize the property, not pursue the borrower personally) — a major advantage for large investors
+- **Prepayment:** CMBS loans have significant prepayment restrictions — defeasance or yield maintenance. Exiting early is extremely expensive.
+
+**Best for:** Stabilized, cash-flowing commercial properties (office, retail, multifamily, industrial, hospitality) held for the full loan term. Borrowers who want non-recourse, competitive long-term fixed rates.
+
+**CMBS servicer complexity:** Because the loan is securitized, the servicer (who manages the loan) cannot easily modify terms if problems arise. This makes CMBS loans inflexible during financial stress — a key risk to disclose.
+
+**Bridge Loans**
+
+Bridge loans are short-term commercial loans used to "bridge" a gap — between a current financing need and a future permanent financing event.
+
+**Common bridge loan scenarios:**
+- **Value-add acquisition:** Buy an underperforming property, stabilize it (lease up, renovate), then refinance into permanent CMBS or agency financing
+- **Construction to permanent:** Bridge the construction period before qualifying for a permanent loan
+- **Lease-up:** Property is new or recently renovated but not yet stabilized — bridge until stabilized, then refi
+- **Time-sensitive close:** Conventional financing too slow; bridge closes in 2-4 weeks
+
+**Key bridge loan characteristics:**
+- **Term:** 12-36 months (some up to 5 years with extensions)
+- **LTV:** 65-80% of stabilized value
+- **Rates:** Higher than permanent — typically SOFR + 300-600 bps
+- **Structure:** Often interest-only during the bridge period
+- **Recourse:** Most bridge loans are recourse (personal guarantee required)
+- **Exit fee:** Many bridge lenders charge 0.5-1% exit fee
+
+**Choosing Between CMBS and Bridge**
+
+| Scenario | Product |
+|----------|----------|
+| Stabilized property, long-term hold | CMBS |
+| Value-add or transitional asset | Bridge |
+| Need non-recourse | CMBS |
+| Need flexibility | Bridge |
+| Best long-term rate | CMBS |
+| Need to close in 2-3 weeks | Bridge |
+
+**The Bridge-to-Perm Strategy**
+
+Many commercial deals follow a two-step financing path:
+1. **Bridge loan** — to acquire and stabilize the property
+2. **Permanent loan** — CMBS, agency (Fannie/Freddie multifamily), or bank loan once stabilized
+
+As a loan officer, positioning yourself to handle both steps of this financing cycle doubles your relationship value with commercial clients.`,
+        keyPoints: [
+          'CMBS loans are securitized commercial mortgages — non-recourse, long-term fixed rate, but with severe prepayment penalties.',
+          'Bridge loans are short-term (12-36 months) used for transitional properties — value-add, lease-up, or time-sensitive acquisitions.',
+          'CMBS inflexibility during financial stress (due to securitization) is a key risk to disclose to clients.',
+          'Bridge loans are typically recourse; CMBS is typically non-recourse — a significant difference for large investors.',
+          'The bridge-to-permanent strategy covers both the acquisition/stabilization phase and the long-term hold — position yourself to handle both.',
+        ],
+        quiz: [
+          {
+            question: 'What is the primary advantage of a CMBS loan for a large commercial real estate investor?',
+            options: ['The ability to prepay the loan at any time without penalty', 'Non-recourse structure — the lender can only seize the property, not pursue the borrower personally', 'Flexible terms that allow modification if the property underperforms', 'Lower down payment requirements than conventional commercial loans'],
+            correctIndex: 1,
+            explanation: 'Non-recourse is the most significant advantage of CMBS for sophisticated investors. If the property fails, the lender can foreclose but cannot come after the borrower\'s other assets or personal wealth. This enables investors to take on larger deals without personal financial risk.',
+          },
+          {
+            question: 'A developer is buying an office building that is 40% occupied. They plan to lease it up over 18 months and then refinance. Which loan product is most appropriate?',
+            options: ['CMBS loan', 'Bridge loan', 'SBA 504', 'Conventional 30-year fixed'],
+            correctIndex: 1,
+            explanation: 'A 40%-occupied building doesn\'t meet CMBS stabilization requirements (typically 90%+ occupancy). A bridge loan funds the acquisition and carries the property through the lease-up period, after which the investor can refinance into permanent CMBS or agency financing.',
+          },
+          {
+            question: 'What is defeasance in the context of CMBS loans?',
+            options: ['The process of defaulting on a CMBS loan and returning the property to the lender', 'A prepayment mechanism where the borrower replaces the loan collateral with government securities instead of paying a cash penalty', 'A CMBS restructuring process triggered when DSCR falls below 1.0', 'The securitization process by which individual loans are pooled into CMBS bonds'],
+            correctIndex: 1,
+            explanation: 'Defeasance is one way to exit a CMBS loan early. Instead of paying a cash prepayment penalty, the borrower purchases government securities that generate the same cash flows as the original loan — effectively replacing the collateral. It\'s complex and expensive, reinforcing why CMBS is best for long-term holds.',
           },
         ],
       },
       {
         title: 'Loan Processing & Closing',
         duration: '22 min',
-        content: `Understanding the loan process from application to closing allows mortgage professionals to set accurate expectations and prevent last-minute surprises.\n\n**The Loan Process Timeline**\n1. **Application** — collect all borrower documents, run credit, issue Loan Estimate (3 business days)\n2. **Processing** — processor organizes file, orders appraisal, verification of employment/income/assets\n3. **Appraisal** — independent appraiser values the property (5-10 days typical)\n4. **Underwriting** — underwriter reviews complete file, issues approval, conditional approval, or denial\n5. **Conditions** — borrower clears all conditions (additional documents, letters, explanations)\n6. **Clear to Close (CTC)** — underwriter approves all conditions\n7. **Closing Disclosure** — issued 3 business days before closing (TRID rule)\n8. **Closing** — signing, funding, recording\n\n**Common Delays**\n- Appraisal issues: value comes in low (renegotiate or switch lenders)\n- Underwriter conditions: missing documents, unexplained deposits, employment gaps\n- Title issues: liens, judgments, missing easements\n- Last-minute credit changes: never let borrowers make large purchases or open new accounts during the loan process\n\n**The TRID Rule**\nKnow Your Customer regulations under TRID (TILA-RESPA Integrated Disclosure):\n- Loan Estimate due within 3 business days of application\n- Closing Disclosure due 3 business days before closing\n- Changes to APR >0.125% require new CD and new 3-day wait\n\n**Clear to Close Checklist**\nBefore issuing CTC, underwriter verifies: income, assets, credit, title, appraisal, flood cert, hazard insurance, all conditions cleared, final VOE (verbal verification of employment within 10 days of closing).`,
+        content: `Understanding the loan process from application to closing is essential — both for managing your pipeline and for setting accurate expectations with borrowers, real estate agents, and other parties. Delays are the number one complaint in the mortgage industry. Most of them are preventable.
+
+**The Loan Process: Key Milestones**
+
+**1. Application (Day 0)**
+Borrower completes the Uniform Residential Loan Application (1003). Loan officer reviews and discusses product options, rate, and estimated costs.
+
+**2. Initial Disclosures (Within 3 Business Days of Application)**
+Federal law (TRID — TILA/RESPA Integrated Disclosure) requires the Loan Estimate (LE) to be delivered within 3 business days of application. The LE discloses estimated rate, payment, closing costs, and loan terms.
+
+**3. Processing (Days 1-15 approximately)**
+Loan processor collects all required documents:
+- Income verification (pay stubs, W-2s, tax returns)
+- Asset verification (bank statements, investment accounts)
+- Employment verification
+- Title order
+- Appraisal order
+
+**4. Appraisal (Days 5-15)**
+Independent appraiser inspects and values the property. Typically takes 7-14 days from order to report. The appraisal is the most common source of delays — and the one you have the least control over.
+
+**5. Underwriting (Days 15-25 approximately)**
+The underwriter reviews the complete loan file:
+- Validates income, assets, credit
+- Reviews appraisal
+- Issues one of three decisions: Approved, Approved with Conditions, Suspended, or Denied
+
+Conditional approval is most common. Conditions must be satisfied before final approval (clear to close).
+
+**6. Conditions and Clear to Close (Days 20-30)**
+Common conditions:
+- Updated pay stubs or bank statements
+- Letter of explanation for credit inquiries or derogatory marks
+- Additional documentation for unusual income or assets
+- Property insurance (homeowner's policy)
+- Title issues resolved
+
+Once all conditions are met, the underwriter issues a Clear to Close (CTC).
+
+**7. Closing Disclosure (CD) (3 Business Days Before Closing)**
+TRID requires the Closing Disclosure — the final version of all loan terms and closing costs — to be delivered at least 3 business days before closing. Changes to certain terms restart this 3-day waiting period.
+
+**8. Closing (Day 30-45 typically)**
+Borrower signs all loan documents. Funds are disbursed. Keys are exchanged.
+
+**Common Delay Causes and Prevention**
+
+| Delay Cause | Prevention |
+|------------|------------|
+| Incomplete document package at application | Collect all docs upfront — don't start with half a file |
+| Appraisal backlogs | Order appraisal on day 1, not day 10 |
+| Borrower slow to provide conditions | Set expectations clearly — give a 24-48 hour response deadline |
+| Title issues | Order title early; flag known issues immediately |
+| Last-minute credit changes | Instruct borrowers: no new debt, no large deposits, no job changes |
+| CD timing violation | Track the 3-day waiting period carefully |
+
+**The Loan Officer's Pipeline Management**
+
+Maintain a pipeline tracker with every active loan:
+- Application date
+- Expected closing date
+- Lock expiration date
+- Appraisal status
+- Underwriting status
+- Outstanding conditions
+- CD delivery date
+
+Review your pipeline daily. Every delayed loan is a dissatisfied borrower and a damaged agent relationship.`,
         keyPoints: [
-          'Never let borrowers open credit or make large purchases during processing',
-          'TRID: Loan Estimate within 3 days of application; CD 3 days before closing',
-          'Appraisal low value: renegotiate price, challenge appraisal, or switch lenders',
-          'Final VOE required within 10 days of closing — verify employment is still active',
+          'The Loan Estimate (LE) must be delivered within 3 business days of application — TRID compliance is non-negotiable.',
+          'Appraisal is the most common delay source — order it on day one, not when the file is ready for underwriting.',
+          'The Closing Disclosure must be delivered at least 3 business days before closing — certain changes restart this waiting period.',
+          'Collect the complete document package at application — starting with a partial file creates downstream delays.',
+          'Instruct borrowers before and during the process: no new debt, no large deposits, and no job changes until after closing.',
         ],
         quiz: [
           {
-            question: 'Under TRID, when must the Closing Disclosure be delivered to the borrower?',
-            options: ['At least 1 business day before closing', 'At closing', 'At least 3 business days before closing', '7 days before closing'],
-            correctIndex: 2,
-            explanation: 'The 3-business-day waiting period after the CD is mandatory — changes to APR >0.125% restart the clock.',
-          },
-          {
-            question: 'What should borrowers NEVER do during the loan process?',
-            options: ['Submit additional income documentation', 'Open new credit accounts or make large purchases', 'Provide updated bank statements', 'Verify employment information'],
+            question: 'Within how many business days of receiving a loan application must the Loan Estimate be delivered?',
+            options: ['1 business day', '3 business days', '5 business days', '7 business days'],
             correctIndex: 1,
-            explanation: 'New debt or large deposits can disqualify a loan that was already approved — coach borrowers to freeze all financial activity until after closing.',
+            explanation: 'TRID (TILA/RESPA Integrated Disclosure) requires the Loan Estimate to be delivered within 3 business days of application. Failure to meet this deadline is a regulatory violation and can create liability for the lender.',
           },
           {
-            question: 'When must the final Verbal Verification of Employment (VOE) be completed?',
-            options: ['At the time of application', '30 days before closing', 'Within 10 days of closing', 'On the day of closing'],
-            correctIndex: 2,
-            explanation: 'A final VOE within 10 days confirms the borrower is still employed — losing a job before closing would require new underwriting.',
+            question: 'What is the most common source of delays in the residential mortgage process?',
+            options: ['Borrower credit score changes after application', 'Appraisal — delays in ordering, scheduling, or completing the appraisal report', 'Title search finding unknown liens', 'Underwriter review time'],
+            correctIndex: 1,
+            explanation: 'The appraisal is ordered from an independent AMC (Appraisal Management Company) and involves scheduling with the property owner, completing the inspection, and writing the report. This process is outside the loan officer\'s direct control and is the most frequent cause of missed closing dates.',
+          },
+          {
+            question: 'What is a \'Clear to Close\' (CTC) in the mortgage process?',
+            options: ['The borrower\'s signed agreement to proceed with the loan at the quoted rate', 'The underwriter\'s confirmation that all loan conditions have been satisfied and the loan is approved to close', 'The title company\'s confirmation that the property has no outstanding liens', 'The lender\'s formal commitment to fund the loan at application'],
+            correctIndex: 1,
+            explanation: 'Clear to Close is the underwriter\'s final sign-off after all conditions from the conditional approval have been satisfied. It\'s the green light to schedule closing — one of the most satisfying milestones in the loan process for both the borrower and loan officer.',
           },
         ],
       },
@@ -2459,199 +3049,1129 @@ Don't switch for a marginally better split — relationships and reputation take
       },
     ],
   },
-  },
   {
     id: 'investing',
     title: 'Real Estate Investing',
-    description: 'Build wealth through BRRRR strategy, multifamily underwriting, and smart market selection.',
+    description: 'The complete professional curriculum for real estate investors and deal structurers. Master BRRRR, multifamily underwriting, market selection, deal sourcing, creative financing, joint ventures, syndication, and advanced deal structures.',
     icon: 'trending-up-outline',
-    color: '#E35D5D',
-    tiers: ['pro', 'elite'],
-    creditHours: 8,
+    color: '#9C27B0',
+    tiers: ['starter', 'pro', 'elite', 'all-access'],
+    creditHours: 18,
     lessons: [
       {
         title: 'BRRRR Strategy',
         duration: '22 min',
-        content: `BRRRR — Buy, Rehab, Rent, Refinance, Repeat — is a wealth-building strategy for investors who want to maximize returns and recycle capital.\n\n**The BRRRR Cycle**\n1. **Buy**: Acquire a distressed property below market value\n2. **Rehab**: Renovate to increase value and attract quality tenants\n3. **Rent**: Stabilize with a long-term tenant at market rent\n4. **Refinance**: Cash-out refinance based on new appraised value\n5. **Repeat**: Use extracted equity to fund the next purchase\n\n**The Math of BRRRR**\nExample:\n- Purchase: $80,000\n- Rehab: $30,000\n- Total invested: $110,000\n- After-repair value (ARV): $160,000\n- Refinance at 75% LTV: $120,000\n- Cash out: $120,000 − $110,000 = $10,000 profit + property retained\n\n**Ideal BRRRR Numbers**\n- Purchase 60-70% of ARV\n- All-in cost (purchase + rehab) = 75-80% of ARV\n- Refinance at 75% LTV recovers most/all invested capital\n- Post-refi cash flow should still be positive at DSCR ≥ 1.1x\n\n**Common Mistakes**\n- Underestimating rehab costs (always add 20% contingency)\n- Over-improving for the neighborhood ($$$ upgrades in a $100K market)\n- Not stabilizing the property before refinancing (lenders want 6-12 months tenancy)\n- Refinancing too early before seasoning period\n\n**Scaling BRRRR**\nAs you perfect the system, you can run parallel projects. The key bottleneck is usually rehab management — build relationships with reliable contractors before scaling.`,
+        content: `BRRRR is one of the most powerful portfolio-building strategies in real estate investing. Done correctly, it allows investors to recycle their capital — pulling most or all of their initial investment out through a cash-out refinance — and deploy it into the next deal. The result: a growing rental portfolio with an ever-smaller net capital basis.
+
+**The Five Steps**
+
+**B — Buy**
+Acquire a distressed or undervalued property at a price that creates room for value-add. The target: buy at 65-70% of ARV minus renovation costs.
+
+Formula: Maximum Purchase Price = (ARV × 70%) - Renovation Costs
+
+Example:
+- ARV: $200,000
+- Renovation: $30,000
+- Max purchase price: ($200,000 × 70%) - $30,000 = $140,000 - $30,000 = $110,000
+
+If you pay more than your maximum, the math breaks down. Discipline on acquisition price is the most important decision in BRRRR.
+
+**R — Rehab**
+Renovate the property to rental-ready standard — not flip-grade. BRRRR renovations focus on durability, not luxury. Target: updates that maximize rental income and appraised value without over-improving for the neighborhood.
+
+Key renovation principles for BRRRR:
+- Kitchens and bathrooms drive the most appraised value
+- Mechanicals (HVAC, plumbing, electrical) drive tenant satisfaction and reduce future capex
+- Cosmetics (paint, flooring, fixtures) are cheap and high-impact
+- Don't install materials that exceed neighborhood standards
+
+**R — Rent**
+Place a qualified tenant before refinancing. Reasons:
+- A leased property appraises at or near stabilized value
+- Most refinance lenders require 6-12 months of ownership before cash-out
+- Demonstrated rental income strengthens the refinance case
+
+Screen tenants rigorously: income verification (3× rent), credit check, rental history. A bad tenant in a BRRRR property costs far more than vacancy.
+
+**R — Refinance**
+Once the property is rented and seasoned, execute a cash-out refinance:
+- Target: refinance at 75-80% LTV of the new appraised value
+- Use the cash proceeds to repay the original acquisition financing (hard money, private money, or personal funds)
+- Ideally, pull out all or most of your initial investment
+
+Example:
+- New appraised value: $200,000
+- Cash-out refi at 75% LTV: $150,000
+- Pay off hard money loan balance: $120,000
+- Net cash out: $30,000
+- Original total investment (down + closing + rehab): $50,000
+- Remaining capital in deal after refi: $20,000
+
+**R — Repeat**
+Deploy the recycled capital into the next acquisition. The goal is to build a portfolio of cash-flowing properties with minimal net capital basis.
+
+**The Cash Flow Test**
+
+After the refinance, the property must cash flow positively with the new permanent mortgage. This is the most common BRRRR failure — investors execute the strategy successfully but end up with a property that barely covers its costs at the new loan amount.
+
+Monthly cash flow analysis post-refi:
+- Gross rental income: $1,400
+- Vacancy (5%): -$70
+- Operating expenses (taxes, insurance, management, maintenance): -$450
+- New mortgage payment (PITIA): -$760
+- Monthly cash flow: $120
+
+If cash flow is negative after the refinance, the deal only works if you're building equity — and that's a speculative strategy, not an investment strategy.
+
+**BRRRR Risk Factors**
+
+- **Renovation cost overruns:** Every renovation takes longer and costs more than planned. Build a 15-20% contingency.
+- **Appraisal comes in low:** If the refinance appraisal is below target, you may not be able to pull all your capital out.
+- **Seasoning requirements:** Some lenders require 12 months of ownership before cash-out refi. Plan your timeline accordingly.
+- **Tenant quality:** A bad tenant undermines the rental income that supports the refinance and ongoing cash flow.`,
         keyPoints: [
-          'All-in cost (purchase + rehab) should be 75-80% of ARV',
-          'Refinance at 75% LTV should recover most or all invested capital',
-          'Add 20% contingency to all rehab budgets — always',
-          'Property must be stabilized (6-12 months tenancy) before cash-out refi',
+          'Maximum purchase price in BRRRR = (ARV × 70%) minus renovation costs — discipline on acquisition price is the most critical step.',
+          'Rehab for rental standards, not flip standards — durability over luxury, mechanicals over cosmetics.',
+          'Place a tenant before refinancing — a leased property appraises at stabilized value and most lenders require 6-12 months seasoning.',
+          'The post-refinance cash flow test is non-negotiable — a deal that doesn\'t cash flow after refi is a speculation, not an investment.',
+          'Build a 15-20% renovation contingency — cost overruns are the norm, not the exception.',
         ],
         quiz: [
           {
-            question: 'What does BRRRR stand for?',
-            options: ['Build, Renovate, Rent, Refinance, Repeat', 'Buy, Rehab, Rent, Refinance, Repeat', 'Buy, Renovate, Resell, Refinance, Return', 'Build, Rent, Rehab, Refinance, Return'],
-            correctIndex: 1,
-            explanation: 'BRRRR is a wealth-building cycle that recycles the same capital across multiple properties — the goal is to pull out most or all of your invested cash.',
+            question: 'Using the BRRRR formula, what is the maximum purchase price for a property with an ARV of $250,000 and estimated renovation costs of $35,000?',
+            options: ['$175,000', '$157,500', '$140,000', '$215,000'],
+            correctIndex: 2,
+            explanation: 'Maximum Purchase Price = (ARV × 70%) - Renovation = ($250,000 × 70%) - $35,000 = $175,000 - $35,000 = $140,000.',
           },
           {
-            question: 'What should the all-in cost (purchase + rehab) be relative to ARV?',
-            options: ['50–60% of ARV', '75–80% of ARV', '90–95% of ARV', 'Equal to ARV'],
+            question: 'Why should an investor place a tenant BEFORE executing the refinance in a BRRRR deal?',
+            options: ['Rental income is required to qualify for any type of mortgage', 'A leased property appraises at stabilized value and most refinance lenders require 6-12 months of ownership seasoning', 'Vacant properties cannot legally be refinanced in most states', 'Tenants provide the funds needed to cover refinancing closing costs'],
             correctIndex: 1,
-            explanation: 'At 75–80% of ARV, a 75% LTV refinance recovers most of your invested capital — the margin is your profit and safety buffer.',
+            explanation: 'An appraiser values a stabilized rental property based on its income — a leased property demonstrates that income. Additionally, most conventional cash-out lenders require the borrower to have owned the property for 6-12 months. Planning the tenant placement into the timeline is essential.',
           },
           {
-            question: 'How long should a property typically be stabilized before a BRRRR cash-out refinance?',
-            options: ['Immediately after renovation', '30 days', '3 months', '6–12 months'],
-            correctIndex: 3,
-            explanation: 'Most lenders require 6–12 months of seasoned tenancy before allowing a cash-out refinance — rushing this step can disqualify the loan.',
+            question: 'After a BRRRR refinance, a property shows -$150/month cash flow. What does this indicate?',
+            options: ['This is acceptable — equity appreciation will make up for negative cash flow', 'The deal structure is problematic — the new mortgage is too large relative to rental income for this to function as a cash-flowing investment', 'The investor overpaid for the renovation but the strategy was otherwise sound', 'Negative cash flow in year one is standard for BRRRR and typically resolves by year two'],
+            correctIndex: 1,
+            explanation: 'BRRRR is an investment strategy — investments must generate returns. Negative cash flow means the property is costing money every month. This either means the ARV was too low (investor overpaid for acquisition), the refinance LTV was too high, or rents are below market. The deal should be re-evaluated.',
           },
         ],
       },
       {
         title: 'Multifamily Underwriting',
         duration: '28 min',
-        content: `Multifamily underwriting is the process of analyzing an apartment building's financials to determine what it's worth and what you can pay for it.\n\n**The Income Approach**\n\nStep 1: Gross Potential Income (GPI)\n= All units × Market Rent × 12 months\n(Use market rent, not current rent — you're buying potential)\n\nStep 2: Effective Gross Income (EGI)\n= GPI − Vacancy & Credit Loss (5-10% of GPI)\n+ Other Income (laundry, parking, storage)\n\nStep 3: Net Operating Income (NOI)\n= EGI − Operating Expenses\n\n**Operating Expense Categories**\n- Property management: 8-12% of EGI\n- Property taxes: varies widely by location\n- Insurance: 0.5-1% of property value annually\n- Utilities (if landlord pays): varies by unit count and leases\n- Repairs & maintenance: $800-$1,500 per unit annually\n- Capital reserves: $300-$800 per unit annually\n- Administrative (accounting, legal, misc): $500-$1,000/year flat\n\n**Typical Operating Expenses**\nAs a sanity check: operating expenses are typically 35-50% of EGI for stabilized properties. If a seller shows 20% expense ratio, they're probably not including management and reserves.\n\n**Value-Add Underwriting**\nFor value-add deals:\n1. Underwrite current (T12 actuals) — what it is today\n2. Underwrite stabilized projections — what it will be after improvements\n3. Apply appropriate cap rates to both (current and stabilized)\n4. Bridge the gap with a capital improvement budget and timeline`,
+        content: `Multifamily underwriting is the skill that separates serious investors from speculators. Without a thorough underwriting model, you're guessing — and guessing with other people's money (or your own) is dangerous. Master this model and you'll be able to evaluate any multifamily deal accurately.
+
+**The Income Statement**
+
+Every multifamily underwriting model starts with the income statement:
+
+**Gross Potential Rent (GPR):** Total rent if every unit were leased at market rent.
+
+Example — 12-unit building:
+- 8 two-bedroom units at $1,400/month = $11,200
+- 4 one-bedroom units at $1,100/month = $4,400
+- GPR = $15,600/month = $187,200/year
+
+**Vacancy and Credit Loss:** Allowance for vacant units and non-paying tenants. Use actual historical vacancy or market vacancy — typically 5-10% for stabilized properties.
+- Vacancy (7%): -$13,104
+- Effective Gross Income (EGI): $174,096
+
+**Other Income:** Laundry, parking, storage fees, late fees.
+- Other income: $4,800
+- Total EGI: $178,896
+
+**Operating Expenses**
+
+**Fixed expenses (don't vary with occupancy):**
+- Property taxes: $14,400
+- Insurance: $6,000
+- Total fixed: $20,400
+
+**Variable expenses (scale with occupancy and usage):**
+- Property management (8% of EGI): $14,312
+- Maintenance and repairs: $12,000
+- Landscaping and cleaning: $3,600
+- Utilities (landlord-paid): $8,400
+- Administrative: $2,400
+- Total variable: $40,712
+
+**Capital Reserves (CapEx):**
+- Replacement reserves for roof, HVAC, appliances, etc.
+- Industry standard: $100-200/unit/year for older properties
+- 12 units × $150/year = $1,800
+
+**Total Operating Expenses: $62,912**
+
+**Net Operating Income**
+
+NOI = EGI + Other Income - Operating Expenses
+NOI = $178,896 - $62,912 = $115,984
+
+**Cap Rate and Value**
+
+Cap Rate = NOI ÷ Purchase Price
+$115,984 ÷ $1,400,000 = 8.3% cap rate
+
+At a market cap rate of 7.5%:
+Implied Value = $115,984 ÷ 0.075 = $1,546,453
+
+This property at $1,400,000 is priced below its implied market value — a potential acquisition opportunity.
+
+**Debt Service and Cash Flow**
+
+After NOI, subtract annual debt service to get Cash Flow Before Tax:
+
+**Financing assumption:**
+- Purchase: $1,400,000
+- Down payment (25%): $350,000
+- Loan amount: $1,050,000
+- Rate: 7.25%, 30-year am, annual debt service: $86,000 (approx.)
+
+Cash Flow Before Tax = NOI - Annual Debt Service
+= $115,984 - $86,000 = $29,984
+
+Monthly cash flow: $29,984 ÷ 12 = $2,499
+
+**Cash-on-Cash Return**
+
+Cash-on-Cash = Annual Cash Flow ÷ Total Cash Invested
+= $29,984 ÷ ($350,000 + closing costs $25,000)
+= $29,984 ÷ $375,000 = **8.0%**
+
+An 8% cash-on-cash return means the investor earns 8 cents on every dollar invested annually from cash flow alone — before appreciation or loan paydown.
+
+**The T-12 — Trailing 12 Months**
+
+Never underwrite a deal using the seller's pro forma (projected numbers). Always request the T-12 — the actual income and expense statement for the trailing 12 months — and verify against the rent roll and bank statements.
+
+Pro forma income can be inflated. Seller-provided expense statements often exclude management fees (if self-managed), defer maintenance, and omit capital expenditures. Reconstruct the expense statement from actual data.`,
         keyPoints: [
-          'Underwrite to market rents, not current rents — you\'re buying potential',
-          'Operating expenses should be 35-50% of EGI for stabilized multifamily',
-          'Management fee (8-12%) and reserves ($300-800/unit) must be included',
-          'Model both as-is and as-stabilized NOI for value-add deals',
+          'NOI = Effective Gross Income minus all operating expenses — mortgage payments are not included in operating expenses.',
+          'Always underwrite from the T-12 (trailing 12 months actual data), not the seller\'s pro forma projections.',
+          'Cash-on-cash return = Annual Cash Flow ÷ Total Cash Invested — measures the annual yield on your actual equity.',
+          'Capital reserves ($100-200/unit/year) must be included in operating expenses — they\'re real costs even when not yet incurred.',
+          'Implied value = NOI ÷ Market Cap Rate — comparing this to the asking price reveals whether the deal is priced above or below market.',
         ],
         quiz: [
           {
-            question: 'In multifamily underwriting, should you use current rents or market rents for GPI?',
-            options: ['Current rents — what the property actually earns today', 'Market rents — you\'re buying the property\'s potential', 'An average of current and market rents', 'Rents from 2 years ago for trending purposes'],
+            question: 'A 10-unit building has an EGI of $120,000 and operating expenses of $48,000. What is the NOI?',
+            options: ['$48,000', '$72,000', '$120,000', '$168,000'],
             correctIndex: 1,
-            explanation: 'You\'re buying the asset\'s income potential, not its current under-market performance — underwriting to market rents shows the true opportunity.',
+            explanation: 'NOI = EGI - Operating Expenses = $120,000 - $48,000 = $72,000. Note that this is before debt service — mortgage payments are excluded from NOI.',
           },
           {
-            question: 'What percentage of EGI should operating expenses represent for a stabilized multifamily?',
-            options: ['10–20%', '20–30%', '35–50%', '60–70%'],
-            correctIndex: 2,
-            explanation: 'If a seller shows operating expenses below 35% of EGI, they\'re almost certainly excluding management fees or reserves — red flag.',
+            question: 'Why is the T-12 more important than the seller\'s pro forma when underwriting a multifamily acquisition?',
+            options: ['The T-12 is required by law for any multifamily transaction over $500,000', 'The T-12 reflects actual historical income and expenses — pro formas often contain inflated income projections and understated expenses', 'Pro formas are only valid for new construction; existing properties must use T-12', 'The T-12 includes depreciation projections that pro formas typically exclude'],
+            correctIndex: 1,
+            explanation: 'Sellers present pro forma numbers that reflect best-case scenarios — 95% occupancy, below-market management fees (or none if self-managed), and excluded CapEx. The T-12 shows what actually happened. Underwriting on pro forma numbers and discovering the real picture at closing is one of the most expensive mistakes an investor can make.',
           },
           {
-            question: 'If a seller shows a 15% expense ratio on a multifamily, what should you suspect?',
-            options: ['Exceptional management', 'Management fees and reserves are not being included', 'No maintenance needed', 'The seller is being overly conservative'],
+            question: 'An investor puts $200,000 into a deal and earns $18,000 in annual cash flow. What is the cash-on-cash return?',
+            options: ['6%', '9%', '11%', '18%'],
             correctIndex: 1,
-            explanation: 'A 15% expense ratio is nearly impossible for a real property — management (8–12%) alone would exceed that. Always underwrite your own expenses.',
+            explanation: 'Cash-on-Cash = Annual Cash Flow ÷ Total Cash Invested = $18,000 ÷ $200,000 = 0.09 = 9%.',
           },
         ],
       },
       {
         title: 'Market Selection',
         duration: '18 min',
-        content: `The biggest predictor of real estate investment success is market selection. A great deal in a declining market is worse than a mediocre deal in a growing market.\n\n**Market Evaluation Framework**\n\n**Population & Job Growth**\nLook for markets with:\n- Population growth > 1% annually (US average is ~0.5%)\n- Job growth in diversified sectors (not single-employer markets)\n- Net in-migration (people moving in > moving out)\n- Young median age (millennials are peak household formation age)\n\n**Economic Diversity**\nSingle-industry markets (Detroit auto, Houston oil) are vulnerable to industry cycles. Diversified markets (tech + healthcare + government + education) weather recessions better.\n\n**Housing Supply & Affordability**\n- Zoning constraints = supply-constrained markets = stronger appreciation\n- Home price-to-income ratio: areas where renting is much cheaper than owning support rental demand\n- New permits relative to population growth\n\n**Landlord-Friendly Laws**\nEviction timelines, rent control regulations, and security deposit limits vary dramatically by state/city. Texas and Florida are landlord-friendly; California and NYC are tenant-friendly. This affects risk and operations.\n\n**Cash Flow vs. Appreciation Markets**\nRule of thumb:\n- **Cash flow markets** (Midwest, South): Lower prices, higher cap rates, less appreciation\n- **Appreciation markets** (Coastal): Higher prices, lower cap rates, stronger long-term appreciation\n\nMost successful investors hold cash flow properties for stability and appreciation properties for wealth building.`,
+        content: `Where you invest matters as much as what you invest in. A mediocre deal in a great market outperforms a great deal in a declining market. Market selection is the most strategic decision a real estate investor makes — and most investors make it based on proximity rather than data.
+
+**The Three Market Types**
+
+**Primary Markets (Gateway Cities):** New York, Los Angeles, San Francisco, Chicago, Miami, Boston.
+- High barriers to entry, strong demand, low cap rates
+- Expensive — price appreciation potential but low cash flow
+- Best for: core institutional investors, long-term wealth preservation
+
+**Secondary Markets:** Austin, Nashville, Charlotte, Phoenix, Denver, Tampa, Raleigh.
+- Strong population and job growth, more affordable than primary markets
+- Better cash flow than primary markets, strong appreciation potential
+- Best for: BRRRR, multifamily value-add, active investors building portfolios
+
+**Tertiary Markets:** Smaller cities and towns with 100,000-500,000 population.
+- Higher cap rates, more cash flow, lower appreciation potential
+- Higher vacancy risk if the local economy softens
+- Best for: cash flow-focused investors with local knowledge
+
+**The Market Selection Framework**
+
+Evaluate markets on five dimensions:
+
+**1. Population Growth**
+Are people moving in or out? Census data and U-Haul pricing (higher one-way rates out of a city = people are leaving) are useful signals.
+- Target: positive net migration
+- Red flag: population decline for 3+ consecutive years
+
+**2. Job Growth and Economic Diversity**
+Single-employer towns are dangerous — when the plant closes, the market collapses. Diverse economies (healthcare, tech, education, government, finance) are more resilient.
+- Target: multiple major employers across multiple sectors
+- Red flag: one employer over 20% of local jobs
+
+**3. Landlord Laws**
+Some states and cities are extremely tenant-friendly — eviction processes take 6-18 months, rent control limits income, and tenant protections create risk. Know the legal environment before investing.
+- Landlord-friendly: Texas, Florida, Georgia, Indiana, Ohio
+- Tenant-friendly: California, New York, Oregon, New Jersey, Massachusetts
+
+**4. Price-to-Rent Ratio**
+The price-to-rent ratio measures affordability relative to rental income:
+Price-to-Rent = Median Home Price ÷ Annual Median Rent
+
+- Ratio under 15: Strong rental market — buying makes financial sense
+- Ratio 15-20: Neutral — evaluate deal by deal
+- Ratio over 20: Overpriced for rental purposes — lower cash flow
+
+Example: Median home price $200,000, annual rent $18,000 → ratio of 11.1 — excellent rental market.
+
+**5. Vacancy and Absorption**
+Low vacancy + positive absorption = strong rental demand. Review quarterly market reports from CBRE, JLL, or CoStar for the target market.
+
+**Remote Investing**
+
+Most high-cash-flow markets are not where investors live. Building a remote investing team is essential:
+- **Property manager:** Your most important hire. They are your eyes, ears, and daily operator.
+- **Contractor/GC:** Trusted, licensed, experienced with investment property renovation.
+- **Real estate agent:** Investor-friendly, understands cash flow analysis, has access to off-market deals.
+- **Lender:** A local lender who understands the market and can close efficiently.
+
+Never buy remotely without a trusted, tested team in place first.`,
         keyPoints: [
-          'Population growth >1% annually and job diversification are primary screens',
-          'Single-industry markets have boom/bust cycles — avoid or hedge carefully',
-          'Landlord-friendly laws (TX, FL) reduce operational risk vs. regulated markets',
-          'Cash flow vs. appreciation: hold both for stability + wealth building',
+          'Secondary markets (Nashville, Charlotte, Phoenix) offer the best balance of appreciation and cash flow for active investors.',
+          'Evaluate markets on five dimensions: population growth, job diversity, landlord laws, price-to-rent ratio, and vacancy trends.',
+          'A price-to-rent ratio under 15 indicates a strong rental market; above 20 indicates overpricing relative to rental income.',
+          'Single-employer towns carry outsized risk — economic diversity is the most important long-term market stability factor.',
+          'Remote investing requires a fully assembled team (PM, contractor, agent, lender) in place before the first acquisition.',
         ],
         quiz: [
           {
-            question: 'What annual population growth rate is considered strong for real estate investment?',
-            options: ['Less than 0.1%', '0.1–0.5%', 'Greater than 1%', 'Greater than 5%'],
-            correctIndex: 2,
-            explanation: 'The US average is ~0.5% — markets growing at >1% annually have above-average demand that supports rent growth and appreciation.',
+            question: 'A market has a median home price of $180,000 and annual median rent of $15,000. What is the price-to-rent ratio and what does it suggest?',
+            options: ['12 — a strong rental market where buying makes financial sense', '12 — an overpriced market that investors should avoid', '15 — a neutral market that requires deal-by-deal evaluation', '0.08 — a ratio below 1 indicating below-market rents'],
+            correctIndex: 0,
+            explanation: 'Price-to-Rent = $180,000 ÷ $15,000 = 12. A ratio under 15 indicates the market is priced favorably relative to rental income — buyers get more value relative to what renters pay, making investment purchases financially compelling.',
           },
           {
-            question: 'Why are single-industry markets (Detroit, Houston) considered higher risk?',
-            options: ['Too many properties available', 'Unfavorable landlord laws', 'Vulnerable to industry cycles — boom and bust', 'Higher insurance costs'],
-            correctIndex: 2,
-            explanation: 'When one industry dominates, job losses in that sector create vacancy waves across the entire market — diversified economies are far more resilient.',
-          },
-          {
-            question: 'Midwest and South markets are generally characterized as:',
-            options: ['Appreciation markets with low cap rates', 'Cash flow markets with higher cap rates and less appreciation', 'Markets with no rental demand', 'Suitable only for commercial investing'],
+            question: 'Why is economic diversity the most important long-term market stability factor for real estate investors?',
+            options: ['Diverse economies always produce higher median incomes than specialized ones', 'Diverse economies withstand employer-specific downturns — single-employer towns can collapse when that employer leaves or downsizes', 'Economic diversity is required by Fannie Mae for investor financing in secondary markets', 'Diverse economies have lower property tax rates due to broader tax bases'],
             correctIndex: 1,
-            explanation: 'Savvy investors hold cash flow markets for stability and income while holding coastal appreciation markets for long-term wealth building.',
+            explanation: 'A real estate portfolio in a single-industry town faces existential risk if that industry declines. Diverse economies (healthcare, tech, education, government, finance) mean that no single employer failure or industry downturn can crater the local real estate market.',
+          },
+          {
+            question: 'When investing remotely, who is the most important person to hire first?',
+            options: ['A real estate attorney to handle contracts and closings', 'A property manager — they are your daily operator and on-the-ground representative', 'A mortgage broker to arrange financing', 'A real estate agent to identify deal flow'],
+            correctIndex: 1,
+            explanation: 'A property manager is your eyes, ears, and operational control in a remote market. Without a trusted PM in place, you cannot manage tenants, maintenance, vacancies, or emergencies from a distance. No deal should be purchased remotely without a vetted PM already engaged.',
           },
         ],
       },
       {
         title: 'Deal Sourcing',
         duration: '20 min',
-        content: `Finding deals before they hit the market is the competitive edge of successful real estate investors.\n\n**Off-Market Deal Sources**\n\n**Direct Mail**\nMail to motivated seller segments: absentee owners, high-equity homeowners, pre-foreclosures, probate estates, tax delinquents. Response rates of 0.5-2% — plan for 1,000+ mailers per deal.\n\n**Driving for Dollars**\nDrive neighborhoods looking for distressed properties: overgrown yards, boarded windows, peeling paint, accumulated mail, tarps on roofs. Skip trace the owner and make contact.\n\n**Wholesaler Networks**\nBuild relationships with wholesalers — they find deals, assign contracts, and take a fee. Join local real estate investment associations (REIAs) to meet active wholesalers.\n\n**MLS Monitoring**\nStale listings (60+ days on market), price-reduced properties, and relisted homes often indicate motivated sellers. Make low-ball offers with quick-close and cash terms.\n\n**Agent Relationships**\nAgents who know you buy ugly houses will call you first when the listing comes in. Build a reputation as a reliable, fast buyer who doesn't nickel-and-dime.\n\n**Deal Analysis Speed**\nThe faster you can analyze a deal, the more deals you can review. Build your underwriting model into a spreadsheet and be able to evaluate any deal in 10 minutes. Serious offers should be submitted within 24 hours of finding a deal — motivated sellers won't wait.`,
+        content: `Deal flow is the lifeblood of a real estate investment business. Investors who wait for good deals to appear on the MLS compete with thousands of other buyers and rarely win. The best investors build proprietary deal flow — finding opportunities before they're widely available.
+
+**On-Market vs. Off-Market**
+
+**On-market:** Listed on the MLS, Zillow, LoopNet, or other public platforms. Everyone sees them simultaneously. Competition is highest, prices are typically at or above market. Best for less competitive markets or investors with speed/cash advantages.
+
+**Off-market:** Properties not yet listed publicly. Motivated sellers who haven't started the listing process. Less competition, more motivated sellers, often better prices. Requires proactive outreach.
+
+The best investors do both — on-market to maintain volume, off-market to find the best deals.
+
+**On-Market Strategies**
+
+**MLS deal analysis:**
+Set up automated alerts for target criteria (price range, zip code, property type). Review new listings daily. Calculate NOI and cap rate immediately for any property that fits. Be first to offer on underpriced listings.
+
+**Expired and withdrawn listings:**
+Properties that didn't sell often have motivated sellers — especially if the listing expired after 90+ days. Search expired listings and contact the owner directly (with agent permission if represented).
+
+**Foreclosures and REO:**
+- Pre-foreclosure: Contact homeowners in default before the bank forecloses
+- Foreclosure auction: Courthouse steps — requires cash, quick due diligence, no contingencies
+- REO (bank-owned): Post-foreclosure bank inventory. Accessible via MLS or direct bank outreach.
+
+**Off-Market Strategies**
+
+**Direct Mail Campaigns:**
+Target lists of motivated seller profiles:
+- Absentee owners (own the property but don't live there)
+- High equity properties (owned 10+ years, likely paid down)
+- Inherited properties (probate)
+- Out-of-state owners (more likely to be tired landlords)
+- Vacant properties
+
+Send consistent direct mail — postcards or letters — to your target list. Consistency matters more than message. 3+ touches before a seller responds is normal.
+
+**Cold Calling / Texting:**
+Using skip-traced lists, call or text targeted property owners directly. Higher labor intensity than mail but higher response rate.
+
+**Driving for Dollars:**
+Physically drive target neighborhoods looking for distressed properties — tall grass, boarded windows, deferred maintenance. Note the address, skip-trace the owner, reach out.
+
+**Wholesalers:**
+Wholesalers put properties under contract below market value and sell the contract to investors for an assignment fee. Building relationships with 5-10 active wholesalers in your target market gives you first look at deals before they're widely distributed.
+
+**Agent Relationships:**
+Agents who work with estates, divorces, and distressed sellers often know about properties before they list. Agents who specialize in investment properties have off-market deal flow. These relationships take time to build — but they produce the best deals.
+
+**Networking:**
+Real estate investor meetups (REIAs), BiggerPockets events, and local networking groups. Other investors are often your best source of deals — joint ventures, distressed sellers, or deals they can't take down themselves.
+
+**The Deal Pipeline System**
+
+Track every lead in a simple system:
+- **Date of contact**
+- **Property address**
+- **Source**
+- **Owner information**
+- **Last contact date**
+- **Status (interested / not interested / follow up / under contract)**
+
+Most deals come from the 5th-10th touch, not the first. A system ensures no motivated seller falls through the cracks.`,
         keyPoints: [
-          'Direct mail: target absentee owners, high-equity, pre-foreclosures, probate',
-          'Wholesaler relationships: build your buyers list at REIAs',
-          'MLS: 60+ day stale listings often signal motivated sellers',
-          'Speed wins deals — analyze in 10 minutes, offer within 24 hours',
+          'The best investors build proprietary off-market deal flow rather than competing for on-market listings with everyone else.',
+          'Direct mail to absentee owners, high-equity properties, and inherited/probate properties targets the most motivated seller profiles.',
+          'Building relationships with 5-10 active wholesalers gives first-look access to off-market deals before they\'re widely distributed.',
+          'Most off-market deals close after 5-10 touches — a systematic pipeline tracker ensures motivated sellers aren\'t lost.',
+          'Driving for dollars (finding physically distressed properties) is still one of the most effective and underused deal sourcing methods.',
         ],
         quiz: [
           {
-            question: 'What is "driving for dollars"?',
-            options: ['Driving for Uber to fund investments', 'Driving neighborhoods to identify distressed properties by their outward appearance', 'A direct mail marketing method', 'Using a vehicle to transport cash to closings'],
+            question: 'Which seller profile is most commonly targeted in direct mail campaigns because of the highest motivation to sell?',
+            options: ['First-time sellers who recently listed on the MLS', 'Absentee owners — property owners who don\'t live in their property are more likely to be motivated sellers', 'Owners who purchased in the last 2 years', 'Properties with recently reduced list prices'],
             correctIndex: 1,
-            explanation: 'Visible distress (overgrown yards, tarps, boarded windows) signals a potentially motivated seller — skip trace the owner and make contact.',
+            explanation: 'Absentee owners — people who own a property but don\'t live there — are often tired landlords dealing with problem tenants, deferred maintenance, or properties far from their primary residence. Their motivation to sell is typically higher than owner-occupants, making them the most commonly targeted profile in direct mail campaigns.',
           },
           {
-            question: 'What is the typical response rate for direct mail targeting motivated sellers?',
-            options: ['10–20%', '5–10%', '0.5–2%', 'Less than 0.1%'],
-            correctIndex: 2,
-            explanation: 'Plan for 1,000+ mailers per deal at 0.5–2% response — the economics work because you\'re buying at a steep discount.',
+            question: 'What is the primary advantage of buying from wholesalers?',
+            options: ['Wholesalers offer below-market financing on the properties they sell', 'First-look access to off-market properties before they\'re widely distributed to other investors', 'Wholesaler deals include a guaranteed ARV assessment', 'Wholesalers share their commission with the buyer to reduce acquisition costs'],
+            correctIndex: 1,
+            explanation: 'Wholesalers acquire contracts on properties below market and sell the contract (assign it) to investors. Their value is speed and access — they do the prospecting work and bring deals to investors before they reach the open market. Building relationships with active wholesalers is a high-leverage deal sourcing strategy.',
           },
           {
-            question: 'For MLS deal sourcing, which listings often indicate a motivated seller?',
-            options: ['New listings at full asking price', 'Open house listings', '60+ day stale listings or price-reduced properties', 'Luxury properties above $1M'],
-            correctIndex: 2,
-            explanation: 'Days on market and price reductions signal motivation — the longer a property sits, the more willing the seller becomes.',
+            question: 'What is \'driving for dollars\' in real estate investing?',
+            options: ['Using a rideshare vehicle to generate income while scouting investment properties', 'Physically driving target neighborhoods to identify visually distressed properties, then researching and contacting the owners', 'Analyzing property values while commuting to identify investment opportunities', 'A driving app that generates real estate deal alerts based on current location'],
+            correctIndex: 1,
+            explanation: 'Driving for dollars means actively scouting neighborhoods for properties showing physical signs of distress — tall grass, boarded windows, peeling paint, accumulated mail. These visible signals often indicate an absentee owner, deferred maintenance, or motivated seller. The investor notes the address, skip-traces the owner, and makes contact.',
           },
         ],
       },
       {
         title: 'Property Management',
         duration: '16 min',
-        content: `Property management is the operational side of real estate investing. Done well, it preserves asset value and maintains cash flow. Done poorly, it destroys both.\n\n**Self-Manage vs. Hire a PM**\n\nSelf-manage if:\n- 1-5 properties within 30 minutes of you\n- You have time and enjoy operations\n- Properties are in good condition\n\nHire a PM if:\n- 5+ properties or out-of-state\n- You value your time at >$75/hour\n- Properties require intensive management\n\nTypical PM fees: 8-12% of collected rent + 50-100% of first month's rent for leasing fee.\n\n**Tenant Screening — The Most Important Step**\nScreening standards:\n- Credit score: 620+ minimum\n- Income: 3× monthly rent in gross income\n- Employment: 1+ year at current job\n- Rental history: no evictions in last 5 years\n- Background: felony-free (with judgment)\n\nApply criteria consistently to all applicants — Fair Housing Act prohibits discrimination based on protected classes.\n\n**Lease Enforcement**\nBe firm and consistent. Late fees should be charged every time or never. Once you make exceptions, tenants learn they can negotiate. Issue pay or quit notices on day 2 of late rent — it sets the tone.\n\n**Preventive Maintenance**\nAnnual inspections catch problems early. HVAC filter replacements, gutter cleaning, and weatherstripping are cheap. A $50 repair ignored becomes a $500 problem, then a $5,000 emergency.`,
+        content: `Property management is where real estate investing happens in practice. Deals are made at acquisition, but returns are made in management. A well-managed portfolio with average deals outperforms a poorly managed portfolio with great deals.
+
+**Self-Management vs. Hiring a PM**
+
+**Self-management:**
+- Keep the management fee (typically 8-12% of gross rent)
+- Direct control over tenant selection and maintenance
+- Time-intensive — 5-10+ hours per property per month for active issues
+- Difficult to scale and nearly impossible to manage remotely
+
+**Professional property management:**
+- Costs 8-12% of gross rent (plus lease-up fees, maintenance markups, vacancy fees)
+- Frees your time to acquire more deals
+- Essential for remote investing
+- Quality varies enormously — the wrong PM can destroy returns
+
+Rule of thumb: self-manage up to 3-4 local units while building systems, then hire a PM as you scale or go remote.
+
+**Tenant Screening — The Most Important Decision**
+
+The cost of a bad tenant (eviction, property damage, missed rent, legal fees) is typically $5,000-$20,000+. Rigorous screening prevents most of this.
+
+**The 3× income rule:** Monthly rent should not exceed 1/3 of gross monthly income. A $1,400/month apartment requires $4,200/month gross income minimum.
+
+**Credit check:** Minimum score depends on your market standard. Focus on payment history — evictions and rental-related collections are disqualifying.
+
+**Rental history:** Call every prior landlord listed. Ask: 'Would you rent to this person again?' A hesitation is an answer.
+
+**Criminal background:** Follow Fair Housing Act guidelines — blanket bans may violate FHA. Evaluate on a case-by-case basis per your written screening criteria.
+
+**Application process:** Charge a non-refundable application fee (covers screening costs). First qualified applicant wins — don't take multiple applications simultaneously and then choose.
+
+**Lease Administration**
+
+Use a professionally drafted lease specific to your state. State laws vary significantly — a generic internet lease may be unenforceable.
+
+Key lease terms to customize:
+- Lease term and renewal options
+- Rent amount, due date, late fees
+- Security deposit amount and terms
+- Maintenance responsibilities (tenant vs. landlord)
+- Pet policy
+- Subleasing prohibition
+- Early termination conditions
+
+Conduct a move-in inspection with the tenant present, documented with photos and a signed checklist. This protects both parties at move-out.
+
+**Maintenance Systems**
+
+**Preventive maintenance:** Schedule annual HVAC servicing, gutter cleaning, pest control, and smoke detector testing. Preventive costs are a fraction of reactive emergency costs.
+
+**Maintenance request process:** Establish a clear channel (phone, text, app) for tenant requests. Respond within 24 hours always. Emergency repairs (no heat, water leak, electrical) within hours.
+
+**Contractor relationships:** Have 3-5 trusted, licensed contractors for plumbing, electrical, HVAC, and general repairs. Don't try to find a contractor when the water heater fails at 10pm.
+
+**Evaluating a Property Management Company**
+
+Before hiring a PM, interview 3-5 companies and ask:
+- How many units do you currently manage?
+- What is your average vacancy rate?
+- How do you screen tenants?
+- What is your maintenance process and markup policy?
+- How do you handle evictions?
+- Can I see a sample monthly owner statement?
+- What are all fees? (Leasing fee, management fee, vacancy fee, renewal fee, maintenance markup)
+
+A PM with strong references from investors similar to you is more valuable than the lowest management fee.`,
         keyPoints: [
-          'Hire PM for 5+ properties or out-of-state — your time has value',
-          'Tenant screening: 620+ credit, 3× income, no evictions',
-          'Apply screening criteria consistently — Fair Housing compliance',
-          'Preventive maintenance saves 10x the cost of deferred repairs',
+          'The cost of a bad tenant ($5,000-$20,000+ in eviction, damage, and lost rent) makes rigorous screening the highest-ROI investment decision.',
+          'Use the 3× income rule: monthly rent should not exceed 1/3 of the tenant\'s gross monthly income.',
+          'Always call prior landlords and ask \'Would you rent to this person again?\' — hesitation is an answer.',
+          'A move-in inspection with photos and a signed checklist protects both parties and is essential documentation for security deposit disputes.',
+          'Preventive maintenance (annual HVAC, gutter cleaning, pest control) costs a fraction of emergency reactive maintenance.',
         ],
         quiz: [
           {
-            question: 'When should you strongly consider hiring a professional property manager?',
-            options: ['1–2 properties within 10 miles', '3–4 properties within 20 miles', '5+ properties or out-of-state', '10+ properties or outside the country'],
-            correctIndex: 2,
-            explanation: 'At 5+ properties, self-management becomes a full-time job — a PM at 8–12% of rents frees you to find and close more deals.',
+            question: 'A tenant applicant earns $3,600/month gross income. Using the 3× income rule, what is the maximum monthly rent they should pay?',
+            options: ['$900/month', '$1,200/month', '$1,800/month', '$3,600/month'],
+            correctIndex: 1,
+            explanation: 'The 3× income rule states that rent should not exceed 1/3 of gross monthly income. $3,600 ÷ 3 = $1,200/month maximum. A tenant paying more than this is financially stressed relative to their income, increasing the risk of missed payments.',
           },
           {
-            question: 'What is the standard income-to-rent ratio for tenant screening?',
-            options: ['2× monthly rent', '3× monthly rent', '5× monthly rent', '10× monthly rent'],
+            question: 'When calling a prior landlord reference, what is the single most important question to ask?',
+            options: ['\'Did the tenant ever pay rent late?\' — any late payment is disqualifying', '\'Would you rent to this person again?\' — hesitation or a qualified answer is a red flag', '\'What was the tenant\'s monthly rent?\' — to verify application accuracy', '\'Did the tenant damage the property?\' — damage history is the most important screening factor'],
             correctIndex: 1,
-            explanation: '3× gross monthly income provides enough cushion to ensure the tenant can pay rent and still meet other living expenses.',
+            explanation: 'This single question cuts through politeness and forces a direct signal. A prior landlord who genuinely had a good tenant will say \'Absolutely.\' Hesitation, qualifications (\'well... they always paid eventually\'), or a careful answer suggests issues that may not be explicitly shared due to legal caution.',
           },
           {
-            question: 'Fair Housing Act compliance requires:',
-            options: ['Accepting all applicants regardless of income', 'Applying screening criteria consistently to all applicants', 'Prioritizing veterans and elderly applicants', 'Removing all screening criteria'],
+            question: 'What is the primary risk of skipping preventive maintenance on a rental property?',
+            options: ['Tenants have the legal right to terminate their lease if preventive maintenance is not performed', 'Small issues become expensive emergencies — a $200 HVAC service can prevent a $5,000 system replacement', 'Lenders can call the loan if the property is not maintained to their standards', 'Preventive maintenance is required by Fannie Mae on all investment properties'],
             correctIndex: 1,
-            explanation: 'You can have strict screening standards — you just must apply them uniformly regardless of protected class characteristics.',
+            explanation: 'Preventive maintenance catches small issues before they become major failures. An annual HVAC service ($150-200) extends the life of a system and catches refrigerant or mechanical issues early. A failed HVAC in summer requires emergency replacement at premium cost plus potential habitability issues — far more expensive than prevention.',
           },
         ],
       },
       {
         title: 'Exit Strategies',
         duration: '18 min',
-        content: `Every investment needs an exit strategy before you buy. Your exit determines your hold period, financing structure, and tax planning.\n\n**Common Exit Strategies**\n\n**Sell Retail**\nList with an agent on the MLS at full market value. Best for stabilized properties in strong markets. Plan for 90-120 days from decision to close.\n\n**Sell to Another Investor**\nOff-market sale to another investor — faster, fewer contingencies, usually slightly below retail. Good for tired landlords or properties that need work.\n\n**1031 Exchange**\nDefer capital gains by rolling proceeds into a like-kind property. Best for investors with significant appreciation. Requires 45-day ID and 180-day close.\n\n**Cash-Out Refinance**\nExtract equity tax-free (not a taxable event) while retaining the asset. Best when rates are favorable and the property has substantial appreciation.\n\n**Owner Finance**\nSell on installment basis — collect monthly payments instead of a lump sum. Spreads capital gains over time and generates ongoing cash flow. Requires working with a real estate attorney.\n\n**Hold and Build Equity**\nLong-term hold — let rent pay down the mortgage and appreciation do the work. The Millionaire Real Estate Investor's foundational strategy.\n\n**Tax Planning by Exit**\n- Assets held <1 year: short-term capital gains (ordinary income rates)\n- Assets held >1 year: long-term capital gains (0%, 15%, 20% depending on income)\n- Depreciation recapture: 25% rate on accumulated depreciation\n- 1031 defers all of the above until final sale`,
+        content: `Every investment eventually ends. The exit strategy determines how much of your gain you keep, how quickly you access capital, and what tax obligations you face. Sophisticated investors plan their exit before they acquire — because the right entry price depends on the target exit.
+
+**Exit Strategy 1 — Traditional Sale (MLS)**
+
+The most common exit: list the property, find a buyer, pay off the mortgage, pay capital gains taxes, keep the rest.
+
+**Best for:** Investors who need liquidity, are done with real estate, or can't find a suitable 1031 replacement property.
+
+**Tax implications:**
+- Short-term capital gains (held under 1 year): Taxed as ordinary income — up to 37% federal
+- Long-term capital gains (held over 1 year): 0%, 15%, or 20% depending on income
+- Depreciation recapture: Always taxed at 25% on prior depreciation deductions
+
+**Strategy tip:** Time the sale for a year with lower income if possible — the capital gains rate depends on total taxable income.
+
+**Exit Strategy 2 — 1031 Exchange**
+
+Defer capital gains by rolling proceeds into a like-kind replacement property. (See Lending Track — 1031 Exchange lesson for full mechanics.)
+
+**Best for:** Investors who want to reinvest gains into a larger property without paying taxes now.
+
+**Power of deferral:** Deferring $100,000 in taxes allows the investor to deploy $100,000 more capital into the next deal — compounding the portfolio's growth.
+
+**Exit Strategy 3 — Cash-Out Refinance**
+
+Instead of selling, refinance to pull equity out while retaining ownership.
+
+**Best for:** Investors in strong appreciation markets who want liquidity without selling (and without triggering taxes).
+
+**Tax advantage:** Refinance proceeds are not taxable income — they're debt. This is the "buy, borrow, die" strategy favored by wealthy investors — access equity through loans, never sell, avoid capital gains.
+
+**Risk:** The new mortgage must be serviceable from property cash flow. Over-leveraging a property through repeated cash-out refinancing can leave negative cash flow.
+
+**Exit Strategy 4 — Seller Financing**
+
+Instead of a traditional sale, the seller acts as the lender — providing financing to the buyer and receiving monthly payments over time.
+
+**Best for:** Investors with no mortgage (or small mortgage) who want monthly income and to spread the capital gains tax over multiple years (installment sale treatment).
+
+**Benefits:**
+- Spread capital gains tax over the life of the loan (installment sale)
+- Generate monthly income without reinvesting in another property
+- Often commands a higher sale price — buyers value the financing
+- Close faster with less friction than a traditional financed sale
+
+**Risk:** Buyer default — if the buyer stops paying, the investor must foreclose (reclaim the property).
+
+**Exit Strategy 5 — Estate Planning / Hold Forever**
+
+The most tax-efficient real estate exit: don't exit. Hold the property until death.
+
+At death, heirs receive a **step-up in basis** — the property's cost basis resets to its current fair market value. All accumulated capital gains and depreciation recapture disappear. The heir can sell immediately with no federal tax on the appreciation.
+
+**Example:**
+- Investor bought property for $100,000 in 1990, now worth $800,000
+- If sold today: capital gains on $700,000 appreciation + depreciation recapture
+- If held until death: heir inherits at $800,000 basis, sells for $800,000, pays $0 capital gains
+
+This strategy is the most powerful for long-term wealth transfer and requires coordination with an estate planning attorney.`,
         keyPoints: [
-          'Plan your exit before you buy — hold period determines financing and tax strategy',
-          'Cash-out refi extracts equity tax-free while retaining the asset',
-          '1031: defer all gains by reinvesting in like-kind property within 180 days',
-          'Long-term hold >1 year gets preferred capital gains rates',
+          'Plan the exit before the acquisition — the right entry price depends on the target exit and its tax implications.',
+          'Long-term capital gains (held 1+ year) are taxed at 0-20%; short-term gains are taxed as ordinary income up to 37%.',
+          'A 1031 exchange defers all capital gains taxes by rolling proceeds into a like-kind replacement property.',
+          'Seller financing spreads capital gains tax over multiple years through installment sale treatment — and often commands a higher sale price.',
+          'Holding until death triggers a step-up in basis for heirs — eliminating capital gains tax on all accumulated appreciation.',
         ],
         quiz: [
           {
-            question: 'Which exit strategy defers capital gains taxes by rolling proceeds into a like-kind property?',
-            options: ['Owner financing', 'Cash-out refinance', '1031 exchange', 'Retail sale on MLS'],
-            correctIndex: 2,
-            explanation: '1031 exchanges defer ALL taxes — gains, depreciation recapture, and state taxes — by reinvesting into qualifying replacement properties.',
+            question: 'An investor sells a property held for 8 months. How is the capital gain taxed?',
+            options: ['At the long-term capital gains rate of 15-20%', 'As ordinary income (short-term capital gains) — up to 37% federal rate', 'No tax — capital gains on real estate are exempt for the first year', 'At a flat 25% rate regardless of holding period'],
+            correctIndex: 1,
+            explanation: 'Properties held for less than 12 months are subject to short-term capital gains tax, taxed as ordinary income at the investor\'s marginal federal rate — up to 37%. Holding at least 12 months before sale can dramatically reduce the tax burden by qualifying for long-term capital gains rates.',
           },
           {
-            question: 'Assets held less than 1 year are taxed at:',
-            options: ['0–20% long-term capital gains rate', 'Short-term capital gains rate (ordinary income rates)', '25% depreciation recapture rate', 'No tax if reinvested within 6 months'],
+            question: 'What is the primary tax advantage of a cash-out refinance over a traditional sale?',
+            options: ['Refinancing allows investors to deduct the full loan amount from their taxable income', 'Refinance proceeds are debt — not taxable income — allowing investors to access equity without triggering capital gains tax', 'A cash-out refinance resets the depreciation schedule on the property', 'Refinancing extends the holding period to qualify for long-term capital gains treatment'],
             correctIndex: 1,
-            explanation: 'Short-term gains are taxed as ordinary income — which can be 37% for high earners. Holding past 12 months to qualify for LTCG rates is almost always worth it.',
+            explanation: 'When you borrow money, it\'s not income — it\'s debt that must be repaid. This is the core of the \'buy, borrow, die\' strategy: access the equity you\'ve built through refinancing (not taxable), live on the loan proceeds, and never trigger a taxable sale. The interest on the new debt may also be deductible.',
           },
           {
-            question: 'A cash-out refinance is advantageous because:',
-            options: ['It sells the property for maximum value', 'It extracts equity tax-free while retaining ownership', 'It eliminates capital gains taxes permanently', 'It is faster than a 1031 exchange'],
+            question: 'What is a \'step-up in basis\' and why is it the most tax-efficient real estate exit strategy?',
+            options: ['A technique for gradually increasing rental income to support a higher property appraisal', 'At death, heirs inherit property at current fair market value — eliminating all capital gains and depreciation recapture on accumulated appreciation', 'An IRS provision that reduces capital gains tax by 25% for each year a property is held', 'A mechanism that allows investors over 65 to defer capital gains on one property per lifetime'],
             correctIndex: 1,
-            explanation: 'Borrowed money is not taxable income — a cash-out refi lets you access equity for reinvestment without triggering a taxable event.',
+            explanation: 'The step-up in basis is one of the most powerful wealth transfer tools in the tax code. An investor who bought for $150,000, took depreciation deductions over 30 years, and now has a property worth $900,000 would face massive taxes on sale. Their heir inherits at $900,000 basis — all gains wiped clean. This is why ultra-wealthy investors \'never sell\' real estate.',
+          },
+        ],
+      },
+      {
+        title: 'Creative Financing Overview',
+        duration: '20 min',
+        content: `Creative financing is what separates advanced investors from beginners. Beginners believe that if the bank won't lend, the deal can't happen. Advanced investors know that banks are just one source of capital — and often not the most flexible one. Creative financing is the ability to structure deals using non-traditional capital sources and terms.
+
+**Why Creative Financing Exists**
+
+Three conditions create demand for creative financing:
+
+1. **Bank limitations:** Banks won't lend on distressed properties, to borrowers with challenged credit, or on deals that don't conform to standard guidelines.
+
+2. **Seller motivations:** Some sellers are more motivated by terms than price. A seller who needs monthly income doesn't want a lump sum — they want installment payments.
+
+3. **Speed and flexibility:** Traditional financing takes 30-60 days and has rigid requirements. Creative deals can close in days with customized terms.
+
+**The Creative Financing Mindset**
+
+Traditional financing is about the borrower's qualifications. Creative financing is about the deal's structure.
+
+Key mental shift: instead of asking 'will the bank approve me?', ask 'what does the seller actually need, and how can I structure the deal to give it to them?'
+
+A seller who is:
+- Tired of being a landlord → wants to sell, doesn't care about all-cash
+- Facing foreclosure → wants relief from payments, may take a deeply discounted price
+- In the middle of a divorce → wants speed and certainty over highest price
+- Dealing with an inherited property they don't want → wants to be done with minimal hassle
+- Holding a paid-off property → may prefer monthly income from seller financing over a taxable lump sum
+
+Each situation creates an opportunity for a creative structure that serves both parties.
+
+**The Four Pillars of Creative Deals**
+
+**1. Price:** What the investor pays for the property.
+**2. Terms:** How and when the payment is made (seller financing, installment, etc.).
+**3. Equity:** What equity or down payment changes hands upfront.
+**4. Cash Flow:** How monthly income and expenses flow between parties.
+
+In creative deals, favorable terms often offset a higher price — or favorable price offsets less favorable terms. The investor's job is to find the combination that works for both parties.
+
+**Risk Management in Creative Deals**
+
+**Due diligence doesn't change:** Creative structures don't eliminate the need for thorough due diligence on the property, title, and seller's financial position.
+
+**Title and legal protections:** Creative deals without proper documentation and title work are dangerous. Always use a real estate attorney and title company — even for informal-seeming seller financing deals.
+
+**Understand your exit:** Creative financing often comes with non-standard terms (balloons, due-on-sale clauses, prepayment penalties). Know exactly how and when you'll exit or refinance before closing.
+
+**Due-on-sale clauses:** Most conventional mortgages have a due-on-sale clause — if the property is transferred, the full mortgage balance is due immediately. Subject-to deals (acquiring a property subject to the existing mortgage) technically trigger this clause, creating legal risk that must be managed.`,
+        keyPoints: [
+          'Creative financing is about deal structure — understanding what the seller needs and creating terms that serve both parties.',
+          'The four pillars of creative deals are price, terms, equity, and cash flow — favorable terms can offset price and vice versa.',
+          'Three conditions create creative financing opportunities: bank limitations, seller term motivations, and speed/flexibility needs.',
+          'Always use a real estate attorney and title company on creative deals — informal structures without documentation create serious risk.',
+          'Understand your exit before closing on any creative deal — non-standard terms (balloons, due-on-sale) require a clear refinance or resale plan.',
+        ],
+        quiz: [
+          {
+            question: 'A seller owns a free-and-clear rental property and is concerned about the large capital gains tax they\'ll owe on a traditional sale. Which creative financing approach might best serve their needs?',
+            options: ['A subject-to transaction where the investor takes over the existing mortgage', 'Seller financing — the seller acts as the lender, spreads the capital gains over years, and receives monthly income', 'A short sale where the seller accepts less than market value', 'A 1031 exchange where the seller rolls proceeds into a new property'],
+            correctIndex: 1,
+            explanation: 'A free-and-clear property is the perfect candidate for seller financing. The seller has no mortgage to pay off, so they can carry the note directly. They receive monthly payments (like an annuity), spread the capital gains tax over years through installment sale treatment, and often command a higher sale price for providing the financing.',
+          },
+          {
+            question: 'What is the primary legal risk associated with subject-to transactions?',
+            options: ['The buyer assumes personal liability for the seller\'s existing mortgage', 'The due-on-sale clause — the existing lender can demand full repayment if the property is transferred without their consent', 'Subject-to transactions are illegal in most states', 'The seller\'s credit is damaged when the property is transferred'],
+            correctIndex: 1,
+            explanation: 'Most conventional mortgages include a due-on-sale clause: if the property is sold or transferred without the lender\'s consent, the full loan balance becomes immediately due. Subject-to transactions technically trigger this clause. Most lenders don\'t discover or enforce it if payments continue, but the risk exists and must be disclosed and understood.',
+          },
+          {
+            question: 'Which seller situation most strongly indicates an opportunity for a creative financing deal?',
+            options: ['A seller who has just listed on the MLS at market price', 'A seller facing foreclosure who needs immediate debt relief', 'A seller who is relocating and has 90 days before they need to be out', 'A seller who recently refinanced and has substantial equity but no urgency'],
+            correctIndex: 1,
+            explanation: 'A seller in foreclosure faces a deadline, wants relief from their debt obligation, and is typically willing to accept a below-market price or creative structure to avoid the credit damage of a completed foreclosure. Their urgency creates negotiating flexibility that an on-market, non-distressed seller doesn\'t have.',
+          },
+        ],
+      },
+      {
+        title: 'Seller Financing & Wraps',
+        duration: '22 min',
+        content: `Seller financing is one of the most powerful and versatile tools in creative real estate. When structured correctly, it creates a win-win — the buyer acquires property without bank approval, and the seller receives income, tax benefits, and often a higher price.
+
+**Seller Financing Basics**
+
+In seller financing, the seller extends credit to the buyer — effectively acting as the bank. The buyer makes monthly payments to the seller (or a loan servicer) per the terms of a promissory note, secured by a mortgage or deed of trust.
+
+**Key documents:**
+- **Promissory note:** The buyer's written promise to repay the loan. Specifies amount, rate, term, payment schedule, and default terms.
+- **Mortgage or deed of trust:** The security instrument — gives the seller the right to foreclose if the buyer defaults.
+- **Purchase agreement:** The underlying purchase contract for the property.
+
+**Typical seller financing terms:**
+- **Interest rate:** Usually 6-10% — higher than conventional because the seller bears the risk
+- **Term:** 15-30 years, often with a 5-7 year balloon (full payment due at end of balloon period)
+- **Down payment:** Negotiated — can be as low as 5-10% or no down payment for motivated sellers
+- **Amortization:** Can be fully amortizing (principal + interest) or interest-only
+
+**The Balloon Payment**
+
+Most seller-financed notes include a balloon — the full remaining balance is due after a set period (often 3-7 years). The buyer's plan:
+1. Buy using seller financing
+2. Improve the property and/or build credit/income during the balloon period
+3. Refinance with conventional financing before the balloon is due
+
+Buyers who don't plan for the balloon carefully risk losing the property. Always have a clear refinance exit strategy.
+
+**Installment Sale Tax Treatment**
+
+For sellers, spreading the gain over the life of the note rather than recognizing it all in the year of sale is a major tax benefit. The seller reports capital gains proportionally as payments are received — potentially over 10-30 years.
+
+Consult a tax advisor to confirm eligibility and structure the installment sale correctly.
+
+**Wraparound Mortgages**
+
+A wrap is a form of seller financing where the seller has an existing mortgage. Instead of paying off the existing mortgage at closing, the seller wraps a new, larger mortgage around it.
+
+**How it works:**
+- Seller's existing mortgage: $150,000 at 4% interest
+- New wraparound mortgage to buyer: $220,000 at 7% interest
+- Seller collects $220,000 worth of payments from buyer
+- Seller continues paying their $150,000 mortgage from those proceeds
+- Seller pockets the spread: interest on $220,000 at 7% minus interest on $150,000 at 4%
+
+**The seller earns income in two ways:**
+1. The spread between the buyer's interest rate and the existing mortgage rate
+2. The equity spread between the new note amount and the existing mortgage balance
+
+**Due-on-sale risk:** Wraps involve the same due-on-sale risk as subject-to transactions — the underlying lender can technically call the loan. This must be disclosed to and accepted by all parties, with a clear mitigation plan.
+
+**Using a Loan Servicer**
+
+Always use a professional loan servicer for seller-financed notes. The servicer:
+- Collects payments from the buyer
+- Disburses proceeds to the seller (and underlying lender, for wraps)
+- Maintains payment records
+- Issues year-end tax documents (Form 1098/1099)
+- Manages escrow for taxes and insurance (if applicable)
+
+A servicer creates a professional paper trail and reduces friction between buyer and seller. Cost: $25-75/month.`,
+        keyPoints: [
+          'Seller financing requires three documents: promissory note, mortgage/deed of trust, and purchase agreement — always use an attorney.',
+          'Balloon payments (typically 3-7 years) require the buyer to refinance — always have a clear conventional refinance exit plan.',
+          'Installment sale treatment allows the seller to spread capital gains over the life of the note rather than recognizing all gains in the year of sale.',
+          'A wraparound mortgage wraps a new, larger note around the seller\'s existing mortgage — the seller profits from the interest rate and equity spread.',
+          'Always use a professional loan servicer — it creates a paper trail, manages disbursements, and reduces buyer-seller friction.',
+        ],
+        quiz: [
+          {
+            question: 'A buyer purchases a property with seller financing featuring a 5-year balloon payment. What must the buyer ensure before the 5-year period expires?',
+            options: ['Verification that the seller has paid off their own mortgage', 'A refinance with conventional financing to pay off the balloon balance before it comes due', 'Renewal of the seller financing terms for another 5-year period', 'Completion of all planned renovations to the property'],
+            correctIndex: 1,
+            explanation: 'A balloon payment means the full remaining loan balance is due at the end of the balloon period. If the buyer can\'t refinance or doesn\'t have the cash, they face default and potential foreclosure. Planning for this exit — building credit, improving the property, ensuring qualifiable income — starts on day one.',
+          },
+          {
+            question: 'In a wraparound mortgage, how does the seller profit beyond the difference between the sale price and the original purchase price?',
+            options: ['The seller receives all of the buyer\'s down payment as immediate profit', 'The seller earns a spread between the interest rate on the new wrap note and the rate on the underlying mortgage', 'The seller collects the buyer\'s property taxes as additional income', 'The seller profits from the buyer\'s payments but is no longer responsible for the underlying mortgage'],
+            correctIndex: 1,
+            explanation: 'The wrap earns income in two ways: (1) the equity spread (difference between what\'s owed on the original mortgage and the new note amount), and (2) the interest rate spread (the seller charges the buyer a higher rate than they pay on the underlying mortgage). On a $150,000 underlying mortgage at 4% and a $220,000 wrap note at 7%, the interest spread alone generates significant monthly income.',
+          },
+          {
+            question: 'What is the primary function of a loan servicer in a seller financing arrangement?',
+            options: ['To guarantee the buyer\'s payments in case of default', 'To collect payments, maintain records, disburse proceeds, and issue tax documents — creating a professional paper trail', 'To conduct annual property inspections on behalf of the seller', 'To negotiate the interest rate on behalf of both parties'],
+            correctIndex: 1,
+            explanation: 'A loan servicer professionalizes the seller financing relationship — ensuring payments are tracked, disbursements are documented, and both parties have clean records for tax purposes. Without a servicer, informal payment arrangements between buyer and seller create disputes, tax complications, and potential fraud risk.',
+          },
+        ],
+      },
+      {
+        title: 'Joint Ventures',
+        duration: '18 min',
+        content: `Joint ventures are how investors scale faster than their own capital allows. Every investor eventually hits the ceiling of what they can do alone — JVs break through that ceiling by combining complementary resources. The right JV structure creates exponential growth; the wrong one destroys relationships and deals.
+
+**The Two Roles in Every JV**
+
+**Operating Partner (Sponsor):**
+- Finds the deal
+- Manages due diligence
+- Coordinates financing
+- Oversees renovation and management
+- Makes day-to-day decisions
+- Contributes time, expertise, and deal flow
+- Typically contributes less or no capital
+
+**Money Partner (Capital Partner):**
+- Provides funding — down payment, renovation budget, or full acquisition
+- Typically passive — not involved in day-to-day operations
+- Expects a return on their invested capital
+- Bears the primary financial risk
+
+The deal is the bridge: the operating partner has the expertise and deal access the money partner lacks; the money partner has the capital the operator needs.
+
+**JV Structures and Splits**
+
+There's no universal split — it depends on what each party contributes. Common structures:
+
+**50/50 Split:**
+Both parties contribute equally in some dimension — equal capital and equal work, or the deal is balanced enough to justify equal profit share. Simple and clear.
+
+**70/30 or 80/20 (Money Partner Heavy):**
+Money partner provides most or all of the capital. Operating partner does all the work. Money partner receives the larger share (70-80%) as return on capital; operator gets 20-30% as compensation for expertise and effort.
+
+**Preferred Return:**
+Money partner receives a preferred return (e.g., 8% annually) before profits are split. After the pref is paid, remaining profits split per the agreed ratio.
+
+Example: $200,000 invested, 8% pref = $16,000/year guaranteed to money partner before any split occurs.
+
+**Equity on Refinance / Sale:**
+Operator may receive an 'equity kicker' at refinance or sale — a larger share of the gain at exit than during the hold period.
+
+**The JV Agreement — Non-Negotiable**
+
+Every JV must have a written agreement — a JV Agreement or Operating Agreement (if structured as an LLC). It must address:
+
+- **Capital contributions:** Who invests what, when
+- **Ownership percentages**
+- **Decision-making authority:** Who controls what decisions? Does the money partner have veto rights?
+- **Cash flow distribution:** How often? In what order?
+- **Exit provisions:** What happens when one partner wants out? Right of first refusal, forced sale clauses
+- **Default provisions:** What happens if one party fails to meet their obligations?
+- **Dispute resolution:** Mediation, arbitration, jurisdiction
+
+Never do a JV on a handshake. The relationship seems solid before the deal — disputes arise during the deal. Documentation protects everyone.
+
+**Finding JV Partners**
+
+- Real estate investor networks (REIAs, BiggerPockets)
+- Professional networks (attorneys, accountants, other investors)
+- High-income professionals who want real estate exposure but lack time (doctors, dentists, executives)
+- Family office investors and private wealth managers
+- Prior clients and colleagues who have capital and trust you
+
+Your track record is your pitch. Before approaching capital partners, have at least one completed deal to show — results speak louder than presentations.`,
+        keyPoints: [
+          'Every JV has two roles: the operating partner (expertise and deal flow) and the money partner (capital) — the structure must fairly compensate both.',
+          'A preferred return gives the money partner a guaranteed yield before any profit split — typically 6-10% annually.',
+          'JV splits are negotiated — 50/50, 70/30, and preferred return structures are all common depending on what each party contributes.',
+          'Every JV requires a written agreement covering contributions, ownership, decision-making, distributions, exit provisions, and dispute resolution.',
+          'Your track record is your pitch to capital partners — completed deals are more persuasive than projections.',
+        ],
+        quiz: [
+          {
+            question: 'In a JV deal, who is typically the \'operating partner\'?',
+            options: ['The investor who provides the majority of the capital for the acquisition', 'The investor who finds the deal, manages due diligence, oversees renovation, and handles day-to-day operations', 'The licensed real estate agent who represented the transaction', 'The property manager hired to manage the asset after acquisition'],
+            correctIndex: 1,
+            explanation: 'The operating partner (sponsor) contributes expertise, time, and deal flow. They run the deal — from finding it to managing it. The money partner contributes capital. The JV structure compensates each partner for their specific contribution.',
+          },
+          {
+            question: 'A money partner invests $300,000 with an 8% preferred return. What must be paid to the money partner before any profit split occurs?',
+            options: ['$8,000 annually', '$24,000 annually', '$300,000 at exit', '$30,000 annually'],
+            correctIndex: 1,
+            explanation: 'Preferred return = Investment × Pref Rate = $300,000 × 8% = $24,000/year. This is paid to the money partner before any profits are split with the operating partner. It functions like a guaranteed minimum return and reduces the money partner\'s risk.',
+          },
+          {
+            question: 'What is the most important provision to include in a JV agreement to protect both parties if the relationship breaks down?',
+            options: ['A clause requiring both partners to live within 50 miles of the subject property', 'Exit provisions — including right of first refusal and forced sale clauses — that define how a partner can exit and how the deal resolves', 'A requirement that all profits be reinvested into the next deal', 'A provision requiring monthly meetings between all JV partners'],
+            correctIndex: 1,
+            explanation: 'Deals change — timelines extend, disagreements arise, life happens. Exit provisions define what happens when one partner wants out: Can they sell their share? To whom? At what price? Does the other partner have the right to buy first? A forced sale clause (buy-sell or \'shotgun\' clause) can resolve deadlocks by allowing one partner to name a price and require the other to either buy at that price or sell at that price. Without exit provisions, disputes can become expensive and protracted.',
+          },
+        ],
+      },
+      {
+        title: 'Real Estate Syndication',
+        duration: '26 min',
+        content: `Real estate syndication is how individual investors access deals too large to do alone — and how sponsors raise capital to build portfolios at scale. A syndication pools money from multiple investors (limited partners) managed by a lead sponsor (general partner) to acquire, operate, and eventually sell a large asset.
+
+**The Syndication Structure**
+
+**General Partner (GP) / Sponsor:**
+- Finds and analyzes the deal
+- Arranges financing
+- Manages the asset and asset manager relationship
+- Makes operational decisions
+- Typically invests little or no capital (or a small co-investment)
+- Earns: acquisition fee, asset management fee, promote/carried interest at exit
+
+**Limited Partners (LPs) / Investors:**
+- Provide the equity capital for the deal
+- Passive — no operational role
+- Receive: preferred return + share of profits at exit
+- Risk: loss of invested capital (limited to their investment — no personal liability)
+
+**The entity:** Most syndications are structured as an LLC or LP (limited partnership). The investors hold membership interests or limited partnership units.
+
+**How the Returns Work**
+
+**Example — 100-unit apartment complex:**
+- Purchase: $12,000,000
+- Debt (70% LTV): $8,400,000
+- Equity required: $3,600,000
+- GP co-invest: $180,000 (5%)
+- LP equity: $3,420,000
+
+**During the hold (5-year business plan):**
+- 8% preferred return to LPs: $273,600/year
+- Remaining cash flow split: 70% LP / 30% GP
+
+**At exit (Year 5 sale):**
+- Sale price: $17,000,000
+- Return of LP capital: $3,420,000
+- Remaining profit split: 70% LP / 30% GP
+- LP total return: $3,420,000 + preferred return distributions + 70% of profit
+- GP profit: acquisition fee + asset mgmt fees (during hold) + 30% of profit at exit
+
+**Securities Law — The Critical Compliance Issue**
+
+Syndications involve selling securities — interests in an entity to investors. This is regulated by the SEC under federal securities law. Most syndicators rely on Regulation D exemptions:
+
+**Rule 506(b):** Raise from up to 35 non-accredited investors and unlimited accredited investors. Cannot use general solicitation (advertising). Most common for smaller operators with existing networks.
+
+**Rule 506(c):** Raise from accredited investors only. Can use general solicitation (advertising, social media, etc.). Must verify accredited status.
+
+**Accredited Investor definition:** Net worth over $1M (excluding primary residence) OR income over $200K/year ($300K joint) for the last 2 years with expectation of continuing.
+
+**The PPM:** Private Placement Memorandum — the disclosure document that describes the deal, risks, and terms to potential investors. Written by a securities attorney. Non-negotiable for any legitimate syndication.
+
+**Critical:** Raising money from investors without proper securities compliance can result in SEC enforcement, criminal charges, and personal liability. Always engage a securities attorney before raising a single dollar from investors.
+
+**The GP's Economics**
+
+**Acquisition fee:** 1-3% of purchase price, paid at closing
+**Asset management fee:** 1-2% of revenue annually (ongoing)
+**Disposition fee:** 1-2% of sale price at exit
+**Promote/carried interest:** GP's share of profits above the preferred return — typically 20-30%
+
+On a $12M acquisition, the GP earns $120,000-$360,000 in acquisition fees alone — before any share of profits.`,
+        keyPoints: [
+          'Syndications pool capital from multiple LPs (passive investors) managed by a GP (sponsor) — each party has distinct roles, rights, and economics.',
+          'LPs receive a preferred return (typically 8%) plus a share of profits; GPs earn fees and a promote (carry) at exit.',
+          'Syndications involve selling securities — Regulation D compliance, a securities attorney, and a PPM are non-negotiable.',
+          'Rule 506(b) allows up to 35 non-accredited investors with no general solicitation; Rule 506(c) allows advertising but only to verified accredited investors.',
+          'The GP\'s economics include acquisition fees, asset management fees, disposition fees, and a carried interest — often generating significant income independent of the deal\'s investment returns.',
+        ],
+        quiz: [
+          {
+            question: 'In a syndication, what is the role of a Limited Partner (LP)?',
+            options: ['The lead sponsor who finds the deal and manages the asset', 'A passive capital investor who provides equity, receives returns, but has no operational decision-making role', 'The property manager responsible for day-to-day operations', 'The lender providing the senior debt on the acquisition'],
+            correctIndex: 1,
+            explanation: 'Limited partners provide the equity capital for the deal and receive returns (preferred return + profit share) but take no active role in operations. Their liability is limited to their investment — they cannot be personally liable beyond what they invested, which is why the structure is called a limited partnership.',
+          },
+          {
+            question: 'Under Regulation D Rule 506(c), what is the key difference from Rule 506(b)?',
+            options: ['506(c) allows up to 100 non-accredited investors; 506(b) allows only 35', '506(c) allows general solicitation (advertising) but requires ALL investors to be verified accredited investors', '506(c) is available only to real estate investment trusts (REITs)', '506(c) requires SEC registration; 506(b) is a private exemption'],
+            correctIndex: 1,
+            explanation: 'The key trade-off: 506(c) allows sponsors to advertise and publicly solicit investors (social media, conferences, podcasts) — but ALL investors must be verified accredited investors. 506(b) prohibits advertising but allows up to 35 non-accredited investors alongside unlimited accredited investors.',
+          },
+          {
+            question: 'What is the \'promote\' or \'carried interest\' in a syndication?',
+            options: ['The marketing fee paid to promote the deal to potential investors', 'The GP\'s disproportionate share of profits above the preferred return — typically 20-30% of deal profits', 'The interest rate charged on the senior debt for the acquisition', 'The preferred return percentage guaranteed to limited partners'],
+            correctIndex: 1,
+            explanation: 'The promote (or carry) is the GP\'s economic incentive — they receive a disproportionate share of profits above the preferred return, even though they contribute little or no capital. On a deal with 70/30 split after an 8% pref, the GP gets 30% of profits while contributing 5% of equity. This aligns the GP\'s incentive with investor returns — the GP only earns the promote if the deal performs.',
+          },
+        ],
+      },
+      {
+        title: 'Distressed Asset Acquisition',
+        duration: '20 min',
+        content: `Distressed assets are the greatest source of below-market pricing in real estate. Understanding how to find them, evaluate them quickly, and close on them confidently is a core skill for investors who want consistent deal flow at attractive prices.
+
+**What Makes a Property Distressed?**
+
+Distress comes in two forms:
+
+**Financial distress:** The owner can no longer service the debt — missed payments, impending foreclosure, or underwater on the mortgage.
+
+**Physical distress:** The property is in poor condition — deferred maintenance, vacancy, fire damage, flood damage, or code violations.
+
+The best distressed deals combine both: a financially distressed owner of a physically distressed property who needs to exit quickly.
+
+**The Foreclosure Spectrum**
+
+**Pre-foreclosure:**
+The owner has missed payments and received a Notice of Default (NOD) but foreclosure hasn't been completed. The owner is in distress but still has options. Opportunities:
+- Negotiate a direct purchase with the owner (subject-to or seller financing)
+- Buy the property conventionally at a discount before auction
+- Help the owner avoid foreclosure while acquiring the asset
+
+**Foreclosure auction:**
+- Properties sold at the courthouse steps to the highest bidder
+- No financing contingencies — must close with cash or within 24-48 hours
+- No inspection access prior to auction — bidder takes the property as-is
+- Starting bid is typically the unpaid mortgage balance plus fees
+- Highest risk / highest potential discount
+- Requires significant due diligence: title search, drive-by assessment, lien research before bidding
+
+**REO (Real Estate Owned):**
+- Property the bank acquired through completed foreclosure
+- Accessible through the MLS or direct bank/servicer outreach
+- Standard closing process with inspection and financing contingencies
+- Less discount than auction but far less risk
+- Banks want to move REO quickly — they're not in the landlord business
+
+**Short Sales**
+
+A short sale occurs when the bank agrees to accept less than the full outstanding mortgage balance to facilitate a sale.
+
+**Short sale timeline:**
+- Buyer makes offer on property
+- Seller submits hardship package to lender (financial statements, hardship letter)
+- Lender reviews and orders BPO (Broker Price Opinion)
+- Lender approves, counters, or rejects the proposed sale price
+- Process typically takes 60-120 days from offer to approval
+
+**Short sale negotiation:**
+The bank's primary concern is minimizing loss. Your job: demonstrate that the proposed sale price represents maximum recovery — better than what the bank would net through a completed foreclosure.
+
+**Due Diligence on Distressed Properties**
+
+**Title:** Distressed properties often have multiple liens — second mortgages, mechanic's liens, tax liens, HOA liens, judgment liens. A thorough title search and title insurance are essential.
+
+**Physical condition:** Assess as thoroughly as possible before closing. Distressed properties often have deferred maintenance, code violations, unpermitted work, and hidden damage (mold, structural issues, roof damage).
+
+**Rehab estimate:** Get a contractor walkthrough before closing if at all possible. Budget a 20-25% contingency — distressed properties always have surprises.
+
+**Occupied properties:** Foreclosures are sometimes still occupied by the prior owner or tenants. Understand the eviction process and timeline in your market before closing on an occupied distressed property.`,
+        keyPoints: [
+          'The best distressed deals combine financial and physical distress — motivated sellers of deteriorated properties offer the deepest discounts.',
+          'Foreclosure auctions offer the highest potential discount but require cash, no contingencies, and accept properties as-is — highest risk channel.',
+          'REO (bank-owned post-foreclosure) properties offer a standard closing process with contingencies — less discount but far lower risk.',
+          'Short sales require bank approval of a below-market sale — the process typically takes 60-120 days and requires demonstrating the proposed price exceeds foreclosure recovery.',
+          'Title research is critical on distressed acquisitions — multiple liens (tax, mechanic\'s, HOA, judgment) can attach to the property and must be resolved.',
+        ],
+        quiz: [
+          {
+            question: 'What is the primary risk of purchasing a property at a foreclosure auction?',
+            options: ['Auction properties are always priced above market value due to competitive bidding', 'No inspection access, no financing contingencies, no title guarantee — the buyer purchases as-is with limited due diligence', 'All auction properties require a 20% down payment regardless of the investor\'s financing', 'Auction buyers are personally liable for the prior owner\'s tax debt'],
+            correctIndex: 1,
+            explanation: 'Foreclosure auction is the highest-risk acquisition channel. Buyers can\'t inspect the interior, can\'t finance through traditional lenders, and may inherit liens and title issues the prior search didn\'t catch. The potential discount compensates for this risk — but only for experienced investors with strong due diligence skills and cash reserves.',
+          },
+          {
+            question: 'In a short sale, who must approve the sale price for the transaction to proceed?',
+            options: ['The local housing authority must approve all short sales', 'The lender (bank) — they must agree to accept less than the full outstanding mortgage balance', 'The original seller who purchased the property from the builder', 'The title company — they insure the transaction and must approve the discount'],
+            correctIndex: 1,
+            explanation: 'A short sale requires the lender\'s approval because they\'re agreeing to take a loss — accepting less than what they\'re owed. The seller technically owns the property but the lender has the ultimate authority over whether the sale can proceed at the proposed price.',
+          },
+          {
+            question: 'Why is a title search particularly critical when acquiring distressed properties?',
+            options: ['Distressed properties are exempt from standard title insurance requirements', 'Distressed properties frequently have multiple liens — tax, mechanic\'s, HOA, judgment — that can survive the sale and attach to the new owner', 'Title searches take longer on distressed properties due to complex ownership histories', 'Lenders require additional title searches on distressed properties before approving financing'],
+            correctIndex: 1,
+            explanation: 'Financially distressed owners typically have multiple creditors. Tax liens, contractor mechanic\'s liens, HOA assessments, and court judgments can all attach to the property. Some liens survive the sale — meaning the buyer inherits them. A thorough title search identifies every lien before closing, and title insurance protects against undiscovered liens after closing.',
+          },
+        ],
+      },
+      {
+        title: 'Off-Market Strategies',
+        duration: '22 min',
+        content: `Off-market deals are the competitive advantage of the most successful real estate investors. When you find a deal before it's publicly listed, you eliminate competition and create the opportunity to negotiate directly with a motivated seller — without the pressure of competing offers.
+
+**Why Off-Market Deals Are Better**
+
+**No competition:** By definition, if a deal is off-market, you're the only buyer at the table.
+
+**Motivated sellers:** Off-market sellers are usually people who need to sell — not people who are testing the market. Their motivation creates negotiating flexibility.
+
+**More deal structures:** An on-market seller is advised by an agent to take the highest all-cash offer. An off-market seller may prefer seller financing, a lease-option, or other creative structures that serve their specific needs.
+
+**Better prices:** Motivated sellers are less likely to hold out for top dollar — especially if you can offer speed, certainty, and a hassle-free process.
+
+**The Off-Market Outreach Machine**
+
+**Consistency is the key.** Off-market outreach works through volume and persistence — most sellers aren't ready when you first reach out. The deal comes when they become ready, often months or years later.
+
+**Direct mail:**
+The most scalable off-market strategy. Key elements:
+- Targeted list (absentee owners, high equity, probate, pre-foreclosure)
+- Consistent mailing frequency (every 4-6 weeks)
+- Personal, conversational tone — not corporate
+- Clear offer: 'I buy houses as-is, fast close, no fees'
+- Dedicated phone number that's always answered (or always returned within 1 hour)
+
+**Cold outreach (phone and text):**
+Higher conversion than mail because it's real-time conversation. Requires skip-traced contact information. A simple script:
+
+'Hi [Name], my name is [Name]. I'm a real estate investor in [market]. I noticed you own the property at [address] and wanted to reach out to see if you've ever considered selling. I'm not a real estate agent — I'm an investor who buys directly. Is that something you'd be open to talking about?'
+
+**Probate:**
+When someone dies, their property enters the probate process. Heirs often want to liquidate quickly — they're dealing with grief and administration, not shopping for top dollar. Probate records are public — identify them at the courthouse or through a probate attorney relationship.
+
+**Networking with professionals:**
+- Divorce attorneys know clients who need to sell fast
+- Estate attorneys know heirs with property to sell
+- Accountants know clients with tax-motivated sales
+- Property managers know tired landlords ready to exit
+
+A relationship with one divorce attorney can generate more deals per year than a $5,000/month marketing campaign.
+
+**Analyzing Off-Market Deals Quickly**
+
+Off-market deals often require fast decisions. Build your analysis capability to evaluate a deal in 15-20 minutes:
+
+1. Pull recent comps on your phone (Zillow, MLS app)
+2. Estimate ARV from comps
+3. Estimate renovation cost (walk-through or phone estimate from your contractor)
+4. Apply your buying formula: (ARV × 70%) - Rehab = Max Price
+5. Call the seller with an offer
+
+Speed signals seriousness. Sellers who get an offer within 24 hours of first contact are far more likely to accept than sellers who wait 2 weeks for an offer.
+
+**Building Your Off-Market Brand**
+
+Over time, your off-market reputation compounds. Every deal you close creates a referral — the seller tells a neighbor, a family member, or a friend who also needs to sell. The best off-market investors eventually generate most of their deal flow through word-of-mouth from prior sellers.
+
+Protect your reputation in every deal: close when you say you'll close, pay what you agree to pay, and treat every seller with respect — even when you're buying at a significant discount.`,
+        keyPoints: [
+          'Off-market deals eliminate competition, surface motivated sellers, and enable creative deal structures unavailable on the open market.',
+          'Consistency in outreach is the key — most off-market sellers aren\'t ready at first contact; the deal comes when they become ready.',
+          'Professional network relationships (divorce attorneys, estate attorneys, accountants, property managers) generate high-quality off-market deal flow.',
+          'Speed is a competitive advantage — sellers who receive an offer within 24 hours are far more likely to engage than those who wait weeks.',
+          'Every closed off-market deal compounds your reputation — word-of-mouth from satisfied sellers becomes your most valuable long-term deal source.',
+        ],
+        quiz: [
+          {
+            question: 'What is the primary advantage of pursuing off-market deals over on-market MLS listings?',
+            options: ['Off-market properties are always priced below assessed value', 'No competition — you\'re negotiating directly with a motivated seller without competing offers', 'Off-market sellers are required to accept below-market offers by law', 'Off-market deals close faster because they bypass the MLS system'],
+            correctIndex: 1,
+            explanation: 'The core advantage is elimination of competition. On the MLS, your offer competes against every other buyer in the market. Off-market, you\'re the only buyer at the table — which gives you time to build rapport, understand the seller\'s needs, and craft a structure that works for both parties.',
+          },
+          {
+            question: 'Why is the probate process a productive source of off-market deals?',
+            options: ['Probate properties are legally required to be sold below market value', 'Heirs often want to liquidate quickly and with minimal hassle — dealing with an estate, not shopping for top dollar', 'Probate sales bypass normal real estate transaction requirements', 'Probate properties have no existing mortgage, making them easier to finance'],
+            correctIndex: 1,
+            explanation: 'When someone inherits a property, they\'re often dealing with grief, administrative complexity, and family dynamics simultaneously. The priority is resolution — not maximizing the sale price. Investors who can offer a fast, certain, hassle-free close often find willing sellers in probate at attractive prices.',
+          },
+          {
+            question: 'An investor estimates an ARV of $320,000 and renovation costs of $45,000 on a potential acquisition. Using the 70% rule, what is the maximum they should offer?',
+            options: ['$224,000', '$179,000', '$199,000', '$275,000'],
+            correctIndex: 1,
+            explanation: 'Maximum offer = (ARV × 70%) - Renovation = ($320,000 × 0.70) - $45,000 = $224,000 - $45,000 = $179,000.',
           },
         ],
       },
@@ -2660,195 +4180,538 @@ Don't switch for a marginally better split — relationships and reputation take
   {
     id: 'deal_structuring',
     title: 'Advanced Deal Structuring',
-    description: 'Master creative financing, joint ventures, syndication, and off-market deal strategies.',
-    icon: 'git-network-outline',
-    color: '#E6A23C',
-    tiers: ['elite'],
-    creditHours: 10,
+    description: 'The complete professional curriculum for real estate investors and deal structurers. Master creative financing, joint ventures, syndication, distressed asset acquisition, and off-market strategies.',
+    icon: 'git-branch-outline',
+    color: '#F44336',
+    tiers: ['pro', 'elite', 'all-access'],
+    creditHours: 9,
     lessons: [
       {
         title: 'Creative Financing Overview',
         duration: '20 min',
-        content: `Creative financing refers to any transaction structure that differs from a standard purchase with bank financing. It's used when conventional financing is unavailable, insufficient, or when the deal structure creates a better outcome for all parties.\n\n**Why Creative Financing?**\n- Access deals that wouldn't qualify for conventional financing\n- Reduce down payment requirements\n- Create transactions where seller gets better tax treatment\n- Access distressed assets where banks won't lend\n- Move faster than the conventional lending timeline\n\n**Common Creative Financing Structures**\n\n**Subject-To**\nBuy a property "subject to" the existing mortgage — the seller's loan stays in place, title transfers to you, you make the payments. The seller's name stays on the mortgage but not the deed.\n\nRisk: Due-on-sale clause. If lender discovers transfer, they can accelerate the loan (demand full payoff). In practice, lenders rarely exercise this if payments are current.\n\n**Lease Option**\nLease the property with an option to purchase at a set price within a set timeframe. Option fee is non-refundable but typically credited toward purchase price.\n\nUsed by buyers who aren't ready to qualify for conventional financing or who want to test the market.\n\n**Contract for Deed / Land Contract**\nSeller finances the purchase — buyer makes payments directly to seller and receives title at payoff or after meeting conditions. Common in rural markets and for buyers who can't qualify for conventional loans.\n\n**Blended Structures**\nMany deals use combinations: conventional bank first + seller second, or hard money + seller carryback. The key is understanding how each layer of capital works together.`,
+        content: `Creative financing is what separates advanced investors from beginners. Beginners believe that if the bank won't lend, the deal can't happen. Advanced investors know that banks are just one source of capital — and often not the most flexible one. Creative financing is the ability to structure deals using non-traditional capital sources and terms.
+
+**Why Creative Financing Exists**
+
+Three conditions create demand for creative financing:
+
+1. **Bank limitations:** Banks won't lend on distressed properties, to borrowers with challenged credit, or on deals that don't conform to standard guidelines.
+
+2. **Seller motivations:** Some sellers are more motivated by terms than price. A seller who needs monthly income doesn't want a lump sum — they want installment payments.
+
+3. **Speed and flexibility:** Traditional financing takes 30-60 days and has rigid requirements. Creative deals can close in days with customized terms.
+
+**The Creative Financing Mindset**
+
+Traditional financing is about the borrower's qualifications. Creative financing is about the deal's structure.
+
+Key mental shift: instead of asking 'will the bank approve me?', ask 'what does the seller actually need, and how can I structure the deal to give it to them?'
+
+A seller who is:
+- Tired of being a landlord → wants to sell, doesn't care about all-cash
+- Facing foreclosure → wants relief from payments, may take a deeply discounted price
+- In the middle of a divorce → wants speed and certainty over highest price
+- Dealing with an inherited property they don't want → wants to be done with minimal hassle
+- Holding a paid-off property → may prefer monthly income from seller financing over a taxable lump sum
+
+Each situation creates an opportunity for a creative structure that serves both parties.
+
+**The Four Pillars of Creative Deals**
+
+**1. Price:** What the investor pays for the property.
+**2. Terms:** How and when the payment is made (seller financing, installment, etc.).
+**3. Equity:** What equity or down payment changes hands upfront.
+**4. Cash Flow:** How monthly income and expenses flow between parties.
+
+In creative deals, favorable terms often offset a higher price — or favorable price offsets less favorable terms. The investor's job is to find the combination that works for both parties.
+
+**Risk Management in Creative Deals**
+
+**Due diligence doesn't change:** Creative structures don't eliminate the need for thorough due diligence on the property, title, and seller's financial position.
+
+**Title and legal protections:** Creative deals without proper documentation and title work are dangerous. Always use a real estate attorney and title company — even for informal-seeming seller financing deals.
+
+**Understand your exit:** Creative financing often comes with non-standard terms (balloons, due-on-sale clauses, prepayment penalties). Know exactly how and when you'll exit or refinance before closing.
+
+**Due-on-sale clauses:** Most conventional mortgages have a due-on-sale clause — if the property is transferred, the full mortgage balance is due immediately. Subject-to deals (acquiring a property subject to the existing mortgage) technically trigger this clause, creating legal risk that must be managed.`,
         keyPoints: [
-          'Subject-to: existing mortgage stays in place, you make payments, title transfers',
-          'Due-on-sale clause risk: mitigated by keeping loans current',
-          'Lease option: control the asset, lock in price, test the deal',
-          'Most sophisticated deals layer multiple financing sources',
+          'Creative financing is about deal structure — understanding what the seller needs and creating terms that serve both parties.',
+          'The four pillars of creative deals are price, terms, equity, and cash flow — favorable terms can offset price and vice versa.',
+          'Three conditions create creative financing opportunities: bank limitations, seller term motivations, and speed/flexibility needs.',
+          'Always use a real estate attorney and title company on creative deals — informal structures without documentation create serious risk.',
+          'Understand your exit before closing on any creative deal — non-standard terms (balloons, due-on-sale) require a clear refinance or resale plan.',
         ],
         quiz: [
           {
-            question: 'In a "Subject-To" purchase, what happens to the existing mortgage?',
-            options: ['It is paid off at closing', 'It is assumed by the buyer with bank approval', 'The loan stays in place; title transfers but the seller\'s name remains on the mortgage', 'It is converted to lease payments'],
-            correctIndex: 2,
-            explanation: 'Subject-to is a creative way to acquire property with existing financing — no bank approval needed, but the seller remains liable on the mortgage.',
-          },
-          {
-            question: 'The primary risk of a Subject-To purchase is:',
-            options: ['The seller could change the locks', 'The lender could invoke the due-on-sale clause and demand full payoff', 'Title cannot be transferred', 'The interest rate increases automatically'],
+            question: 'A seller owns a free-and-clear rental property and is concerned about the large capital gains tax they\'ll owe on a traditional sale. Which creative financing approach might best serve their needs?',
+            options: ['A subject-to transaction where the investor takes over the existing mortgage', 'Seller financing — the seller acts as the lender, spreads the capital gains over years, and receives monthly income', 'A short sale where the seller accepts less than market value', 'A 1031 exchange where the seller rolls proceeds into a new property'],
             correctIndex: 1,
-            explanation: 'The due-on-sale clause technically gives lenders the right to demand full payoff on sale — in practice, lenders rarely exercise this if payments remain current.',
+            explanation: 'A free-and-clear property is the perfect candidate for seller financing. The seller has no mortgage to pay off, so they can carry the note directly. They receive monthly payments (like an annuity), spread the capital gains tax over years through installment sale treatment, and often command a higher sale price for providing the financing.',
           },
           {
-            question: 'A lease option gives the buyer:',
-            options: ['Ownership immediately upon signing', 'A long-term land lease with an option to build', 'Control of the asset with a right to purchase at a set price within a set timeframe', 'A government-backed purchase option'],
-            correctIndex: 2,
-            explanation: 'Lease options let investors control and test an asset before committing to full purchase — the option fee is the price of that flexibility.',
+            question: 'What is the primary legal risk associated with subject-to transactions?',
+            options: ['The buyer assumes personal liability for the seller\'s existing mortgage', 'The due-on-sale clause — the existing lender can demand full repayment if the property is transferred without their consent', 'Subject-to transactions are illegal in most states', 'The seller\'s credit is damaged when the property is transferred'],
+            correctIndex: 1,
+            explanation: 'Most conventional mortgages include a due-on-sale clause: if the property is sold or transferred without the lender\'s consent, the full loan balance becomes immediately due. Subject-to transactions technically trigger this clause. Most lenders don\'t discover or enforce it if payments continue, but the risk exists and must be disclosed and understood.',
+          },
+          {
+            question: 'Which seller situation most strongly indicates an opportunity for a creative financing deal?',
+            options: ['A seller who has just listed on the MLS at market price', 'A seller facing foreclosure who needs immediate debt relief', 'A seller who is relocating and has 90 days before they need to be out', 'A seller who recently refinanced and has substantial equity but no urgency'],
+            correctIndex: 1,
+            explanation: 'A seller in foreclosure faces a deadline, wants relief from their debt obligation, and is typically willing to accept a below-market price or creative structure to avoid the credit damage of a completed foreclosure. Their urgency creates negotiating flexibility that an on-market, non-distressed seller doesn\'t have.',
           },
         ],
       },
       {
         title: 'Seller Financing & Wraps',
         duration: '22 min',
-        content: `Seller financing is one of the most powerful tools in real estate. When a seller doesn't need all their proceeds immediately, they become the bank.\n\n**Seller Financing Basics**\nInstead of cashing out at closing, the seller accepts a promissory note and deed of trust (or mortgage) from the buyer. The buyer makes monthly payments directly to the seller.\n\nBenefits for sellers:\n- Spread capital gains over time (installment sale reporting)\n- Generate ongoing income stream\n- Often achieve higher price than cash sale\n- Avoid tax in the year of sale on proceeds received in future years\n\nBenefits for buyers:\n- Potentially lower down payment\n- Faster closing (no bank underwriting)\n- More flexible terms\n- Access to properties conventional lenders won't finance\n\n**Wrap-Around Mortgages**\nA wrap is a seller finance structure where the existing mortgage is embedded within the new larger note:\n\nExample:\n- Existing mortgage: $150,000 at 4%\n- Wrap note: $250,000 at 7%\n- Seller's spread: receives 7% on $250K, pays 4% on $150K\n- Buyer's effective leverage: borrowed at 7% with only $100K new capital at risk for seller\n\n**Documentation Requirements**\nSeller financing must be properly documented:\n- Promissory note with full terms\n- Deed of trust or mortgage as security\n- Loan servicing company (not DIY) for payment collection and records\n- Title insurance\n- Dodd-Frank compliance (SAFE Act if seller does >3 seller-financed deals/year)`,
+        content: `Seller financing is one of the most powerful and versatile tools in creative real estate. When structured correctly, it creates a win-win — the buyer acquires property without bank approval, and the seller receives income, tax benefits, and often a higher price.
+
+**Seller Financing Basics**
+
+In seller financing, the seller extends credit to the buyer — effectively acting as the bank. The buyer makes monthly payments to the seller (or a loan servicer) per the terms of a promissory note, secured by a mortgage or deed of trust.
+
+**Key documents:**
+- **Promissory note:** The buyer's written promise to repay the loan. Specifies amount, rate, term, payment schedule, and default terms.
+- **Mortgage or deed of trust:** The security instrument — gives the seller the right to foreclose if the buyer defaults.
+- **Purchase agreement:** The underlying purchase contract for the property.
+
+**Typical seller financing terms:**
+- **Interest rate:** Usually 6-10% — higher than conventional because the seller bears the risk
+- **Term:** 15-30 years, often with a 5-7 year balloon (full payment due at end of balloon period)
+- **Down payment:** Negotiated — can be as low as 5-10% or no down payment for motivated sellers
+- **Amortization:** Can be fully amortizing (principal + interest) or interest-only
+
+**The Balloon Payment**
+
+Most seller-financed notes include a balloon — the full remaining balance is due after a set period (often 3-7 years). The buyer's plan:
+1. Buy using seller financing
+2. Improve the property and/or build credit/income during the balloon period
+3. Refinance with conventional financing before the balloon is due
+
+Buyers who don't plan for the balloon carefully risk losing the property. Always have a clear refinance exit strategy.
+
+**Installment Sale Tax Treatment**
+
+For sellers, spreading the gain over the life of the note rather than recognizing it all in the year of sale is a major tax benefit. The seller reports capital gains proportionally as payments are received — potentially over 10-30 years.
+
+Consult a tax advisor to confirm eligibility and structure the installment sale correctly.
+
+**Wraparound Mortgages**
+
+A wrap is a form of seller financing where the seller has an existing mortgage. Instead of paying off the existing mortgage at closing, the seller wraps a new, larger mortgage around it.
+
+**How it works:**
+- Seller's existing mortgage: $150,000 at 4% interest
+- New wraparound mortgage to buyer: $220,000 at 7% interest
+- Seller collects $220,000 worth of payments from buyer
+- Seller continues paying their $150,000 mortgage from those proceeds
+- Seller pockets the spread: interest on $220,000 at 7% minus interest on $150,000 at 4%
+
+**The seller earns income in two ways:**
+1. The spread between the buyer's interest rate and the existing mortgage rate
+2. The equity spread between the new note amount and the existing mortgage balance
+
+**Due-on-sale risk:** Wraps involve the same due-on-sale risk as subject-to transactions — the underlying lender can technically call the loan. This must be disclosed to and accepted by all parties, with a clear mitigation plan.
+
+**Using a Loan Servicer**
+
+Always use a professional loan servicer for seller-financed notes. The servicer:
+- Collects payments from the buyer
+- Disburses proceeds to the seller (and underlying lender, for wraps)
+- Maintains payment records
+- Issues year-end tax documents (Form 1098/1099)
+- Manages escrow for taxes and insurance (if applicable)
+
+A servicer creates a professional paper trail and reduces friction between buyer and seller. Cost: $25-75/month.`,
         keyPoints: [
-          'Seller finance: installment sale spreads capital gains over time',
-          'Wrap-around mortgage: seller keeps existing mortgage, creates new larger note',
-          'Always use a professional loan servicer — don\'t collect payments directly',
-          'Dodd-Frank limits seller financing to 3 deals/year without MLO licensing',
+          'Seller financing requires three documents: promissory note, mortgage/deed of trust, and purchase agreement — always use an attorney.',
+          'Balloon payments (typically 3-7 years) require the buyer to refinance — always have a clear conventional refinance exit plan.',
+          'Installment sale treatment allows the seller to spread capital gains over the life of the note rather than recognizing all gains in the year of sale.',
+          'A wraparound mortgage wraps a new, larger note around the seller\'s existing mortgage — the seller profits from the interest rate and equity spread.',
+          'Always use a professional loan servicer — it creates a paper trail, manages disbursements, and reduces buyer-seller friction.',
         ],
         quiz: [
           {
-            question: 'What is the primary tax benefit of seller financing for the seller?',
-            options: ['Eliminates all capital gains taxes', 'Spreads capital gains over time via installment sale reporting', 'Creates a tax deduction for the seller', 'Avoids depreciation recapture entirely'],
+            question: 'A buyer purchases a property with seller financing featuring a 5-year balloon payment. What must the buyer ensure before the 5-year period expires?',
+            options: ['Verification that the seller has paid off their own mortgage', 'A refinance with conventional financing to pay off the balloon balance before it comes due', 'Renewal of the seller financing terms for another 5-year period', 'Completion of all planned renovations to the property'],
             correctIndex: 1,
-            explanation: 'Installment sales report gain only as principal is received — a powerful tax deferral strategy for sellers with significant appreciation.',
+            explanation: 'A balloon payment means the full remaining loan balance is due at the end of the balloon period. If the buyer can\'t refinance or doesn\'t have the cash, they face default and potential foreclosure. Planning for this exit — building credit, improving the property, ensuring qualifiable income — starts on day one.',
           },
           {
-            question: 'In a wrap-around mortgage, the seller:',
-            options: ['Pays off the existing mortgage first', 'Receives interest at a higher rate and continues paying the original mortgage at its lower rate', 'Transfers the mortgage to the buyer directly', 'Requires the buyer to refinance immediately'],
+            question: 'In a wraparound mortgage, how does the seller profit beyond the difference between the sale price and the original purchase price?',
+            options: ['The seller receives all of the buyer\'s down payment as immediate profit', 'The seller earns a spread between the interest rate on the new wrap note and the rate on the underlying mortgage', 'The seller collects the buyer\'s property taxes as additional income', 'The seller profits from the buyer\'s payments but is no longer responsible for the underlying mortgage'],
             correctIndex: 1,
-            explanation: 'The spread between the wrap rate and the underlying mortgage rate is the seller\'s profit — they arbitrage their own cheap financing.',
+            explanation: 'The wrap earns income in two ways: (1) the equity spread (difference between what\'s owed on the original mortgage and the new note amount), and (2) the interest rate spread (the seller charges the buyer a higher rate than they pay on the underlying mortgage). On a $150,000 underlying mortgage at 4% and a $220,000 wrap note at 7%, the interest spread alone generates significant monthly income.',
           },
           {
-            question: 'Dodd-Frank limits seller financing without MLO licensing to:',
-            options: ['1 transaction per year', '3 transactions per year', '5 transactions per year', '10 transactions per year'],
+            question: 'What is the primary function of a loan servicer in a seller financing arrangement?',
+            options: ['To guarantee the buyer\'s payments in case of default', 'To collect payments, maintain records, disburse proceeds, and issue tax documents — creating a professional paper trail', 'To conduct annual property inspections on behalf of the seller', 'To negotiate the interest rate on behalf of both parties'],
             correctIndex: 1,
-            explanation: 'Sellers who do more than 3 seller-financed deals per year are considered mortgage originators under Dodd-Frank and must be licensed.',
+            explanation: 'A loan servicer professionalizes the seller financing relationship — ensuring payments are tracked, disbursements are documented, and both parties have clean records for tax purposes. Without a servicer, informal payment arrangements between buyer and seller create disputes, tax complications, and potential fraud risk.',
           },
         ],
       },
       {
         title: 'Joint Ventures',
         duration: '18 min',
-        content: `A joint venture (JV) allows investors to pool resources — money, expertise, relationships, or time — to complete deals that neither could accomplish alone.\n\n**Common JV Structures**\n\n**Money Partner + Operator**\nMost common structure:\n- Money partner: provides capital, passive role\n- Operator: finds deals, manages rehab/operations, active role\n- Typical split: 50/50 or 60/40 (operator gets more) after capital return\n\n**Preferred Return + Split**\nMoney partner receives a preferred return first (8-10% on invested capital annually), then remaining profits split with operator.\n\nExample:\n- Investment: $200,000\n- Preferred return (8%): $16,000/year\n- Year 1 profits: $30,000\n- Preferred return paid: $16,000\n- Remaining profit ($14,000) split 50/50: $7,000 each\n\n**Documentation — Never Skip This**\nEvery JV needs a proper Operating Agreement:\n- Ownership percentages\n- Decision-making authority\n- Capital contribution requirements\n- Waterfall (order of distributions)\n- Exit provisions (what if one partner wants out?)\n- Deadlock resolution\n\n**JV Partner Vetting**\nMoney is easy to lose with the wrong partner. Before entering a JV:\n- Check references (talk to people they've done deals with)\n- Review their financial statements\n- Start small before scaling\n- Make sure exit provisions are favorable in case of disagreement`,
+        content: `Joint ventures are how investors scale faster than their own capital allows. Every investor eventually hits the ceiling of what they can do alone — JVs break through that ceiling by combining complementary resources. The right JV structure creates exponential growth; the wrong one destroys relationships and deals.
+
+**The Two Roles in Every JV**
+
+**Operating Partner (Sponsor):**
+- Finds the deal
+- Manages due diligence
+- Coordinates financing
+- Oversees renovation and management
+- Makes day-to-day decisions
+- Contributes time, expertise, and deal flow
+- Typically contributes less or no capital
+
+**Money Partner (Capital Partner):**
+- Provides funding — down payment, renovation budget, or full acquisition
+- Typically passive — not involved in day-to-day operations
+- Expects a return on their invested capital
+- Bears the primary financial risk
+
+The deal is the bridge: the operating partner has the expertise and deal access the money partner lacks; the money partner has the capital the operator needs.
+
+**JV Structures and Splits**
+
+There's no universal split — it depends on what each party contributes. Common structures:
+
+**50/50 Split:**
+Both parties contribute equally in some dimension — equal capital and equal work, or the deal is balanced enough to justify equal profit share. Simple and clear.
+
+**70/30 or 80/20 (Money Partner Heavy):**
+Money partner provides most or all of the capital. Operating partner does all the work. Money partner receives the larger share (70-80%) as return on capital; operator gets 20-30% as compensation for expertise and effort.
+
+**Preferred Return:**
+Money partner receives a preferred return (e.g., 8% annually) before profits are split. After the pref is paid, remaining profits split per the agreed ratio.
+
+Example: $200,000 invested, 8% pref = $16,000/year guaranteed to money partner before any split occurs.
+
+**Equity on Refinance / Sale:**
+Operator may receive an 'equity kicker' at refinance or sale — a larger share of the gain at exit than during the hold period.
+
+**The JV Agreement — Non-Negotiable**
+
+Every JV must have a written agreement — a JV Agreement or Operating Agreement (if structured as an LLC). It must address:
+
+- **Capital contributions:** Who invests what, when
+- **Ownership percentages**
+- **Decision-making authority:** Who controls what decisions? Does the money partner have veto rights?
+- **Cash flow distribution:** How often? In what order?
+- **Exit provisions:** What happens when one partner wants out? Right of first refusal, forced sale clauses
+- **Default provisions:** What happens if one party fails to meet their obligations?
+- **Dispute resolution:** Mediation, arbitration, jurisdiction
+
+Never do a JV on a handshake. The relationship seems solid before the deal — disputes arise during the deal. Documentation protects everyone.
+
+**Finding JV Partners**
+
+- Real estate investor networks (REIAs, BiggerPockets)
+- Professional networks (attorneys, accountants, other investors)
+- High-income professionals who want real estate exposure but lack time (doctors, dentists, executives)
+- Family office investors and private wealth managers
+- Prior clients and colleagues who have capital and trust you
+
+Your track record is your pitch. Before approaching capital partners, have at least one completed deal to show — results speak louder than presentations.`,
         keyPoints: [
-          'JV: money partner + operator split profits after capital return',
-          'Preferred return (8-10%) is paid first, then remaining profits split',
-          'Operating Agreement is mandatory — never proceed without one',
-          'Vet partners through references and start small before scaling',
+          'Every JV has two roles: the operating partner (expertise and deal flow) and the money partner (capital) — the structure must fairly compensate both.',
+          'A preferred return gives the money partner a guaranteed yield before any profit split — typically 6-10% annually.',
+          'JV splits are negotiated — 50/50, 70/30, and preferred return structures are all common depending on what each party contributes.',
+          'Every JV requires a written agreement covering contributions, ownership, decision-making, distributions, exit provisions, and dispute resolution.',
+          'Your track record is your pitch to capital partners — completed deals are more persuasive than projections.',
         ],
         quiz: [
           {
-            question: 'What does a "preferred return" mean in a joint venture?',
-            options: ['The money partner gets to choose the property', 'The money partner receives a set return first before profits are split with the operator', 'The operator earns a higher percentage than normal', 'Profits are paid monthly regardless of performance'],
+            question: 'In a JV deal, who is typically the \'operating partner\'?',
+            options: ['The investor who provides the majority of the capital for the acquisition', 'The investor who finds the deal, manages due diligence, oversees renovation, and handles day-to-day operations', 'The licensed real estate agent who represented the transaction', 'The property manager hired to manage the asset after acquisition'],
             correctIndex: 1,
-            explanation: 'A preferred return (8–10%) protects the passive capital partner by ensuring they\'re made whole before profits are shared.',
+            explanation: 'The operating partner (sponsor) contributes expertise, time, and deal flow. They run the deal — from finding it to managing it. The money partner contributes capital. The JV structure compensates each partner for their specific contribution.',
           },
           {
-            question: 'Why is an Operating Agreement critical in a JV?',
-            options: ['Required by banks for financing', 'It defines ownership, decision-making, capital requirements, waterfall, and exit provisions', 'It replaces the need for title insurance', 'It enforces verbal agreements'],
+            question: 'A money partner invests $300,000 with an 8% preferred return. What must be paid to the money partner before any profit split occurs?',
+            options: ['$8,000 annually', '$24,000 annually', '$300,000 at exit', '$30,000 annually'],
             correctIndex: 1,
-            explanation: 'Partnerships fail when expectations aren\'t written down — the Operating Agreement prevents disputes before they start.',
+            explanation: 'Preferred return = Investment × Pref Rate = $300,000 × 8% = $24,000/year. This is paid to the money partner before any profits are split with the operating partner. It functions like a guaranteed minimum return and reduces the money partner\'s risk.',
           },
           {
-            question: 'How should you vet a JV partner before investing?',
-            options: ['Ask about their experience only', 'Check references, review financial capacity, start small before scaling', 'Require their credit score only', 'JV partners cannot be effectively vetted in advance'],
+            question: 'What is the most important provision to include in a JV agreement to protect both parties if the relationship breaks down?',
+            options: ['A clause requiring both partners to live within 50 miles of the subject property', 'Exit provisions — including right of first refusal and forced sale clauses — that define how a partner can exit and how the deal resolves', 'A requirement that all profits be reinvested into the next deal', 'A provision requiring monthly meetings between all JV partners'],
             correctIndex: 1,
-            explanation: 'The cost of a bad partner is not just financial — disputes can tie up assets in litigation for years. References and a small test deal are essential.',
+            explanation: 'Deals change — timelines extend, disagreements arise, life happens. Exit provisions define what happens when one partner wants out: Can they sell their share? To whom? At what price? Does the other partner have the right to buy first? A forced sale clause (buy-sell or \'shotgun\' clause) can resolve deadlocks by allowing one partner to name a price and require the other to either buy at that price or sell at that price. Without exit provisions, disputes can become expensive and protracted.',
           },
         ],
       },
       {
         title: 'Real Estate Syndication',
         duration: '26 min',
-        content: `Syndication is the process of pooling capital from multiple investors to acquire a larger asset than any one investor could fund alone. It's how institutional-scale deals are done in the private market.\n\n**Syndication Structure**\n- **Sponsor (GP)**: Finds deal, raises capital, manages the asset\n- **Limited Partners (LPs)**: Passive investors who provide capital\n- **Entity**: Typically an LLC or LP through which the deal is held\n\n**The Capital Stack**\n- Senior debt (bank): First position, lowest risk, lowest return (5-8%)\n- Mezzanine debt: Second position, higher risk, higher return (10-14%)\n- Preferred equity: Gets paid before common equity (8-12% preferred)\n- Common equity (GP + LP): Highest risk, highest upside\n\n**SEC Regulation**\nSyndications involve offering securities and are regulated by the SEC:\n- **Reg D 506(b)**: Up to 35 non-accredited investors, no advertising, 506 relationships\n- **Reg D 506(c)**: Accredited investors only, public advertising allowed\n- **Reg A+**: Lower capital raise with more disclosure, can include non-accredited\n\n**Typical Syndication Economics**\n- Sponsor fee: 1-2% of purchase price\n- Asset management fee: 1-2% of gross revenues annually\n- Acquisition fee at close\n- Promote: 20-30% of profits above preferred return\n\n**The Waterfall**\nOrder of distributions:\n1. Return of LP capital\n2. Preferred return to LPs (6-8%)\n3. Catch-up to GP (if applicable)\n4. Remaining profits split 70/30 or 80/20 (LP/GP)`,
+        content: `Real estate syndication is how individual investors access deals too large to do alone — and how sponsors raise capital to build portfolios at scale. A syndication pools money from multiple investors (limited partners) managed by a lead sponsor (general partner) to acquire, operate, and eventually sell a large asset.
+
+**The Syndication Structure**
+
+**General Partner (GP) / Sponsor:**
+- Finds and analyzes the deal
+- Arranges financing
+- Manages the asset and asset manager relationship
+- Makes operational decisions
+- Typically invests little or no capital (or a small co-investment)
+- Earns: acquisition fee, asset management fee, promote/carried interest at exit
+
+**Limited Partners (LPs) / Investors:**
+- Provide the equity capital for the deal
+- Passive — no operational role
+- Receive: preferred return + share of profits at exit
+- Risk: loss of invested capital (limited to their investment — no personal liability)
+
+**The entity:** Most syndications are structured as an LLC or LP (limited partnership). The investors hold membership interests or limited partnership units.
+
+**How the Returns Work**
+
+**Example — 100-unit apartment complex:**
+- Purchase: $12,000,000
+- Debt (70% LTV): $8,400,000
+- Equity required: $3,600,000
+- GP co-invest: $180,000 (5%)
+- LP equity: $3,420,000
+
+**During the hold (5-year business plan):**
+- 8% preferred return to LPs: $273,600/year
+- Remaining cash flow split: 70% LP / 30% GP
+
+**At exit (Year 5 sale):**
+- Sale price: $17,000,000
+- Return of LP capital: $3,420,000
+- Remaining profit split: 70% LP / 30% GP
+- LP total return: $3,420,000 + preferred return distributions + 70% of profit
+- GP profit: acquisition fee + asset mgmt fees (during hold) + 30% of profit at exit
+
+**Securities Law — The Critical Compliance Issue**
+
+Syndications involve selling securities — interests in an entity to investors. This is regulated by the SEC under federal securities law. Most syndicators rely on Regulation D exemptions:
+
+**Rule 506(b):** Raise from up to 35 non-accredited investors and unlimited accredited investors. Cannot use general solicitation (advertising). Most common for smaller operators with existing networks.
+
+**Rule 506(c):** Raise from accredited investors only. Can use general solicitation (advertising, social media, etc.). Must verify accredited status.
+
+**Accredited Investor definition:** Net worth over $1M (excluding primary residence) OR income over $200K/year ($300K joint) for the last 2 years with expectation of continuing.
+
+**The PPM:** Private Placement Memorandum — the disclosure document that describes the deal, risks, and terms to potential investors. Written by a securities attorney. Non-negotiable for any legitimate syndication.
+
+**Critical:** Raising money from investors without proper securities compliance can result in SEC enforcement, criminal charges, and personal liability. Always engage a securities attorney before raising a single dollar from investors.
+
+**The GP's Economics**
+
+**Acquisition fee:** 1-3% of purchase price, paid at closing
+**Asset management fee:** 1-2% of revenue annually (ongoing)
+**Disposition fee:** 1-2% of sale price at exit
+**Promote/carried interest:** GP's share of profits above the preferred return — typically 20-30%
+
+On a $12M acquisition, the GP earns $120,000-$360,000 in acquisition fees alone — before any share of profits.`,
         keyPoints: [
-          'GP manages, LP invests passively — GP earns fees + promote',
-          'SEC Reg D 506(c) allows advertising but only to accredited investors',
-          'Waterfall: LP capital return → preferred return → remaining split',
-          'Sponsor earns 1-2% acquisition fee + ongoing asset management fee',
+          'Syndications pool capital from multiple LPs (passive investors) managed by a GP (sponsor) — each party has distinct roles, rights, and economics.',
+          'LPs receive a preferred return (typically 8%) plus a share of profits; GPs earn fees and a promote (carry) at exit.',
+          'Syndications involve selling securities — Regulation D compliance, a securities attorney, and a PPM are non-negotiable.',
+          'Rule 506(b) allows up to 35 non-accredited investors with no general solicitation; Rule 506(c) allows advertising but only to verified accredited investors.',
+          'The GP\'s economics include acquisition fees, asset management fees, disposition fees, and a carried interest — often generating significant income independent of the deal\'s investment returns.',
         ],
         quiz: [
           {
-            question: 'In a syndication, who is the General Partner (GP)?',
-            options: ['The passive investor who provides capital', 'A government licensing body', 'The sponsor who finds deals, raises capital, and manages the asset', 'The senior lender'],
-            correctIndex: 2,
-            explanation: 'The GP drives the deal — they earn acquisition fees, asset management fees, and a promote (share of profits) for their active role.',
+            question: 'In a syndication, what is the role of a Limited Partner (LP)?',
+            options: ['The lead sponsor who finds the deal and manages the asset', 'A passive capital investor who provides equity, receives returns, but has no operational decision-making role', 'The property manager responsible for day-to-day operations', 'The lender providing the senior debt on the acquisition'],
+            correctIndex: 1,
+            explanation: 'Limited partners provide the equity capital for the deal and receive returns (preferred return + profit share) but take no active role in operations. Their liability is limited to their investment — they cannot be personally liable beyond what they invested, which is why the structure is called a limited partnership.',
           },
           {
-            question: 'SEC Regulation D 506(c) allows:',
-            options: ['Non-accredited investors to participate with full disclosure', 'Public advertising of the offering but only accredited investors may invest', 'Unlimited investors without SEC registration', 'Syndications under $5M without any SEC filings'],
+            question: 'Under Regulation D Rule 506(c), what is the key difference from Rule 506(b)?',
+            options: ['506(c) allows up to 100 non-accredited investors; 506(b) allows only 35', '506(c) allows general solicitation (advertising) but requires ALL investors to be verified accredited investors', '506(c) is available only to real estate investment trusts (REITs)', '506(c) requires SEC registration; 506(b) is a private exemption'],
             correctIndex: 1,
-            explanation: '506(c) is the modern fundraising tool — social media and advertising are permitted, but investor verification is required for all participants.',
+            explanation: 'The key trade-off: 506(c) allows sponsors to advertise and publicly solicit investors (social media, conferences, podcasts) — but ALL investors must be verified accredited investors. 506(b) prohibits advertising but allows up to 35 non-accredited investors alongside unlimited accredited investors.',
           },
           {
-            question: 'What is the "waterfall" in a real estate syndication?',
-            options: ['The construction schedule', 'The order in which profits are distributed: LP capital return → preferred return → remaining split', 'The minimum investment threshold', 'The process of reporting to the SEC'],
+            question: 'What is the \'promote\' or \'carried interest\' in a syndication?',
+            options: ['The marketing fee paid to promote the deal to potential investors', 'The GP\'s disproportionate share of profits above the preferred return — typically 20-30% of deal profits', 'The interest rate charged on the senior debt for the acquisition', 'The preferred return percentage guaranteed to limited partners'],
             correctIndex: 1,
-            explanation: 'The waterfall determines who gets paid in what order — LPs are protected first, then the GP earns their promote on remaining upside.',
+            explanation: 'The promote (or carry) is the GP\'s economic incentive — they receive a disproportionate share of profits above the preferred return, even though they contribute little or no capital. On a deal with 70/30 split after an 8% pref, the GP gets 30% of profits while contributing 5% of equity. This aligns the GP\'s incentive with investor returns — the GP only earns the promote if the deal performs.',
           },
         ],
       },
       {
         title: 'Distressed Asset Acquisition',
         duration: '20 min',
-        content: `Distressed assets — foreclosures, REOs, short sales, and bankruptcy estates — offer significant discount opportunities, but with higher complexity and risk.\n\n**Types of Distressed Assets**\n\n**Pre-Foreclosure**\nThe owner is behind on payments but hasn't lost the property yet. Approach directly with a solution: cash purchase, subject-to acquisition, or short sale facilitation.\n\n**Short Sales**\nSeller owes more than the property is worth. Requires lender approval to accept less than full payoff. Process:\n1. Buyer makes offer subject to lender approval\n2. Seller's agent submits short sale package (hardship letter, financials, HUD-1 estimate)\n3. Lender BPO (Broker Price Opinion) determines acceptable price\n4. Lender approval typically takes 30-120 days\n\n**REO (Real Estate Owned)**\nProperties the bank has already foreclosed on. Listed through asset management companies. Banks want to sell quickly — be a clean, fast offer. Sold "as-is"; no seller disclosures.\n\n**Tax Deed Sales**\nCounties sell properties to recoup unpaid taxes. Buyers purchase the tax deed, which may not convey clear title — title insurance is often unavailable. Research liens, litigation, and property access before bidding.\n\n**Due Diligence for Distressed**\nDistressed properties require deeper diligence:\n- Title search for all liens (mortgage, mechanic's lien, judgment, tax)\n- Environmental assessment\n- Physical inspection (often limited or denied pre-purchase)\n- Estimated rehab budget with 30% contingency\n- Holding cost calculation during renovation and sale period`,
+        content: `Distressed assets are the greatest source of below-market pricing in real estate. Understanding how to find them, evaluate them quickly, and close on them confidently is a core skill for investors who want consistent deal flow at attractive prices.
+
+**What Makes a Property Distressed?**
+
+Distress comes in two forms:
+
+**Financial distress:** The owner can no longer service the debt — missed payments, impending foreclosure, or underwater on the mortgage.
+
+**Physical distress:** The property is in poor condition — deferred maintenance, vacancy, fire damage, flood damage, or code violations.
+
+The best distressed deals combine both: a financially distressed owner of a physically distressed property who needs to exit quickly.
+
+**The Foreclosure Spectrum**
+
+**Pre-foreclosure:**
+The owner has missed payments and received a Notice of Default (NOD) but foreclosure hasn't been completed. The owner is in distress but still has options. Opportunities:
+- Negotiate a direct purchase with the owner (subject-to or seller financing)
+- Buy the property conventionally at a discount before auction
+- Help the owner avoid foreclosure while acquiring the asset
+
+**Foreclosure auction:**
+- Properties sold at the courthouse steps to the highest bidder
+- No financing contingencies — must close with cash or within 24-48 hours
+- No inspection access prior to auction — bidder takes the property as-is
+- Starting bid is typically the unpaid mortgage balance plus fees
+- Highest risk / highest potential discount
+- Requires significant due diligence: title search, drive-by assessment, lien research before bidding
+
+**REO (Real Estate Owned):**
+- Property the bank acquired through completed foreclosure
+- Accessible through the MLS or direct bank/servicer outreach
+- Standard closing process with inspection and financing contingencies
+- Less discount than auction but far less risk
+- Banks want to move REO quickly — they're not in the landlord business
+
+**Short Sales**
+
+A short sale occurs when the bank agrees to accept less than the full outstanding mortgage balance to facilitate a sale.
+
+**Short sale timeline:**
+- Buyer makes offer on property
+- Seller submits hardship package to lender (financial statements, hardship letter)
+- Lender reviews and orders BPO (Broker Price Opinion)
+- Lender approves, counters, or rejects the proposed sale price
+- Process typically takes 60-120 days from offer to approval
+
+**Short sale negotiation:**
+The bank's primary concern is minimizing loss. Your job: demonstrate that the proposed sale price represents maximum recovery — better than what the bank would net through a completed foreclosure.
+
+**Due Diligence on Distressed Properties**
+
+**Title:** Distressed properties often have multiple liens — second mortgages, mechanic's liens, tax liens, HOA liens, judgment liens. A thorough title search and title insurance are essential.
+
+**Physical condition:** Assess as thoroughly as possible before closing. Distressed properties often have deferred maintenance, code violations, unpermitted work, and hidden damage (mold, structural issues, roof damage).
+
+**Rehab estimate:** Get a contractor walkthrough before closing if at all possible. Budget a 20-25% contingency — distressed properties always have surprises.
+
+**Occupied properties:** Foreclosures are sometimes still occupied by the prior owner or tenants. Understand the eviction process and timeline in your market before closing on an occupied distressed property.`,
         keyPoints: [
-          'Pre-foreclosure: approach owner directly with cash or subject-to solution',
-          'Short sales: 30-120 day lender approval timeline — patience required',
-          'REO: sold as-is, no disclosures — factor unknown defects into price',
-          'Tax deed: research all liens first — title insurance may be unavailable',
+          'The best distressed deals combine financial and physical distress — motivated sellers of deteriorated properties offer the deepest discounts.',
+          'Foreclosure auctions offer the highest potential discount but require cash, no contingencies, and accept properties as-is — highest risk channel.',
+          'REO (bank-owned post-foreclosure) properties offer a standard closing process with contingencies — less discount but far lower risk.',
+          'Short sales require bank approval of a below-market sale — the process typically takes 60-120 days and requires demonstrating the proposed price exceeds foreclosure recovery.',
+          'Title research is critical on distressed acquisitions — multiple liens (tax, mechanic\'s, HOA, judgment) can attach to the property and must be resolved.',
         ],
         quiz: [
           {
-            question: 'In a short sale, what determines the acceptable sale price?',
-            options: ['The buyer\'s offer alone', 'The seller\'s remaining mortgage balance', 'A Broker Price Opinion (BPO) commissioned by the lender', 'The county tax assessment'],
-            correctIndex: 2,
-            explanation: 'The lender orders a BPO to establish minimum acceptable proceeds — the BPO value is the floor, and negotiating below it requires a hardship justification.',
-          },
-          {
-            question: 'REO (bank-owned) properties are sold:',
-            options: ['With full seller disclosures and warranties', 'As-is, with no seller disclosures, by the foreclosing bank', 'Through normal MLS with buyer contingencies', 'Only to investors with cash'],
+            question: 'What is the primary risk of purchasing a property at a foreclosure auction?',
+            options: ['Auction properties are always priced above market value due to competitive bidding', 'No inspection access, no financing contingencies, no title guarantee — the buyer purchases as-is with limited due diligence', 'All auction properties require a 20% down payment regardless of the investor\'s financing', 'Auction buyers are personally liable for the prior owner\'s tax debt'],
             correctIndex: 1,
-            explanation: 'Banks have never occupied the property and disclaim all knowledge — as-is pricing must reflect unknown defects.',
+            explanation: 'Foreclosure auction is the highest-risk acquisition channel. Buyers can\'t inspect the interior, can\'t finance through traditional lenders, and may inherit liens and title issues the prior search didn\'t catch. The potential discount compensates for this risk — but only for experienced investors with strong due diligence skills and cash reserves.',
           },
           {
-            question: 'Tax deed sales present what key risk?',
-            options: ['Properties cannot be renovated', 'Zoning restrictions apply', 'Title may not be clear and title insurance is often unavailable', 'Properties must be owner-occupied'],
-            correctIndex: 2,
-            explanation: 'A tax deed conveys the right to the property but not necessarily clear title — other liens may remain and title insurance companies often won\'t insure them.',
+            question: 'In a short sale, who must approve the sale price for the transaction to proceed?',
+            options: ['The local housing authority must approve all short sales', 'The lender (bank) — they must agree to accept less than the full outstanding mortgage balance', 'The original seller who purchased the property from the builder', 'The title company — they insure the transaction and must approve the discount'],
+            correctIndex: 1,
+            explanation: 'A short sale requires the lender\'s approval because they\'re agreeing to take a loss — accepting less than what they\'re owed. The seller technically owns the property but the lender has the ultimate authority over whether the sale can proceed at the proposed price.',
+          },
+          {
+            question: 'Why is a title search particularly critical when acquiring distressed properties?',
+            options: ['Distressed properties are exempt from standard title insurance requirements', 'Distressed properties frequently have multiple liens — tax, mechanic\'s, HOA, judgment — that can survive the sale and attach to the new owner', 'Title searches take longer on distressed properties due to complex ownership histories', 'Lenders require additional title searches on distressed properties before approving financing'],
+            correctIndex: 1,
+            explanation: 'Financially distressed owners typically have multiple creditors. Tax liens, contractor mechanic\'s liens, HOA assessments, and court judgments can all attach to the property. Some liens survive the sale — meaning the buyer inherits them. A thorough title search identifies every lien before closing, and title insurance protects against undiscovered liens after closing.',
           },
         ],
       },
       {
         title: 'Off-Market Strategies',
         duration: '22 min',
-        content: `Off-market deals are the holy grail for serious investors — no competition, motivated sellers, and the ability to move at your own pace.\n\n**Why Sellers Go Off-Market**\n- Privacy (divorce, financial distress, estate situations)\n- Speed (need to close in days, not months)\n- Condition (property won't pass conventional appraisal)\n- Simplicity (don't want showings, open houses, and negotiations)\n\n**Building Your Off-Market Pipeline**\n\n**Attorney Network**\nEstate attorneys, probate attorneys, and divorce attorneys regularly handle real estate as part of their practice. A referral fee arrangement (buyer pays at closing) creates a steady stream of opportunities.\n\n**Wholesaler Relationships**\nWholesalers are professional deal finders. They tie up properties at a discount and assign the contract to end buyers for a fee ($5,000-$30,000+). Having deep wholesaler relationships means getting first call on deals.\n\n**Cold Outreach — Targeted**\nDirect mail, text, and cold calls to:\n- Absentee owners (owner doesn't live at the property)\n- High-equity owners (low or no mortgage balance)\n- Probate filings (public record)\n- Expired listings (motivated sellers who couldn't sell retail)\n\n**Social Proof and Reputation**\nSuccessful investors become known as reliable, fast buyers. Word travels in real estate circles. Every clean, professional close generates future deal flow. Reputation is your most valuable off-market lead source.\n\n**Direct-to-Seller Offers**\nKnocking on doors or calling property owners directly:\n- "I'm a local investor. I buy properties as-is for cash. Is this something you'd ever consider?"\n- Low batting average (1 in 50+) but no competition\n- Best for driving-for-dollars targets and distressed properties`,
+        content: `Off-market deals are the competitive advantage of the most successful real estate investors. When you find a deal before it's publicly listed, you eliminate competition and create the opportunity to negotiate directly with a motivated seller — without the pressure of competing offers.
+
+**Why Off-Market Deals Are Better**
+
+**No competition:** By definition, if a deal is off-market, you're the only buyer at the table.
+
+**Motivated sellers:** Off-market sellers are usually people who need to sell — not people who are testing the market. Their motivation creates negotiating flexibility.
+
+**More deal structures:** An on-market seller is advised by an agent to take the highest all-cash offer. An off-market seller may prefer seller financing, a lease-option, or other creative structures that serve their specific needs.
+
+**Better prices:** Motivated sellers are less likely to hold out for top dollar — especially if you can offer speed, certainty, and a hassle-free process.
+
+**The Off-Market Outreach Machine**
+
+**Consistency is the key.** Off-market outreach works through volume and persistence — most sellers aren't ready when you first reach out. The deal comes when they become ready, often months or years later.
+
+**Direct mail:**
+The most scalable off-market strategy. Key elements:
+- Targeted list (absentee owners, high equity, probate, pre-foreclosure)
+- Consistent mailing frequency (every 4-6 weeks)
+- Personal, conversational tone — not corporate
+- Clear offer: 'I buy houses as-is, fast close, no fees'
+- Dedicated phone number that's always answered (or always returned within 1 hour)
+
+**Cold outreach (phone and text):**
+Higher conversion than mail because it's real-time conversation. Requires skip-traced contact information. A simple script:
+
+'Hi [Name], my name is [Name]. I'm a real estate investor in [market]. I noticed you own the property at [address] and wanted to reach out to see if you've ever considered selling. I'm not a real estate agent — I'm an investor who buys directly. Is that something you'd be open to talking about?'
+
+**Probate:**
+When someone dies, their property enters the probate process. Heirs often want to liquidate quickly — they're dealing with grief and administration, not shopping for top dollar. Probate records are public — identify them at the courthouse or through a probate attorney relationship.
+
+**Networking with professionals:**
+- Divorce attorneys know clients who need to sell fast
+- Estate attorneys know heirs with property to sell
+- Accountants know clients with tax-motivated sales
+- Property managers know tired landlords ready to exit
+
+A relationship with one divorce attorney can generate more deals per year than a $5,000/month marketing campaign.
+
+**Analyzing Off-Market Deals Quickly**
+
+Off-market deals often require fast decisions. Build your analysis capability to evaluate a deal in 15-20 minutes:
+
+1. Pull recent comps on your phone (Zillow, MLS app)
+2. Estimate ARV from comps
+3. Estimate renovation cost (walk-through or phone estimate from your contractor)
+4. Apply your buying formula: (ARV × 70%) - Rehab = Max Price
+5. Call the seller with an offer
+
+Speed signals seriousness. Sellers who get an offer within 24 hours of first contact are far more likely to accept than sellers who wait 2 weeks for an offer.
+
+**Building Your Off-Market Brand**
+
+Over time, your off-market reputation compounds. Every deal you close creates a referral — the seller tells a neighbor, a family member, or a friend who also needs to sell. The best off-market investors eventually generate most of their deal flow through word-of-mouth from prior sellers.
+
+Protect your reputation in every deal: close when you say you'll close, pay what you agree to pay, and treat every seller with respect — even when you're buying at a significant discount.`,
         keyPoints: [
-          'Build attorney (estate/probate/divorce) referral network for consistent flow',
-          'Wholesalers: be the first call by being reliable and fast',
-          'Target absentee owners, high-equity, and probate filings for direct mail',
-          'Reputation = deal flow: every clean close generates future opportunities',
+          'Off-market deals eliminate competition, surface motivated sellers, and enable creative deal structures unavailable on the open market.',
+          'Consistency in outreach is the key — most off-market sellers aren\'t ready at first contact; the deal comes when they become ready.',
+          'Professional network relationships (divorce attorneys, estate attorneys, accountants, property managers) generate high-quality off-market deal flow.',
+          'Speed is a competitive advantage — sellers who receive an offer within 24 hours are far more likely to engage than those who wait weeks.',
+          'Every closed off-market deal compounds your reputation — word-of-mouth from satisfied sellers becomes your most valuable long-term deal source.',
         ],
         quiz: [
           {
-            question: 'Which attorney network is most valuable for consistent off-market deal flow?',
-            options: ['Real estate transaction attorneys', 'Estate/probate and divorce attorneys who regularly handle real estate', 'Eviction attorneys', 'Patent attorneys'],
+            question: 'What is the primary advantage of pursuing off-market deals over on-market MLS listings?',
+            options: ['Off-market properties are always priced below assessed value', 'No competition — you\'re negotiating directly with a motivated seller without competing offers', 'Off-market sellers are required to accept below-market offers by law', 'Off-market deals close faster because they bypass the MLS system'],
             correctIndex: 1,
-            explanation: 'Estate and divorce attorneys handle distressed real estate situations regularly and can refer deals to reliable investors — build these relationships proactively.',
+            explanation: 'The core advantage is elimination of competition. On the MLS, your offer competes against every other buyer in the market. Off-market, you\'re the only buyer at the table — which gives you time to build rapport, understand the seller\'s needs, and craft a structure that works for both parties.',
           },
           {
-            question: 'For direct mail targeting, which list typically yields the most motivated sellers?',
-            options: ['All homeowners in a zip code', 'Recent home buyers', 'Absentee owners, high-equity holders, probate filings, and expired listings', 'Homeowners who\'ve lived in the home less than 2 years'],
-            correctIndex: 2,
-            explanation: 'These groups have a motivated reason to sell — absentees want passive income, high-equity owners can sell at a discount and still profit, probates need to liquidate.',
+            question: 'Why is the probate process a productive source of off-market deals?',
+            options: ['Probate properties are legally required to be sold below market value', 'Heirs often want to liquidate quickly and with minimal hassle — dealing with an estate, not shopping for top dollar', 'Probate sales bypass normal real estate transaction requirements', 'Probate properties have no existing mortgage, making them easier to finance'],
+            correctIndex: 1,
+            explanation: 'When someone inherits a property, they\'re often dealing with grief, administrative complexity, and family dynamics simultaneously. The priority is resolution — not maximizing the sale price. Investors who can offer a fast, certain, hassle-free close often find willing sellers in probate at attractive prices.',
           },
           {
-            question: 'What is the primary long-term source of off-market deal flow?',
-            options: ['Direct mail campaigns', 'Door knocking', 'Reputation — every clean, professional close generates future deal flow', 'Social media advertising'],
-            correctIndex: 2,
-            explanation: 'In real estate networks, word travels fast — being known as reliable, fast, and fair is the most durable and cost-effective deal source.',
+            question: 'An investor estimates an ARV of $320,000 and renovation costs of $45,000 on a potential acquisition. Using the 70% rule, what is the maximum they should offer?',
+            options: ['$224,000', '$179,000', '$199,000', '$275,000'],
+            correctIndex: 1,
+            explanation: 'Maximum offer = (ARV × 70%) - Renovation = ($320,000 × 0.70) - $45,000 = $224,000 - $45,000 = $179,000.',
           },
         ],
       },
@@ -2859,320 +4722,961 @@ Don't switch for a marginally better split — relationships and reputation take
   // ─────────────────────────────────────────────────────────────────────────
   {
     id: 'underwriting',
-    title: 'Underwriting & Processing',
-    description: 'Master loan file analysis, AUS, income/asset/credit review, compliance, and fraud detection for residential and commercial loans.',
-    icon: 'documents-outline',
-    color: '#2E86AB',
-    tiers: ['lending', 'elite'],
+    title: 'Processing & Underwriting',
+    description: 'The complete professional curriculum for mortgage processors, underwriters, and compliance specialists. Master loan file review, automated underwriting systems, income and asset analysis, appraisal review, compliance frameworks, and fraud detection.',
+    icon: 'document-text-outline',
+    color: '#607D8B',
+    tiers: ['lending', 'elite', 'all-access'],
     creditHours: 14,
     lessons: [
       {
         title: 'Loan File Review & Documentation',
         duration: '20 min',
-        content: `The loan file is the foundation of every mortgage transaction. As an underwriter or processor, your job is to collect, organize, and analyze a complete file before it moves forward.\n\n**The Processor's Role**\nThe processor builds and organizes the file before it goes to underwriting:\n- Order appraisal, title, flood cert\n- Verify employment (VOE)\n- Request missing documentation\n- Ensure TRID timing is met\n- Communicate with the borrower and LO\n\n**The Underwriter's Role**\nThe underwriter makes the credit decision. They evaluate:\n- Creditworthiness (the 4 Cs: Capacity, Capital, Collateral, Credit)\n- Compliance with loan program guidelines\n- Investor overlays (lender-specific restrictions beyond agency guidelines)\n- Risk layering — multiple marginal factors together can sink an otherwise approvable loan\n\n**Standard Loan File Components**\n1. Uniform Residential Loan Application (Form 1003)\n2. Tri-merge credit report\n3. Income documentation (pay stubs, W-2s, tax returns)\n4. Asset statements (60 days bank/retirement/investment)\n5. Property (purchase contract, appraisal, title)\n6. Insurance (hazard, flood if applicable)\n7. Government disclosures (LE, CD, HMDA)\n\n**File Organization**\nStandard sections: Application → Income → Assets → Credit → Property → Title → Insurance → Compliance\n\nA well-organized file speeds underwriting and reduces conditions. Disorganized files create delays and damaged relationships with underwriters.`,
+        content: `A complete, well-organized loan file is the foundation of every successful mortgage transaction. Processors who submit incomplete files to underwriting create delays, conditions, and frustration for everyone in the pipeline. The goal is to get it right the first time.
+
+**The Loan File Structure**
+
+Every residential mortgage file follows a standard structure. The exact order may vary by lender, but the components are consistent across the industry:
+
+**Section 1 — Loan Application and Disclosures**
+- Uniform Residential Loan Application (1003) — signed and dated
+- Loan Estimate (LE) — signed by borrower, delivered within 3 business days of application
+- Intent to Proceed — borrower's signed confirmation to move forward
+- Right of Rescission (refinances only) — 3-day rescission period documentation
+- Privacy Notice
+- Equal Credit Opportunity Act (ECOA) disclosure
+
+**Section 2 — Credit**
+- Tri-merge credit report (all three bureaus)
+- Credit scores for all borrowers
+- Explanations for derogatory marks (letters of explanation)
+- Any credit supplements or rapid rescore documentation
+
+**Section 3 — Income and Employment**
+- Most recent 30 days pay stubs (all borrowers)
+- W-2s for last 2 years (all borrowers)
+- Federal tax returns for last 2 years (if required by product or AUS)
+- Self-employment: Business tax returns for last 2 years
+- Verification of Employment (VOE)
+- Social Security, pension, or other income documentation
+
+**Section 4 — Assets**
+- Most recent 2 months bank statements (all pages — no omissions)
+- Investment/retirement account statements
+- Gift letter and donor bank statement (if gift funds used)
+- Source of funds explanation for large deposits
+- Proof of earnest money deposit
+
+**Section 5 — Property**
+- Fully executed purchase contract (all addenda)
+- Appraisal report
+- Title commitment/preliminary title report
+- Homeowner's insurance declaration page (prior to closing)
+- Survey (where required)
+- HOA documents (for condos and PUDs)
+
+**Section 6 — Underwriting and AUS**
+- AUS findings (DU or LP — see Lesson 2)
+- All AUS messages and conditions
+- Underwriter's approval or conditional approval
+- Condition responses and supporting documentation
+
+**The Processor's Checklist Discipline**
+
+Before submitting any file to underwriting, run a complete checklist:
+
+1. Is the 1003 complete — all fields, all signatures, all dates?
+2. Do the income documents support the income used for qualification?
+3. Are all bank statement pages present? Any large unexplained deposits?
+4. Is the appraisal signed, dated, and in compliance with USPAP?
+5. Is the title commitment free of exceptions that affect lending?
+6. Are all AUS conditions addressed?
+
+A processor who answers 'yes' to all six questions before submission dramatically reduces the number of conditions issued by the underwriter.
+
+**Common Documentation Deficiencies**
+
+- **Unsigned 1003:** Application is invalid without all borrower signatures
+- **Missing bank statement pages:** All pages means all pages — lenders reject files with page 3 of 10 missing
+- **Undated or unsigned appraisal:** Appraisal must be signed and dated by the appraiser
+- **Purchase contract without all addenda:** Every addendum and amendment is part of the contract
+- **Expired documents:** Pay stubs older than 30 days, bank statements older than 60 days may need updating
+- **Unexplained large deposits:** Any deposit over 50% of monthly income needs a paper trail
+
+**File Organization Standards**
+
+A disorganized file signals a disorganized processor. Number every page. Use clear section dividers. Label every document. When an underwriter opens your file, they should be able to find any document in under 30 seconds. This is not a preference — it's a professional standard.`,
         keyPoints: [
-          'Processor builds the file; underwriter makes the credit decision',
-          'Complete documentation upfront reduces conditions and speeds closing',
-          'Risk layering: multiple marginal factors together can disqualify an approvable loan',
-          'File organization directly impacts approval speed and underwriter relationships',
+          'The loan file has six core sections: application/disclosures, credit, income/employment, assets, property, and underwriting.',
+          'All bank statement pages must be included — missing even one page is grounds for a condition or rejection.',
+          'Run a complete pre-submission checklist before sending any file to underwriting — conditions caught in processing are faster to resolve than those caught in underwriting.',
+          'Purchase contracts must include all addenda and amendments — the contract is incomplete without them.',
+          'Expired documents must be refreshed — pay stubs over 30 days and bank statements over 60 days typically need to be updated.',
         ],
         quiz: [
           {
-            question: 'What is the primary role of the processor in the loan process?',
-            options: ['Make the credit decision', 'Build and organize the complete file before underwriting', 'Issue the final approval letter', 'Order the appraisal after underwriting'],
+            question: 'A processor is preparing to submit a file to underwriting. The borrower\'s bank statements show page 1, 2, and 4 of a 4-page statement. What should the processor do?',
+            options: ['Submit the file and note the missing page in the cover letter', 'Request the missing page 3 from the borrower before submitting — all pages are required', 'Estimate the content of page 3 based on surrounding context', 'Use an older complete statement from a prior month instead'],
             correctIndex: 1,
-            explanation: 'The processor is the file builder — they gather, organize, and verify documentation so the underwriter can make a clean credit decision.',
+            explanation: 'All pages means all pages — no exceptions. A missing page is a condition that will be caught in underwriting and delay the file. Catching it in processing and requesting it before submission is the professional standard.',
           },
           {
-            question: 'What does "risk layering" mean in underwriting?',
-            options: ['Using multiple loan products', 'Stacking multiple marginal risk factors that together can disqualify an otherwise approvable loan', 'Using multiple lenders on one transaction', 'Reviewing the file in separate phases'],
+            question: 'What document confirms the borrower\'s agreement to proceed with the loan after receiving the Loan Estimate?',
+            options: ['Signed 1003', 'Intent to Proceed', 'Closing Disclosure', 'Rate Lock Confirmation'],
             correctIndex: 1,
-            explanation: 'One marginal factor may be acceptable — but low credit + high DTI + low reserves together create compounding risk that most programs won\'t accept.',
+            explanation: 'The Intent to Proceed is the borrower\'s signed acknowledgment that they received the Loan Estimate and agree to move forward with the application. The lender cannot proceed with ordering appraisals or other services until this is received.',
           },
           {
-            question: 'Which of the following does NOT belong in a standard loan file?',
-            options: ['Tri-merge credit report', 'Hazard insurance', 'Borrower\'s medical records', 'Purchase contract'],
-            correctIndex: 2,
-            explanation: 'Medical history is protected under HIPAA and cannot be considered in credit decisions. Including it creates ECOA and fair lending exposure.',
+            question: 'Which of the following is a common documentation deficiency that can cause a file to be rejected at underwriting?',
+            options: ['A borrower who has lived at their current address for less than 2 years', 'A purchase contract submitted without addenda and amendments', 'A credit score of exactly 720 on a conventional loan', 'A borrower with both W-2 and self-employment income'],
+            correctIndex: 1,
+            explanation: 'The purchase contract must include every addendum and amendment — seller concession addenda, inspection response addenda, closing date extensions, etc. An incomplete contract is a material deficiency that underwriters will flag.',
           },
         ],
       },
       {
-        title: 'Automated Underwriting Systems (AUS)',
+        title: 'Automated Underwriting Systems — DU & LP',
         duration: '18 min',
-        content: `Automated Underwriting Systems — primarily Fannie Mae's Desktop Underwriter (DU) and Freddie Mac's Loan Product Advisor (LPA) — have transformed mortgage underwriting. Understanding how to read and leverage AUS findings is a core skill.\n\n**How AUS Works**\nThe lender submits loan data; AUS runs it against the GSE's proprietary risk model and returns a recommendation:\n- **Approve/Eligible (DU)** or **Accept (LPA)**: Meets automated criteria — reduced documentation required\n- **Refer with Caution**: High risk — requires manual underwriting or is ineligible\n- **Out of Scope**: Doesn't fit AUS parameters (typically non-conforming/jumbo)\n\n**DU vs. LPA Key Differences**\n- Student loan treatment: DU uses 1% if IBR payment is $0; LPA uses actual IBR payment (often better)\n- Self-employed income: slight flexibility differences\n- Rental income: DU may allow appraiser's market rent schedule; LPA prefers actual leases\n\nLenders often run both and submit the more favorable finding.\n\n**What Approve/Eligible Unlocks**\n- Fewer years of tax returns\n- Reduced asset verification\n- Lower reserve requirements\n- Verbal VOE instead of written in some cases\n- Streamlined income documentation\n\n**When Manual Underwriting Is Required**\n- Borrower with no credit score (non-traditional credit)\n- Recent bankruptcy or foreclosure below waiting period minimums\n- FHA loans for borrowers below certain thresholds\n- Any loan that gets Refer/Caution from AUS\n\nManual underwriting requires more conservative DTI ratios, more documentation, and stronger compensating factors.`,
+        content: `Automated Underwriting Systems are the engines that drive modern mortgage approval. Understanding DU and LP — how they work, what they're looking for, and how to interpret their findings — is one of the most important skills in mortgage processing and underwriting.
+
+**What Are AUS Systems?**
+
+Desktop Underwriter (DU) and Loan Product Advisor (LPA/LP) are proprietary automated systems owned by Fannie Mae and Freddie Mac, respectively. When a loan application is submitted, the AUS analyzes the file data — credit, income, assets, loan terms, and property details — and issues a risk assessment and eligibility finding.
+
+The AUS is not the final decision — it's a risk assessment tool. The underwriter still reviews the full file for compliance, documentation quality, and guideline adherence.
+
+**AUS Finding Categories**
+
+**DU Findings:**
+- **Approve/Eligible:** The loan meets Fannie Mae guidelines. List of documentation requirements provided. This is the target outcome.
+- **Refer/Eligible:** The loan may meet guidelines but requires additional manual review. Higher scrutiny, more documentation.
+- **Refer with Caution:** Significant risk factors identified. Manual underwriting required — most lenders will not proceed.
+- **Ineligible:** The loan does not meet Fannie Mae guidelines as structured.
+
+**LP Findings:**
+- **Accept:** Equivalent to DU Approve/Eligible. Meets Freddie Mac guidelines.
+- **Caution:** Equivalent to DU Refer — additional review required.
+- **Ineligible:** Does not meet Freddie Mac guidelines.
+
+**What the AUS Evaluates**
+
+The AUS runs a risk model that considers hundreds of variables. Key factors:
+- **Credit score and history** — The most heavily weighted factor
+- **LTV and equity** — Higher equity = lower risk
+- **DTI ratio** — Higher DTI = more risk
+- **Loan purpose** — Purchase is lower risk than cash-out refinance
+- **Occupancy type** — Primary residence is lower risk than investment property
+- **Reserves** — More reserves = more risk offset
+- **Employment history** — Stability signals lower default risk
+
+**Reading the DU Findings Report**
+
+The DU findings report is a multi-page document. Key sections:
+
+**Underwriting Findings:** The overall risk assessment and approval status.
+
+**Loan Data:** The input data used — verify that all loan data was entered correctly. Errors in data entry produce inaccurate findings.
+
+**Required Verifications:** The documentation the lender must collect and verify. DU can sometimes reduce documentation requirements — for example, waiving tax returns for salaried borrowers with strong credit.
+
+**Messages:** Important flags and guidance. Read every message carefully — they often contain critical guidance about specific risk factors.
+
+**DU vs. LP — When to Use Each**
+
+Most lenders run both DU and LP on borderline files and use whichever gives the better finding. Key differences:
+
+- **Self-employed income:** LP is often more flexible with self-employed borrowers
+- **High DTI:** DU sometimes approves higher DTI with strong compensating factors
+- **Student loans in deferment:** DU and LP treat these differently — LP may be more favorable
+- **Multiple financed properties:** Guideline differences can affect which system gives a better result
+
+**AUS Documentation Waivers**
+
+DU can waive traditional documentation requirements for strong files — for example:
+- Waiving tax returns for W-2 borrowers with excellent credit and low LTV
+- Waiving appraisal (Property Inspection Waiver/PIW) for refinances
+- Reducing asset documentation requirements
+
+These waivers are one of the most valuable tools in processing — they reduce borrower burden and accelerate the process.`,
         keyPoints: [
-          'DU (Fannie) and LPA (Freddie) are the two primary AUS platforms — run both',
-          'Approve/Eligible unlocks reduced documentation requirements for the lender',
-          'LPA often handles IBR student loans more favorably than DU',
-          'Refer/Caution or no credit score triggers mandatory manual underwriting',
+          'DU (Fannie Mae) and LP (Freddie Mac) are automated risk assessment tools — the underwriter still reviews the full file.',
+          'DU Approve/Eligible and LP Accept are the target findings — they confirm the loan meets agency guidelines.',
+          'Run both DU and LP on borderline files — guideline differences sometimes produce a better finding in one system.',
+          'AUS waivers (tax return waivers, appraisal waivers) reduce documentation burden for strong files — always check if applicable.',
+          'Verify all data entry before running AUS — errors in input produce inaccurate findings and waste time.',
         ],
         quiz: [
           {
-            question: 'What does an AUS "Approve/Eligible" finding mean?',
-            options: ['The loan automatically closes without underwriter review', 'The loan meets automated risk criteria and may have reduced documentation requirements', 'The loan requires full manual underwriting', 'The borrower is guaranteed approval'],
+            question: 'What does a DU finding of \'Refer with Caution\' indicate?',
+            options: ['The loan is approved but requires manual underwriting', 'Significant risk factors exist — most lenders will not proceed with the loan as structured', 'The loan is eligible but the borrower must be referred to a credit counselor', 'Additional appraisal review is required before the loan can be approved'],
             correctIndex: 1,
-            explanation: 'Approve/Eligible is the GSE\'s risk model green light — it unlocks rep-and-warrant relief for lenders and reduces documentation burdens.',
+            explanation: 'Refer with Caution indicates that DU\'s risk model has flagged serious concerns. Unlike a standard Refer (which means additional review is needed), Refer with Caution signals that the loan, as structured, has significant default risk. Most investors will not purchase loans with this finding.',
           },
           {
-            question: 'When running both DU and LPA, which system\'s finding should you use?',
-            options: ['Always DU — Fannie Mae is the larger GSE', 'Always LPA — Freddie Mac is more conservative', 'Whichever gives a more favorable finding for the borrower', 'Both must be submitted together'],
-            correctIndex: 2,
-            explanation: 'Lenders have flexibility to run both and use the better outcome — a difference in how student loans or income is calculated can change a borderline loan.',
+            question: 'A processor enters a borrower\'s income incorrectly in the AUS, resulting in a better finding. What should happen?',
+            options: ['Use the finding as-is since it was generated by the AUS system', 'Correct the income data and re-run AUS — the finding must reflect accurate data', 'Manually override the income in the underwriting notes', 'Submit the file with the original finding and correct the income on the 1003'],
+            correctIndex: 1,
+            explanation: 'AUS findings are only valid if the input data is accurate. A finding based on incorrect data is not a valid approval — it\'s a documentation error. Submitting a file knowing the AUS data is wrong is a fraud risk and a compliance violation.',
           },
           {
-            question: 'Which scenario always requires manual underwriting?',
-            options: ['750 credit score borrower', 'Investment property purchase', 'Borrower with no traditional credit score', 'Jumbo loan application'],
-            correctIndex: 2,
-            explanation: 'AUS systems rely on credit score data to generate a risk model output — without a score, the system cannot produce a finding and the file must be manually underwritten.',
+            question: 'What is a DU Property Inspection Waiver (PIW)?',
+            options: ['A lender option to skip the home inspection on purchase transactions', 'An AUS-issued waiver that allows a refinance to close without a traditional in-person appraisal', 'A borrower\'s right to decline the appraiser\'s access to the property', 'An exemption from property inspection requirements for new construction'],
+            correctIndex: 1,
+            explanation: 'When DU has sufficient property value data from its database (prior appraisals, public records), it may issue a PIW — waiving the requirement for a new in-person appraisal on refinances. This saves the borrower $500-$800 and eliminates appraisal timing risk.',
           },
         ],
       },
       {
         title: 'Income Analysis — W-2 & Salaried Borrowers',
         duration: '22 min',
-        content: `Income analysis is the most scrutinized element of mortgage underwriting. For W-2 employees the calculation seems straightforward — but nuances around variable income, multiple jobs, and declining earnings create real complexity.\n\n**Base Salary**\nAlways use gross monthly income (before taxes):\n- Annual salary ÷ 12 = gross monthly income\n- Hourly: rate × average hours × 52 ÷ 12\n\nVerify the salary matches across: application, pay stub, VOE, and tax return W-2 boxes.\n\n**Overtime, Bonus & Commission**\nVariable income requires a documented 2-year history:\n- Average the last 2 years from W-2s + YTD from most recent pay stub\n- If declining year-over-year: use the lower year — never average a declining trend\n- Commission income >25% of total income: treat as self-employed (Schedule C analysis)\n\n**Part-Time & Second Job Income**\n- Must show 2-year history at same employer or same type of work\n- Seasonal employment: same employer 2+ years with documented likelihood to continue\n\n**DTI Calculation**\nFront-end DTI: PITIA ÷ Gross Monthly Income\nBack-end DTI: All monthly obligations ÷ Gross Monthly Income\n\n- Conventional max: 45% back-end (up to 50% with AUS approval + compensating factors)\n- FHA max: 43% back-end (up to 57% with strong AUS approval)\n\n**W-2 Income Red Flags**\n- Year-over-year income decline\n- Large gap between W-2 and YTD pay stub (undisclosed unpaid leave)\n- Employer is a relative or entity the borrower owns (self-employment risk)\n- Bonus/commission in YTD not reflected in prior W-2 history`,
+        content: `Income analysis is the core skill of mortgage underwriting. Calculating qualifying income incorrectly — whether overstating or understating — has serious consequences. Overstating income leads to approvals that default. Understating income causes unnecessary denials. Precision matters.
+
+**Base Salary / Hourly Income**
+
+**Salaried borrower:**
+Qualifying income = Annual salary ÷ 12 months
+
+Example: $72,000 annual salary = $6,000/month qualifying income
+
+**Hourly borrower:**
+Qualifying income = Hourly rate × 40 hours × 52 weeks ÷ 12 months
+
+Example: $25/hour = $25 × 40 × 52 ÷ 12 = $4,333/month
+
+For part-time hourly, use actual documented hours — not a 40-hour assumption.
+
+**Verification:** Current pay stub showing year-to-date earnings. Cross-reference: YTD ÷ months worked should approximate the monthly income. Large discrepancies require explanation.
+
+**Overtime Income**
+
+Overtime can be used as qualifying income if:
+- The borrower has a 2-year history of receiving overtime from the same employer (or consistent pattern)
+- The employer indicates overtime is likely to continue
+
+**Calculation:** Average overtime over 24 months (using 2 years of W-2s and year-to-date pay stub)
+
+Example:
+- 2022 W-2 overtime: $8,400
+- 2023 W-2 overtime: $9,600
+- 2024 YTD (8 months): $6,800
+- Annualized YTD: $6,800 × 12/8 = $10,200
+- 24-month average: ($8,400 + $9,600) ÷ 24 = $750/month
+- Use the lower of the 24-month average or annualized YTD: $750/month
+
+If overtime is declining year-over-year, use the most recent 12-month average or exclude it.
+
+**Bonus Income**
+
+Bonus income follows the same rules as overtime:
+- 2-year history required
+- Calculate 24-month average
+- If declining, use recent average or exclude
+- Employer must confirm likelihood of continuation
+
+**Key distinction:** A one-time signing bonus or performance bonus is not recurring income — cannot be used for qualifying.
+
+**Commission Income**
+
+For borrowers earning primarily commission (typically >25% of total income):
+- Use 24-month average from tax returns (Schedule A employee business expenses may reduce qualifying income)
+- If commission is increasing, use the average. If declining, investigate and consider using the lower figure.
+- Year-to-date pay stub must support the annualized income
+
+**Second Job / Part-Time Income**
+
+- Must have a 2-year history at the same employer (or same line of work)
+- Income must be likely to continue
+- No exceptions for recently added part-time jobs
+
+**Multiple Borrowers**
+
+All income from all borrowers on the loan is combined for qualifying:
+- Each borrower's income is calculated separately
+- Combined income is used for DTI calculation
+- Both borrowers' debts are included
+
+**Year-to-Date Income Consistency Check**
+
+The most important income verification step: cross-check the YTD earnings on the pay stub against the annual income used for qualification.
+
+Example: If qualifying income is $6,000/month and the pay stub shows $36,000 YTD through June (6 months), the YTD is consistent ($36,000 ÷ 6 = $6,000/month).
+
+If YTD income is significantly lower than the annual income would project, investigate before qualifying — the borrower may have had a reduction in pay, extended leave, or other income disruption.`,
         keyPoints: [
-          'Always use gross income — never take-home/net pay',
-          'Overtime and bonus require 2-year history; declining trends use the lower year only',
-          'Commission >25% of income triggers self-employment income treatment',
-          'DTI uses all monthly obligations — housing + all revolving and installment debts',
+          'Base salary qualifying income = Annual salary ÷ 12. For hourly, use actual documented hours.',
+          'Overtime and bonus income require a 2-year history and are averaged over 24 months — declining income should be scrutinized.',
+          'Commission income over 25% of total income requires 24-month tax return averaging, not just pay stubs.',
+          'Part-time or second job income requires a 2-year history at the same employer — recently added income cannot be used.',
+          'Always cross-check YTD earnings on the pay stub against the annual qualifying income — discrepancies require explanation.',
         ],
         quiz: [
           {
-            question: 'How is annual base salary converted to monthly qualifying income?',
-            options: ['Net (take-home) pay × 12 months', 'Gross annual salary ÷ 12', 'Average of last 3 years\' W-2 income ÷ 36', 'Most recent month\'s pay stub × 12'],
+            question: 'A borrower earns $28/hour and works 40 hours per week. What is their monthly qualifying income?',
+            options: ['$4,480/month', '$4,853/month', '$5,600/month', '$6,240/month'],
             correctIndex: 1,
-            explanation: 'Gross income before taxes is always used — all monthly debt obligations are also pre-tax, so the comparison must be gross-to-gross.',
+            explanation: 'Hourly qualifying income = $28 × 40 hours × 52 weeks ÷ 12 months = $58,240 ÷ 12 = $4,853/month.',
           },
           {
-            question: 'A borrower earned $10,000 bonus in Year 1 and $6,000 in Year 2. Which figure is used?',
-            options: ['$10,000 (higher year)', '$8,000 (2-year average)', '$6,000 (lower/most recent)', 'Bonus income cannot be included at all'],
-            correctIndex: 2,
-            explanation: 'Declining income shows a negative trend — using the lower year is the conservative and appropriate approach. Averaging a decline overstates reliable income.',
+            question: 'A borrower received overtime of $6,000 in 2022 and $4,800 in 2023, with YTD overtime of $1,500 through March 2024. What is the appropriate treatment of the overtime income?',
+            options: ['Average the 24 months and use $450/month without further review', 'The declining trend warrants scrutiny — use the most recent 12-month average or consider excluding overtime entirely', 'Use the highest year ($6,000) as it represents the borrower\'s earning potential', 'Overtime cannot be used for qualifying if it declined in any year'],
+            correctIndex: 1,
+            explanation: 'Declining overtime income is a red flag. Averaging a declining trend produces a number that overstates the likely future income. An underwriter should use the most recent lower figure or exclude overtime entirely, depending on the employer\'s confirmation of future continuity.',
           },
           {
-            question: 'What triggers treating income as self-employed rather than W-2?',
-            options: ['The borrower works from home', 'Commission exceeds 25% of total income', 'The borrower has more than one employer', 'The employer is out of state'],
+            question: 'A borrower\'s qualifying income is $5,500/month. Their pay stub shows $28,000 YTD through August (8 months). Is there a consistency issue?',
+            options: ['No — $28,000 YTD is reasonable for any income level', 'Yes — YTD income annualizes to $4,200/month, significantly below the $5,500/month qualifying income', 'No — YTD is only reviewed for self-employed borrowers', 'Yes — $28,000 YTD exceeds the expected income and requires explanation'],
             correctIndex: 1,
-            explanation: 'When commission dominates, the borrower\'s income is fundamentally variable and business-dependent — Schedule C self-employment rules apply.',
+            explanation: '$28,000 ÷ 8 months = $3,500/month YTD average, annualized to approximately $42,000/year. The qualifying income of $5,500/month = $66,000/year. This is a significant discrepancy that requires investigation — the borrower may have had reduced hours, a period of leave, or the qualifying income may be overstated.',
           },
         ],
       },
       {
         title: 'Income Analysis — Self-Employed & Complex Income',
         duration: '25 min',
-        content: `Self-employed borrowers present the most documentation-intensive income analysis. The core challenge: the same tax deductions that minimize their tax bill also minimize their qualifying income.\n\n**Who Is Self-Employed?**\n- 25%+ ownership of a business\n- Independent contractor (1099)\n- Sole proprietor, partner, or LLC/S-Corp member\n- Commission income >25% of total income\n\n**Schedule C (Sole Proprietor)**\nQualifying income = Net Profit + Non-cash add-backs\n\nKey add-backs:\n- Depreciation (Form 4562 / Line 13)\n- Depletion\n- Business use of home (Line 30)\n- Amortization and casualty losses\n- Non-recurring losses\n\nFormula: (Year 1 Schedule C net + Year 2 Schedule C net + add-backs) ÷ 24 = Monthly income\n\nIf the business shows a net loss, that loss offsets all other income.\n\n**S-Corp & Partnership (Schedule E / K-1)**\nQualifying = W-2 wages from business + pro-rata share of net income\n- Must own 25%+ to count entity income or loss\n- Add back entity-level non-cash items: depreciation, depletion, amortization\n- Business loss offsets personal income proportionally\n\n**Bank Statement Programs (Non-QM)**\n24 months of business bank statements ÷ 24 = average monthly gross\nApply expense factor (typically 50% for service businesses, lower for retail)\n= Monthly qualifying income\n\nNo tax returns needed — qualifies borrowers whose deductions destroy their taxable income.\n\n**Year-Over-Year Rule**\n- Increasing income: average the 2 years\n- Declining income: use the lower year and document why\n- Greater than 25% decline: may be ineligible without compensating factors`,
+        content: `Self-employed income analysis is the most complex and judgment-intensive skill in mortgage underwriting. No two self-employed borrowers are the same — the income structure, the business type, and the tax strategy all vary. Mastering this skill makes you invaluable on any underwriting team.
+
+**The Core Principle**
+
+Mortgage qualifying income for self-employed borrowers is based on taxable net income — not gross revenue, not owner distributions, not bank deposits. Whatever the borrower legally reported to the IRS is the income available for qualifying.
+
+**Sole Proprietor — Schedule C Analysis**
+
+A sole proprietor reports business income on Schedule C of their personal tax return.
+
+**Qualifying income calculation:**
+Schedule C Net Profit (Line 31)
++ Depreciation (Form 4562 or Schedule C line 13)
++ Depletion
++ Mileage (add back the non-cash portion — typically 27-28 cents per mile)
+– Business use of home (if claimed)
+
+**Two-year average:** Add both years' adjusted Schedule C income and divide by 24 months.
+
+**Example:**
+- 2022 Schedule C net profit: $52,000
+- Add back depreciation: $4,200
+- 2022 adjusted income: $56,200
+- 2023 Schedule C net profit: $58,000
+- Add back depreciation: $3,800
+- 2023 adjusted income: $61,800
+- Total: $118,000 ÷ 24 months = $4,917/month qualifying income
+
+**S-Corporation — K-1 and W-2 Analysis**
+
+An S-corp owner receives income in two ways: W-2 salary from the business and K-1 distributions (ordinary business income).
+
+**W-2 income:** Use as normal salaried income if the borrower has 2-year history.
+
+**K-1 income:** Only the borrower's proportional share of business income is used — and only if the business is viable and has consistent income. Add back depreciation, depletion, and other non-cash charges.
+
+**Critical check — Business solvency:** Before using K-1 income, review the business tax return to confirm the business has positive cash flow and no indication of financial distress. A business losing money cannot support the claimed income.
+
+**Partnership Income — Schedule E**
+
+Partnership income flows to the borrower through Schedule E of their personal return (not Schedule C). Analysis is similar to S-corp K-1 — use the borrower's proportional share, add back non-cash deductions.
+
+**Rental Income**
+
+Rental income from investment properties is calculated from Schedule E:
+
+**Calculation:**
+Gross rental income (Schedule E)
+– Operating expenses (exclude depreciation and mortgage interest)
+= Net rental income
+
+Fannie Mae and Freddie Mac typically use 75% of gross rent to account for vacancy and expenses.
+
+**Rental properties not on tax returns:** If a borrower recently purchased a rental property that isn't yet on their tax return, use the lease agreement and appraiser's rent schedule. Apply 75% of gross rent and deduct PITIA to determine whether it produces positive or negative rental income.
+
+**Year-Over-Year Income Trends**
+
+**Increasing income:** Use the 24-month average — favorable.
+**Declining income:** This is the most important red flag in self-employed analysis. If income declined more than 25% year over year, underwriters should use the most recent year only — or investigate the cause.
+
+A business with $120,000 income in 2022 and $75,000 in 2023 has a serious negative trend. Using the 24-month average ($81,250) may overstate the borrower's ability to repay going forward.
+
+**Business Liquidity Check**
+
+For self-employed borrowers, also review business bank statements to confirm:
+- The business has adequate cash flow to support the claimed income
+- Business income is consistent with what's on the tax returns
+- No unusual large withdrawals that suggest financial stress`,
         keyPoints: [
-          'Add back non-cash expenses (depreciation, amortization) to Schedule C net income',
-          'Declining self-employed income: use the lower year — never average a decline',
-          'S-Corp borrowers need both W-2 wages and K-1 pro-rata share analyzed',
-          'Bank statement programs bypass tax returns using an expense factor on deposits',
+          'Self-employed qualifying income is based on taxable net income from tax returns — not gross revenue or bank deposits.',
+          'Schedule C income adds back depreciation, depletion, and certain mileage — these are non-cash deductions that don\'t reduce real income.',
+          'S-corp analysis requires reviewing both the W-2 salary and K-1 income — and confirming the business is financially healthy.',
+          'Declining self-employed income year-over-year is the most important red flag — consider using only the most recent year.',
+          'Rental income from Schedule E is calculated at 75% of gross rent after deducting operating expenses (excluding depreciation and mortgage interest).',
         ],
         quiz: [
           {
-            question: 'For a sole proprietor, what expenses are added back to Schedule C net income?',
-            options: ['All business expenses', 'Health insurance premiums only', 'Non-cash items: depreciation, depletion, and amortization', 'The borrower\'s personal tax liability'],
-            correctIndex: 2,
-            explanation: 'Non-cash expenses were deducted on the tax return but don\'t represent actual cash outflow — adding them back gives a more accurate picture of available income.',
+            question: 'Why is depreciation added back when calculating self-employed qualifying income?',
+            options: ['The IRS does not allow depreciation deductions for self-employed borrowers', 'Depreciation is a non-cash deduction — it reduces taxable income but does not represent an actual cash outflow', 'Lenders require depreciation to be added back to comply with RESPA guidelines', 'Adding back depreciation ensures the income matches the borrower\'s gross revenue'],
+            correctIndex: 1,
+            explanation: 'Depreciation reduces taxable income on paper but doesn\'t represent money actually spent in that year. By adding it back, underwriters capture the borrower\'s true available cash income — not just what\'s left after accounting entries.',
           },
           {
-            question: 'A self-employed borrower earned $90,000 net in Year 1 and $65,000 in Year 2. Which income is used?',
-            options: ['$90,000 (higher year)', '$77,500 (average)', '$65,000 (lower/most recent)', 'Lender\'s choice'],
+            question: 'A self-employed borrower shows Schedule C income of $95,000 in 2022 and $58,000 in 2023. What is the most appropriate underwriting approach?',
+            options: ['Average the two years: $76,500/year = $6,375/month qualifying income without further investigation', 'Use the higher 2022 income since it represents the borrower\'s demonstrated earning capacity', 'Investigate the reason for the decline — consider using only the 2023 income since the declining trend may overstate repayment ability', 'Deny the loan — declining self-employed income automatically disqualifies a borrower'],
             correctIndex: 2,
-            explanation: 'Declining income signals a negative trend. Using the lower year is required — the averaged figure would overstate income the borrower is unlikely to sustain.',
+            explanation: 'A 39% decline in one year is a major red flag. Using the 24-month average produces $6,375/month — but if the business is continuing to decline, this overstates the borrower\'s ability to repay. Responsible underwriting requires understanding why income declined and using a conservative income figure.',
           },
           {
-            question: 'What is the typical expense factor applied to business bank statement deposits for qualifying income?',
-            options: ['10%', '25%', '50%', '75%'],
-            correctIndex: 2,
-            explanation: 'The 50% factor assumes roughly half of gross deposits represent business expenses. Some programs adjust this by industry — retail may use a higher expense factor.',
+            question: 'A borrower owns a rental property with gross rent of $2,400/month. What is the qualifying rental income used in the DTI calculation per Fannie Mae guidelines?',
+            options: ['$2,400/month (full gross rent)', '$1,800/month (75% of gross rent)', '$1,200/month (50% of gross rent)', '$0 — rental income cannot be used until it appears on a tax return'],
+            correctIndex: 1,
+            explanation: 'Fannie Mae guidelines use 75% of gross market rent to account for vacancy and maintenance expenses. $2,400 × 75% = $1,800/month. If there\'s an existing lease, the lease rent is used at 75%. If vacant, the appraiser\'s market rent estimate is used at 75%.',
           },
         ],
       },
       {
         title: 'Asset Verification & Source of Funds',
         duration: '18 min',
-        content: `Assets are verified to confirm the borrower has funds for down payment, closing costs, prepaids, and reserves. Every dollar must be sourced and seasoned.\n\n**Asset Types and How They Count**\n- Checking/savings: 100% — most liquid, most reliable\n- Retirement (vested): 60–70% — assumes penalty and tax on early withdrawal\n- Brokerage/investment: 100% at current value\n- Gift funds: allowed on primary residence with documentation; restricted on investment property\n- Proceeds from asset sale: document with bill of sale, closing statement\n\n**Seasoning Requirements**\nStandard: 60 days (2 months) of bank statements\n- All funds must be in the account for 60 days to be considered "seasoned"\n- Large deposits within the 60-day window must be sourced\n\n**What Triggers a Large Deposit Flag?**\nGeneral rule: any deposit greater than 50% of gross monthly income requires a written explanation and documentation.\n\nAcceptable sources: payroll, tax refund, sale of asset (with HUD-1), gift (with letter + donor statement + transfer proof), account-to-account transfer (with both statements)\n\nRed flags: large round-number cash deposits, transfers from unknown accounts, deposits inconsistent with income pattern\n\n**Reserves**\nReserves = assets remaining after down payment and closing costs\n- Conventional: 2–6 months PITIA\n- Jumbo: 6–12+ months\n- Investment property: 2–6 months per owned property\n\nRetirement accounts count at 60–70% for reserves (not for down payment on most programs).\n\n**Gift Fund Requirements**\n- Gift letter: donor relationship, amount, statement that no repayment is required\n- Donor bank statement showing withdrawal\n- Evidence of transfer to borrower's account\n- Investment property: gift funds generally not permitted for down payment`,
+        content: `Asset verification is about one thing: proving the borrower has the funds they claim — and that those funds came from legitimate, acceptable sources. Undocumented or unsourced funds create underwriting conditions, delay closings, and in some cases indicate fraud.
+
+**Why Asset Verification Matters**
+
+Lenders verify assets for three purposes:
+1. Confirm sufficient funds for down payment and closing costs
+2. Verify post-closing reserves
+3. Ensure funds come from acceptable, sourceable sources (not loans, straw borrowers, or undisclosed financing)
+
+**Acceptable Asset Types**
+
+**Liquid assets (most acceptable):**
+- Checking and savings accounts
+- Money market accounts
+- CDs
+
+**Investment and retirement accounts:**
+- Brokerage accounts (100% of balance for liquid; 60-70% for retirement accounts to account for early withdrawal penalties)
+- 401(k)/IRA (may use if vested; check plan for withdrawal terms)
+
+**Gift funds:**
+- Acceptable for primary residence down payment on conventional and FHA
+- NOT acceptable for investment properties
+- Require: signed gift letter from donor, donor's bank statement showing funds available, evidence of transfer to borrower's account
+
+**Proceeds from sale of current home:**
+- Acceptable; require net proceeds documentation from closing
+
+**Unacceptable or problematic sources:**
+- Borrowed funds (personal loans, credit card advances)
+- Funds from undisclosed parties to the transaction
+- Cash — cannot be sourced
+- Cryptocurrency (some lenders accept with documentation; many do not)
+
+**Documentation Requirements**
+
+**Bank statements:** Most recent 2 months, all pages. Statements must show account holder name, account number, institution name, and all transactions.
+
+**Investment statements:** Most recent statement. If market fluctuations could affect the balance, a more recent statement may be required.
+
+**Large Deposit Analysis**
+
+Any deposit over 50% of the borrower's gross monthly income requires sourcing and explanation.
+
+**Acceptable sourcing:**
+- Payroll deposit — confirmed by pay stub
+- Tax refund — confirmed by IRS documentation
+- Sale of personal property — bill of sale
+- Transfer from another account — statement showing the other account
+- Gift — gift letter and donor documentation
+
+**Unacceptable:**
+- 'I saved it' with no paper trail
+- Cash deposit with no source
+- Large wire with no explanation
+
+**Practical guidance:** Request the explanation and documentation before ordering additional conditions from underwriting. A processor who proactively clears large deposits before submission saves everyone time.
+
+**Reserve Calculation**
+
+Reserves = assets remaining after down payment and closing costs.
+
+**Standard reserve requirements:**
+- Conventional primary residence: 2 months PITIA (may vary by AUS)
+- Second home: 2 months PITIA
+- Investment property: 6 months PITIA
+- Multiple financed properties: 6 months PITIA per property
+
+**Example:**
+- Savings: $95,000
+- Down payment: $60,000
+- Closing costs: $8,500
+- Remaining after close: $26,500
+- Monthly PITIA: $2,200
+- Reserves: $26,500 ÷ $2,200 = 12 months — exceeds the 2-month minimum
+
+**Bridge Funds and Simultaneous Closings**
+
+When a borrower is selling their current home to fund the purchase of a new one on the same day (simultaneous close), the processor must track the sequencing: the sale must close and fund before the purchase, confirming the net proceeds are available.`,
         keyPoints: [
-          'Source all deposits >50% of gross monthly income within the 60-day window',
-          'Retirement accounts count at 60–70% — assumes penalty and tax at liquidation',
-          'Gift funds require: letter + donor bank statement + proof of transfer',
-          'Reserves are measured after subtracting down payment and all closing costs',
+          'Asset verification confirms funds are sufficient, legitimate, and from acceptable sources — undocumented funds signal potential fraud.',
+          'Any deposit over 50% of gross monthly income must be sourced and explained with documentation.',
+          'Retirement accounts are used at 60-70% of balance to account for early withdrawal penalties.',
+          'Gift funds are allowed for primary residence down payments but require a gift letter, donor statement, and transfer documentation.',
+          'Investment property reserves require 6 months PITIA — significantly more than the 2 months required for primary residence.',
         ],
         quiz: [
           {
-            question: 'A borrower has $5,000 monthly gross income. What deposit amount triggers sourcing?',
-            options: ['Any deposit over $1,000', 'Any deposit over $2,500 (50% of gross income)', 'Any deposit over $5,000', 'Only cash deposits regardless of amount'],
+            question: 'A borrower\'s bank statement shows a $15,000 deposit with no explanation. Their gross monthly income is $7,000. What action is required?',
+            options: ['No action required — deposits under $20,000 do not need sourcing', 'The deposit must be sourced — it exceeds 50% of gross monthly income and requires documentation', 'The entire bank account must be excluded from qualifying assets', 'The borrower must wait 60 days for the deposit to be considered seasoned'],
             correctIndex: 1,
-            explanation: 'The 50%-of-gross-income threshold identifies deposits that are large relative to the borrower\'s income pattern and could represent undisclosed borrowed funds.',
+            explanation: '$15,000 exceeds 50% of $7,000 monthly income ($3,500 threshold). The source must be documented — payroll, tax refund, sale of personal property, transfer from another account, or gift (with full gift documentation). Unsourced large deposits cannot be included in qualifying assets.',
           },
           {
-            question: 'At what percentage do retirement account balances count toward qualifying reserves?',
-            options: ['100%', '80%', '60–70%', '50%'],
-            correctIndex: 2,
-            explanation: 'The 30–40% haircut accounts for income taxes and early withdrawal penalties — lenders can\'t count money the IRS would claim if the account were liquidated.',
+            question: 'A borrower wants to use funds from their 401(k) for a down payment. How much of the account balance can typically be used for qualifying?',
+            options: ['100% of the vested balance', '60-70% of the vested balance to account for early withdrawal penalties', 'Only contributions, not employer match', '401(k) funds cannot be used for mortgage down payments'],
+            correctIndex: 1,
+            explanation: 'Retirement account funds are accessible but subject to income taxes and early withdrawal penalties (typically 10% for withdrawals before 59½). Lenders apply a 60-70% factor to account for these costs — ensuring the borrower actually has the net funds after taxes and penalties.',
           },
           {
-            question: 'What three items are required to use gift funds for a down payment?',
-            options: ['Gift letter only', 'Gift letter + donor\'s credit report + bank statement', 'Gift letter + donor bank statement showing withdrawal + proof of transfer to borrower', 'Verbal confirmation from the donor'],
-            correctIndex: 2,
-            explanation: 'All three elements together prove the gift is genuine, the money existed, and it actually transferred — any missing piece can stall or kill the closing.',
+            question: 'For an investment property purchase, what is the standard post-closing reserve requirement?',
+            options: ['1 month PITIA', '2 months PITIA', '3 months PITIA', '6 months PITIA'],
+            correctIndex: 3,
+            explanation: 'Investment properties carry higher default risk than primary residences — lenders require 6 months PITIA in reserves to ensure the borrower can continue servicing the debt during vacancy or income disruption. Primary residences typically require only 2 months.',
           },
         ],
       },
       {
         title: 'Credit Analysis & Risk Assessment',
         duration: '20 min',
-        content: `Credit analysis is the underwriter's clearest window into a borrower's repayment behavior. Reading a credit report accurately and identifying red flags is foundational underwriting skill.\n\n**Tri-Merge Credit Report**\nLenders pull from all three bureaus (Experian, Equifax, TransUnion). The middle score of the three is used. For joint borrowers: use the lower of the two borrowers' middle scores.\n\n**Program Minimum Credit Scores**\n- Conventional: 620 minimum (740+ for best pricing tier)\n- FHA: 580 for 3.5% down; 500–579 for 10% down\n- VA: No GSE minimum (lenders typically overlay 620)\n- Jumbo: Typically 720+\n\n**Derogatory Event Waiting Periods**\n| Event | Conventional | FHA | VA |\n|-------|-------------|-----|----||\n| Ch.7 Bankruptcy | 4 years | 2 years | 2 years |\n| Ch.13 Bankruptcy | 2 years from discharge | 1 year from discharge | 1 year |\n| Foreclosure | 7 years | 3 years | 2 years |\n| Short Sale | 4 years | 3 years | 2 years |\n\n**Collections and Judgments**\n- Conventional (per DU): collections under $2,000 aggregate may not require payoff\n- FHA: non-medical collections over $2,000 aggregate must be included in DTI or paid\n- Judgments: must be paid before closing on ALL programs — no exceptions\n\n**Disputed Accounts**\nDisputed accounts with negative information must be resolved before conventional approval. Disputed positive accounts are fine. FHA handles disputed accounts differently — check current guidelines.\n\n**Re-established Credit**\nAfter a derogatory event, borrowers typically need:\n- 3–4 open and active tradelines\n- 12–24 months of clean payment history post-event`,
+        content: `Credit analysis in underwriting goes far deeper than looking at a score. A 680 score with perfect payment history and one collection account tells a very different story than a 680 score with seven late payments in the last 12 months. Underwriters read credit as a narrative — not just a number.
+
+**The Credit Report Structure**
+
+A tri-merge credit report pulls data from all three bureaus — Equifax, TransUnion, and Experian. For mortgage qualification:
+- If all three scores are available, use the middle score
+- If two scores are available, use the lower of the two
+- For co-borrowers, use the lower of the qualifying scores
+
+**FICO Score Components**
+
+| Factor | Weight |
+|--------|--------|
+| Payment history | 35% |
+| Credit utilization | 30% |
+| Length of credit history | 15% |
+| Credit mix | 10% |
+| New credit/inquiries | 10% |
+
+**Reading Payment History**
+
+**Mortgage lates** are the most serious negative mark on a credit report — far more damaging than credit card lates. A 30-day mortgage late in the last 12 months can disqualify a borrower from many programs.
+
+Late payment notation:
+- 30 days late (1×30)
+- 60 days late (1×60)
+- 90 days late (1×90)
+- 120+ days late (1×120+)
+
+**Seasoning requirements for derogatory marks:**
+- Bankruptcy Chapter 7: 4 years from discharge (conventional); 2 years (FHA)
+- Bankruptcy Chapter 13: 2 years from discharge or 4 years from dismissal (conventional); 1 year (FHA)
+- Foreclosure: 7 years (conventional); 3 years (FHA); 2 years (VA)
+- Short sale: 4 years (conventional); 3 years (FHA); 2 years (VA)
+- Deed in lieu: 4 years (conventional); 3 years (FHA)
+
+**Collections and Judgments**
+
+**Medical collections:** Fannie Mae excludes medical collections from DTI calculations — they don't need to be paid off prior to closing (per current guidelines).
+
+**Non-medical collections:** Must be evaluated. High aggregate balances may need to be paid off. Underwriters assess whether they indicate a pattern of non-payment.
+
+**Judgments:** Must typically be paid in full or have a payment plan established prior to closing. Unpaid judgments can become liens on the subject property.
+
+**Credit Inquiries**
+
+Each hard inquiry (application for credit) reduces the score slightly — typically 2-5 points. Multiple mortgage inquiries within a 14-45 day window are treated as a single inquiry by FICO.
+
+Inquiries within 90 days of application must be explained. If the borrower opened new credit or took on new debt, the new liability must be included in DTI.
+
+**Writing the Credit Narrative**
+
+When a file has credit issues — past derogatory marks, recent lates, multiple collections — a well-written underwriting narrative explains the circumstances and makes the case for approval:
+
+1. What happened (job loss, medical event, divorce)
+2. When it happened and when it resolved
+3. What the credit looks like since then
+4. Why it's unlikely to recur
+
+A compelling narrative paired with a strong file on all other dimensions can support approval on files that might otherwise be denied.`,
         keyPoints: [
-          'For joint borrowers: use the lower of the two middle scores',
-          'Waiting periods vary significantly by program — FHA and VA are more lenient than conventional',
-          'Judgments must be paid before closing on every loan program without exception',
-          'Disputed negative accounts must be resolved before most conventional approvals',
+          'For mortgage qualification, use the middle score of three; the lower score of two; and for co-borrowers, the lower qualifying score.',
+          'Mortgage lates are the most serious negative mark — a 30-day late in the last 12 months can disqualify a borrower from many programs.',
+          'Know the seasoning requirements for major derogatory events (bankruptcy, foreclosure, short sale) for conventional, FHA, and VA loans.',
+          'Multiple mortgage inquiries within a 14-45 day window count as a single inquiry — important for borrowers who shop rates.',
+          'A well-written credit narrative can support approval for files with historical issues when the current picture is strong.',
         ],
         quiz: [
           {
-            question: 'Two borrowers apply jointly. Their middle scores are 718 and 682. Which score qualifies the loan?',
-            options: ['718 (higher score)', '700 (average)', '682 (lower middle score)', 'Both scores are submitted separately'],
-            correctIndex: 2,
-            explanation: 'Each borrower\'s middle score is identified first, then the lower of those two is used — this ensures the lender underwrites to the weaker credit profile.',
+            question: 'A co-borrower has credit scores of 710, 695, and 720. The primary borrower has a qualifying score of 680. What score is used for mortgage qualification?',
+            options: ['708 — the average of all four scores', '710 — the highest co-borrower score', '695 — the co-borrower\'s middle score', '680 — the lower of the two borrowers\' qualifying scores'],
+            correctIndex: 3,
+            explanation: 'For the co-borrower, the middle score of 695, 710, 720 = 710. The primary borrower\'s qualifying score is 680. For loans with multiple borrowers, the qualifying score is the lower of the two representative scores: 680.',
           },
           {
-            question: 'How long must a borrower wait after a Chapter 7 bankruptcy for a conventional loan?',
-            options: ['2 years', '4 years', '7 years', 'No waiting period with compensating factors'],
+            question: 'How long must a borrower wait after a Chapter 7 bankruptcy discharge to qualify for a conventional mortgage?',
+            options: ['1 year from the discharge date', '2 years from the discharge date', '4 years from the discharge date', '7 years from the discharge date'],
+            correctIndex: 2,
+            explanation: 'Conventional loans (Fannie Mae/Freddie Mac) require a 4-year seasoning period from Chapter 7 bankruptcy discharge. FHA requires only 2 years, making FHA the bridge product for borrowers in the 2-4 year window after discharge.',
+          },
+          {
+            question: 'Under current Fannie Mae guidelines, how are medical collection accounts treated in the DTI calculation?',
+            options: ['Medical collections over $2,000 must be paid before closing', 'Medical collections are excluded from DTI — they do not need to be paid off prior to closing', 'Medical collections are included in DTI as a monthly payment of 5% of the balance', 'Medical collections only affect the credit score, not the qualifying DTI'],
             correctIndex: 1,
-            explanation: 'Conventional requires 4 years from Ch.7 discharge. FHA and VA are more lenient at 2 years — why many post-bankruptcy borrowers start with government programs.',
-          },
-          {
-            question: 'An unpaid civil judgment appears on the credit report. What must happen before closing?',
-            options: ['Write an explanation letter', 'Nothing — judgments are informational', 'The judgment must be paid or on a verified court-approved payment plan', 'The lender decides case by case'],
-            correctIndex: 2,
-            explanation: 'Unpaid judgments are senior liens against the borrower — every loan program requires they be resolved before closing to protect the lender\'s secured position.',
+            explanation: 'Fannie Mae\'s current guidelines exclude medical collections from the DTI calculation — recognizing that medical debt often results from circumstances beyond the borrower\'s control and does not reflect a pattern of financial mismanagement. Non-medical collections are evaluated separately.',
           },
         ],
       },
       {
         title: 'Appraisal Review for Underwriters',
         duration: '22 min',
-        content: `The appraisal establishes property value and confirms eligibility for financing. Underwriters must read appraisals critically — not just accept the number, but evaluate methodology, comp selection, and property condition.\n\n**What the Underwriter Reviews**\n- Subject property description (accurate? matches contract and MLS?)\n- Neighborhood analysis (stable, declining, or improving market?)\n- Comparable selection (proximity, age, similarity)\n- Adjustments (are they market-supported and reasonable?)\n- Final reconciled value (adequately supported by the data?)\n- Property condition rating\n\n**Condition Ratings (URAR — Conventional)**\n- C1: New construction, never occupied\n- C2: No deferred maintenance, minimal wear\n- C3: Well-maintained, minor deferred maintenance\n- C4: Adequate condition, some deferred maintenance\n- C5: Obvious deferred maintenance — may require repair\n- C6: Substantial damage — generally ineligible for conventional financing\n\n**Appraisal Red Flags**\n- Comps more than 1 mile away in urban area without explanation\n- Comps older than 6 months in an active market\n- Net adjustments >15% or gross adjustments >25% on any single comp\n- Value lands exactly at or just above contract price ("hits the number")\n- Declining market trend without corresponding adjustments\n- Appraiser used the same comp in multiple assignments (possible coordination)\n\n**FHA & VA Minimum Property Requirements (MPR)**\nFHA/VA appraisers also inspect for habitability:\n- No peeling paint on pre-1978 homes (lead hazard)\n- Working utilities (heat, plumbing, electricity)\n- Safe access (stairs, railings, egress windows)\n- Roof with 2+ years remaining life\n- No active pest infestation\n\nRequired repairs become loan conditions — must be completed before closing.`,
+        content: `Appraisal review is a critical underwriting function. The appraisal determines the collateral value — the foundation of the LTV calculation. An incorrect appraisal leads to either an overly risky loan (overvaluation) or an unnecessary denial (undervaluation). Underwriters must read appraisals critically, not passively.
+
+**The Uniform Residential Appraisal Report (URAR)**
+
+The standard appraisal form for 1-4 unit residential properties is the URAR (Fannie Mae Form 1004). Key sections:
+
+**Subject Property:** Address, legal description, site size, zoning, utilities, and property characteristics. Verify against the purchase contract and title.
+
+**Neighborhood Analysis:** Describes the market area — location, built-up percentage, growth rate, property values trend (increasing/stable/declining), marketing time. A declining market flag requires additional scrutiny.
+
+**Site Description:** Lot size, topography, drainage, utilities, easements, and adverse conditions. Adverse conditions (flood zone, environmental contamination) must be addressed.
+
+**Improvement Description:** The property's physical characteristics — square footage, construction quality, condition, room count, and notable features. The appraiser assigns a condition rating (C1-C6) and quality rating (Q1-Q6).
+
+**Sales Comparison Approach:** Three comparable sales used to derive value. The heart of the residential appraisal.
+
+**Reconciliation:** The appraiser's explanation of how they weighted the approaches and arrived at the final value opinion.
+
+**Reviewing the Comparables**
+
+The comparables are the most important section to review. An underwriter evaluates:
+
+**Proximity:** Are the comps in the same neighborhood? Did the appraiser go too far to find them — and if so, why?
+
+**Recency:** Are the comps recent? Sales over 12 months old should be questioned, especially in active markets.
+
+**Similarity:** Are the comps truly comparable — same size, style, condition, and amenities? Significant differences require large adjustments, which reduce reliability.
+
+**Adjustments:** Are the adjustments reasonable and supported? Adjustments that are unusually large, or that all go in one direction (supporting a higher value), are a red flag.
+
+**Net and gross adjustment limits:** Fannie Mae suggests no single comp should have net adjustments exceeding 15% or gross adjustments exceeding 25% of the comp's sale price. Violations don't automatically disqualify a comp but require explanation.
+
+**Common Appraisal Issues and Responses**
+
+**Value below purchase price:** The most common and consequential issue. Options:
+- Buyer reduces purchase price to appraised value
+- Buyer and seller renegotiate (price reduction, seller credit)
+- Buyer makes up difference in cash (out-of-pocket)
+- Buyer orders a Reconsideration of Value (ROV) with additional comparable data
+
+**Property condition issues (FHA/VA):** FHA and VA appraisals include minimum property requirements. Required repairs must be completed before closing.
+
+**Appraisal from a declining market:** If the appraiser marks 'declining' for property values, the underwriter should verify the LTV remains within guidelines with appropriate cushion.
+
+**Non-arms-length transactions:** Sales between related parties, from foreclosure, or from estate sales may have distorted prices. Underwriters should verify these aren't being used as comps.
+
+**The Desk Review and Field Review**
+
+When an appraisal is questionable, the underwriter can order:
+- **Desk review:** A second appraiser reviews the report without visiting the property
+- **Field review:** A second appraiser visits the property and reviews the original report
+- **Second full appraisal:** A completely new appraisal ordered by the lender`,
         keyPoints: [
-          'C5–C6 condition properties are typically ineligible for conventional financing',
-          'Net adjustments >15% or gross >25% on a single comp raise reliability concerns',
-          'FHA/VA appraisers enforce Minimum Property Requirements — required repairs are conditions',
-          '"Hitting the number" exactly at contract price is a red flag for appraiser bias',
+          'The Sales Comparison Approach (comparables section) is the most important section of a residential appraisal to review.',
+          'Comparable net adjustments over 15% or gross adjustments over 25% of the sale price are a red flag requiring explanation.',
+          'An appraisal value below purchase price triggers renegotiation, a cash contribution from the buyer, or a Reconsideration of Value.',
+          'FHA and VA appraisals include minimum property requirements — required repairs must be completed before closing.',
+          'When an appraisal is questionable, underwriters can order a desk review, field review, or second full appraisal.',
         ],
         quiz: [
           {
-            question: 'Which property condition rating typically disqualifies a home for conventional financing?',
-            options: ['C3', 'C4', 'C5', 'C6'],
-            correctIndex: 3,
-            explanation: 'C6 indicates substantial damage requiring major repairs — conventional lenders will not finance these. C5 may or may not be acceptable depending on the nature of the deferred maintenance.',
+            question: 'A comparable sale has a sale price of $400,000 and gross adjustments totaling $110,000. What concern does this raise?',
+            options: ['No concern — gross adjustments have no guideline limits', 'Gross adjustments of 27.5% exceed the 25% guideline threshold — the comparable\'s reliability is questionable', 'The adjustment exceeds the legal maximum per USPAP standards', 'The appraiser must use a different comp when adjustments exceed $100,000'],
+            correctIndex: 1,
+            explanation: '$110,000 ÷ $400,000 = 27.5% gross adjustment ratio, exceeding the 25% Fannie Mae guideline. Heavy adjustments suggest the comparable isn\'t truly similar to the subject — the more adjustments needed, the less reliable the comp. The appraiser should explain why this comp was used.',
           },
           {
-            question: 'A single comparable has gross adjustments of 30%. What does this indicate?',
-            options: ['The comp is ideal — minimal differences', 'The comp is too dissimilar to be fully reliable', 'The appraisal automatically fails review', 'Adjustments above 25% are always acceptable if explained'],
+            question: 'What is a Reconsideration of Value (ROV)?',
+            options: ['A lender\'s right to order a second appraisal at the borrower\'s expense', 'A formal request asking the appraiser to review their value opinion based on additional comparable sales data provided by the buyer or agent', 'An appeal to the state appraisal board when the value is believed to be discriminatory', 'A reduction in appraisal fee when the appraiser delivers an unsupported value'],
             correctIndex: 1,
-            explanation: 'The more a comp must be adjusted, the less reliable it is as a value indicator — high gross adjustments signal the comp and subject are fundamentally different properties.',
+            explanation: 'An ROV is a formal, structured request through the AMC asking the appraiser to reconsider their value based on specific comparable sales the buyer or agent believes should have been used. The appraiser reviews the data and either maintains or adjusts their value. It\'s not a guarantee of a higher value — it\'s a process for ensuring relevant data was considered.',
           },
           {
-            question: 'For an FHA loan, what property condition must be corrected before closing?',
-            options: ['Dated appliances', 'Peeling paint on a pre-1978 home', 'Single-car garage in a 2-car market', 'Older HVAC system in working condition'],
+            question: 'The appraiser marks the property\'s condition as C5. What does this indicate?',
+            options: ['The property is in excellent condition with only minor cosmetic updates needed', 'The property shows significant deferred maintenance and may require substantial repairs before meeting livability standards', 'The property is new construction with no prior occupancy', 'The property condition could not be determined due to limited access'],
             correctIndex: 1,
-            explanation: 'Lead paint on pre-1978 homes is a federal health and safety requirement — FHA mandates it be remediated (scraped and repainted) before the loan can close.',
+            explanation: 'The condition rating scale runs C1 (new/excellent) to C6 (substantial damage, uninhabitable). A C5 rating indicates significant deterioration — the property likely has major maintenance needs. FHA and VA will typically not insure/guarantee loans on C5 or C6 properties without required repairs. Conventional lenders may also require repairs or adjust LTV.',
           },
         ],
       },
       {
         title: 'Compliance — TRID, RESPA & Fair Lending',
         duration: '20 min',
-        content: `Compliance is non-negotiable. Violations expose lenders to regulatory fines, buybacks, and reputational damage. Processors and underwriters are often the last line of defense.\n\n**TRID — Know Before You Owe**\nTwo mandatory disclosures:\n- **Loan Estimate (LE)**: Delivered within 3 business days of application — must reflect actual loan terms\n- **Closing Disclosure (CD)**: Delivered at least 3 business days before consummation\n\n**Fee Tolerance Buckets**\n- Zero tolerance: Origination charges, transfer taxes, own-title insurance — cannot increase from LE to CD\n- 10% tolerance: Third-party services on the LE provider list\n- Unlimited tolerance: Prepaid interest, homeowner's insurance, services borrower selected independently\n\n**Valid Changed Circumstances** (allow LE revision)\n- Acts of God or natural disaster\n- New information received after LE (e.g., appraisal value significantly different)\n- Rate lock extension or expiration\n- Borrower-initiated loan product change\n\n**RESPA — Real Estate Settlement Procedures Act**\nProhibits:\n- Kickbacks or unearned referral fees between settlement providers\n- Requiring borrowers to use a specific title company, attorney, or other service\n- Excessive escrow requirements\n\n**Fair Lending Laws**\n- ECOA: No discrimination based on race, color, religion, national origin, sex, marital status, age, or public assistance status\n- Fair Housing Act: Covers all residential real estate transactions\n- HMDA: Lenders report loan-level data used by regulators to detect discrimination patterns\n\n**Red Flags for Fair Lending**\n- Steering: offering worse terms to protected class borrowers\n- Redlining: avoiding lending in certain neighborhoods based on demographics\n- Disparate impact: neutral policies that disproportionately harm protected classes`,
+        content: `Compliance is not optional, and it's not just the compliance department's job. Every processor and underwriter participates in compliance daily — through disclosure timing, fee accuracy, and consistent underwriting standards. Violations carry serious consequences: fines, license revocation, and lawsuits.
+
+**TRID — TILA/RESPA Integrated Disclosure Rule**
+
+TRID (implemented in 2015) combined two previously separate federal disclosure requirements into a single streamlined framework. It governs when and how loan disclosures must be delivered.
+
+**The Loan Estimate (LE):**
+- Must be delivered within 3 business days of application
+- Must be received (or presumed received) by the borrower before they pay any fees (except credit report)
+- Shows estimated rate, payment, closing costs, and loan terms
+- Changes to certain loan features require a revised LE
+
+**The Closing Disclosure (CD):**
+- Must be provided at least 3 business days before consummation (closing)
+- Three categories of changes can restart the 3-day waiting period:
+  1. APR increases by more than 0.125% (fixed) or 0.25% (variable)
+  2. Loan product changes (fixed to ARM)
+  3. Prepayment penalty added
+- The CD must reconcile with the LE — fees in certain categories are subject to tolerance limits
+
+**Tolerance Categories:**
+- **Zero tolerance:** Lender fees, transfer taxes, fees for required services where the borrower cannot shop. Any increase = violation.
+- **10% tolerance:** Title services where borrower shops from approved list, recording fees. Aggregate increases cannot exceed 10%.
+- **No tolerance:** Services where the borrower freely shops (homeowner's insurance, some inspections). Can change freely.
+
+**RESPA — Real Estate Settlement Procedures Act**
+
+RESPA governs the settlement process for federally related mortgage loans. Its most important provisions:
+
+**Section 8 — Anti-Kickback:** Prohibits giving or receiving anything of value in exchange for referrals of settlement services. This means:
+- A lender cannot pay a real estate agent for sending them business
+- A title company cannot give gifts to loan officers in exchange for referrals
+- Affiliated Business Arrangements (ABAs) are allowed but require disclosure
+
+**Section 9:** Sellers cannot require buyers to use a specific title insurance company
+
+**Section 10:** Limits the amount servicers can require in escrow accounts
+
+**Fair Lending Laws**
+
+**Equal Credit Opportunity Act (ECOA):** Prohibits discrimination in any aspect of a credit transaction based on race, color, religion, national origin, sex, marital status, age, or receipt of public assistance.
+
+**Fair Housing Act (FHA):** Prohibits discrimination in residential real estate transactions — including mortgage lending — based on race, color, national origin, religion, sex, familial status, or disability.
+
+**Disparate Treatment:** Treating a borrower differently because of a protected characteristic — even without discriminatory intent, this is illegal.
+
+**Disparate Impact:** A facially neutral policy that has a disproportionate negative impact on a protected class — even without discriminatory intent, this can be illegal.
+
+**Redlining:** Denying services to residents of certain geographic areas based on the racial composition of those areas — illegal and still actively enforced by CFPB and DOJ.
+
+**Applying Fair Lending in Underwriting**
+
+Every credit decision must be based solely on creditworthiness factors — income, credit, assets, and property. The same standards must be applied consistently to every borrower. Document your decisions clearly so they can withstand scrutiny:
+- What factors supported approval?
+- What factors led to the denial?
+- Were compensating factors considered?
+- Would a similarly situated borrower of a different protected class receive the same decision?`,
         keyPoints: [
-          'LE within 3 business days of application; CD at least 3 business days before closing',
-          'Zero-tolerance fees (origination charges) cannot increase from LE to CD — ever',
-          'RESPA prohibits kickbacks and requiring borrowers to use specific settlement providers',
-          'HMDA data is used by regulators to detect patterns of discrimination',
+          'The Loan Estimate must be delivered within 3 business days of application — before any fees (except credit report) are collected.',
+          'The Closing Disclosure must be provided at least 3 business days before closing — certain changes restart this waiting period.',
+          'RESPA Section 8 prohibits kickbacks and referral fees between settlement service providers — this includes lenders, agents, and title companies.',
+          'Disparate treatment (different treatment based on protected characteristic) and disparate impact (neutral policy with discriminatory effect) are both illegal under Fair Lending laws.',
+          'Document every underwriting decision clearly — consistency and documentation are the best defenses against Fair Lending scrutiny.',
         ],
         quiz: [
           {
-            question: 'How many business days before closing must the Closing Disclosure be delivered?',
-            options: ['1 business day', '2 business days', '3 business days', '5 business days'],
-            correctIndex: 2,
-            explanation: 'The 3-business-day CD waiting period is federal law — changes to APR exceeding 0.125% or the loan product after CD delivery restart the clock.',
+            question: 'A lender\'s origination fee increases between the Loan Estimate and Closing Disclosure. What is the tolerance for this type of fee?',
+            options: ['10% aggregate increase is allowed', 'Zero tolerance — lender fees cannot increase at all between the LE and CD', 'The fee can increase by up to $100 without triggering a violation', 'Lender fees can increase freely as long as the APR doesn\'t change'],
+            correctIndex: 1,
+            explanation: 'Lender-controlled fees (origination charges, underwriting fees, application fees) fall in the zero tolerance category. Any increase between the LE and CD is a TRID violation, regardless of the reason. If the lender discovers their fee needs to increase, they must absorb the difference.',
           },
           {
-            question: 'Which fee category has zero tolerance from Loan Estimate to Closing Disclosure?',
-            options: ['Title insurance selected by borrower', 'Homeowner\'s insurance premium', 'Origination charges (points and lender fees)', 'Recording fees'],
-            correctIndex: 2,
-            explanation: 'Origination charges are entirely within the lender\'s control — borrowers must be able to rely on them. Any increase requires a valid changed circumstance.',
+            question: 'Under RESPA Section 8, which of the following is prohibited?',
+            options: ['A lender offering a lower rate to borrowers who use their affiliated title company', 'A title company providing free closing gifts to loan officers as a thank-you for sending business', 'A real estate agent and mortgage broker working for the same affiliated company with proper disclosure', 'A lender requiring borrowers to use their escrow account for taxes and insurance'],
+            correctIndex: 1,
+            explanation: 'RESPA Section 8 prohibits anything of value exchanged for referrals of settlement services. A gift from a title company to a loan officer for sending business is a classic kickback — even if it\'s a small gift. The prohibition extends to meals, tickets, marketing support, and other indirect benefits.',
           },
           {
-            question: 'Which federal law prohibits requiring borrowers to use a lender-chosen title company?',
-            options: ['TILA', 'ECOA', 'RESPA', 'HMDA'],
-            correctIndex: 2,
-            explanation: 'RESPA prohibits tying arrangements — borrowers must be free to shop for settlement services, and lenders cannot incentivize or require specific vendors.',
+            question: 'A lender\'s policy requires a minimum 2-year employment history. If this policy disproportionately affects borrowers of a specific national origin — even without discriminatory intent — what legal concept applies?',
+            options: ['Disparate treatment — the lender is intentionally discriminating', 'Disparate impact — a facially neutral policy that has a disproportionate negative effect on a protected class', 'Redlining — denying services based on geographic location', 'No legal issue — policies based on employment history are always permissible'],
+            correctIndex: 1,
+            explanation: 'Disparate impact doesn\'t require intent to discriminate. A policy that is neutral on its face (employment history requirement) can still be illegal if it has a statistically disproportionate negative impact on a protected class and isn\'t justified by business necessity. Lenders must regularly analyze their policies for disparate impact.',
           },
         ],
       },
       {
         title: 'Fraud Detection & Red Flags',
         duration: '18 min',
-        content: `Mortgage fraud costs lenders billions annually and can expose processors and underwriters to criminal liability. Every file should be reviewed with healthy skepticism.\n\n**Income Fraud Red Flags**\n- Pay stubs with unusual fonts, inconsistent spacing, or round earnings numbers\n- Employer not verifiable through public sources (no website, disconnected phone)\n- Bank deposits don't reflect the claimed income level\n- YTD income inconsistent with the position or industry\n\n**Asset Fraud Red Flags**\n- Large round-number deposits shortly before application ("parking" borrowed funds)\n- Bank statements with inconsistent fonts or altered balance figures\n- Account balance far exceeds income trajectory\n- Retirement statements from obscure custodians with no online presence\n\n**Occupancy Fraud Red Flags**\n- Property is far from borrower's employer with no reasonable explanation\n- Borrower already owns a home in the same market\n- Implausible commute for the stated employment\n- Lease agreement found on the subject property before closing\n\n**Identity Fraud Red Flags**\n- SSN doesn't match reported date of birth or credit report data\n- Photo ID information doesn't align with application\n- Thin credit file inconsistent with stated income and employment history\n- Prior address history on credit report doesn't match application\n\n**Appraisal Fraud Red Flags**\n- Value lands exactly at contract price without clear support\n- Comps far outside normal market area without explanation\n- Short flip: seller acquired property recently at significantly lower price\n\n**Fraud Detection Tools**\n- 4506-C: Compare borrower-submitted tax returns against IRS transcripts — most powerful tool\n- SSA-89: Verify SSN with Social Security Administration\n- Verbal VOE: Call employer directly using a number found independently, not from the application\n- LexisNexis/Kroll/Inco IDEX: Identity and background verification`,
+        content: `Mortgage fraud costs the industry billions of dollars annually and ultimately harms borrowers, lenders, and communities. Every processor and underwriter is a front-line defense against fraud. Knowing what to look for — and what to do when you find it — is a professional and ethical obligation.
+
+**Types of Mortgage Fraud**
+
+**Fraud for Housing:** The borrower misrepresents their qualifications to obtain a mortgage they couldn't otherwise get — inflated income, undisclosed debt, false employment. Usually motivated by desire to buy a home.
+
+**Fraud for Profit:** Organized schemes involving multiple parties (appraisers, loan officers, title agents, straw borrowers) to extract equity or lender funds illegally. Far more serious and often criminal.
+
+**The Most Common Fraud Schemes**
+
+**Income Fraud:**
+Falsified pay stubs, fabricated W-2s, or manipulated tax returns. Signs:
+- Round-number salaries (exactly $5,000/month — real payroll doesn't usually work this way)
+- Pay stubs with perfect formatting but missing typical payroll details (year-to-date taxes, deductions)
+- W-2s that don't match the tax return
+- Employer phone number that connects to the borrower's cell or a virtual office
+
+**Occupancy Fraud:**
+Borrower states they'll occupy the property as a primary residence but intends to rent it. Occupancy fraud allows borrowers to get primary residence rates and lower down payments on investment properties.
+Signs:
+- Purchase of a property much farther from work than the stated residence makes sense
+- Borrower already owns multiple properties
+- The subject property address appears on credit report for existing accounts
+
+**Appraisal Fraud:**
+Inflated appraisal — appraiser overstates value to make a deal work or at direction of an interested party.
+Signs:
+- Comparables chosen from outside the market area
+- Adjustments consistently inflate rather than support market value
+- Appraiser and buyer's agent share an address or phone number
+- Appraiser's prior work on the same property shows dramatically different value
+
+**Straw Buyer:**
+A person with good credit buys a property on behalf of someone else who couldn't qualify. The actual buyer controls the property and makes payments — the straw buyer gets a fee.
+Signs:
+- Borrower has no apparent connection to the property location
+- Someone else negotiated the deal and is present at all interactions
+- Borrower is unfamiliar with details of the transaction when questioned
+
+**Identity Theft:**
+Application submitted using another person's identity or credit without their knowledge.
+Signs:
+- Signature inconsistencies across documents
+- Address history on the application doesn't match credit report address history
+- Borrower can't verify personal information during the verification call
+
+**The Processor's and Underwriter's Responsibility**
+
+**Do not ignore red flags.** Even if you think you might be wrong, document what you observed and escalate to your supervisor or compliance department.
+
+**Suspicious Activity Reports (SARs):** Financial institutions are required by the Bank Secrecy Act to file SARs when they suspect fraud or money laundering. Processors and underwriters who knowingly process fraudulent loans face personal liability.
+
+**Protect yourself:** Never alter documents, never overlook material misrepresentations at a colleague's request, and never let production pressure override your judgment. The consequences of mortgage fraud participation — even unwitting — include loss of licensure, civil liability, and criminal prosecution.`,
         keyPoints: [
-          'The 4506-C (IRS transcript) is the most powerful income fraud detection tool',
-          'Never use the phone number on the application for VOE — find the employer\'s number independently',
-          'Round-number large deposits just before application are a classic borrowed-funds red flag',
-          'Occupancy fraud: property far from employer + borrower already has a nearby primary home',
+          'Fraud for housing involves borrower misrepresentation; fraud for profit involves organized schemes — both are illegal and detectable.',
+          'Perfect round-number salaries, formatting inconsistencies on pay stubs, and W-2/tax return mismatches are classic income fraud indicators.',
+          'Occupancy fraud — claiming primary residence on an investment purchase — is one of the most common and hard-to-detect fraud types.',
+          'Processors and underwriters have an ethical and legal obligation to escalate red flags — never ignore suspected fraud due to production pressure.',
+          'Knowingly processing a fraudulent loan exposes processors and underwriters to personal liability, license revocation, and criminal prosecution.',
         ],
         quiz: [
           {
-            question: 'What is the most effective tool for detecting income document fraud?',
-            options: ['Calling the borrower directly', 'IRS Form 4506-C (tax transcript comparison)', 'Reviewing the pay stub carefully', 'Running the credit report'],
+            question: 'A borrower\'s pay stub shows a monthly salary of exactly $6,000.00 with no deductions for federal tax, Social Security, or Medicare. What does this suggest?',
+            options: ['The borrower may be exempt from all taxes due to a low-income exemption', 'The pay stub may be fabricated — real payroll almost always includes tax withholdings and shows non-round net pay amounts', 'The borrower is self-employed and correctly reporting gross pay', 'This is normal for salaried employees paid via direct deposit'],
             correctIndex: 1,
-            explanation: 'The 4506-C compares the borrower\'s submitted return against what was actually filed with the IRS — fabricated returns show up as mismatches or unfiled returns.',
+            explanation: 'Real payroll includes Social Security (6.2%), Medicare (1.45%), and typically federal and state income tax withholding. A pay stub showing perfectly round gross pay with no deductions is a strong indicator of fabrication. Verify through the employer directly, not using the phone number on the pay stub.',
           },
           {
-            question: 'When conducting a Verbal VOE, where should you get the employer\'s phone number?',
-            options: ['From the borrower\'s application', 'From the pay stub header', 'Independently — from a public directory, not any document provided by the borrower', 'From the employer\'s HR department after borrower provides permission'],
-            correctIndex: 2,
-            explanation: 'If the employer is fabricated, the number on the application leads to a co-conspirator. An independently verified number ensures you\'re reaching the real company.',
+            question: 'A borrower states they will occupy the subject property as a primary residence, but they already own 3 investment properties and the subject property is 4 hours from their employer. What type of fraud does this suggest?',
+            options: ['Identity theft — the borrower\'s information may have been stolen', 'Occupancy fraud — the borrower may intend to use the property as an investment while claiming primary occupancy', 'Income fraud — the borrower may have misrepresented their employment', 'Appraisal fraud — the property value may be inflated'],
+            correctIndex: 1,
+            explanation: 'Multiple existing investment properties combined with a purchase location that makes no sense for a primary residence are classic occupancy fraud indicators. The borrower wants the better rate and lower down payment of a primary residence on what is effectively an investment property. Request a letter of explanation and scrutinize the occupancy claim carefully.',
           },
           {
-            question: 'A borrower applies for a primary residence but already owns a home two miles away. This is a red flag for:',
-            options: ['Income fraud', 'Appraisal fraud', 'Occupancy fraud', 'Identity fraud'],
-            correctIndex: 2,
-            explanation: 'Claiming primary residence qualifies the borrower for better rates and lower down payment — occupancy fraud to exploit these benefits is one of the most common mortgage fraud schemes.',
+            question: 'A loan officer asks a processor to overlook an inconsistency in the borrower\'s employment verification because \'the deal will fall apart.\' What should the processor do?',
+            options: ['Use judgment — if the rest of the file is clean, proceed and note the inconsistency in the file', 'Document the inconsistency, escalate to a supervisor or compliance department, and refuse to proceed with a materially deficient file', 'Let the underwriter decide — it\'s not the processor\'s responsibility to catch income fraud', 'Proceed as directed — the loan officer bears responsibility for any issues in the file'],
+            correctIndex: 1,
+            explanation: 'Processors who knowingly overlook material deficiencies share liability for any resulting fraud. The loan officer\'s instruction does not relieve the processor of their professional and legal obligation. Document the request, escalate, and do not alter or suppress evidence of a problem.',
           },
         ],
       },
       {
         title: 'Processing Workflow & Condition Management',
         duration: '20 min',
-        content: `Efficient processing is about managing a complex multi-party workflow — borrower, LO, underwriter, appraiser, title, and the calendar — simultaneously. Organization and communication are the job.\n\n**Standard Processing Timeline (30-Day Close)**\nDay 1–2: Application received, LE issued, initial file review\nDay 3–5: Order appraisal, title, flood cert, VOE\nDay 5–10: Chase outstanding borrower documents\nDay 10–14: Appraisal received, complete file submitted to underwriting\nDay 14–21: Underwriting decision — approval with conditions\nDay 21–25: Clear conditions, schedule closing\nDay 25–28: CD issued (3-day clock starts)\nDay 28–30: Closing and funding\n\n**Managing the Borrower**\n- Initial briefing: explain the process, timeline, and what you need\n- "Don't touch your finances" talk: no large purchases, new accounts, job changes, or large deposits\n- Milestone notifications keep borrowers calm and reduce inbound calls\n\n**Condition Types**\n- **PTD (Prior to Document)**: Must clear before closing docs are drawn — these are the critical path\n- **PTF (Prior to Funding)**: Must clear before the wire is sent\n- **PTP (Prior to Purchase)**: Investor condition — loan can close but investor won\'t buy the loan until resolved\n\n**Condition Tracking**\nOrganize conditions by type. PTD conditions are always the priority. Build a tracker: condition, required document, date requested, date received, cleared date.\n\n**The Pre-Underwriting Memo**\nA narrative summary submitted with the file:\n- Loan purpose and program\n- Borrower profile: income, assets, credit highlights\n- Key strengths\n- Known issues and how they\'re addressed\n\nNot required but builds underwriter relationships, speeds decisions, and reduces conditions on clean files.`,
+        content: `Processing is project management. Every loan file has multiple moving pieces — appraisals, title, income verification, underwriting conditions — all converging on a single closing date. A great processor orchestrates all of it without missing a beat.
+
+**The Processing Workflow**
+
+**Stage 1 — Intake and Setup (Days 1-2)**
+- Receive loan file from loan officer
+- Review the 1003 for completeness
+- Set up the loan in the LOS (Loan Origination System)
+- Order initial documents: credit report (if not already pulled), preliminary title, appraisal
+- Create processing checklist and timeline
+- Send borrower a document request list with a deadline
+
+**Stage 2 — Document Collection (Days 2-10)**
+- Follow up daily on outstanding documents
+- Review documents as they arrive — don't wait for the full package
+- Identify issues early: large deposits, employment gaps, property condition concerns
+- Verify all documents are current (pay stubs within 30 days, bank statements within 60 days)
+
+**Stage 3 — Pre-Submission Review (Days 10-15)**
+- Complete the full processing checklist
+- Run AUS with finalized income and asset figures
+- Resolve all issues identified in document review
+- Organize the file per lender's required submission format
+- Write a processor's summary note for the underwriter
+
+**Stage 4 — Underwriting (Days 15-25)**
+- Submit the complete file to underwriting
+- Track underwriting queue time
+- Be available for immediate response to underwriter questions
+- Receive and review the underwriting decision
+
+**Stage 5 — Condition Management (Days 20-35)**
+- Issue conditions to the borrower immediately — don't batch them
+- Set clear deadlines: 'I need this by [date] to meet your closing date'
+- Review conditions as they come in — submit cleared conditions to underwriting in batches
+- Confirm re-approval or CTC with underwriter
+
+**Stage 6 — Clear to Close and Closing Prep (Days 30-45)**
+- Confirm CTC with underwriter
+- Coordinate with closing/settlement team on closing disclosure
+- Verify CD is delivered at least 3 business days before closing
+- Confirm all conditions are cleared and closing package is complete
+- Monitor wire instructions and confirm funding
+
+**Condition Management Best Practices**
+
+**Communicate conditions immediately:** The moment underwriting issues conditions, call the borrower. Don't email and wait. Every day of delay at this stage risks a lock extension or missed closing date.
+
+**Prioritize by complexity:** A letter of explanation takes 10 minutes. A pay stub needs to be obtained from HR. A payoff statement requires contacting a bank. Know which conditions take longest and request those first.
+
+**Submit conditions in batches:** Rather than sending one condition at a time to underwriting, collect all cleared conditions and submit together — it respects the underwriter's time and reduces processing touches.
+
+**Track every condition in writing:** Use your LOS or a simple spreadsheet. Every condition: what it is, when it was requested, when it was received, when it was submitted to underwriting.
+
+**Pipeline Management**
+
+A processor managing 20-40 active files simultaneously must have a system. Key metrics to track daily:
+- Files in each stage of the pipeline
+- Days remaining to lock expiration for each file
+- Outstanding conditions by file (sorted by age)
+- Closing dates in the next 14 days
+- Appraisal status for each file
+
+The files closing in the next 14 days get first attention every morning. Everything else is prioritized by risk of delay.`,
         keyPoints: [
-          'PTD conditions are the critical path — nothing can close without them cleared',
-          '"Don\'t touch your finances" briefing prevents last-minute disqualifying changes',
-          'Submit a complete, organized file — conditions are the primary source of delay',
-          'A pre-UW memo builds credibility with underwriters and speeds the review',
+          'Processing is project management — orchestrating appraisals, title, income verification, and conditions toward a single closing date.',
+          'Order the appraisal and title on day one — they\'re the longest lead-time items and the most common source of delays.',
+          'Communicate conditions to the borrower immediately by phone — email and wait loses days at the most critical stage.',
+          'Track every condition in writing — what was requested, when received, and when submitted to underwriting.',
+          'Files closing in the next 14 days get first priority every morning — closing date management is a processor\'s primary daily responsibility.',
         ],
         quiz: [
           {
-            question: 'Which type of condition must be cleared before closing documents can be drawn?',
-            options: ['Prior to Purchase (PTP)', 'Prior to Funding (PTF)', 'Prior to Document (PTD)', 'All condition types clear simultaneously'],
-            correctIndex: 2,
-            explanation: 'PTD conditions are the critical path — the title company cannot prepare closing documents until PTD conditions are cleared. Prioritize these above all others.',
-          },
-          {
-            question: 'What should processors tell borrowers about their finances during the loan process?',
-            options: ['Feel free to make any changes — the approval is already in', 'Do not make large purchases, open new credit, change jobs, or move large sums', 'Only major changes over $10,000 need to be reported', 'Changes are fine as long as the credit score stays above minimum'],
+            question: 'What is the most important reason to order the appraisal on day one of processing?',
+            options: ['Federal law requires the appraisal to be ordered within 24 hours of application', 'The appraisal is the longest lead-time item and the most common source of closing delays — early ordering minimizes risk', 'Early appraisal ordering reduces the fee by 15% in most markets', 'The borrower must receive the appraisal report before the processor can order the credit report'],
             correctIndex: 1,
-            explanation: 'Any financial change can trigger a re-underwrite — a new car loan, job change, or unexplained large deposit can delay or kill a loan at the closing table.',
+            explanation: 'Appraisals involve scheduling with the homeowner, the inspector\'s visit, and the appraiser\'s report preparation — a process outside the processor\'s direct control. Delays happen. The only way to manage appraisal risk is to start early, giving yourself the maximum possible timeline buffer.',
           },
           {
-            question: 'What is the purpose of a Pre-Underwriting Memo written by the processor?',
-            options: ['Required by TRID for compliance', 'Replaces income documentation for clean files', 'Provides a narrative summary of strengths and issues to speed the underwriter\'s review', 'Must be signed by the borrower'],
+            question: 'When underwriting issues multiple conditions, what is the most effective approach to condition management?',
+            options: ['Request one condition at a time and wait for each response before requesting the next', 'Request all conditions from the borrower immediately, prioritizing the most time-consuming ones, and submit to underwriting in batches', 'Wait until all conditions are received before contacting the borrower to avoid confusion', 'Let the loan officer manage conditions — the processor\'s job ends at submission'],
+            correctIndex: 1,
+            explanation: 'Batching condition requests saves time for both the borrower and the underwriter. Prioritizing time-consuming conditions (pay stubs from HR, payoff statements) means they\'re requested first while faster conditions (letters of explanation) are collected simultaneously. Submitting cleared conditions in batches to underwriting reduces review touches and respects the underwriter\'s workflow.',
+          },
+          {
+            question: 'A processor has 35 active files. Which files should receive first priority every morning?',
+            options: ['Files that have been in processing the longest', 'Files with the largest loan amounts', 'Files with closing dates in the next 14 days', 'Files with the most outstanding conditions'],
             correctIndex: 2,
-            explanation: 'A well-written pre-UW memo tells the story of the file. Underwriters appreciate the context and it often results in fewer conditions and faster decisions.',
+            explanation: 'Closing date management is the primary responsibility of a processor. A missed closing date harms the borrower (rate lock extensions, rescheduled movers, temporary housing costs) and damages the lender\'s and loan officer\'s relationship. Files approaching closing always take priority over files earlier in the process.',
           },
         ],
       },
@@ -3183,325 +5687,1033 @@ Don't switch for a marginally better split — relationships and reputation take
   // ─────────────────────────────────────────────────────────────────────────
   {
     id: 'construction',
-    title: 'Construction Management & Estimating',
-    description: 'Learn cost estimating, material takeoffs, bidding, project scheduling, contracts, permits, and how lenders underwrite construction budgets.',
-    icon: 'construct-outline',
-    color: '#E07B39',
-    tiers: ['elite'],
+    title: 'Construction Management',
+    description: 'The complete professional curriculum for real estate construction, renovation, and project management. Master estimating, material takeoffs, labor pricing, bid packages, scheduling, permits, construction draws, lien waivers, and renovation underwriting.',
+    icon: 'hammer-outline',
+    color: '#795548',
+    tiers: ['pro', 'elite', 'all-access'],
     creditHours: 13,
     lessons: [
       {
-        title: 'Introduction to Construction Estimating',
-        duration: '18 min',
-        content: `Construction estimating is the process of forecasting the cost to complete a project before a single nail is driven. For investors, realtors, and developers, accurate estimates are the difference between a profitable deal and a financial disaster.\n\n**Why Estimates Matter**\n- Determine feasibility before acquisition\n- Set the budget for financing (construction loan draw schedule)\n- Create the basis for contractor bids and negotiation\n- Establish the contingency reserve needed\n\n**Types of Estimates**\n\n**Conceptual Estimate (Order of Magnitude)**\nEarly-stage estimate based on high-level scope. Often $/sq ft:\n- Light cosmetic renovation: $15–40/sq ft\n- Mid-level renovation: $40–80/sq ft\n- Full gut rehab: $80–150/sq ft\n- New construction: $150–350/sq ft depending on market and finish level\n\n**Preliminary Estimate**\nBased on schematic drawings. More line-item breakdown. Accuracy: ±20–30%\n\n**Detailed (Quantity Survey) Estimate**\nBased on full construction documents. Line-item material and labor takeoffs. Accuracy: ±5–10%\n\n**The Estimating Process**\n1. Review scope of work and drawings\n2. Perform quantity takeoffs (measure everything)\n3. Price materials (supplier quotes or cost data)\n4. Price labor (subcontractor bids or labor units × wage)\n5. Add overhead and profit\n6. Add contingency (10–20% depending on project risk)\n\n**CSI MasterFormat**\nThe Construction Specifications Institute divides all construction work into 50 divisions. Common ones:\n- Division 3: Concrete\n- Division 4: Masonry\n- Division 6: Wood and Plastics (framing, finish)\n- Division 9: Finishes (drywall, paint, flooring)\n- Division 22–23: Plumbing and HVAC\n- Division 26: Electrical`,
-        keyPoints: [
-          'Conceptual estimates use $/sq ft; detailed estimates use full quantity takeoffs',
-          'Full gut rehab typically costs $80–150/sq ft; new construction $150–350/sq ft+',
-          'Add 10–20% contingency — renovation projects almost always encounter unknowns',
-          'CSI MasterFormat organizes all construction work into 50 standardized divisions',
-        ],
-        quiz: [
-          {
-            question: 'What is the most accurate type of construction estimate?',
-            options: ['Conceptual (order of magnitude)', 'Preliminary (schematic)', 'Detailed quantity survey estimate', 'Rule-of-thumb $/sq ft'],
-            correctIndex: 2,
-            explanation: 'A detailed quantity survey using full construction documents achieves ±5–10% accuracy — far superior to early-stage conceptual estimates which can vary by 30%+.',
-          },
-          {
-            question: 'What contingency percentage should be added to most renovation estimates?',
-            options: ['0–2% — estimates should be exact', '3–5% for minor projects only', '10–20% depending on project risk', '30–40% for all projects'],
-            correctIndex: 2,
-            explanation: 'Construction projects almost always encounter unknowns — hidden rot, outdated electrical, subcontractor issues. A 10–20% contingency protects the budget and the deal.',
-          },
-          {
-            question: 'What is the typical cost range for a full gut rehabilitation (per square foot)?',
-            options: ['$10–30/sq ft', '$30–50/sq ft', '$80–150/sq ft', '$200–400/sq ft'],
-            correctIndex: 2,
-            explanation: 'A full gut rehab — down to studs with new mechanical, electrical, plumbing, and finishes — typically runs $80–150/sq ft depending on market and finish quality.',
-          },
-        ],
-      },
-      {
-        title: 'Material Takeoffs & Quantity Surveying',
+        title: 'Construction Estimating Fundamentals',
         duration: '22 min',
-        content: `A material takeoff (MTO) is the process of measuring and quantifying every material needed for a project. It is the foundation of an accurate estimate.\n\n**Why Takeoffs Matter**\nWithout accurate quantities, you can't get accurate pricing. Every over- or under-measure translates directly to lost margin or unbid scope.\n\n**Basic Takeoff Units**\n- Linear feet (LF): baseboards, framing lumber, piping\n- Square feet (SF): drywall, flooring, roofing, insulation\n- Square yards (SY): carpet (divide SF by 9)\n- Cubic yards (CY): concrete, excavation, fill (1 CY = 27 cubic feet)\n- Each (EA): doors, windows, fixtures, cabinets\n- Tons: roofing shingles (1 square = 100 SF = 3 bundles = ¼ ton)\n\n**Takeoff Process — Room by Room**\nFor interior renovations, go room by room:\n1. Measure the room (length × width = floor SF)\n2. Calculate wall area: perimeter × ceiling height − openings\n3. List every item to be replaced or installed\n4. Quantify each item\n\n**Waste Factors**\nAlways add waste to material quantities:\n- Drywall: 10% waste\n- Flooring (straight lay): 10% waste; diagonal lay: 15%\n- Tile: 10–15% waste (more for complex patterns)\n- Lumber: 10–15% depending on cuts\n- Roofing: 10–15% for waste and starter courses\n\n**Common Mistakes in Takeoffs**\n- Forgetting to add waste factors\n- Not accounting for door and window deductions in drywall\n- Measuring finished dimensions instead of rough dimensions for framing\n- Not including accessories (nails, screws, adhesive, underlayment)\n\n**Digital Takeoff Tools**\nModern estimators use digital tools:\n- PlanSwift\n- Bluebeam Revu\n- On-Screen Takeoff\n- Stack (cloud-based)\n\nThese tools let you scale PDFs and mark up quantities directly on digital plans.`,
+        content: `Every construction project — from a cosmetic flip to a ground-up build — begins with an estimate. The estimate determines whether the deal makes sense, how much capital to raise, and what to pay a contractor. A bad estimate destroys profit margins before the first nail is driven. A disciplined estimate is the foundation of every successful project.
+
+**The Purpose of an Estimate**
+
+An estimate serves three functions:
+1. **Deal analysis** — Is the project financially viable?
+2. **Capital planning** — How much money do you need and when?
+3. **Contractor accountability** — What are you hiring someone to do, and for how much?
+
+Without a detailed estimate, you're guessing on all three. Guessing on capital needs is how projects stall. Guessing on scope is how contractors pad bills.
+
+**Estimate Types**
+
+**Conceptual Estimate (Order of Magnitude):** Quick, high-level estimate based on cost per square foot. Used for initial deal analysis before a full scope is developed.
+- Cosmetic renovation: $15-35/SF
+- Mid-level renovation: $40-75/SF
+- Full gut renovation: $80-150/SF
+- Ground-up construction: $120-300+/SF depending on market and finishes
+
+**Detailed Estimate:** Line-by-line breakdown of every scope item with quantities and unit costs. Used for bidding, capital raising, and contractor accountability.
+
+**Final Budget:** Signed contracts in hand, all scopes priced, contingency established. The financial plan for the project.
+
+**The Construction Budget Structure**
+
+Every detailed construction budget should be organized into divisions:
+
+**Division 01 — Site Work:** Demolition, grading, excavation, site utilities, driveway, landscaping
+
+**Division 02 — Foundation:** Concrete, footings, slab, waterproofing, underpinning
+
+**Division 03 — Framing:** Structural lumber, LVL beams, OSB sheathing, trusses
+
+**Division 04 — Exterior:** Roofing, siding, windows, doors, flashing, gutters
+
+**Division 05 — Rough MEP:** Rough plumbing, rough electrical, HVAC rough-in
+
+**Division 06 — Insulation:** Batt, spray foam, blown-in
+
+**Division 07 — Drywall:** Hanging, taping, finishing, skim coat
+
+**Division 08 — Interior Finishes:** Flooring, tile, trim, doors, hardware, cabinets, countertops
+
+**Division 09 — Final MEP:** Plumbing fixtures, electrical fixtures, HVAC equipment
+
+**Division 10 — Specialties:** Appliances, mirrors, bath accessories, shelving
+
+**Division 11 — Soft Costs:** Permits, architectural/engineering fees, inspection fees, utility connection fees
+
+**Division 12 — Contingency:** 10-20% of hard construction costs depending on project type and known unknowns
+
+**The Contingency Rule**
+
+Contingency is not a luxury — it's a professional requirement. Every project has unknowns. Renovation projects have more unknowns than new construction. The contingency absorbs them without blowing the budget.
+
+**Standard contingency guidelines:**
+- New construction with complete drawings: 5-10%
+- Renovation with full inspection access: 10-15%
+- Renovation of older property / partial access: 15-20%
+- Gut renovation / historic property: 20-25%
+
+An investor or developer who skips contingency is betting that nothing unexpected happens. That bet almost always loses.
+
+**The Most Common Estimating Errors**
+
+**1. Skipping scope items:** 'We'll figure out the kitchen later' — items left out of the estimate always cost more than budgeted when they're added.
+
+**2. Using square footage costs without adjustment:** Regional costs vary enormously. A $50/SF renovation in Cleveland is a $120/SF renovation in Manhattan.
+
+**3. Forgetting soft costs:** Permits, architect fees, engineering, inspections — these add 10-20% to hard construction costs on complex projects.
+
+**4. No contingency:** See above.
+
+**5. Using a contractor's estimate as the budget:** Contractors estimate what they know. They don't estimate what the owner forgot to tell them. Scope gaps become change orders.`,
         keyPoints: [
-          'Takeoff units vary by material: LF for framing, SF for drywall/flooring, CY for concrete',
-          'Always add waste factors: 10% for drywall, 10–15% for flooring and tile',
-          'Go room by room — floor, walls, ceiling, then individual items (doors, windows, cabinets)',
-          'Accessories (nails, adhesive, underlayment) are frequently missed in takeoffs',
+          'Estimates serve three functions: deal analysis, capital planning, and contractor accountability — skipping any one creates risk.',
+          'Organize detailed budgets by construction division (site, foundation, framing, MEP, finishes, etc.) to ensure complete scope coverage.',
+          'Contingency is mandatory — 10-20% for renovation, 5-10% for new construction with complete drawings.',
+          'Soft costs (permits, architect, engineering, inspections) add 10-20% to hard construction costs on complex projects — never forget them.',
+          'A contractor\'s estimate is not the project budget — scope gaps between what you described and what they priced become change orders.',
         ],
         quiz: [
           {
-            question: 'A room is 12 ft × 14 ft with 9 ft ceilings, two doors (3×7), and one window (3×4). What is the wall area (before deductions)?',
-            options: ['432 sq ft', '468 sq ft', '468 sq ft minus 34 sq ft for openings = 434 sq ft', 'Cannot be calculated without a floor plan'],
-            correctIndex: 2,
-            explanation: 'Perimeter = (12+14)×2 = 52 LF. Wall area = 52×9 = 468 SF. Deductions: 2 doors (3×7=21 SF each = 42 SF) + 1 window (3×4=12 SF) = 54 SF. Net wall area ≈ 414 SF.',
+            question: 'What is the appropriate contingency percentage for a gut renovation of an older property with partial access during due diligence?',
+            options: ['5%', '10%', '15%', '20-25%'],
+            correctIndex: 3,
+            explanation: 'Older properties with limited pre-purchase access carry the most estimating uncertainty — hidden structural issues, outdated electrical and plumbing, environmental concerns, and code compliance requirements discovered mid-project. A 20-25% contingency reflects the real risk of unknown conditions in these projects.',
           },
           {
-            question: 'What waste factor should be added to flooring installed in a straight lay pattern?',
-            options: ['0–2%', '5%', '10%', '20%'],
+            question: 'Which of the following is NOT typically included in a construction hard cost budget?',
+            options: ['Framing labor and materials', 'Roofing installation', 'Permit fees and architectural drawings', 'Drywall finishing'],
             correctIndex: 2,
-            explanation: 'A 10% waste factor accounts for cuts, irregular room shapes, and damaged pieces. Diagonal or pattern installations require 15% due to additional cuts.',
+            explanation: 'Permit fees and architectural drawings are soft costs — not hard construction costs. Hard costs are direct construction labor and materials. Soft costs include permits, design fees, engineering, inspections, and financing costs. Both must be included in the total project budget but should be tracked separately.',
           },
           {
-            question: 'Concrete is measured in:',
-            options: ['Square feet', 'Linear feet', 'Cubic yards', 'Tons'],
-            correctIndex: 2,
-            explanation: 'Concrete is a volume material measured in cubic yards (1 CY = 27 cubic feet). A 4-inch thick 10×10 slab = 1,000 SF × 0.33 ft ÷ 27 = approximately 12.3 CY.',
+            question: 'Why should an investor never use a contractor\'s estimate as the final project budget?',
+            options: ['Contractors are legally prohibited from providing binding estimates', 'Contractors estimate what they were told to price — scope gaps and forgotten items become change orders that exceed the original estimate', 'Contractor estimates always include excessive profit margins that inflate costs', 'A contractor\'s estimate does not include material costs — only labor'],
+            correctIndex: 1,
+            explanation: 'A contractor prices exactly what you describe to them. If you forgot to mention the bathroom demo, the new subfloor, or the window replacement, they didn\'t price it. When you need those items done, they become change orders — typically at premium pricing. The investor\'s detailed scope document drives the estimate, not the contractor\'s interpretation of a verbal conversation.',
           },
         ],
       },
       {
-        title: 'Labor Costs & Subcontractor Pricing',
+        title: 'Material Takeoffs',
         duration: '20 min',
-        content: `Labor is typically 30–50% of total construction cost. Understanding how to estimate it accurately — and how to evaluate subcontractor bids — is essential for any project.\n\n**Labor Pricing Methods**\n\n**Unit Price Method**\nThe most common: assign a labor cost per unit of work.\n- Install drywall: $1.50–3.00/SF installed and finished\n- Frame interior wall: $3–5/LF\n- Install hardwood flooring: $3–5/SF installed\n- Rough plumbing per fixture: $400–800\n- Electrical outlet: $100–200 installed\n\n**Time and Materials (T&M)**\nLabor hourly rates + material cost. Used when scope is uncertain.\n- Carpenter: $35–75/hr depending on market\n- Electrician: $65–125/hr\n- Plumber: $75–150/hr\n- General laborer: $20–40/hr\n\n**Lump Sum Subcontractor Bids**\nThe most common method for major trades (HVAC, electrical, plumbing, roofing):\n- You describe the scope\n- Sub provides an all-in price\n- You compare bids\n\n**Getting and Evaluating Bids**\nAlways get minimum 3 bids for any significant scope:\n1. Low bid: investigate — may indicate misunderstood scope or corner-cutting\n2. Middle bid: often the most balanced\n3. High bid: sometimes reflects superior quality or full scope understanding\n\nNever choose by price alone. Evaluate: license and insurance, references, experience with similar projects, ability to meet schedule.\n\n**Scope of Work**\nEvery subcontractor bid must be based on an identical written scope of work. Without it, you're comparing apples to oranges. The scope defines: exactly what work is included, materials specified, timeline, and exclusions.\n\n**Subcontractor Overhead and Profit**\nTrade contractors typically build in 15–25% overhead and profit. When building your estimate, this is already in their bid — your job is to add your own OH&P on top as the GC or project manager.`,
+        content: `A material takeoff (MTO) is the process of calculating the exact quantities of materials needed for a construction project from architectural drawings or field measurements. Accurate takeoffs are the difference between ordering the right amount of material and having costly delays (underordered) or wasteful surplus (overordered).
+
+**Why Takeoffs Matter**
+
+Materials typically represent 40-60% of total construction cost. Over-ordering wastes money on materials that sit unused. Under-ordering causes project delays when the crew waits for restocked materials — and labor standby time is expensive. Accurate takeoffs minimize both.
+
+**The Takeoff Process**
+
+**Step 1 — Review the Drawings**
+For new construction: start with architectural plans. For renovation: start with field measurements if no drawings exist. Note all dimensions, details, and specifications.
+
+**Step 2 — Identify Scope by Division**
+Work through the project systematically by division. Don't try to take off the whole project at once — work one trade at a time.
+
+**Step 3 — Measure and Calculate Quantities**
+Convert drawing dimensions into usable quantities:
+- Linear footage (LF): trim, framing members, pipes
+- Square footage (SF): flooring, drywall, roofing, tile
+- Cubic yards (CY): concrete, fill dirt, excavation
+- Each (EA): doors, windows, fixtures, cabinets
+- Tons: asphalt, gravel
+
+**Step 4 — Apply Waste Factors**
+Real installation always wastes material — cuts, errors, breakage. Standard waste factors by material:
+- Drywall: 10%
+- Flooring (carpet, LVP, hardwood): 10-15%
+- Tile: 10-15% (15-20% for diagonal or complex patterns)
+- Framing lumber: 15%
+- Roofing shingles: 10-15% (more on complex roof geometry)
+- Paint: measure wall and ceiling area, subtract large openings
+
+**Step 5 — Price the Quantities**
+Apply current local material prices to each quantity. Prices vary significantly by region and change with supply chain conditions. Always use current pricing — not last year's numbers.
+
+**Common Takeoff Calculations**
+
+**Drywall (SF):**
+- Calculate wall area: Perimeter × Wall height
+- Subtract large openings (doors, windows) — rough estimate: subtract 15 SF per door opening, 12 SF per window
+- Add ceiling area: length × width
+- Add 10% waste
+- Convert to sheets: total SF ÷ 32 SF per sheet (4×8 sheet) = number of sheets
+
+Example: 1,000 SF house, 9-foot ceilings, 12 doors, 14 windows
+- Wall area: (perimeter 132 LF) × 9 ft = 1,188 SF
+- Subtract openings: (12 × 15) + (14 × 12) = 180 + 168 = 348 SF
+- Net wall area: 840 SF
+- Ceiling: 1,000 SF
+- Total: 1,840 SF × 1.10 (waste) = 2,024 SF
+- Sheets: 2,024 ÷ 32 = 64 sheets
+
+**Flooring (SF):**
+- Measure room by room (length × width)
+- Total all rooms
+- Add waste factor (10-15%)
+- Subtract tiled areas if different material
+
+**Concrete (CY):**
+- Volume = Length × Width × Depth (in feet) ÷ 27
+- Example: 4-inch slab, 20 ft × 30 ft = 20 × 30 × 0.333 ÷ 27 = 7.4 CY
+- Add 10% for waste and over-pour
+
+**Roofing (Squares):**
+- 1 roofing square = 100 SF of roof surface
+- Measure roof planes, calculate total SF
+- Add 10-15% for waste
+- Include ridge cap, starter strip, and underlayment separately
+
+**Takeoff Software**
+
+For large projects, takeoff software (Bluebeam, PlanSwift, Buildxact) speeds up the process significantly — allowing measurement directly on PDF drawings with automatic calculations. For small to mid-size renovation projects, a spreadsheet with formulas is often sufficient.`,
         keyPoints: [
-          'Labor is 30–50% of project cost — unit pricing is the most reliable estimation method',
-          'Always get 3 bids minimum — low bid often means misunderstood scope or quality cuts',
-          'Every bid must be based on an identical written scope of work — no scope = no comparison',
-          'Trade subs include 15–25% OH&P in their bids; the GC adds overhead and profit on top',
+          'Material takeoffs convert drawing dimensions into quantities — apply waste factors (10-20% depending on material) to every line item.',
+          'Drywall takeoff: (perimeter × height) - openings + ceiling SF, then divide by 32 for sheet count.',
+          'Concrete is measured in cubic yards: (L × W × D in feet) ÷ 27, plus 10% over-pour waste.',
+          'One roofing square = 100 SF of roof surface area — always add 10-15% for waste on complex roof geometry.',
+          'Use current local pricing for all takeoffs — material costs vary significantly by region and change with supply chain conditions.',
         ],
         quiz: [
           {
-            question: 'What is the most reliable method for estimating labor costs for defined scopes?',
-            options: ['Time and materials (T&M)', 'Unit price method (cost per SF, LF, or EA)', 'Multiplying material cost by 2', 'Subtracting 20% from the highest bid'],
-            correctIndex: 1,
-            explanation: 'Unit pricing assigns a known labor cost per measurable unit — predictable, comparable, and the industry standard for defined scopes of work.',
-          },
-          {
-            question: 'When comparing three bids for roofing, the low bid is 40% below the others. What should you do?',
-            options: ['Accept it — that\'s the market price', 'Reject it immediately', 'Investigate — compare scope, verify license and insurance, check references', 'Average all three bids'],
+            question: 'A floor plan shows a 15 ft × 20 ft bedroom. After adding a 10% waste factor, how many square feet of LVP flooring should be ordered?',
+            options: ['300 SF', '315 SF', '330 SF', '350 SF'],
             correctIndex: 2,
-            explanation: 'A dramatically low bid usually means misunderstood scope, missing items, uninsured contractor, or lower quality materials. Investigate before rejecting or accepting.',
+            explanation: 'Room area = 15 × 20 = 300 SF. With 10% waste: 300 × 1.10 = 330 SF.',
           },
           {
-            question: 'Why must every subcontractor bid be based on the same written scope of work?',
-            options: ['It\'s required by law for all construction projects', 'Without identical scope, bids are not comparable — you may be comparing different amounts of work', 'It protects the sub from change orders', 'Written scopes reduce the need for permits'],
+            question: 'How many cubic yards of concrete are needed for a 4-inch slab measuring 25 ft × 40 ft? (Add 10% waste)',
+            options: ['Approximately 3.7 CY', 'Approximately 10.0 CY', 'Approximately 13.7 CY', 'Approximately 37.0 CY'],
+            correctIndex: 2,
+            explanation: 'Volume = 25 × 40 × (4/12) ÷ 27 = 25 × 40 × 0.333 ÷ 27 = 333.3 ÷ 27 = 12.35 CY. With 10% waste: 12.35 × 1.10 = 13.6 CY ≈ 13.7 CY.',
+          },
+          {
+            question: 'Why are waste factors applied differently for diagonal tile installation compared to standard straight-lay tile?',
+            options: ['Diagonal tile uses thicker adhesive, requiring more material per square foot', 'Diagonal patterns require more cuts at room edges and corners, generating significantly more waste', 'Waste factors are standardized at 10% for all tile installation patterns', 'Diagonal installation requires tile ordered in a larger format, increasing unit waste'],
             correctIndex: 1,
-            explanation: 'Without a defined scope, one sub may include demolition while another doesn\'t — price differences don\'t reflect skill level, they reflect different assumptions about the work.',
+            explanation: 'When tile is laid at 45 degrees, every edge and corner of the room requires a diagonal cut — often wasting half of each cut piece. Standard straight lay generates cut waste only at room perimeters. Diagonal patterns typically require 15-20% waste factor vs. 10-12% for straight lay.',
           },
         ],
       },
       {
-        title: 'Bid Packages & Proposal Writing',
-        duration: '18 min',
-        content: `A bid package is the set of documents you send to subcontractors or suppliers to solicit pricing. A well-organized bid package gets better bids, faster — and protects you legally if disputes arise.\n\n**Bid Package Components**\n1. **Cover letter / Invitation to Bid**: Project overview, bid due date, contact info\n2. **Scope of Work**: Detailed description of what the sub is responsible for\n3. **Plans and Specifications**: Drawings (if available), material specifications\n4. **Schedule**: Project start date, milestones, required completion\n5. **Bid Form**: Standardized form for the sub to fill in prices (line items + lump sum)\n6. **Contract Terms**: Payment terms, lien waiver requirements, insurance requirements\n\n**Writing a Scope of Work**\nThe scope is the most critical document. A good scope:\n- Defines exactly what IS included\n- Defines what is NOT included (exclusions)\n- Specifies materials (brand, model, grade)\n- Addresses access, working hours, debris removal\n- Notes any special conditions (occupied building, phased work, HOA restrictions)\n\n**Proposal Structure (for writing your own bids to owners)**\n1. Executive Summary: project description, proposed approach, why you're qualified\n2. Scope of Work: what you will deliver\n3. Exclusions: what is NOT included\n4. Assumptions: conditions your price depends on (e.g., "assumes no asbestos")\n5. Pricing Summary: total price, payment schedule\n6. Timeline: projected schedule\n7. Terms: warranty, change order process, governing law\n\n**Bid Leveling**\nWhen you receive multiple bids, "level" them before comparing:\n- Create a line-by-line spreadsheet\n- Check what each sub included vs. excluded\n- Add the cost of exclusions to normalize the bids\n- Compare apples to apples\n\n**Bid Security**\nFor larger projects, owners may require:\n- Bid bond: guarantees the bidder will enter into contract if selected (typically 5–10% of bid)\n- Performance bond: guarantees project completion\n- Payment bond: guarantees subs and suppliers will be paid`,
-        keyPoints: [
-          'A complete bid package includes scope, plans, schedule, bid form, and contract terms',
-          'Scope of work must specify inclusions AND exclusions — ambiguity creates disputes',
-          'Bid leveling normalizes bids by adding the cost of what each sub excluded',
-          'Bid bonds guarantee the contractor will sign the contract if selected',
-        ],
-        quiz: [
-          {
-            question: 'What is bid leveling?',
-            options: ['Averaging all bids to find a fair price', 'Normalizing bids by adding the cost of exclusions so all bids cover the same scope', 'Choosing the bid closest to the budget', 'Requiring all bidders to revise their prices to the same number'],
-            correctIndex: 1,
-            explanation: 'Without leveling, you\'re comparing bids that include different scopes — a $50,000 bid that excludes demolition and a $60,000 bid that includes it aren\'t really comparable.',
-          },
-          {
-            question: 'Why must a scope of work define exclusions as well as inclusions?',
-            options: ['Exclusions reduce the contract price', 'Exclusions are required by law', 'Undefined scope creates disputes — the contractor assumes their exclusions are the owner\'s responsibility', 'Exclusions allow the sub to charge more'],
-            correctIndex: 2,
-            explanation: 'Every undefined item will become a dispute or a change order. Explicit exclusions set clear expectations before work begins and protect all parties.',
-          },
-          {
-            question: 'A bid bond guarantees:',
-            options: ['Project quality', 'That subcontractors will be paid', 'That the bidder will enter into contract if selected', 'That the project will be completed on time'],
-            correctIndex: 2,
-            explanation: 'A bid bond protects the owner from a contractor who wins the bid but then refuses to sign the contract — the bond compensates the owner for re-bidding costs.',
-          },
-        ],
-      },
-      {
-        title: 'Markup vs. Margin & Pricing for Profit',
+        title: 'Labor Pricing & Subcontractor Management',
         duration: '20 min',
-        content: `The most common financial mistake contractors make is confusing markup with margin. Understanding the difference — and how to price jobs for actual profit — is foundational to building a sustainable construction business.\n\n**Markup vs. Margin**\n\n**Markup** = additional percentage added ON TOP of cost\nSelling Price = Cost × (1 + Markup %)\n\n**Margin (Gross Profit Margin)** = profit as a percentage OF the selling price\nMargin % = (Profit ÷ Selling Price) × 100\n\nExample with $10,000 in costs:\n- 25% markup: Selling Price = $10,000 × 1.25 = $12,500. Profit = $2,500. Margin = 20%\n- 25% margin: Selling Price = $10,000 ÷ 0.75 = $13,333. Profit = $3,333. Margin = 25%\n\nA contractor who says "I want 25% profit" but uses 25% markup is actually making 20% margin.\n\n**Overhead Recovery**\nOverhead includes all costs not directly tied to a project:\n- Office rent and utilities\n- Vehicle expenses\n- Insurance (general liability, workers comp)\n- Tools and equipment\n- Admin staff\n- Marketing\n- Owner salary (not charged to projects)\n\nAnnual overhead ÷ Annual revenue target = overhead rate\nIf overhead is $200,000 and target revenue is $1M: overhead rate = 20%\n\n**Building Your Markup**\nMarkup must cover overhead AND profit:\n- Overhead rate: 20%\n- Net profit target: 10%\n- Required gross profit margin: 30%\n- Markup to achieve 30% margin: 1 ÷ (1 − 0.30) − 1 = 42.8% markup\n\n**Common Industry Margins**\n- General contractor (residential): 15–25% gross margin\n- Specialty trades: 20–35% gross margin\n- Design-build firms: 25–40%\n- Luxury/high-end: 30–50%`,
+        content: `Labor is the most variable and least predictable cost in construction. Materials have published prices. Labor depends on the skill of the crew, the complexity of the scope, the site conditions, and the quality of the project management. Understanding labor pricing — and managing it — is where construction profitability is won or lost.
+
+**How Labor is Priced**
+
+**Time and Materials (T&M):**
+The contractor bills for actual hours worked plus materials at cost plus a markup (typically 15-25%). The owner bears all productivity and cost risk — if the job takes longer, the owner pays more.
+
+When to use T&M: exploratory work (demolition to assess hidden conditions), highly unpredictable scopes, small repairs where estimating would cost more than the work.
+
+**Fixed Price / Lump Sum:**
+The contractor prices the complete scope for a fixed total. The contractor bears the productivity risk — if it takes longer than estimated, their profit shrinks.
+
+When to use fixed price: clearly defined scopes with complete drawings and specifications, any scope over $5,000 where the risk of overruns is meaningful.
+
+**Unit Pricing:**
+Labor priced per unit of installation — per linear foot of framing, per square foot of drywall hung, per fixture installed. Common in production-style renovation.
+
+Sample unit prices (vary significantly by market):
+- Framing: $3-6/SF of framed area
+- Drywall hang: $0.40-0.70/SF
+- Drywall tape and finish: $0.50-0.80/SF
+- Tile installation: $8-18/SF (simple floor), $15-30/SF (shower surround)
+- Hardwood flooring installation: $4-8/SF
+- Exterior painting: $1.50-3.00/SF
+- Interior painting: $1.00-2.50/SF per coat
+
+**Subcontractor vs. General Contractor**
+
+**Subcontractors** are specialty trade contractors — plumbers, electricians, HVAC, framers, roofers, tile setters. They work directly in their trade.
+
+**General Contractors** manage the overall project — hiring, scheduling, and coordinating subcontractors. The GC's fee for this service is typically 10-25% of total construction cost (GC overhead and profit markup).
+
+When you hire a GC, you're paying for project management. When you self-manage subs, you keep the GC markup but take on the scheduling and coordination burden yourself. For investors with large renovation pipelines, self-managing subs can save 10-20% on construction costs — if they have the time and systems.
+
+**Getting Bids and Leveling**
+
+Always get a minimum of 3 bids for any scope over $2,500. Bids on the same scope will vary 20-40% between contractors — sometimes more.
+
+**Bid leveling:** Don't just compare the bottom line. Review each bid line-by-line:
+- Is every scope item included?
+- Are specifications the same (material grade, brand)?
+- What's the payment schedule?
+- What's the timeline?
+- What are the exclusions?
+
+The lowest bid is often missing scope items. The highest bid often includes items you didn't ask for. The goal is an apples-to-apples comparison.
+
+**Managing Subcontractors**
+
+**Written scope of work:** Every sub gets a written scope document before they bid. 'Paint the house' is not a scope. '2 coats Benjamin Moore Regal Select on all interior walls and ceilings, trim painted in semi-gloss, all prep included' is a scope.
+
+**Written contracts:** Every engagement over $500 gets a contract. Specify: scope, price, payment schedule, start date, completion date, and warranty.
+
+**Payment tied to milestones:** Never pay 100% upfront. A typical payment schedule:
+- 10-30% at start (mobilization)
+- 40-50% at rough completion
+- Balance at final completion and sign-off
+
+**Hold retainage:** On larger contracts, hold 10% retainage until 30 days after completion. This ensures the contractor returns to address punch list items.`,
         keyPoints: [
-          '25% markup = 20% margin — they are not the same number',
-          'Markup is applied ON TOP of cost; margin is measured AS A PERCENT of selling price',
-          'Overhead rate = annual overhead ÷ annual revenue target — must be recovered in every job',
-          'To achieve a desired margin: selling price = cost ÷ (1 − desired margin)',
+          'Fixed price contracts shift productivity risk to the contractor — always use fixed price for clearly defined scopes over $5,000.',
+          'T&M pricing is appropriate for exploratory or highly unpredictable work — but the owner bears all cost overrun risk.',
+          'Always get a minimum of 3 bids and level them line-by-line — the lowest bid often has missing scope items.',
+          'GC markup (10-25%) buys project management — self-managing subs saves this cost but requires time and coordination systems.',
+          'Never pay 100% upfront — milestone-based payments and retainage ensure contractor accountability through project completion.',
         ],
         quiz: [
           {
-            question: 'A contractor has $80,000 in job costs and applies a 30% markup. What is the selling price?',
-            options: ['$104,000', '$110,000', '$114,300', '$120,000'],
-            correctIndex: 0,
-            explanation: '$80,000 × 1.30 = $104,000. The gross margin on this job is ($24,000 ÷ $104,000) = 23.1% — not 30%. Many contractors underestimate their profit target by confusing markup and margin.',
-          },
-          {
-            question: 'A contractor wants a 25% gross profit margin. Their job cost is $60,000. What is the selling price?',
-            options: ['$75,000', '$80,000', '$85,000', '$90,000'],
+            question: 'Which payment structure puts the most cost risk on the property owner?',
+            options: ['Fixed price lump sum', 'Time and Materials (T&M) — the owner pays for all actual hours regardless of productivity', 'Unit pricing per square foot', 'Milestone-based payment schedule'],
             correctIndex: 1,
-            explanation: 'Selling Price = Cost ÷ (1 − Margin) = $60,000 ÷ 0.75 = $80,000. Profit = $20,000. $20,000 ÷ $80,000 = 25% margin.',
+            explanation: 'T&M means you pay for actual hours worked. If the crew is inefficient, slow, or encounters unexpected conditions, you pay more. Fixed price shifts this risk to the contractor — they absorb inefficiency in their profit margin. Always use fixed price when the scope is clearly defined.',
           },
           {
-            question: 'If annual overhead is $180,000 and annual revenue target is $900,000, what is the overhead rate?',
-            options: ['10%', '15%', '20%', '25%'],
-            correctIndex: 2,
-            explanation: '$180,000 ÷ $900,000 = 20%. Every job bid must recover 20% of its revenue toward overhead before a single dollar of profit is earned.',
+            question: 'A general contractor quotes $150,000 for a renovation. Their standard markup is 20%. What is the approximate underlying subcontractor and material cost?',
+            options: ['$120,000', '$125,000', '$130,000', '$140,000'],
+            correctIndex: 1,
+            explanation: 'If the GC markup is 20%, the quote = underlying cost × 1.20. Underlying cost = $150,000 ÷ 1.20 = $125,000. The GC is earning $25,000 to manage the project. Whether that\'s worth it depends on the investor\'s time, expertise, and opportunity cost.',
+          },
+          {
+            question: 'What is the purpose of holding retainage on a construction contract?',
+            options: ['To reduce the total amount paid to the contractor as a negotiating tactic', 'To ensure the contractor returns to address punch list items and warranty issues after project completion', 'Retainage is required by law on all construction contracts over $10,000', 'To fund the project contingency reserve in case of cost overruns'],
+            correctIndex: 1,
+            explanation: 'Contractors are most motivated to return when money is on the table. Retainage (typically 10% of contract value) is withheld until the punch list is complete and any warranty issues are addressed. Once the final payment is released, the contractor\'s financial incentive to return disappears — so getting everything right before releasing retainage is critical.',
           },
         ],
       },
       {
-        title: 'Project Scheduling & Critical Path Method',
+        title: 'Bid Packages & Scope of Work',
         duration: '18 min',
-        content: `A construction schedule is the plan for who does what and when. Without one, trades step on each other, inspections fail, and projects go over budget. Scheduling is project management.\n\n**Why Scheduling Matters**\n- Coordinates trade sequencing (can't drywall before rough inspections)\n- Manages construction loan draw timing (draws tied to completion milestones)\n- Identifies the critical path — delays on it delay the project\n- Sets owner and contractor expectations\n\n**Construction Sequence (Residential Renovation)**\n1. Demolition\n2. Structural repairs\n3. Rough framing\n4. Rough mechanical (plumbing, electrical, HVAC)\n5. Insulation\n6. Rough inspections (framing, MEP)\n7. Drywall (hang, tape, mud, sand)\n8. Prime paint\n9. Finish carpentry (doors, trim, cabinets)\n10. Finish mechanical (fixtures, switches, outlets)\n11. Finish flooring\n12. Paint — finish coats\n13. Punch list\n14. Final inspection\n\n**The Critical Path Method (CPM)**\nThe critical path = the longest sequence of dependent tasks that determines the minimum project duration.\n\n- Tasks on the critical path have zero float (delay = project delay)\n- Tasks off the critical path have float (can slip without affecting finish date)\n- Compressing the schedule (crashing) requires adding resources to critical path tasks\n\n**Gantt Charts**\nThe most common scheduling tool. Each task is a horizontal bar showing:\n- Start date\n- Duration\n- End date\n- Dependencies (what must finish before this starts)\n\nTools: Microsoft Project, Smartsheet, Buildertrend, CoConstruct, or even Excel.\n\n**Schedule Milestones for Draw Requests**\nLenders tie construction loan draws to measurable completion milestones:\n- Foundation complete\n- Framing complete\n- Rough MEP complete and inspected\n- Drywall complete\n- Substantial completion\n- Final inspection/CO`,
+        content: `A bid package is the complete set of documents provided to contractors when soliciting bids. The quality of a bid package determines the quality of the bids you receive. Vague packages produce vague bids — and vague bids become expensive change orders.
+
+**The Bid Package Contents**
+
+A complete bid package includes:
+
+**1. Invitation to Bid:**
+A cover letter specifying:
+- Project address and brief description
+- Bid submission deadline and format
+- Site visit date/time (always require a site visit for bids over $5,000)
+- Owner contact information
+- Decision timeline
+- Insurance and licensing requirements
+
+**2. Scope of Work Document:**
+The detailed, room-by-room, system-by-system description of exactly what work is included. (See below for structure.)
+
+**3. Drawings and Specifications:**
+Any architectural drawings, permit drawings, or design specifications. The more complete the drawings, the more accurate the bids.
+
+**4. Bid Form:**
+A standardized template that every contractor fills out — with line items matching your scope document. This forces apples-to-apples comparison.
+
+**5. Contract Form (Optional):**
+Providing your standard contract form with the bid package signals professionalism and pre-empts negotiation on contract terms.
+
+**Writing the Scope of Work**
+
+The scope of work is the most important document in the bid package. A well-written scope eliminates ambiguity — the number one cause of contractor disputes and cost overruns.
+
+**Scope of work structure:**
+
+**Section 1 — General Conditions:**
+- Site access and working hours
+- Debris removal responsibility
+- Site security and protection of existing finishes
+- Daily cleanup requirements
+- Utility disconnect/reconnect protocols
+- Permit responsibility (who pulls permits)
+
+**Section 2 — Demolition:**
+Specify exactly what is being demolished:
+- 'Remove and dispose of all existing kitchen cabinets, countertops, and appliances'
+- 'Demo existing bathroom tile floor and walls to studs'
+- 'Remove all carpet throughout — dispose off-site'
+
+**Section 3 — By Trade (one section per trade):**
+For each trade, specify:
+- Scope of work
+- Materials (brand, grade, model number where applicable)
+- Standards of installation
+- Exclusions and owner-furnished items
+
+**Example — Kitchen Cabinets:**
+'Furnish and install [24 base cabinets, 20 LF upper cabinets] as per attached layout drawing. Cabinets to be [Brand/Grade/Door Style/Color]. Soft-close hinges and drawer slides included. Crown molding and light rail included. Contractor to install owner-furnished hardware. Countertop and backsplash excluded from this scope.'
+
+**Section 4 — Exclusions:**
+Explicitly state what is NOT in this contractor's scope. This prevents overlap billing and confusion when multiple subs are on site.
+
+**Common Scope Ambiguities That Cause Problems**
+
+- 'Paint the interior' — how many coats? What brand? Does prep include skim coat?
+- 'Replace windows' — which windows? What brand/grade? Exterior trim included?
+- 'Update kitchen' — does 'update' mean paint cabinets or replace them?
+- 'Fix the plumbing' — which plumbing? What standard? Fixtures included?
+
+Every ambiguous word in a scope document is a potential dispute. Replace every ambiguous word with a specific description.
+
+**The Bid Leveling Sheet**
+
+Create a bid leveling spreadsheet before receiving bids. List every scope item as a row. Each contractor gets a column. When bids arrive, enter each contractor's price per line item.
+
+This makes omissions immediately visible — if Contractor A has no number for electrical rough-in and Contractors B and C both priced it at $8,500, Contractor A either missed it or included it elsewhere. Resolve these gaps before selecting a contractor.`,
         keyPoints: [
-          'Rough inspections must happen before drywall — never close walls before inspection',
-          'Critical path tasks have zero float — any delay extends the project completion date',
-          'Construction loan draws are tied to completion milestones — schedule drives funding',
-          'Gantt charts show task duration, dependencies, and critical path visually',
+          'Bid package quality determines bid quality — vague packages produce vague bids that become expensive change orders.',
+          'A complete bid package includes: invitation to bid, scope of work, drawings, bid form, and optionally a contract form.',
+          'Every ambiguous word in a scope document is a potential dispute — replace vague language with specific materials, brands, quantities, and standards.',
+          'A bid leveling spreadsheet with line items forces apples-to-apples comparison and immediately reveals scope omissions.',
+          'Always require a site visit before bids are submitted — contractors who bid without seeing the site miss conditions that become change orders.',
         ],
         quiz: [
           {
-            question: 'What does "critical path" mean in project scheduling?',
-            options: ['The most expensive sequence of tasks', 'The longest sequence of dependent tasks that determines the minimum project duration', 'Tasks that have the most float time', 'Tasks only the GC can perform'],
+            question: 'Why should a standardized bid form be included in every bid package?',
+            options: ['Bid forms are required by state contractor licensing boards', 'It forces all contractors to price the same line items in the same format, enabling direct comparison', 'Contractors only accept bids submitted on standardized government forms', 'Bid forms automatically generate contracts when signed by the contractor'],
             correctIndex: 1,
-            explanation: 'Any delay to a critical path task delays the entire project. Off-path tasks have float — they can slip without affecting the finish date.',
+            explanation: 'Without a standardized bid form, each contractor submits their estimate in their own format — making comparison nearly impossible. One contractor might include demo in their total; another might not. A bid form with matching line items makes omissions and additions immediately visible.',
           },
           {
-            question: 'Why must rough mechanical (plumbing, electrical, HVAC) be installed before drywall?',
-            options: ['It\'s cheaper to do it that way', 'Inspectors need access to verify all rough work before walls are closed', 'Drywall contractors require it', 'Trade unions require this sequence'],
+            question: 'A scope document says \'paint the interior.\' What critical information is missing?',
+            options: ['The contractor\'s license number and insurance certificate', 'Number of coats, paint brand and grade, surface prep requirements, and what surfaces are included', 'The property address and owner contact information', 'The payment schedule for the painting scope'],
             correctIndex: 1,
-            explanation: 'Building inspectors must visually verify all in-wall work before it\'s covered. Closing walls before inspection means costly tear-out if the inspector finds issues.',
+            explanation: 'Paint the interior could mean 1 coat of primer, 2 coats premium paint with full prep — or it could mean 1 coat of flat paint with no prep. The price difference between these interpretations can be 3-4x. Every scope item must specify what product, what standard, how many coats, and what prep is included.',
           },
           {
-            question: 'Construction loan draws are typically tied to:',
-            options: ['Calendar dates only', 'Measurable project completion milestones verified by an inspector', 'The contractor\'s invoice due dates', 'The lender\'s monthly statement cycle'],
+            question: 'On a bid leveling sheet, Contractors A and B both price electrical rough-in at $9,000 and $8,500 respectively. Contractor C\'s total bid is 25% lower but shows no line item for electrical rough-in. What does this suggest?',
+            options: ['Contractor C negotiated a lower electrical subcontractor rate and is passing savings to the owner', 'Contractor C likely omitted electrical rough-in — their bid is incomplete and the real comparison should exclude this omission', 'Electrical rough-in is always included in the general conditions section and does not require a separate line item', 'Contractor C has already completed the electrical work and is crediting it in the bid'],
             correctIndex: 1,
-            explanation: 'Lenders protect themselves by only releasing funds when verified milestones are complete — this ensures the collateral (the building) is progressing in value.',
+            explanation: 'When two contractors price a scope item consistently and a third omits it, the most likely explanation is that the third contractor missed it or misunderstood the scope. Before selecting Contractor C, clarify: Is electrical rough-in included in their total? If not, add the market rate ($8,500-$9,000) to their total and re-compare. The \'lowest\' bid often isn\'t.',
           },
         ],
       },
       {
-        title: 'Contracts, Change Orders & Scope Creep',
-        duration: '22 min',
-        content: `Contracts are the legal framework of every construction project. Understanding the key contract types, how to handle changes, and how to prevent scope creep is essential for protecting your business and your projects.\n\n**Common Contract Types**\n\n**Lump Sum (Stipulated Sum)**\nContractor agrees to complete defined scope for a fixed price. Owner bears no cost risk for contractor's efficiency. Contractor bears risk for unforeseen conditions.\n\n**Cost Plus a Fee**\nOwner pays actual costs plus a contractor fee (fixed dollar or percentage). Owner bears cost risk; contractor is less incentivized to minimize costs.\n\n**Cost Plus with Guaranteed Maximum Price (GMP)**\nHybrid: owner pays actual costs up to a maximum. Savings below GMP are shared.\n\n**Time and Materials (T&M)**\nOwner pays labor hours + materials + markup. Used for undefined scope or emergency work.\n\n**AIA Contract Documents**\nThe American Institute of Architects publishes industry-standard contract forms:\n- A101: Standard Agreement Between Owner and Contractor (lump sum)\n- A102: Standard Agreement (cost plus with GMP)\n- A201: General Conditions (covers responsibilities, disputes, changes, claims)\n\n**Change Orders**\nA change order (CO) is a written amendment to the contract that modifies scope, price, or schedule.\n\nKey change order rules:\n- All changes must be in writing — verbal agreements don't protect anyone\n- Price and schedule impact must be agreed BEFORE work proceeds\n- The contract should define the markup allowed on change order work\n- Document the basis: is the CO due to owner request, unforeseen conditions, or design error?\n\n**Scope Creep**\nThe gradual expansion of project scope without corresponding contract amendments. The most common cause of contractor underpayment and project disputes.\n\nPrevent it by:\n- Defining exclusions explicitly in the original contract\n- Requiring a signed CO before performing any out-of-scope work\n- Tracking all field decisions and design changes in writing\n- Holding a weekly project meeting with the owner and documenting decisions`,
+        title: 'Markup, Margin & Profitability',
+        duration: '16 min',
+        content: `Markup and margin are the two most confused concepts in construction pricing. Using them incorrectly — which most contractors and even many developers do — leads to systematic underpricing and profit erosion. Understanding the difference is foundational to running any construction business profitably.
+
+**Markup vs. Margin — The Critical Distinction**
+
+**Markup** is a percentage of cost.
+**Margin** is a percentage of revenue (selling price).
+
+They are not the same. A 25% markup does NOT produce a 25% margin.
+
+**Markup formula:**
+Selling Price = Cost × (1 + Markup %)
+Example: $100,000 cost × 1.25 markup = $125,000 selling price
+
+**Margin formula:**
+Margin = Profit ÷ Selling Price
+Example: $25,000 profit ÷ $125,000 selling price = 20% margin
+
+A 25% markup produces a 20% margin — not 25%. This gap gets wider as markup increases:
+| Markup | Resulting Margin |
+|--------|------------------|
+| 10% | 9.1% |
+| 20% | 16.7% |
+| 25% | 20.0% |
+| 33% | 24.8% |
+| 50% | 33.3% |
+| 100% | 50.0% |
+
+**To achieve a target margin, the required markup is:**
+Markup = Margin ÷ (1 - Margin)
+
+Example: To achieve a 30% margin: Markup = 0.30 ÷ (1 - 0.30) = 0.30 ÷ 0.70 = 42.9%
+
+**Overhead and Profit**
+
+Construction company pricing must cover:
+1. **Direct costs:** Labor, materials, subcontractors for the specific job
+2. **Overhead:** Office rent, insurance, vehicles, tools, software, administrative salaries — costs of being in business that aren't tied to a specific job
+3. **Profit:** The return to the business owner for their risk, capital, and expertise
+
+A contractor who prices at cost + labor + materials with no overhead or profit is going out of business slowly. Overhead typically runs 15-25% of revenue for a well-run construction company.
+
+A healthy GC profit target is 10-15% net margin after overhead. To achieve 10% net margin with 20% overhead, the required gross markup over direct costs is:
+- Target total: 30% above direct costs (overhead + profit)
+- Required markup: 30 ÷ 70 = 42.9%
+
+**Project Financial Analysis**
+
+On every completed project, compare actual costs to budget:
+
+**Variance analysis:**
+- Budget vs. actual by division
+- Over/under by line item
+- Root cause for significant variances
+
+**Project margin report:**
+Revenue (contract amount) - Total actual costs = Gross profit
+Gross profit ÷ Revenue = Project gross margin
+
+**Common margin killers:**
+- Change orders that weren't priced at full margin
+- Labor productivity below estimate
+- Material cost increases after bidding
+- Scope creep (work done outside the contract without documentation)
+- Punch list and warranty work that wasn't budgeted
+
+**Pricing Change Orders Correctly**
+
+Change orders (work outside the original scope) are a primary source of contractor profit — but only if priced correctly.
+
+Change order pricing:
+- Direct material cost + markup
+- Labor hours at burdened rate (wages + taxes + benefits) + markup
+- Subcontractor cost + markup
+- Apply full overhead and profit — not just cost recovery`,
         keyPoints: [
-          'Lump sum contracts fix price — contractor bears risk for unforeseen conditions',
-          'All changes must be in writing with agreed price and schedule impact before work starts',
-          'Scope creep is the most common cause of contractor underpayment — prevent it with written COs',
-          'AIA A201 General Conditions governs disputes, claims, and change procedures for most projects',
+          'Markup is a percentage of cost; margin is a percentage of revenue — a 25% markup produces only a 20% margin.',
+          'To achieve a target margin, use: Required Markup = Margin ÷ (1 - Margin).',
+          'Construction pricing must cover direct costs, overhead (15-25% of revenue), and profit — pricing only direct costs is a path to insolvency.',
+          'Every project should have a post-completion variance analysis comparing budget to actual costs — this is how estimating improves.',
+          'Change orders must be priced at full overhead and profit — not just cost recovery.',
         ],
         quiz: [
           {
-            question: 'In a lump sum contract, who bears the financial risk of unforeseen site conditions?',
-            options: ['The owner', 'The contractor', 'Risk is shared 50/50', 'The architect'],
+            question: 'A contractor has $80,000 in direct costs and applies a 25% markup. What is their selling price and actual profit margin?',
+            options: ['Selling price $100,000, margin 25%', 'Selling price $100,000, margin 20%', 'Selling price $105,000, margin 25%', 'Selling price $106,667, margin 25%'],
             correctIndex: 1,
-            explanation: 'In a lump sum contract, the contractor commits to a fixed price — unexpected conditions (hidden rot, soil issues, code violations) come out of the contractor\'s profit unless a specific carve-out exists.',
+            explanation: 'Selling price = $80,000 × 1.25 = $100,000. Profit = $100,000 - $80,000 = $20,000. Margin = $20,000 ÷ $100,000 = 20%. This is the markup vs. margin distinction — a 25% markup produces a 20% margin, not 25%.',
           },
           {
-            question: 'When should change order work begin?',
-            options: ['Immediately when the owner requests it verbally', 'After work is complete and price is negotiated', 'After a written change order is signed with agreed price and schedule impact', 'Whenever the GC deems it appropriate'],
+            question: 'A contractor wants to achieve a 30% gross margin. What markup percentage must they apply to their direct costs?',
+            options: ['30%', '35%', 'Approximately 42.9%', '50%'],
             correctIndex: 2,
-            explanation: 'Performing work without a signed CO is one of the most common contractor mistakes — recovering payment for undocumented changes is very difficult after the fact.',
+            explanation: 'Required markup = Target margin ÷ (1 - Target margin) = 0.30 ÷ (1 - 0.30) = 0.30 ÷ 0.70 = 0.4286 = 42.9%. Verify: $100,000 costs × 1.429 = $142,900 price. Profit = $42,900. Margin = $42,900 ÷ $142,900 = 30%.',
           },
           {
-            question: 'What is scope creep?',
-            options: ['A slow increase in material prices over time', 'The gradual expansion of project scope without corresponding written contract amendments', 'A lender adding conditions to a construction loan', 'A building inspector expanding the inspection scope'],
+            question: 'Why must change orders be priced at full overhead and profit — not just cost recovery?',
+            options: ['Change orders are legally required to be priced at 10% above the base contract rate', 'Change orders consume the same overhead resources as contracted work — recovering only direct costs means overhead goes uncompensated for that work', 'Change order pricing above cost is unethical and should be avoided', 'Change orders only occur due to contractor errors and should be priced at cost as a penalty'],
             correctIndex: 1,
-            explanation: 'Scope creep erodes profit one "small favor" at a time — by the end of the project, the contractor has delivered far more than the contract price covered.',
+            explanation: 'Every hour of work — whether in the original contract or a change order — consumes overhead: insurance, vehicle, tools, supervision, administration. Pricing a change order at cost recovery means the contractor is working for free on that scope. Full overhead and profit on every change order is sound business practice.',
+          },
+        ],
+      },
+      {
+        title: 'CPM Scheduling & Project Timeline',
+        duration: '20 min',
+        content: `Time is money in construction. Every day a project runs over schedule is a day of carrying costs — interest, insurance, taxes, utilities — with no revenue. Project scheduling is not administrative busywork — it's a financial discipline. The Critical Path Method is the industry-standard framework for planning and controlling construction timelines.
+
+**What Is CPM Scheduling?**
+
+Critical Path Method (CPM) is a project scheduling technique that:
+1. Identifies all project activities
+2. Defines the sequence and dependencies between activities
+3. Estimates the duration of each activity
+4. Calculates the longest path through the project — the **critical path**
+5. Identifies which activities have **float** (flexibility) and which do not
+
+The critical path is the sequence of activities that determines the minimum project duration. Any delay to a critical path activity directly delays the project completion date.
+
+**Activity Dependencies**
+
+Before scheduling, define the dependency relationship between every activity:
+
+**Finish-to-Start (FS):** Activity B cannot start until Activity A is finished. Most common.
+Example: Rough electrical cannot start until framing is complete.
+
+**Start-to-Start (SS):** Activity B can start when Activity A starts (not necessarily finishes).
+Example: Drywall hanging can start on first floor while framing continues on second floor.
+
+**Finish-to-Finish (FF):** Activity B must finish when Activity A finishes.
+Example: Punch list items must be completed when the owner walk-through finishes.
+
+**Lag:** A required wait period between activities.
+Example: Concrete must cure 7 days before framing begins (Finish-to-Start with 7-day lag).
+
+**Building a Basic Construction Schedule**
+
+For a residential renovation, the typical sequence:
+
+1. Demolition (3-7 days)
+2. Rough framing / structural work (5-15 days)
+3. Rough plumbing (3-7 days) — can overlap with rough electrical
+4. Rough electrical (3-7 days) — concurrent with rough plumbing
+5. Rough HVAC (2-5 days) — concurrent with MEP trades
+6. Insulation (1-3 days) — after rough MEP complete
+7. Inspections (1-3 days) — rough-in inspections before closing walls
+8. Drywall hang (3-7 days)
+9. Drywall tape and finish (5-10 days including drying time)
+10. Primer (1-2 days)
+11. Flooring rough (hardwood install/nail down) (2-5 days)
+12. Cabinets and millwork (3-7 days)
+13. Countertops (template day + 7-14 day fabrication + install day)
+14. Tile work (3-10 days depending on scope)
+15. Paint final coats (2-4 days)
+16. Final plumbing, electrical, HVAC (2-5 days each — concurrent)
+17. Flooring finish (sanding/staining/finishing or LVP installation) (2-5 days)
+18. Hardware, fixtures, appliances (1-3 days)
+19. Final inspections and punch list (2-7 days)
+
+**Total: 45-90 days** for a standard residential renovation, depending on scope and crew size.
+
+**Float and Schedule Risk**
+
+**Total float:** The amount of time an activity can be delayed without delaying the project completion date.
+
+Activities on the critical path have zero float. Any delay = project delay.
+
+Activities off the critical path have positive float — they can slip within their float window without impact. Example: countertop fabrication has a 14-day lead time but doesn't hit the schedule until week 8 — if templating was done in week 3, there's significant float before it becomes critical.
+
+**Schedule Recovery**
+
+When the schedule slips, recovery options:
+- **Fast-tracking:** Overlap activities that were previously sequential (start finish work in some areas while rough work continues in others)
+- **Crashing:** Add resources to critical path activities (more crew, extended hours) — costs more but compresses duration
+- **Scope reduction:** Remove non-critical items from the current phase and address in a future phase
+
+Always identify the cause of the delay before applying recovery. A crew shortage requires a different solution than a material delay.`,
+        keyPoints: [
+          'The critical path is the longest sequence of dependent activities — any delay to it directly delays project completion.',
+          'Activities on the critical path have zero float; off-critical activities can slip within their float window without affecting the finish date.',
+          'The standard residential renovation sequence: demo → rough framing → rough MEP → inspections → drywall → finishes → final MEP → punch list.',
+          'Schedule recovery options are fast-tracking (overlap activities), crashing (add resources), or scope reduction.',
+          'Countertop fabrication lead time (7-14 days after template) is a frequently missed critical path item — template early.',
+        ],
+        quiz: [
+          {
+            question: 'What does it mean for an activity to be \'on the critical path\'?',
+            options: ['The activity is the most expensive line item in the construction budget', 'Any delay to this activity directly delays the project completion date — it has zero float', 'The activity requires the most skilled workers on the project', 'The activity must be completed before any permits can be issued'],
+            correctIndex: 1,
+            explanation: 'The critical path is the sequence of activities that determines project duration. Critical path activities have zero float — no slack. A 3-day delay in a critical path activity means a 3-day delay to project completion, additional carrying costs, and potentially a missed closing date.',
+          },
+          {
+            question: 'In a residential renovation, rough electrical must be complete before insulation can begin. What type of dependency is this?',
+            options: ['Start-to-Start — both activities begin on the same day', 'Finish-to-Start — insulation cannot start until rough electrical is finished', 'Finish-to-Finish — both activities must end at the same time', 'Start-to-Finish — electrical cannot finish until insulation starts'],
+            correctIndex: 1,
+            explanation: 'Finish-to-Start (FS) is the most common dependency in construction — one activity must completely finish before the next can begin. Rough MEP must be complete before walls are closed (insulation, drywall) because inspections and code compliance require access to verify rough work.',
+          },
+          {
+            question: 'A project is running 10 days behind schedule due to a framing delay. The owner wants to recover the schedule. What is \'crashing\' as a recovery strategy?',
+            options: ['Canceling non-essential scope items to shorten the project', 'Adding resources (more crew, extended hours) to critical path activities to compress their duration — at higher cost', 'Changing the project\'s completion date to accommodate the delay', 'Overlapping previously sequential activities to reduce overall project duration'],
+            correctIndex: 1,
+            explanation: 'Crashing means buying time with money — adding crew, overtime, or weekend work to compress the duration of critical path activities. It\'s effective but expensive. Fast-tracking (the other option) overlaps activities but doesn\'t require additional resources — though it increases coordination complexity and rework risk.',
           },
         ],
       },
       {
         title: 'Permits, Inspections & Code Compliance',
-        duration: '16 min',
-        content: `Permits and inspections are the government's mechanism for ensuring construction meets safety standards. For investors and developers, understanding the permitting process prevents costly delays and liability.\n\n**Why Permits Matter**\n- Legal protection: work done without permits creates liability at resale\n- Insurance: unpermitted work may void homeowner's insurance\n- Financing: lenders and appraisers flag unpermitted additions\n- Safety: code requirements exist because buildings failed before these standards existed\n\n**Permit Types**\n- Building permit: structural changes, additions, new construction\n- Electrical permit: panel upgrades, new circuits, service changes\n- Plumbing permit: new supply or drain lines, fixture additions\n- Mechanical permit: HVAC system changes, new equipment\n- Demolition permit: structural demolition\n\n**The Permitting Process**\n1. Submit application with plans (architectural drawings for major work)\n2. Plan review (1–4 weeks depending on jurisdiction and project complexity)\n3. Permit issued — post it on site (required by most jurisdictions)\n4. Begin work\n5. Call inspections at required stages (rough framing, rough MEP, insulation, final)\n6. Receive approval at each stage\n7. Final inspection → Certificate of Occupancy (CO) or Final Certificate\n\n**Key Building Codes**\n- International Building Code (IBC): commercial construction\n- International Residential Code (IRC): one- and two-family dwellings\n- National Electrical Code (NEC / NFPA 70): electrical work\n- International Plumbing Code (IPC) / International Mechanical Code (IMC)\n\nLocal jurisdictions adopt and amend these model codes — always verify local amendments.\n\n**Certificate of Occupancy (CO)**\nIssued when the final inspection passes and the building is deemed safe for occupancy. Without a CO:\n- Tenants cannot legally occupy the space\n- The property may be unmortgageable\n- Investors cannot sell without disclosure of the missing CO\n\n**Common Permit Problems**\n- Work started without permit: stop-work order, fines, mandatory demolition of non-compliant work\n- Inspector finds violations: correction notice, re-inspection required\n- Expired permit: must renew (with fees) or re-apply`,
-        keyPoints: [
-          'Unpermitted work creates liability at resale, insurance gaps, and financing problems',
-          'Call for inspections at each required stage — do not close walls before rough inspection',
-          'Certificate of Occupancy is required for legal occupancy and mortgageability',
-          'Research local code amendments — model codes are adopted differently in each jurisdiction',
-        ],
-        quiz: [
-          {
-            question: 'What is a Certificate of Occupancy (CO)?',
-            options: ['A permit to begin construction', 'A document issued after final inspection confirming the building is safe for occupancy', 'An HOA approval for renovation work', 'A contractor\'s license certification'],
-            correctIndex: 1,
-            explanation: 'A CO is issued after all inspections pass and confirms the building meets code for occupancy. Without it, the space cannot be legally occupied and may be unmortgageable.',
-          },
-          {
-            question: 'What are the consequences of starting construction without a permit?',
-            options: ['No consequences if the work is done correctly', 'A warning letter only', 'Stop-work order, fines, and potentially mandatory demolition of non-compliant work', 'Only required to pay a small late permit fee'],
-            correctIndex: 2,
-            explanation: 'Jurisdictions take unpermitted work seriously — inspectors have authority to require tear-out and rebuild of all work done without proper permits.',
-          },
-          {
-            question: 'Which inspection must happen BEFORE drywall can be installed?',
-            options: ['Final inspection', 'Insulation inspection only', 'Rough framing and rough MEP (mechanical, electrical, plumbing) inspections', 'Foundation inspection'],
-            correctIndex: 2,
-            explanation: 'Rough framing and all rough MEP must be inspected and approved before walls are closed — inspectors need visual access to verify compliance.',
-          },
-        ],
-      },
-      {
-        title: 'Construction Draws & Lien Waivers',
         duration: '18 min',
-        content: `Construction loans fund the project through a draw schedule — money is released in stages as work is completed. Understanding how draws work — and protecting your project with lien waivers — is critical for both investors and contractors.\n\n**Construction Loan Draw Process**\n1. Work is completed to a milestone\n2. Contractor submits a draw request (Application for Payment, AIA G702/G703 format)\n3. Owner (or lender's inspector) verifies the work is complete\n4. Lender releases funds — typically within 1–3 business days\n5. Contractor pays subcontractors and suppliers\n\n**AIA G702/G703 — Application for Payment**\n- G702: Summary of contract value, work completed, retainage, and amount due\n- G703: Continuation sheet showing breakdown by CSI division or schedule of values\n\nThe Schedule of Values allocates the total contract across all line items. Each draw request tracks completion percentages by line item.\n\n**Retainage**\nLenders and owners typically withhold 5–10% of each draw as retainage. It is released:\n- At substantial completion, or\n- At final completion after the punch list is cleared\n\nRetainage protects against incomplete work at the end of the project.\n\n**Lien Rights**\nA construction lien (mechanic's lien) gives contractors, subcontractors, and suppliers a legal claim against the property if they are not paid. Liens can:\n- Cloud title and block sale or refinancing\n- Force owners to pay twice (once to GC, once to unpaid subs)\n\n**Lien Waiver Types**\n- **Preliminary Notice**: Required in many states before a sub or supplier can file a lien — must be sent early in the project\n- **Conditional Waiver**: Waives lien rights conditioned on payment clearing\n- **Unconditional Waiver**: Permanently waives lien rights — only sign after funds clear\n\n**Best Practice for Owners and Investors**\nNever release payment to a GC without receiving lien waivers from all subs and suppliers for the prior draw. A GC who is paid but fails to pay their subs leaves the owner exposed to sub-lien claims.`,
+        content: `Permits and inspections are the legal framework of construction. They protect public safety, ensure code compliance, and create a documented record of the work performed. Investors and developers who skip permits to save time and money create legal liabilities, insurance exposures, and resale problems that cost far more than the permits they avoided.
+
+**What Requires a Permit?**
+
+Permit requirements vary by jurisdiction, but generally:
+
+**Always requires a permit:**
+- New construction
+- Structural modifications (removing walls, adding rooms, changing roof lines)
+- Electrical work beyond replacing outlets and fixtures
+- Plumbing work beyond replacing fixtures
+- HVAC installation or replacement
+- Window and door additions or changes to openings
+- Decks, fences, pools, and accessory structures over a certain size
+
+**Usually does NOT require a permit:**
+- Cosmetic work: painting, flooring, cabinets (if no plumbing changes)
+- Like-for-like fixture replacements
+- Minor repairs
+
+When in doubt, call the local building department and ask. The 5-minute phone call costs nothing. Getting caught with unpermitted work costs thousands.
+
+**The Permit Process**
+
+**Step 1 — Plans and Application:**
+For structural or complex work, submit architectural or engineering drawings with the permit application. Simple permits (HVAC replacement, electrical panel upgrade) may require only a description.
+
+Who pulls permits: The licensed contractor typically pulls the permit. Some jurisdictions allow owners to pull owner-builder permits if they occupy the property. Investment properties typically require a licensed contractor to pull.
+
+**Step 2 — Plan Review:**
+The building department reviews the plans for code compliance. Timeline: 1-3 weeks for standard residential; longer for commercial or complex projects. Expedited review available in many jurisdictions for an additional fee.
+
+**Step 3 — Permit Issuance:**
+Permit is issued when plans are approved. The permit (and approved plans) must be on site during all inspections.
+
+**Step 4 — Inspections:**
+Inspections occur at key milestones to verify work meets code before it's covered:
+
+**Residential inspection sequence:**
+- Foundation inspection (before pouring concrete)
+- Framing inspection (before insulation)
+- Rough plumbing inspection (before closing walls)
+- Rough electrical inspection (before closing walls)
+- Rough HVAC inspection (before closing walls)
+- Insulation inspection (before drywall)
+- Drywall inspection (in some jurisdictions)
+- Final inspections (plumbing, electrical, HVAC, building)
+
+**Step 5 — Certificate of Occupancy (CO):**
+For new construction or significant renovation, a CO is issued after all final inspections pass. Required before occupancy and often required for financing.
+
+**Consequences of Unpermitted Work**
+
+**At resale:** Buyers, their agents, and their lenders routinely research permit history. Unpermitted work must be disclosed. Buyers can demand it be legalized (retro-permitted) or reduce their offer significantly.
+
+**At refinancing:** Lenders may discover unpermitted additions or improvements during appraisal. Unpermitted square footage may not be included in the appraisal — reducing value and LTV.
+
+**Insurance:** Unpermitted work may void homeowner's insurance coverage for claims related to that work.
+
+**Safety:** Code exists for safety reasons. Unpermitted electrical work burns houses down. Unpermitted structural work collapses.
+
+**Retroactive permitting:** Getting after-the-fact permits is possible but expensive — walls must sometimes be opened for inspection, work may need to be torn out and redone to current code.
+
+**Managing the Inspection Process**
+
+- Schedule inspections as soon as work is ready — don't wait
+- Failed inspections require re-scheduling after corrective work — each failure adds 3-7 days to the schedule
+- Have the contractor present at inspections to answer questions and correct minor items on the spot
+- Maintain a permit log tracking every inspection: date, inspector, result, corrections required`,
         keyPoints: [
-          'Construction draws are released in stages tied to verified completion milestones',
-          'Retainage (5–10%) is withheld from each draw and released at substantial completion',
-          'Unconditional lien waivers are permanent — only sign after payment clears your account',
-          'Collect lien waivers from all subs and suppliers before releasing payment to the GC',
+          'Structural, mechanical, electrical, and plumbing work almost always requires permits — when in doubt, call the building department.',
+          'The permit inspection sequence (framing, rough MEP, insulation, final) must be followed in order — covering work before inspection fails.',
+          'Unpermitted work creates disclosure obligations, insurance voids, refinancing problems, and resale complications — always pull permits.',
+          'A Certificate of Occupancy is required for new construction and major renovations before occupancy and often before financing.',
+          'Failed inspections add 3-7 days to the schedule — have the contractor present at inspections to resolve minor corrections on the spot.',
         ],
         quiz: [
           {
-            question: 'What is retainage in a construction draw schedule?',
-            options: ['The contractor\'s profit margin', 'A 5–10% holdback from each draw released after project completion', 'The lender\'s origination fee', 'The owner\'s down payment on the construction loan'],
+            question: 'An investor installs a new HVAC system without pulling a permit to save time. What is the most likely consequence at resale?',
+            options: ['No consequence — cosmetic and mechanical work is exempt from permit disclosure', 'Disclosure obligation, potential buyer demand for retroactive permitting, and appraisal complications', 'A fine of $500 payable to the local building department', 'The HVAC system must be removed and replaced by a licensed contractor'],
             correctIndex: 1,
-            explanation: 'Retainage incentivizes the contractor to finish the project and address punch list items — it\'s the last check, so it gets the most attention.',
+            explanation: 'Permit history is public record. Buyers, their agents, and their lenders routinely check permit history during due diligence. Unpermitted HVAC must be disclosed and can become a negotiating issue — buyers may demand it be retroactively permitted (which requires opening walls for inspection and potentially reinstalling to current code) or reduce their offer accordingly.',
           },
           {
-            question: 'When is it safe to sign an Unconditional Lien Waiver?',
-            options: ['At the time of the draw request', 'After the owner approves the draw', 'Only after the payment check has fully cleared your bank account', 'Before work begins on the next phase'],
-            correctIndex: 2,
-            explanation: 'An unconditional waiver permanently releases lien rights — signing before funds clear means you have no recourse if the check bounces or payment is stopped.',
+            question: 'At what point in the construction sequence must the framing inspection occur?',
+            options: ['After insulation is installed to verify it was applied correctly', 'After framing is complete but before insulation is installed — so the inspector can see the structural work', 'Before demolition begins to document the existing structure', 'After drywall is hung to verify framing dimensions match the plans'],
+            correctIndex: 1,
+            explanation: 'The framing inspection verifies that the structural work complies with code — proper stud spacing, header sizing, connection hardware, joist spans. Once insulation is installed, the framing is obscured. The inspection must occur while all framing is visible and accessible.',
           },
           {
-            question: 'Why should owners collect lien waivers from all subcontractors, not just the GC?',
-            options: ['It\'s required by RESPA', 'If the GC is paid but fails to pay subs, the subs can file liens against the property — the owner pays twice', 'Subs provide better quality work when lien waivers are collected', 'Lenders require it for insurance purposes'],
+            question: 'Which of the following work items typically does NOT require a building permit?',
+            options: ['Installing a new electrical panel', 'Replacing existing carpet with luxury vinyl plank flooring throughout the home', 'Adding a bathroom to a previously unfinished basement', 'Replacing a load-bearing wall with a structural beam'],
             correctIndex: 1,
-            explanation: 'The owner\'s contract is with the GC — but subs have direct lien rights against the property. A dishonest or insolvent GC leaves owners exposed to double payment.',
+            explanation: 'Cosmetic work — flooring replacement, painting, cabinet replacement without plumbing changes — generally does not require permits. Installing a new panel, adding a bathroom, and structural modifications all involve electrical, plumbing, or structural work that requires permits and inspections in virtually every jurisdiction.',
           },
         ],
       },
       {
-        title: 'Renovation Underwriting for Investors & Lenders',
-        duration: '20 min',
-        content: `When investors and lenders evaluate a renovation project, they're underwriting the construction budget just as carefully as the purchase price. A credible, detailed budget is your most important tool for securing financing and protecting returns.\n\n**What Lenders Look For in a Renovation Budget**\n- Detailed line-item breakdown (not a single lump sum)\n- Cost reasonableness (does it match market rates?)\n- Contingency (usually 10–15% required)\n- Timeline (feasibility of the completion schedule)\n- Contractor qualifications (licensed, insured, experienced)\n- Draw schedule aligned with construction milestones\n\n**The Scope of Work Document**\nLenders want a written scope that matches the budget. For hard money and fix-and-flip loans:\n- Line items must tie to each room or system\n- Materials must be specified (grade/quality)\n- Labor and material broken out where possible\n- Timeline realistic for the scope\n\n**ARV Analysis**\nAfter-Repair Value = the appraised value after renovations are complete\n- Appraiser uses comparable sales that reflect the proposed finish level\n- Over-improving for the neighborhood lowers ROI — match finish level to the comp market\n- Sweat equity is not recognized by appraisers — value comes from comparable sales, not effort\n\n**Investor Math — Does the Deal Work?**\nARV − (Purchase Price + Renovation Cost + Holding Costs + Selling Costs) = Profit\n\n70% Rule (fix and flip shortcut):\nMaximum Allowable Offer (MAO) = ARV × 70% − Renovation Cost\n\nExample: ARV $300,000, rehab $50,000\nMAO = $300,000 × 0.70 − $50,000 = $160,000\n\n**Lender Draw Inspection**\nFor construction loans, lenders send an inspector before each draw to verify:\n- Percentage of work complete matches draw request\n- Materials on-site are accounted for\n- No material deviations from approved scope\n- No stop-work orders or liens filed\n\n**Common Budget Mistakes**\n- Underestimating mechanical (HVAC, electrical, plumbing) — always the biggest surprise\n- Forgetting carrying costs (loan interest, utilities, insurance during renovation)\n- No contingency for unknown conditions\n- Budget based on contractor estimates only — get a second opinion on major line items`,
+        title: 'Construction Draws & Loan Administration',
+        duration: '22 min',
+        content: `Construction financing is not like a conventional mortgage — you don't receive the full loan amount at closing. Instead, funds are disbursed in draws as construction progresses. Managing the draw process efficiently is a critical project management skill — delays in draws mean delays in paying contractors, which means delays in construction.
+
+**How Construction Loans Work**
+
+A construction loan is a short-term credit facility that funds the cost of building or renovating a property. Unlike a conventional mortgage that funds in a lump sum, construction loans disburse funds progressively as work is completed and verified.
+
+**Two common structures:**
+
+**Construction-to-Permanent Loan (One-Time Close):**
+A single loan that starts as a construction loan and automatically converts to a permanent mortgage at completion. Simpler — one closing, one set of costs.
+
+**Two-Time Close:**
+Separate construction loan (short-term) followed by a new permanent mortgage at completion. Two sets of closing costs but more flexibility — can shop for the best permanent rate when ready.
+
+**The Draw Process**
+
+**Draw schedule:**
+Established at loan origination. Typically based on construction milestones:
+- Draw 1: Mobilization and site work (10-15%)
+- Draw 2: Foundation complete (10-15%)
+- Draw 3: Framing complete (15-20%)
+- Draw 4: Rough MEP and insulation (15-20%)
+- Draw 5: Drywall and exterior complete (10-15%)
+- Draw 6: Interior finishes, fixtures, completion (15-20%)
+- Retainage release: 5-10% held until final completion and CO
+
+**Preparing a draw request:**
+For each draw, the borrower (or GC on their behalf) submits:
+- Draw request form specifying amount and milestone
+- Completed work verification (photos, inspection reports)
+- Lien waivers from all contractors and suppliers paid with prior draws
+- Updated construction schedule and budget
+- Stored materials documentation (if materials on-site not yet installed)
+- Any change order approvals if scope has changed
+
+**Draw inspection:**
+Before releasing funds, most construction lenders require an independent inspection by their draw inspector (often an appraiser or construction consultant). The inspector verifies:
+- Work described in the draw request is actually complete
+- Quality meets contract specifications
+- Percentage of completion matches the draw amount requested
+
+Inspection typically takes 2-5 business days from request to completion. Then the lender processes and wires funds — total draw timeline: 5-10 business days from submission to funding.
+
+**Managing Cash Flow on a Construction Project**
+
+The draw timing gap (5-10 days from submission to funding) creates a cash flow management challenge. Contractors expect payment within a few days of invoice; lenders fund after inspection and processing.
+
+**Strategies:**
+- Maintain a working capital reserve (10-15% of project budget) to bridge draw gaps
+- Submit draw requests immediately when milestones are complete — don't wait
+- Communicate proactively with contractors about the 5-10 day funding timeline
+- Never let retainage from prior draws accumulate — release it per contract terms promptly
+
+**Stored Materials**
+
+Some construction lenders fund stored materials — materials that have been purchased and are on site but not yet installed. Requirements:
+- Materials must be on-site (not at a supplier warehouse)
+- Must be secured (not exposed to theft or weather)
+- Require documentation: purchase receipts, photos, list of quantities
+- Typically funded at 50-80% of value
+
+Stored materials draws are useful for managing cash flow when materials must be purchased in bulk ahead of installation (lumber packages, window orders, flooring).
+
+**Budget-to-Cost Tracking**
+
+Every draw is an opportunity to update the project's budget-to-cost tracker:
+- Committed costs (signed contracts)
+- Costs to date (amounts drawn)
+- Remaining budget
+- Projected final cost
+- Variance from original budget
+
+A construction loan that runs out of money before the project is complete is a crisis. Catching budget overruns at draw 3 — not draw 6 — gives time to course-correct.`,
         keyPoints: [
-          'Lenders require detailed line-item budgets — a lump sum figure will not get approved',
-          '70% Rule: MAO = ARV × 70% − Renovation Cost — the investor\'s quick feasibility check',
-          'Match finish quality to comp market — over-improving does not increase appraised value',
-          'Mechanical (HVAC, plumbing, electrical) is consistently underestimated — pad these line items',
+          'Construction loans disburse funds in draws as work is completed and verified by an independent inspector — not in a lump sum at closing.',
+          'Prepare draw requests with: draw form, completion photos, lien waivers from all paid contractors, updated schedule, and change order approvals.',
+          'The draw timeline (5-10 business days from submission to funding) requires a working capital reserve to bridge payment gaps with contractors.',
+          'Submit draw requests immediately when milestones are complete — delays in submission directly delay funding and slow the project.',
+          'Update the budget-to-cost tracker with every draw — catching overruns early gives time to correct course before the loan is exhausted.',
         ],
         quiz: [
           {
-            question: 'Using the 70% Rule, a property has an ARV of $250,000 and estimated renovation of $40,000. What is the Maximum Allowable Offer?',
-            options: ['$135,000', '$175,000', '$150,000', '$210,000'],
-            correctIndex: 0,
-            explanation: 'MAO = $250,000 × 0.70 − $40,000 = $175,000 − $40,000 = $135,000. This is the most an investor should pay while maintaining adequate profit margin.',
+            question: 'Why is a working capital reserve essential on a construction project funded by draw-based financing?',
+            options: ['Lenders require a cash reserve equal to 50% of the loan amount before approving construction financing', 'The 5-10 day draw funding timeline creates a gap between contractor invoices (immediate) and lender funding — reserves bridge this gap', 'Working capital reserves replace the need for a construction contingency', 'Reserves are held by the title company and released only at final completion'],
+            correctIndex: 1,
+            explanation: 'Contractors expect payment within a few days of invoicing. Construction lenders fund draws 5-10 business days after submission (inspection + processing). Without reserves to bridge this gap, the borrower either delays contractor payments (damaging the working relationship) or slows the project waiting for draw funding.',
           },
           {
-            question: 'A lender\'s draw inspector finds the renovation is 40% complete but the draw request claims 60%. What happens?',
-            options: ['The draw is approved for 60% as submitted', 'The lender releases only the draw amount corresponding to verified 40% completion', 'The loan is immediately called due', 'The contractor is fined'],
+            question: 'What is the purpose of requiring lien waivers from contractors as part of each draw request?',
+            options: ['Lien waivers are required by the IRS to document construction expenses for tax purposes', 'Lien waivers confirm contractors have been paid and waive their right to place a mechanic\'s lien on the property for work covered by that payment', 'Lien waivers release the lender from liability for construction defects', 'Lien waivers give the owner the right to withhold final payment for punch list items'],
             correctIndex: 1,
-            explanation: 'Draw amounts are tied to verified completion — lenders only release funds for work that is confirmed complete. Overclaiming draws is a form of construction loan fraud.',
+            explanation: 'A mechanic\'s lien allows contractors and suppliers who haven\'t been paid to place a lien on the property — potentially blocking the owner\'s ability to sell or refinance. Lenders require lien waivers at each draw to confirm that all contractors paid with prior draws have waived their lien rights, keeping the title clear.',
           },
           {
-            question: 'Why does over-improving a property for the neighborhood not increase its appraised value?',
-            options: ['Appraisers penalize luxury finishes in modest neighborhoods', 'Appraised value is based on comparable sales, not the cost of improvements — the market sets the ceiling', 'Lenders restrict high-finish renovations', 'Contractors charge extra for premium materials in modest markets'],
+            question: 'At what point in the draw process does the lender\'s draw inspector typically visit the site?',
+            options: ['Before the draw request is submitted — to advise the borrower on what milestone has been reached', 'After the draw request is submitted — before funds are released — to verify that the described work is actually complete', 'After funds are released — to confirm the borrower used the funds as intended', 'Only at final completion to verify the Certificate of Occupancy conditions are met'],
             correctIndex: 1,
-            explanation: 'An appraiser finds value in what comparable homes in the neighborhood sell for. If no comparable sold for $400,000, a $100,000 kitchen won\'t push the value there.',
+            explanation: 'The draw inspector verifies work before lender funding. The inspector confirms the milestone described in the draw request (e.g., \'framing complete\') is actually complete, the quality meets specifications, and the percentage-of-completion justifies the requested draw amount. This protects the lender from funding work that hasn\'t been done.',
+          },
+        ],
+      },
+      {
+        title: 'Lien Waivers & Construction Law',
+        duration: '18 min',
+        content: `Construction law is a specialized field, but every developer, investor, and project manager needs to understand the basics — because construction disputes are common, lien rights are powerful, and the consequences of ignoring both are expensive.
+
+**Mechanic's Liens**
+
+A mechanic's lien (also called a construction lien or materialman's lien) is a legal claim filed against a property by a contractor, subcontractor, or supplier who has not been paid for work or materials provided.
+
+**Who can file a mechanic's lien?**
+- General contractors
+- Subcontractors (even if paid by the GC — if the GC didn't pay them, they can lien the owner's property)
+- Material suppliers
+- Equipment rental companies
+- Design professionals (in some states)
+
+**The danger for property owners:** If a GC is paid by the owner but fails to pay their subcontractors, those subs can place liens on the property — even though the owner already paid the GC. This is why lien waivers are critical.
+
+**Lien filing deadlines:** Lien rights are time-limited — typically 60-120 days from the last date of work or material supply (varies significantly by state). Missing the deadline permanently extinguishes the lien right.
+
+**Effect of a lien:** A recorded lien clouds the title. The owner cannot sell or refinance the property without resolving the lien — either paying it, getting it released, or bonding around it.
+
+**Types of Lien Waivers**
+
+**Conditional Waiver and Release on Progress Payment:**
+Used with each progress payment during construction. The waiver is conditional — it becomes effective only when the payment actually clears. This protects the contractor if the check bounces.
+
+**Unconditional Waiver and Release on Progress Payment:**
+Effective immediately upon signing — regardless of whether payment has actually been received. Used after the check has cleared. Risky for contractors to sign before payment is confirmed.
+
+**Conditional Waiver and Release on Final Payment:**
+Used for the final payment. Becomes effective when the final payment clears. The most important lien waiver in the project.
+
+**Unconditional Waiver and Release on Final Payment:**
+The contractor gives up all lien rights for the entire project. Only sign/accept after final payment has been verified as received and cleared.
+
+**Lien Waiver Best Practices for Owners**
+
+1. **Collect conditional waivers before releasing each draw.** Get waivers from the GC AND all named subcontractors and suppliers for the amounts covered by that draw.
+
+2. **Track the sub-tier.** The GC's waiver only releases GC claims. Subcontractors have independent lien rights — get their waivers too.
+
+3. **Use joint checks for major subcontractors.** A joint check is made payable to both the GC and the subcontractor — ensuring the sub gets paid directly.
+
+4. **File a Notice of Completion.** In many states, recording a Notice of Completion (or Notice of Cessation) after project completion starts the clock on lien filing deadlines — shortening the window during which liens can be filed.
+
+**Key Construction Contract Provisions**
+
+**Scope of work:** What is being built. Must be specific — see Lesson 4 (Bid Packages).
+
+**Contract price and payment terms:** Fixed price, T&M, or unit price. Payment schedule — milestone or schedule-based.
+
+**Change order procedure:** How scope changes are authorized, priced, and approved in writing.
+
+**Schedule:** Start date, completion date, consequences of delay (liquidated damages).
+
+**Warranty:** Duration and scope of the contractor's warranty for defective work.
+
+**Dispute resolution:** Mediation before litigation, arbitration clause, jurisdiction.
+
+**Termination for cause:** Owner's right to terminate if contractor abandons the project, fails to perform, or is insolvent.
+
+**Insurance requirements:** Minimum coverage types and limits (general liability, workers' comp, builder's risk).`,
+        keyPoints: [
+          'Mechanic\'s liens can be filed by any unpaid subcontractor or supplier — even if the owner already paid the GC — clouding the title.',
+          'Collect conditional lien waivers from the GC AND all major subcontractors before releasing each draw payment.',
+          'Conditional waivers protect the contractor (effective only when payment clears); unconditional waivers are effective immediately — never accept an unconditional waiver request before payment has cleared.',
+          'A joint check (payable to both GC and subcontractor) ensures the sub gets paid and prevents the GC from diverting funds.',
+          'Every construction contract must address: scope, price, payment schedule, change order procedure, schedule, warranty, and dispute resolution.',
+        ],
+        quiz: [
+          {
+            question: 'An owner pays the GC in full, but the GC fails to pay their electrical subcontractor. What can the electrical subcontractor do?',
+            options: ['Nothing — the subcontractor\'s dispute is only with the GC, not the owner', 'File a mechanic\'s lien against the owner\'s property for the unpaid amount', 'Report the GC to the state contractor licensing board only', 'Sue the owner for breach of the GC\'s contract'],
+            correctIndex: 1,
+            explanation: 'Subcontractors have independent lien rights on the property where their work was performed — even if they have no direct contract with the owner. If the GC didn\'t pay them, they can lien the property. This is why owners must collect lien waivers from both the GC and all named subcontractors before releasing draw payments.',
+          },
+          {
+            question: 'What is the difference between a conditional and unconditional lien waiver?',
+            options: ['A conditional waiver covers partial payments; an unconditional waiver covers final payment only', 'A conditional waiver becomes effective only when payment clears — an unconditional waiver is effective immediately upon signing', 'Conditional waivers are signed before work begins; unconditional waivers are signed after completion', 'There is no practical difference — both types release lien rights at signing'],
+            correctIndex: 1,
+            explanation: 'The timing of effectiveness is the critical distinction. A conditional waiver protects the contractor — if the check bounces, the waiver never became effective and their lien rights remain intact. An unconditional waiver releases lien rights the moment it\'s signed, regardless of payment. Contractors should never sign an unconditional waiver until payment has cleared.',
+          },
+          {
+            question: 'What is the purpose of a joint check in construction payment?',
+            options: ['A check issued by the lender directly to the owner upon draw approval', 'A check payable to both the GC and subcontractor ensures the subcontractor receives payment and cannot be diverted by the GC', 'Joint checks are required by law when construction loans are used to fund the project', 'A joint check allows two owners of the same property to split construction costs'],
+            correctIndex: 1,
+            explanation: 'A joint check is made payable to both parties — say, \'ABC General Contracting AND Smith Electric.\' Both parties must endorse it. The GC cannot cash it without the subcontractor\'s endorsement, ensuring the sub gets paid. Joint checks are most effective for major subcontractors (electrical, plumbing, HVAC) where unpaid lien exposure would be significant.',
+          },
+        ],
+      },
+      {
+        title: 'Renovation Underwriting for Investors',
+        duration: '22 min',
+        content: `Renovation underwriting is the financial analysis that determines whether a fix-and-flip, BRRRR, or value-add project is worth pursuing — and exactly what you can pay for it. Unlike standard real estate analysis, renovation underwriting must account for the full project lifecycle: acquisition, construction, carrying period, and exit.
+
+**The Total Project Cost Model**
+
+Every renovation project has four cost buckets:
+
+**1. Acquisition Costs:**
+- Purchase price
+- Closing costs (1-3% of purchase price)
+- Acquisition financing costs (origination points, appraisal, title)
+
+**2. Renovation Costs:**
+- Hard construction costs (by division)
+- Soft costs (permits, architect, engineering)
+- Contingency (10-20%)
+- Project management fee (if hired out)
+
+**3. Carrying Costs (Holding Costs):**
+The ongoing costs of owning the property during the renovation and hold period:
+- Interest on acquisition/construction loan
+- Property taxes (prorated)
+- Insurance (builder's risk during construction, standard after)
+- Utilities
+- HOA fees (if applicable)
+
+Carrying costs are often underestimated. On a 6-month project with $500,000 in debt at 10% interest, carrying costs are $25,000 in interest alone — before taxes, insurance, and utilities.
+
+**4. Exit Costs:**
+- Real estate agent commission (typically 5-6% of sale price)
+- Closing costs at sale (transfer taxes, title, escrow — typically 1-2%)
+- Staging costs
+- Final punch list and touch-up costs
+
+**The Renovation Underwriting Formula**
+
+**Maximum Allowable Offer (MAO) for a fix-and-flip:**
+MAO = ARV - Renovation Costs - Carrying Costs - Exit Costs - Desired Profit
+
+**Example:**
+- ARV (after repair value): $400,000
+- Renovation costs: $65,000
+- Carrying costs (6 months): $18,000
+- Exit costs (agent + closing): $28,000
+- Desired profit: $40,000
+- MAO = $400,000 - $65,000 - $18,000 - $28,000 - $40,000 = **$249,000**
+
+If the property can be acquired for $249,000 or less, the deal works at the target return.
+
+**Return Metrics for Renovation Projects**
+
+**Gross Profit:**
+Sale Price - Total All-In Cost = Gross Profit
+
+**Return on Investment (ROI):**
+Gross Profit ÷ Total Cash Invested
+
+**Annualized ROI:**
+ROI ÷ Project Duration in Years (or multiply monthly by 12)
+
+Example:
+- Sale price: $400,000
+- Total all-in: $342,000 (purchase + renovation + carrying + exit)
+- Gross profit: $58,000
+- Cash invested: $100,000 (down payment + renovation funded out of pocket)
+- ROI: $58,000 ÷ $100,000 = 58%
+- Annualized (6-month project): 58% × 2 = 116% annualized ROI
+
+**Common Renovation Underwriting Mistakes**
+
+**1. Using the wrong ARV:**
+ARV is not wishful thinking — it must be supported by recent, comparable closed sales. Pull comps before modeling, not after.
+
+**2. Underestimating renovation costs:**
+Budget conservatively. Use your detailed estimate plus contingency. Never use a conceptual per-square-foot number as the basis for a $200,000 renovation decision.
+
+**3. Forgetting carrying costs:**
+Every extra month of project duration costs money. A renovation that runs 3 months over schedule adds $9,000-$15,000 in carrying costs on a $500,000 financed project.
+
+**4. Underestimating exit costs:**
+Agent commission (5-6%), transfer taxes, and closing costs at sale are substantial. On a $400,000 sale, exit costs are $25,000-$30,000 — not zero.
+
+**5. Starting with the purchase price:**
+Amateur investors find a property, fall in love with it, and then try to make the numbers work. Professional investors start with the ARV, work backward through all costs, and arrive at the maximum allowable offer — then walk away if the seller wants more.`,
+        keyPoints: [
+          'The four renovation cost buckets are acquisition, renovation, carrying costs, and exit costs — all four must be modeled before making an offer.',
+          'MAO = ARV - Renovation - Carrying Costs - Exit Costs - Desired Profit — always start with ARV and work backward.',
+          'Carrying costs are frequently underestimated — 6 months of interest on $500,000 at 10% is $25,000 before taxes, insurance, and utilities.',
+          'Exit costs (agent commission + closing) typically represent 7-8% of sale price — on a $400,000 sale, that\'s $28,000-$32,000.',
+          'Professional investors start with ARV and work backward to the maximum offer — amateur investors start with the property and work forward, hoping the numbers work.',
+        ],
+        quiz: [
+          {
+            question: 'An investor analyzes a flip with the following: ARV $350,000, renovation $55,000, carrying costs $14,000, exit costs $24,500, desired profit $35,000. What is the Maximum Allowable Offer?',
+            options: ['$195,000', '$221,500', '$256,500', '$280,000'],
+            correctIndex: 1,
+            explanation: 'MAO = ARV - Renovation - Carrying - Exit - Profit = $350,000 - $55,000 - $14,000 - $24,500 - $35,000 = $221,500.',
+          },
+          {
+            question: 'A project runs 4 months over schedule. The investor has $450,000 in outstanding debt at 9% annual interest. What are the additional carrying costs from the delay?',
+            options: ['$3,375', '$13,500', '$40,500', '$162,000'],
+            correctIndex: 1,
+            explanation: 'Monthly interest = $450,000 × 9% ÷ 12 = $3,375/month. Four additional months = $3,375 × 4 = $13,500 in additional interest alone — not counting additional taxes, insurance, and utilities. Schedule overruns are expensive, which is why CPM scheduling and proactive delay management matter.',
+          },
+          {
+            question: 'Why do professional investors start with ARV and work backward to a maximum offer — rather than starting with the asking price?',
+            options: ['Lenders require the ARV calculation before approving any renovation loan', 'Working backward from ARV produces the maximum price that makes the deal viable — starting with asking price risks overpaying and eliminating profit margin', 'The asking price is always higher than ARV, making backward analysis irrelevant', 'Professional investors avoid MLS listings entirely, making asking price irrelevant'],
+            correctIndex: 1,
+            explanation: 'The MAO formula forces financial discipline. If the seller wants $280,000 and the MAO is $221,500, the deal doesn\'t work at the target return — regardless of how attractive the property looks. Starting with the asking price and working forward tempts investors to rationalize overpaying by adjusting ARV upward or renovation costs downward — two of the most dangerous mistakes in renovation investing.',
           },
         ],
       },
     ],
-  },
+  }
 ];
 
 // Course IDs map directly to module IDs

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
 import { useProgressStore } from '../store/progressStore';
+import { useAuthStore } from '../store/authStore';
 import { COURSES, QuizQuestion } from '../data/modules';
 import { api } from '../services/api';
 
@@ -14,11 +15,14 @@ type QuizState = 'idle' | 'active' | 'passed' | 'failed';
 export default function LessonScreen({ route, navigation }: any) {
   const { moduleId, lessonIndex } = route.params;
   const course = COURSES.find(m => m.id === moduleId);
-  const { isComplete, markComplete, markIncomplete } = useProgressStore();
+  const { isComplete, markComplete, markIncomplete, completed } = useProgressStore();
+  const { user } = useAuthStore();
   const [marking, setMarking] = useState(false);
 
   // Quiz state
   const [quizState, setQuizState] = useState<QuizState>('idle');
+  const [coachMessage, setCoachMessage] = useState<string | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -98,6 +102,25 @@ export default function LessonScreen({ route, navigation }: any) {
       } else {
         setQuizState('failed');
       }
+
+      // Post-lesson coach message
+      const trigger = passed ? 'post_lesson_pass' : 'post_lesson_fail';
+      setCoachMessage(null);
+      setCoachLoading(true);
+      api.post('/mobile/academy/chat', {
+        messages: [{ role: 'user', content: passed ? 'Give me my post-lesson coaching.' : 'Help me understand what I missed.' }],
+        tier: user?.university_tier || 'starter',
+        trigger,
+        progress: {
+          userId: user?.id || '',
+          currentCourse: { id: course.id, name: course.title, totalLessons: course.lessons.length, creditHours: course.creditHours },
+          currentLesson: { title: lesson.title, duration: lesson.duration, completed: passed },
+          lastQuiz: { lessonTitle: lesson.title, score, passed },
+          completedLessonCount: completed.length,
+          completedCourses: [],
+          subscription: user?.university_tier || 'starter',
+        },
+      }).then(res => setCoachMessage(res.data.reply || '')).catch(() => {}).finally(() => setCoachLoading(false));
     }
   };
 
@@ -147,12 +170,27 @@ export default function LessonScreen({ route, navigation }: any) {
       const correct = answers.filter((a, i) => a === quiz[i].correctIndex).length;
       const score = Math.round((correct / quiz.length) * 100);
       return (
-        <View style={styles.quizResultCard}>
-          <Ionicons name="checkmark-circle" size={40} color={Colors.success} />
-          <Text style={styles.quizResultTitle}>Quiz Passed!</Text>
-          <Text style={styles.quizResultScore}>{score}% — {correct}/{quiz.length} correct</Text>
-          <Text style={styles.quizResultDesc}>Lesson marked complete. Keep going!</Text>
-        </View>
+        <>
+          <View style={styles.quizResultCard}>
+            <Ionicons name="checkmark-circle" size={40} color={Colors.success} />
+            <Text style={styles.quizResultTitle}>Quiz Passed!</Text>
+            <Text style={styles.quizResultScore}>{score}% — {correct}/{quiz.length} correct</Text>
+            <Text style={styles.quizResultDesc}>Lesson marked complete. Keep going!</Text>
+          </View>
+          {(coachLoading || coachMessage) && (
+            <View style={styles.coachCard}>
+              <View style={styles.coachHeader}>
+                <Ionicons name="sparkles" size={14} color={Colors.blueprint} />
+                <Text style={styles.coachLabel}>Ravlo AI Coach</Text>
+              </View>
+              {coachLoading ? (
+                <ActivityIndicator size="small" color={Colors.blueprint} style={{ marginTop: 6 }} />
+              ) : (
+                <Text style={styles.coachText}>{coachMessage}</Text>
+              )}
+            </View>
+          )}
+        </>
       );
     }
 
@@ -160,16 +198,31 @@ export default function LessonScreen({ route, navigation }: any) {
       const correct = answers.filter((a, i) => a === quiz[i].correctIndex).length;
       const score = Math.round((correct / quiz.length) * 100);
       return (
-        <View style={[styles.quizResultCard, { borderColor: Colors.danger + '44' }]}>
-          <Ionicons name="close-circle" size={40} color={Colors.danger} />
-          <Text style={[styles.quizResultTitle, { color: Colors.danger }]}>Not Quite</Text>
-          <Text style={styles.quizResultScore}>{score}% — need 70% to pass</Text>
-          <Text style={styles.quizResultDesc}>Review the lesson content and try again.</Text>
-          <TouchableOpacity style={[styles.retryBtn, { borderColor: Colors.danger }]} onPress={handleRetryQuiz} activeOpacity={0.8}>
-            <Ionicons name="refresh-outline" size={16} color={Colors.danger} />
-            <Text style={[styles.retryBtnText, { color: Colors.danger }]}>Retry Quiz</Text>
-          </TouchableOpacity>
-        </View>
+        <>
+          <View style={[styles.quizResultCard, { borderColor: Colors.danger + '44' }]}>
+            <Ionicons name="close-circle" size={40} color={Colors.danger} />
+            <Text style={[styles.quizResultTitle, { color: Colors.danger }]}>Not Quite</Text>
+            <Text style={styles.quizResultScore}>{score}% — need 70% to pass</Text>
+            <Text style={styles.quizResultDesc}>Review the lesson content and try again.</Text>
+            <TouchableOpacity style={[styles.retryBtn, { borderColor: Colors.danger }]} onPress={handleRetryQuiz} activeOpacity={0.8}>
+              <Ionicons name="refresh-outline" size={16} color={Colors.danger} />
+              <Text style={[styles.retryBtnText, { color: Colors.danger }]}>Retry Quiz</Text>
+            </TouchableOpacity>
+          </View>
+          {(coachLoading || coachMessage) && (
+            <View style={styles.coachCard}>
+              <View style={styles.coachHeader}>
+                <Ionicons name="sparkles" size={14} color={Colors.blueprint} />
+                <Text style={styles.coachLabel}>Ravlo AI Coach</Text>
+              </View>
+              {coachLoading ? (
+                <ActivityIndicator size="small" color={Colors.blueprint} style={{ marginTop: 6 }} />
+              ) : (
+                <Text style={styles.coachText}>{coachMessage}</Text>
+              )}
+            </View>
+          )}
+        </>
       );
     }
 
@@ -468,6 +521,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10, borderRadius: Radii.md, borderWidth: 1.5,
   },
   retryBtnText: { ...Typography.bodySmall, fontWeight: '700' },
+  coachCard: {
+    backgroundColor: Colors.blueprint + '0D', borderRadius: Radii.md, padding: Spacing.md,
+    borderWidth: 1, borderColor: Colors.blueprint + '33', marginBottom: Spacing.lg,
+  },
+  coachHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm },
+  coachLabel: { ...Typography.caption, color: Colors.blueprint, fontWeight: '700' },
+  coachText: { ...Typography.bodySmall, color: Colors.textPrimary, lineHeight: 22 },
 
   completeBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,

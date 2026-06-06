@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radii, Typography } from '../theme';
 import { useAuthStore } from '../store/authStore';
+import { useProgressStore } from '../store/progressStore';
+import { COURSES } from '../data/modules';
 import { api } from '../services/api';
 
 interface Message {
@@ -25,17 +27,62 @@ const STARTER_PROMPTS = [
 
 export default function RavloAIScreen({ route }: any) {
   const { user } = useAuthStore();
+  const { completed } = useProgressStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
+  const buildProgressPayload = useCallback(() => {
+    const courseId = user?.chosen_course || 'residential';
+    const course = COURSES.find(c => c.id === courseId);
+    return {
+      userId: user?.id || '',
+      currentCourse: {
+        id: courseId,
+        name: course?.title || courseId,
+        totalLessons: course?.lessons.length || 0,
+        creditHours: course?.creditHours || 0,
+      },
+      completedLessonCount: completed.length,
+      completedCourses: [] as string[],
+      subscription: user?.university_tier || 'starter',
+    };
+  }, [user, completed]);
+
+  // Auto-generate a progress check-in when the Coach tab is first opened
   useEffect(() => {
     const initial = route?.params?.initialPrompt;
     if (initial) {
       setInput(initial);
+      return;
     }
-  }, [route?.params?.initialPrompt]);
+    if (messages.length > 0) return;
+
+    const generate = async () => {
+      setLoading(true);
+      try {
+        const res = await api.post('/mobile/academy/chat', {
+          messages: [{ role: 'user', content: 'Check in with me on my progress.' }],
+          tier: user?.university_tier || 'starter',
+          trigger: 'progress_checkin',
+          progress: buildProgressPayload(),
+        });
+        const checkin: Message = {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: res.data.reply || 'Hey! Ready to keep building your real estate knowledge?',
+        };
+        setMessages([checkin]);
+      } catch {
+        // Silent fail — empty state shows starter prompts
+      } finally {
+        setLoading(false);
+      }
+    };
+    generate();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const send = useCallback(async (text: string) => {
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text };
@@ -49,6 +96,8 @@ export default function RavloAIScreen({ route }: any) {
       const res = await api.post('/mobile/academy/chat', {
         messages: history,
         tier: user?.university_tier || 'starter',
+        trigger: 'general_chat',
+        progress: buildProgressPayload(),
       });
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -66,7 +115,7 @@ export default function RavloAIScreen({ route }: any) {
     } finally {
       setLoading(false);
     }
-  }, [messages, user]);
+  }, [messages, user, buildProgressPayload]);
 
   const handleSend = () => {
     if (!input.trim() || loading) return;
