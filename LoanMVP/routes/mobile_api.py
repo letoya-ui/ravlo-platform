@@ -346,6 +346,7 @@ def investor_deals():
     per_page = int(request.args.get('per_page', 20))
     status_filter = request.args.get('status', '').strip()
     strategy_filter = request.args.get('strategy', '').strip()
+    search_query = request.args.get('q', '').strip()
 
     try:
         from LoanMVP.models import Deal
@@ -358,6 +359,16 @@ def investor_deals():
             q = q.filter(Deal.status == status_filter)
         if strategy_filter and strategy_filter != 'All':
             q = q.filter(Deal.strategy == strategy_filter)
+        if search_query:
+            like = f'%{search_query}%'
+            q = q.filter(
+                db.or_(
+                    Deal.title.ilike(like),
+                    Deal.address.ilike(like),
+                    Deal.city.ilike(like),
+                    Deal.state.ilike(like),
+                )
+            )
         q = q.order_by(Deal.created_at.desc())
         paginated = q.paginate(page=page, per_page=per_page, error_out=False)
         return jsonify({'deals': [_serialize_deal(d) for d in paginated.items],

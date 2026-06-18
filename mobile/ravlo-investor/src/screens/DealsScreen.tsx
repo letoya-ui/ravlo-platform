@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
   RefreshControl, ActivityIndicator, ScrollView,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,11 +58,15 @@ export default function DealsScreen({ navigation }: any) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
+  const searchInputRef = useRef<TextInput>(null);
 
-  const fetchDeals = useCallback(async (p = 1, status = activeFilter, reset = false) => {
+  const fetchDeals = useCallback(async (p = 1, status = activeFilter, reset = false, q = activeSearch) => {
     try {
       const res = await api.get('/mobile/investor/deals', {
-        params: { page: p, status: status === 'All' ? '' : status },
+        params: { page: p, status: status === 'All' ? '' : status, q: q || undefined },
       });
       const newDeals = res.data.deals || [];
       setDeals(prev => (reset || p === 1) ? newDeals : [...prev, ...newDeals]);
@@ -72,9 +77,20 @@ export default function DealsScreen({ navigation }: any) {
     } finally {
       setLoading(false);
     }
-  }, [activeFilter]);
+  }, [activeFilter, activeSearch]);
 
-  useEffect(() => { fetchDeals(1, activeFilter, true); }, [activeFilter]);
+  useEffect(() => { fetchDeals(1, activeFilter, true, activeSearch); }, [activeFilter, activeSearch]);
+
+  const submitSearch = () => {
+    setActiveSearch(searchText.trim());
+    setSearchVisible(false);
+  };
+
+  const clearSearch = () => {
+    setSearchText('');
+    setActiveSearch('');
+    setSearchVisible(false);
+  };
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -83,7 +99,7 @@ export default function DealsScreen({ navigation }: any) {
   }, [fetchDeals, activeFilter]);
 
   const onEndReached = () => {
-    if (!loading && deals.length < total) fetchDeals(page + 1, activeFilter, false);
+    if (!loading && deals.length < total) fetchDeals(page + 1, activeFilter, false, activeSearch);
   };
 
   const fmt = (val: number) =>
@@ -110,9 +126,54 @@ export default function DealsScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>My Deals</Text>
-        <Text style={styles.subtitle}>{total} total</Text>
+        <View>
+          <Text style={styles.title}>My Deals</Text>
+          <Text style={styles.subtitle}>
+            {activeSearch ? `${total} result${total !== 1 ? 's' : ''} for "${activeSearch}"` : `${total} total`}
+          </Text>
+        </View>
+        <TouchableOpacity style={[styles.searchBtn, activeSearch ? styles.searchBtnActive : null]} onPress={() => { setSearchText(activeSearch); setSearchVisible(true); }}>
+          <Ionicons name={activeSearch ? 'search' : 'search-outline'} size={20} color={activeSearch ? Colors.white : Colors.textMuted} />
+        </TouchableOpacity>
       </View>
+
+      <Modal visible={searchVisible} transparent animationType="fade" onRequestClose={() => setSearchVisible(false)}>
+        <Pressable style={styles.overlay} onPress={() => setSearchVisible(false)}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.searchModal}>
+            <Pressable onPress={() => {}}>
+              <Text style={styles.searchModalTitle}>Search Deals</Text>
+              <View style={styles.searchInputRow}>
+                <Ionicons name="search-outline" size={18} color={Colors.textMuted} style={{ marginRight: 8 }} />
+                <TextInput
+                  ref={searchInputRef}
+                  style={styles.searchInput}
+                  placeholder="Title, address, city, state…"
+                  placeholderTextColor={Colors.textMuted}
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  onSubmitEditing={submitSearch}
+                  returnKeyType="search"
+                  autoFocus
+                  autoCapitalize="none"
+                />
+                {searchText.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchText('')}>
+                    <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={styles.searchActions}>
+                <TouchableOpacity style={styles.searchClearBtn} onPress={clearSearch}>
+                  <Text style={styles.searchClearText}>Clear</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.searchSubmitBtn} onPress={submitSearch}>
+                  <Text style={styles.searchSubmitText}>Search</Text>
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
         {STATUS_FILTERS.map(s => (
@@ -244,4 +305,16 @@ const styles = StyleSheet.create({
   metricValue: { ...Typography.caption, color: Colors.textPrimary, fontWeight: '700', marginTop: 2 },
   empty: { alignItems: 'center', paddingTop: 80, gap: Spacing.md },
   emptyText: { ...Typography.body, color: Colors.textMuted },
+  searchBtn: { width: 38, height: 38, borderRadius: Radii.sm, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
+  searchBtnActive: { backgroundColor: Colors.blueprint, borderColor: Colors.blueprint },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-start', paddingTop: 80 },
+  searchModal: { marginHorizontal: Spacing.lg, backgroundColor: Colors.surfaceElevated, borderRadius: Radii.lg, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.border },
+  searchModalTitle: { ...Typography.h3, color: Colors.textPrimary, marginBottom: Spacing.md },
+  searchInputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radii.sm, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md, paddingVertical: 10, marginBottom: Spacing.md },
+  searchInput: { flex: 1, color: Colors.textPrimary, fontSize: 15 },
+  searchActions: { flexDirection: 'row', gap: Spacing.sm },
+  searchClearBtn: { flex: 1, paddingVertical: 10, borderRadius: Radii.sm, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' },
+  searchClearText: { ...Typography.label, color: Colors.textMuted },
+  searchSubmitBtn: { flex: 2, paddingVertical: 10, borderRadius: Radii.sm, backgroundColor: Colors.blueprint, alignItems: 'center' },
+  searchSubmitText: { ...Typography.label, color: Colors.white },
 });

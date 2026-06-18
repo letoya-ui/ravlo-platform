@@ -347,6 +347,7 @@ class Partner(db.Model):
         db.DateTime,
         default=lambda: datetime.utcnow() + timedelta(days=30)
     )
+    beta_payment_sent = db.Column(db.Boolean, default=False, nullable=True)
 
     # Relationships
     leads = db.relationship(

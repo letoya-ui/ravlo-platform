@@ -19,6 +19,13 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
 {% endblock %}
 
 {% block content %}
+
+<!-- Searching... popup -->
+<div id="dfSearchingPopup" class="dfs-popup" style="display:none;" aria-live="polite">
+  <div class="dfs-popup-spinner"></div>
+  <span id="dfsPopupMsg">Searching for deals…</span>
+</div>
+
 <div class="dfv4-shell">
   <aside class="ravlo-card pad dfv4-search-panel">
     <div class="eyebrow">DEAL FINDER</div>
@@ -181,7 +188,7 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
         <div class="eyebrow">DEAL FINDER</div>
         <h3 class="mb-8">This is where the right properties should start showing up</h3>
         <p class="muted mb-0">
-          Enter a ZIP code, city/state, or use your location. Ravlo will rank the strongest opportunities in that market.
+          Click <strong>Search Deals</strong> above, enter a ZIP code or city/state, and Ravlo will rank the strongest opportunities in that market.
         </p>
       </div>
     </div>
@@ -1105,6 +1112,16 @@ async function useMyLocation(){
   );
 }
 
+function showSearchingPopup(msg){
+  const popup = document.getElementById("dfSearchingPopup");
+  document.getElementById("dfsPopupMsg").textContent = msg || "Searching for deals…";
+  popup.style.display = "flex";
+}
+
+function hideSearchingPopup(){
+  document.getElementById("dfSearchingPopup").style.display = "none";
+}
+
 async function runSearch(){
   const address = document.getElementById("address")?.value?.trim() || "";
   const city = document.getElementById("city")?.value?.trim() || "";
@@ -1127,6 +1144,7 @@ async function runSearch(){
   }
 
   status.innerText = "Searching for deals...";
+  showSearchingPopup("Searching for deals…");
 
   const payload = {
     address,
@@ -1157,12 +1175,14 @@ async function runSearch(){
     const data = await res.json();
 
     if (!res.ok || data.status === "error") {
+      hideSearchingPopup();
       status.innerText = data.error || "Search failed. Try ZIP code or city/state.";
       renderEmpty("No matches yet", "Try another ZIP code, city/state, or use your location.");
       return;
     }
 
     const results = data.results || data.properties || [];
+    hideSearchingPopup();
     renderSummary(zip, strategy, assetType, results.length, true, data.total_matches || results.length);
     renderCards(results);
 
@@ -1172,6 +1192,7 @@ async function runSearch(){
 
   } catch (err) {
     console.error(err);
+    hideSearchingPopup();
     status.innerText = "Search failed. Try ZIP code or city/state.";
     renderEmpty("Search failed", "Try another ZIP code, city/state, or use your location.");
   }
@@ -1179,6 +1200,11 @@ async function runSearch(){
 </script>
 
 <style>
+/* Searching... popup */
+.dfs-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1000;display:flex;align-items:center;gap:.75rem;padding:.9rem 1.4rem;border-radius:14px;background:rgba(19,27,37,.97);border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 40px rgba(0,0,0,.6);color:#fff;font-size:.95rem;font-weight:600;pointer-events:none}
+.dfs-popup-spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.2);border-top-color:#4C8ED9;border-radius:50%;animation:dfs-spin .7s linear infinite;flex-shrink:0}
+@keyframes dfs-spin{to{transform:rotate(360deg)}}
+
 .dfv4-shell{display:grid;grid-template-columns:360px minmax(0,1fr);gap:1rem}
 .dfv4-search-panel{position:sticky;top:16px;align-self:start}
 .dfv4-panel-title,.dfv4-hero-title{margin:.35rem 0}
