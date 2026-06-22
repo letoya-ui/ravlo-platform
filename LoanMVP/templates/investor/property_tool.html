@@ -1176,6 +1176,51 @@ async function runSearch(){
     renderEmpty("Search failed", "Try another ZIP code, city/state, or use your location.");
   }
 }
+
+(function autoSearchFromPopup() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get("auto") !== "1") return;
+
+  function setVal(id, key) {
+    var v = params.get(key);
+    var el = document.getElementById(id);
+    if (v && el) el.value = v;
+  }
+
+  setVal("zip", "zip");
+  setVal("city", "city");
+  setVal("state", "state");
+  setVal("assetType", "asset_type");
+  setVal("strategy", "strategy");
+  setVal("maxPrice", "max_price");
+  setVal("minScore", "min_score");
+  setVal("minDiscount", "min_discount");
+  setVal("buyerProfile", "buyer_profile");
+
+  var lat = params.get("latitude");
+  var lng = params.get("longitude");
+  if (lat && lng) {
+    var latInput = document.getElementById("latitude");
+    var lngInput = document.getElementById("longitude");
+    if (!latInput) {
+      latInput = document.createElement("input");
+      latInput.type = "hidden";
+      latInput.id = "latitude";
+      document.body.appendChild(latInput);
+    }
+    if (!lngInput) {
+      lngInput = document.createElement("input");
+      lngInput.type = "hidden";
+      lngInput.id = "longitude";
+      document.body.appendChild(lngInput);
+    }
+    latInput.value = lat;
+    lngInput.value = lng;
+  }
+
+  history.replaceState(null, "", window.location.pathname);
+  runSearch();
+})();
 </script>
 
 <style>
