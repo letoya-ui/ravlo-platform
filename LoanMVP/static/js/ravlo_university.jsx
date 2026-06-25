@@ -363,15 +363,15 @@ function LandingGate({ onAccess }) {
 }
 
 // ── Sidebar ────────────────────────────────────────────────────────────────
-function Sidebar({ track, setTrack, levelIdx, setLevelIdx, view, setView, progress, xp, userName, open, setOpen }) {
+function Sidebar({ track, setTrack, levelIdx, setLevelIdx, view, setView, progress, xp, userName, open, setOpen, isDesktop }) {
   const trackKeys = Object.keys(TRACKS);
 
   function selectTrack(key) {
-    setTrack(key); setLevelIdx(0); setView('home'); setOpen(false);
+    setTrack(key); setLevelIdx(0); setView('home'); if (!isDesktop) setOpen(false);
   }
 
   function selectLevel(i) {
-    setLevelIdx(i); setView('level'); setOpen(false);
+    setLevelIdx(i); setView('level'); if (!isDesktop) setOpen(false);
   }
 
   const sideStyle = {
@@ -380,7 +380,7 @@ function Sidebar({ track, setTrack, levelIdx, setLevelIdx, view, setView, progre
     borderRight: `1px solid ${T.border}`,
     display: 'flex', flexDirection: 'column',
     zIndex: 100,
-    transform: open ? 'translateX(0)' : 'translateX(-100%)',
+    transform: (isDesktop || open) ? 'translateX(0)' : 'translateX(-100%)',
     transition: 'transform .25s cubic-bezier(.4,0,.2,1)',
   };
 
@@ -389,7 +389,7 @@ function Sidebar({ track, setTrack, levelIdx, setLevelIdx, view, setView, progre
 
   return (
     <>
-      {open && <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 99, backdropFilter: 'blur(2px)' }} />}
+      {!isDesktop && open && <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 99, backdropFilter: 'blur(2px)' }} />}
       <div style={sideStyle}>
         {/* Brand */}
         <div style={{ padding: '20px 20px 16px', borderBottom: `1px solid ${T.borderSoft}` }}>
@@ -821,6 +821,13 @@ function App() {
   const [lesson, setLesson] = useState(null);
   const [progress, setProgress] = useState({ completed: {}, xp: 0 });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+
+  useEffect(() => {
+    function onResize() { setIsDesktop(window.innerWidth >= 768); }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     if (!tier) return;
@@ -867,11 +874,11 @@ function App() {
 
   return (
     <div style={bgStyle}>
-      <Sidebar track={track} setTrack={setTrack} levelIdx={levelIdx} setLevelIdx={setLevelIdx} view={view} setView={setView} progress={progress} xp={progress.xp} userName={userName} open={sidebarOpen} setOpen={setSidebarOpen} />
+      <Sidebar track={track} setTrack={setTrack} levelIdx={levelIdx} setLevelIdx={setLevelIdx} view={view} setView={setView} progress={progress} xp={progress.xp} userName={userName} open={sidebarOpen} setOpen={setSidebarOpen} isDesktop={isDesktop} />
 
       {/* Topbar */}
-      <div style={{ position: 'fixed', top: 0, left: 280, right: 0, height: 52, background: 'rgba(7,17,31,.92)', borderBottom: `1px solid ${T.border}`, backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 12, zIndex: 50 }}>
-        <button onClick={() => setSidebarOpen(true)} style={{ display: 'none', background: 'none', border: 'none', color: T.muted, cursor: 'pointer', fontSize: 20, padding: 0 }} className="mob-menu">≡</button>
+      <div style={{ position: 'fixed', top: 0, left: isDesktop ? 280 : 0, right: 0, height: 52, background: 'rgba(7,17,31,.92)', borderBottom: `1px solid ${T.border}`, backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 12, zIndex: 50 }}>
+        <button onClick={() => setSidebarOpen(true)} style={{ display: isDesktop ? 'none' : 'block', background: 'none', border: 'none', color: T.muted, cursor: 'pointer', fontSize: 22, padding: 0, lineHeight: 1 }}>≡</button>
         <span style={{ fontSize: 12, color: T.muted }}>{TRACKS[track]?.label}</span>
         {view !== 'home' && view !== 'coach' && <><span style={{ color: T.mutedDark }}>›</span><span style={{ fontSize: 12, color: T.muted }}>{TRACKS[track]?.levels[levelIdx]?.title}</span></>}
         {view === 'lesson' && lesson && <><span style={{ color: T.mutedDark }}>›</span><span style={{ fontSize: 12, color: T.text, fontWeight: 600 }}>{lesson.title}</span></>}
@@ -882,17 +889,11 @@ function App() {
       </div>
 
       {/* Content */}
-      <div style={{ marginLeft: 280, paddingTop: 52 }}>
-        <div style={{ padding: '28px 32px', maxWidth: 1000 }}>
+      <div style={{ marginLeft: isDesktop ? 280 : 0, paddingTop: 52 }}>
+        <div style={{ padding: isDesktop ? '28px 32px' : '20px 16px', maxWidth: 1000 }}>
           {renderMain()}
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .mob-menu { display: block !important; }
-        }
-      `}</style>
     </div>
   );
 }
