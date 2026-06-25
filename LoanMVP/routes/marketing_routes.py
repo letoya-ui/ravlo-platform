@@ -4,7 +4,6 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from sqlalchemy import func
 
 from LoanMVP.extensions import db, csrf, limiter
-
 from LoanMVP.models.admin import LicenseApplication
 from LoanMVP.models.user_model import User
 
@@ -15,13 +14,19 @@ marketing_bp = Blueprint("marketing", __name__, url_prefix="/")
 # Shared page metadata
 # ---------------------------------------------------------
 SITE_NAME = "Ravlo"
-SITE_TAGLINE = "Investor Command Center for deals, renovation, build strategy, and budgeting."
+SITE_TAGLINE = "The Operating System for Real Estate."
 
 PAGE_META = {
     "home": {
-        "title": "Ravlo | Investor Command Center",
-        "description": "Analyze deals, plan renovations, model new construction, and manage your investor workflow in one platform.",
+        "title": "Ravlo | The Operating System for Real Estate",
+        "description": "Run deals, analysis, budgets, projects, capital, partners, coaching, and AI in one connected real estate operating system.",
         "template": "marketing/home.html",
+        "hero_image": "images/marketing/hero_combined.png",
+    },
+    "why_ravlo": {
+        "title": "Why Ravlo | The Operating System for Real Estate",
+        "description": "Learn why Ravlo connects Investor OS, Lending OS, Partner Network, Academy coaching, and AI into one real estate operating system.",
+        "template": "marketing/why_ravlo.html",
         "hero_image": "images/marketing/hero_combined.png",
     },
     "about": {
@@ -142,8 +147,8 @@ PAGE_META = {
         "hero_image": "images/marketing/interior_luxury.jpg",
     },
     "academy": {
-        "title": "Ravlo Academy | AI-Powered Real Estate Education",
-        "description": "AI coaching for realtors, investors, and lenders. Get a personalized business plan, master loans, and grow your real estate career with Ravlo Academy.",
+        "title": "Ravlo Academy | Real Estate Coaching",
+        "description": "Practical real estate coaching, AI-guided learning, platform walkthroughs, and business-building resources included with Ravlo subscription access.",
         "template": "marketing/academy.html",
         "hero_image": "images/marketing/city_skyline.jpg",
     },
@@ -173,7 +178,6 @@ def _owner_admin_exists() -> bool:
 def _workspace_recovery_mode() -> bool:
     if db.session.query(User.id).first() is None:
         return True
-
     return _single_admin_mode_enabled() and not _owner_admin_exists()
 
 
@@ -182,7 +186,6 @@ def _workspace_recovery_mode() -> bool:
 # ---------------------------------------------------------
 def render_marketing_page(page_key, **extra_context):
     page = PAGE_META[page_key]
-
     context = {
         "site_name": SITE_NAME,
         "site_tagline": SITE_TAGLINE,
@@ -193,7 +196,7 @@ def render_marketing_page(page_key, **extra_context):
         "page_key": page_key,
         "nav_links": [
             {"label": "Home", "endpoint": "marketing.homepage"},
-            {"label": "About", "endpoint": "marketing.about"},
+            {"label": "Why Ravlo", "endpoint": "marketing.why_ravlo"},
             {"label": "Plans", "endpoint": "marketing.plans"},
             {"label": "Partners", "endpoint": "marketing.partners"},
             {"label": "Tour", "endpoint": "marketing.tour"},
@@ -203,7 +206,6 @@ def render_marketing_page(page_key, **extra_context):
         "recovery_mode": _workspace_recovery_mode(),
         "owner_admin_email": _owner_admin_email(),
     }
-
     context.update(extra_context)
     return render_template(page["template"], **context)
 
@@ -218,7 +220,7 @@ def inject_marketing_globals():
 
 
 # ---------------------------------------------------------
-# HOME
+# HOME / WHY RAVLO
 # ---------------------------------------------------------
 @marketing_bp.route("/")
 def homepage():
@@ -254,44 +256,39 @@ def homepage_alias():
     return redirect(url_for("marketing.homepage"), code=301)
 
 
+@marketing_bp.route("/why-ravlo")
+def why_ravlo():
+    return render_marketing_page("why_ravlo")
+
+
 # ---------------------------------------------------------
-# ABOUT
+# CORE MARKETING PAGES
 # ---------------------------------------------------------
 @marketing_bp.route("/about")
 def about():
     return render_marketing_page("about")
 
 
-# ---------------------------------------------------------
-# PLANS
-# ---------------------------------------------------------
 @marketing_bp.route("/plans")
 def plans():
     return render_marketing_page("plans")
+
 
 @marketing_bp.route("/pricing")
 def pricing():
     return render_template("marketing/lending_pricing.html")
 
-# ---------------------------------------------------------
-# PARTNERS
-# ---------------------------------------------------------
+
 @marketing_bp.route("/partners")
 def partners():
     return render_marketing_page("partners")
 
 
-# ---------------------------------------------------------
-# ENTER
-# ---------------------------------------------------------
 @marketing_bp.route("/enter")
 def enter():
     return render_marketing_page("enter")
 
 
-# ---------------------------------------------------------
-# PRODUCT TOUR
-# ---------------------------------------------------------
 @marketing_bp.route("/tour")
 def tour():
     return render_marketing_page("tour")
@@ -305,8 +302,8 @@ def tour():
 @limiter.limit("5 per minute", methods=["POST"])
 def contact():
     if request.method == "POST":
-        name    = (request.form.get("name")    or "").strip()
-        email   = (request.form.get("email")   or "").strip().lower()
+        name = (request.form.get("name") or "").strip()
+        email = (request.form.get("email") or "").strip().lower()
         subject = (request.form.get("subject") or "").strip()
         message = (request.form.get("message") or "").strip()
 
@@ -314,7 +311,6 @@ def contact():
             flash("Name, email, and message are required.", "warning")
             return redirect(url_for("marketing.contact"))
 
-        # Always persist — each submission has distinct message content
         notes_body = f"Subject: {subject}\n\n{message}" if subject else message
         row = LicenseApplication(
             company_name="—",
@@ -326,7 +322,6 @@ def contact():
         )
         db.session.add(row)
         db.session.commit()
-
         _notify_admin_contact(name, email, subject, message)
         flash("Message sent — we'll be in touch shortly.", "success")
         return redirect(url_for("marketing.contact"))
@@ -338,9 +333,11 @@ def _notify_admin_contact(name: str, email: str, subject: str, message: str) -> 
     try:
         from LoanMVP.app import mail
         from flask_mail import Message as MailMessage
+
         admin_email = _owner_admin_email()
         if not admin_email:
             return
+
         subj_line = subject or "(no subject)"
         msg = MailMessage(
             subject=f"[Ravlo Contact] {subj_line} — {email}",
@@ -362,14 +359,11 @@ def _notify_admin_contact(name: str, email: str, subject: str, message: str) -> 
 @marketing_bp.route("/lenders-contact")
 def lenders_contact():
     topic = request.args.get("topic", "")
-    return render_marketing_page(
-        "lenders_contact",
-        selected_topic=topic,
-    )
+    return render_marketing_page("lenders_contact", selected_topic=topic)
 
 
 # ---------------------------------------------------------
-# SUPPORT / FAQ
+# SUPPORT / FAQ / LEGAL
 # ---------------------------------------------------------
 @marketing_bp.route("/support")
 def support():
@@ -381,9 +375,6 @@ def faq():
     return render_marketing_page("faq")
 
 
-# ---------------------------------------------------------
-# LEGAL
-# ---------------------------------------------------------
 @marketing_bp.route("/terms")
 def terms():
     return render_marketing_page("terms")
@@ -445,6 +436,9 @@ def partner_plans():
     return render_marketing_page("partner_plans")
 
 
+# ---------------------------------------------------------
+# LENDING OS
+# ---------------------------------------------------------
 @marketing_bp.route("/lending-os")
 def lending_os():
     return render_template(
@@ -454,7 +448,6 @@ def lending_os():
         page_key="lending_os",
         hero_image="images/marketing/lending_os_hero.jpg",
     )
-
 
 
 @marketing_bp.route("/lending-os/request-preview", methods=["POST"])
@@ -471,7 +464,6 @@ def lending_os_request_preview():
         flash("Email is required.", "warning")
         return redirect(url_for("marketing.lending_os") + "#request-preview")
 
-    # Save lead — no account created; admin invites them via the invite system
     existing = LicenseApplication.query.filter(
         func.lower(LicenseApplication.email) == email,
         LicenseApplication.business_type == "lending_os_lead",
@@ -499,10 +491,10 @@ def lending_os_preview_thanks():
 
 
 def _send_lending_os_lead_confirmation(first_name: str, email: str) -> None:
-    """Confirmation email to the prospect — lets them know we got their request."""
     try:
         from LoanMVP.app import mail
         from flask_mail import Message as MailMessage
+
         name = first_name or "there"
         msg = MailMessage(
             subject="We received your Ravlo Lending OS request",
@@ -510,22 +502,13 @@ def _send_lending_os_lead_confirmation(first_name: str, email: str) -> None:
         )
         msg.html = f"""
         <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#0f1117;">
-          <img src="https://ravlohq.com/static/images/ravlo-logo-dark.png"
-               alt="Ravlo" style="height:32px;margin-bottom:28px;">
-          <h2 style="font-size:22px;font-weight:700;margin:0 0 12px;">
-            Hey {name}, we got your request!
-          </h2>
+          <img src="https://ravlohq.com/static/images/ravlo-logo-dark.png" alt="Ravlo" style="height:32px;margin-bottom:28px;">
+          <h2 style="font-size:22px;font-weight:700;margin:0 0 12px;">Hey {name}, we got your request!</h2>
           <p style="font-size:15px;line-height:1.6;color:#374151;">
-            Thanks for your interest in Ravlo Lending OS. A member of our team will reach out
-            within <strong>2 business hours</strong> to walk you through the platform and set up
-            your team's access.
+            Thanks for your interest in Ravlo Lending OS. A member of our team will reach out within <strong>2 business hours</strong> to walk you through the platform and set up your team's access.
           </p>
-          <p style="font-size:15px;line-height:1.6;color:#374151;margin-top:16px;">
-            In the meantime, feel free to reply to this email with any questions.
-          </p>
-          <p style="margin-top:28px;font-size:13px;color:#9ca3af;">
-            — The Ravlo Team
-          </p>
+          <p style="font-size:15px;line-height:1.6;color:#374151;margin-top:16px;">In the meantime, feel free to reply to this email with any questions.</p>
+          <p style="margin-top:28px;font-size:13px;color:#9ca3af;">— The Ravlo Team</p>
         </div>
         """
         mail.send(msg)
@@ -538,9 +521,11 @@ def _notify_admin_lending_os_lead(first_name, last_name, company, email, phone) 
         from LoanMVP.app import mail
         from flask_mail import Message as MailMessage
         from LoanMVP.routes.auth import _owner_admin_email
+
         admin_email = _owner_admin_email()
         if not admin_email:
             return
+
         msg = MailMessage(
             subject=f"[Ravlo] New Lending OS Lead — {email}",
             recipients=[admin_email],
@@ -559,6 +544,9 @@ def _notify_admin_lending_os_lead(first_name, last_name, company, email, phone) 
         print(f"[lending_os] admin notification failed: {e}")
 
 
+# ---------------------------------------------------------
+# APPLICATIONS / ACADEMY
+# ---------------------------------------------------------
 @marketing_bp.route("/apply", methods=["GET", "POST"])
 @csrf.exempt
 @limiter.limit("5 per minute", methods=["POST"])
@@ -596,23 +584,19 @@ def apply():
             notes=notes,
             status="new",
         )
-
         db.session.add(app_row)
         db.session.commit()
-
         flash("Your application has been submitted.", "success")
         return redirect(url_for("marketing.apply_success"))
 
     return render_template("marketing/apply.html")
+
 
 @marketing_bp.route("/apply/success")
 def apply_success():
     return render_template("marketing/apply_success.html")
 
 
-# ---------------------------------------------------------
-# RAVLO ACADEMY
-# ---------------------------------------------------------
 @marketing_bp.route("/academy")
 def academy():
     return render_template("marketing/academy.html")
