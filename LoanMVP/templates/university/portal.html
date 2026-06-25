@@ -3,39 +3,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ravlo Academy Portal</title>
-
-  {# Portal is an authenticated app shell — Google shouldn't index it #}
+  <title>Ravlo Academy</title>
   <meta name="robots" content="noindex, nofollow">
 
-  {# Load fonts here so they're ready before React paints (prevents FOUC) #}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; background: #080808; }
+    html, body { height: 100%; background: #07111f; font-family: 'Inter', sans-serif; }
     #ravlo-university-root { height: 100%; }
 
-    /* Show a subtle spinner while Babel compiles the JSX */
+    .ru-grain {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.035) 1px, transparent 1px);
+      background-size: 10px 10px;
+    }
+
     .ru-loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       height: 100vh;
-      background: #080808;
-      color: #D4AF6A;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
+      background: radial-gradient(circle at top left, rgba(54,115,255,.18), transparent 40%),
+                  linear-gradient(180deg, #06101d, #081322);
+      color: #9fb1c9;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
       letter-spacing: 3px;
       text-transform: uppercase;
       gap: 10px;
     }
     .ru-spinner {
       width: 20px; height: 20px;
-      border: 2px solid rgba(212,175,106,0.2);
-      border-top-color: #D4AF6A;
+      border: 2px solid rgba(89,183,255,0.2);
+      border-top-color: #59B7FF;
       border-radius: 50%;
       animation: ru-spin 0.8s linear infinite;
     }
@@ -44,36 +45,27 @@
 </head>
 <body>
 
-  {# Loading state shown until React mounts #}
+  <div class="ru-grain"></div>
+
   <div id="ru-loader" class="ru-loading">
     <div class="ru-spinner"></div>
-    Loading Ravlo Academy…
+    Loading Ravlo Academy
   </div>
 
-  {# React mounts here #}
   <div id="ravlo-university-root"></div>
 
-  {# ── React 18 (UMD / CDN) ───────────────────────────────────────────── #}
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-
-  {#
-    Babel Standalone transforms the JSX in-browser.
-    NOTE: For production with high traffic, pre-compile with Vite / CRA and
-    serve a plain .js bundle.  For now Babel standalone is fine for an MVP.
-  #}
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  {# Hide the loader once React is about to paint #}
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      // Babel fires a custom event after transform — poll as fallback
       var loader = document.getElementById('ru-loader');
       var attempts = 0;
       var check = setInterval(function () {
         attempts++;
         var root = document.getElementById('ravlo-university-root');
-        if ((root && root.childElementCount > 0) || attempts > 60) {
+        if ((root && root.childElementCount > 0) || attempts > 80) {
           if (loader) loader.style.display = 'none';
           clearInterval(check);
         }
@@ -81,7 +73,6 @@
     });
   </script>
 
-  {# Server-side tier injected before JSX loads — this is authoritative, no bypass possible #}
   <script>
     window.RAVLO_ACADEMY = {
       tier: {{ server_tier | tojson }},
@@ -89,7 +80,6 @@
     };
   </script>
 
-  {# The component — Babel compiles JSX on load, then mounts to #ravlo-university-root #}
   <script type="text/babel"
           data-presets="react"
           src="{{ url_for('static', filename='js/ravlo_university.jsx') }}">

@@ -472,6 +472,92 @@ Rules:
     return json.loads(raw.strip())
 
 
+@university_bp.route("/api/progress", methods=["GET"])
+@csrf.exempt
+def api_progress():
+    """Return completed lessons + XP for the current user."""
+    tier_key, _ = _current_access()
+    if not tier_key:
+        return jsonify({"error": "Academy access required."}), 403
+
+    completed = {}
+    xp = 0
+
+    if current_user.is_authenticated:
+        try:
+            from LoanMVP.models.training_models import AcademyLessonProgress
+            from LoanMVP.extensions import db
+            rows = AcademyLessonProgress.query.filter_by(user_id=current_user.id).all()
+            for r in rows:
+                key = f"{r.module_id}:{r.lesson_index}"
+                completed[key] = True
+                xp += 10
+        except Exception as exc:
+            current_app.logger.warning("progress fetch error: %s", exc)
+    else:
+        raw = session.get("academy_progress") or {}
+        completed = raw.get("completed", {})
+        xp = raw.get("xp", 0)
+
+    return jsonify({"completed": completed, "xp": xp})
+
+
+@university_bp.route("/api/progress/complete", methods=["POST"])
+@csrf.exempt
+def api_progress_complete():
+    """Mark a lesson complete and award XP."""
+    tier_key, _ = _current_access()
+    if not tier_key:
+        return jsonify({"error": "Academy access required."}), 403
+
+    payload = request.get_json(silent=True) or {}
+    module_id = (payload.get("module_id") or "").strip()
+    lesson_index = payload.get("lesson_index")
+
+    if not module_id or lesson_index is None:
+        return jsonify({"error": "module_id and lesson_index are required"}), 400
+
+    try:
+        lesson_index = int(lesson_index)
+    except (TypeError, ValueError):
+        return jsonify({"error": "lesson_index must be an integer"}), 400
+
+    xp_awarded = 0
+
+    if current_user.is_authenticated:
+        try:
+            from LoanMVP.models.training_models import AcademyLessonProgress
+            from LoanMVP.extensions import db
+            from datetime import datetime
+            existing = AcademyLessonProgress.query.filter_by(
+                user_id=current_user.id,
+                module_id=module_id,
+                lesson_index=lesson_index,
+            ).first()
+            if not existing:
+                row = AcademyLessonProgress(
+                    user_id=current_user.id,
+                    module_id=module_id,
+                    lesson_index=lesson_index,
+                    completed_at=datetime.utcnow(),
+                )
+                db.session.add(row)
+                db.session.commit()
+                xp_awarded = 10
+        except Exception as exc:
+            current_app.logger.warning("progress save error: %s", exc)
+    else:
+        raw = session.get("academy_progress") or {"completed": {}, "xp": 0}
+        key = f"{module_id}:{lesson_index}"
+        if key not in raw["completed"]:
+            raw["completed"][key] = True
+            raw["xp"] = raw.get("xp", 0) + 10
+            xp_awarded = 10
+        session["academy_progress"] = raw
+
+    return jsonify({"ok": True, "xp_awarded": xp_awarded})
+
+
 @university_bp.route("/lesson-content", methods=["POST"])
 @csrf.exempt
 def lesson_content():
