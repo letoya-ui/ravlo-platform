@@ -619,3 +619,12 @@ def investor_access():
         page_title="Investor Access Program | Ravlo",
         meta_description="5 exclusive spots — get up to 3 months of Ravlo Enterprise free in exchange for feedback. One survey per month, one free month earned.",
     )
+
+
+@marketing_bp.route("/refer")
+def referral():
+    return render_template(
+        "marketing/referral.html",
+        page_title="Refer & Earn | Ravlo",
+        meta_description="Refer a friend to Ravlo and you both get a free month when they sign up. No limits — every referral earns another month.",
+    )
