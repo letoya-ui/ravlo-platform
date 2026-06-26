@@ -52,6 +52,11 @@ const TRACKS = {
           { title: 'Seller Financing & Subject-To', desc: 'Structuring owner-carry deals, due-on-sale risks, and documentation.' },
           { title: 'Private Money & Partnerships', desc: 'Raising capital, investor agreements, preferred returns, JV structures.' },
         ]},
+        { id: 'inv-l3-m3', title: 'Getting Funded: Requirements & Preparation', lessons: [
+          { title: 'Qualifying Criteria by Loan Type', desc: 'Credit scores, reserve requirements, DSCR ratios, and experience tiers — what each lender actually needs before they say yes.' },
+          { title: 'LTV, LTC, and ARV — How Lenders Underwrite Investment Deals', desc: 'Loan-to-Value vs Loan-to-Cost, ARV-based lending at 65–70%, draw schedules, and why lenders think differently on investment properties.' },
+          { title: 'Building Your Deal Package', desc: 'What lenders actually want: executive summary, comp analysis, scope of work, rent projections, and borrower profile — assembled before you make the call.' },
+        ]},
       ]},
       { title: 'BRRRR & Flipping', modules: [
         { id: 'inv-l4-m1', title: 'The BRRRR Method', lessons: [
