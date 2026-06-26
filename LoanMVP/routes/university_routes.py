@@ -419,11 +419,21 @@ def _save_lesson_cache(cache: dict):
 def _generate_lesson_content(title: str, description: str, course_title: str, unit_title: str) -> dict:
     """Call Anthropic to generate structured lesson content. Returns parsed dict."""
     system = (
-        "You are a real estate curriculum writer. Generate professional, practitioner-level lesson content "
-        "for Ravlo Academy — a real estate education platform. Content must be specific, actionable, and grounded "
-        "in real-world real estate practice. Never give generic business advice."
+        "You are a senior real estate instructor writing curriculum for Ravlo Academy — a platform used by "
+        "working investors, lenders, realtors, and contractors. Your lessons teach people who are doing real deals, "
+        "not reading theory. Every lesson must meet these standards:\n\n"
+        "1. USE REAL NUMBERS. Always include actual figures, percentages, dollar amounts, and ratios "
+        "(e.g. '70-75% ARV', '$15-22/sqft for drywall', '1.25x DSCR minimum', '6% cap rate'). Vague claims are useless.\n"
+        "2. TEACH THE WHY. Don't just say what to do — explain why it matters and what goes wrong when it's ignored.\n"
+        "3. INCLUDE A REAL SCENARIO. Every lesson needs at least one concrete example: a specific property, deal, or "
+        "situation with real numbers that shows the concept in action.\n"
+        "4. COMMON MISTAKES SECTION IS MANDATORY. This is where practitioners learn the most. Name the actual mistakes "
+        "that cost money, not generic caution.\n"
+        "5. WRITE AT PRACTITIONER LEVEL. Assume the reader is on their second or third deal — not a first-time reader "
+        "of a real estate textbook. Skip basic definitions. Teach depth.\n\n"
+        "Never give generic encouragement. Never say 'consult a professional' or 'do your research'. Give the answer."
     )
-    prompt = f"""Generate complete lesson content for this real estate lesson:
+    prompt = f"""Generate a complete, high-quality lesson for this real estate course:
 
 Course: {course_title}
 Unit: {unit_title}
@@ -432,19 +442,21 @@ Description: {description}
 
 Return a JSON object with EXACTLY this structure:
 {{
-  "content": "Full lesson text. Use **Section Header** (double asterisks) for section titles. Use - bullet (dash space) for list items. Write 4-6 paragraphs total across 2-4 sections. 350-500 words.",
-  "keyPoints": ["Key takeaway 1", "Key takeaway 2", "Key takeaway 3", "Key takeaway 4", "Key takeaway 5"],
+  "objectives": ["By the end of this lesson you will be able to [specific skill 1]", "...skill 2", "...skill 3"],
+  "content": "Full lesson text — minimum 600 words. Format: opening paragraph (no header), then use **Section Header** (double asterisks) for 3-4 section titles. Use - bullet (dash space) for list items. REQUIRED sections: one section with a real worked example including actual numbers, one section titled **Common Mistakes** with 3-4 specific practitioner errors and why they happen.",
+  "keyPoints": ["Specific takeaway with a real number or threshold", "Specific takeaway 2", "Specific takeaway 3", "Specific takeaway 4", "Specific takeaway 5"],
   "quiz": [
-    {{"question": "Question text?", "options": ["Option A", "Option B", "Option C", "Option D"], "correctIndex": 1, "explanation": "Why this answer is correct."}},
-    {{"question": "Question text?", "options": ["Option A", "Option B", "Option C", "Option D"], "correctIndex": 2, "explanation": "Why this answer is correct."}},
-    {{"question": "Question text?", "options": ["Option A", "Option B", "Option C", "Option D"], "correctIndex": 0, "explanation": "Why this answer is correct."}}
+    {{"question": "Comprehension question testing the core concept — not a definition, but application of the idea.", "options": ["Plausible wrong answer", "Correct answer", "Plausible wrong answer", "Plausible wrong answer"], "correctIndex": 1, "explanation": "Explain why this is correct AND briefly why the other options are wrong."}},
+    {{"question": "Scenario question: An investor/lender/professional is facing [real situation from the lesson]. What should they do?", "options": ["Option A", "Option B — correct", "Option C", "Option D"], "correctIndex": 1, "explanation": "Walk through the reasoning, referencing the numbers or concept from the lesson."}},
+    {{"question": "Analysis question involving a number, calculation, or judgment call from the lesson content.", "options": ["Option A", "Option B", "Option C — correct", "Option D"], "correctIndex": 2, "explanation": "Show the calculation or reasoning that leads to the correct answer."}}
   ]
 }}
 
-Rules:
-- content: Opening paragraph first (no header), then **Section Header** followed by body and bullets
-- keyPoints: 5 specific, memorable takeaways a practitioner would actually use
-- quiz: 3 questions testing comprehension, not trivia. correctIndex must match the correct option (0-3).
+Critical rules:
+- objectives: 3 specific, measurable skills the student gains — start each with an active verb (calculate, identify, structure, evaluate, etc.)
+- content: Must include a worked example with real dollar figures or percentages. Must have a **Common Mistakes** section.
+- keyPoints: Each must be specific and actionable — include a number, threshold, or rule of thumb where possible.
+- quiz: Questions must test whether the student can APPLY the lesson, not just recall it. All wrong options must be plausible (no obviously silly answers). correctIndex must match the correct option (0-indexed).
 - Return ONLY the JSON object, no markdown fences, no extra text."""
 
     resp = http.post(
@@ -456,11 +468,11 @@ Rules:
         },
         json={
             "model": "claude-haiku-4-5-20251001",
-            "max_tokens": 1800,
+            "max_tokens": 2800,
             "system": system,
             "messages": [{"role": "user", "content": prompt}],
         },
-        timeout=45,
+        timeout=60,
     )
     resp.raise_for_status()
     raw = resp.json()["content"][0]["text"].strip()
