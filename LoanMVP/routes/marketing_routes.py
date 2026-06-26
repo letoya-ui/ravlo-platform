@@ -610,3 +610,21 @@ def university_redirect():
 @marketing_bp.route("/university/portal")
 def university_portal_redirect():
     return redirect(url_for("university.portal"), code=301)
+
+
+@marketing_bp.route("/investor-access")
+def investor_access():
+    return render_template(
+        "marketing/investor_access.html",
+        page_title="The 5-Investor Challenge | Ravlo",
+        meta_description="We're turning 5 people into full real estate investors. Full Enterprise access — Academy, Investor OS, every studio. Learn, find a deal, and share your experience. Up to 3 months free.",
+    )
+
+
+@marketing_bp.route("/refer")
+def referral():
+    return render_template(
+        "marketing/referral.html",
+        page_title="Refer & Earn | Ravlo",
+        meta_description="Refer a friend to Ravlo and you both get a free month when they sign up. No limits — every referral earns another month.",
+    )
