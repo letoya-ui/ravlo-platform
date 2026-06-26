@@ -1,13 +1,13 @@
 const { useState, useEffect, useRef } = React;
 
-// ── Design tokens ──────────────────────────────────────────────────────────
+// ── Design tokens — aligned to ravlo_tokens.css brand foundation ───────────
 const T = {
-  bg: '#07111f', bgSoft: '#0c1728',
-  panel: 'rgba(10,20,36,0.92)', panel2: 'rgba(255,255,255,0.03)',
-  border: 'rgba(255,255,255,0.08)', borderSoft: 'rgba(255,255,255,0.04)',
-  text: '#eaf2ff', muted: '#9fb1c9', mutedDark: '#4d6480',
-  accent: '#3A5C7A', accentLight: '#59B7FF', accentGlow: 'rgba(89,183,255,0.15)',
-  success: '#52d3a6', warning: '#ffd36f', danger: '#ff8f8f',
+  bg: '#070c12', bgSoft: '#0c1116',
+  panel: '#101821', panel2: '#131c26',
+  border: 'rgba(255,255,255,0.07)', borderSoft: 'rgba(107,127,147,0.18)',
+  text: '#ffffff', muted: 'rgba(255,255,255,0.58)', mutedDark: '#6B7F93',
+  accent: '#3A5C7A', accentLight: '#5FA8FF', accentGlow: 'rgba(95,168,255,0.15)',
+  success: '#2cb67d', warning: '#d1a246', danger: '#c46363',
   shadow: '0 18px 48px rgba(0,0,0,0.34)',
   radius: { sm: 12, md: 16, lg: 22, xl: 28 },
 };
