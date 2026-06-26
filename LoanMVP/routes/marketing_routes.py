@@ -610,3 +610,12 @@ def university_redirect():
 @marketing_bp.route("/university/portal")
 def university_portal_redirect():
     return redirect(url_for("university.portal"), code=301)
+
+
+@marketing_bp.route("/investor-access")
+def investor_access():
+    return render_template(
+        "marketing/investor_access.html",
+        page_title="Investor Access Program | Ravlo",
+        meta_description="5 exclusive spots — get up to 3 months of Ravlo Enterprise free in exchange for feedback. One survey per month, one free month earned.",
+    )
