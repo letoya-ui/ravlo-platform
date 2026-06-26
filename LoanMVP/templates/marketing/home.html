@@ -69,6 +69,25 @@
 
 {% block content %}
 
+<section style="padding: 28px 0; border-bottom: 1px solid rgba(107,127,147,.18);">
+  <div class="mk-container">
+    <div style="display:flex; align-items:center; gap:24px; flex-wrap:wrap; background: linear-gradient(135deg, rgba(58,92,122,.18), rgba(10,20,36,.6)); border:1px solid rgba(107,127,147,.28); border-radius:20px; padding:28px 32px;">
+      <div style="flex:1; min-width:260px;">
+        <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(95,168,255,.12); border:1px solid rgba(95,168,255,.25); border-radius:999px; padding:4px 14px; margin-bottom:14px;">
+          <span style="width:7px;height:7px;border-radius:50%;background:#5FA8FF;display:inline-block;"></span>
+          <span style="font-size:.78rem; font-weight:800; letter-spacing:2px; color:#5FA8FF; text-transform:uppercase;">5 spots only</span>
+        </div>
+        <h3 style="font-size:clamp(1.1rem,2.5vw,1.4rem); font-weight:800; margin:0 0 8px; color:#fff; line-height:1.25;">Free Investor OS + Academy access — in exchange for your feedback.</h3>
+        <p style="color:rgba(255,255,255,.6); font-size:.92rem; margin:0; line-height:1.6;">We're opening 5 spots to real estate investors who want full access to the Ravlo Investor OS and Ravlo Academy at no cost. In return, we ask for honest feedback on the platform. That's it.</p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px; min-width:160px;">
+        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary" style="text-align:center; white-space:nowrap;">Claim a Spot</a>
+        <p style="margin:0; font-size:.76rem; color:rgba(255,255,255,.35); text-align:center;">Mention "Investor Feedback" in your message</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="mk-section">
   <div class="mk-container">
     <div class="mk-kicker">Why Ravlo exists</div>
