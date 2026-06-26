@@ -189,6 +189,58 @@
   </div>
 </section>
 
+<!-- INVESTOR ACCESS PROMO -->
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-panel" style="background:linear-gradient(135deg, rgba(95,168,255,0.07), rgba(58,92,122,0.06)); border:1px solid rgba(95,168,255,0.2); position:relative; overflow:hidden;">
+
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#5FA8FF,transparent);"></div>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:32px; flex-wrap:wrap;">
+        <div style="flex:1 1 400px;">
+          <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(95,168,255,0.1); border:1px solid rgba(95,168,255,0.22); border-radius:999px; padding:5px 14px; margin-bottom:18px;">
+            <span style="width:7px;height:7px;border-radius:50%;background:#5FA8FF;display:inline-block;animation:mk-pulse 2s infinite;"></span>
+            <span style="font-size:.74rem; font-weight:800; letter-spacing:2px; color:#5FA8FF; text-transform:uppercase;">5 Spots Available</span>
+          </div>
+          <h2 class="mk-title-lg" style="margin-bottom:14px;">Looking for 5 investors ready to learn, find a deal, and share their experience.</h2>
+          <p class="mk-copy" style="max-width:520px;">
+            We're inviting 5 real estate investors into Ravlo's early access program — full Enterprise access including Ravlo Academy, Investor OS, and every studio tool. Use the platform for a month, find a deal, complete a short survey, and earn another free month. Up to 3 months total.
+          </p>
+          <div class="mk-list" style="margin-top:18px;">
+            <div class="mk-list-item">
+              <div class="mk-check">✓</div>
+              <div><strong>Full Ravlo Enterprise</strong> — Investor OS, Academy, all studios</div>
+            </div>
+            <div class="mk-list-item">
+              <div class="mk-check">✓</div>
+              <div><strong>Up to 3 months free</strong> — 1 survey per month earns 1 free month</div>
+            </div>
+            <div class="mk-list-item">
+              <div class="mk-check">✓</div>
+              <div><strong>No credit card</strong> — apply, get access, start using the platform</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:0 0 220px; text-align:center;">
+          <div style="font-size:3.5rem; font-weight:900; color:#5FA8FF; line-height:1;">5</div>
+          <div style="font-size:.78rem; color:rgba(255,255,255,.4); letter-spacing:2px; text-transform:uppercase; margin-top:4px;">Investor Spots</div>
+          <div style="margin:20px 0; width:100%; height:1px; background:rgba(107,127,147,.18);"></div>
+          <div style="font-size:2rem; font-weight:900; color:#2cb67d; line-height:1;">$447</div>
+          <div style="font-size:.78rem; color:rgba(255,255,255,.4); margin-top:4px;">in Enterprise access</div>
+          <a href="{{ url_for('marketing.investor_access') }}" class="mk-btn mk-btn-primary" style="margin-top:24px; display:block; font-size:.9rem;">Apply for a Spot</a>
+          <p style="margin-top:10px; font-size:.75rem; color:rgba(255,255,255,.28);">Mention "Investor Access"</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<style>
+@keyframes mk-pulse { 0%, 100% { opacity:1; } 50% { opacity:.35; } }
+</style>
+
 <section class="mk-section">
   <div class="mk-container">
     <div class="mk-kicker">Featured Screens</div>
