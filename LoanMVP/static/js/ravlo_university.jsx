@@ -52,6 +52,11 @@ const TRACKS = {
           { title: 'Seller Financing & Subject-To', desc: 'Structuring owner-carry deals, due-on-sale risks, and documentation.' },
           { title: 'Private Money & Partnerships', desc: 'Raising capital, investor agreements, preferred returns, JV structures.' },
         ]},
+        { id: 'inv-l3-m3', title: 'Getting Funded: Requirements & Preparation', lessons: [
+          { title: 'Qualifying Criteria by Loan Type', desc: 'Credit scores, reserve requirements, DSCR ratios, and experience tiers — what each lender actually needs before they say yes.' },
+          { title: 'LTV, LTC, and ARV — How Lenders Underwrite Investment Deals', desc: 'Loan-to-Value vs Loan-to-Cost, ARV-based lending at 65–70%, draw schedules, and why lenders think differently on investment properties.' },
+          { title: 'Building Your Deal Package', desc: 'What lenders actually want: executive summary, comp analysis, scope of work, rent projections, and borrower profile — assembled before you make the call.' },
+        ]},
       ]},
       { title: 'BRRRR & Flipping', modules: [
         { id: 'inv-l4-m1', title: 'The BRRRR Method', lessons: [
@@ -626,6 +631,19 @@ function LessonViewer({ lesson, track, levelIdx, progress, onComplete, onBack })
             <p style={{ color: T.muted, fontSize: 13, lineHeight: 1.6 }}>{lesson.desc}</p>
           </div>
 
+          {/* Learning objectives */}
+          {content && content.objectives && content.objectives.length > 0 && (
+            <div style={{ background: `${tr.color}0d`, border: `1px solid ${tr.color}30`, borderRadius: T.radius.lg, padding: '18px 24px', marginBottom: 20 }}>
+              <div style={{ fontSize: 11, letterSpacing: 2, color: tr.color, fontWeight: 700, marginBottom: 12 }}>WHAT YOU'LL LEARN</div>
+              {content.objectives.map((obj, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: i < content.objectives.length - 1 ? 8 : 0 }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 5, background: `${tr.color}22`, border: `1px solid ${tr.color}40`, display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 900, color: tr.color, flexShrink: 0, marginTop: 1 }}>✓</div>
+                  <span style={{ fontSize: 13, color: T.text, lineHeight: 1.55 }}>{obj.replace(/^by the end of this lesson (you will be able to|,?\s*you('ll)?)/i, '').trim()}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, padding: '28px 32px', marginBottom: 20 }}>
             {!content && !loadErr && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.muted, fontSize: 13 }}>
@@ -725,10 +743,20 @@ function AICoach({ track, tier, userName }) {
   const bottomRef = useRef(null);
   const tr = track ? TRACKS[track] : null;
 
-  const systemPrompt = `You are the Ravlo Academy AI Coach — a real estate expert and mentor for ${tr ? tr.label + 's' : 'real estate professionals'}.
-The user's name is ${userName || 'a member'} and they have ${tier} access.
-Be direct, specific, and practitioner-focused. Give actionable advice grounded in real-world real estate.
-Never give generic advice. Always tie recommendations to actual numbers, strategies, or processes.`;
+  const systemPrompt = `You are the Ravlo Academy AI Coach — a senior real estate expert and instructor. You are mentoring ${userName || 'a member'} who is enrolled in the ${tr ? tr.label : 'Real Estate Professional'} track.
+
+Your coaching standards:
+- ALWAYS use specific numbers: percentages, dollar amounts, ratios, thresholds (e.g. "DSCR must be at least 1.25x", "budget 10-15% contingency on rehabs", "ARV-based lending is typically 65-75% of ARV")
+- Teach the WHY behind every recommendation — not just what to do but why it matters and what goes wrong when ignored
+- Give concrete examples: "On a $200k acquisition at 70% ARV of $285k, your max all-in is $199,500"
+- Call out the most common mistakes practitioners make in real situations
+- When the user asks about a concept, give the practitioner answer, not the textbook definition
+- If they share a deal or scenario, run the actual numbers with them
+- Short answers for simple questions; deep explanations for complex ones
+- Never say "consult a professional" or "it depends" without also giving the direct answer
+- Never give generic encouragement; give useful information
+
+You have deep expertise across: deal analysis, BRRRR strategy, multifamily, fix & flip, creative financing, DSCR loans, hard money, construction budgeting, renovation underwriting, lease structuring, 1031 exchanges, syndication, and market analysis.`;
 
   useEffect(() => {
     if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -743,7 +771,7 @@ Never give generic advice. Always tie recommendations to actual numbers, strateg
       const data = await apiFetch('/academy/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 800, system: systemPrompt, messages: newMessages }),
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1200, system: systemPrompt, messages: newMessages }),
       });
       const text = (data.content || [{}])[0].text || '';
       setMessages(m => [...m, { role: 'assistant', content: text }]);
@@ -754,7 +782,14 @@ Never give generic advice. Always tie recommendations to actual numbers, strateg
     }
   }
 
-  const starters = ['How do I analyze my first rental property?', 'Explain DSCR loans in simple terms', 'What should I look for in a target market?', 'How do I calculate ARV?'];
+  const startersByTrack = {
+    investor: ['Walk me through how to calculate ARV and set a max offer price', 'What does a good BRRRR deal look like on paper?', 'How do I evaluate whether a market is worth investing in?', 'What are the biggest mistakes new investors make on their first deal?'],
+    lending:  ['Walk me through how DSCR loans are underwritten', 'What income documentation do I need for a self-employed borrower?', 'How does an AUS (DU/LPA) decision get overridden manually?', 'What are the most common TRID compliance mistakes?'],
+    realtor:  ['How do I build a listing presentation that wins against established agents?', 'Walk me through how to do a CMA the right way', 'What does a strong SOI system look like for a new agent?', 'How do I break into working with investors as a realtor?'],
+    property_mgmt: ['How do I set rent prices in a new market?', 'Walk me through a solid lease renewal process', 'What maintenance issues do landlords most often ignore until they become expensive?', 'How do I screen tenants effectively?'],
+    contractor: ['How do I write a bid that protects my margin?', 'Walk me through how to read construction drawings for estimating', 'What are the most common budget busters on residential rehabs?', 'How do draw schedules typically work on a renovation project?'],
+  };
+  const starters = startersByTrack[track] || startersByTrack.investor;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)' }}>

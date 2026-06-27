@@ -616,8 +616,8 @@ def university_portal_redirect():
 def investor_access():
     return render_template(
         "marketing/investor_access.html",
-        page_title="Investor Access Program | Ravlo",
-        meta_description="5 exclusive spots — get up to 3 months of Ravlo Enterprise free in exchange for feedback. One survey per month, one free month earned.",
+        page_title="The 5-Investor Challenge | Ravlo",
+        meta_description="We're turning 5 people into full real estate investors. Full Enterprise access — Academy, Investor OS, every studio. Learn, find a deal, and share your experience. Up to 3 months free.",
     )
 
 

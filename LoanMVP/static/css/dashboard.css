@@ -441,21 +441,40 @@ textarea.ravlo-input{
 
 .mobile-menu-button{
   display:none;
-  width:42px;
+  align-items:center;
+  gap:7px;
   height:42px;
-  border:1px solid rgba(255,255,255,.10);
+  padding:0 14px 0 12px;
+  border:1px solid rgba(95,168,255,.35);
   border-radius:12px;
-  background:linear-gradient(180deg, rgba(95,168,255,.22), rgba(95,168,255,.10));
+  background:linear-gradient(180deg, rgba(95,168,255,.26), rgba(95,168,255,.14));
   color:#F4F8FC;
   cursor:pointer;
-  font-size:1.1rem;
-  font-weight:800;
-  letter-spacing:.05em;
+  font-size:.8rem;
+  font-weight:700;
+  letter-spacing:.04em;
+  white-space:nowrap;
+  box-shadow:0 0 0 1px rgba(95,168,255,.12);
+}
+
+.mobile-menu-button .mmb-bars{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  flex-shrink:0;
+}
+
+.mobile-menu-button .mmb-bars span{
+  display:block;
+  width:16px;
+  height:2px;
+  border-radius:2px;
+  background:currentColor;
 }
 
 .mobile-menu-button:hover{
-  background:linear-gradient(180deg, rgba(95,168,255,.32), rgba(95,168,255,.18));
-  border-color:rgba(141,167,194,.28);
+  background:linear-gradient(180deg, rgba(95,168,255,.38), rgba(95,168,255,.22));
+  border-color:rgba(95,168,255,.55);
 }
 
 .ravlo-sidebar-overlay{
@@ -468,8 +487,8 @@ textarea.ravlo-input{
   }
 
   .mobile-menu-button{
-    display:inline-grid;
-    place-items:center;
+    display:inline-flex;
+    align-items:center;
   }
 
   .ravlo-sidebar{
