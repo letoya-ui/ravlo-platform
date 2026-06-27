@@ -488,7 +488,8 @@ Critical rules:
 - content: Must include a worked example with real dollar figures or percentages. Must have a **Common Mistakes** section.
 - keyPoints: Each must be specific and actionable — include a number, threshold, or rule of thumb where possible.
 - quiz: Questions must test whether the student can APPLY the lesson, not just recall it. All wrong options must be plausible (no obviously silly answers). correctIndex must match the correct option (0-indexed).
-- Return ONLY the JSON object, no markdown fences, no extra text."""
+- Return ONLY the JSON object, no markdown fences, no extra text.
+- CRITICAL JSON RULE: The content field is a single JSON string. Do NOT use double-quote characters (") anywhere inside string values — use single quotes (') instead for any quoted terms or dialogue. Do NOT include literal newline characters inside strings."""
 
     resp = http.post(
         _ANTHROPIC_URL,
@@ -499,11 +500,11 @@ Critical rules:
         },
         json={
             "model": "claude-haiku-4-5-20251001",
-            "max_tokens": 2800,
+            "max_tokens": 4096,
             "system": system,
             "messages": [{"role": "user", "content": prompt}],
         },
-        timeout=60,
+        timeout=90,
     )
     resp.raise_for_status()
     raw = resp.json()["content"][0]["text"].strip()
@@ -512,7 +513,15 @@ Critical rules:
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
-    return _parse_ai_json(raw.strip())
+    raw = raw.strip()
+    try:
+        return _parse_ai_json(raw)
+    except Exception as parse_exc:
+        current_app.logger.error(
+            "lesson JSON parse failed — raw response (first 800 chars): %s",
+            raw[:800]
+        )
+        raise parse_exc
 
 
 @university_bp.route("/api/progress", methods=["GET"])
