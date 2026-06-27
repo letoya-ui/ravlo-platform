@@ -1,14 +1,14 @@
 """Add academy lesson progress, scores, and chat log tables
 
-Revision ID: a1b2c3d4e5f6
-Revises: f80fae86417f
+Revision ID: 20260627acad01
+Revises: a4c9e2f87b31, 20260531pcr01, b3c4d5e6f7a8
 Create Date: 2026-06-27 00:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = 'a1b2c3d4e5f6'
-down_revision = 'f80fae86417f'
+revision = '20260627acad01'
+down_revision = ('a4c9e2f87b31', '20260531pcr01', 'b3c4d5e6f7a8')
 branch_labels = None
 depends_on = None
 
