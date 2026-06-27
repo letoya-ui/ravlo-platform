@@ -45,6 +45,50 @@ class AcademyChatLog(db.Model):
         return f"<AcademyChatLog id={self.id} feature={self.feature} tier={self.tier}>"
 
 
+class RavloAIMemoryLog(db.Model):
+    """Universal event log for training and improving Ravlo AI across the platform.
+
+    This is intentionally generic so every module can write consistent events:
+    Academy questions, Lending OS assistant actions, Investor OS analyses,
+    partner-page leads, Mission Control insights, CRM activity, and future tools.
+
+    Keep sensitive data minimized. Prefer summaries and metadata over raw PII.
+    Use approved_for_training as the gate before exporting anything for model tuning.
+    """
+    __tablename__ = "ravlo_ai_memory_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("company.id"), nullable=True, index=True)
+
+    module = db.Column(db.String(80), nullable=False, index=True)       # academy | lending_os | investor_os | mission_control | crm
+    feature = db.Column(db.String(100), nullable=True, index=True)      # chat | lesson | capital_request | deal_analysis
+    event_type = db.Column(db.String(80), nullable=False, index=True)   # ai_request | ai_response | user_action | system_insight
+
+    source = db.Column(db.String(80), nullable=True)                    # route/function/provider
+    role_view = db.Column(db.String(80), nullable=True)                 # investor | processor | admin | partner
+    session_key = db.Column(db.String(120), nullable=True, index=True)
+
+    prompt = db.Column(db.Text, nullable=True)
+    response = db.Column(db.Text, nullable=True)
+    summary = db.Column(db.Text, nullable=True)
+    metadata_json = db.Column(db.Text, nullable=True)
+    model = db.Column(db.String(100), nullable=True)
+    provider = db.Column(db.String(50), nullable=True)                  # openai | anthropic | replicate | internal
+
+    object_type = db.Column(db.String(80), nullable=True, index=True)   # loan | property | lesson | lead | user | company
+    object_id = db.Column(db.String(80), nullable=True, index=True)
+
+    quality_rating = db.Column(db.Integer, nullable=True)               # 1-5
+    approved_for_training = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    contains_sensitive_data = db.Column(db.Boolean, default=True, nullable=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    def __repr__(self):
+        return f"<RavloAIMemoryLog id={self.id} module={self.module} event={self.event_type}>"
+
+
 class TrainingJob(db.Model):
     """Tracks Replicate (or other provider) fine-tuning jobs."""
     __tablename__ = "training_jobs"
