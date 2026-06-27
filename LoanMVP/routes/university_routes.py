@@ -32,6 +32,7 @@ Auto-registered by LoanMVP/app.py blueprint scanner.
 
 import os
 import json
+import re
 import requests as http
 from flask import Blueprint, render_template, request, jsonify, current_app, session
 from flask_login import current_user
@@ -416,6 +417,36 @@ def _save_lesson_cache(cache: dict):
     except Exception as exc:
         current_app.logger.error("lesson cache write error: %s", exc)
 
+def _parse_ai_json(raw: str) -> dict:
+    """Parse JSON from AI, escaping literal newlines/tabs inside string values."""
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        chars = list(raw)
+        in_string = False
+        escape_next = False
+        out = []
+        for ch in chars:
+            if escape_next:
+                out.append(ch)
+                escape_next = False
+            elif ch == '\\' and in_string:
+                out.append(ch)
+                escape_next = True
+            elif ch == '"':
+                in_string = not in_string
+                out.append(ch)
+            elif in_string and ch == '\n':
+                out.append('\\n')
+            elif in_string and ch == '\r':
+                out.append('\\r')
+            elif in_string and ch == '\t':
+                out.append('\\t')
+            else:
+                out.append(ch)
+        return json.loads(''.join(out))
+
+
 def _generate_lesson_content(title: str, description: str, course_title: str, unit_title: str) -> dict:
     """Call Anthropic to generate structured lesson content. Returns parsed dict."""
     system = (
@@ -481,7 +512,7 @@ Critical rules:
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
-    return json.loads(raw.strip())
+    return _parse_ai_json(raw.strip())
 
 
 @university_bp.route("/api/progress", methods=["GET"])
