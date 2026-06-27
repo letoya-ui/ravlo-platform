@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, current_app, flash, redirect, render_template, url_for
 from flask_login import current_user, login_required
@@ -11,6 +11,17 @@ from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.loan_models import LoanApplication
 from LoanMVP.models.system_models import SystemLog
 from LoanMVP.models.user_model import User
+
+try:
+    from LoanMVP.models.ai_models import AIAssistantInteraction
+except Exception:  # pragma: no cover - optional model during migrations
+    AIAssistantInteraction = None
+
+try:
+    from LoanMVP.models.payment_models import PaymentRecord
+except Exception:  # pragma: no cover - optional model during migrations
+    PaymentRecord = None
+
 executive_bp = Blueprint("executive", __name__, url_prefix="/executive")
 
 
@@ -36,6 +47,7 @@ def _can_access_executive_dashboard(user) -> bool:
     company_name = (getattr(company, "name", "") or "").strip().lower()
 
     return role in {"executive", "platform_admin", "master_admin", "lending_admin"} and company_name == "ravlo"
+
 
 def _demo_dashboard_cards():
     return [
@@ -111,6 +123,92 @@ def _monthly_series(records, date_attr="created_at", months_back=6):
 
     series = [counts.get((year, month), 0) for year, month in month_keys]
     return labels, series
+
+
+def _count_since(model, since, company_id=None):
+    try:
+        if not model or not hasattr(model, "created_at"):
+            return 0
+        q = model.query.filter(model.created_at >= since)
+        if company_id and hasattr(model, "company_id"):
+            q = q.filter(model.company_id == company_id)
+        return q.count()
+    except Exception:
+        return 0
+
+
+def _count_all(model):
+    try:
+        return model.query.count() if model else 0
+    except Exception:
+        return 0
+
+
+def _mission_control_payload(stats, company, company_id):
+    now = datetime.utcnow()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    last_24h = now - timedelta(hours=24)
+
+    ai_today = _count_since(AIAssistantInteraction, today, company_id)
+    ai_24h = _count_since(AIAssistantInteraction, last_24h, company_id)
+    new_users_today = _count_since(User, today, company_id)
+    new_loans_today = _count_since(LoanApplication, today, company_id)
+    new_docs_today = _count_since(LoanDocument, today, company_id)
+    new_leads_today = _count_since(Lead, today, company_id)
+    payments_today = _count_since(PaymentRecord, today, company_id)
+
+    try:
+        recent_error_logs = SystemLog.query.filter(SystemLog.created_at >= last_24h).filter(
+            db.or_(
+                SystemLog.action.ilike("%error%"),
+                SystemLog.action.ilike("%fail%"),
+                SystemLog.description.ilike("%error%"),
+                SystemLog.description.ilike("%fail%"),
+            )
+        ).count()
+    except Exception:
+        recent_error_logs = 0
+
+    health_level = "Healthy" if recent_error_logs == 0 else "Review"
+    threat_level = "Normal" if recent_error_logs == 0 else "Attention"
+
+    mission_brief = [
+        f"{new_users_today} new user(s) joined today.",
+        f"{ai_today} AI interaction(s) logged today.",
+        f"{new_loans_today} new loan file(s) and {new_docs_today} document(s) added today.",
+        f"{stats.get('pending_requests', 0)} access request(s) and {stats.get('pending_invites', 0)} invite(s) need visibility.",
+    ]
+
+    focus_items = []
+    if stats.get("pending_requests", 0):
+        focus_items.append({"level": "warning", "title": "Review access requests", "detail": f"{stats['pending_requests']} request(s) are waiting."})
+    if stats.get("pending_invites", 0):
+        focus_items.append({"level": "info", "title": "Follow up on pending invites", "detail": f"{stats['pending_invites']} invite(s) have not been accepted."})
+    if recent_error_logs:
+        focus_items.append({"level": "danger", "title": "Check platform logs", "detail": f"{recent_error_logs} error/failure log(s) in the last 24 hours."})
+    if not focus_items:
+        focus_items.append({"level": "success", "title": "No urgent issues", "detail": "Platform activity looks stable right now."})
+
+    return {
+        "generated_at": now.strftime("%I:%M %p"),
+        "company_name": company.name if company else "Ravlo",
+        "health_level": health_level,
+        "threat_level": threat_level,
+        "brief": mission_brief,
+        "focus_items": focus_items,
+        "cards": [
+            {"label": "New Users Today", "value": new_users_today, "detail": "Fresh accounts since midnight"},
+            {"label": "AI Today", "value": ai_today, "detail": f"{ai_24h} in last 24h"},
+            {"label": "New Leads Today", "value": new_leads_today, "detail": "CRM and intake momentum"},
+            {"label": "Payments Today", "value": payments_today, "detail": "Payment records logged"},
+        ],
+        "systems": [
+            {"name": "Web App", "status": "Online", "tone": "success"},
+            {"name": "Database", "status": "Connected", "tone": "success"},
+            {"name": "AI Services", "status": "Active" if ai_24h else "Ready", "tone": "success"},
+            {"name": "Security", "status": threat_level, "tone": "success" if threat_level == "Normal" else "warning"},
+        ],
+    }
 
 
 @executive_bp.route("/")
@@ -191,12 +289,14 @@ def dashboard():
     loan_volume_labels, loan_volume_series = _monthly_series(loan_records, "created_at", 6)
     user_growth_labels, user_growth_series = _monthly_series(team_users, "created_at", 6)
 
+    mission_control = _mission_control_payload(stats, company, company_id)
     server_load_value = 68
     ai_summary = (
-        f"Executive snapshot for {(company.name if company else 'Ravlo')}: "
+        f"Mission Control snapshot for {(company.name if company else 'Ravlo')}: "
         f"{stats['total_users']} user(s), {stats['total_loans']} loan file(s), "
-        f"{stats['pending_requests']} pending request(s), and "
-        f"{stats['pending_invites']} pending invite(s)."
+        f"{stats['pending_requests']} pending request(s), "
+        f"{stats['pending_invites']} pending invite(s), and "
+        f"{mission_control['cards'][1]['value']} AI interaction(s) today."
     )
 
     return render_template(
@@ -212,6 +312,7 @@ def dashboard():
         leads=leads,
         logs=logs,
         ai_summary=ai_summary,
+        mission_control=mission_control,
         loan_volume_labels=loan_volume_labels,
         loan_volume_series=loan_volume_series,
         user_growth_labels=user_growth_labels,
