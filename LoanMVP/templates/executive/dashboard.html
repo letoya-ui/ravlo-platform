@@ -1,197 +1,216 @@
 {% extends "layouts/ravlo_employee_base.html" %}
 {% set executive_company_name = company.name if company else (current_user.company.name if current_user.company else "Ravlo") %}
 {% set exec_ns = route_namespace|default('executive', true) %}
-{% block title %}{{ executive_company_name }} Executive Dashboard{% endblock %}
-{% block page_title %}{{ executive_company_name }} Executive Dashboard{% endblock %}
+{% block title %}Ravlo Mission Control{% endblock %}
+{% block page_title %}Mission Control{% endblock %}
 {% block page_subline %}
-Executive oversight across users, onboarding, invites, lending operations, and platform visibility.
+Your founder command center — business activity, AI usage, platform health, and what needs attention.
 {% endblock %}
 
 {% block topbar_actions %}
   <a class="re-btn primary sm" href="{{ url_for('system.users') }}">
     <i class="lucide lucide-user-cog"></i>
-    Manage Users
+    Users
   </a>
   <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.access_requests') }}">
     <i class="lucide lucide-inbox"></i>
-    Access Requests
+    Requests
   </a>
-  <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.licensing_applications') }}">
-    <i class="lucide lucide-file-text"></i>
-    License Applications
+  <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.analytics') }}">
+    <i class="lucide lucide-bar-chart-3"></i>
+    Analytics
   </a>
 {% endblock %}
 
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <style>
-  .exec-wrap{display:grid;gap:18px}
-  .exec-hero{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.85fr);gap:18px;align-items:stretch}
-  .exec-hero-panel{padding:28px;border-radius:24px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(150deg, rgba(17,29,45,.96), rgba(8,14,24,.94));box-shadow:0 20px 46px rgba(0,0,0,.24)}
-  .exec-hero h1{margin:.35rem 0 .55rem;font-size:clamp(2rem,3vw,3rem);line-height:1.03;letter-spacing:-.05em}
-  .exec-hero-copy{color:#a9b7c6;max-width:720px}
-  .exec-chip-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
-  .exec-chip{display:inline-flex;align-items:center;padding:.45rem .75rem;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);font-size:.82rem;font-weight:700;color:#e8eef6}
-  .exec-hero-stat{display:grid;gap:10px;align-content:center}
-  .exec-hero-stat .label{font-size:.78rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#8fbef2}
-  .exec-hero-stat .value{font-size:3rem;line-height:1;font-weight:900;letter-spacing:-.06em}
-  .exec-hero-stat .meta{color:#98aabd}
-  .exec-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
-  .exec-stat{padding:18px;border-radius:20px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg, rgba(18,26,38,.72), rgba(10,16,24,.84))}
-  .exec-stat-label{font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;color:#8fa1b6;font-weight:800}
-  .exec-stat-value{font-size:2rem;line-height:1;margin:.55rem 0 .35rem;font-weight:900}
-  .exec-stat-meta{color:#95a7b9;font-size:.88rem}
-  .exec-main{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(340px,.8fr);gap:18px}
-  .exec-card{padding:22px;border-radius:24px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg, rgba(18,26,38,.72), rgba(10,16,24,.84))}
-  .exec-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
-  .exec-card-head h3{margin:.25rem 0 0}
-  .exec-card-sub{color:#92a5b7}
-  .exec-list{display:grid;gap:12px}
-  .exec-row{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
-  .exec-row-title{font-weight:800}
-  .exec-row-sub{color:#95a7b9;font-size:.88rem;margin-top:2px}
-  .exec-pill{display:inline-flex;align-items:center;padding:.3rem .55rem;border-radius:999px;background:rgba(122,184,255,.14);border:1px solid rgba(122,184,255,.18);color:#dcedff;font-size:.74rem;font-weight:800}
-  .exec-chart{height:280px}
-  @media (max-width: 1200px){.exec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.exec-main,.exec-hero{grid-template-columns:1fr}}
-  @media (max-width: 700px){.exec-grid{grid-template-columns:1fr}}
+  .mc-wrap{display:grid;gap:18px}
+  .mc-hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(320px,.7fr);gap:18px;align-items:stretch}
+  .mc-panel{border:1px solid rgba(107,127,147,.22);background:linear-gradient(180deg,rgba(26,35,44,.88),rgba(17,22,28,.82));border-radius:26px;box-shadow:0 24px 70px rgba(0,0,0,.24)}
+  .mc-hero-main{padding:32px;position:relative;overflow:hidden;background:radial-gradient(circle at 80% 0%,rgba(58,92,122,.28),transparent 34%),linear-gradient(135deg,rgba(17,22,28,.96),rgba(12,17,22,.95))}
+  .mc-eyebrow{font-size:.72rem;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#88a6bf}
+  .mc-title{margin:.55rem 0 .7rem;font-size:clamp(2.3rem,4vw,4.4rem);line-height:.96;letter-spacing:-.06em}
+  .mc-copy{max-width:780px;color:#a7b7c6;line-height:1.65;margin:0}
+  .mc-chip-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .mc-chip{display:inline-flex;align-items:center;gap:8px;padding:.5rem .75rem;border-radius:999px;border:1px solid rgba(76,122,163,.32);background:rgba(58,92,122,.14);color:#dceafa;font-size:.82rem;font-weight:800}
+  .mc-brief{padding:24px;display:grid;gap:14px}
+  .mc-brief h3,.mc-card h3{margin:.35rem 0 .3rem;font-size:1rem}
+  .mc-brief-list{display:grid;gap:10px;margin-top:4px}
+  .mc-brief-line{display:flex;gap:10px;color:#b7c4cf;line-height:1.45;font-size:.9rem}
+  .mc-dot{width:8px;height:8px;margin-top:7px;border-radius:999px;background:#4C7AA3;box-shadow:0 0 18px rgba(76,122,163,.55);flex-shrink:0}
+  .mc-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+  .mc-stat{padding:20px;border-radius:22px;border:1px solid rgba(107,127,147,.22);background:linear-gradient(180deg,rgba(26,35,44,.76),rgba(17,22,28,.72))}
+  .mc-stat-label{font-size:.72rem;letter-spacing:.13em;text-transform:uppercase;color:#88a6bf;font-weight:900}
+  .mc-stat-value{font-size:2.35rem;font-weight:950;line-height:1;margin:.7rem 0 .45rem;letter-spacing:-.05em;color:#fff}
+  .mc-stat-detail{font-size:.84rem;color:#8fa2b4}
+  .mc-main{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(340px,.8fr);gap:18px}
+  .mc-card{padding:22px}
+  .mc-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+  .mc-card-sub{color:#92a5b7;font-size:.88rem;margin-top:2px}
+  .mc-focus{display:grid;gap:12px}
+  .mc-focus-item{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:14px 16px;border-radius:18px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.035)}
+  .mc-focus-icon{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:rgba(58,92,122,.18);color:#cfe3f5;font-weight:900}
+  .mc-focus-title{font-weight:900;color:#fff}
+  .mc-focus-detail{color:#93a6b7;font-size:.88rem;margin-top:2px}
+  .mc-systems{display:grid;gap:10px}
+  .mc-system{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)}
+  .mc-status{font-size:.75rem;font-weight:900;border-radius:999px;padding:.32rem .6rem;background:rgba(44,182,125,.12);color:#8be0b8;border:1px solid rgba(44,182,125,.22)}
+  .mc-status.warning{background:rgba(209,162,70,.12);color:#f3ce82;border-color:rgba(209,162,70,.24)}
+  .mc-chart{height:280px}
+  .mc-list{display:grid;gap:12px}
+  .mc-row{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+  .mc-row-title{font-weight:900;color:#fff}.mc-row-sub{color:#95a7b9;font-size:.88rem;margin-top:2px}
+  .mc-pill{display:inline-flex;align-items:center;padding:.3rem .55rem;border-radius:999px;background:rgba(122,184,255,.14);border:1px solid rgba(122,184,255,.18);color:#dcedff;font-size:.74rem;font-weight:900;white-space:nowrap}
+  @media (max-width:1200px){.mc-hero,.mc-main{grid-template-columns:1fr}.mc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (max-width:700px){.mc-grid{grid-template-columns:1fr}.mc-hero-main{padding:24px}.mc-title{font-size:2.4rem}}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="exec-wrap">
-  <section class="exec-hero">
-    <div class="exec-hero-panel">
-      <div class="eyebrow">{{ executive_company_name|upper }} EXECUTIVE DASHBOARD</div>
-      <h1>Executive oversight for the whole operating system.</h1>
-      <div class="exec-hero-copy">
-        Use this view to manage people, monitor loan activity, review invites and access requests, and keep the Ravlo workspace aligned across teams.
-      </div>
-      <div class="exec-chip-row">
-        <span class="exec-chip">{{ stats.total_users or 0 }} total users</span>
-        <span class="exec-chip">{{ stats.total_loans or 0 }} active loan files</span>
-        <span class="exec-chip">{{ stats.pending_requests or 0 }} pending requests</span>
-        <span class="exec-chip">{{ stats.pending_invites or 0 }} pending invites</span>
+{% set mc = mission_control or {} %}
+<div class="mc-wrap">
+  <section class="mc-hero">
+    <div class="mc-panel mc-hero-main">
+      <div class="mc-eyebrow">RAVLO MISSION CONTROL</div>
+      <h1 class="mc-title">Good morning, {{ current_user.first_name or current_user.username or 'Letoya' }}.</h1>
+      <p class="mc-copy">This is your operating view for Ravlo — growth, users, AI, Academy, lending activity, platform health, and the items that need your attention.</p>
+      <div class="mc-chip-row">
+        <span class="mc-chip">Health: {{ mc.health_level or 'Healthy' }}</span>
+        <span class="mc-chip">Security: {{ mc.threat_level or 'Normal' }}</span>
+        <span class="mc-chip">Generated {{ mc.generated_at or 'now' }}</span>
+        <span class="mc-chip">{{ stats.total_users or 0 }} total users</span>
       </div>
     </div>
 
-    <div class="exec-hero-panel exec-hero-stat">
-      <div class="label">Executive Summary</div>
-      <div class="value">{{ stats.total_users or 0 }}</div>
-      <div class="meta">{{ ai_summary | md | safe }}</div>
-      <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.analytics') }}">Open Analytics</a>
-    </div>
+    <aside class="mc-panel mc-brief">
+      <div>
+        <div class="mc-eyebrow">Morning Brief</div>
+        <h3>What changed today</h3>
+        <div class="mc-card-sub">Your assistant snapshot across the platform.</div>
+      </div>
+      <div class="mc-brief-list">
+        {% for item in mc.brief or [] %}
+          <div class="mc-brief-line"><span class="mc-dot"></span><span>{{ item }}</span></div>
+        {% endfor %}
+      </div>
+    </aside>
   </section>
 
-  <section class="exec-grid">
-    <div class="exec-stat">
-      <div class="exec-stat-label">Users</div>
-      <div class="exec-stat-value">{{ stats.total_users or 0 }}</div>
-      <div class="exec-stat-meta">Registered accounts in this workspace</div>
-    </div>
-    <div class="exec-stat">
-      <div class="exec-stat-label">Loans</div>
-      <div class="exec-stat-value">{{ stats.total_loans or 0 }}</div>
-      <div class="exec-stat-meta">Loan files currently in the system</div>
-    </div>
-    <div class="exec-stat">
-      <div class="exec-stat-label">Access Requests</div>
-      <div class="exec-stat-value">{{ stats.pending_requests or 0 }}</div>
-      <div class="exec-stat-meta">Pending onboarding and access approvals</div>
-    </div>
-    <div class="exec-stat">
-      <div class="exec-stat-label">Invites</div>
-      <div class="exec-stat-value">{{ stats.pending_invites or 0 }}</div>
-      <div class="exec-stat-meta">Invites waiting to be accepted</div>
-    </div>
+  <section class="mc-grid">
+    {% for card in mc.cards or [] %}
+      <div class="mc-stat">
+        <div class="mc-stat-label">{{ card.label }}</div>
+        <div class="mc-stat-value">{{ card.value }}</div>
+        <div class="mc-stat-detail">{{ card.detail }}</div>
+      </div>
+    {% endfor %}
   </section>
 
-  <section class="exec-main">
-    <div class="exec-card">
-      <div class="exec-card-head">
+  <section class="mc-main">
+    <div class="mc-panel mc-card">
+      <div class="mc-card-head">
         <div>
-          <div class="eyebrow">Recent Requests</div>
-          <h3>Access and onboarding queue</h3>
-          <div class="exec-card-sub">Newest requests that need executive visibility.</div>
+          <div class="mc-eyebrow">Needs Attention</div>
+          <h3>Today’s focus</h3>
+          <div class="mc-card-sub">Mission Control pulls forward the work you should check first.</div>
+        </div>
+      </div>
+      <div class="mc-focus">
+        {% for item in mc.focus_items or [] %}
+          <div class="mc-focus-item">
+            <div class="mc-focus-icon">{% if item.level == 'danger' %}!{% elif item.level == 'warning' %}•{% elif item.level == 'success' %}✓{% else %}i{% endif %}</div>
+            <div>
+              <div class="mc-focus-title">{{ item.title }}</div>
+              <div class="mc-focus-detail">{{ item.detail }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="mc-panel mc-card">
+      <div class="mc-card-head">
+        <div>
+          <div class="mc-eyebrow">System Health</div>
+          <h3>Platform status</h3>
+          <div class="mc-card-sub">A simple operating snapshot while we wire deeper integrations.</div>
+        </div>
+      </div>
+      <div class="mc-systems">
+        {% for system in mc.systems or [] %}
+          <div class="mc-system">
+            <strong>{{ system.name }}</strong>
+            <span class="mc-status {{ 'warning' if system.tone == 'warning' else '' }}">{{ system.status }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="mc-main">
+    <div class="mc-panel mc-card">
+      <div class="mc-card-head">
+        <div>
+          <div class="mc-eyebrow">Platform Activity</div>
+          <h3>Loan volume</h3>
+          <div class="mc-card-sub">Recent application momentum across the workspace.</div>
+        </div>
+      </div>
+      <div id="execLoanChart" class="mc-chart"></div>
+    </div>
+
+    <div class="mc-panel mc-card">
+      <div class="mc-card-head">
+        <div>
+          <div class="mc-eyebrow">Growth</div>
+          <h3>User registrations</h3>
+          <div class="mc-card-sub">New user growth over the last six months.</div>
+        </div>
+      </div>
+      <div id="execUserChart" class="mc-chart"></div>
+    </div>
+  </section>
+
+  <section class="mc-main">
+    <div class="mc-panel mc-card">
+      <div class="mc-card-head">
+        <div>
+          <div class="mc-eyebrow">Access Queue</div>
+          <h3>Recent requests</h3>
+          <div class="mc-card-sub">Newest access and onboarding requests.</div>
         </div>
         <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.access_requests') }}">View All</a>
       </div>
-
-      <div class="exec-list">
+      <div class="mc-list">
         {% if recent_requests %}
           {% for req in recent_requests %}
-          <div class="exec-row">
-            <div>
-              <div class="exec-row-title">{{ req.contact_name or req.email or ('Request #' ~ req.id) }}</div>
-              <div class="exec-row-sub">{{ req.company_name or executive_company_name }} • {{ req.email or "No email" }}</div>
-            </div>
-            <div class="exec-pill">{{ req.status or "pending" }}</div>
-          </div>
+            <div class="mc-row"><div><div class="mc-row-title">{{ req.contact_name or req.email or ('Request #' ~ req.id) }}</div><div class="mc-row-sub">{{ req.company_name or executive_company_name }} • {{ req.email or 'No email' }}</div></div><span class="mc-pill">{{ req.status or 'pending' }}</span></div>
           {% endfor %}
         {% else %}
-          <div class="exec-row">
-            <div>
-              <div class="exec-row-title">No requests waiting</div>
-              <div class="exec-row-sub">New access and onboarding requests will show up here.</div>
-            </div>
-          </div>
+          <div class="mc-row"><div><div class="mc-row-title">No requests waiting</div><div class="mc-row-sub">New access requests will show here.</div></div></div>
         {% endif %}
       </div>
     </div>
 
-    <div class="exec-card">
-      <div class="exec-card-head">
+    <div class="mc-panel mc-card">
+      <div class="mc-card-head">
         <div>
-          <div class="eyebrow">Recent Users</div>
-          <h3>Newest team members</h3>
-          <div class="exec-card-sub">Quick visibility into who was added most recently.</div>
+          <div class="mc-eyebrow">Recent Users</div>
+          <h3>Newest accounts</h3>
+          <div class="mc-card-sub">Quick visibility into who joined recently.</div>
         </div>
-        <a class="re-btn ghost sm" href="{{ url_for('system.users') }}">Manage Users</a>
+        <a class="re-btn ghost sm" href="{{ url_for('system.users') }}">Manage</a>
       </div>
-
-      <div class="exec-list">
+      <div class="mc-list">
         {% if users %}
           {% for user in users %}
-          <div class="exec-row">
-            <div>
-              <div class="exec-row-title">{{ user.full_name or user.username or user.email }}</div>
-              <div class="exec-row-sub">{{ user.email }} • {{ user.role|replace('_', ' ')|title }}</div>
-            </div>
-            <div class="exec-pill">{{ user.company.name if user.company else executive_company_name }}</div>
-          </div>
+            <div class="mc-row"><div><div class="mc-row-title">{{ user.full_name or user.username or user.email }}</div><div class="mc-row-sub">{{ user.email }} • {{ user.role|replace('_', ' ')|title }}</div></div><span class="mc-pill">{{ user.company.name if user.company else executive_company_name }}</span></div>
           {% endfor %}
         {% else %}
-          <div class="exec-row">
-            <div>
-              <div class="exec-row-title">No users yet</div>
-              <div class="exec-row-sub">User records will appear here once accounts are created.</div>
-            </div>
-          </div>
+          <div class="mc-row"><div><div class="mc-row-title">No users yet</div><div class="mc-row-sub">User records will appear here once accounts are created.</div></div></div>
         {% endif %}
       </div>
-    </div>
-  </section>
-
-  <section class="exec-main">
-    <div class="exec-card">
-      <div class="exec-card-head">
-        <div>
-          <div class="eyebrow">Loan Activity</div>
-          <h3>Monthly loan volume</h3>
-          <div class="exec-card-sub">Recent application momentum across the workspace.</div>
-        </div>
-      </div>
-      <div id="execLoanChart" class="exec-chart"></div>
-    </div>
-
-    <div class="exec-card">
-      <div class="exec-card-head">
-        <div>
-          <div class="eyebrow">User Growth</div>
-          <h3>Monthly registrations</h3>
-          <div class="exec-card-sub">New user growth over the last six months.</div>
-        </div>
-      </div>
-      <div id="execUserChart" class="exec-chart"></div>
     </div>
   </section>
 </div>
@@ -206,7 +225,7 @@ Executive oversight across users, onboarding, invites, lending operations, and p
     yaxis: { labels: { style: { colors: "#92a5b7" } } },
     stroke: { curve: "smooth", width: 3 },
     fill: { type: "gradient", gradient: { opacityFrom: 0.35, opacityTo: 0.04 } },
-    colors: ["#7ab8ff"],
+    colors: ["#4C7AA3"],
     grid: { borderColor: "rgba(255,255,255,.08)" },
     dataLabels: { enabled: false },
     legend: { show: false }
@@ -218,7 +237,7 @@ Executive oversight across users, onboarding, invites, lending operations, and p
     series: [{ name: "Users", data: {{ user_growth_series|tojson }} }],
     xaxis: { categories: {{ user_growth_labels|tojson }}, labels: { style: { colors: "#92a5b7" } } },
     yaxis: { labels: { style: { colors: "#92a5b7" } } },
-    colors: ["#9dd39b"],
+    colors: ["#3A5C7A"],
     grid: { borderColor: "rgba(255,255,255,.08)" },
     dataLabels: { enabled: false },
     legend: { show: false }
