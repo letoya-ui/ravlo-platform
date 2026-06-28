@@ -621,6 +621,15 @@ def investor_access():
     )
 
 
+@marketing_bp.route("/lending-challenge")
+def lending_challenge():
+    return render_template(
+        "marketing/lending_challenge.html",
+        page_title="The Lending Challenge | Ravlo Lending OS",
+        meta_description="We're choosing 5 lending professionals to take the Ravlo Lending Challenge. Experience how Ravlo Lending OS streamlines every step of the loan process. One platform. One workflow. Up to 3 months free.",
+    )
+
+
 @marketing_bp.route("/refer")
 def referral():
     return render_template(
