@@ -16677,9 +16677,11 @@ def investor_partner_search():
 @login_required
 def investor_partner_place_details():
     """AJAX: fetch phone + website for a Google Place ID."""
+    import re
     from LoanMVP.services.partner_marketplace_service import get_place_details
     place_id = request.args.get("place_id", "").strip()
-    if not place_id:
+    # Google Place IDs are alphanumeric + underscores/hyphens, 10-300 chars
+    if not place_id or not re.match(r'^[A-Za-z0-9_\-]{10,300}$', place_id):
         return jsonify({"phone": None, "website": None})
     details = get_place_details(place_id)
     return jsonify(details)
@@ -16871,9 +16873,22 @@ def investor_send_to_partner():
     if external_lead:
         try:
             from LoanMVP.utils.emailer import send_email
+            from markupsafe import escape as _esc
             _partner_label = partner_name or "Unknown Partner"
             _loc = ", ".join(p for p in [address, city, state, zip_code] if p) or "—"
             _investor_name = getattr(current_user, "first_name", None) or current_user.email
+
+            # Escape all user-supplied values before embedding in HTML
+            _e_partner  = _esc(_partner_label)
+            _e_loc      = _esc(_loc)
+            _e_category = _esc(partner_type or "—")
+            _e_investor = _esc(_investor_name)
+            _e_email    = _esc(current_user.email)
+            _e_title    = _esc(title or "—")
+            _e_message  = _esc(message or "—")
+            _e_timeline = _esc(timeline or "—")
+            _budget_str = "${:,.0f}".format(budget) if budget else "—"
+            _google_q   = requests.utils.quote(f"{_partner_label} {_loc}")
 
             admin_email = (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip()
             if admin_email:
@@ -16885,18 +16900,18 @@ def investor_send_to_partner():
                         f"<p>An investor found an outside-network partner and sent a connection request through Ravlo. "
                         f"Please reach out to this partner to invite them to the Ravlo network.</p>"
                         f"<table style='border-collapse:collapse;width:100%;max-width:600px;'>"
-                        f"<tr><td style='padding:8px;color:#555;'>Partner name</td><td style='padding:8px;font-weight:600;'>{_partner_label}</td></tr>"
-                        f"<tr><td style='padding:8px;color:#555;'>Address / Location</td><td style='padding:8px;'>{_loc}</td></tr>"
-                        f"<tr><td style='padding:8px;color:#555;'>Category</td><td style='padding:8px;'>{partner_type or '—'}</td></tr>"
-                        f"<tr><td style='padding:8px;color:#555;'>Investor</td><td style='padding:8px;'>{_investor_name} ({current_user.email})</td></tr>"
-                        f"<tr><td style='padding:8px;color:#555;'>Property / Project</td><td style='padding:8px;'>{title or '—'}</td></tr>"
-                        f"<tr><td style='padding:8px;color:#555;'>Investor message</td><td style='padding:8px;'>{message or '—'}</td></tr>"
-                        f"<tr><td style='padding:8px;color:#555;'>Budget</td><td style='padding:8px;'>{'${:,.0f}'.format(budget) if budget else '—'}</td></tr>"
-                        f"<tr><td style='padding:8px;color:#555;'>Timeline</td><td style='padding:8px;'>{timeline or '—'}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Partner name</td><td style='padding:8px;font-weight:600;'>{_e_partner}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Address / Location</td><td style='padding:8px;'>{_e_loc}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Category</td><td style='padding:8px;'>{_e_category}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Investor</td><td style='padding:8px;'>{_e_investor} ({_e_email})</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Property / Project</td><td style='padding:8px;'>{_e_title}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Investor message</td><td style='padding:8px;'>{_e_message}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Budget</td><td style='padding:8px;'>{_budget_str}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Timeline</td><td style='padding:8px;'>{_e_timeline}</td></tr>"
                         f"<tr><td style='padding:8px;color:#555;'>Request ID</td><td style='padding:8px;'>#{req.id}</td></tr>"
                         f"</table>"
                         f"<p style='margin-top:18px;'>"
-                        f"<a href='https://www.google.com/search?q={requests.utils.quote(_partner_label + ' ' + _loc)}' "
+                        f"<a href='https://www.google.com/search?q={_google_q}' "
                         f"style='background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600;'>"
                         f"Find on Google</a></p>"
                     ),
@@ -16907,16 +16922,16 @@ def investor_send_to_partner():
                 subject=f"Ravlo is reaching out to {_partner_label} on your behalf",
                 html_body=(
                     f"<h2>We're on it.</h2>"
-                    f"<p>You selected <strong>{_partner_label}</strong> — a partner outside the Ravlo network. "
+                    f"<p>You selected <strong>{_e_partner}</strong> — a partner outside the Ravlo network. "
                     f"The Ravlo team will reach out to invite them and facilitate your connection.</p>"
                     f"<p><strong>In the meantime, you can contact them directly:</strong></p>"
-                    f"<p><a href='https://www.google.com/search?q={requests.utils.quote(_partner_label + ' ' + _loc)}' "
-                    f"style='color:#2563eb;'>Search {_partner_label} on Google →</a></p>"
+                    f"<p><a href='https://www.google.com/search?q={_google_q}' "
+                    f"style='color:#2563eb;'>Search {_e_partner} on Google →</a></p>"
                     f"<table style='border-collapse:collapse;width:100%;max-width:500px;margin-top:12px;'>"
-                    f"<tr><td style='padding:8px;color:#555;'>Partner</td><td style='padding:8px;font-weight:600;'>{_partner_label}</td></tr>"
-                    f"<tr><td style='padding:8px;color:#555;'>Location</td><td style='padding:8px;'>{_loc}</td></tr>"
-                    f"<tr><td style='padding:8px;color:#555;'>Type</td><td style='padding:8px;'>{partner_type or '—'}</td></tr>"
-                    f"<tr><td style='padding:8px;color:#555;'>Your message</td><td style='padding:8px;'>{message or '—'}</td></tr>"
+                    f"<tr><td style='padding:8px;color:#555;'>Partner</td><td style='padding:8px;font-weight:600;'>{_e_partner}</td></tr>"
+                    f"<tr><td style='padding:8px;color:#555;'>Location</td><td style='padding:8px;'>{_e_loc}</td></tr>"
+                    f"<tr><td style='padding:8px;color:#555;'>Type</td><td style='padding:8px;'>{_e_category}</td></tr>"
+                    f"<tr><td style='padding:8px;color:#555;'>Your message</td><td style='padding:8px;'>{_e_message}</td></tr>"
                     f"</table>"
                     f"<p style='margin-top:14px;color:#555;font-size:0.9em;'>Once they join Ravlo, you'll be able to communicate, share project packages, and track requests directly on the platform.</p>"
                 ),

@@ -158,7 +158,12 @@
     });
     </script>
 
+  {% if active_portal == "vip" %}
+    {% include "layouts/_ai_pilot_fab.html" %}
+  {% endif %}
+
   {% if current_user.is_authenticated %}
+    {% set rac_stacked = (active_portal == "vip") %}
     {% include "layouts/_ravlo_ai_chat.html" %}
   {% endif %}
 

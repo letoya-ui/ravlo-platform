@@ -2366,7 +2366,7 @@ def ai_email_assistant():
     """AI Email Assistant — generate and send outreach emails for partner leads and requests."""
     from LoanMVP.models.partner_models import ExternalPartnerLead, PartnerConnectionRequest
 
-    external_leads = (
+    external_leads_raw = (
         ExternalPartnerLead.query
         .filter(ExternalPartnerLead.invite_status.in_(["new", "saved"]))
         .order_by(ExternalPartnerLead.created_at.desc())
@@ -2374,7 +2374,7 @@ def ai_email_assistant():
         .all()
     )
 
-    open_requests = (
+    open_requests_raw = (
         PartnerConnectionRequest.query
         .filter(PartnerConnectionRequest.status.in_(["awaiting_match", "pending"]))
         .filter(PartnerConnectionRequest.source.in_(["external", "fallback_search"]))
@@ -2382,6 +2382,39 @@ def ai_email_assistant():
         .limit(30)
         .all()
     )
+
+    # Serialize to plain dicts — SQLAlchemy models are not JSON-serializable
+    external_leads = [
+        {
+            "id":            l.id,
+            "name":          l.name or "",
+            "business_name": l.business_name or "",
+            "category":      l.category or "",
+            "address":       l.address or "",
+            "city":          l.city or "",
+            "state":         l.state or "",
+            "zip_code":      l.zip_code or "",
+            "invite_status": l.invite_status or "",
+            "created_at":    l.created_at.strftime("%b %d, %Y") if l.created_at else "",
+        }
+        for l in external_leads_raw
+    ]
+
+    open_requests = [
+        {
+            "id":       r.id,
+            "title":    r.title or "",
+            "category": r.category or "",
+            "status":   r.status or "",
+            "message":  r.message or "",
+            "budget":   float(r.budget) if r.budget else None,
+            "timeline": r.timeline or "",
+            "created_at": r.created_at.strftime("%b %d, %Y") if r.created_at else "",
+            "lead_name": (r.external_partner_lead.name or r.external_partner_lead.business_name or "")
+                         if r.external_partner_lead else "",
+        }
+        for r in open_requests_raw
+    ]
 
     return render_template(
         "admin/ai_email_assistant.html",
@@ -2420,7 +2453,10 @@ def ai_generate_email():
             "Never mention internal platform details or use placeholder text. "
             "Always sign off as 'The Ravlo Team'."
         )
-        budget_line = f"\n- Budget: ${float(budget):,.0f}" if budget else ""
+        try:
+            budget_line = f"\n- Budget: ${float(budget):,.0f}" if budget else ""
+        except (TypeError, ValueError):
+            budget_line = f"\n- Budget: {budget}" if budget else ""
         timeline_line = f"\n- Timeline: {timeline}" if timeline else ""
         prompt = (
             f"Write an outreach email inviting {partner_name or 'a local business'} to join the Ravlo partner network.\n\n"
@@ -2548,8 +2584,9 @@ def ai_send_email():
             if req and req.status == "awaiting_match":
                 req.status = "pending"
                 db.session.commit()
-    except Exception:
-        pass
+    except Exception as db_exc:
+        db.session.rollback()
+        current_app.logger.error("[ai-send-email] status update failed: %s", db_exc)
 
     return jsonify({"status": "ok", "message": "Email sent successfully."})
 

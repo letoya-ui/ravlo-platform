@@ -117,7 +117,7 @@
 .rac-fab-wrap {
   position: fixed;
   right: 22px;
-  bottom: 22px;
+  bottom: {% if rac_stacked %}84px{% else %}22px{% endif %};
   z-index: 9800;
 }
 .rac-fab {
@@ -419,8 +419,8 @@
 .rac-send:disabled{ opacity: .5; transform: none; cursor: not-allowed; }
 
 @media (max-width: 500px) {
-  .rac-fab-wrap { right: 14px; bottom: 14px; }
-  .rac-panel    { right: 14px; bottom: 76px; width: calc(100vw - 28px); }
+  .rac-fab-wrap { right: 14px; bottom: {% if rac_stacked %}76px{% else %}14px{% endif %}; }
+  .rac-panel    { right: 14px; bottom: {% if rac_stacked %}138px{% else %}76px{% endif %}; width: calc(100vw - 28px); }
 }
 </style>
 
