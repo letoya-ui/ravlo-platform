@@ -27,6 +27,13 @@ Build the financial operating system for your deal.
     {% if existing_budget %}
       <a class="ravlo-btn primary sm" href="{{ url_for('investor.budget_detail', budget_id=existing_budget.id) }}">Open Budget Tracker</a>
     {% endif %}
+    <button type="button" class="ravlo-btn ghost sm" onclick="openSendPartnerModal(_budgetStudioCtx)">
+      <i class="lucide lucide-send"></i> Send to Contractor
+    </button>
+  {% else %}
+    <button type="button" class="ravlo-btn ghost sm" onclick="openSendPartnerModal(_budgetStudioCtx)">
+      <i class="lucide lucide-send"></i> Find Contractor
+    </button>
   {% endif %}
 {% endblock %}
 
@@ -1899,6 +1906,90 @@ Build the financial operating system for your deal.
 
   _wireStandaloneForm("saveStandaloneBudgetForm", "standaloneBudgetPayload", "standaloneBudgetName");
   _wireStandaloneForm("saveStandaloneBudgetFormSide", "standaloneBudgetPayloadSide", "standaloneBudgetNameSide");
+
+  // ── Budget number import ──────────────────────────────────────────────────
+  function parseBudgetText(raw) {
+    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    const results = [];
+    lines.forEach(line => {
+      // Formats: "Roof: 8500", "Roof, 8500", "Roof 8500", "Roof - 8500", "Roof | 8500"
+      const m = line.match(/^([^:,|\-\$\d]+?)[\s:,|\-]+\$?([\d,]+(?:\.\d+)?)\s*$/);
+      if (m) {
+        const name = m[1].trim();
+        const cost = parseFloat(m[2].replace(/,/g, ''));
+        if (name && !isNaN(cost)) results.push({ name, cost });
+      }
+    });
+    return results;
+  }
+
+  window.importBudgetNumbers = function () {
+    const raw = document.getElementById('budgetImportText').value || '';
+    const parsed = parseBudgetText(raw);
+    if (!parsed.length) {
+      document.getElementById('budgetImportStatus').textContent = 'No valid lines found. Use format: Item Name: 5000';
+      return;
+    }
+    parsed.forEach(item => addItem(item.name, item.cost, 'Imported'));
+    document.getElementById('budgetImportText').value = '';
+    document.getElementById('budgetImportStatus').textContent = `✓ Imported ${parsed.length} item${parsed.length !== 1 ? 's' : ''}.`;
+    setTimeout(() => {
+      const el = document.getElementById('budgetImportStatus');
+      if (el) el.textContent = '';
+    }, 3000);
+  };
+
+  window.toggleBudgetImport = function () {
+    const panel = document.getElementById('budgetImportPanel');
+    const isHidden = panel.style.display === 'none' || !panel.style.display;
+    panel.style.display = isHidden ? 'block' : 'none';
+  };
 </script>
+
+<!-- Budget Import Panel -->
+<div style="margin-top:18px;border:1px solid rgba(255,255,255,.1);border-radius:18px;overflow:hidden;">
+  <button type="button" onclick="toggleBudgetImport()" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:rgba(255,255,255,.03);border:none;cursor:pointer;color:#eef4ff;font-size:.88rem;font-weight:700;">
+    <span>📋 Paste / Import Budget Numbers</span>
+    <span style="font-size:.78rem;color:rgba(228,236,246,.55);">Toggle</span>
+  </button>
+  <div id="budgetImportPanel" style="display:none;padding:18px 20px;border-top:1px solid rgba(255,255,255,.08);">
+    <p style="color:rgba(228,236,246,.65);font-size:.84rem;line-height:1.6;margin:0 0 12px;">
+      Paste your numbers one per line. Accepted formats:<br>
+      <code style="font-size:.8rem;color:#8ebdff;">Roof: 8500</code>&nbsp;&nbsp;
+      <code style="font-size:.8rem;color:#8ebdff;">HVAC, 6200</code>&nbsp;&nbsp;
+      <code style="font-size:.8rem;color:#8ebdff;">Plumbing 4000</code>
+    </p>
+    <textarea id="budgetImportText" rows="8" placeholder="Roof: 8500&#10;HVAC: 6200&#10;Plumbing: 4000&#10;Electrical: 5500&#10;Flooring: 7000"
+      style="width:100%;box-sizing:border-box;padding:12px 14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;color:#fff;font-size:.88rem;line-height:1.6;resize:vertical;font-family:monospace;outline:none;"></textarea>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+      <button type="button" onclick="importBudgetNumbers()" style="padding:10px 22px;border-radius:12px;background:linear-gradient(135deg,#3a7bd5,#1e4d9b);border:none;color:#fff;font-weight:700;font-size:.88rem;cursor:pointer;">
+        Import Lines →
+      </button>
+      <span id="budgetImportStatus" style="font-size:.82rem;color:#74e8ba;"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+var _budgetStudioCtx = {
+  dealId:      {{ deal.id if deal else 'null' }},
+  title:       {{ (deal.address or deal.title if deal else 'Budget Studio')|tojson }},
+  address:     {{ (deal.address if deal else '')|tojson }},
+  city:        {{ (deal.city if deal else '')|tojson }},
+  state:       {{ (deal.state if deal else '')|tojson }},
+  zip:         {{ (deal.zip_code if deal else '')|tojson }},
+  studioType:  'budget',
+  studioRefId: {{ deal.id if deal else 'null' }},
+  packageLabel: 'Budget Studio Package',
+  defaultPartnerType: 'Contractor',
+  defaultMessage: {{ ('Please review this budget for ' ~ (deal.address or deal.title or 'this project') ~ ' and provide a contractor estimate or scope feedback.')|tojson }},
+  studioItems: [
+    {icon: '💰', label: 'Budget Studio', detail: {{ (budget_label)|tojson }}},
+    {icon: '📍', label: 'Property', detail: {{ (deal.address or deal.title if deal else 'Budget Project')|tojson }}}
+  ]
+};
+</script>
+
+{% include 'components/send_to_partner_modal.html' %}
 
 {% endblock %}
