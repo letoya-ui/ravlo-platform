@@ -368,8 +368,8 @@ function LandingGate({ onAccess }) {
 }
 
 // ── Sidebar ────────────────────────────────────────────────────────────────
-function Sidebar({ track, setTrack, levelIdx, setLevelIdx, view, setView, progress, xp, userName, open, setOpen, isDesktop }) {
-  const trackKeys = Object.keys(TRACKS);
+function Sidebar({ track, setTrack, levelIdx, setLevelIdx, view, setView, progress, xp, userName, open, setOpen, isDesktop, allowedTrack }) {
+  const trackKeys = allowedTrack ? [allowedTrack] : Object.keys(TRACKS);
 
   function selectTrack(key) {
     setTrack(key); setLevelIdx(0); setView('home'); if (!isDesktop) setOpen(false);
@@ -416,7 +416,7 @@ function Sidebar({ track, setTrack, levelIdx, setLevelIdx, view, setView, progre
 
         {/* Track nav */}
         <div style={{ padding: '14px 12px 8px', flex: 1, overflowY: 'auto' }}>
-          <div style={{ fontSize: 10, letterSpacing: 2, color: T.mutedDark, fontWeight: 700, padding: '0 8px', marginBottom: 8 }}>CAREER TRACKS</div>
+          {trackKeys.length > 1 && <div style={{ fontSize: 10, letterSpacing: 2, color: T.mutedDark, fontWeight: 700, padding: '0 8px', marginBottom: 8 }}>CAREER TRACKS</div>}
           {trackKeys.map(key => {
             const tr = TRACKS[key];
             const isActive = track === key;
@@ -848,9 +848,10 @@ You have deep expertise across: deal analysis, BRRRR strategy, multifamily, fix 
 // ── App ────────────────────────────────────────────────────────────────────
 function App() {
   const init = window.RAVLO_ACADEMY || {};
+  const allowedTrack = init.allowedTrack || null;
   const [tier, setTier] = useState(init.tier || null);
   const [userName, setUserName] = useState(init.userName || '');
-  const [track, setTrack] = useState('investor');
+  const [track, setTrack] = useState(allowedTrack || 'investor');
   const [levelIdx, setLevelIdx] = useState(0);
   const [view, setView] = useState('home');
   const [lesson, setLesson] = useState(null);
@@ -909,7 +910,7 @@ function App() {
 
   return (
     <div style={bgStyle}>
-      <Sidebar track={track} setTrack={setTrack} levelIdx={levelIdx} setLevelIdx={setLevelIdx} view={view} setView={setView} progress={progress} xp={progress.xp} userName={userName} open={sidebarOpen} setOpen={setSidebarOpen} isDesktop={isDesktop} />
+      <Sidebar track={track} setTrack={setTrack} levelIdx={levelIdx} setLevelIdx={setLevelIdx} view={view} setView={setView} progress={progress} xp={progress.xp} userName={userName} open={sidebarOpen} setOpen={setSidebarOpen} isDesktop={isDesktop} allowedTrack={allowedTrack} />
 
       {/* Topbar */}
       <div style={{ position: 'fixed', top: 0, left: isDesktop ? 280 : 0, right: 0, height: 52, background: 'rgba(7,17,31,.92)', borderBottom: `1px solid ${T.border}`, backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 12, zIndex: 50 }}>

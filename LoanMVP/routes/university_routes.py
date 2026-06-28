@@ -57,6 +57,23 @@ _ROLE_TIER = {
     "lending_admin": "lending",
     "processor":     "lending",
     "underwriter":   "lending",
+    "realtor":       "elite",
+    "property_mgmt": "elite",
+    "contractor":    "elite",
+}
+
+# ── Role → track (null = unrestricted) ─────────────────────────────────────
+_ROLE_TRACK = {
+    "investor":      "investor",
+    "partner":       "investor",
+    "loan_officer":  "lending",
+    "lending_admin": "lending",
+    "processor":     "lending",
+    "underwriter":   "lending",
+    "realtor":       "realtor",
+    "property_mgmt": "property_mgmt",
+    "contractor":    "contractor",
+    # admin/master_admin/executive see all tracks — no restriction
 }
 
 # ── Tier metadata (matches ACCESS_TIERS in the JSX) ───────────────────────
@@ -118,10 +135,10 @@ def _get_company_codes() -> dict:
 
 
 def _platform_access() -> tuple:
-    """(tier_key, display_name) from Flask-Login user, or (None, None)."""
+    """(tier_key, display_name, allowed_track) from Flask-Login user, or (None, None, None)."""
     try:
         if not current_user or not current_user.is_authenticated:
-            return None, None
+            return None, None, None
         role = (getattr(current_user, "role", "") or "").strip().lower()
         tier_key = _ROLE_TIER.get(role)
         if not tier_key:
@@ -129,29 +146,31 @@ def _platform_access() -> tuple:
             if paid in _TIER_META:
                 tier_key = paid
         if not tier_key:
-            return None, None
-        return tier_key, _user_display_name(current_user)
+            return None, None, None
+        allowed_track = _ROLE_TRACK.get(role)  # None = unrestricted
+        return tier_key, _user_display_name(current_user), allowed_track
     except Exception:
-        return None, None
+        return None, None, None
 
 
 def _standalone_access() -> tuple:
-    """(tier_key, display_name) from Flask session['academy_access'], or (None, None)."""
+    """(tier_key, display_name, allowed_track) from Flask session, or (None, None, None)."""
     try:
         a = session.get("academy_access") or {}
         t = a.get("tier", "")
         if t in _TIER_META:
-            return t, a.get("name", "Member")
+            track = a.get("allowed_track") or None
+            return t, a.get("name", "Member"), track
     except Exception:
         pass
-    return None, None
+    return None, None, None
 
 
 def _current_access() -> tuple:
-    """(tier_key, display_name) from any source, or (None, None)."""
-    tier, name = _platform_access()
+    """(tier_key, display_name, allowed_track) from any source, or (None, None, None)."""
+    tier, name, track = _platform_access()
     if tier:
-        return tier, name
+        return tier, name, track
     return _standalone_access()
 
 
@@ -229,13 +248,14 @@ def portal():
         if sid:
             _activate_from_stripe_session(sid)
 
-    tier_key, display_name = _current_access()
+    tier_key, display_name, allowed_track = _current_access()
 
     # Always serve the portal shell. The JSX handles the no-access UX.
     return render_template(
         "university/portal.html",
         server_tier=tier_key,
         server_user=display_name or "",
+        server_track=allowed_track,
     )
 
 
@@ -280,7 +300,7 @@ def business_plan():
 @csrf.exempt
 def chat():
     """Proxy Anthropic API. Validates Academy session before forwarding."""
-    tier_key, _ = _current_access()
+    tier_key, _, _track = _current_access()
     if not tier_key:
         return jsonify({"error": "Academy access required."}), 403
     if not _ANTHROPIC_KEY:
@@ -313,7 +333,7 @@ def chat():
 
         try:
             ai_text = (resp_data.get("content") or [{}])[0].get("text", "")
-            tier_key, _ = _current_access()
+            tier_key, _, _track = _current_access()
             user_id = current_user.id if current_user.is_authenticated else None
             from LoanMVP.services.training_service import log_academy_chat
             log_academy_chat(
@@ -342,7 +362,7 @@ def chat():
 @csrf.exempt
 def business_plan_generate():
     """Proxy Anthropic API for Business Plan tool. Validates Academy session."""
-    tier_key, _ = _current_access()
+    tier_key, _, _track = _current_access()
     if not tier_key:
         return jsonify({"error": "Academy access required."}), 403
     if not _ANTHROPIC_KEY:
@@ -375,7 +395,7 @@ def business_plan_generate():
 
         try:
             ai_text = (resp_data.get("content") or [{}])[0].get("text", "")
-            tier_key, _ = _current_access()
+            tier_key, _, _track = _current_access()
             user_id = current_user.id if current_user.is_authenticated else None
             from LoanMVP.services.training_service import log_academy_chat
             log_academy_chat(
@@ -607,7 +627,7 @@ Critical rules:
 @csrf.exempt
 def api_progress():
     """Return completed lessons + XP for the current user."""
-    tier_key, _ = _current_access()
+    tier_key, _, _track = _current_access()
     if not tier_key:
         return jsonify({"error": "Academy access required."}), 403
 
@@ -637,7 +657,7 @@ def api_progress():
 @csrf.exempt
 def api_progress_complete():
     """Mark a lesson complete and award XP."""
-    tier_key, _ = _current_access()
+    tier_key, _, _track = _current_access()
     if not tier_key:
         return jsonify({"error": "Academy access required."}), 403
 
@@ -693,7 +713,7 @@ def api_progress_complete():
 @csrf.exempt
 def lesson_content():
     """Return structured lesson content. Generated by AI on first request, cached permanently."""
-    tier_key, _ = _current_access()
+    tier_key, _, _track = _current_access()
     if not tier_key:
         return jsonify({"error": "Academy access required."}), 403
     if not _ANTHROPIC_KEY:
