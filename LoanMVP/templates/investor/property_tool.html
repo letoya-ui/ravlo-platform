@@ -176,6 +176,17 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
       </div>
     </div>
 
+    <div id="aiMarketReadPanel" style="display:none;" class="ravlo-card pad dfv4-ai-market-read">
+      <div class="dfv4-ai-market-head">
+        <div>
+          <div class="eyebrow">AI MARKET READ</div>
+          <h3 id="aiMarketReadTitle" class="mb-4">Top Pick Analysis</h3>
+        </div>
+        <span id="aiMarketReadSpinner" class="dfv4-ai-spinner" style="display:none;">Analyzing…</span>
+      </div>
+      <div id="aiMarketReadBody" class="dfv4-ai-market-body"></div>
+    </div>
+
     <div id="results" class="dfv4-grid">
       <div class="ravlo-card pad dfv4-empty">
         <div class="eyebrow">DEAL FINDER</div>
@@ -197,6 +208,7 @@ const VIEW_DETAILS_URL = "{{ url_for('investor.api_property_detail') }}";
 const SEARCH_URL = "{{ url_for('investor.api_property_tool_search') }}";
 const IMAGE_PROXY_URL = "{{ url_for('investor.api_property_tool_image') }}";
 const DEAL_WORKSPACE_URL = "{{ url_for('investor.deal_workspace') }}";
+const AI_MARKET_READ_URL = "{{ url_for('investor.api_deal_finder_ai_read') }}";
 
 function money(x){
   if (x === null || x === undefined || x === "") return "—";
@@ -786,7 +798,8 @@ function renderCards(results){
     const aiWhy = Array.isArray(aiRecommendation.why) ? aiRecommendation.why.slice(0, 3) : [];
 
     return `
-      <article class="ravlo-card pad dfv4-card">
+      <article class="ravlo-card pad dfv4-card${idx === 0 ? " dfv4-card--top-pick" : ""}">
+        ${idx === 0 ? `<div class="dfv4-top-pick-banner">⭐ TOP PICK${escapeHtml(r.zip_code || r.zip || "") ? " IN " + escapeHtml(r.zip_code || r.zip || "") : ""}<span class="dfv4-top-pick-score">${Number.isFinite(score) ? score + "/99" : ""}</span></div>` : ""}
         <div class="dfv4-thumb">
           <img src="${escapeHtml(resolveCardImageSrc(r))}" alt="Property photo" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
           <div class="dfv4-thumb-top">
@@ -1166,6 +1179,10 @@ async function runSearch(){
     renderSummary(zip, strategy, assetType, results.length, true, data.total_matches || results.length);
     renderCards(results);
 
+    if (results.length > 0) {
+      runAIMarketRead(results[0], zip || city);
+    }
+
     status.innerText = results.length
       ? `Found ${results.length} opportunities.`
       : "No matches found. Try another ZIP code or nearby market.";
@@ -1174,6 +1191,50 @@ async function runSearch(){
     console.error(err);
     status.innerText = "Search error. Try ZIP code or city/state.";
     renderEmpty("Search failed", "Try another ZIP code, city/state, or use your location.");
+  }
+}
+
+async function runAIMarketRead(topResult, market) {
+  const panel = document.getElementById("aiMarketReadPanel");
+  const title = document.getElementById("aiMarketReadTitle");
+  const spinner = document.getElementById("aiMarketReadSpinner");
+  const body = document.getElementById("aiMarketReadBody");
+
+  if (!panel || !body) return;
+
+  panel.style.display = "";
+  spinner.style.display = "";
+  body.innerHTML = "";
+  if (title) title.textContent = `Top Pick: ${topResult.address || market || "Market Analysis"}`;
+
+  try {
+    const res = await fetch(AI_MARKET_READ_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ property: topResult, market: market })
+    });
+    const data = await res.json();
+    spinner.style.display = "none";
+
+    if (!res.ok || data.status === "error") {
+      body.innerHTML = `<p class="muted">${escapeHtml(data.error || "AI Market Read unavailable.")}</p>`;
+      return;
+    }
+
+    const md = data.analysis || "";
+    body.innerHTML = md.split("\n").filter(l => l.trim()).map(line => {
+      if (line.startsWith("**") && line.endsWith("**")) {
+        return `<strong class="dfv4-ai-section">${escapeHtml(line.replace(/\*\*/g, ""))}</strong>`;
+      }
+      if (line.startsWith("- ")) {
+        return `<li>${escapeHtml(line.slice(2))}</li>`;
+      }
+      return `<p>${escapeHtml(line)}</p>`;
+    }).join("");
+  } catch (e) {
+    console.error("AI Market Read error:", e);
+    if (spinner) spinner.style.display = "none";
+    if (body) body.innerHTML = `<p class="muted">AI Market Read unavailable right now.</p>`;
   }
 }
 
@@ -1224,6 +1285,20 @@ async function runSearch(){
 </script>
 
 <style>
+/* TOP PICK */
+.dfv4-card--top-pick{border-color:rgba(95,168,255,0.4)!important;box-shadow:0 0 0 1px rgba(95,168,255,0.22),0 18px 46px rgba(0,0,0,0.28)!important}
+.dfv4-top-pick-banner{display:flex;align-items:center;gap:8px;padding:6px 12px;margin-bottom:12px;border-radius:10px;background:linear-gradient(90deg,rgba(95,168,255,0.18),rgba(44,182,125,0.10));color:#5FA8FF;font-size:.75rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border:1px solid rgba(95,168,255,0.22)}
+.dfv4-top-pick-score{margin-left:auto;background:rgba(95,168,255,0.15);padding:2px 8px;border-radius:6px;font-size:.7rem}
+/* AI Market Read panel */
+.dfv4-ai-market-read{margin-bottom:0}
+.dfv4-ai-market-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.dfv4-ai-market-head h3{color:#fff;margin:0}
+.dfv4-ai-spinner{color:rgba(193,209,227,.7);font-size:.8rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;animation:dfv4spin 1.2s linear infinite}
+@keyframes dfv4spin{0%,100%{opacity:1}50%{opacity:.35}}
+.dfv4-ai-market-body{display:flex;flex-direction:column;gap:6px;color:rgba(226,236,247,.82);line-height:1.6;font-size:.9rem}
+.dfv4-ai-market-body strong.dfv4-ai-section{display:block;color:#fff;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;margin-top:6px}
+.dfv4-ai-market-body li{margin-left:16px}
+/* Shell & search panel */
 .dfv4-shell{display:grid;grid-template-columns:360px minmax(0,1fr);gap:1rem}
 .dfv4-search-panel{position:sticky;top:16px;align-self:start}
 .dfv4-panel-title,.dfv4-hero-title{margin:.35rem 0}

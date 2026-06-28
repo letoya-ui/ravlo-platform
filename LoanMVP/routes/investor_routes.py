@@ -4470,6 +4470,92 @@ def api_property_tool_image():
         current_app.logger.warning("property_tool_image proxy failed for %s", log_url, exc_info=True)
         return redirect(url_for("static", filename="images/placeholder_property.jpg"))
 
+@investor_bp.route("/api/deal-finder-ai-read", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def api_deal_finder_ai_read():
+    payload = request.get_json(silent=True) or {}
+    prop = payload.get("property") or {}
+    market = (payload.get("market") or prop.get("zip_code") or prop.get("zip") or "").strip()
+
+    address = (prop.get("address") or prop.get("address_line1") or "").strip()
+    price = prop.get("listing_price") or prop.get("price") or prop.get("display_value")
+    market_value = prop.get("estimated_value_engine") or prop.get("market_value")
+    deal_score = prop.get("deal_score")
+    tier = prop.get("opportunity_tier") or "moderate"
+    strategy_tag = prop.get("strategy_tag") or prop.get("recommended_strategy") or "Review"
+    rough_upside = prop.get("rough_upside") or "—"
+    rent = prop.get("monthly_rent_estimate") or prop.get("traditional_rent")
+    str_rev = prop.get("airbnb_revenue") or prop.get("airbnb_rent_estimate")
+    beds = prop.get("beds") or "—"
+    baths = prop.get("baths") or "—"
+    sqft = prop.get("square_feet") or prop.get("sqft") or "—"
+    days_on_market = prop.get("days_on_market") or "—"
+    reasons = []
+    ai_rec = prop.get("ai_recommendation") or {}
+    if isinstance(ai_rec.get("why"), list):
+        reasons = ai_rec["why"][:3]
+    elif isinstance(prop.get("reasons"), list):
+        reasons = prop["reasons"][:3]
+
+    def fmt_money(v):
+        try:
+            n = float(str(v).replace("$", "").replace(",", ""))
+            return f"${n:,.0f}"
+        except Exception:
+            return str(v) if v else "—"
+
+    fact_lines = [
+        f"Address: {address or 'Not specified'}",
+        f"Market / ZIP: {market or 'Not specified'}",
+        f"Price: {fmt_money(price)}",
+        f"Engine Value: {fmt_money(market_value)}",
+        f"Deal Score: {deal_score}/99" if deal_score else "Deal Score: —",
+        f"Tier: {tier}",
+        f"Recommended Strategy: {strategy_tag}",
+        f"Rough Upside: {rough_upside}",
+        f"Beds/Baths: {beds}/{baths}",
+        f"Sq Ft: {sqft}",
+        f"Days on Market: {days_on_market}",
+        f"Rent Estimate: {fmt_money(rent)}/mo" if rent else "Rent Estimate: —",
+        f"STR Revenue Estimate: {fmt_money(str_rev)}/mo" if str_rev else "STR Revenue: —",
+    ]
+    if reasons:
+        fact_lines.append("Why it ranked: " + "; ".join(reasons))
+
+    system_prompt = (
+        "You are a senior real estate investment analyst at Ravlo. "
+        "Given top-pick property data from a Deal Finder search, write a concise AI Market Read. "
+        "Structure your response as: "
+        "**Deal Summary** (2-3 sentences on why this property ranked #1), "
+        "**Market Signal** (1-2 bullets on the ZIP/market opportunity), "
+        "**Strategy Fit** (1-2 bullets on the recommended strategy and exit), "
+        "**Key Risks** (1-2 bullets), "
+        "**Next Move** (one clear sentence). "
+        "Be direct, data-grounded, and actionable. No fluff."
+    )
+    user_prompt = "TOP PICK PROPERTY DATA:\n" + "\n".join(fact_lines)
+
+    try:
+        ai_client = OpenAI()
+        ai_model = current_app.config.get("AI_MODEL") or "gpt-4o-mini"
+        response = ai_client.chat.completions.create(
+            model=ai_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.4,
+            max_tokens=500,
+        )
+        analysis = (response.choices[0].message.content or "").strip()
+        return jsonify({"status": "ok", "analysis": analysis})
+    except Exception as e:
+        current_app.logger.warning("deal_finder_ai_read failed: %s", e, exc_info=True)
+        return jsonify({"status": "error", "error": "AI Market Read unavailable."}), 500
+
+
 @investor_bp.route("/api/property_detail", methods=["POST"])
 @csrf.exempt
 @login_required
