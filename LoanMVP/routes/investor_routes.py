@@ -16667,9 +16667,22 @@ def investor_partner_search():
             "rating":       p.get("rating"),
             "source":       p.get("source", "ravlo"),
             "is_internal":  p.get("is_internal", False),
+            "external_id":  p.get("external_id"),  # Google place_id for external results
         })
 
     return jsonify(results)
+
+
+@investor_bp.route("/partners/place-details", methods=["GET"])
+@login_required
+def investor_partner_place_details():
+    """AJAX: fetch phone + website for a Google Place ID."""
+    from LoanMVP.services.partner_marketplace_service import get_place_details
+    place_id = request.args.get("place_id", "").strip()
+    if not place_id:
+        return jsonify({"phone": None, "website": None})
+    details = get_place_details(place_id)
+    return jsonify(details)
 
 
 @investor_bp.route("/send-to-partner", methods=["POST"])
@@ -16853,6 +16866,63 @@ def investor_send_to_partner():
         import logging
         logging.getLogger(__name__).error("[send-to-partner] DB error: %s", exc)
         return jsonify({"status": "error", "message": "Could not save request"}), 500
+
+    # ── Email notifications for external leads ────────────────────────────
+    if external_lead:
+        try:
+            from LoanMVP.utils.emailer import send_email
+            _partner_label = partner_name or "Unknown Partner"
+            _loc = ", ".join(p for p in [address, city, state, zip_code] if p) or "—"
+            _investor_name = getattr(current_user, "first_name", None) or current_user.email
+
+            admin_email = (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip()
+            if admin_email:
+                send_email(
+                    to=admin_email,
+                    subject=f"[Ravlo Lead] Investor wants to work with {_partner_label} (external)",
+                    html_body=(
+                        f"<h2>New External Partner Lead</h2>"
+                        f"<p>An investor found an outside-network partner and sent a connection request through Ravlo. "
+                        f"Please reach out to this partner to invite them to the Ravlo network.</p>"
+                        f"<table style='border-collapse:collapse;width:100%;max-width:600px;'>"
+                        f"<tr><td style='padding:8px;color:#555;'>Partner name</td><td style='padding:8px;font-weight:600;'>{_partner_label}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Address / Location</td><td style='padding:8px;'>{_loc}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Category</td><td style='padding:8px;'>{partner_type or '—'}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Investor</td><td style='padding:8px;'>{_investor_name} ({current_user.email})</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Property / Project</td><td style='padding:8px;'>{title or '—'}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Investor message</td><td style='padding:8px;'>{message or '—'}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Budget</td><td style='padding:8px;'>{'${:,.0f}'.format(budget) if budget else '—'}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Timeline</td><td style='padding:8px;'>{timeline or '—'}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Request ID</td><td style='padding:8px;'>#{req.id}</td></tr>"
+                        f"</table>"
+                        f"<p style='margin-top:18px;'>"
+                        f"<a href='https://www.google.com/search?q={requests.utils.quote(_partner_label + ' ' + _loc)}' "
+                        f"style='background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600;'>"
+                        f"Find on Google</a></p>"
+                    ),
+                )
+
+            send_email(
+                to=current_user.email,
+                subject=f"Ravlo is reaching out to {_partner_label} on your behalf",
+                html_body=(
+                    f"<h2>We're on it.</h2>"
+                    f"<p>You selected <strong>{_partner_label}</strong> — a partner outside the Ravlo network. "
+                    f"The Ravlo team will reach out to invite them and facilitate your connection.</p>"
+                    f"<p><strong>In the meantime, you can contact them directly:</strong></p>"
+                    f"<p><a href='https://www.google.com/search?q={requests.utils.quote(_partner_label + ' ' + _loc)}' "
+                    f"style='color:#2563eb;'>Search {_partner_label} on Google →</a></p>"
+                    f"<table style='border-collapse:collapse;width:100%;max-width:500px;margin-top:12px;'>"
+                    f"<tr><td style='padding:8px;color:#555;'>Partner</td><td style='padding:8px;font-weight:600;'>{_partner_label}</td></tr>"
+                    f"<tr><td style='padding:8px;color:#555;'>Location</td><td style='padding:8px;'>{_loc}</td></tr>"
+                    f"<tr><td style='padding:8px;color:#555;'>Type</td><td style='padding:8px;'>{partner_type or '—'}</td></tr>"
+                    f"<tr><td style='padding:8px;color:#555;'>Your message</td><td style='padding:8px;'>{message or '—'}</td></tr>"
+                    f"</table>"
+                    f"<p style='margin-top:14px;color:#555;font-size:0.9em;'>Once they join Ravlo, you'll be able to communicate, share project packages, and track requests directly on the platform.</p>"
+                ),
+            )
+        except Exception:
+            pass  # Don't fail the response if email sending errors
 
     return jsonify({
         "status": "ok",

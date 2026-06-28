@@ -24,6 +24,32 @@ def score_partner(rating=None, review_count=0, preferred=False, verified=False):
     return round(score, 2)
 
 
+def get_place_details(place_id):
+    """Fetch phone + website for a Google Place using the Place Details API."""
+    if not GOOGLE_API_KEY or not place_id:
+        return {}
+    url = "https://maps.googleapis.com/maps/api/place/details/json"
+    try:
+        res = requests.get(
+            url,
+            params={
+                "place_id": place_id,
+                "fields": "formatted_phone_number,website,international_phone_number",
+                "key": GOOGLE_API_KEY,
+            },
+            timeout=10,
+        )
+        res.raise_for_status()
+        data = res.json()
+        result = data.get("result", {}) or {}
+        return {
+            "phone": result.get("formatted_phone_number") or result.get("international_phone_number"),
+            "website": result.get("website"),
+        }
+    except Exception:
+        return {}
+
+
 def search_google_places(location_text, category, limit=8):
     if not GOOGLE_API_KEY or not location_text or not category:
         return []
