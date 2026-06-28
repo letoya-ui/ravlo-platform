@@ -438,11 +438,16 @@ def _save_lesson_cache(cache: dict):
         current_app.logger.error("lesson cache write error: %s", exc)
 
 def _parse_ai_json(raw: str) -> dict:
-    """Parse JSON from AI, escaping literal newlines/tabs inside string values."""
+    """Parse JSON from AI with aggressive repair for common LLM output issues."""
+    # Attempt 1: direct parse
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        chars = list(raw)
+        pass
+
+    # Attempt 2: escape literal newlines/tabs inside string values
+    def _escape_strings(text: str) -> str:
+        chars = list(text)
         in_string = False
         escape_next = False
         out = []
@@ -464,7 +469,76 @@ def _parse_ai_json(raw: str) -> dict:
                 out.append('\\t')
             else:
                 out.append(ch)
-        return json.loads(''.join(out))
+        return ''.join(out)
+
+    escaped = _escape_strings(raw)
+    try:
+        return json.loads(escaped)
+    except json.JSONDecodeError:
+        pass
+
+    # Attempt 3: repair truncated JSON (close unclosed strings/arrays/objects)
+    def _repair_truncated(text: str) -> str:
+        repaired = text.rstrip()
+        # If it ends mid-string, close the string
+        in_str = False
+        esc = False
+        for ch in repaired:
+            if esc:
+                esc = False
+            elif ch == '\\':
+                esc = True
+            elif ch == '"':
+                in_str = not in_str
+        if in_str:
+            repaired += '"'
+        # Close open brackets/braces
+        stack = []
+        in_str2 = False
+        esc2 = False
+        for ch in repaired:
+            if esc2:
+                esc2 = False
+                continue
+            if ch == '\\' and in_str2:
+                esc2 = True
+                continue
+            if ch == '"':
+                in_str2 = not in_str2
+                continue
+            if in_str2:
+                continue
+            if ch in ('{', '['):
+                stack.append('}' if ch == '{' else ']')
+            elif ch in ('}', ']'):
+                if stack:
+                    stack.pop()
+        # Remove trailing comma before closing
+        repaired = repaired.rstrip()
+        if repaired.endswith(','):
+            repaired = repaired[:-1]
+        repaired += ''.join(reversed(stack))
+        return repaired
+
+    repaired = _repair_truncated(escaped)
+    try:
+        return json.loads(repaired)
+    except json.JSONDecodeError:
+        pass
+
+    # Attempt 4: try extracting from first { to handle any preamble
+    match = re.search(r'\{', raw)
+    if match:
+        candidate = raw[match.start():]
+        candidate = _escape_strings(candidate)
+        candidate = _repair_truncated(candidate)
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            pass
+
+    # All repair attempts failed
+    raise json.JSONDecodeError("All JSON repair attempts failed", raw, 0)
 
 
 def _generate_lesson_content(title: str, description: str, course_title: str, unit_title: str) -> dict:
@@ -520,26 +594,31 @@ Critical rules:
         },
         json={
             "model": "claude-haiku-4-5-20251001",
-            "max_tokens": 4096,
+            "max_tokens": 8192,
             "system": system,
             "messages": [{"role": "user", "content": prompt}],
         },
         timeout=90,
     )
     resp.raise_for_status()
-    raw = resp.json()["content"][0]["text"].strip()
+    resp_data = resp.json()
+    raw = resp_data["content"][0]["text"].strip()
     # Strip markdown fences if model added them anyway
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
     raw = raw.strip()
+    # Detect truncation via stop_reason
+    stop_reason = resp_data.get("stop_reason", "")
+    if stop_reason == "max_tokens":
+        current_app.logger.warning("lesson AI response was truncated (hit max_tokens)")
     try:
         return _parse_ai_json(raw)
     except Exception as parse_exc:
         current_app.logger.error(
-            "lesson JSON parse failed — raw response (first 800 chars): %s",
-            raw[:800]
+            "lesson JSON parse failed (stop_reason=%s) — raw response (first 800 chars): %s",
+            stop_reason, raw[:800]
         )
         raise parse_exc
 
@@ -654,10 +733,22 @@ def lesson_content():
     if lesson_id in cache:
         return jsonify(cache[lesson_id])
 
-    try:
-        data = _generate_lesson_content(title, description, course_title, unit_title)
-    except Exception as exc:
-        current_app.logger.error("lesson content generation error: %s", exc)
+    # Retry once on parse failure (LLM output can be non-deterministic)
+    last_exc = None
+    for attempt in range(2):
+        try:
+            data = _generate_lesson_content(title, description, course_title, unit_title)
+            break
+        except json.JSONDecodeError as exc:
+            last_exc = exc
+            if attempt == 0:
+                current_app.logger.warning("lesson content parse failed (attempt 1), retrying: %s", exc)
+                continue
+        except Exception as exc:
+            current_app.logger.error("lesson content generation error: %s", exc)
+            return jsonify({"error": "Could not generate lesson content. Please try again."}), 500
+    else:
+        current_app.logger.error("lesson content generation error after 2 attempts: %s", last_exc)
         return jsonify({"error": "Could not generate lesson content. Please try again."}), 500
 
     cache[lesson_id] = data
