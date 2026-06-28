@@ -447,12 +447,12 @@ function Sidebar({ track, setTrack, levelIdx, setLevelIdx, view, setView, progre
             );
           })}
 
-          {/* AI Coach */}
+          {/* Instructor */}
           <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${T.borderSoft}` }}>
             <button onClick={() => { setView('coach'); setOpen(false); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px', borderRadius: T.radius.md, background: view === 'coach' ? T.accentGlow : 'transparent', border: view === 'coach' ? `1px solid ${T.accentLight}30` : '1px solid transparent', cursor: 'pointer', transition: 'all .15s' }}>
               <span style={{ fontSize: 18 }}>◎</span>
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: view === 'coach' ? T.accentLight : T.muted }}>AI Coach</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: view === 'coach' ? T.accentLight : T.muted }}>Instructor</div>
                 <div style={{ fontSize: 10, color: T.mutedDark }}>Ask anything</div>
               </div>
             </button>
@@ -585,18 +585,26 @@ function LevelView({ track, levelIdx, setView, setLesson, progress }) {
 }
 
 // ── LessonViewer ───────────────────────────────────────────────────────────
-function LessonViewer({ lesson, track, levelIdx, progress, onComplete, onBack }) {
+function LessonViewer({ lesson, track, levelIdx, progress, onComplete, onBack, onNext, userName }) {
   const tr = TRACKS[track];
   const level = tr.levels[levelIdx];
   const [content, setContent] = useState(null);
   const [loadErr, setLoadErr] = useState('');
+  const [articleOpen, setArticleOpen] = useState(false);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
+  const [personalCity, setPersonalCity] = useState('');
+  const [personalGoal, setPersonalGoal] = useState('');
+  const [personalResult, setPersonalResult] = useState('');
+  const [personalLoading, setPersonalLoading] = useState(false);
   const alreadyDone = !!progress.completed[pKey(lesson.moduleId, lesson.lessonIndex)];
 
   useEffect(() => {
     setContent(null); setLoadErr(''); setAnswers({}); setSubmitted(false);
+    setArticleOpen(false); setCelebrating(false); setPersonalResult('');
+    setPersonalCity(''); setPersonalGoal('');
     const lessonId = `${lesson.moduleId}-${lesson.lessonIndex}`;
     apiFetch('/academy/lesson-content', {
       method: 'POST',
@@ -610,11 +618,114 @@ function LessonViewer({ lesson, track, levelIdx, progress, onComplete, onBack })
     setCompleting(true);
     await onComplete(lesson.moduleId, lesson.lessonIndex);
     setCompleting(false);
+    setCelebrating(true);
   }
+
+  async function handlePersonalize() {
+    if (!personalCity && !personalGoal) return;
+    setPersonalLoading(true);
+    const sysMsg = `You are the Ravlo Academy Instructor. The student just completed "${lesson.title}" in the ${tr.label} track. Give a personalized, concrete takeaway for their specific situation — specific numbers, examples, and next steps relevant to their market and goal. 2-3 short paragraphs max.`;
+    const userMsg = `Apply what I just learned to my situation.${personalCity ? ` I'm in ${personalCity}.` : ''}${personalGoal ? ` My goal: ${personalGoal}.` : ''} Give me specific next steps.`;
+    try {
+      const data = await apiFetch('/academy/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 600, system: sysMsg, messages: [{ role: 'user', content: userMsg }] }),
+      });
+      setPersonalResult((data.content || [{}])[0].text || '');
+    } catch {
+      setPersonalResult('Could not generate takeaway. Please try again.');
+    } finally {
+      setPersonalLoading(false);
+    }
+  }
+
+  const nextLesson = (() => {
+    const mods = level.modules;
+    const modIdx = mods.findIndex(m => m.id === lesson.moduleId);
+    if (modIdx === -1) return null;
+    const mod = mods[modIdx];
+    if (lesson.lessonIndex < mod.lessons.length - 1) {
+      const nl = mod.lessons[lesson.lessonIndex + 1];
+      return { moduleId: mod.id, lessonIndex: lesson.lessonIndex + 1, title: nl.title, desc: nl.desc, moduleTitle: mod.title, trackLabel: tr.label };
+    }
+    if (modIdx < mods.length - 1) {
+      const nm = mods[modIdx + 1];
+      return { moduleId: nm.id, lessonIndex: 0, title: nm.lessons[0].title, desc: nm.lessons[0].desc, moduleTitle: nm.title, trackLabel: tr.label };
+    }
+    return null;
+  })();
+
+  const difficulty = levelIdx === 0
+    ? { label: 'Beginner', stars: '⭐⭐' }
+    : levelIdx <= 2
+      ? { label: 'Intermediate', stars: '⭐⭐⭐' }
+      : { label: 'Advanced', stars: '⭐⭐⭐⭐' };
+  const firstName = (userName || '').split(' ')[0] || null;
 
   const quiz = content && content.quiz;
   const allAnswered = quiz && Object.keys(answers).length === quiz.length;
   const quizScore = submitted && quiz ? quiz.filter((q, i) => answers[i] === q.correctIndex).length : 0;
+
+  const inpStyle = { padding: '10px 14px', background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.md, color: T.text, fontSize: 13, outline: 'none', fontFamily: 'Inter, sans-serif', width: '100%' };
+
+  if (celebrating) {
+    return (
+      <div>
+        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, color: T.muted, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, marginBottom: 20, padding: 0 }}>← {level.title}</button>
+
+        <div style={{ background: T.panel, border: `1px solid ${T.success}40`, borderRadius: T.radius.xl, padding: '48px 40px', textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+          <div style={{ fontSize: 11, letterSpacing: 3, color: T.success, fontWeight: 800, marginBottom: 10 }}>LESSON COMPLETE</div>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: T.text, marginBottom: 16, letterSpacing: '-0.4px', lineHeight: 1.3 }}>{lesson.title}</h1>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 22px', borderRadius: 100, background: 'rgba(44,182,125,0.12)', border: `1px solid ${T.success}40`, marginBottom: 20 }}>
+            <span style={{ fontSize: 16 }}>⚡</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: T.success }}>+25 XP Earned</span>
+          </div>
+          <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.7, maxWidth: 400, margin: '0 auto' }}>
+            {firstName ? `Nice work, ${firstName}.` : 'Nice work.'} Every lesson you finish is a real advantage — this knowledge pays off in real situations.
+          </p>
+        </div>
+
+        <div style={{ background: T.panel2, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, padding: '28px 32px', marginBottom: 20 }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, color: T.accentLight, fontWeight: 800, marginBottom: 6 }}>LET'S APPLY THIS TO YOU</div>
+          <p style={{ color: T.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>Tell the Instructor your situation and get a personalized takeaway from this lesson.</p>
+
+          {!personalResult ? (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <input value={personalCity} onChange={e => setPersonalCity(e.target.value)} placeholder="Your market / city" style={inpStyle} />
+                <input value={personalGoal} onChange={e => setPersonalGoal(e.target.value)} placeholder="Your goal (e.g. buy first rental)" style={inpStyle} />
+              </div>
+              <button onClick={handlePersonalize} disabled={personalLoading || (!personalCity && !personalGoal)}
+                style={{ padding: '10px 22px', borderRadius: T.radius.md, background: (personalCity || personalGoal) ? `linear-gradient(135deg,${T.accent},#1F3A56)` : T.borderSoft, color: (personalCity || personalGoal) ? '#fff' : T.muted, fontWeight: 700, fontSize: 13, border: 'none', cursor: (personalCity || personalGoal) ? 'pointer' : 'default', fontFamily: 'Inter, sans-serif', opacity: personalLoading ? 0.7 : 1 }}>
+                {personalLoading ? 'Generating…' : 'Get My Personalized Takeaway →'}
+              </button>
+            </>
+          ) : (
+            <div>
+              <div style={{ padding: '16px 20px', background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.md, fontSize: 13, color: T.text, lineHeight: 1.75, whiteSpace: 'pre-wrap', marginBottom: 12 }}>{personalResult}</div>
+              <button onClick={() => setPersonalResult('')} style={{ fontSize: 12, color: T.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>← Try different details</button>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <button onClick={onBack} style={{ padding: '12px 24px', borderRadius: T.radius.md, background: T.panel2, border: `1px solid ${T.border}`, color: T.muted, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>View Level</button>
+          {nextLesson ? (
+            <button onClick={() => onNext(nextLesson)}
+              style={{ padding: '12px 28px', borderRadius: T.radius.md, background: `linear-gradient(135deg,${T.accent},#1F3A56)`, color: '#fff', fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
+              Next: {nextLesson.title.length > 38 ? nextLesson.title.slice(0, 38) + '…' : nextLesson.title} →
+            </button>
+          ) : (
+            <div style={{ padding: '12px 22px', borderRadius: T.radius.md, background: 'rgba(44,182,125,0.1)', border: `1px solid ${T.success}40`, color: T.success, fontWeight: 700, fontSize: 14 }}>
+              🏆 Level complete!
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -622,15 +733,23 @@ function LessonViewer({ lesson, track, levelIdx, progress, onComplete, onBack })
         ← {level.title}
       </button>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 24, alignItems: 'start' }}>
-        {/* Main column */}
-        <div>
-          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, padding: '28px 32px', marginBottom: 20 }}>
-            <div style={{ fontSize: 11, letterSpacing: 2, color: tr.color, fontWeight: 700, marginBottom: 8 }}>{lesson.moduleTitle}</div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text, marginBottom: 8, letterSpacing: '-0.4px', lineHeight: 1.3 }}>{lesson.title}</h1>
-            <p style={{ color: T.muted, fontSize: 13, lineHeight: 1.6 }}>{lesson.desc}</p>
-          </div>
+      {/* Lesson header */}
+      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, padding: '32px 36px', marginBottom: 20 }}>
+        <div style={{ fontSize: 10, letterSpacing: 3, color: tr.color, fontWeight: 800, marginBottom: 10 }}>TODAY YOU'LL LEARN ONE THING</div>
+        {firstName && <div style={{ fontSize: 17, color: T.text, marginBottom: 10 }}>👋 Hi {firstName}!</div>}
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: T.text, marginBottom: 16, letterSpacing: '-0.5px', lineHeight: 1.25 }}>{lesson.title}</h1>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: alreadyDone ? 14 : 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 100, background: T.panel2, border: `1px solid ${T.border}`, fontSize: 12, color: T.muted }}>⏱ 5 min</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 100, background: T.panel2, border: `1px solid ${T.border}`, fontSize: 12, color: T.muted }}>{difficulty.stars} {difficulty.label}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 100, background: T.panel2, border: `1px solid ${T.border}`, fontSize: 12, color: tr.color }}>{lesson.moduleTitle}</div>
+        </div>
+        {alreadyDone && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 100, background: 'rgba(44,182,125,0.1)', border: `1px solid ${T.success}40`, fontSize: 12, color: T.success, fontWeight: 700 }}>✓ Completed</div>
+        )}
+      </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 24, alignItems: 'start' }}>
+        <div>
           {/* Learning objectives */}
           {content && content.objectives && content.objectives.length > 0 && (
             <div style={{ background: `${tr.color}0d`, border: `1px solid ${tr.color}30`, borderRadius: T.radius.lg, padding: '18px 24px', marginBottom: 20 }}>
@@ -644,15 +763,28 @@ function LessonViewer({ lesson, track, levelIdx, progress, onComplete, onBack })
             </div>
           )}
 
-          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, padding: '28px 32px', marginBottom: 20 }}>
-            {!content && !loadErr && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.muted, fontSize: 13 }}>
-                <div style={{ width: 16, height: 16, border: `2px solid ${T.accentLight}30`, borderTopColor: T.accentLight, borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
-                Generating lesson content…
+          {/* Article toggle */}
+          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, overflow: 'hidden', marginBottom: 20 }}>
+            <button onClick={() => setArticleOpen(o => !o)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16 }}>📖</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Read Full Lesson</span>
+                {!content && !loadErr && <span style={{ fontSize: 12, color: T.mutedDark, marginLeft: 4 }}>Loading…</span>}
+              </div>
+              <span style={{ color: T.muted, fontSize: 16, transform: articleOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>⌄</span>
+            </button>
+            {articleOpen && (
+              <div style={{ borderTop: `1px solid ${T.borderSoft}`, padding: '24px 28px' }}>
+                {!content && !loadErr && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.muted, fontSize: 13 }}>
+                    <div style={{ width: 16, height: 16, border: `2px solid ${T.accentLight}30`, borderTopColor: T.accentLight, borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
+                    Generating lesson content…
+                  </div>
+                )}
+                {loadErr && <div style={{ color: T.danger, fontSize: 14 }}>{loadErr}</div>}
+                {content && <RichText text={content.content} />}
               </div>
             )}
-            {loadErr && <div style={{ color: T.danger, fontSize: 14 }}>{loadErr}</div>}
-            {content && <RichText text={content.content} />}
           </div>
 
           {/* Quiz */}
@@ -698,12 +830,21 @@ function LessonViewer({ lesson, track, levelIdx, progress, onComplete, onBack })
                   </div>
                   {!alreadyDone && (
                     <button onClick={handleComplete} disabled={completing} style={{ padding: '11px 24px', borderRadius: T.radius.md, background: `linear-gradient(135deg,${T.success},#36b88a)`, color: '#07111f', fontWeight: 800, fontSize: 14, border: 'none', cursor: completing ? 'default' : 'pointer', fontFamily: 'Inter, sans-serif', opacity: completing ? 0.7 : 1 }}>
-                      {completing ? 'Saving…' : '✓ Mark Complete +10 XP'}
+                      {completing ? 'Saving…' : '✓ Mark Complete +25 XP'}
                     </button>
                   )}
                   {alreadyDone && <span style={{ fontSize: 13, color: T.success }}>✓ Completed</span>}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* No quiz: direct mark complete */}
+          {content && !quiz && !alreadyDone && (
+            <div style={{ padding: '20px 0' }}>
+              <button onClick={handleComplete} disabled={completing} style={{ padding: '13px 32px', borderRadius: T.radius.md, background: `linear-gradient(135deg,${T.success},#36b88a)`, color: '#07111f', fontWeight: 800, fontSize: 15, border: 'none', cursor: completing ? 'default' : 'pointer', fontFamily: 'Inter, sans-serif', opacity: completing ? 0.7 : 1 }}>
+                {completing ? 'Saving…' : '✓ Mark Complete +25 XP'}
+              </button>
             </div>
           )}
         </div>
@@ -721,13 +862,6 @@ function LessonViewer({ lesson, track, levelIdx, progress, onComplete, onBack })
               ))}
             </div>
           )}
-
-          {alreadyDone && (
-            <div style={{ marginTop: 14, background: 'rgba(82,211,166,.08)', border: `1px solid ${T.success}40`, borderRadius: T.radius.lg, padding: '16px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: 20, marginBottom: 4 }}>✓</div>
-              <div style={{ fontSize: 13, color: T.success, fontWeight: 700 }}>Lesson Complete</div>
-            </div>
-          )}
         </div>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -735,15 +869,15 @@ function LessonViewer({ lesson, track, levelIdx, progress, onComplete, onBack })
   );
 }
 
-// ── AICoach ────────────────────────────────────────────────────────────────
-function AICoach({ track, tier, userName }) {
+// ── Instructor ─────────────────────────────────────────────────────────────
+function Instructor({ track, tier, userName }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
   const tr = track ? TRACKS[track] : null;
 
-  const systemPrompt = `You are the Ravlo Academy AI Coach — a senior real estate expert and instructor. You are mentoring ${userName || 'a member'} who is enrolled in the ${tr ? tr.label : 'Real Estate Professional'} track.
+  const systemPrompt = `You are the Ravlo Academy Instructor — a senior real estate expert and practitioner. You are mentoring ${userName || 'a member'} who is enrolled in the ${tr ? tr.label : 'Real Estate Professional'} track.
 
 Your coaching standards:
 - ALWAYS use specific numbers: percentages, dollar amounts, ratios, thresholds (e.g. "DSCR must be at least 1.25x", "budget 10-15% contingency on rehabs", "ARV-based lending is typically 65-75% of ARV")
@@ -794,8 +928,8 @@ You have deep expertise across: deal analysis, BRRRR strategy, multifamily, fix 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)' }}>
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 11, letterSpacing: 2, color: T.accentLight, fontWeight: 700, marginBottom: 6 }}>AI COACH</div>
-        <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text }}>Ask Your Coach</h2>
+        <div style={{ fontSize: 11, letterSpacing: 2, color: T.accentLight, fontWeight: 700, marginBottom: 6 }}>INSTRUCTOR</div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text }}>Ask Your Instructor</h2>
         {tr && <p style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>Focused on {tr.label} strategies</p>}
       </div>
 
@@ -804,7 +938,7 @@ You have deep expertise across: deal analysis, BRRRR strategy, multifamily, fix 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 20, padding: 20 }}>
             <div style={{ width: 60, height: 60, borderRadius: 20, background: T.accentGlow, border: `1px solid ${T.accentLight}30`, display: 'grid', placeItems: 'center', fontSize: 28 }}>◎</div>
             <p style={{ color: T.muted, fontSize: 14, textAlign: 'center', maxWidth: 320, lineHeight: 1.6 }}>
-              Your AI coach is ready. Ask about strategies, deal analysis, market research, financing, and more.
+              Your Instructor is ready. Ask about strategies, deal analysis, market research, financing, and more.
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
               {starters.map((s, i) => (
@@ -883,7 +1017,7 @@ function App() {
       });
       setProgress(p => ({
         completed: { ...p.completed, [pKey(moduleId, lessonIndex)]: true },
-        xp: p.xp + 10,
+        xp: p.xp + 25,
       }));
     } catch {}
   }
@@ -898,9 +1032,9 @@ function App() {
   };
 
   function renderMain() {
-    if (view === 'coach') return <AICoach track={track} tier={tier} userName={userName} />;
+    if (view === 'coach') return <Instructor track={track} tier={tier} userName={userName} />;
     if (view === 'lesson' && lesson) return (
-      <LessonViewer lesson={lesson} track={track} levelIdx={levelIdx} progress={progress} onComplete={handleComplete} onBack={() => setView('level')} />
+      <LessonViewer lesson={lesson} track={track} levelIdx={levelIdx} progress={progress} onComplete={handleComplete} onBack={() => setView('level')} onNext={nextL => setLesson(nextL)} userName={userName} />
     );
     if (view === 'level') return (
       <LevelView track={track} levelIdx={levelIdx} setView={setView} setLesson={setLesson} progress={progress} />
