@@ -131,6 +131,14 @@
       <span>Documents</span>
     </a>
 
+    <div class="ravlo-nav-section">Learn</div>
+
+    <a href="{{ url_for('university.portal') }}"
+       class="ravlo-nav-link {% if 'university' in ep or 'academy' in ep %}active{% endif %}">
+      <i class="lucide lucide-graduation-cap"></i>
+      <span>Academy</span>
+    </a>
+
     <div class="ravlo-nav-section">Network</div>
 
     <a href="{{ url_for('investor.partners') }}"
@@ -153,7 +161,7 @@
 
     <a href="{{ url_for('investor.tutorial') }}"
        class="ravlo-nav-link {% if ep == 'investor.tutorial' %}active{% endif %}">
-      <i class="lucide lucide-graduation-cap"></i>
+      <i class="lucide lucide-map"></i>
       <span>Getting Started</span>
     </a>
 
