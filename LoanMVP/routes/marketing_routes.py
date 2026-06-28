@@ -11,6 +11,26 @@ from LoanMVP.models.user_model import User
 marketing_bp = Blueprint("marketing", __name__, url_prefix="/")
 
 # ---------------------------------------------------------
+# Contact form spam controls
+# ---------------------------------------------------------
+_BLOCKED_EMAILS = frozenset({
+    "candacecroft57@icloud.com",
+})
+
+_SPAM_KEYWORDS = frozenset({
+    "jackpot", "lever for loot", "don't underestimate", "dont underestimate",
+    "lottery", "winner", "winnings", "claim your prize", "crypto giveaway",
+    "bitcoin giveaway", "free url", "freeurlredirect",
+})
+
+def _is_spam(email: str, subject: str, message: str) -> bool:
+    if email.lower() in _BLOCKED_EMAILS:
+        return True
+    combined = (subject + " " + message).lower()
+    return any(kw in combined for kw in _SPAM_KEYWORDS)
+
+
+# ---------------------------------------------------------
 # Shared page metadata
 # ---------------------------------------------------------
 SITE_NAME = "Ravlo"
@@ -309,6 +329,12 @@ def contact():
 
         if not name or not email or not message:
             flash("Name, email, and message are required.", "warning")
+            return redirect(url_for("marketing.contact"))
+
+        # Silently drop spam — don't notify sender they were blocked
+        if _is_spam(email, subject, message):
+            current_app.logger.warning("Contact spam blocked: %s <%s>", name, email)
+            flash("Message sent — we'll be in touch shortly.", "success")
             return redirect(url_for("marketing.contact"))
 
         notes_body = f"Subject: {subject}\n\n{message}" if subject else message
