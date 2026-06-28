@@ -1,228 +1,614 @@
 {% extends "layouts/ravlo_employee_base.html" %}
-{% set executive_company_name = company.name if company else (current_user.company.name if current_user.company else "Ravlo") %}
 {% set exec_ns = route_namespace|default('executive', true) %}
-{% block title %}{{ executive_company_name }} Executive Dashboard{% endblock %}
-{% block page_title %}{{ executive_company_name }} Executive Dashboard{% endblock %}
-{% block page_subline %}
-Executive oversight across users, onboarding, invites, lending operations, and platform visibility.
-{% endblock %}
+{% block title %}Mission Control | Ravlo{% endblock %}
+{% block page_title %}Mission Control{% endblock %}
+{% block page_subline %}Executive overview of the entire Ravlo ecosystem.{% endblock %}
 
 {% block topbar_actions %}
-  <a class="re-btn primary sm" href="{{ url_for('system.users') }}">
-    <i class="lucide lucide-user-cog"></i>
-    Manage Users
-  </a>
   <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.access_requests') }}">
-    <i class="lucide lucide-inbox"></i>
-    Access Requests
+    <i class="lucide lucide-inbox"></i> Requests
   </a>
-  <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.licensing_applications') }}">
-    <i class="lucide lucide-file-text"></i>
-    License Applications
+  <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.analytics') }}">
+    <i class="lucide lucide-bar-chart-2"></i> Analytics
   </a>
 {% endblock %}
 
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <style>
-  .exec-wrap{display:grid;gap:18px}
-  .exec-hero{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.85fr);gap:18px;align-items:stretch}
-  .exec-hero-panel{padding:28px;border-radius:24px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(150deg, rgba(17,29,45,.96), rgba(8,14,24,.94));box-shadow:0 20px 46px rgba(0,0,0,.24)}
-  .exec-hero h1{margin:.35rem 0 .55rem;font-size:clamp(2rem,3vw,3rem);line-height:1.03;letter-spacing:-.05em}
-  .exec-hero-copy{color:#a9b7c6;max-width:720px}
-  .exec-chip-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
-  .exec-chip{display:inline-flex;align-items:center;padding:.45rem .75rem;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);font-size:.82rem;font-weight:700;color:#e8eef6}
-  .exec-hero-stat{display:grid;gap:10px;align-content:center}
-  .exec-hero-stat .label{font-size:.78rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#8fbef2}
-  .exec-hero-stat .value{font-size:3rem;line-height:1;font-weight:900;letter-spacing:-.06em}
-  .exec-hero-stat .meta{color:#98aabd}
-  .exec-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
-  .exec-stat{padding:18px;border-radius:20px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg, rgba(18,26,38,.72), rgba(10,16,24,.84))}
-  .exec-stat-label{font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;color:#8fa1b6;font-weight:800}
-  .exec-stat-value{font-size:2rem;line-height:1;margin:.55rem 0 .35rem;font-weight:900}
-  .exec-stat-meta{color:#95a7b9;font-size:.88rem}
-  .exec-main{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(340px,.8fr);gap:18px}
-  .exec-card{padding:22px;border-radius:24px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg, rgba(18,26,38,.72), rgba(10,16,24,.84))}
-  .exec-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
-  .exec-card-head h3{margin:.25rem 0 0}
-  .exec-card-sub{color:#92a5b7}
-  .exec-list{display:grid;gap:12px}
-  .exec-row{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
-  .exec-row-title{font-weight:800}
-  .exec-row-sub{color:#95a7b9;font-size:.88rem;margin-top:2px}
-  .exec-pill{display:inline-flex;align-items:center;padding:.3rem .55rem;border-radius:999px;background:rgba(122,184,255,.14);border:1px solid rgba(122,184,255,.18);color:#dcedff;font-size:.74rem;font-weight:800}
-  .exec-chart{height:280px}
-  @media (max-width: 1200px){.exec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.exec-main,.exec-hero{grid-template-columns:1fr}}
-  @media (max-width: 700px){.exec-grid{grid-template-columns:1fr}}
+/* ── Layout ───────────────────────────────────────────────────────── */
+.emc { display:grid; gap:20px; }
+.emc-2col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.emc-3col { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.emc-4col { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+
+/* ── Card base ───────────────────────────────────────────────────── */
+.emc-card {
+  padding:24px; border-radius:20px;
+  border:1px solid rgba(255,255,255,.07);
+  background:linear-gradient(160deg, rgba(18,28,42,.85), rgba(10,16,26,.9));
+}
+.emc-card-sm { padding:18px 20px; border-radius:16px; }
+.emc-section-label {
+  font-size:.7rem; font-weight:900; letter-spacing:.18em;
+  text-transform:uppercase; color:#5a7fa8; margin-bottom:14px;
+}
+.emc-h2 { font-size:1.25rem; font-weight:800; margin:0 0 4px; }
+.emc-sub { color:#7a96b2; font-size:.88rem; }
+
+/* ── Briefing ────────────────────────────────────────────────────── */
+.emc-briefing {
+  display:grid; grid-template-columns:1fr auto; gap:24px; align-items:start;
+  padding:28px 32px; border-radius:24px;
+  background:linear-gradient(145deg, rgba(10,20,35,.98) 0%, rgba(14,24,40,.95) 100%);
+  border:1px solid rgba(95,168,255,.18);
+  position:relative; overflow:hidden;
+}
+.emc-briefing::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, transparent, #5FA8FF 40%, #6d28d9 60%, transparent);
+}
+.emc-greeting { font-size:.82rem; font-weight:700; color:#5FA8FF; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
+.emc-briefing-title { font-size:1.6rem; font-weight:900; letter-spacing:-.03em; margin:0 0 16px; }
+.emc-bullets { display:grid; gap:8px; }
+.emc-bullet { display:flex; gap:10px; font-size:.9rem; color:rgba(255,255,255,.8); align-items:baseline; }
+.emc-bullet::before { content:'•'; color:#5FA8FF; font-weight:900; flex-shrink:0; }
+.emc-recommendation {
+  margin-top:16px; padding:12px 16px; border-radius:12px;
+  background:rgba(95,168,255,.08); border:1px solid rgba(95,168,255,.18);
+  font-size:.88rem; color:rgba(255,255,255,.75);
+}
+.emc-recommendation strong { color:#5FA8FF; }
+#emcBriefingLoading { display:flex; gap:6px; align-items:center; padding:8px 0; color:#5a7fa8; font-size:.88rem; }
+.emc-dot { width:7px; height:7px; border-radius:50%; background:#5FA8FF; animation:emcPulse 1.4s ease-in-out infinite; }
+.emc-dot:nth-child(2){ animation-delay:.2s; }
+.emc-dot:nth-child(3){ animation-delay:.4s; }
+@keyframes emcPulse { 0%,100%{opacity:.2;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+
+/* ── Mission Status card ─────────────────────────────────────────── */
+.emc-mission-status {
+  padding:22px 24px; border-radius:20px; min-width:240px;
+  border:1px solid rgba(44,182,125,.25);
+  background:linear-gradient(160deg, rgba(44,182,125,.06), rgba(10,16,26,.9));
+  display:flex; flex-direction:column; gap:10px;
+}
+.emc-status-dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px; }
+.emc-status-label { font-size:.72rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#7a96b2; }
+.emc-status-value { font-size:1.3rem; font-weight:900; }
+.emc-status-lines { display:grid; gap:6px; margin-top:4px; }
+.emc-status-line { font-size:.82rem; color:rgba(255,255,255,.6); display:flex; gap:6px; align-items:center; }
+.emc-status-line::before { content:'✓'; color:#2cb67d; font-weight:900; }
+
+/* ── Scoreboard stats ────────────────────────────────────────────── */
+.emc-stat {
+  padding:18px 20px; border-radius:16px;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.02);
+}
+.emc-stat-label { font-size:.72rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase; color:#5a7fa8; }
+.emc-stat-value { font-size:2.2rem; font-weight:900; letter-spacing:-.05em; line-height:1; margin:.5rem 0 .3rem; }
+.emc-stat-meta { font-size:.82rem; color:#6a8aaa; }
+
+/* ── Pipeline ────────────────────────────────────────────────────── */
+.emc-pipeline { display:grid; gap:0; }
+.emc-pipe-row {
+  display:flex; align-items:center; gap:14px;
+  padding:12px 14px; border-left:2px solid rgba(95,168,255,.25);
+  margin-left:10px; position:relative;
+}
+.emc-pipe-row::before {
+  content:''; position:absolute; left:-6px; top:50%; transform:translateY(-50%);
+  width:10px; height:10px; border-radius:50%;
+  background:linear-gradient(135deg,#5FA8FF,#6d28d9);
+  border:2px solid rgba(10,16,26,.9);
+}
+.emc-pipe-row:last-child { border-left-color:rgba(44,182,125,.4); }
+.emc-pipe-row:last-child::before { background:linear-gradient(135deg,#2cb67d,#16a34a); }
+.emc-pipe-stage { flex:1; font-size:.88rem; font-weight:700; }
+.emc-pipe-count {
+  font-size:1.4rem; font-weight:900; letter-spacing:-.04em;
+  min-width:40px; text-align:right; color:#5FA8FF;
+}
+.emc-pipe-row:last-child .emc-pipe-count { color:#2cb67d; }
+.emc-pipe-arrow { font-size:.75rem; color:#5a7fa8; margin-left:28px; padding-bottom:2px; }
+
+/* ── Partner breakdown ───────────────────────────────────────────── */
+.emc-partner-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px; }
+.emc-partner-chip {
+  padding:12px 14px; border-radius:12px; text-align:center;
+  border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.02);
+}
+.emc-partner-chip .num { font-size:1.6rem; font-weight:900; letter-spacing:-.04em; color:#5FA8FF; }
+.emc-partner-chip .lbl { font-size:.72rem; font-weight:700; color:#6a8aaa; margin-top:2px; }
+.emc-req-row { display:flex; gap:12px; }
+.emc-req-chip {
+  flex:1; padding:12px; border-radius:12px; text-align:center;
+  border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.02);
+  font-size:.82rem; font-weight:700; color:#9ab5cc;
+}
+.emc-req-chip .num { font-size:1.4rem; font-weight:900; display:block; margin-bottom:2px; }
+.emc-req-chip.waiting .num { color:#f59e0b; }
+.emc-req-chip.accepted .num { color:#5FA8FF; }
+.emc-req-chip.completed .num { color:#2cb67d; }
+
+/* ── Ecosystem map ───────────────────────────────────────────────── */
+.emc-ecosystem {
+  display:flex; flex-direction:column; align-items:center; gap:0;
+}
+.emc-eco-node {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 20px; border-radius:999px; width:200px; justify-content:center;
+  border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03);
+  font-size:.85rem; font-weight:800; color:rgba(255,255,255,.85);
+}
+.emc-eco-node.active {
+  background:linear-gradient(135deg,rgba(95,168,255,.15),rgba(109,40,217,.12));
+  border-color:rgba(95,168,255,.35); color:#e8f0fb;
+}
+.emc-eco-arrow {
+  font-size:.8rem; color:#3d5a78; line-height:1; padding:3px 0;
+}
+
+/* ── AI Activity ─────────────────────────────────────────────────── */
+.emc-ai-list { display:grid; gap:10px; }
+.emc-ai-row {
+  display:flex; align-items:center; gap:14px;
+  padding:12px 14px; border-radius:12px;
+  background:rgba(95,168,255,.05); border:1px solid rgba(95,168,255,.12);
+}
+.emc-ai-icon { width:32px; height:32px; border-radius:999px; background:rgba(95,168,255,.15); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#5FA8FF; }
+.emc-ai-label { font-size:.88rem; font-weight:700; }
+.emc-ai-count { margin-left:auto; font-size:1.2rem; font-weight:900; color:#5FA8FF; }
+
+/* ── Community wins ──────────────────────────────────────────────── */
+.emc-wins { display:grid; gap:10px; }
+.emc-win-row {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 14px; border-radius:12px;
+  background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.06);
+  font-size:.88rem; color:rgba(255,255,255,.75);
+}
+.emc-win-icon { font-size:1.2rem; flex-shrink:0; }
+
+/* ── Attention center ────────────────────────────────────────────── */
+.emc-attention { display:grid; gap:10px; }
+.emc-attn-row {
+  display:flex; align-items:center; gap:12px; padding:14px 16px;
+  border-radius:14px; border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.02);
+}
+.emc-attn-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.emc-attn-dot.red    { background:#ef4444; box-shadow:0 0 6px rgba(239,68,68,.4); }
+.emc-attn-dot.yellow { background:#f59e0b; box-shadow:0 0 6px rgba(245,158,11,.4); }
+.emc-attn-dot.green  { background:#2cb67d; box-shadow:0 0 6px rgba(44,182,125,.4); }
+.emc-attn-dot.blue   { background:#5FA8FF; box-shadow:0 0 6px rgba(95,168,255,.4); }
+.emc-attn-text { flex:1; font-size:.88rem; font-weight:700; }
+.emc-attn-count {
+  padding:3px 10px; border-radius:999px; font-size:.75rem; font-weight:900;
+  background:rgba(255,255,255,.06); color:rgba(255,255,255,.7);
+}
+
+/* ── Lives changed ───────────────────────────────────────────────── */
+.emc-lives {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:16px;
+  padding:28px 30px; border-radius:24px;
+  background:linear-gradient(140deg, rgba(10,20,36,.98), rgba(14,24,40,.95));
+  border:1px solid rgba(44,182,125,.2); position:relative; overflow:hidden;
+}
+.emc-lives::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, transparent, #2cb67d 40%, #16a34a 60%, transparent);
+}
+.emc-life-card { text-align:center; }
+.emc-life-num { font-size:2.8rem; font-weight:900; letter-spacing:-.06em; line-height:1; color:#2cb67d; }
+.emc-life-label { font-size:.78rem; font-weight:700; color:#6a9a82; margin-top:8px; letter-spacing:.04em; }
+
+/* ── Business metrics ────────────────────────────────────────────── */
+.emc-biz-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.emc-biz-chip {
+  padding:14px 16px; border-radius:14px; border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.02);
+}
+.emc-biz-num { font-size:1.5rem; font-weight:900; color:rgba(255,255,255,.9); }
+.emc-biz-label { font-size:.75rem; color:#6a8aaa; margin-top:4px; font-weight:600; }
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+@media (max-width:1100px) {
+  .emc-2col { grid-template-columns:1fr; }
+  .emc-3col { grid-template-columns:1fr 1fr; }
+  .emc-4col { grid-template-columns:1fr 1fr; }
+  .emc-briefing { grid-template-columns:1fr; }
+  .emc-partner-grid { grid-template-columns:repeat(3,1fr); }
+  .emc-lives { grid-template-columns:1fr 1fr; }
+}
+@media (max-width:680px) {
+  .emc-3col,.emc-4col,.emc-biz-grid,.emc-partner-grid { grid-template-columns:1fr; }
+  .emc-lives { grid-template-columns:1fr 1fr; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="exec-wrap">
-  <section class="exec-hero">
-    <div class="exec-hero-panel">
-      <div class="eyebrow">{{ executive_company_name|upper }} EXECUTIVE DASHBOARD</div>
-      <h1>Executive oversight for the whole operating system.</h1>
-      <div class="exec-hero-copy">
-        Use this view to manage people, monitor loan activity, review invites and access requests, and keep the Ravlo workspace aligned across teams.
-      </div>
-      <div class="exec-chip-row">
-        <span class="exec-chip">{{ stats.total_users or 0 }} total users</span>
-        <span class="exec-chip">{{ stats.total_loans or 0 }} active loan files</span>
-        <span class="exec-chip">{{ stats.pending_requests or 0 }} pending requests</span>
-        <span class="exec-chip">{{ stats.pending_invites or 0 }} pending invites</span>
-      </div>
-    </div>
+<div class="emc">
 
-    <div class="exec-hero-panel exec-hero-stat">
-      <div class="label">Executive Summary</div>
-      <div class="value">{{ stats.total_users or 0 }}</div>
-      <div class="meta">{{ ai_summary | md | safe }}</div>
-      <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.analytics') }}">Open Analytics</a>
-    </div>
-  </section>
+  <!-- ══════════════════════════════════════════════════════════════
+       EXECUTIVE BRIEFING + MISSION STATUS
+  ══════════════════════════════════════════════════════════════════ -->
+  <div style="display:grid; grid-template-columns:1fr auto; gap:20px; align-items:start;">
 
-  <section class="exec-grid">
-    <div class="exec-stat">
-      <div class="exec-stat-label">Users</div>
-      <div class="exec-stat-value">{{ stats.total_users or 0 }}</div>
-      <div class="exec-stat-meta">Registered accounts in this workspace</div>
-    </div>
-    <div class="exec-stat">
-      <div class="exec-stat-label">Loans</div>
-      <div class="exec-stat-value">{{ stats.total_loans or 0 }}</div>
-      <div class="exec-stat-meta">Loan files currently in the system</div>
-    </div>
-    <div class="exec-stat">
-      <div class="exec-stat-label">Access Requests</div>
-      <div class="exec-stat-value">{{ stats.pending_requests or 0 }}</div>
-      <div class="exec-stat-meta">Pending onboarding and access approvals</div>
-    </div>
-    <div class="exec-stat">
-      <div class="exec-stat-label">Invites</div>
-      <div class="exec-stat-value">{{ stats.pending_invites or 0 }}</div>
-      <div class="exec-stat-meta">Invites waiting to be accepted</div>
-    </div>
-  </section>
+    <div class="emc-briefing">
+      <div>
+        <div class="emc-greeting">Executive Briefing</div>
+        <div class="emc-briefing-title">Good morning, {{ first_name }}.</div>
+        <div class="emc-section-label" style="margin-bottom:12px;">Here's what's happening across Ravlo.</div>
 
-  <section class="exec-main">
-    <div class="exec-card">
-      <div class="exec-card-head">
-        <div>
-          <div class="eyebrow">Recent Requests</div>
-          <h3>Access and onboarding queue</h3>
-          <div class="exec-card-sub">Newest requests that need executive visibility.</div>
+        <div id="emcBriefingLoading">
+          <div class="emc-dot"></div><div class="emc-dot"></div><div class="emc-dot"></div>
+          <span style="margin-left:4px;">Generating your briefing…</span>
         </div>
-        <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.access_requests') }}">View All</a>
+        <div id="emcBriefingContent" style="display:none;">
+          <div class="emc-bullets" id="emcBullets"></div>
+          <div class="emc-recommendation" id="emcRecommendation" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="emc-mission-status">
+      <div class="emc-status-label">Mission Status</div>
+      <div class="emc-status-value">
+        <span class="emc-status-dot" style="background:{{ mission_color }};box-shadow:0 0 8px {{ mission_color }}44;"></span>
+        {{ mission_status }}
+      </div>
+      <div class="emc-status-lines">
+        <div class="emc-status-line">Platform is healthy</div>
+        <div class="emc-status-line">Users are progressing</div>
+        {% if loans_need_review == 0 %}
+        <div class="emc-status-line">No critical issues detected</div>
+        {% else %}
+        <div class="emc-status-line" style="color:#f59e0b;">{{ loans_need_review }} file{{ 's' if loans_need_review != 1 }} need review</div>
+        {% endif %}
+      </div>
+      <p style="font-size:.78rem; color:#4a6a82; margin:8px 0 0; line-height:1.5;">
+        Keep helping people make<br>smarter real estate decisions.
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ATTENTION CENTER
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="emc-card">
+    <div class="emc-section-label">Attention Center — Executive Priorities</div>
+    <div class="emc-attention">
+      <div class="emc-attn-row">
+        <div class="emc-attn-dot {{ 'red' if loans_need_review > 0 else 'green' }}"></div>
+        <div class="emc-attn-text">Loan files needing review</div>
+        <div class="emc-attn-count">{{ loans_need_review }}</div>
+      </div>
+      <div class="emc-attn-row">
+        <div class="emc-attn-dot {{ 'yellow' if partner_waiting > 0 else 'green' }}"></div>
+        <div class="emc-attn-text">Partner connection requests waiting</div>
+        <div class="emc-attn-count">{{ partner_waiting }}</div>
+      </div>
+      <div class="emc-attn-row">
+        <div class="emc-attn-dot green"></div>
+        <div class="emc-attn-text">Active Investor Challenge signups</div>
+        <div class="emc-attn-count">{{ challenge_signups }}</div>
+      </div>
+      <div class="emc-attn-row">
+        <div class="emc-attn-dot blue"></div>
+        <div class="emc-attn-text">New enterprise / licensing inquiries</div>
+        <div class="emc-attn-count">{{ enterprise_leads }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       EXECUTIVE SCOREBOARD
+  ══════════════════════════════════════════════════════════════════ -->
+
+  <!-- Business -->
+  <div class="emc-card">
+    <div class="emc-section-label">Business</div>
+    <div class="emc-4col">
+      <div class="emc-stat">
+        <div class="emc-stat-label">Total Users</div>
+        <div class="emc-stat-value">{{ total_users }}</div>
+        <div class="emc-stat-meta">All registered accounts</div>
+      </div>
+      <div class="emc-stat">
+        <div class="emc-stat-label">Active Today</div>
+        <div class="emc-stat-value">{{ active_today }}</div>
+        <div class="emc-stat-meta">Logged in so far today</div>
+      </div>
+      <div class="emc-stat">
+        <div class="emc-stat-label">Free Trials</div>
+        <div class="emc-stat-value">{{ free_trials }}</div>
+        <div class="emc-stat-meta">Trial accounts still active</div>
+      </div>
+      <div class="emc-stat">
+        <div class="emc-stat-label">Paid Members</div>
+        <div class="emc-stat-value">{{ paid_members }}</div>
+        <div class="emc-stat-meta">Active paying subscribers</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="emc-2col">
+
+    <!-- Lending OS Pipeline -->
+    <div class="emc-card">
+      <div class="emc-section-label">Lending OS — Pipeline</div>
+      <div class="emc-pipeline">
+        {% for stage, count in loan_pipeline.items() %}
+        <div class="emc-pipe-row">
+          <div class="emc-pipe-stage">{{ stage }}</div>
+          <div class="emc-pipe-count">{{ count }}</div>
+        </div>
+        {% if not loop.last %}
+        <div class="emc-pipe-arrow" style="margin-left:10px;">↓</div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,.06);">
+        <span style="font-size:.82rem; color:#6a8aaa;">{{ total_loans }} total loan file{{ 's' if total_loans != 1 }} in system</span>
+      </div>
+    </div>
+
+    <!-- Investor OS + Academy -->
+    <div style="display:grid; gap:16px;">
+      <div class="emc-card">
+        <div class="emc-section-label">Investor OS</div>
+        <div class="emc-3col">
+          <div class="emc-stat emc-card-sm">
+            <div class="emc-stat-label">Saved Properties</div>
+            <div class="emc-stat-value">{{ saved_props }}</div>
+            <div class="emc-stat-meta">+{{ new_saves_today }} today</div>
+          </div>
+          <div class="emc-stat emc-card-sm">
+            <div class="emc-stat-label">New Accounts</div>
+            <div class="emc-stat-value">{{ new_overnight }}</div>
+            <div class="emc-stat-meta">Since yesterday</div>
+          </div>
+          <div class="emc-stat emc-card-sm">
+            <div class="emc-stat-label">Loan Files</div>
+            <div class="emc-stat-value">{{ total_loans }}</div>
+            <div class="emc-stat-meta">Total in system</div>
+          </div>
+        </div>
       </div>
 
-      <div class="exec-list">
-        {% if recent_requests %}
-          {% for req in recent_requests %}
-          <div class="exec-row">
-            <div>
-              <div class="exec-row-title">{{ req.contact_name or req.email or ('Request #' ~ req.id) }}</div>
-              <div class="exec-row-sub">{{ req.company_name or executive_company_name }} • {{ req.email or "No email" }}</div>
-            </div>
-            <div class="exec-pill">{{ req.status or "pending" }}</div>
+      <div class="emc-card">
+        <div class="emc-section-label">Academy</div>
+        <div class="emc-2col" style="gap:12px;">
+          <div class="emc-stat emc-card-sm">
+            <div class="emc-stat-label">Active Students</div>
+            <div class="emc-stat-value">{{ academy_students }}</div>
+            <div class="emc-stat-meta">Users with course access</div>
           </div>
-          {% endfor %}
-        {% else %}
-          <div class="exec-row">
-            <div>
-              <div class="exec-row-title">No requests waiting</div>
-              <div class="exec-row-sub">New access and onboarding requests will show up here.</div>
-            </div>
+          <div class="emc-stat emc-card-sm">
+            <div class="emc-stat-label">Course Completions</div>
+            <div class="emc-stat-value">{{ academy_graduates }}</div>
+            <div class="emc-stat-meta">Total courses unlocked</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Partner Network -->
+  <div class="emc-card">
+    <div class="emc-section-label">Partner Network</div>
+    <div class="emc-partner-grid">
+      {% for cat, count in partner_breakdown.items() %}
+      <div class="emc-partner-chip">
+        <div class="num">{{ count }}</div>
+        <div class="lbl">{{ cat }}s</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="emc-req-row">
+      <div class="emc-req-chip waiting">
+        <span class="num">{{ req_waiting }}</span>
+        Requests Waiting
+      </div>
+      <div class="emc-req-chip accepted">
+        <span class="num">{{ req_accepted }}</span>
+        Accepted
+      </div>
+      <div class="emc-req-chip completed">
+        <span class="num">{{ req_completed }}</span>
+        Completed
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Activity + Ecosystem Map -->
+  <div class="emc-2col">
+
+    <div class="emc-card">
+      <div class="emc-section-label">AI Activity — Today</div>
+      <div class="emc-ai-list">
+        <div class="emc-ai-row">
+          <div class="emc-ai-icon"><i class="lucide lucide-trending-up" style="width:16px;height:16px;"></i></div>
+          <div class="emc-ai-label">Deals analyzed</div>
+          <div class="emc-ai-count">{{ saved_props }}</div>
+        </div>
+        <div class="emc-ai-row">
+          <div class="emc-ai-icon"><i class="lucide lucide-message-square" style="width:16px;height:16px;"></i></div>
+          <div class="emc-ai-label">AI questions answered</div>
+          <div class="emc-ai-count">—</div>
+        </div>
+        <div class="emc-ai-row">
+          <div class="emc-ai-icon"><i class="lucide lucide-file-text" style="width:16px;height:16px;"></i></div>
+          <div class="emc-ai-label">Emails generated</div>
+          <div class="emc-ai-count">—</div>
+        </div>
+        <div class="emc-ai-row">
+          <div class="emc-ai-icon"><i class="lucide lucide-graduation-cap" style="width:16px;height:16px;"></i></div>
+          <div class="emc-ai-label">Academy lessons completed</div>
+          <div class="emc-ai-count">{{ academy_graduates }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="emc-card">
+      <div class="emc-section-label">Ecosystem Map — Watch Users Flow</div>
+      <div class="emc-ecosystem">
+        {% set eco_nodes = [
+          ("graduation-cap", "Academy"),
+          ("map", "Investor OS"),
+          ("bookmark", "Saved Property"),
+          ("layout-dashboard", "Deal Workspace"),
+          ("calculator", "Deal Architect"),
+          ("dollar-sign", "Budget Studio"),
+          ("palette", "Design Studio"),
+          ("hard-hat", "Build Studio"),
+          ("users", "Partner Network"),
+          ("building-2", "Lending OS"),
+        ] %}
+        {% for icon, label in eco_nodes %}
+        <div class="emc-eco-node {% if loop.first or loop.last %}active{% endif %}">
+          <i class="lucide lucide-{{ icon }}" style="width:14px;height:14px;flex-shrink:0;"></i>
+          <span>{{ label }}</span>
+        </div>
+        {% if not loop.last %}
+        <div class="emc-eco-arrow">↓</div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       LIVES CHANGED
+  ══════════════════════════════════════════════════════════════════ -->
+  <div>
+    <div class="emc-section-label" style="margin-bottom:12px; padding:0 2px;">
+      Lives Changed — Mission Performance
+    </div>
+    <div class="emc-lives">
+      <div class="emc-life-card">
+        <div class="emc-life-num">{{ lives.properties_saved }}</div>
+        <div class="emc-life-label">Properties Saved<br>by Investors</div>
+      </div>
+      <div class="emc-life-card">
+        <div class="emc-life-num">{{ lives.loans_closed }}</div>
+        <div class="emc-life-label">Loans<br>Closed</div>
+      </div>
+      <div class="emc-life-card">
+        <div class="emc-life-num">{{ lives.projects_completed }}</div>
+        <div class="emc-life-label">Projects<br>Completed</div>
+      </div>
+      <div class="emc-life-card">
+        <div class="emc-life-num">{{ lives.academy_graduates }}</div>
+        <div class="emc-life-label">Academy<br>Course Completions</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       COMMUNITY WINS
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="emc-2col">
+    <div class="emc-card">
+      <div class="emc-section-label">Community Wins</div>
+      <div class="emc-wins">
+        {% if academy_graduates > 0 %}
+        <div class="emc-win-row"><div class="emc-win-icon">🎓</div><div>{{ academy_graduates }} course completion{{ 's' if academy_graduates != 1 }} logged in Academy</div></div>
+        {% endif %}
+        {% if saved_props > 0 %}
+        <div class="emc-win-row"><div class="emc-win-icon">🏡</div><div>{{ saved_props }} investment propert{{ 'ies' if saved_props != 1 else 'y' }} saved by investors</div></div>
+        {% endif %}
+        {% if req_completed > 0 %}
+        <div class="emc-win-row"><div class="emc-win-icon">🤝</div><div>{{ req_completed }} partner connection{{ 's' if req_completed != 1 }} completed</div></div>
+        {% endif %}
+        {% if lives.loans_closed > 0 %}
+        <div class="emc-win-row"><div class="emc-win-icon">💰</div><div>{{ lives.loans_closed }} loan{{ 's' if lives.loans_closed != 1 }} funded</div></div>
+        {% endif %}
+        {% if new_overnight > 0 %}
+        <div class="emc-win-row"><div class="emc-win-icon">🚀</div><div>{{ new_overnight }} new user{{ 's' if new_overnight != 1 }} joined since yesterday</div></div>
+        {% endif %}
+        {% if not (academy_graduates or saved_props or req_completed or lives.loans_closed or new_overnight) %}
+        <div class="emc-win-row"><div class="emc-win-icon">⏳</div><div>Activity will appear here as users progress through the platform.</div></div>
         {% endif %}
       </div>
     </div>
 
-    <div class="exec-card">
-      <div class="exec-card-head">
-        <div>
-          <div class="eyebrow">Recent Users</div>
-          <h3>Newest team members</h3>
-          <div class="exec-card-sub">Quick visibility into who was added most recently.</div>
-        </div>
-        <a class="re-btn ghost sm" href="{{ url_for('system.users') }}">Manage Users</a>
-      </div>
-
-      <div class="exec-list">
-        {% if users %}
-          {% for user in users %}
-          <div class="exec-row">
-            <div>
-              <div class="exec-row-title">{{ user.full_name or user.username or user.email }}</div>
-              <div class="exec-row-sub">{{ user.email }} • {{ user.role|replace('_', ' ')|title }}</div>
-            </div>
-            <div class="exec-pill">{{ user.company.name if user.company else executive_company_name }}</div>
-          </div>
-          {% endfor %}
-        {% else %}
-          <div class="exec-row">
-            <div>
-              <div class="exec-row-title">No users yet</div>
-              <div class="exec-row-sub">User records will appear here once accounts are created.</div>
-            </div>
-          </div>
-        {% endif %}
-      </div>
+    <!-- User growth chart -->
+    <div class="emc-card">
+      <div class="emc-section-label">User Growth</div>
+      <div id="emcUserChart" style="height:200px;"></div>
     </div>
-  </section>
+  </div>
 
-  <section class="exec-main">
-    <div class="exec-card">
-      <div class="exec-card-head">
-        <div>
-          <div class="eyebrow">Loan Activity</div>
-          <h3>Monthly loan volume</h3>
-          <div class="exec-card-sub">Recent application momentum across the workspace.</div>
-        </div>
-      </div>
-      <div id="execLoanChart" class="exec-chart"></div>
-    </div>
-
-    <div class="exec-card">
-      <div class="exec-card-head">
-        <div>
-          <div class="eyebrow">User Growth</div>
-          <h3>Monthly registrations</h3>
-          <div class="exec-card-sub">New user growth over the last six months.</div>
-        </div>
-      </div>
-      <div id="execUserChart" class="exec-chart"></div>
-    </div>
-  </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  const executiveLoanChart = new ApexCharts(document.querySelector("#execLoanChart"), {
-    chart: { type: "area", height: 280, toolbar: { show: false }, background: "transparent" },
-    series: [{ name: "Loan Files", data: {{ loan_volume_series|tojson }} }],
-    xaxis: { categories: {{ loan_volume_labels|tojson }}, labels: { style: { colors: "#92a5b7" } } },
-    yaxis: { labels: { style: { colors: "#92a5b7" } } },
-    stroke: { curve: "smooth", width: 3 },
-    fill: { type: "gradient", gradient: { opacityFrom: 0.35, opacityTo: 0.04 } },
-    colors: ["#7ab8ff"],
-    grid: { borderColor: "rgba(255,255,255,.08)" },
-    dataLabels: { enabled: false },
-    legend: { show: false }
-  });
-  executiveLoanChart.render();
+// ── AI Briefing (async load) ─────────────────────────────────────
+(function() {
+  var BRIEFING_URL = "{{ url_for('executive.ai_briefing') }}";
+  fetch(BRIEFING_URL, { credentials: 'same-origin' })
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      var loading = document.getElementById('emcBriefingLoading');
+      var content = document.getElementById('emcBriefingContent');
+      var bullets  = document.getElementById('emcBullets');
+      var rec      = document.getElementById('emcRecommendation');
+      if (!d.briefing) return;
 
-  const executiveUserChart = new ApexCharts(document.querySelector("#execUserChart"), {
-    chart: { type: "bar", height: 280, toolbar: { show: false }, background: "transparent" },
-    series: [{ name: "Users", data: {{ user_growth_series|tojson }} }],
-    xaxis: { categories: {{ user_growth_labels|tojson }}, labels: { style: { colors: "#92a5b7" } } },
-    yaxis: { labels: { style: { colors: "#92a5b7" } } },
-    colors: ["#9dd39b"],
-    grid: { borderColor: "rgba(255,255,255,.08)" },
-    dataLabels: { enabled: false },
-    legend: { show: false }
-  });
-  executiveUserChart.render();
+      var lines = d.briefing.split('\n').filter(function(l){ return l.trim(); });
+      var recLine = '', bulletLines = [];
+      lines.forEach(function(l) {
+        var t = l.trim();
+        if (t.toLowerCase().startsWith('recommendation')) {
+          recLine = t.replace(/^recommendation:?\s*/i, '');
+        } else if (t.startsWith('•') || t.startsWith('-') || t.startsWith('*')) {
+          bulletLines.push(t.replace(/^[•\-\*]\s*/, ''));
+        } else if (t) {
+          bulletLines.push(t);
+        }
+      });
+
+      bullets.innerHTML = bulletLines.map(function(b){
+        return '<div class="emc-bullet">' + b + '</div>';
+      }).join('');
+
+      if (recLine) {
+        rec.innerHTML = '<strong>Recommendation:</strong> ' + recLine;
+        rec.style.display = '';
+      }
+
+      loading.style.display = 'none';
+      content.style.display = '';
+    })
+    .catch(function() {
+      document.getElementById('emcBriefingLoading').style.display = 'none';
+      var content = document.getElementById('emcBriefingContent');
+      document.getElementById('emcBullets').innerHTML =
+        '<div class="emc-bullet">Platform is running normally.</div>';
+      content.style.display = '';
+    });
+})();
+
+// ── User growth chart ────────────────────────────────────────────
+new ApexCharts(document.getElementById('emcUserChart'), {
+  chart: { type: 'area', height: 200, toolbar: { show: false }, background: 'transparent', sparkline: { enabled: false } },
+  series: [{ name: 'New Users', data: {{ user_growth_series|tojson }} }],
+  xaxis: { categories: {{ user_growth_labels|tojson }}, labels: { style: { colors: '#6a8aaa', fontSize: '11px' } } },
+  yaxis: { labels: { style: { colors: '#6a8aaa' }, formatter: function(v){ return Math.round(v); } } },
+  stroke: { curve: 'smooth', width: 2 },
+  fill: { type: 'gradient', gradient: { opacityFrom: 0.3, opacityTo: 0.03 } },
+  colors: ['#5FA8FF'],
+  grid: { borderColor: 'rgba(255,255,255,.06)', padding: { left:0, right:0 } },
+  dataLabels: { enabled: false },
+  legend: { show: false },
+  tooltip: { theme: 'dark' },
+}).render();
 </script>
 {% endblock %}
