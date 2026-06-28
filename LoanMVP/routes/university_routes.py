@@ -642,7 +642,7 @@ def api_progress():
             for r in rows:
                 key = f"{r.module_id}:{r.lesson_index}"
                 completed[key] = True
-                xp += 10
+                xp += 25
         except Exception as exc:
             current_app.logger.warning("progress fetch error: %s", exc)
     else:
@@ -694,7 +694,7 @@ def api_progress_complete():
                 )
                 db.session.add(row)
                 db.session.commit()
-                xp_awarded = 10
+                xp_awarded = 25
         except Exception as exc:
             current_app.logger.warning("progress save error: %s", exc)
     else:
@@ -702,8 +702,8 @@ def api_progress_complete():
         key = f"{module_id}:{lesson_index}"
         if key not in raw["completed"]:
             raw["completed"][key] = True
-            raw["xp"] = raw.get("xp", 0) + 10
-            xp_awarded = 10
+            raw["xp"] = raw.get("xp", 0) + 25
+            xp_awarded = 25
         session["academy_progress"] = raw
 
     return jsonify({"ok": True, "xp_awarded": xp_awarded})
