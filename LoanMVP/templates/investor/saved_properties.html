@@ -97,12 +97,14 @@ Your watchlist of potential deals, ready to move into Deal Workspace.
               <span>Explore</span>
             </a>
             <button type="button" class="ravlo-btn ghost sm"
-              onclick='openSendPartnerModal({{ {"savedPropertyId": prop.id, "title": prop.address or "Saved Property", "address": prop.address or "", "zip": prop.zipcode or "", "defaultPartnerType": "Realtor", "defaultMessage": "I’d like a market opinion on " ~ (prop.address or "this property") ~ ". Please review comparables, pricing, and days on market in the area."}|tojson }})'>
+              data-partner-ctx=’{{ {"savedPropertyId": prop.id, "title": prop.address or "Saved Property", "address": prop.address or "", "zip": prop.zipcode or "", "defaultPartnerType": "Realtor", "defaultMessage": "I’d like a market opinion on " ~ (prop.address or "this property") ~ ". Please review comparables, pricing, and days on market in the area."}|tojson }}’
+              onclick="openSendPartnerModal(JSON.parse(this.dataset.partnerCtx))">
               <i class="lucide lucide-home"></i>
               <span>Find Realtor</span>
             </button>
             <button type="button" class="ravlo-btn ghost sm"
-              onclick='openSendPartnerModal({{ {"savedPropertyId": prop.id, "title": prop.address or "Saved Property", "address": prop.address or "", "zip": prop.zipcode or "", "defaultMessage": "Requesting a partner connection for " ~ (prop.address or "this property") ~ "."}|tojson }})'>
+              data-partner-ctx=’{{ {"savedPropertyId": prop.id, "title": prop.address or "Saved Property", "address": prop.address or "", "zip": prop.zipcode or "", "defaultMessage": "Requesting a partner connection for " ~ (prop.address or "this property") ~ "."}|tojson }}’
+              onclick="openSendPartnerModal(JSON.parse(this.dataset.partnerCtx))">
               <i class="lucide lucide-send"></i>
               <span>Send to Partner</span>
             </button>
