@@ -1,0 +1,705 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Ravlo • AI Email Assistant{% endblock %}
+{% block page_title %}AI Email Assistant{% endblock %}
+{% block page_subline %}
+Generate and send outreach emails with AI — partner invites, investor updates, and custom drafts.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('admin.dashboard') }}" class="re-btn ghost sm">
+    <i class="lucide lucide-arrow-left"></i>
+    Admin
+  </a>
+  <a href="{{ url_for('admin.ai_dashboard') }}" class="re-btn ghost sm">
+    <i class="lucide lucide-bar-chart-2"></i>
+    AI Stats
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="aie-wrap">
+
+  <!-- ── Hero ── -->
+  <section class="aie-hero re-card">
+    <div class="aie-hero-text">
+      <div class="eyebrow">RAVLO AI</div>
+      <h2>Email Assistant</h2>
+      <p>Pick an item from the queue or write a custom prompt — AI drafts the email, you review and send. Every outreach email updates the lead status automatically.</p>
+    </div>
+    <div class="aie-hero-stats">
+      <div class="aie-stat">
+        <strong>{{ external_leads|length }}</strong>
+        <span>Partner leads to invite</span>
+      </div>
+      <div class="aie-stat">
+        <strong>{{ open_requests|length }}</strong>
+        <span>Requests needing follow-up</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="aie-layout">
+
+    <!-- ── Left: Queue ── -->
+    <div class="aie-queue">
+
+      <!-- Tab bar -->
+      <div class="aie-tabs">
+        <button class="aie-tab aie-tab--active" onclick="switchTab('leads', this)">
+          Partner Leads
+          {% if external_leads %}<span class="aie-badge">{{ external_leads|length }}</span>{% endif %}
+        </button>
+        <button class="aie-tab" onclick="switchTab('requests', this)">
+          Open Requests
+          {% if open_requests %}<span class="aie-badge">{{ open_requests|length }}</span>{% endif %}
+        </button>
+        <button class="aie-tab" onclick="switchTab('custom', this)">
+          Custom Draft
+        </button>
+      </div>
+
+      <!-- Partner leads list -->
+      <div id="tabLeads" class="aie-tab-panel">
+        {% if external_leads %}
+          {% for lead in external_leads %}
+          <div class="aie-queue-item" onclick="loadLeadContext({{ lead|tojson }})">
+            <div class="aie-queue-item-head">
+              <span class="aie-category-badge">{{ lead.category or "Partner" }}</span>
+              <span class="aie-queue-date">{{ lead.created_at.strftime("%b %d") if lead.created_at else "" }}</span>
+            </div>
+            <div class="aie-queue-name">{{ lead.name or lead.business_name or "Unknown Partner" }}</div>
+            <div class="aie-queue-meta">
+              {% if lead.address %}{{ lead.address }}{% elif lead.city %}{{ lead.city }}{{ ", " + lead.state if lead.state }}{% endif %}
+            </div>
+            <div class="aie-queue-status aie-status--{{ lead.invite_status or 'new' }}">{{ lead.invite_status or "new" }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="aie-empty">
+            <i class="lucide lucide-check-circle"></i>
+            <p>No new external leads.<br>All caught up.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Open requests list -->
+      <div id="tabRequests" class="aie-tab-panel aie-hidden">
+        {% if open_requests %}
+          {% for req in open_requests %}
+          <div class="aie-queue-item" onclick="loadRequestContext({{ req|tojson }})">
+            <div class="aie-queue-item-head">
+              <span class="aie-category-badge">{{ req.category or "Request" }}</span>
+              <span class="aie-queue-date">{{ req.created_at.strftime("%b %d") if req.created_at else "" }}</span>
+            </div>
+            <div class="aie-queue-name">{{ req.title or "Partner Request" }}</div>
+            <div class="aie-queue-meta">
+              {{ req.requester_name() }}
+              {% if req.external_partner_lead %}
+                → {{ req.external_partner_lead.name }}
+              {% endif %}
+            </div>
+            <div class="aie-queue-status aie-status--{{ req.status or 'pending' }}">{{ req.status or "pending" }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="aie-empty">
+            <i class="lucide lucide-check-circle"></i>
+            <p>No open requests.<br>All caught up.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Custom draft -->
+      <div id="tabCustom" class="aie-tab-panel aie-hidden">
+        <div class="aie-custom-prompt-panel">
+          <div class="eyebrow" style="margin-bottom:8px;">CUSTOM EMAIL</div>
+          <p style="color:rgba(255,255,255,.6);font-size:.85rem;margin:0 0 12px;">Describe what you want to say. AI will write the email for you.</p>
+          <textarea id="customPromptInput" class="aie-textarea" rows="5"
+            placeholder="e.g. Write a follow-up email to a contractor we reached out to last week — we haven't heard back and want to check in about a client's project in Atlanta."></textarea>
+          <button class="re-btn primary sm" style="margin-top:10px;width:100%;" onclick="generateCustomEmail()">
+            <i class="lucide lucide-sparkles"></i>
+            Generate Email
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /aie-queue -->
+
+    <!-- ── Right: Composer ── -->
+    <div class="aie-composer re-card">
+
+      <!-- Empty state -->
+      <div id="composerEmpty" class="aie-composer-empty">
+        <i class="lucide lucide-mail"></i>
+        <h3>Select an item to draft an email</h3>
+        <p>Pick a partner lead or open request from the queue, or use Custom Draft to write any email.</p>
+      </div>
+
+      <!-- Active composer -->
+      <div id="composerActive" class="aie-hidden">
+
+        <!-- Context card -->
+        <div class="aie-context-card" id="composerContext"></div>
+
+        <!-- Email type selector -->
+        <div class="aie-type-row" id="composerTypeRow">
+          <div class="eyebrow" style="margin-bottom:8px;">EMAIL TYPE</div>
+          <div class="aie-type-chips" id="typeChips"></div>
+        </div>
+
+        <!-- Recipient -->
+        <div class="aie-field">
+          <label class="aie-label">To (Recipient Email)</label>
+          <input type="email" id="recipientEmail" class="aie-input" placeholder="partner@company.com">
+        </div>
+
+        <!-- Generate button -->
+        <button class="re-btn primary" id="generateBtn" onclick="generateEmail()" style="width:100%;">
+          <i class="lucide lucide-sparkles"></i>
+          Generate Email with AI
+        </button>
+
+        <!-- Generated subject -->
+        <div class="aie-field" id="subjectField" style="display:none;">
+          <label class="aie-label">Subject</label>
+          <input type="text" id="emailSubject" class="aie-input" placeholder="Email subject">
+        </div>
+
+        <!-- Generated body -->
+        <div class="aie-field" id="bodyField" style="display:none;">
+          <label class="aie-label" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>Email Body</span>
+            <div style="display:flex;gap:8px;">
+              <button type="button" class="re-btn ghost sm" onclick="regenerateEmail()">
+                <i class="lucide lucide-refresh-cw"></i> Regenerate
+              </button>
+              <button type="button" class="re-btn ghost sm" onclick="copyBody()">
+                <i class="lucide lucide-copy"></i> Copy
+              </button>
+            </div>
+          </label>
+          <textarea id="emailBody" class="aie-textarea aie-body-textarea" rows="12"></textarea>
+        </div>
+
+        <!-- Send button -->
+        <button class="re-btn primary" id="sendBtn" onclick="sendEmail()" style="display:none;width:100%;">
+          <i class="lucide lucide-send"></i>
+          Send Email
+        </button>
+
+        <!-- Result message -->
+        <div id="sendResult" class="aie-hidden"></div>
+
+      </div><!-- /composerActive -->
+
+    </div><!-- /aie-composer -->
+
+  </div><!-- /aie-layout -->
+
+</div><!-- /aie-wrap -->
+
+<script>
+(function(){
+  var _ctx      = {};
+  var _emailType = 'partner_invite';
+  var _leadId    = null;
+  var _requestId = null;
+
+  /* ── tabs ── */
+  window.switchTab = function(tab, btn) {
+    document.querySelectorAll('.aie-tab').forEach(function(t){ t.classList.remove('aie-tab--active'); });
+    btn.classList.add('aie-tab--active');
+    document.querySelectorAll('.aie-tab-panel').forEach(function(p){ p.classList.add('aie-hidden'); });
+    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('aie-hidden');
+
+    if (tab === 'custom') {
+      resetComposer();
+      openComposerCustom();
+    }
+  };
+
+  /* ── load context from queue ── */
+  window.loadLeadContext = function(lead) {
+    _leadId    = lead.id;
+    _requestId = null;
+    _ctx = {
+      partner_name:     lead.name || lead.business_name || '',
+      partner_address:  [lead.address, lead.city, lead.state, lead.zip_code].filter(Boolean).join(', '),
+      partner_category: lead.category || 'contractor',
+      investor_message: (lead.raw_json && lead.raw_json.investor_message) || '',
+      property_title:   (lead.raw_json && lead.raw_json.property_title) || '',
+    };
+
+    var types = [
+      { id: 'partner_invite', label: 'Invite to Ravlo' },
+      { id: 'custom',         label: 'Custom Email'    },
+    ];
+    openComposer(types, 'partner_invite', _buildLeadContextHtml(lead));
+  };
+
+  window.loadRequestContext = function(req) {
+    _requestId = req.id;
+    _leadId    = null;
+    var lead = req.external_partner_lead || {};
+    _ctx = {
+      partner_name:     (lead.name || lead.business_name || req.title || ''),
+      partner_address:  [lead.address, lead.city, lead.state].filter(Boolean).join(', '),
+      partner_category: req.category || lead.category || 'contractor',
+      investor_message: req.message || '',
+      property_title:   req.title || '',
+      budget:           req.budget || null,
+      timeline:         req.timeline || '',
+      investor_name:    'the investor',
+    };
+
+    var types = [
+      { id: 'partner_invite',  label: 'Invite Partner' },
+      { id: 'investor_update', label: 'Update Investor' },
+      { id: 'custom',          label: 'Custom Email'   },
+    ];
+    openComposer(types, 'partner_invite', _buildRequestContextHtml(req, lead));
+  };
+
+  function openComposerCustom() {
+    _ctx = {}; _leadId = null; _requestId = null; _emailType = 'custom';
+    document.getElementById('composerEmpty').classList.add('aie-hidden');
+    document.getElementById('composerActive').classList.remove('aie-hidden');
+    document.getElementById('composerContext').innerHTML = '';
+    document.getElementById('composerTypeRow').style.display = 'none';
+    document.getElementById('generateBtn').style.display = 'none';
+    document.getElementById('subjectField').style.display = 'none';
+    document.getElementById('bodyField').style.display = 'none';
+    document.getElementById('sendBtn').style.display = 'none';
+    document.getElementById('recipientEmail').value = '';
+    document.getElementById('sendResult').classList.add('aie-hidden');
+  }
+
+  function openComposer(types, defaultType, contextHtml) {
+    _emailType = defaultType;
+    document.getElementById('composerEmpty').classList.add('aie-hidden');
+    document.getElementById('composerActive').classList.remove('aie-hidden');
+    document.getElementById('composerContext').innerHTML = contextHtml;
+    document.getElementById('composerTypeRow').style.display = '';
+    document.getElementById('generateBtn').style.display = '';
+    document.getElementById('subjectField').style.display = 'none';
+    document.getElementById('bodyField').style.display = 'none';
+    document.getElementById('sendBtn').style.display = 'none';
+    document.getElementById('emailSubject').value = '';
+    document.getElementById('emailBody').value = '';
+    document.getElementById('sendResult').classList.add('aie-hidden');
+
+    // Render type chips
+    var chips = document.getElementById('typeChips');
+    chips.innerHTML = types.map(function(t){
+      return '<button class="aie-type-chip' + (t.id === defaultType ? ' aie-type-chip--active' : '') + '"' +
+        ' onclick="selectType(\'' + t.id + '\', this)">' + t.label + '</button>';
+    }).join('');
+  }
+
+  function resetComposer() {
+    document.getElementById('composerEmpty').classList.remove('aie-hidden');
+    document.getElementById('composerActive').classList.add('aie-hidden');
+  }
+
+  window.selectType = function(type, btn) {
+    _emailType = type;
+    document.querySelectorAll('.aie-type-chip').forEach(function(c){ c.classList.remove('aie-type-chip--active'); });
+    btn.classList.add('aie-type-chip--active');
+  };
+
+  /* ── generate ── */
+  window.generateEmail = function() {
+    var btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="lucide lucide-loader-2" style="animation:spin 1s linear infinite"></i> Generating…';
+
+    fetch('/admin/ai/generate-email', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'same-origin',
+      body: JSON.stringify({ email_type: _emailType, context: _ctx }),
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      _resetGenerateBtn(btn);
+      if (d.status !== 'ok') { alert(d.message || 'Generation failed'); return; }
+      document.getElementById('emailSubject').value = d.subject || '';
+      document.getElementById('emailBody').value    = d.body    || '';
+      document.getElementById('subjectField').style.display = '';
+      document.getElementById('bodyField').style.display    = '';
+      document.getElementById('sendBtn').style.display      = '';
+    })
+    .catch(function(){ _resetGenerateBtn(btn); alert('Network error. Please try again.'); });
+  };
+
+  window.generateCustomEmail = function() {
+    var prompt = (document.getElementById('customPromptInput').value || '').trim();
+    if (!prompt) { alert('Please describe what you want to say.'); return; }
+
+    var btn = document.querySelector('#tabCustom .re-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="lucide lucide-loader-2" style="animation:spin 1s linear infinite"></i> Generating…';
+
+    openComposerCustom();
+
+    fetch('/admin/ai/generate-email', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'same-origin',
+      body: JSON.stringify({ email_type: 'custom', custom_prompt: prompt }),
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      btn.disabled = false;
+      btn.innerHTML = '<i class="lucide lucide-sparkles"></i> Generate Email';
+      if (d.status !== 'ok') { alert(d.message || 'Generation failed'); return; }
+      document.getElementById('emailSubject').value = d.subject || '';
+      document.getElementById('emailBody').value    = d.body    || '';
+      document.getElementById('subjectField').style.display = '';
+      document.getElementById('bodyField').style.display    = '';
+      document.getElementById('sendBtn').style.display      = '';
+      document.getElementById('generateBtn').style.display  = 'none';
+    })
+    .catch(function(){
+      btn.disabled = false;
+      btn.innerHTML = '<i class="lucide lucide-sparkles"></i> Generate Email';
+      alert('Network error. Please try again.');
+    });
+  };
+
+  window.regenerateEmail = function() { generateEmail(); };
+
+  window.copyBody = function() {
+    var body = document.getElementById('emailBody').value;
+    if (!body) return;
+    navigator.clipboard.writeText(body).then(function(){
+      var btn = document.querySelector('[onclick="copyBody()"]');
+      if (btn) { btn.innerHTML = '<i class="lucide lucide-check"></i> Copied'; setTimeout(function(){ btn.innerHTML = '<i class="lucide lucide-copy"></i> Copy'; }, 1500); }
+    });
+  };
+
+  /* ── send ── */
+  window.sendEmail = function() {
+    var to      = (document.getElementById('recipientEmail').value || '').trim();
+    var subject = (document.getElementById('emailSubject').value   || '').trim();
+    var body    = (document.getElementById('emailBody').value      || '').trim();
+
+    if (!to)      { document.getElementById('recipientEmail').focus(); alert('Add a recipient email address.'); return; }
+    if (!subject) { document.getElementById('emailSubject').focus();   alert('Subject cannot be empty.'); return; }
+    if (!body)    { document.getElementById('emailBody').focus();      alert('Email body cannot be empty.'); return; }
+
+    var btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="lucide lucide-loader-2" style="animation:spin 1s linear infinite"></i> Sending…';
+
+    fetch('/admin/ai/send-email', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'same-origin',
+      body: JSON.stringify({ to_email: to, subject: subject, body: body, lead_id: _leadId, request_id: _requestId }),
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.status === 'ok') {
+        btn.style.display = 'none';
+        var result = document.getElementById('sendResult');
+        result.innerHTML = '<div class="aie-success"><i class="lucide lucide-check-circle"></i> Email sent to ' + to + '. Lead status updated.</div>';
+        result.classList.remove('aie-hidden');
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="lucide lucide-send"></i> Send Email';
+        var result = document.getElementById('sendResult');
+        result.innerHTML = '<div class="aie-error"><i class="lucide lucide-alert-circle"></i> ' + (d.message || 'Send failed.') + '</div>';
+        result.classList.remove('aie-hidden');
+      }
+    })
+    .catch(function(){
+      btn.disabled = false;
+      btn.innerHTML = '<i class="lucide lucide-send"></i> Send Email';
+      alert('Network error. Please try again.');
+    });
+  };
+
+  function _resetGenerateBtn(btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="lucide lucide-sparkles"></i> Generate Email with AI';
+  }
+
+  function _buildLeadContextHtml(lead) {
+    var loc = [lead.address, lead.city, lead.state, lead.zip_code].filter(Boolean).join(', ');
+    return '<div class="aie-context-grid">' +
+      _ctxRow('Partner', lead.name || lead.business_name || '—') +
+      _ctxRow('Category', lead.category || '—') +
+      _ctxRow('Location', loc || '—') +
+      _ctxRow('Status', lead.invite_status || 'new') +
+    '</div>';
+  }
+
+  function _buildRequestContextHtml(req, lead) {
+    var leadName = (lead && (lead.name || lead.business_name)) || '—';
+    return '<div class="aie-context-grid">' +
+      _ctxRow('Project', req.title || '—') +
+      _ctxRow('Investor message', req.message ? req.message.substring(0, 80) + (req.message.length > 80 ? '…' : '') : '—') +
+      _ctxRow('Partner selected', leadName) +
+      _ctxRow('Category', req.category || '—') +
+      (req.budget ? _ctxRow('Budget', '$' + Number(req.budget).toLocaleString()) : '') +
+      (req.timeline ? _ctxRow('Timeline', req.timeline) : '') +
+    '</div>';
+  }
+
+  function _ctxRow(label, value) {
+    return '<div class="aie-ctx-row"><span class="aie-ctx-label">' + label + '</span><span class="aie-ctx-value">' + _esc(String(value)) + '</span></div>';
+  }
+
+  function _esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+})();
+</script>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.aie-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Hero */
+.aie-hero {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  padding: 24px;
+  align-items: center;
+}
+.aie-hero-text { max-width: 680px; }
+.aie-hero-text h2 { margin: 6px 0 8px; font-size: clamp(1.5rem,2.2vw,2rem); }
+.aie-hero-text p  { margin: 0; color: rgba(255,255,255,.6); line-height: 1.6; }
+.aie-hero-stats {
+  display: flex;
+  gap: 16px;
+}
+.aie-stat {
+  padding: 14px 18px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px;
+  background: rgba(255,255,255,.04);
+  text-align: center;
+  min-width: 110px;
+}
+.aie-stat strong { display: block; font-size: 1.6rem; font-weight: 800; color: #fff; }
+.aie-stat span   { font-size: .75rem; color: rgba(255,255,255,.5); }
+
+/* Layout */
+.aie-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+/* Queue */
+.aie-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255,255,255,.03);
+}
+.aie-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+.aie-tab {
+  flex: 1;
+  padding: 10px 6px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.5);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: color .15s, background .15s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.aie-tab:hover { color: #fff; background: rgba(255,255,255,.04); }
+.aie-tab--active { color: #fff; border-bottom-color: #3b82f6; }
+.aie-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #3b82f6;
+  color: #fff;
+  font-size: .65rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 999px;
+  min-width: 16px;
+}
+.aie-tab-panel { overflow-y: auto; max-height: 520px; }
+.aie-hidden { display: none !important; }
+
+.aie-queue-item {
+  padding: 13px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  cursor: pointer;
+  transition: background .15s;
+}
+.aie-queue-item:hover { background: rgba(255,255,255,.05); }
+.aie-queue-item:last-child { border-bottom: none; }
+.aie-queue-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.aie-category-badge {
+  font-size: .65rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(59,130,246,.14);
+  color: #93c5fd;
+}
+.aie-queue-date { font-size: .72rem; color: rgba(255,255,255,.4); }
+.aie-queue-name { font-size: .9rem; font-weight: 700; color: #fff; margin-bottom: 3px; }
+.aie-queue-meta { font-size: .76rem; color: rgba(255,255,255,.5); margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aie-queue-status {
+  display: inline-block;
+  font-size: .65rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.aie-status--new      { background: rgba(234,179,8,.14); color: #fbbf24; }
+.aie-status--saved    { background: rgba(99,102,241,.14); color: #a5b4fc; }
+.aie-status--invited  { background: rgba(34,197,94,.14);  color: #86efac; }
+.aie-status--pending  { background: rgba(234,179,8,.14);  color: #fbbf24; }
+.aie-status--awaiting_match { background: rgba(99,102,241,.14); color: #a5b4fc; }
+
+.aie-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: rgba(255,255,255,.4);
+  font-size: .85rem;
+}
+.aie-empty i { font-size: 1.5rem; margin-bottom: 8px; display: block; }
+.aie-empty p { margin: 0; line-height: 1.6; }
+
+.aie-custom-prompt-panel { padding: 16px; }
+
+/* Composer */
+.aie-composer {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 480px;
+}
+.aie-composer-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  padding: 40px 20px;
+  color: rgba(255,255,255,.4);
+  gap: 12px;
+}
+.aie-composer-empty i { font-size: 2rem; }
+.aie-composer-empty h3 { margin: 0; color: rgba(255,255,255,.7); font-size: 1rem; }
+.aie-composer-empty p  { margin: 0; font-size: .83rem; line-height: 1.6; }
+
+/* Context card */
+.aie-context-card {
+  padding: 14px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
+}
+.aie-context-grid { display: grid; gap: 6px; }
+.aie-ctx-row { display: flex; gap: 10px; align-items: baseline; }
+.aie-ctx-label { font-size: .73rem; font-weight: 700; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .04em; min-width: 100px; }
+.aie-ctx-value { font-size: .85rem; color: #fff; }
+
+/* Type chips */
+.aie-type-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.aie-type-chip {
+  padding: 6px 14px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  color: rgba(255,255,255,.7);
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+}
+.aie-type-chip:hover { background: rgba(255,255,255,.12); color: #fff; }
+.aie-type-chip--active { background: rgba(59,130,246,.18); border-color: rgba(59,130,246,.5); color: #93c5fd; }
+
+/* Fields */
+.aie-field { display: flex; flex-direction: column; gap: 6px; }
+.aie-label {
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.55);
+}
+.aie-input, .aie-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  color: #fff;
+  font-size: .9rem;
+  line-height: 1.5;
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.aie-input:focus, .aie-textarea:focus {
+  border-color: rgba(148,190,255,.45);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+}
+.aie-body-textarea { min-height: 240px; font-size: .84rem; }
+
+/* Result banners */
+.aie-success, .aie-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: .85rem;
+  font-weight: 600;
+}
+.aie-success { background: rgba(34,197,94,.12); color: #86efac; border: 1px solid rgba(34,197,94,.25); }
+.aie-error   { background: rgba(239,68,68,.12);  color: #fca5a5; border: 1px solid rgba(239,68,68,.25); }
+
+@media (max-width: 900px) {
+  .aie-layout { grid-template-columns: 1fr; }
+  .aie-hero   { grid-template-columns: 1fr; }
+  .aie-hero-stats { justify-content: flex-start; }
+}
+</style>
+{% endblock %}

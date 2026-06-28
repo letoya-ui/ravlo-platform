@@ -2353,3 +2353,202 @@ def unblock_company(company_id):
 
     flash(f"{company.name} was restored.", "success")
     return redirect(request.referrer or url_for("admin.companies"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AI EMAIL ASSISTANT
+# ─────────────────────────────────────────────────────────────────────────────
+
+@admin_bp.route("/ai-email-assistant", methods=["GET"])
+@login_required
+@role_required("admin")
+def ai_email_assistant():
+    """AI Email Assistant — generate and send outreach emails for partner leads and requests."""
+    from LoanMVP.models.partner_models import ExternalPartnerLead, PartnerConnectionRequest
+
+    external_leads = (
+        ExternalPartnerLead.query
+        .filter(ExternalPartnerLead.invite_status.in_(["new", "saved"]))
+        .order_by(ExternalPartnerLead.created_at.desc())
+        .limit(30)
+        .all()
+    )
+
+    open_requests = (
+        PartnerConnectionRequest.query
+        .filter(PartnerConnectionRequest.status.in_(["awaiting_match", "pending"]))
+        .filter(PartnerConnectionRequest.source.in_(["external", "fallback_search"]))
+        .order_by(PartnerConnectionRequest.created_at.desc())
+        .limit(30)
+        .all()
+    )
+
+    return render_template(
+        "admin/ai_email_assistant.html",
+        external_leads=external_leads,
+        open_requests=open_requests,
+    )
+
+
+@admin_bp.route("/ai/generate-email", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("admin")
+def ai_generate_email():
+    """AJAX: AI drafts an email given a type + context payload."""
+    from openai import OpenAI
+
+    data = request.get_json(silent=True) or {}
+    email_type    = (data.get("email_type") or "partner_invite").strip()
+    context       = data.get("context") or {}
+    custom_prompt = (data.get("custom_prompt") or "").strip()
+
+    partner_name     = (context.get("partner_name") or "").strip()
+    partner_address  = (context.get("partner_address") or "").strip()
+    partner_category = (context.get("partner_category") or "contractor").strip()
+    investor_message = (context.get("investor_message") or "").strip()
+    property_title   = (context.get("property_title") or "").strip()
+    budget           = context.get("budget")
+    timeline         = (context.get("timeline") or "").strip()
+    investor_name    = (context.get("investor_name") or "a Ravlo investor").strip()
+
+    if email_type == "partner_invite":
+        system = (
+            "You are the outreach coordinator for Ravlo, a real estate investment platform that "
+            "connects investors with local contractors, realtors, and inspectors. "
+            "Your tone is professional, warm, and direct. Emails should be under 200 words. "
+            "Never mention internal platform details or use placeholder text. "
+            "Always sign off as 'The Ravlo Team'."
+        )
+        budget_line = f"\n- Budget: ${float(budget):,.0f}" if budget else ""
+        timeline_line = f"\n- Timeline: {timeline}" if timeline else ""
+        prompt = (
+            f"Write an outreach email inviting {partner_name or 'a local business'} to join the Ravlo partner network.\n\n"
+            f"Context:\n"
+            f"- Business name: {partner_name or 'unknown'}\n"
+            f"- Category: {partner_category}\n"
+            f"- Location: {partner_address or 'local area'}\n"
+            f"- One of our investors is specifically looking to work with them\n"
+            f"- Project: {property_title or 'a local real estate project'}\n"
+            f"- Investor note: {investor_message or 'Looking for a reliable local professional'}"
+            f"{budget_line}{timeline_line}\n\n"
+            f"Format:\n"
+            f"Line 1 — Subject: <subject here>\n"
+            f"Line 2 — blank\n"
+            f"Lines 3+ — email body\n\n"
+            f"Do not use any placeholder brackets like [Name]."
+        )
+
+    elif email_type == "investor_update":
+        system = (
+            "You are a client success manager at Ravlo. "
+            "Write warm, professional status updates to investors. "
+            "Keep it under 150 words. Sign off as 'The Ravlo Team'."
+        )
+        prompt = (
+            f"Write a brief update email to {investor_name} about their partner request.\n\n"
+            f"Context:\n"
+            f"- They requested a {partner_category}\n"
+            f"- Partner they selected: {partner_name or 'a local professional'}\n"
+            f"- Project: {property_title or 'their real estate project'}\n"
+            f"- Update: Ravlo has reached out to this partner and is facilitating the connection\n\n"
+            f"Format:\n"
+            f"Line 1 — Subject: <subject here>\n"
+            f"Line 2 — blank\n"
+            f"Lines 3+ — email body"
+        )
+
+    elif email_type == "custom":
+        if not custom_prompt:
+            return jsonify({"status": "error", "message": "Custom prompt is required."}), 400
+        system = (
+            "You are an AI writing assistant for Ravlo, a real estate investment platform. "
+            "Write professional, concise emails. "
+            "Always put the subject on line 1 (format: 'Subject: ...'). "
+            "Sign off as 'The Ravlo Team'. Never use placeholder brackets."
+        )
+        prompt = custom_prompt
+
+    else:
+        return jsonify({"status": "error", "message": "Unknown email type."}), 400
+
+    try:
+        ai_client = OpenAI()
+        ai_model = current_app.config.get("AI_MODEL") or "gpt-4o-mini"
+        response = ai_client.chat.completions.create(
+            model=ai_model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user",   "content": prompt},
+            ],
+            temperature=0.6,
+            max_tokens=700,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+
+        # Split subject from body
+        subject = ""
+        body = raw
+        lines = raw.split("\n")
+        if lines and lines[0].lower().startswith("subject:"):
+            subject = lines[0][8:].strip()
+            body = "\n".join(lines[2:]).strip() if len(lines) > 2 else ""
+
+        return jsonify({"status": "ok", "subject": subject, "body": body})
+
+    except Exception as exc:
+        current_app.logger.error("[ai-generate-email] %s", exc)
+        return jsonify({"status": "error", "message": "AI generation failed. Please try again."}), 500
+
+
+@admin_bp.route("/ai/send-email", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("admin")
+def ai_send_email():
+    """AJAX: send an AI-drafted email and update the related lead/request status."""
+    from LoanMVP.models.partner_models import ExternalPartnerLead, PartnerConnectionRequest
+
+    data       = request.get_json(silent=True) or {}
+    to_email   = (data.get("to_email") or "").strip()
+    subject    = (data.get("subject") or "").strip()
+    body       = (data.get("body") or "").strip()
+    lead_id    = data.get("lead_id")
+    request_id = data.get("request_id")
+
+    if not to_email or "@" not in to_email:
+        return jsonify({"status": "error", "message": "A valid recipient email is required."}), 400
+    if not subject:
+        return jsonify({"status": "error", "message": "Subject line cannot be empty."}), 400
+    if not body:
+        return jsonify({"status": "error", "message": "Email body cannot be empty."}), 400
+
+    safe_body = body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+    html = (
+        f"<div style='font-family:sans-serif;line-height:1.6;max-width:600px;'>"
+        f"{safe_body}"
+        f"</div>"
+    )
+
+    try:
+        send_email(to=to_email, subject=subject, html_body=html, text_body=body)
+    except Exception as exc:
+        current_app.logger.error("[ai-send-email] %s", exc)
+        return jsonify({"status": "error", "message": "Email delivery failed. Check mail configuration."}), 500
+
+    # Update lead/request status after successful send
+    try:
+        if lead_id:
+            lead = ExternalPartnerLead.query.get(int(lead_id))
+            if lead and lead.invite_status in ("new", "saved"):
+                lead.invite_status = "invited"
+                db.session.commit()
+        if request_id:
+            req = PartnerConnectionRequest.query.get(int(request_id))
+            if req and req.status == "awaiting_match":
+                req.status = "pending"
+                db.session.commit()
+    except Exception:
+        pass
+
+    return jsonify({"status": "ok", "message": "Email sent successfully."})
