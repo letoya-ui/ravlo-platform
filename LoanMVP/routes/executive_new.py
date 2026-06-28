@@ -135,66 +135,213 @@ def _executive_user_query():
 @executive_bp.route("/dashboard")
 @login_required
 def dashboard():
+    from datetime import timedelta
+    from LoanMVP.models.property import SavedProperty
+    from LoanMVP.models.partner_models import PartnerConnectionRequest, ExternalPartnerLead
+    from LoanMVP.models.training_models import UserCourseUnlock
+
     access_redirect = _ensure_executive_access()
     if access_redirect:
         return access_redirect
 
-    company = _executive_company()
-    team_users = _executive_user_query().all()
-    scoped_invites = _executive_invite_query()
-    scoped_requests = _executive_request_query()
+    company  = _executive_company()
+    all_users = _executive_user_query().all()
     scoped_loans = _executive_loan_query()
 
-    stats = {
-        "total_users": len(team_users),
-        "total_loans": scoped_loans.count(),
-        "total_docs": LoanDocument.query.count() if LoanDocument else 0,
-        "pending_tasks": (
-            Task.query.filter(db.func.lower(Task.status) == "pending").count()
-            if Task and hasattr(Task, "status")
-            else 0
-        ),
-        "pending_requests": scoped_requests.filter(db.func.lower(AccessRequest.status) == "pending").count(),
-        "approved_requests": scoped_requests.filter(db.func.lower(AccessRequest.status) == "approved").count(),
-        "total_companies": Company.query.count(),
-        "pending_invites": scoped_invites.filter(db.func.lower(UserInvite.status) == "pending").count(),
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday   = today_start - timedelta(days=1)
+
+    # ── Business metrics ─────────────────────────────────────────────
+    total_users   = len(all_users)
+    active_today  = sum(1 for u in all_users if u.last_login and u.last_login >= today_start)
+    free_trials   = sum(1 for u in all_users if u.trial_ends_at and u.trial_ends_at > now)
+    paid_members  = sum(1 for u in all_users
+                        if (u.subscription or "").lower() not in ("free", "core", "") and not u.trial_ends_at)
+    new_overnight = sum(1 for u in all_users if u.created_at and u.created_at >= yesterday)
+
+    # ── Investor OS ───────────────────────────────────────────────────
+    saved_props   = SavedProperty.query.count()
+    new_saves_today = SavedProperty.query.filter(SavedProperty.created_at >= today_start).count()
+
+    # ── Lending OS pipeline ───────────────────────────────────────────
+    def _stage_count(stage_fragment):
+        return scoped_loans.filter(
+            func.lower(LoanApplication.milestone_stage).contains(stage_fragment.lower())
+        ).count()
+
+    loan_pipeline = {
+        "Applications Started": _stage_count("application"),
+        "Processing":           _stage_count("processing"),
+        "Underwriting":         _stage_count("underwriting"),
+        "Conditions":           _stage_count("condition"),
+        "Clear to Close":       _stage_count("clear"),
+        "Funded":               _stage_count("funded"),
+    }
+    total_loans = scoped_loans.count()
+
+    # ── Academy ───────────────────────────────────────────────────────
+    academy_students  = UserCourseUnlock.query.with_entities(UserCourseUnlock.user_id).distinct().count()
+    academy_graduates = UserCourseUnlock.query.count()
+
+    # ── Partner Network ───────────────────────────────────────────────
+    partner_cats = ["Realtor", "Contractor", "Designer", "Architect",
+                    "Property Manager", "Lender", "Inspector"]
+    partner_breakdown = {}
+    for cat in partner_cats:
+        partner_breakdown[cat] = PartnerConnectionRequest.query.filter(
+            func.lower(PartnerConnectionRequest.category).contains(cat.lower())
+        ).count()
+
+    req_waiting   = PartnerConnectionRequest.query.filter(
+        PartnerConnectionRequest.status.in_(["pending", "awaiting_match"])).count()
+    req_accepted  = PartnerConnectionRequest.query.filter_by(status="accepted").count()
+    req_completed = PartnerConnectionRequest.query.filter_by(status="completed").count()
+
+    # ── Attention center ──────────────────────────────────────────────
+    loans_need_review = scoped_loans.filter(
+        func.lower(LoanApplication.status).in_(["pending", "stalled", "needs review"])
+    ).count()
+    partner_waiting = req_waiting
+    challenge_signups = sum(1 for u in all_users
+                            if u.trial_ends_at and u.trial_ends_at > now
+                            and (u.role or "").lower() == "investor")
+    enterprise_leads = LicenseApplication.query.filter(
+        LicenseApplication.status == "new"
+    ).count()
+
+    # ── Lives Changed (mission metrics) ──────────────────────────────
+    lives = {
+        "properties_saved":   saved_props,
+        "loans_closed":       loan_pipeline["Funded"],
+        "projects_completed": req_completed,
+        "academy_graduates":  academy_graduates,
     }
 
-    recent_requests = scoped_requests.order_by(AccessRequest.created_at.desc()).limit(5).all()
-    users = _executive_user_query().order_by(User.created_at.desc()).limit(5).all()
-    recent_invites = scoped_invites.order_by(UserInvite.created_at.desc()).limit(5).all()
-    leads = Lead.query.order_by(Lead.created_at.desc()).limit(5).all() if Lead and hasattr(Lead, "created_at") else []
-    logs = SystemLog.query.order_by(SystemLog.created_at.desc()).limit(8).all() if SystemLog and hasattr(SystemLog, "created_at") else []
+    # ── Platform health ───────────────────────────────────────────────
+    critical_issues = loans_need_review + enterprise_leads
+    mission_status = "On Track" if critical_issues < 5 else "Needs Attention"
+    mission_color  = "#2cb67d" if critical_issues < 5 else "#f59e0b"
 
-    loan_records = scoped_loans.all() if hasattr(LoanApplication, "created_at") else []
+    # ── User growth for sparkline ─────────────────────────────────────
+    user_growth_labels, user_growth_series = _monthly_series(all_users, "created_at", 6)
+    loan_records = scoped_loans.all()
     loan_volume_labels, loan_volume_series = _monthly_series(loan_records, "created_at", 6)
-    user_growth_labels, user_growth_series = _monthly_series(team_users, "created_at", 6)
-    ai_summary = (
-        f"Executive snapshot for {(company.name if company else 'Ravlo')}: "
-        f"{stats['total_users']} user(s), {stats['total_loans']} loan file(s), "
-        f"{stats['pending_requests']} pending request(s), and "
-        f"{stats['pending_invites']} pending invite(s)."
-    )
+
+    first_name = getattr(current_user, "first_name", None) or \
+                 getattr(current_user, "username", None) or "there"
 
     return render_template(
         "executive/dashboard.html",
         company=company,
-        stats=stats,
-        demo_dashboards=admin_routes._demo_dashboard_cards(),
-        single_admin_mode=False,
-        owner_admin_email="",
-        recent_requests=recent_requests,
-        users=users,
-        recent_invites=recent_invites,
-        leads=leads,
-        logs=logs,
-        ai_summary=ai_summary,
-        loan_volume_labels=loan_volume_labels,
-        loan_volume_series=loan_volume_series,
+        first_name=first_name,
+        # business
+        total_users=total_users,
+        active_today=active_today,
+        free_trials=free_trials,
+        paid_members=paid_members,
+        new_overnight=new_overnight,
+        # investor
+        saved_props=saved_props,
+        new_saves_today=new_saves_today,
+        # lending
+        loan_pipeline=loan_pipeline,
+        total_loans=total_loans,
+        # academy
+        academy_students=academy_students,
+        academy_graduates=academy_graduates,
+        # partners
+        partner_breakdown=partner_breakdown,
+        req_waiting=req_waiting,
+        req_accepted=req_accepted,
+        req_completed=req_completed,
+        # attention
+        loans_need_review=loans_need_review,
+        partner_waiting=partner_waiting,
+        challenge_signups=challenge_signups,
+        enterprise_leads=enterprise_leads,
+        # lives
+        lives=lives,
+        # mission
+        mission_status=mission_status,
+        mission_color=mission_color,
+        # charts
         user_growth_labels=user_growth_labels,
         user_growth_series=user_growth_series,
-        server_load_value=68,
+        loan_volume_labels=loan_volume_labels,
+        loan_volume_series=loan_volume_series,
     )
+
+
+@executive_bp.route("/ai-briefing", methods=["GET"])
+@login_required
+def ai_briefing():
+    """AJAX: Generate a real-time AI executive briefing."""
+    from LoanMVP.extensions import csrf
+    from openai import OpenAI
+    from LoanMVP.models.property import SavedProperty
+    from LoanMVP.models.partner_models import PartnerConnectionRequest
+
+    access_redirect = _ensure_executive_access()
+    if access_redirect:
+        from flask import jsonify
+        return jsonify({"briefing": "Access restricted."}), 403
+
+    from flask import jsonify
+    from datetime import timedelta
+
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday   = today_start - timedelta(days=1)
+    all_users   = _executive_user_query().all()
+    scoped_loans = _executive_loan_query()
+
+    new_overnight  = sum(1 for u in all_users if u.created_at and u.created_at >= yesterday)
+    active_today   = sum(1 for u in all_users if u.last_login and u.last_login >= today_start)
+    saves_today    = SavedProperty.query.filter(SavedProperty.created_at >= today_start).count()
+    loans_total    = scoped_loans.count()
+    req_waiting    = PartnerConnectionRequest.query.filter(
+        PartnerConnectionRequest.status.in_(["pending", "awaiting_match"])).count()
+
+    first_name = getattr(current_user, "first_name", None) or \
+                 getattr(current_user, "username", None) or "there"
+
+    prompt = (
+        f"You are the AI chief of staff for Ravlo, a real estate platform. "
+        f"Write a concise executive morning briefing for {first_name}. "
+        f"Keep it to 4-6 bullet points. Be direct, mission-focused, and end with ONE specific recommendation. "
+        f"Tone: warm but strategic. No fluff.\n\n"
+        f"Today's data:\n"
+        f"- {new_overnight} new accounts created since yesterday\n"
+        f"- {active_today} users active today so far\n"
+        f"- {saves_today} properties saved today\n"
+        f"- {loans_total} total loan files in the system\n"
+        f"- {req_waiting} partner connection requests waiting\n\n"
+        f"Format: bullet points (use •), then 'Recommendation:' on its own line at the end."
+    )
+
+    try:
+        client  = OpenAI()
+        model   = current_app.config.get("AI_MODEL") or "gpt-4o-mini"
+        resp    = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.6,
+            max_tokens=350,
+        )
+        briefing = resp.choices[0].message.content.strip()
+    except Exception as exc:
+        current_app.logger.warning("[ai-briefing] %s", exc)
+        briefing = (
+            f"• {new_overnight} new accounts joined since yesterday\n"
+            f"• {active_today} users active on the platform today\n"
+            f"• {saves_today} properties saved by investors today\n"
+            f"• {loans_total} total loan files in the system\n"
+            f"• {req_waiting} partner connection requests waiting for a match\n\n"
+            f"Recommendation: Review open partner requests and assign them before end of day."
+        )
+
+    return jsonify({"briefing": briefing, "first_name": first_name})
 
 
 @executive_bp.route("/demo-center")
