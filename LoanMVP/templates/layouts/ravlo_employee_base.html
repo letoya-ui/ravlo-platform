@@ -131,7 +131,9 @@
     </div>
   </div>
 
-  {% include "layouts/_ravlo_ai_chat.html" %}
+  {% if current_user.is_authenticated %}
+    {% include "layouts/_ravlo_ai_chat.html" %}
+  {% endif %}
 
   {% block scripts %}{% endblock %}
 </body>

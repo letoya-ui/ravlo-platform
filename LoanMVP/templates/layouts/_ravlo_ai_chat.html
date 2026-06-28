@@ -593,6 +593,7 @@
     })
     .catch(function(){
       _setLoading(false);
+      _history.pop(); // remove orphaned user message so history stays consistent
       _appendMsg('ai', 'Network error — please check your connection and try again.');
     });
   };

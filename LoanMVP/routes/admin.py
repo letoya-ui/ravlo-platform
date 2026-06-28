@@ -2567,10 +2567,14 @@ def ai_chat():
 
     data    = request.get_json(silent=True) or {}
     message = (data.get("message") or "").strip()
-    history = data.get("history") or []
+    raw_history = data.get("history")
+    history = raw_history if isinstance(raw_history, list) else []
 
     if not message:
         return jsonify({"ok": False, "reply": "Please say something."}), 400
+
+    if len(message) > 4000:
+        return jsonify({"ok": False, "reply": "Message too long."}), 400
 
     role = (getattr(current_user, "role", "") or "").lower()
     name = getattr(current_user, "first_name", None) or getattr(current_user, "username", None) or "there"
@@ -2600,11 +2604,13 @@ def ai_chat():
             f"Be concise and helpful. You are speaking with {name}."
         )
 
-    # Build messages with last 12 turns of history
+    # Build messages with last 12 turns of history (cap each turn at 2000 chars)
     messages = [{"role": "system", "content": system}]
-    for turn in (history or [])[-12:]:
+    for turn in history[-12:]:
+        if not isinstance(turn, dict):
+            continue
         r = (turn.get("role") or "").strip()
-        c = (turn.get("content") or "").strip()
+        c = (turn.get("content") or "").strip()[:2000]
         if r in ("user", "assistant") and c:
             messages.append({"role": r, "content": c})
     messages.append({"role": "user", "content": message})
