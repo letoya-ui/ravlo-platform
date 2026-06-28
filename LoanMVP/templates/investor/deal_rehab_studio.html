@@ -40,24 +40,7 @@
       <a href="#" class="ravlo-btn ghost hidden" id="continueToBudgetStudioBtn">Send to Budget Studio</a>
       {% if deal %}
       <button type="button" class="ravlo-btn ghost"
-        onclick="openSendPartnerModal({
-          dealId: {{ deal.id }},
-          savedPropertyId: {{ deal.saved_property_id if deal.saved_property_id else 'null' }},
-          title: {{ (deal.address or deal.title or 'Design Studio')|tojson }},
-          address: {{ (deal.address or '')|tojson }},
-          city: {{ (deal.city or '')|tojson }},
-          state: {{ (deal.state or '')|tojson }},
-          zip: {{ (deal.zip_code or '')|tojson }},
-          studioType: 'design',
-          studioRefId: {{ deal.id }},
-          packageLabel: 'Design Studio Package',
-          defaultPartnerType: 'Contractor',
-          defaultMessage: {{ ('Please review this Design Studio package for ' ~ (deal.address or deal.title or 'this project') ~ ' and send next-step pricing, timeline, and feasibility notes.')|tojson }},
-          studioItems: [
-            {label: 'Design Studio', detail: 'Interior concept and scope'},
-            {label: 'Property', detail: {{ (deal.address or deal.title or 'Design Studio')|tojson }}}
-          ]
-        })">
+        onclick='openSendPartnerModal({{ {"dealId": deal.id, "savedPropertyId": deal.saved_property_id or none, "title": deal.address or deal.title or "Design Studio", "address": deal.address or "", "city": deal.city or "", "state": deal.state or "", "zip": deal.zip_code or "", "studioType": "design", "studioRefId": deal.id, "packageLabel": "Design Studio Package", "defaultPartnerType": "Contractor", "defaultMessage": "Please review this Design Studio package for " ~ (deal.address or deal.title or "this project") ~ " and send next-step pricing, timeline, and feasibility notes.", "studioItems": [{"label": "Design Studio", "detail": "Interior concept and scope"}, {"label": "Property", "detail": deal.address or deal.title or "Design Studio"}]}|tojson }})'>
         <i class="lucide lucide-send"></i> Send to Partner
       </button>
       {% endif %}

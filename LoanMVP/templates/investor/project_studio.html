@@ -11,28 +11,12 @@ Open any address and let Ravlo compare the best plan before you move into scope,
   <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">Deal Workspace</a>
   {% if address %}
   <button type="button" class="ravlo-btn ghost sm"
-    onclick="openSendPartnerModal({
-      title: {{ (address)|tojson }},
-      address: {{ (address)|tojson }},
-      zip: {{ (zip_code or '')|tojson }},
-      city: {{ (city or '')|tojson }},
-      state: {{ (state or '')|tojson }},
-      defaultPartnerType: 'Realtor',
-      defaultMessage: {{ ('I\'d like a market opinion on ' ~ address ~ '. Please review comparables, pricing, and strategy fit.')|tojson }}
-    })">
+    onclick='openSendPartnerModal({{ {"title": address, "address": address, "zip": zip_code or "", "city": city or "", "state": state or "", "defaultPartnerType": "Realtor", "defaultMessage": "I'd like a market opinion on " ~ address ~ ". Please review comparables, pricing, and strategy fit."}|tojson }})'>
     <i class="lucide lucide-home"></i>
     <span>Find Realtor</span>
   </button>
   <button type="button" class="ravlo-btn ghost sm"
-    onclick="openSendPartnerModal({
-      title: {{ (address)|tojson }},
-      address: {{ (address)|tojson }},
-      zip: {{ (zip_code or '')|tojson }},
-      city: {{ (city or '')|tojson }},
-      state: {{ (state or '')|tojson }},
-      defaultPartnerType: 'Contractor',
-      defaultMessage: {{ ('Requesting a contractor connection for ' ~ address ~ '.')|tojson }}
-    })">
+    onclick='openSendPartnerModal({{ {"title": address, "address": address, "zip": zip_code or "", "city": city or "", "state": state or "", "defaultPartnerType": "Contractor", "defaultMessage": "Requesting a contractor connection for " ~ address ~ "."}|tojson }})'>
     <i class="lucide lucide-hard-hat"></i>
     <span>Find Contractor</span>
   </button>

@@ -20,24 +20,7 @@
         <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">Send to Budget Studio</a>
         {% endif %}
         <button type="button" class="ravlo-btn ghost"
-          onclick="openSendPartnerModal({
-            dealId: {{ deal.id }},
-            savedPropertyId: {{ deal.saved_property_id if deal.saved_property_id else 'null' }},
-            title: {{ (property_address or deal.title or 'Deal')|tojson }},
-            address: {{ (property_address or '')|tojson }},
-            city: {{ (city or '')|tojson }},
-            state: {{ (state or '')|tojson }},
-            zip: {{ (zip_code or '')|tojson }},
-            studioType: 'deal_architect',
-            studioRefId: {{ deal.id }},
-            packageLabel: 'Deal Architect Package',
-            defaultPartnerType: 'Contractor',
-            defaultMessage: {{ ('Please review this Deal Architect package for ' ~ (property_address or deal.title or 'this deal') ~ ' and send next-step pricing, timeline, and feasibility notes.')|tojson }},
-            studioItems: [
-              {label: 'Deal Architect', detail: {{ ('Design budget path' if design_only_mode else 'Full deal strategy')|tojson }}},
-              {label: 'Property', detail: {{ (property_address or deal.title or 'Deal')|tojson }}}
-            ]
-          })">
+          onclick='openSendPartnerModal({{ {"dealId": deal.id, "savedPropertyId": deal.saved_property_id or none, "title": property_address or deal.title or "Deal", "address": property_address or "", "city": city or "", "state": state or "", "zip": zip_code or "", "studioType": "deal_architect", "studioRefId": deal.id, "packageLabel": "Deal Architect Package", "defaultPartnerType": "Contractor", "defaultMessage": "Please review this Deal Architect package for " ~ (property_address or deal.title or "this deal") ~ " and send next-step pricing, timeline, and feasibility notes.", "studioItems": [{"label": "Deal Architect", "detail": "Design budget path" if design_only_mode else "Full deal strategy"}, {"label": "Property", "detail": property_address or deal.title or "Deal"}]}|tojson }})'>
           <i class="lucide lucide-send"></i> Send to Partner
         </button>
       {% endif %}
