@@ -2552,3 +2552,74 @@ def ai_send_email():
         pass
 
     return jsonify({"status": "ok", "message": "Email sent successfully."})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# UNIVERSAL AI CHAT  (login_required only — all roles may use this)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@admin_bp.route("/ai/chat", methods=["POST"])
+@csrf.exempt
+@login_required
+def ai_chat():
+    """Universal conversational AI — adapts system prompt to the user's role."""
+    from openai import OpenAI
+
+    data    = request.get_json(silent=True) or {}
+    message = (data.get("message") or "").strip()
+    history = data.get("history") or []
+
+    if not message:
+        return jsonify({"ok": False, "reply": "Please say something."}), 400
+
+    role = (getattr(current_user, "role", "") or "").lower()
+    name = getattr(current_user, "first_name", None) or getattr(current_user, "username", None) or "there"
+
+    if role in ("admin", "platform_admin", "master_admin", "lending_admin", "executive"):
+        system = (
+            f"You are Ravlo AI — the intelligent assistant for Ravlo platform administrators and executives. "
+            f"You help with partner outreach strategy, investor request management, platform operations, team oversight, "
+            f"deal pipeline visibility, and business growth. "
+            f"When the user asks about generating emails, guide them to the AI Email Assistant (/admin/ai-email-assistant). "
+            f"When they ask about partner leads, mention the partner queue. "
+            f"Be concise, strategic, and action-oriented. Suggest specific next steps where relevant. "
+            f"You are speaking with {name}."
+        )
+    elif role == "investor":
+        system = (
+            f"You are Ravlo AI — an intelligent real estate investment assistant. "
+            f"You help investors analyze deals, evaluate rehab budgets, find contractors and realtors, "
+            f"understand market conditions, and navigate the Ravlo platform. "
+            f"Be concise, data-grounded, and practical. Focus on deal underwriting, strategy, and execution. "
+            f"You are speaking with {name}."
+        )
+    else:
+        system = (
+            f"You are Ravlo AI — a professional assistant for the Ravlo real estate platform. "
+            f"Help the user with any platform questions, workflow guidance, or real estate topics. "
+            f"Be concise and helpful. You are speaking with {name}."
+        )
+
+    # Build messages with last 12 turns of history
+    messages = [{"role": "system", "content": system}]
+    for turn in (history or [])[-12:]:
+        r = (turn.get("role") or "").strip()
+        c = (turn.get("content") or "").strip()
+        if r in ("user", "assistant") and c:
+            messages.append({"role": r, "content": c})
+    messages.append({"role": "user", "content": message})
+
+    try:
+        ai_client = OpenAI()
+        ai_model  = current_app.config.get("AI_MODEL") or "gpt-4o-mini"
+        response  = ai_client.chat.completions.create(
+            model=ai_model,
+            messages=messages,
+            temperature=0.65,
+            max_tokens=500,
+        )
+        reply = (response.choices[0].message.content or "").strip()
+        return jsonify({"ok": True, "reply": reply})
+    except Exception as exc:
+        current_app.logger.error("[ai-chat] %s", exc)
+        return jsonify({"ok": False, "reply": "I ran into an issue. Please try again."}), 500
