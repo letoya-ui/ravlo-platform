@@ -3,10 +3,13 @@
 {% block title %}Ravlo • Partner Network{% endblock %}
 {% block page_title %}{{ partner.company or partner.name or "Ravlo Partner Network" }}{% endblock %}
 {% block page_subline %}
-Your place inside the Ravlo ecosystem — referrals, requests, proposals, visibility, and partner operations.
+Your place inside the Ravlo ecosystem — referrals, requests, proposals, visibility, Academy, and partner operations.
 {% endblock %}
 
 {% block topbar_actions %}
+  <a href="{{ url_for('university.portal') }}" class="ravlo-btn ghost sm">
+    Open Ravlo Academy
+  </a>
   {% if is_realtor and not vip_unlocked %}
     <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary sm">
       Upgrade to VIP Workspace
@@ -39,18 +42,21 @@ Your place inside the Ravlo ecosystem — referrals, requests, proposals, visibi
             and referral opportunities. Upgrade to Premium to unlock the VIP Realtor Workspace —
             your personalized pipeline, listings, Canva flyers, AI Pilot, and finances.
           {% else %}
-            Use this dashboard to manage your profile, requests, proposals, visibility, and partner activity.
-            Your VIP Workspace is where you run your personalized dashboard, AI Pilot, finances,
-            and role-based tools.
+            Use this dashboard to manage your profile, requests, proposals, visibility, Academy path,
+            and partner activity. Your VIP Workspace is where you run your personalized dashboard,
+            AI Pilot, finances, and role-based tools.
           {% endif %}
         </p>
         <div class="partner-hero-actions">
+          <a href="{{ url_for('university.portal') }}" class="ravlo-btn primary">
+            Open Ravlo Academy
+          </a>
           {% if is_realtor and not vip_unlocked %}
-            <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary">
+            <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn ghost">
               Upgrade to VIP Workspace
             </a>
           {% else %}
-            <a href="{{ url_for('vip.index') }}" class="ravlo-btn primary">
+            <a href="{{ url_for('vip.index') }}" class="ravlo-btn ghost">
               Open My VIP Workspace
             </a>
           {% endif %}
@@ -63,6 +69,10 @@ Your place inside the Ravlo ecosystem — referrals, requests, proposals, visibi
         <div class="partner-mini-stat">
           <span class="label">Network Status</span>
           <strong>{% if partner.approved %}Approved{% else %}Pending{% endif %}</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Academy</span>
+          <strong>Available</strong>
         </div>
         <div class="partner-mini-stat">
           <span class="label">Active Plan</span>
@@ -115,8 +125,8 @@ Your place inside the Ravlo ecosystem — referrals, requests, proposals, visibi
         <span>Keep your profile complete so Ravlo can match you with the right users and opportunities.</span>
       </div>
       <div class="partner-network-item">
-        <strong>Respond quickly</strong>
-        <span>Review requests, accept the right opportunities, and keep communication moving.</span>
+        <strong>Keep learning</strong>
+        <span>Use Ravlo Academy to understand the workflows, standards, and services connected to your partner role.</span>
       </div>
       <div class="partner-network-item">
         <strong>Represent the network</strong>
@@ -138,6 +148,14 @@ Your place inside the Ravlo ecosystem — referrals, requests, proposals, visibi
         </div>
 
         <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('university.portal') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-graduation-cap"></i></div>
+            <div class="partner-action-copy">
+              <h4>Ravlo Academy</h4>
+              <p>Open your learning path and build the skills for your Ravlo role.</p>
+            </div>
+          </a>
+
           <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
             <div class="partner-action-icon"><i class="lucide lucide-inbox"></i></div>
             <div class="partner-action-copy">
