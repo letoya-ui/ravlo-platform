@@ -121,6 +121,14 @@
       <span>Content Studio</span>
     </a>
 
+    {% if not is_company_admin %}
+      <a href="{{ url_for('admin.ai_email_assistant') }}"
+         class="re-nav-link {% if ep == 'admin.ai_email_assistant' %}active{% endif %}">
+        <i class="icon lucide lucide-mail-open"></i>
+        <span>AI Email</span>
+      </a>
+    {% endif %}
+
     <div class="re-nav-section-label">Linked Systems</div>
 
     {% if not is_company_admin %}

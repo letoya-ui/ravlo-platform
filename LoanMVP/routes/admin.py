@@ -2361,7 +2361,7 @@ def unblock_company(company_id):
 
 @admin_bp.route("/ai-email-assistant", methods=["GET"])
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 def ai_email_assistant():
     """AI Email Assistant — generate and send outreach emails for partner leads and requests."""
     from LoanMVP.models.partner_models import ExternalPartnerLead, PartnerConnectionRequest
@@ -2426,7 +2426,7 @@ def ai_email_assistant():
 @admin_bp.route("/ai/generate-email", methods=["POST"])
 @csrf.exempt
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 def ai_generate_email():
     """AJAX: AI drafts an email given a type + context payload."""
     from openai import OpenAI
@@ -2540,7 +2540,7 @@ def ai_generate_email():
 @admin_bp.route("/ai/send-email", methods=["POST"])
 @csrf.exempt
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 def ai_send_email():
     """AJAX: send an AI-drafted email and update the related lead/request status."""
     from LoanMVP.models.partner_models import ExternalPartnerLead, PartnerConnectionRequest
