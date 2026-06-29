@@ -11,6 +11,9 @@
   <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.analytics') }}">
     <i class="lucide lucide-bar-chart-2"></i> Analytics
   </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.ai_email_assistant') }}">
+    <i class="lucide lucide-mail-open"></i> AI Email
+  </a>
 {% endblock %}
 
 {% block head %}
@@ -451,6 +454,12 @@
           <div class="emc-ai-label">Academy lessons completed</div>
           <div class="emc-ai-count">{{ academy_graduates }}</div>
         </div>
+      </div>
+      <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,255,255,.06);">
+        <a href="{{ url_for('admin.ai_email_assistant') }}" style="font-size:.82rem; color:#60a5fa; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+          <i class="lucide lucide-mail-open" style="width:13px;height:13px;"></i>
+          Launch AI Email Assistant →
+        </a>
       </div>
     </div>
 
