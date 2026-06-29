@@ -3,10 +3,10 @@
 {% set is_executive_dashboard = is_owner_executive or current_user.role == "executive" %}
 {% set executive_company_name = company.name if company else (current_user.company.name if current_user.company else "Ravlo") %}
 
-{% block title %}{% if is_executive_dashboard %}{{ executive_company_name }} Executive Dashboard{% else %}Admin • Operations Desk{% endif %}{% endblock %}
-{% block page_title %}{% if is_executive_dashboard %}{{ executive_company_name }} Executive{% else %}Admin Operations Desk{% endif %}{% endblock %}
+{% block title %}{% if is_executive_dashboard %}{{ executive_company_name }} Executive Dashboard{% else %}Ravlo • Operations Center{% endif %}{% endblock %}
+{% block page_title %}{% if is_executive_dashboard %}{{ executive_company_name }} Executive{% else %}Operations Center{% endif %}{% endblock %}
 {% block page_subline %}
-{% if is_executive_dashboard %}Executive oversight — users, lending ops, and platform analytics.{% else %}Daily operating center for onboarding, follow-ups, CRM, partner requests, and platform visibility.{% endif %}
+{% if is_executive_dashboard %}Executive oversight — users, lending ops, and platform analytics.{% else %}Daily center for onboarding, team records, compensation prep, follow-ups, CRM, partner requests, and platform visibility.{% endif %}
 {% endblock %}
 
 {% block topbar_actions %}
@@ -23,11 +23,10 @@
 
   <section class="re-card ops-hero">
     <div>
-      <div class="ops-eyebrow">RAVLO OPERATIONS DESK</div>
+      <div class="ops-eyebrow">{% if is_executive_dashboard %}{{ executive_company_name|upper }} EXECUTIVE{% else %}RAVLO OPERATIONS CENTER{% endif %}</div>
       <h1>Good morning, {{ current_user.first_name or current_user.username or 'Admin' }}.</h1>
       <p>
-        Start here each morning: welcome new users, review requests, update CRM, check lending files,
-        and send Letoya a clear end-of-day summary.
+        {% if is_executive_dashboard %}Executive oversight for {{ executive_company_name }}.{% else %}Start here each morning: onboard users and team members, review requests, update CRM, prepare compensation notes, check lending files, and send Letoya a clear end-of-day summary.{% endif %}
       </p>
     </div>
     <div class="ops-brief">
@@ -41,6 +40,24 @@
     <div class="re-card ops-kpi"><span>Loan Files</span><strong>{{ stats.total_loans or 0 }}</strong><small>In system</small></div>
     <div class="re-card ops-kpi warning"><span>Pending Requests</span><strong>{{ stats.pending_requests or 0 }}</strong><small>Need review</small></div>
     <div class="re-card ops-kpi"><span>Pending Invites</span><strong>{{ stats.pending_invites or 0 }}</strong><small>Need follow-up</small></div>
+  </section>
+
+  <section class="ops-grid ops-grid-3">
+    <div class="re-card ops-focus-card">
+      <div class="ops-eyebrow">ONBOARDING</div>
+      <h3>Route people correctly</h3>
+      <p>Confirm role, company/team, profile status, dashboard path, and welcome email.</p>
+    </div>
+    <div class="re-card ops-focus-card">
+      <div class="ops-eyebrow">TEAM RECORDS</div>
+      <h3>Keep operations organized</h3>
+      <p>Track team details, responsibilities, completed work, and items that need review.</p>
+    </div>
+    <div class="re-card ops-focus-card">
+      <div class="ops-eyebrow">COMPENSATION PREP</div>
+      <h3>Prepare for approval</h3>
+      <p>Collect work notes and compensation details so Letoya can review and approve clearly.</p>
+    </div>
   </section>
 
   <div class="ops-layout">
@@ -62,6 +79,32 @@
           <div class="ops-step"><time>1:00 PM</time><div><strong>Ravlo Capital / Lending check</strong><span>Review loan inquiries, missing documents, and files that may need assignment or follow-up.</span></div></div>
           <div class="ops-step"><time>2:30 PM</time><div><strong>Support and community</strong><span>Respond to basic questions, send users to the right page, and escalate anything urgent.</span></div></div>
           <div class="ops-step"><time>4:00 PM</time><div><strong>End-of-day report</strong><span>Send Letoya a short summary: what was completed, what is pending, and what needs a decision.</span></div></div>
+        </div>
+      </section>
+
+      <section class="ops-grid ops-grid-2">
+        <div class="re-card ops-card-pad">
+          <div class="ops-eyebrow">ONBOARDING QUEUE</div>
+          <h3>What to verify</h3>
+          <div class="ops-checklist">
+            <label><input type="checkbox"> Name, email, and phone are correct</label>
+            <label><input type="checkbox"> Role matches responsibility</label>
+            <label><input type="checkbox"> Company/team is assigned correctly</label>
+            <label><input type="checkbox"> Dashboard path makes sense</label>
+            <label><input type="checkbox"> Welcome or next-step message sent</label>
+            <label><input type="checkbox"> Any confusion flagged for Letoya</label>
+          </div>
+        </div>
+        <div class="re-card ops-card-pad">
+          <div class="ops-eyebrow">COMPENSATION PREP</div>
+          <h3>What to collect</h3>
+          <div class="ops-checklist">
+            <label><input type="checkbox"> Who worked this period</label>
+            <label><input type="checkbox"> Tasks or files completed</label>
+            <label><input type="checkbox"> Commission or fee notes collected</label>
+            <label><input type="checkbox"> Missing information requested</label>
+            <label><input type="checkbox"> Final approval needed from Letoya</label>
+          </div>
         </div>
       </section>
 
@@ -216,6 +259,14 @@
 .ops-eyebrow { font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.11em; color:#7ab8ff; }
 .ops-grid { display:grid; gap:12px; }
 .ops-grid-4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.ops-grid-3 { grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.ops-grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.ops-focus-card { padding:20px; }
+.ops-focus-card h3 { margin:7px 0; font-size:1rem; }
+.ops-focus-card p { color:var(--muted,#8a9db5); margin:0; line-height:1.55; font-size:.88rem; }
+.ops-checklist { display:grid; gap:10px; margin-top:16px; }
+.ops-checklist label { display:flex; gap:10px; align-items:flex-start; color:var(--muted,#8a9db5); font-size:.86rem; line-height:1.45; cursor:pointer; }
+.ops-checklist input { margin-top:3px; accent-color:#7ab8ff; flex-shrink:0; }
 .ops-kpi { padding:20px; }
 .ops-kpi span { display:block; color:var(--muted,#8a9db5); font-size:.76rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
 .ops-kpi strong { display:block; font-size:2.2rem; line-height:1; margin:10px 0 6px; }
@@ -250,7 +301,8 @@
 .ops-demo-card div { color:#7ab8ff; font-size:.7rem; font-weight:850; text-transform:uppercase; letter-spacing:.1em; }
 .ops-demo-card strong { display:block; margin:6px 0; }
 .ops-demo-card p { color:var(--muted,#8a9db5); margin:0; font-size:.84rem; line-height:1.45; }
-@media (max-width:1100px) { .ops-layout,.ops-hero { grid-template-columns:1fr; } .ops-grid-4 { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:1100px) { .ops-layout,.ops-hero { grid-template-columns:1fr; } .ops-grid-4 { grid-template-columns:repeat(2,1fr); } .ops-grid-3 { grid-template-columns:1fr; } }
+@media (max-width:720px) { .ops-grid-2 { grid-template-columns:1fr; } }
 @media (max-width:620px) { .ops-grid-4,.ops-action-grid { grid-template-columns:1fr; } .ops-step { grid-template-columns:1fr; } }
 </style>
 {% endblock %}
