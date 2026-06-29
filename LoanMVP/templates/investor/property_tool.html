@@ -1082,28 +1082,34 @@ async function useMyLocation(){
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
 
-      status.innerText = "Location found. Searching nearby deals...";
+      status.innerText = "Location found. Looking up your area...";
 
-      // Store lat/lng on hidden fields if backend supports it later.
-      let latInput = document.getElementById("latitude");
-      let lngInput = document.getElementById("longitude");
+      // Reverse geocode to zip/city/state so the search backend can use it
+      try {
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+          { headers: { "Accept-Language": "en-US,en;q=0.9" } }
+        );
+        const geoData = await geoRes.json();
+        const addr = geoData.address || {};
+        const zip = (addr.postcode || "").split("-")[0].trim();
+        const city = (addr.city || addr.town || addr.village || addr.county || "").trim();
+        const stateCode = (addr.state_code || "").trim().toUpperCase();
 
-      if (!latInput) {
-        latInput = document.createElement("input");
-        latInput.type = "hidden";
-        latInput.id = "latitude";
-        document.body.appendChild(latInput);
+        if (zip) {
+          document.getElementById("zip").value = zip;
+          status.innerText = `Using ZIP ${zip} — searching...`;
+        } else if (city && stateCode) {
+          document.getElementById("city").value = city;
+          document.getElementById("state").value = stateCode;
+          status.innerText = `Using ${city}, ${stateCode} — searching...`;
+        } else {
+          status.innerText = "Location found. Searching nearby deals...";
+        }
+      } catch (geoErr) {
+        // Reverse geocode failed — still try search with coordinates
+        status.innerText = "Location found. Searching nearby deals...";
       }
-
-      if (!lngInput) {
-        lngInput = document.createElement("input");
-        lngInput.type = "hidden";
-        lngInput.id = "longitude";
-        document.body.appendChild(lngInput);
-      }
-
-      latInput.value = lat;
-      lngInput.value = lng;
 
       await runSearch();
     },

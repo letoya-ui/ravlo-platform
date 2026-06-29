@@ -1148,6 +1148,8 @@ def _investor_effective_subscription_plan(user):
         "free": "Core",
         "core": "Core",
         "explorer": "Core",
+        "preview": "Operator",  # 15-day trial gets full Operator access
+        "elite": "Operator",
         "operator": "Operator",
         "pro": "Operator",
         "premium": "Operator",

@@ -16,12 +16,21 @@
       </p>
 
       <div class="mk-hero-actions">
-        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Take the Challenge</a>
+        {% if current_user.is_authenticated and current_user.role == 'investor' and not current_user.trial_ends_at %}
+          <form method="POST" action="{{ url_for('investor.activate_trial') }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="mk-btn mk-btn-primary">Start the Challenge — 15 Days Free</button>
+          </form>
+        {% elif current_user.is_authenticated and current_user.role == 'investor' %}
+          <a href="{{ url_for('investor.command_center') }}" class="mk-btn mk-btn-primary">Go to Your Dashboard</a>
+        {% else %}
+          <a href="{{ url_for('auth.register') }}?next={{ url_for('marketing.investor_access') }}" class="mk-btn mk-btn-primary">Join the Challenge</a>
+        {% endif %}
         <a href="#how-it-works" class="mk-btn mk-btn-ghost">See How It Works</a>
       </div>
 
       <p style="margin-top:14px; font-size:.82rem; color:rgba(255,255,255,.35);">
-        Mention "Investor Challenge" in your message. No credit card. No commitment.
+        No credit card. No commitment. 15 days of full platform access.
       </p>
     </div>
   </div>
@@ -198,8 +207,19 @@
       <p class="mk-copy-lg" style="max-width:600px; margin:0 auto 28px;">
         We're keeping this to 5 investors so we can actually pay attention, act on the feedback, and help each person move through the process. Once the spots are filled, this closes.
       </p>
-      <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary" style="font-size:1rem; padding:14px 32px;">Apply for the Challenge</a>
-      <p style="margin-top:12px; font-size:.8rem; color:rgba(255,255,255,.3);">Mention "Investor Challenge" — we'll respond within 24 hours.</p>
+      {% if current_user.is_authenticated and current_user.role == 'investor' and not current_user.trial_ends_at %}
+        <form method="POST" action="{{ url_for('investor.activate_trial') }}" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="mk-btn mk-btn-primary" style="font-size:1rem; padding:14px 32px;">Start the Challenge — 15 Days Free</button>
+        </form>
+        <p style="margin-top:12px; font-size:.8rem; color:rgba(255,255,255,.3);">Full platform access. No credit card required.</p>
+      {% elif current_user.is_authenticated and current_user.role == 'investor' %}
+        <a href="{{ url_for('investor.command_center') }}" class="mk-btn mk-btn-primary" style="font-size:1rem; padding:14px 32px;">Go to Your Dashboard</a>
+        <p style="margin-top:12px; font-size:.8rem; color:rgba(255,255,255,.3);">Your trial is already active.</p>
+      {% else %}
+        <a href="{{ url_for('auth.register') }}?next={{ url_for('marketing.investor_access') }}" class="mk-btn mk-btn-primary" style="font-size:1rem; padding:14px 32px;">Join the Challenge</a>
+        <p style="margin-top:12px; font-size:.8rem; color:rgba(255,255,255,.3);">Create your free account to get started — no credit card needed.</p>
+      {% endif %}
     </div>
   </div>
 </section>
