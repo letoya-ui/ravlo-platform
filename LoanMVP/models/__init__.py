@@ -164,6 +164,9 @@ from LoanMVP.models.training_models import (
     TrainingJob,
 )
 
+# 🔭 Discovery / Crawler tracking
+from LoanMVP.models.discovery_models import DiscoveryEvent
+
 # ======================================================
 # 🧩 SQLAlchemy Export (for Migrate / Shell)
 # ======================================================
@@ -230,4 +233,7 @@ __all__ = [
     "StudioGenerationLog",
     "AcademyChatLog",
     "TrainingJob",
+
+    # Discovery / Crawler tracking
+    "DiscoveryEvent",
 ]
