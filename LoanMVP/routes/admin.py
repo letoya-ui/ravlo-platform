@@ -1409,7 +1409,7 @@ This link expires in 14 days.
 @login_required
 @role_required("admin_group")
 def staff():
-    if not (_is_full_admin(current_user) or _is_owner_account(current_user)):
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user) or (getattr(current_user, "role", "") or "").strip().lower() == "executive"):
         flash("Access restricted to platform administrators.", "warning")
         return redirect(url_for("admin.dashboard"))
 
@@ -1438,7 +1438,7 @@ def staff():
 @login_required
 @role_required("admin_group")
 def invite_staff_member():
-    if not (_is_full_admin(current_user) or _is_owner_account(current_user)):
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user) or (getattr(current_user, "role", "") or "").strip().lower() == "executive"):
         flash("Access restricted.", "warning")
         return redirect(url_for("admin.dashboard"))
 
@@ -1493,7 +1493,7 @@ def invite_staff_member():
 @login_required
 @role_required("admin_group")
 def resend_staff_invite(invite_id):
-    if not (_is_full_admin(current_user) or _is_owner_account(current_user)):
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user) or (getattr(current_user, "role", "") or "").strip().lower() == "executive"):
         flash("Access restricted.", "warning")
         return redirect(url_for("admin.dashboard"))
 
@@ -1524,7 +1524,7 @@ def resend_staff_invite(invite_id):
 @login_required
 @role_required("admin_group")
 def delete_staff_invite(invite_id):
-    if not (_is_full_admin(current_user) or _is_owner_account(current_user)):
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user) or (getattr(current_user, "role", "") or "").strip().lower() == "executive"):
         flash("Access restricted.", "warning")
         return redirect(url_for("admin.dashboard"))
 
