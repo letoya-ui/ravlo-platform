@@ -220,20 +220,24 @@ def dashboard():
     }
 
     # ── Discovery / Who's watching Ravlo ─────────────────────────────
-    _discovery_rows = (
-        db.session.query(DiscoveryEvent.source, func.count(DiscoveryEvent.id))
-        .filter(DiscoveryEvent.created_at >= today_start)
-        .group_by(DiscoveryEvent.source)
-        .all()
-    )
-    discovery_today = {row[0]: row[1] for row in _discovery_rows}
-
-    discovery_feed = (
-        DiscoveryEvent.query
-        .order_by(DiscoveryEvent.created_at.desc())
-        .limit(20)
-        .all()
-    )
+    try:
+        _discovery_rows = (
+            db.session.query(DiscoveryEvent.source, func.count(DiscoveryEvent.id))
+            .filter(DiscoveryEvent.created_at >= today_start)
+            .group_by(DiscoveryEvent.source)
+            .all()
+        )
+        discovery_today = {row[0]: row[1] for row in _discovery_rows}
+        discovery_feed = (
+            DiscoveryEvent.query
+            .order_by(DiscoveryEvent.created_at.desc())
+            .limit(20)
+            .all()
+        )
+    except Exception:
+        db.session.rollback()
+        discovery_today = {}
+        discovery_feed = []
 
     # ── Platform health ───────────────────────────────────────────────
     critical_issues = loans_need_review + enterprise_leads
