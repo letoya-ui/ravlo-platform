@@ -139,6 +139,7 @@ def dashboard():
     from LoanMVP.models.property import SavedProperty
     from LoanMVP.models.partner_models import PartnerConnectionRequest, ExternalPartnerLead
     from LoanMVP.models.training_models import UserCourseUnlock
+    from LoanMVP.models.discovery_models import DiscoveryEvent
 
     access_redirect = _ensure_executive_access()
     if access_redirect:
@@ -218,6 +219,22 @@ def dashboard():
         "academy_graduates":  academy_graduates,
     }
 
+    # ── Discovery / Who's watching Ravlo ─────────────────────────────
+    _discovery_rows = (
+        db.session.query(DiscoveryEvent.source, func.count(DiscoveryEvent.id))
+        .filter(DiscoveryEvent.created_at >= today_start)
+        .group_by(DiscoveryEvent.source)
+        .all()
+    )
+    discovery_today = {row[0]: row[1] for row in _discovery_rows}
+
+    discovery_feed = (
+        DiscoveryEvent.query
+        .order_by(DiscoveryEvent.created_at.desc())
+        .limit(20)
+        .all()
+    )
+
     # ── Platform health ───────────────────────────────────────────────
     critical_issues = loans_need_review + enterprise_leads
     mission_status = "On Track" if critical_issues < 5 else "Needs Attention"
@@ -270,6 +287,9 @@ def dashboard():
         user_growth_series=user_growth_series,
         loan_volume_labels=loan_volume_labels,
         loan_volume_series=loan_volume_series,
+        # discovery
+        discovery_today=discovery_today,
+        discovery_feed=discovery_feed,
     )
 
 
