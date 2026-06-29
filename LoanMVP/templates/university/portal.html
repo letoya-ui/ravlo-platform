@@ -55,6 +55,33 @@
 </head>
 <body>
 
+  {% if current_user.is_authenticated %}
+  {% if current_user.role in ["executive", "platform_admin", "master_admin", "lending_admin"] %}
+    {% set _dash_url = url_for("admin.dashboard") %}
+    {% set _dash_label = "Operations Center" %}
+  {% elif current_user.role == "admin" and current_user.company_id %}
+    {% set _dash_url = url_for("admin.company_dashboard", company_id=current_user.company_id) %}
+    {% set _dash_label = "Dashboard" %}
+  {% elif current_user.role == "investor" %}
+    {% set _dash_url = url_for("investor.command_center") %}
+    {% set _dash_label = "Investor OS" %}
+  {% elif current_user.role == "partner" %}
+    {% set _dash_url = url_for("vip.dashboard") %}
+    {% set _dash_label = "Partner Dashboard" %}
+  {% else %}
+    {% set _dash_url = "/" %}
+    {% set _dash_label = "Dashboard" %}
+  {% endif %}
+  <div id="ru-back-bar" style="position:fixed;top:0;left:0;right:0;z-index:200;padding:9px 20px;background:rgba(7,12,18,.92);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:10px;">
+    <a href="{{ _dash_url }}" style="display:inline-flex;align-items:center;gap:6px;color:rgba(255,255,255,.55);text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;transition:color .15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.55)'">
+      ← {{ _dash_label }}
+    </a>
+    <span style="color:rgba(255,255,255,.12);font-size:12px;">|</span>
+    <span style="color:rgba(255,255,255,.28);font-size:12px;letter-spacing:.1em;font-weight:800;text-transform:uppercase;">Ravlo Academy</span>
+  </div>
+  <style>#ravlo-university-root, .ru-fallback { padding-top: 38px; }</style>
+  {% endif %}
+
   <div id="ru-loader" class="ru-loading">
     <div class="ru-spinner"></div>
     Loading Ravlo Academy
