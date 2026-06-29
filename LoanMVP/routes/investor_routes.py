@@ -4366,8 +4366,8 @@ def api_property_tool_search():
         if buyer_profile:
             results.sort(key=buyer_profile_score, reverse=True)
 
-        # Increment quota only for live API calls — cache hits are free
-        if _SEARCH_LIMIT is not None and _ip and not _cache_hit:
+        # Increment quota only for live API calls that return results — cache hits and empty results are free
+        if _SEARCH_LIMIT is not None and _ip and not _cache_hit and results:
             _ip.deal_finder_search_count = (_ip.deal_finder_search_count or 0) + 1
             db.session.commit()
         elif not _cache_hit:
