@@ -73,6 +73,14 @@ COMPANY_INVITABLE_ROLES = [
 ]
 COMPANY_INVITABLE_ROLE_SET = {role for role, _label in COMPANY_INVITABLE_ROLES}
 
+RAVLO_STAFF_ROLES = [
+    ("platform_admin", "Platform Admin"),
+    ("master_admin", "Master Admin"),
+    ("admin", "Admin"),
+    ("intelligence", "Intelligence"),
+]
+RAVLO_STAFF_ROLE_SET = {role for role, _ in RAVLO_STAFF_ROLES}
+
 
 def _single_admin_mode_enabled() -> bool:
     return False
@@ -1344,6 +1352,196 @@ def delete_team_invite(company_id, invite_id):
     if next_url and next_url.startswith("/"):
         return redirect(next_url)
     return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+
+# =========================================================
+# 👥 RAVLO STAFF MANAGEMENT
+# =========================================================
+
+def _get_or_create_ravlo_company():
+    company = Company.query.filter_by(email_domain="ravlohq.com").first()
+    if not company:
+        company = Company(name="Ravlo HQ", email_domain="ravlohq.com", is_active=True)
+        db.session.add(company)
+        db.session.commit()
+    return company
+
+
+def _send_ravlo_staff_invite_email(invite):
+    invite_url = url_for("auth.register_from_invite", token=invite.token, _external=True)
+    role_label = (invite.role or "").replace("_", " ").title()
+    first_name = (invite.first_name or "").strip() or "there"
+
+    subject = "You've been added to the Ravlo team"
+    body = f"""
+Hi {first_name},
+
+You've been invited to join the Ravlo team.
+
+Complete your registration here:
+{invite_url}
+
+Role: {role_label}
+
+This link expires in 14 days.
+""".strip()
+
+    html = f"""
+    <div style="font-family:Inter,Arial,sans-serif;background:#071018;padding:32px;color:#f4f7fb;">
+      <div style="max-width:680px;margin:0 auto;background:#0f1a26;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;">
+        <div style="font-size:12px;letter-spacing:.18em;font-weight:800;color:#8ec5ff;margin-bottom:12px;">RAVLO TEAM INVITE</div>
+        <h1 style="margin:0 0 12px;font-size:28px;line-height:1.1;">Welcome to the team</h1>
+        <p style="margin:0 0 14px;color:#c9d6e3;">
+          Hi {first_name}, you've been added to the Ravlo platform as a <strong>{role_label}</strong>.
+        </p>
+        <a href="{invite_url}" style="display:inline-block;padding:14px 20px;background:#1f8fff;color:#fff;text-decoration:none;border-radius:12px;font-weight:700;">
+          Accept Invite &amp; Create Account
+        </a>
+        <p style="margin:18px 0 0;color:#8da3b8;font-size:13px;">This link expires in 14 days.</p>
+      </div>
+    </div>
+    """.strip()
+
+    send_email(to=invite.email, subject=subject, html_body=html, text_body=body)
+
+
+@admin_bp.route("/staff")
+@login_required
+@role_required("admin_group")
+def staff():
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user)):
+        flash("Access restricted to platform administrators.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    ravlo_co = _get_or_create_ravlo_company()
+    team_members = (
+        User.query
+        .filter_by(company_id=ravlo_co.id)
+        .order_by(User.role, User.first_name)
+        .all()
+    )
+    invites = (
+        UserInvite.query
+        .filter_by(company_id=ravlo_co.id)
+        .order_by(UserInvite.created_at.desc())
+        .all()
+    )
+    return render_template(
+        "admin/staff.html",
+        team_members=team_members,
+        invites=invites,
+        ravlo_roles=RAVLO_STAFF_ROLES,
+    )
+
+
+@admin_bp.route("/staff/invite", methods=["POST"])
+@login_required
+@role_required("admin_group")
+def invite_staff_member():
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user)):
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    first_name = (request.form.get("first_name") or "").strip()
+    last_name = (request.form.get("last_name") or "").strip()
+    email = (request.form.get("email") or "").strip().lower()
+    role = (request.form.get("role") or "platform_admin").strip()
+
+    if not email:
+        flash("Email is required.", "danger")
+        return redirect(url_for("admin.staff"))
+
+    if role not in RAVLO_STAFF_ROLE_SET:
+        flash("Invalid role selected.", "danger")
+        return redirect(url_for("admin.staff"))
+
+    if User.query.filter_by(email=email).first():
+        flash("A user with that email already exists.", "warning")
+        return redirect(url_for("admin.staff"))
+
+    ravlo_co = _get_or_create_ravlo_company()
+
+    existing = UserInvite.query.filter_by(email=email, company_id=ravlo_co.id, status="pending").first()
+    if existing and not existing.is_expired():
+        flash("An active invite already exists for that email.", "warning")
+        return redirect(url_for("admin.staff"))
+
+    invite = UserInvite(
+        company_id=ravlo_co.id,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        role=role,
+        token=UserInvite.generate_token(),
+        invited_by=current_user.id,
+        expires_at=UserInvite.default_expiration(days=14),
+        status="pending",
+    )
+    db.session.add(invite)
+    db.session.commit()
+
+    try:
+        _send_ravlo_staff_invite_email(invite)
+    except Exception:
+        current_app.logger.exception("Failed to send Ravlo staff invite email")
+
+    flash(f"Invite sent to {email}.", "success")
+    return redirect(url_for("admin.staff"))
+
+
+@admin_bp.route("/staff/invites/<int:invite_id>/resend", methods=["POST"])
+@login_required
+@role_required("admin_group")
+def resend_staff_invite(invite_id):
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user)):
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    ravlo_co = _get_or_create_ravlo_company()
+    invite = UserInvite.query.get_or_404(invite_id)
+    if invite.company_id != ravlo_co.id:
+        flash("Invalid invite.", "danger")
+        return redirect(url_for("admin.staff"))
+
+    if invite.status == "accepted":
+        flash("This invite has already been accepted.", "info")
+        return redirect(url_for("admin.staff"))
+
+    _refresh_invite(invite)
+    try:
+        _send_ravlo_staff_invite_email(invite)
+        db.session.commit()
+        flash("Invite resent.", "success")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to resend Ravlo staff invite")
+        flash("Invite refreshed but email could not be sent.", "warning")
+
+    return redirect(url_for("admin.staff"))
+
+
+@admin_bp.route("/staff/invites/<int:invite_id>/delete", methods=["POST"])
+@login_required
+@role_required("admin_group")
+def delete_staff_invite(invite_id):
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user)):
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    ravlo_co = _get_or_create_ravlo_company()
+    invite = UserInvite.query.get_or_404(invite_id)
+    if invite.company_id != ravlo_co.id:
+        flash("Invalid invite.", "danger")
+        return redirect(url_for("admin.staff"))
+
+    if invite.status == "accepted":
+        flash("Accepted invites cannot be removed here; manage the user account instead.", "warning")
+        return redirect(url_for("admin.staff"))
+
+    db.session.delete(invite)
+    db.session.commit()
+    flash("Invite cancelled.", "success")
+    return redirect(url_for("admin.staff"))
 
 
 # =========================================================
