@@ -234,10 +234,11 @@ def dashboard():
             .limit(20)
             .all()
         )
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
         discovery_today = {}
         discovery_feed = []
+        current_app.logger.warning("discovery_events query failed (table may not exist yet): %s", exc)
 
     # ── Platform health ───────────────────────────────────────────────
     critical_issues = loans_need_review + enterprise_leads
