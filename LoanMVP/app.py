@@ -142,6 +142,7 @@ _SCHEMA_COMPAT_TABLES = [
     "external_partner_leads",
     "partner_connection_requests",
     "partner_requests",
+    "discovery_events",
 ]
 
 _SCHEMA_COMPAT_INDEXES = [
