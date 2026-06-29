@@ -2,11 +2,11 @@
 {% set is_owner_executive = current_user.role == "admin" and owner_admin_email is defined and (current_user.email or "")|lower == owner_admin_email %}
 {% set is_executive_dashboard = is_owner_executive or current_user.role == "executive" %}
 {% set executive_company_name = company.name if company else (current_user.company.name if current_user.company else "Ravlo") %}
-{% block title %}{% if is_executive_dashboard %}{{ executive_company_name }} Executive Dashboard{% else %}Admin • Dashboard{% endif %}{% endblock %}
 
-{% block page_title %}{% if is_executive_dashboard %}{{ executive_company_name }} Executive{% else %}Admin Command Center{% endif %}{% endblock %}
+{% block title %}{% if is_executive_dashboard %}{{ executive_company_name }} Executive Dashboard{% else %}Admin • Operations Desk{% endif %}{% endblock %}
+{% block page_title %}{% if is_executive_dashboard %}{{ executive_company_name }} Executive{% else %}Admin Operations Desk{% endif %}{% endblock %}
 {% block page_subline %}
-{% if is_executive_dashboard %}Executive oversight — users, lending ops, and platform analytics.{% else %}Central system management — users, onboarding, lending operations, and platform visibility.{% endif %}
+{% if is_executive_dashboard %}Executive oversight — users, lending ops, and platform analytics.{% else %}Daily operating center for onboarding, follow-ups, CRM, partner requests, and platform visibility.{% endif %}
 {% endblock %}
 
 {% block topbar_actions %}
@@ -19,149 +19,58 @@
 {% endblock %}
 
 {% block content %}
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<div class="ops-wrap">
 
-<div class="adm-wrap">
-
-  {# ── Hero ── #}
-  <section class="re-card adm-hero">
-    <div class="adm-hero__text">
-      {% if single_admin_mode %}
-        <span class="adm-badge adm-badge--blue">Single Admin Mode</span>
-      {% endif %}
-      <div class="adm-eyebrow">{% if is_executive_dashboard %}{{ executive_company_name|upper }} EXECUTIVE{% else %}ADMIN COMMAND CENTER{% endif %}</div>
-      <h1 class="adm-hero__title">Welcome back, {{ current_user.first_name or current_user.username or 'Admin' }}</h1>
-      <p class="adm-hero__sub">
-        {% if is_executive_dashboard %}Executive oversight for {{ executive_company_name }}.{% else %}Central system management and platform visibility.{% endif %}
+  <section class="re-card ops-hero">
+    <div>
+      <div class="ops-eyebrow">RAVLO OPERATIONS DESK</div>
+      <h1>Good morning, {{ current_user.first_name or current_user.username or 'Admin' }}.</h1>
+      <p>
+        Start here each morning: welcome new users, review requests, update CRM, check lending files,
+        and send Letoya a clear end-of-day summary.
       </p>
     </div>
-    <div class="adm-hero__insight">
-      <div class="adm-eyebrow" style="margin-bottom:8px;">AI SYSTEM INSIGHT</div>
-      <div id="aiInsight" class="adm-ai-text">{{ (ai_summary or "Loading latest AI insight…") | md | safe }}</div>
+    <div class="ops-brief">
+      <div class="ops-eyebrow">Today's Focus</div>
+      <p>{{ (ai_summary or "Review the platform, help users move forward, and flag anything that needs Letoya's attention.") | md | safe }}</p>
     </div>
   </section>
 
-  <div class="adm-layout">
+  <section class="ops-grid ops-grid-4">
+    <div class="re-card ops-kpi"><span>Total Users</span><strong>{{ stats.total_users or 0 }}</strong><small>Registered accounts</small></div>
+    <div class="re-card ops-kpi"><span>Loan Files</span><strong>{{ stats.total_loans or 0 }}</strong><small>In system</small></div>
+    <div class="re-card ops-kpi warning"><span>Pending Requests</span><strong>{{ stats.pending_requests or 0 }}</strong><small>Need review</small></div>
+    <div class="re-card ops-kpi"><span>Pending Invites</span><strong>{{ stats.pending_invites or 0 }}</strong><small>Need follow-up</small></div>
+  </section>
 
-    {# ════════════ MAIN COLUMN ════════════ #}
-    <div class="adm-main">
+  <div class="ops-layout">
+    <main class="ops-main">
 
-      {# ── KPI – Primary row ── #}
-      <div class="adm-kpi-primary">
-
-        <div class="adm-kpi-card adm-kpi-card--blue">
-          <div class="adm-kpi-card__top">
-            <span class="adm-kpi-card__label">Total Users</span>
-            <span class="adm-kpi-card__icon"><i class="lucide lucide-users"></i></span>
-          </div>
-          <div class="adm-kpi-card__val">{{ stats.total_users or 0 }}</div>
-          <div class="adm-kpi-card__sub">Registered accounts</div>
-        </div>
-
-        <div class="adm-kpi-card adm-kpi-card--teal">
-          <div class="adm-kpi-card__top">
-            <span class="adm-kpi-card__label">Loan Files</span>
-            <span class="adm-kpi-card__icon"><i class="lucide lucide-folder-open"></i></span>
-          </div>
-          <div class="adm-kpi-card__val">{{ stats.total_loans or 0 }}</div>
-          <div class="adm-kpi-card__sub">In system</div>
-        </div>
-
-        <div class="adm-kpi-card adm-kpi-card--amber">
-          <div class="adm-kpi-card__top">
-            <span class="adm-kpi-card__label">Pending Requests</span>
-            <span class="adm-kpi-card__icon"><i class="lucide lucide-clock"></i></span>
-          </div>
-          <div class="adm-kpi-card__val">{{ stats.pending_requests or 0 }}</div>
-          <div class="adm-kpi-card__sub">Awaiting review</div>
-        </div>
-
-        <div class="adm-kpi-card adm-kpi-card--green">
-          <div class="adm-kpi-card__top">
-            <span class="adm-kpi-card__label">Approved</span>
-            <span class="adm-kpi-card__icon"><i class="lucide lucide-badge-check"></i></span>
-          </div>
-          <div class="adm-kpi-card__val">{{ stats.approved_requests or 0 }}</div>
-          <div class="adm-kpi-card__sub">Submissions approved</div>
-        </div>
-
-      </div>
-
-      {# ── KPI – Secondary strip ── #}
-      <div class="adm-kpi-strip">
-
-        <div class="adm-kpi-stat adm-kpi-stat--purple">
-          <div class="adm-kpi-stat__dot"></div>
+      <section class="re-card ops-card-pad">
+        <div class="ops-section-head">
           <div>
-            <div class="adm-kpi-stat__val">{{ stats.total_docs or 0 }}</div>
-            <div class="adm-kpi-stat__label">Documents</div>
+            <div class="ops-eyebrow">TODAY'S OPERATIONS CHECKLIST</div>
+            <h3>Daily schedule</h3>
+            <p>Use this as Sandra's operating routine until the workflow becomes automatic.</p>
           </div>
         </div>
-
-        <div class="adm-kpi-strip__div"></div>
-
-        <div class="adm-kpi-stat adm-kpi-stat--slate">
-          <div class="adm-kpi-stat__dot"></div>
-          <div>
-            <div class="adm-kpi-stat__val">{{ stats.total_companies or 0 }}</div>
-            <div class="adm-kpi-stat__label">Companies</div>
-          </div>
+        <div class="ops-timeline">
+          <div class="ops-step"><time>8:00 AM</time><div><strong>Open dashboard and scan priorities</strong><span>Check users, pending requests, invites, messages, logs, and platform health.</span></div></div>
+          <div class="ops-step"><time>8:30 AM</time><div><strong>Welcome new members</strong><span>Send welcome emails, verify role/company, and flag anyone who needs help getting started.</span></div></div>
+          <div class="ops-step"><time>9:30 AM</time><div><strong>Review partner and access requests</strong><span>Open pending requests, check details, and prepare follow-ups for Letoya to approve if needed.</span></div></div>
+          <div class="ops-step"><time>10:30 AM</time><div><strong>CRM updates</strong><span>Update notes, mark tasks complete, schedule follow-ups, and keep the communication history clean.</span></div></div>
+          <div class="ops-step"><time>1:00 PM</time><div><strong>Ravlo Capital / Lending check</strong><span>Review loan inquiries, missing documents, and files that may need assignment or follow-up.</span></div></div>
+          <div class="ops-step"><time>2:30 PM</time><div><strong>Support and community</strong><span>Respond to basic questions, send users to the right page, and escalate anything urgent.</span></div></div>
+          <div class="ops-step"><time>4:00 PM</time><div><strong>End-of-day report</strong><span>Send Letoya a short summary: what was completed, what is pending, and what needs a decision.</span></div></div>
         </div>
+      </section>
 
-        <div class="adm-kpi-strip__div"></div>
-
-        <div class="adm-kpi-stat adm-kpi-stat--rose">
-          <div class="adm-kpi-stat__dot"></div>
+      <section class="re-card ops-card-pad">
+        <div class="ops-section-head">
           <div>
-            <div class="adm-kpi-stat__val">{{ stats.pending_invites or 0 }}</div>
-            <div class="adm-kpi-stat__label">Pending Invites</div>
-          </div>
-        </div>
-
-        <div class="adm-kpi-strip__div"></div>
-
-        <div class="adm-kpi-stat adm-kpi-stat--indigo">
-          <div class="adm-kpi-stat__dot"></div>
-          <div>
-            <div class="adm-kpi-stat__val">{{ stats.pending_tasks or 0 }}</div>
-            <div class="adm-kpi-stat__label">Pending Tasks</div>
-          </div>
-        </div>
-
-      </div>
-
-      {# Analytics Charts #}
-      <div class="re-card adm-card-pad adm-section-head-card">
-        <div class="adm-section-head">
-          <div>
-            <div class="adm-eyebrow">ANALYTICS</div>
-            <h3>Platform Activity</h3>
-            <p class="adm-sub">Loan volume and user growth over time</p>
-          </div>
-          <a class="re-btn ghost sm" href="{{ url_for('admin.analytics') }}">
-            <i class="lucide lucide-bar-chart-3"></i> Full Analytics
-          </a>
-        </div>
-        <div class="adm-chart-grid">
-          <div>
-            <div class="adm-chart-label">Loan Volume</div>
-            <div id="chart_volume" class="adm-chart"></div>
-          </div>
-          <div>
-            <div class="adm-chart-label">User Growth</div>
-            <div id="chart_users" class="adm-chart"></div>
-          </div>
-        </div>
-      </div>
-
-      {# Recent Requests #}
-      <div class="re-card adm-card-pad">
-        <div class="adm-section-head">
-          <div>
-            <div class="adm-eyebrow">ONBOARDING</div>
+            <div class="ops-eyebrow">ONBOARDING</div>
             <h3>Recent Access Requests</h3>
-            <p class="adm-sub">Newest onboarding and access submissions</p>
+            <p>Newest onboarding and access submissions.</p>
           </div>
           <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">View All</a>
         </div>
@@ -192,15 +101,14 @@
         {% else %}
           <div class="re-empty" style="margin-top:16px;">No recent access requests.</div>
         {% endif %}
-      </div>
+      </section>
 
-      {# Recent Users #}
-      <div class="re-card adm-card-pad">
-        <div class="adm-section-head">
+      <section class="re-card ops-card-pad">
+        <div class="ops-section-head">
           <div>
-            <div class="adm-eyebrow">USERS</div>
+            <div class="ops-eyebrow">USERS</div>
             <h3>Recent Users</h3>
-            <p class="adm-sub">Latest accounts added to the platform</p>
+            <p>Latest accounts added to the platform.</p>
           </div>
           <a class="re-btn ghost sm" href="{{ url_for('system.users') }}">Manage Users</a>
         </div>
@@ -224,435 +132,125 @@
         {% else %}
           <div class="re-empty" style="margin-top:16px;">No users found.</div>
         {% endif %}
-      </div>
+      </section>
 
-      {# Demo Dashboards #}
-      <div class="re-card adm-card-pad">
-        <div class="adm-section-head">
+      <section class="re-card ops-card-pad">
+        <div class="ops-section-head">
           <div>
-            <div class="adm-eyebrow">DEMO SURFACES</div>
-            <h3>Role Dashboard Previews</h3>
-            <p class="adm-sub">Investor, partner, and lending role demos prepared for walkthroughs</p>
+            <div class="ops-eyebrow">ROLE DASHBOARDS</div>
+            <h3>Dashboard previews</h3>
+            <p>Use these to understand how each Ravlo user type works.</p>
           </div>
           <a class="re-btn ghost sm" href="{{ url_for('admin.demo_center') }}">Demo Center</a>
         </div>
-        <div class="adm-demo-grid">
+        <div class="ops-demo-grid">
           {% for demo in demo_dashboards %}
-          <div class="adm-demo-card">
-            <div class="adm-demo-theme">{{ demo.theme }}</div>
-            <h4 class="adm-demo-role">{{ demo.role }}</h4>
-            <p class="adm-demo-tagline">{{ demo.tagline }}</p>
-            <div class="adm-demo-kpis">
-              {% for stat in demo.kpis %}
-              <div class="adm-demo-kpi-row">
-                <span>{{ stat.label }}</span>
-                <strong>{{ stat.value }}</strong>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
+          <div class="ops-demo-card"><div>{{ demo.theme }}</div><strong>{{ demo.role }}</strong><p>{{ demo.tagline }}</p></div>
           {% endfor %}
         </div>
-      </div>
+      </section>
 
-    </div>
+    </main>
 
-    {# ════════════ SIDE COLUMN ════════════ #}
-    <aside class="adm-side">
-
-      {# Quick Actions #}
-      <div class="re-card adm-card-pad">
-        <div class="adm-eyebrow" style="margin-bottom:12px;">QUICK ACTIONS</div>
-        <div class="adm-action-grid">
-          <a href="{{ url_for('admin.analytics') }}" class="adm-action-tile">
-            <i class="lucide lucide-bar-chart-3"></i>
-            <span>Analytics</span>
-          </a>
-          <a href="{{ url_for('system.users') }}" class="adm-action-tile">
-            <i class="lucide lucide-user-cog"></i>
-            <span>Users</span>
-          </a>
-          <a href="{{ url_for('admin.access_requests') }}" class="adm-action-tile">
-            <i class="lucide lucide-inbox"></i>
-            <span>Requests</span>
-          </a>
-          <a href="{{ url_for('admin.licensing_applications') }}" class="adm-action-tile">
-            <i class="lucide lucide-file-text"></i>
-            <span>Licenses</span>
-          </a>
-          <a href="{{ url_for('crm.dashboard') }}" class="adm-action-tile">
-            <i class="lucide lucide-phone-call"></i>
-            <span>CRM</span>
-          </a>
-          <a href="{{ url_for('admin.reports') }}" class="adm-action-tile">
-            <i class="lucide lucide-file-spreadsheet"></i>
-            <span>Reports</span>
-          </a>
-          {% if not (current_user.role == "admin" and current_user.company_id) %}
-          <a href="{{ url_for('admin.ai_dashboard') }}" class="adm-action-tile">
-            <i class="lucide lucide-sparkles"></i>
-            <span>AI Control</span>
-          </a>
-          <a href="{{ url_for('admin.ai_email_assistant') }}" class="adm-action-tile">
-            <i class="lucide lucide-mail"></i>
-            <span>AI Email</span>
-          </a>
-          <a href="{{ url_for('admin.verify_data') }}" class="adm-action-tile">
-            <i class="lucide lucide-badge-check"></i>
-            <span>Verify Docs</span>
-          </a>
-          {% endif %}
-          <a href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}{{ url_for('admin.companies') }}{% endif %}"
-             class="adm-action-tile adm-action-tile--primary">
-            <i class="lucide lucide-user-plus"></i>
-            <span>Send Invite</span>
-          </a>
-          <a href="{{ url_for('admin.messages') }}" class="adm-action-tile">
-            <i class="lucide lucide-messages-square"></i>
-            <span>Messages</span>
-          </a>
+    <aside class="ops-side">
+      <section class="re-card ops-card-pad">
+        <div class="ops-eyebrow" style="margin-bottom:12px;">QUICK ACTIONS</div>
+        <div class="ops-action-grid">
+          <a href="{{ url_for('system.users') }}"><i class="lucide lucide-user-cog"></i><span>Users</span></a>
+          <a href="{{ url_for('admin.access_requests') }}"><i class="lucide lucide-inbox"></i><span>Requests</span></a>
+          <a href="{{ url_for('crm.dashboard') }}"><i class="lucide lucide-phone-call"></i><span>CRM</span></a>
+          <a href="{{ url_for('admin.messages') }}"><i class="lucide lucide-messages-square"></i><span>Messages</span></a>
+          <a href="{{ url_for('admin.licensing_applications') }}"><i class="lucide lucide-file-text"></i><span>Licenses</span></a>
+          <a href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}{{ url_for('admin.companies') }}{% endif %}" class="primary"><i class="lucide lucide-user-plus"></i><span>Invite</span></a>
         </div>
-      </div>
+      </section>
 
-      {# License Applications #}
-      <div class="re-card adm-card-pad">
-        <div class="adm-section-head" style="margin-bottom:12px;">
-          <div>
-            <div class="adm-eyebrow">LICENSING</div>
-            <h3 style="margin:4px 0 2px;">License Applications</h3>
-            <p class="adm-sub">Inbound Ravlo OS licensing requests</p>
-          </div>
-          <a class="re-btn ghost sm" href="{{ url_for('admin.licensing_applications') }}">View</a>
+      <section class="re-card ops-card-pad">
+        <div class="ops-eyebrow">END-OF-DAY REPORT TEMPLATE</div>
+        <div class="ops-report-box">
+          <strong>Today's Operations</strong><br>
+          • New users reviewed: ___<br>
+          • Welcome emails sent: ___<br>
+          • Requests reviewed: ___<br>
+          • CRM notes updated: ___<br>
+          • Follow-ups scheduled: ___<br>
+          • Items needing Letoya: ___
         </div>
-        <a class="re-btn primary" style="width:100%;justify-content:center;" href="{{ url_for('admin.licensing_applications') }}">
-          <i class="lucide lucide-file-text"></i> Open License Applications
-        </a>
-      </div>
+      </section>
 
-      {# Recent Invites #}
-      <div class="re-card adm-card-pad">
-        <div class="adm-section-head" style="margin-bottom:14px;">
-          <div>
-            <div class="adm-eyebrow">INVITES</div>
-            <h3 style="margin:4px 0 2px;">Recent Invites</h3>
-            <p class="adm-sub">Latest team invitations</p>
-          </div>
+      <section class="re-card ops-card-pad">
+        <div class="ops-section-head" style="margin-bottom:14px;">
+          <div><div class="ops-eyebrow">INVITES</div><h3>Recent Invites</h3></div>
         </div>
         {% if recent_invites %}
-        <div class="adm-invite-stack">
+        <div class="ops-stack">
           {% for invite in recent_invites %}
           {% set is = (invite.status or 'pending')|lower %}
-          <div class="adm-invite-row">
-            <div class="adm-invite-avatar">{{ (invite.first_name[0] if invite.first_name else invite.email[0])|upper }}</div>
-            <div class="adm-invite-info">
-              <div class="adm-invite-name">{{ ((invite.first_name or '') ~ ' ' ~ (invite.last_name or ''))|trim or invite.email or '—' }}</div>
-              <div class="adm-invite-email">{{ invite.email or '—' }}</div>
-            </div>
-            <div>
-              {% if is == 'pending' %}<span class="badge badge-warning">Pending</span>
-              {% elif is in ['approved','accepted'] %}<span class="badge badge-success">{{ is|title }}</span>
-              {% elif is in ['denied','rejected','expired'] %}<span class="badge badge-danger">{{ is|title }}</span>
-              {% else %}<span class="badge badge-neutral">{{ (invite.status or 'Unknown')|title }}</span>{% endif %}
-            </div>
-          </div>
+          <div class="ops-row"><div><strong>{{ ((invite.first_name or '') ~ ' ' ~ (invite.last_name or ''))|trim or invite.email or '—' }}</strong><span>{{ invite.email or '—' }}</span></div><span class="badge {% if is == 'pending' %}badge-warning{% elif is in ['approved','accepted'] %}badge-success{% else %}badge-neutral{% endif %}">{{ is|title }}</span></div>
           {% endfor %}
         </div>
-        {% else %}
-          <div class="re-empty">No recent invites.</div>
-        {% endif %}
-      </div>
+        {% else %}<div class="re-empty">No recent invites.</div>{% endif %}
+      </section>
 
-      {# System Health #}
-      <div class="re-card adm-card-pad">
-        <div class="adm-eyebrow" style="margin-bottom:8px;">PLATFORM HEALTH</div>
-        <h3 style="margin:0 0 4px;">Server Load</h3>
-        <p class="adm-sub" style="margin-bottom:12px;">Current platform health snapshot</p>
-        <div id="chart_system" style="min-height:220px;"></div>
-      </div>
-
-      {# Recent Logs #}
-      <div class="re-card adm-card-pad">
-        <div class="adm-section-head" style="margin-bottom:14px;">
-          <div>
-            <div class="adm-eyebrow">SYSTEM</div>
-            <h3 style="margin:4px 0 2px;">Recent Logs</h3>
-            <p class="adm-sub">Latest internal activity</p>
-          </div>
-        </div>
+      <section class="re-card ops-card-pad">
+        <div class="ops-eyebrow">SYSTEM</div>
+        <h3 style="margin:4px 0 2px;">Recent Logs</h3>
         {% if logs %}
-        <div class="adm-log-stack">
-          {% for log in logs[:8] %}
-          <div class="adm-log-item">
-            <div class="adm-log-title">{{ log.action if log.action is defined and log.action else (log.title if log.title is defined and log.title else "System Event") }}</div>
-            <div class="adm-log-meta">{{ log.created_at.strftime("%b %d · %I:%M %p") if log.created_at else "" }}</div>
-            {% if log.description is defined and log.description %}<div class="adm-log-body">{{ log.description }}</div>
-            {% elif log.message is defined and log.message %}<div class="adm-log-body">{{ log.message }}</div>{% endif %}
-          </div>
+        <div class="ops-stack" style="margin-top:12px;">
+          {% for log in logs[:6] %}
+          <div class="ops-log"><strong>{{ log.action if log.action is defined and log.action else (log.title if log.title is defined and log.title else "System Event") }}</strong><span>{{ log.created_at.strftime("%b %d · %I:%M %p") if log.created_at else "" }}</span>{% if log.description is defined and log.description %}<p>{{ log.description }}</p>{% elif log.message is defined and log.message %}<p>{{ log.message }}</p>{% endif %}</div>
           {% endfor %}
         </div>
-        {% else %}
-          <div class="re-empty">No recent logs.</div>
-        {% endif %}
-      </div>
-
+        {% else %}<div class="re-empty" style="margin-top:12px;">No recent logs.</div>{% endif %}
+      </section>
     </aside>
   </div>
 </div>
 
 <style>
-/* ── Layout ── */
-.adm-wrap { display:grid; gap:18px; min-width:0; }
-
-.adm-layout {
-  display:grid;
-  grid-template-columns: minmax(0,2.2fr) 320px;
-  gap:16px;
-  align-items:start;
-}
-.adm-main, .adm-side { display:grid; gap:16px; min-width:0; }
-
-/* ── Hero ── */
-.adm-hero {
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap:24px;
-  padding:28px 32px;
-  background: linear-gradient(135deg, rgba(18,32,52,.97) 0%, rgba(10,20,36,.96) 100%);
-  border:1px solid rgba(122,184,255,.12);
-}
-.adm-hero__title { margin:6px 0 6px; font-size:1.6rem; font-weight:800; letter-spacing:-.03em; }
-.adm-hero__sub { color:var(--muted,#8a9db5); font-size:.93rem; margin:0; }
-.adm-hero__insight {
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.07);
-  border-radius:14px;
-  padding:18px 20px;
-}
-.adm-ai-text { font-size:.9rem; line-height:1.65; color:var(--muted,#8a9db5); }
-.adm-ai-text p { margin:0 0 6px; }
-
-/* ── Shared ── */
-.adm-eyebrow {
-  font-size:.72rem; font-weight:700; text-transform:uppercase;
-  letter-spacing:.1em; color:var(--muted,#8a9db5);
-}
-.adm-sub { margin:2px 0 0; font-size:.83rem; color:var(--muted,#8a9db5); }
-.adm-card-pad { padding:22px 24px; }
-.adm-section-head {
-  display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap;
-}
-.adm-section-head h3 { margin:4px 0 2px; font-size:.97rem; font-weight:700; }
-.adm-badge {
-  display:inline-block; padding:3px 12px; border-radius:20px;
-  font-size:.73rem; font-weight:700; letter-spacing:.05em; margin-bottom:8px;
-}
-.adm-badge--blue { background:rgba(122,184,255,.14); color:#7ab8ff; }
-
-/* ── KPI Primary Cards ── */
-.adm-kpi-primary {
-  display:grid;
-  grid-template-columns: repeat(4, minmax(0,1fr));
-  gap:12px;
-}
-.adm-kpi-card {
-  position:relative; overflow:hidden;
-  padding:20px 22px 18px;
-  border-radius:18px;
-  border:1px solid rgba(255,255,255,.07);
-  background:rgba(255,255,255,.03);
-}
-.adm-kpi-card::before {
-  content:"";
-  position:absolute; top:0; left:0; right:0; height:3px;
-  border-radius:18px 18px 0 0;
-}
-.adm-kpi-card__top {
-  display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;
-}
-.adm-kpi-card__label {
-  font-size:.75rem; font-weight:700; text-transform:uppercase;
-  letter-spacing:.07em; color:var(--muted,#8a9db5);
-}
-.adm-kpi-card__icon {
-  width:36px; height:36px; border-radius:10px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:1rem;
-}
-.adm-kpi-card__val {
-  font-size:2.4rem; font-weight:800; line-height:1; letter-spacing:-.04em;
-  margin-bottom:6px;
-}
-.adm-kpi-card__sub { font-size:.78rem; color:var(--muted,#8a9db5); }
-
-.adm-kpi-card--blue::before  { background:linear-gradient(90deg,#3b82f6,#7ab8ff); }
-.adm-kpi-card--blue .adm-kpi-card__icon { background:rgba(122,184,255,.14); color:#7ab8ff; }
-.adm-kpi-card--blue .adm-kpi-card__val  { color:#e8f4ff; }
-
-.adm-kpi-card--teal::before  { background:linear-gradient(90deg,#059669,#34d399); }
-.adm-kpi-card--teal .adm-kpi-card__icon { background:rgba(52,211,153,.12); color:#34d399; }
-.adm-kpi-card--teal .adm-kpi-card__val  { color:#d1faf0; }
-
-.adm-kpi-card--amber::before { background:linear-gradient(90deg,#d97706,#fbbf24); }
-.adm-kpi-card--amber .adm-kpi-card__icon{ background:rgba(251,191,36,.12); color:#fbbf24; }
-.adm-kpi-card--amber .adm-kpi-card__val { color:#fef9e7; }
-
-.adm-kpi-card--green::before { background:linear-gradient(90deg,#16a34a,#4ade80); }
-.adm-kpi-card--green .adm-kpi-card__icon{ background:rgba(74,222,128,.12); color:#4ade80; }
-.adm-kpi-card--green .adm-kpi-card__val { color:#dcfce7; }
-
-/* ── KPI Secondary Strip ── */
-.adm-kpi-strip {
-  display:flex; align-items:center; gap:0;
-  padding:16px 24px;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,.07);
-  background:rgba(255,255,255,.02);
-}
-.adm-kpi-strip__div {
-  width:1px; height:32px; background:rgba(255,255,255,.08); flex-shrink:0; margin:0 20px;
-}
-.adm-kpi-stat {
-  display:flex; align-items:center; gap:10px; flex:1; min-width:0;
-}
-.adm-kpi-stat__dot {
-  width:10px; height:10px; border-radius:50%; flex-shrink:0;
-}
-.adm-kpi-stat__val  { font-size:1.35rem; font-weight:800; line-height:1; letter-spacing:-.02em; }
-.adm-kpi-stat__label{ font-size:.75rem; color:var(--muted,#8a9db5); margin-top:3px; }
-
-.adm-kpi-stat--purple .adm-kpi-stat__dot { background:#a78bfa; }
-.adm-kpi-stat--purple .adm-kpi-stat__val { color:#a78bfa; }
-.adm-kpi-stat--slate  .adm-kpi-stat__dot { background:#94a3b8; }
-.adm-kpi-stat--slate  .adm-kpi-stat__val { color:#94a3b8; }
-.adm-kpi-stat--rose   .adm-kpi-stat__dot { background:#fb7185; }
-.adm-kpi-stat--rose   .adm-kpi-stat__val { color:#fb7185; }
-.adm-kpi-stat--indigo .adm-kpi-stat__dot { background:#818cf8; }
-.adm-kpi-stat--indigo .adm-kpi-stat__val { color:#818cf8; }
-
-/* ── Charts ── */
-.adm-chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px; }
-.adm-chart-label { font-size:.8rem; font-weight:600; color:var(--muted,#8a9db5); margin-bottom:6px; text-transform:uppercase; letter-spacing:.06em; }
-.adm-chart { min-height:240px; }
-
-/* ── Action Grid ── */
-.adm-action-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
-.adm-action-tile {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:8px; padding:16px 10px; border-radius:14px;
-  border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03);
-  font-size:.8rem; font-weight:600; color:var(--text,#f4f8fc);
-  text-decoration:none; transition:.15s;
-  text-align:center;
-}
-.adm-action-tile i { font-size:1.15rem; color:var(--muted,#8a9db5); }
-.adm-action-tile:hover { background:rgba(122,184,255,.08); border-color:rgba(122,184,255,.2); }
-.adm-action-tile--primary { background:rgba(59,130,246,.15); border-color:rgba(59,130,246,.3); }
-.adm-action-tile--primary i { color:#7ab8ff; }
-.adm-action-tile--primary:hover { background:rgba(59,130,246,.22); }
-
-/* ── Invites ── */
-.adm-invite-stack { display:grid; gap:10px; }
-.adm-invite-row { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); }
-.adm-invite-avatar {
-  width:34px; height:34px; border-radius:50%; flex-shrink:0;
-  background:rgba(122,184,255,.14); color:#7ab8ff;
-  display:flex; align-items:center; justify-content:center;
-  font-weight:700; font-size:.85rem;
-}
-.adm-invite-info { flex:1; min-width:0; }
-.adm-invite-name { font-size:.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.adm-invite-email { font-size:.73rem; color:var(--muted,#8a9db5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-/* ── Logs ── */
-.adm-log-stack { display:grid; gap:8px; }
-.adm-log-item { padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.02); }
-.adm-log-title { font-weight:600; font-size:.88rem; }
-.adm-log-meta { font-size:.75rem; color:var(--muted,#8a9db5); margin-top:2px; }
-.adm-log-body { font-size:.8rem; color:var(--muted,#8a9db5); margin-top:4px; line-height:1.4; }
-
-/* ── Demo cards ── */
-.adm-demo-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:12px; margin-top:16px; }
-.adm-demo-card { padding:16px 18px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.02); }
-.adm-demo-theme { font-size:.71rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#7ab8ff; margin-bottom:6px; }
-.adm-demo-role { margin:0 0 6px; font-size:.92rem; font-weight:700; }
-.adm-demo-tagline { color:var(--muted,#8a9db5); font-size:.83rem; margin:0 0 12px; min-height:36px; }
-.adm-demo-kpis { display:grid; gap:6px; }
-.adm-demo-kpi-row { display:flex; justify-content:space-between; font-size:.83rem; }
-.adm-demo-kpi-row span { color:var(--muted,#8a9db5); }
-
-/* ── Responsive ── */
-@media (max-width:1200px) {
-  .adm-layout { grid-template-columns:1fr; }
-  .adm-kpi-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
-}
-@media (max-width:860px) {
-  .adm-hero { grid-template-columns:1fr; }
-  .adm-kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .adm-chart-grid { grid-template-columns:1fr; }
-}
-@media (max-width:540px) {
-  .adm-kpi-grid { grid-template-columns:1fr 1fr; }
-}
+.ops-wrap { display:grid; gap:18px; min-width:0; }
+.ops-hero { display:grid; grid-template-columns:1.2fr .8fr; gap:24px; padding:30px 32px; background:linear-gradient(135deg, rgba(18,32,52,.97), rgba(10,20,36,.96)); border:1px solid rgba(122,184,255,.14); }
+.ops-hero h1 { margin:6px 0 8px; font-size:1.8rem; font-weight:850; letter-spacing:-.04em; }
+.ops-hero p, .ops-brief p { color:var(--muted,#8a9db5); line-height:1.65; margin:0; }
+.ops-brief { padding:18px 20px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03); }
+.ops-eyebrow { font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.11em; color:#7ab8ff; }
+.ops-grid { display:grid; gap:12px; }
+.ops-grid-4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.ops-kpi { padding:20px; }
+.ops-kpi span { display:block; color:var(--muted,#8a9db5); font-size:.76rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+.ops-kpi strong { display:block; font-size:2.2rem; line-height:1; margin:10px 0 6px; }
+.ops-kpi small { color:var(--muted,#8a9db5); }
+.ops-kpi.warning strong { color:#fbbf24; }
+.ops-layout { display:grid; grid-template-columns:minmax(0,2.1fr) 340px; gap:18px; align-items:start; }
+.ops-main,.ops-side { display:grid; gap:16px; min-width:0; }
+.ops-card-pad { padding:22px 24px; }
+.ops-section-head { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; flex-wrap:wrap; }
+.ops-section-head h3 { margin:4px 0 2px; font-size:1.02rem; }
+.ops-section-head p { margin:0; color:var(--muted,#8a9db5); font-size:.86rem; }
+.ops-timeline { display:grid; gap:10px; margin-top:16px; }
+.ops-step { display:grid; grid-template-columns:86px 1fr; gap:14px; padding:14px; border-radius:14px; border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.025); }
+.ops-step time { color:#7ab8ff; font-weight:800; font-size:.82rem; }
+.ops-step strong { display:block; margin-bottom:3px; }
+.ops-step span { color:var(--muted,#8a9db5); font-size:.86rem; line-height:1.45; }
+.ops-action-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+.ops-action-grid a { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:16px 10px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03); color:var(--text,#f4f8fc); text-decoration:none; font-weight:700; font-size:.82rem; }
+.ops-action-grid a.primary { background:rgba(59,130,246,.15); border-color:rgba(59,130,246,.28); }
+.ops-report-box { margin-top:12px; padding:16px; border-radius:14px; background:rgba(122,184,255,.07); border:1px solid rgba(122,184,255,.14); color:var(--muted,#8a9db5); line-height:1.75; font-size:.88rem; }
+.ops-report-box strong { color:var(--text,#f4f8fc); }
+.ops-stack { display:grid; gap:10px; }
+.ops-row { display:flex; justify-content:space-between; gap:10px; align-items:center; padding:12px; border-radius:12px; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.06); }
+.ops-row strong,.ops-row span { display:block; }
+.ops-row div span { color:var(--muted,#8a9db5); font-size:.76rem; }
+.ops-log { padding:12px; border-radius:12px; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.06); }
+.ops-log strong { display:block; font-size:.88rem; }
+.ops-log span { color:var(--muted,#8a9db5); font-size:.74rem; }
+.ops-log p { margin:4px 0 0; color:var(--muted,#8a9db5); font-size:.8rem; line-height:1.45; }
+.ops-demo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px; margin-top:16px; }
+.ops-demo-card { padding:16px; border-radius:15px; border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.025); }
+.ops-demo-card div { color:#7ab8ff; font-size:.7rem; font-weight:850; text-transform:uppercase; letter-spacing:.1em; }
+.ops-demo-card strong { display:block; margin:6px 0; }
+.ops-demo-card p { color:var(--muted,#8a9db5); margin:0; font-size:.84rem; line-height:1.45; }
+@media (max-width:1100px) { .ops-layout,.ops-hero { grid-template-columns:1fr; } .ops-grid-4 { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:620px) { .ops-grid-4,.ops-action-grid { grid-template-columns:1fr; } .ops-step { grid-template-columns:1fr; } }
 </style>
-
-<script>
-(function () {
-  /* AI insight auto-refresh */
-  const aiEl = document.getElementById("aiInsight");
-  function updateInsight() {
-    const csrfToken = {{ csrf_token()|tojson }};
-    fetch('{{ url_for("admin.ai_refresh", target="analytics") }}', {
-      method:"POST",
-      headers:{"X-Requested-With":"XMLHttpRequest","X-CSRFToken":csrfToken}
-    })
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(d => { if (aiEl && d.message) aiEl.innerHTML = `<p>${d.message}</p>`; })
-    .catch(() => {});
-  }
-  updateInsight();
-  setInterval(updateInsight, 60000);
-
-  /* Charts */
-  const loanLabels  = {{ (loan_volume_labels  or ['Jan','Feb','Mar','Apr','May','Jun'])|tojson }};
-  const loanSeries  = {{ (loan_volume_series  or [0,0,0,0,0,0])|tojson }};
-  const userLabels  = {{ (user_growth_labels  or ['Jan','Feb','Mar','Apr','May','Jun'])|tojson }};
-  const userSeries  = {{ (user_growth_series  or [0,0,0,0,0,0])|tojson }};
-  const serverLoad  = {{ (server_load_value   or 68)|tojson }};
-
-  const base = {
-    chart:{ toolbar:{show:false}, foreColor:'#8a9db5', animations:{enabled:true} },
-    grid:{ borderColor:'rgba(255,255,255,.06)' },
-    dataLabels:{ enabled:false },
-    theme:{ mode:'dark' }
-  };
-
-  const volEl = document.querySelector("#chart_volume");
-  if (volEl) new ApexCharts(volEl, { ...base,
-    chart:{ ...base.chart, type:'area', height:240 },
-    stroke:{ curve:'smooth', width:2 },
-    fill:{ type:'gradient', gradient:{ shadeIntensity:.4, opacityFrom:.4, opacityTo:.02 } },
-    series:[{ name:'Loans', data:loanSeries }],
-    xaxis:{ categories:loanLabels },
-    colors:['#7ab8ff']
-  }).render();
-
-  const usrEl = document.querySelector("#chart_users");
-  if (usrEl) new ApexCharts(usrEl, { ...base,
-    chart:{ ...base.chart, type:'line', height:240 },
-    stroke:{ curve:'smooth', width:3 },
-    series:[{ name:'Users', data:userSeries }],
-    xaxis:{ categories:userLabels },
-    colors:['#34d399']
-  }).render();
-
-  const sysEl = document.querySelector("#chart_system");
-  if (sysEl) new ApexCharts(sysEl, { ...base,
-    chart:{ ...base.chart, type:'radialBar', height:220 },
-    series:[serverLoad],
-    labels:['Server Load %'],
-    colors:['#fbbf24'],
-    plotOptions:{ radialBar:{ hollow:{ size:'58%' }, dataLabels:{ value:{ fontSize:'22px' } } } }
-  }).render();
-})();
-</script>
 {% endblock %}
