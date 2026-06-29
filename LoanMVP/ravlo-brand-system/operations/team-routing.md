@@ -13,6 +13,21 @@ A user can have the right role but still not appear in the right team if `compan
 
 ---
 
+## Role language vs technical role
+
+Ravlo can use a human title that is different from the technical role stored in the database.
+
+Example:
+
+- Human title: Ravlo Operations Lead
+- Technical role: `platform_admin`
+- Company: Ravlo
+- Dashboard: Admin Operations Desk
+
+This helps Ravlo stay simple in code while still giving team members a title that matches the work they are doing.
+
+---
+
 ## Ravlo internal team
 
 ### Letoya
@@ -20,47 +35,65 @@ A user can have the right role but still not appear in the right team if `compan
 Recommended setup:
 
 - Email: `letoya@ravlohq.com`
-- Role: `executive`
+- Human title: Founder / CEO
+- Technical role: `executive`
 - Company: Ravlo
 - Expected dashboard: Executive Mission Control
 
 Purpose:
 
-- Founder / CEO view
+- founder / CEO view
 - Mission Control
-- User activity
+- user activity
 - subscriptions
 - platform health
 - growth and operations
+- final decisions
 
 ### Sandra
 
 Recommended setup:
 
-- Email: `Sandra@ravlohq.com`
-- Role: `admin` or `platform_admin`
+- Email: `sandra@ravlohq.com`
+- Human title: Ravlo Operations Lead
+- Technical role: `platform_admin`
 - Company: Ravlo
 - Expected dashboard: Admin Operations Desk
 
-If Sandra should only manage Ravlo's day-to-day operations, prefer:
+Why this is the best fit:
 
-- Role: `admin`
-- Company: Ravlo
+Sandra is trusted internal team and is open to helping wherever Ravlo needs support. She should not be treated like an outside partner or a limited customer/company admin. Her role should let her help with operations, users, messages, CRM, requests, and general platform coordination.
 
-If Sandra should have broader platform-level access, use:
+Sandra's job is not to make founder-level decisions. Her job is to keep the work moving and flag anything that needs Letoya.
 
-- Role: `platform_admin`
-- Company: Ravlo
-
-Sandra's dashboard purpose:
+Sandra's daily dashboard purpose:
 
 - welcome new users
 - review access requests
 - review invites
-- update CRM
+- update CRM notes
 - monitor messages
 - check Ravlo Capital / Lending follow-ups
+- review partner requests
+- help keep user records clean
 - send end-of-day report
+- escalate anything sensitive to Letoya
+
+Recommended access boundary:
+
+- Sandra can help operate Ravlo.
+- Sandra should not replace Letoya's executive dashboard.
+- Sandra should not approve major strategy, pricing, legal, investor, or partnership decisions without Letoya.
+- Sandra can prepare, organize, follow up, and report.
+
+If Ravlo later adds a dedicated custom role, it should be called:
+
+- `operations_admin`
+
+Until then, use:
+
+- `platform_admin`
+- Company: Ravlo
 
 ---
 
@@ -84,6 +117,14 @@ Partner dashboard purpose:
 - use partner tools
 
 If a partner is inactive, keep the dashboard ready but do not give them admin access.
+
+For an absent or inconsistent partner:
+
+- keep role as `partner`
+- keep the dashboard ready
+- do not add admin permissions
+- do not assign internal operations responsibility
+- use CRM/follow-up notes to track whether they are active
 
 ---
 
@@ -148,17 +189,23 @@ Ask these questions before changing a user:
 1. Are they Ravlo internal team?
    - Use Ravlo company.
    - Use `executive`, `admin`, or `platform_admin`.
+   - If they are trusted and helping across the platform, use `platform_admin`.
 
-2. Are they a company customer/team member?
+2. Are they helping operate Ravlo day to day?
+   - Use Ravlo company.
+   - Use Admin Operations Desk.
+   - Human title should be Operations Lead, Operations Assistant, or Operations Admin.
+
+3. Are they a company customer/team member?
    - Use that company's `company_id`.
    - Use role based on their job.
 
-3. Are they an external partner?
+4. Are they an external partner?
    - Use `partner`.
    - Create/confirm partner profile.
    - Do not give admin access unless they help operate Ravlo.
 
-4. Are they an investor or borrower?
+5. Are they an investor or borrower?
    - Keep them out of internal team dashboards.
    - Route them to Investor OS or Borrower Portal.
 
@@ -166,11 +213,13 @@ Ask these questions before changing a user:
 
 ## Current recommended correction
 
-Sandra is part of Ravlo's internal team. Make sure her user record has:
+Sandra is part of Ravlo's internal team and is open to helping wherever needed. Make sure her user record has:
 
 - email normalized to lowercase: `sandra@ravlohq.com`
 - company set to Ravlo
-- role set to `admin` for Operations Desk, or `platform_admin` for broader platform access
+- technical role set to `platform_admin`
+- human title treated as Ravlo Operations Lead
+- expected dashboard: Admin Operations Desk
 
 For the absent partner, keep them as:
 
@@ -181,7 +230,7 @@ For the absent partner, keep them as:
 This keeps Ravlo clean:
 
 - Letoya runs Mission Control.
-- Sandra runs Operations Desk.
+- Sandra runs Operations Desk as Ravlo Operations Lead.
 - Partners stay in Partner Dashboard.
 - Lending staff go to Lending OS dashboards.
 - Investors and borrowers stay in their customer experiences.
