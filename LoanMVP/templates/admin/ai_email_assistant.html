@@ -66,7 +66,7 @@ Generate and send outreach emails with AI — partner invites, investor updates,
           <div class="aie-queue-item" onclick="loadLeadContext({{ lead|tojson }})">
             <div class="aie-queue-item-head">
               <span class="aie-category-badge">{{ lead.category or "Partner" }}</span>
-              <span class="aie-queue-date">{{ lead.created_at.strftime("%b %d") if lead.created_at else "" }}</span>
+              <span class="aie-queue-date">{{ lead.created_at }}</span>
             </div>
             <div class="aie-queue-name">{{ lead.name or lead.business_name or "Unknown Partner" }}</div>
             <div class="aie-queue-meta">
@@ -90,7 +90,7 @@ Generate and send outreach emails with AI — partner invites, investor updates,
           <div class="aie-queue-item" onclick="loadRequestContext({{ req|tojson }})">
             <div class="aie-queue-item-head">
               <span class="aie-category-badge">{{ req.category or "Request" }}</span>
-              <span class="aie-queue-date">{{ req.created_at.strftime("%b %d") if req.created_at else "" }}</span>
+              <span class="aie-queue-date">{{ req.created_at }}</span>
             </div>
             <div class="aie-queue-name">{{ req.title or "Partner Request" }}</div>
             <div class="aie-queue-meta">
