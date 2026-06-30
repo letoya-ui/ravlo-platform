@@ -1544,6 +1544,38 @@ def delete_staff_invite(invite_id):
     return redirect(url_for("admin.staff"))
 
 
+@admin_bp.route("/staff/link", methods=["POST"])
+@login_required
+@role_required("admin_group")
+def link_staff_member():
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user) or (getattr(current_user, "role", "") or "").strip().lower() == "executive"):
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    email = (request.form.get("email") or "").strip().lower()
+    role = (request.form.get("role") or "").strip()
+
+    if not email:
+        flash("Email is required.", "danger")
+        return redirect(url_for("admin.staff"))
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash(f"No account found for {email}. Use the invite form to send them a registration link.", "warning")
+        return redirect(url_for("admin.staff"))
+
+    ravlo_co = _get_or_create_ravlo_company()
+    user.company_id = ravlo_co.id
+
+    if role and role in RAVLO_STAFF_ROLE_SET:
+        user.role = role
+
+    db.session.commit()
+    name = ((user.first_name or "") + " " + (user.last_name or "")).strip() or user.email
+    flash(f"{name} has been added to the Ravlo team.", "success")
+    return redirect(url_for("admin.staff"))
+
+
 # =========================================================
 # 📊 SYSTEM REPORTS (CSV EXPORT)
 # =========================================================
