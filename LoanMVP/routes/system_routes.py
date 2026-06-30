@@ -269,6 +269,40 @@ def toggle_user(user_id):
     return redirect(url_for("system.users"))
 
 # =========================================================
+# 🏷️ Change User Role
+# =========================================================
+_ASSIGNABLE_ROLES = [
+    "investor", "borrower", "loan_officer", "partner", "realtor",
+    "contractor", "admin", "executive", "student", "loan_officer_partner",
+]
+
+@system_bp.route("/change_role/<int:user_id>", methods=["POST"])
+@role_required("system", "admin")
+def change_role(user_id):
+    company_id, redirect_response = _company_admin_guard(current_user)
+    if redirect_response:
+        return redirect_response
+
+    user = User.query.get_or_404(user_id)
+
+    if _is_company_admin(current_user) and company_id is not None and user.company_id != company_id:
+        flash("You can only manage users from your own company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company_id))
+
+    new_role = (request.form.get("role") or "").strip().lower()
+    if new_role not in _ASSIGNABLE_ROLES:
+        flash(f"Invalid role: {new_role}", "danger")
+        return redirect(url_for("system.users"))
+
+    old_role = user.role or "unknown"
+    user.role = new_role
+    db.session.commit()
+
+    flash(f"{user.email} changed from {old_role} → {new_role}.", "success")
+    return redirect(url_for("system.users"))
+
+
+# =========================================================
 # 🗑️ Delete User
 # =========================================================
 @system_bp.route("/delete_user/<int:user_id>", methods=["POST"])
