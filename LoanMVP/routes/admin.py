@@ -1655,33 +1655,42 @@ def company_finances():
     selected_division = request.args.get("division", "all")
     selected_type     = request.args.get("type", "all")
 
-    q = CMFinanceEntry.query
-    if selected_division != "all":
-        q = q.filter_by(division=selected_division)
-    if selected_type in ("income", "expense"):
-        q = q.filter_by(entry_type=selected_type)
-
-    entries = q.order_by(CMFinanceEntry.entry_date.desc(), CMFinanceEntry.created_at.desc()).limit(200).all()
-
-    # Totals per division
-    all_entries = CMFinanceEntry.query.all()
-    division_summary = {}
-    for e in all_entries:
-        d = e.division
-        if d not in division_summary:
-            division_summary[d] = {"income": 0.0, "expense": 0.0}
-        if e.entry_type == "income":
-            division_summary[d]["income"] += e.amount or 0
-        else:
-            division_summary[d]["expense"] += e.amount or 0
-
-    for d in division_summary:
-        division_summary[d]["net"] = division_summary[d]["income"] - division_summary[d]["expense"]
-
-    total_income  = sum(e.amount for e in all_entries if e.entry_type == "income")
-    total_expense = sum(e.amount for e in all_entries if e.entry_type == "expense")
-
     from datetime import datetime as _dt
+
+    try:
+        q = CMFinanceEntry.query
+        if selected_division != "all":
+            q = q.filter_by(division=selected_division)
+        if selected_type in ("income", "expense"):
+            q = q.filter_by(entry_type=selected_type)
+
+        entries = q.order_by(CMFinanceEntry.entry_date.desc(), CMFinanceEntry.created_at.desc()).limit(200).all()
+
+        all_entries = CMFinanceEntry.query.all()
+        division_summary = {}
+        for e in all_entries:
+            d = e.division
+            if d not in division_summary:
+                division_summary[d] = {"income": 0.0, "expense": 0.0}
+            if e.entry_type == "income":
+                division_summary[d]["income"] += e.amount or 0
+            else:
+                division_summary[d]["expense"] += e.amount or 0
+
+        for d in division_summary:
+            division_summary[d]["net"] = division_summary[d]["income"] - division_summary[d]["expense"]
+
+        total_income  = sum(e.amount for e in all_entries if e.entry_type == "income")
+        total_expense = sum(e.amount for e in all_entries if e.entry_type == "expense")
+
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("[company_finances] table not ready yet: %s", exc)
+        flash("Financial Hub is setting up — the database table will be ready shortly after the next deploy.", "info")
+        entries = []
+        division_summary = {}
+        total_income = total_expense = 0.0
+
     return render_template(
         "admin/company_finances.html",
         entries           = entries,

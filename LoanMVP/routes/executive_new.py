@@ -404,12 +404,16 @@ def construction_center():
     bid_opps   = []
     inbound_jobs = []
     if partner:
-        bid_opps = (
-            ContractorBidOpportunity.query
-            .filter_by(partner_id=partner.id)
-            .order_by(ContractorBidOpportunity.created_at.desc())
-            .limit(20).all()
-        )
+        try:
+            bid_opps = (
+                ContractorBidOpportunity.query
+                .filter_by(partner_id=partner.id)
+                .order_by(ContractorBidOpportunity.created_at.desc())
+                .limit(20).all()
+            )
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning("[construction_center] bid table not ready: %s", exc)
         inbound_jobs = (
             PartnerConnectionRequest.query
             .filter_by(partner_id=partner.id)
@@ -423,12 +427,17 @@ def construction_center():
     value_in_play  = sum(o.estimated_value or 0 for o in active_bids)
 
     # ── Finance this month (construction) ───────────────────────────
-    month_entries = CMFinanceEntry.query.filter(
-        CMFinanceEntry.division == "construction",
-        CMFinanceEntry.entry_date >= month_start.date(),
-    ).all()
-    month_income  = sum(e.amount for e in month_entries if e.entry_type == "income")
-    month_expense = sum(e.amount for e in month_entries if e.entry_type == "expense")
+    try:
+        month_entries = CMFinanceEntry.query.filter(
+            CMFinanceEntry.division == "construction",
+            CMFinanceEntry.entry_date >= month_start.date(),
+        ).all()
+        month_income  = sum(e.amount for e in month_entries if e.entry_type == "income")
+        month_expense = sum(e.amount for e in month_entries if e.entry_type == "expense")
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("[construction_center] finance table not ready: %s", exc)
+        month_income = month_expense = 0.0
 
     # ── Ravlo OS snapshot (ownership view) ──────────────────────────
     all_users    = _executive_user_query().all()
