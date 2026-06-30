@@ -96,7 +96,34 @@ _PARTNER_DASHBOARD_PRESETS: dict[str, dict[str, str | bool]] = {
         "smart_notifications_enabled": True,
         "portfolio_showcase_enabled": True,
         "is_verified": True,
-    }
+    },
+    "jamaine.caughman@caughmanmason.com": {
+        "_user_role": "partner",
+        "name": "Caughman Mason Construction",
+        "company": "Caughman Mason Construction",
+        "category": "contractor",
+        "type": "Contractor",
+        "specialty": "General contracting, renovation, and rehab",
+        "service_area": "Tampa, FL",
+        "city": "Tampa",
+        "state": "FL",
+        "bio": "Full-service general contractor based in Tampa, FL. Specializing in residential renovation, rehab, and investor-ready projects.",
+        "listing_description": "General contracting and renovation services for investors and property owners in the Tampa Bay area.",
+        "active": True,
+        "approved": True,
+        "featured": False,
+        "status": "Active",
+        "subscription_tier": "Premium",
+        "crm_enabled": True,
+        "deal_visibility_enabled": True,
+        "proposal_builder_enabled": True,
+        "instant_quote_enabled": True,
+        "ai_assist_enabled": True,
+        "priority_placement_enabled": False,
+        "smart_notifications_enabled": True,
+        "portfolio_showcase_enabled": True,
+        "is_verified": True,
+    },
 }
 
 
@@ -128,14 +155,17 @@ def _ensure_partner_dashboard_profile(user) -> None:
     if not user:
         return
 
-    role = (getattr(user, "role", "") or "").strip().lower()
     email = (getattr(user, "email", "") or "").strip().lower()
-    if role != "partner" or not email:
+    if not email:
         return
 
     preset = _PARTNER_DASHBOARD_PRESETS.get(email)
     if not preset:
         return
+
+    user_role = preset.get("_user_role")
+    if user_role and getattr(user, "role", None) != user_role:
+        user.role = user_role
 
     partner = Partner.query.filter_by(user_id=user.id).first()
     if not partner:
@@ -143,6 +173,8 @@ def _ensure_partner_dashboard_profile(user) -> None:
         db.session.add(partner)
 
     for field, value in preset.items():
+        if field.startswith("_"):
+            continue
         setattr(partner, field, value)
 
     if not partner.email:
