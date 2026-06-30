@@ -448,8 +448,12 @@ def construction_center():
         PartnerConnectionRequest.status.in_(["pending", "awaiting_match"])
     ).count()
 
-    # ── Email connection status ─────────────────────────────────────
-    email_conn = UserEmailConnection.query.filter_by(user_id=current_user.id).first()
+    # ── Email connection status (table may not exist yet) ──────────
+    try:
+        email_conn = UserEmailConnection.query.filter_by(user_id=current_user.id).first()
+    except Exception:
+        db.session.rollback()
+        email_conn = None
 
     return render_template(
         "executive/construction_center.html",
