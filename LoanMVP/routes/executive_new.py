@@ -865,10 +865,10 @@ BID_SUPPORT_STATUSES = [
     ("follow_up_needed",    "Follow-Up Needed",     "#f97316", "lucide-rotate-ccw"),
 ]
 
-# Add Sandra's email here once her account is created.
 _BID_SUPPORT_EMAILS: set[str] = {
     "letoya@ravlohq.com",
     "jamaine.caughman@ravlohq.com",
+    "sandra@ravlohq.com",
 }
 
 
