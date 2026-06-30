@@ -1325,6 +1325,33 @@ def resend_team_invite(company_id, invite_id):
     return redirect(url_for("admin.company_team", company_id=company.id))
 
 
+@admin_bp.route("/company/<int:company_id>/team/<int:user_id>/remove", methods=["POST"])
+@login_required
+@role_required("admin_group")
+@admin_required
+def remove_team_member(company_id, user_id):
+    company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
+    if user_id == current_user.id:
+        flash("You cannot remove yourself from the team.", "warning")
+        return redirect(url_for("admin.company_team", company_id=company.id))
+
+    user = User.query.get_or_404(user_id)
+    if user.company_id != company.id:
+        flash("That user is not on this team.", "warning")
+        return redirect(url_for("admin.company_team", company_id=company.id))
+
+    user.company_id = None
+    db.session.commit()
+
+    name = ((user.first_name or "") + " " + (user.last_name or "")).strip() or user.email
+    flash(f"{name} has been removed from {company.name}.", "success")
+    return redirect(url_for("admin.company_team", company_id=company.id))
+
+
 @admin_bp.route("/company/<int:company_id>/team/invites/<int:invite_id>/delete", methods=["POST"])
 @login_required
 @role_required("admin_group")
