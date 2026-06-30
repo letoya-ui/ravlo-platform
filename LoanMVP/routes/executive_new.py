@@ -16,7 +16,7 @@ from LoanMVP.models.loan_models import BorrowerProfile, LoanApplication
 from LoanMVP.models.system_models import SystemLog
 from LoanMVP.models.user_model import User
 from LoanMVP.models.contractor_models import ContractorBidOpportunity
-from LoanMVP.models.company_finance_models import CMFinanceEntry
+from LoanMVP.models.company_finance_models import CMFinanceEntry, UserEmailConnection
 from LoanMVP.routes import admin as admin_routes
 
 _JAMAINE_EMAIL = "jamaine.caughman@ravlohq.com"
@@ -439,6 +439,9 @@ def construction_center():
         PartnerConnectionRequest.status.in_(["pending", "awaiting_match"])
     ).count()
 
+    # ── Email connection status ─────────────────────────────────────
+    email_conn = UserEmailConnection.query.filter_by(user_id=current_user.id).first()
+
     return render_template(
         "executive/construction_center.html",
         partner         = partner,
@@ -453,6 +456,7 @@ def construction_center():
         total_users     = total_users,
         total_loans     = total_loans,
         req_waiting     = req_waiting,
+        email_conn      = email_conn,
         now             = now,
     )
 
@@ -503,6 +507,336 @@ def construction_ai():
     except Exception as exc:
         current_app.logger.warning("[construction-ai] %s", exc)
         return jsonify({"ok": False, "reply": "Office assistant is unavailable right now. Try again in a moment."})
+
+
+@executive_bp.route("/construction/morning-brief", methods=["POST"])
+@login_required
+def construction_morning_brief():
+    """AJAX: AI-generated construction-focused daily briefing with real project data."""
+    from flask import jsonify
+    from datetime import timedelta
+    from openai import OpenAI
+    from LoanMVP.models.partner_models import PartnerConnectionRequest
+    from LoanMVP.models.crm_models import Partner
+
+    access_redirect = _ensure_executive_access()
+    if access_redirect:
+        return jsonify({"ok": False, "brief": "Access restricted."}), 403
+
+    now         = datetime.utcnow()
+    today       = now.date()
+    week_out    = today + timedelta(days=7)
+    five_days_ago = now - timedelta(days=5)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    partner = Partner.query.filter_by(user_id=current_user.id).first() \
+        or Partner.query.filter(
+            func.lower(Partner.company) == "caughman mason construction"
+        ).first()
+
+    # Bid data
+    upcoming_deadlines = []
+    follow_up_needed   = []
+    inbound_count      = 0
+    if partner:
+        bids = ContractorBidOpportunity.query.filter_by(partner_id=partner.id).all()
+        for b in bids:
+            if b.bid_deadline and b.bid_deadline.date() <= week_out and b.status in ("reviewing",):
+                upcoming_deadlines.append(b)
+            if b.status == "bid_submitted" and b.updated_at and b.updated_at < five_days_ago:
+                follow_up_needed.append(b)
+        inbound_count = PartnerConnectionRequest.query.filter_by(partner_id=partner.id).filter(
+            PartnerConnectionRequest.status.in_(["pending", "awaiting_match"])
+        ).count()
+
+    # Finance snapshot
+    month_entries = CMFinanceEntry.query.filter(
+        CMFinanceEntry.division == "construction",
+        CMFinanceEntry.entry_date >= month_start.date(),
+    ).all()
+    month_income  = sum(e.amount for e in month_entries if e.entry_type == "income")
+    month_expense = sum(e.amount for e in month_entries if e.entry_type == "expense")
+    month_net     = month_income - month_expense
+
+    # Build context for AI
+    deadline_lines = "\n".join(
+        f"  - {b.project_name} (deadline: {b.bid_deadline.strftime('%b %d') if b.bid_deadline else 'soon'}"
+        f"{', est $' + '{:,.0f}'.format(b.estimated_value) if b.estimated_value else ''})"
+        for b in upcoming_deadlines
+    ) or "  None this week"
+
+    followup_lines = "\n".join(
+        f"  - {b.project_name} — bid submitted {(now - b.updated_at).days} days ago, no update"
+        for b in follow_up_needed
+    ) or "  None outstanding"
+
+    day_name = now.strftime("%A")
+    date_str = now.strftime("%B %d, %Y")
+
+    prompt = (
+        f"You are the AI Office for Caughman Mason Construction based in Tampa, FL. "
+        f"Generate a concise, practical morning briefing for today ({day_name}, {date_str}). "
+        f"Be direct and construction-focused. Tone: supportive but action-oriented — like a foreman's morning huddle. "
+        f"No fluff. Use plain language, not corporate speak.\n\n"
+        f"TODAY'S REAL DATA:\n"
+        f"Bids with deadlines this week:\n{deadline_lines}\n\n"
+        f"Bids needing follow-up (submitted >5 days ago):\n{followup_lines}\n\n"
+        f"Inbound job requests from investors: {inbound_count} waiting\n"
+        f"Construction P&L this month: income ${month_income:,.0f}, expenses ${month_expense:,.0f}, net ${month_net:,.0f}\n\n"
+        f"FORMAT (use exactly this structure):\n"
+        f"GOOD MORNING — [one short motivational line specific to today's situation]\n\n"
+        f"TODAY'S PRIORITIES:\n"
+        f"• [priority 1 — be specific, name actual bids/jobs if relevant]\n"
+        f"• [priority 2]\n"
+        f"• [priority 3, optional]\n\n"
+        f"FOLLOW-UPS TO MAKE:\n"
+        f"• [specific follow-up action, naming the project]\n\n"
+        f"MEETING SUGGESTION:\n"
+        f"[One specific meeting to schedule today and why — subcontractor, client, walk-through, etc.]\n\n"
+        f"FINANCIAL NOTE:\n"
+        f"[One sentence on the month's P&L and what it means for this week's decisions.]"
+    )
+
+    try:
+        client  = OpenAI()
+        model   = current_app.config.get("AI_MODEL") or "gpt-4o-mini"
+        resp    = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.6,
+            max_tokens=500,
+        )
+        brief = resp.choices[0].message.content.strip()
+    except Exception as exc:
+        current_app.logger.warning("[morning-brief] %s", exc)
+        brief = (
+            f"GOOD MORNING — Let's get Tampa built.\n\n"
+            f"TODAY'S PRIORITIES:\n"
+            f"• Review any bids with deadlines this week — {len(upcoming_deadlines)} need attention\n"
+            f"• Follow up on submitted bids — {len(follow_up_needed)} waiting on a response\n"
+            f"• Check inbound job requests — {inbound_count} waiting in your inbox\n\n"
+            f"FINANCIAL NOTE:\n"
+            f"Construction this month: ${month_income:,.0f} in, ${month_expense:,.0f} out, ${month_net:,.0f} net."
+        )
+
+    return jsonify({"ok": True, "brief": brief, "date": date_str})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GMAIL OAUTH — email connection for the AI Office Assistant
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _gmail_flow():
+    """Build the Google OAuth2 flow — returns None if creds not configured."""
+    client_id     = current_app.config.get("GOOGLE_CLIENT_ID") or ""
+    client_secret = current_app.config.get("GOOGLE_CLIENT_SECRET") or ""
+    if not client_id or not client_secret:
+        return None
+    try:
+        from google_auth_oauthlib.flow import Flow
+        flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id":     client_id,
+                    "client_secret": client_secret,
+                    "auth_uri":      "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri":     "https://oauth2.googleapis.com/token",
+                }
+            },
+            scopes=[
+                "https://www.googleapis.com/auth/gmail.readonly",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "openid",
+            ],
+        )
+        flow.redirect_uri = url_for("executive.email_callback", _external=True)
+        return flow
+    except ImportError:
+        current_app.logger.warning("[gmail-oauth] google-auth-oauthlib not installed")
+        return None
+
+
+@executive_bp.route("/email/connect")
+@login_required
+def email_connect():
+    """Redirect to Google OAuth to connect Gmail."""
+    from flask import session as flask_session
+
+    access_redirect = _ensure_executive_access()
+    if access_redirect:
+        return access_redirect
+
+    flow = _gmail_flow()
+    if not flow:
+        flash("Gmail OAuth is not configured yet. Contact your admin.", "warning")
+        return redirect(url_for("executive.construction_center"))
+
+    auth_url, state = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true",
+        prompt="consent",
+    )
+    flask_session["gmail_oauth_state"] = state
+    return redirect(auth_url)
+
+
+@executive_bp.route("/email/callback")
+@login_required
+def email_callback():
+    """Handle Google OAuth callback — store tokens in UserEmailConnection."""
+    from flask import session as flask_session, jsonify
+
+    access_redirect = _ensure_executive_access()
+    if access_redirect:
+        return access_redirect
+
+    flow = _gmail_flow()
+    if not flow:
+        flash("Gmail OAuth is not configured.", "warning")
+        return redirect(url_for("executive.construction_center"))
+
+    try:
+        flow.fetch_token(authorization_response=request.url)
+        creds = flow.credentials
+
+        # Get user's email from Google
+        import requests as http_requests
+        info_resp = http_requests.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {creds.token}"},
+            timeout=8,
+        )
+        email_address = info_resp.json().get("email", "") if info_resp.ok else ""
+
+        conn = UserEmailConnection.query.filter_by(user_id=current_user.id).first()
+        if not conn:
+            conn = UserEmailConnection(user_id=current_user.id)
+            db.session.add(conn)
+
+        conn.provider      = "gmail"
+        conn.email_address = email_address
+        conn.access_token  = creds.token
+        conn.refresh_token = creds.refresh_token or conn.refresh_token
+        conn.token_expiry  = creds.expiry
+        conn.connected_at  = datetime.utcnow()
+        db.session.commit()
+
+        flash(f"Gmail connected: {email_address}", "success")
+    except Exception as exc:
+        current_app.logger.warning("[gmail-callback] %s", exc)
+        flash("Could not connect Gmail — please try again.", "danger")
+
+    return redirect(url_for("executive.construction_center"))
+
+
+@executive_bp.route("/email/disconnect", methods=["POST"])
+@login_required
+def email_disconnect():
+    """Remove stored Gmail tokens."""
+    access_redirect = _ensure_executive_access()
+    if access_redirect:
+        return access_redirect
+
+    conn = UserEmailConnection.query.filter_by(user_id=current_user.id).first()
+    if conn:
+        db.session.delete(conn)
+        db.session.commit()
+        flash("Gmail disconnected.", "info")
+    return redirect(url_for("executive.construction_center"))
+
+
+@executive_bp.route("/email/sync", methods=["POST"])
+@login_required
+def email_sync():
+    """AJAX: Read recent Gmail messages and return an AI summary of anything construction-related."""
+    from flask import jsonify
+    from openai import OpenAI
+
+    access_redirect = _ensure_executive_access()
+    if access_redirect:
+        return jsonify({"ok": False, "error": "Access restricted."}), 403
+
+    conn = UserEmailConnection.query.filter_by(user_id=current_user.id).first()
+    if not conn or not conn.access_token:
+        return jsonify({"ok": False, "error": "No Gmail account connected."})
+
+    client_id     = current_app.config.get("GOOGLE_CLIENT_ID") or ""
+    client_secret = current_app.config.get("GOOGLE_CLIENT_SECRET") or ""
+
+    try:
+        from google.oauth2.credentials import Credentials
+        from google.auth.transport.requests import Request as GRequest
+        import requests as http_requests
+
+        creds = Credentials(
+            token=conn.access_token,
+            refresh_token=conn.refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+        if creds.expired and creds.refresh_token:
+            creds.refresh(GRequest())
+            conn.access_token = creds.token
+            conn.token_expiry = creds.expiry
+            db.session.commit()
+
+        # Fetch last 10 messages
+        list_resp = http_requests.get(
+            "https://gmail.googleapis.com/gmail/v1/users/me/messages",
+            headers={"Authorization": f"Bearer {creds.token}"},
+            params={"maxResults": 10, "q": "is:unread"},
+            timeout=10,
+        )
+        messages_raw = list_resp.json().get("messages", []) if list_resp.ok else []
+
+        snippets = []
+        for msg in messages_raw[:10]:
+            msg_resp = http_requests.get(
+                f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{msg['id']}",
+                headers={"Authorization": f"Bearer {creds.token}"},
+                params={"format": "metadata", "metadataHeaders": ["Subject", "From"]},
+                timeout=8,
+            )
+            if not msg_resp.ok:
+                continue
+            data    = msg_resp.json()
+            headers = {h["name"]: h["value"] for h in data.get("payload", {}).get("headers", [])}
+            subject = headers.get("Subject", "(no subject)")
+            sender  = headers.get("From", "")
+            snippet = data.get("snippet", "")
+            snippets.append(f"From: {sender}\nSubject: {subject}\nPreview: {snippet}")
+
+        conn.last_synced_at = datetime.utcnow()
+        db.session.commit()
+
+        if not snippets:
+            return jsonify({"ok": True, "summary": "No unread emails right now. Inbox is clear.", "count": 0})
+
+        inbox_text = "\n\n---\n\n".join(snippets)
+        ai_prompt  = (
+            "You are the AI Office for Caughman Mason Construction. "
+            "Review these recent unread emails and give a SHORT summary of anything that needs attention — "
+            "bids, client messages, invoices, supplier quotes, permits, anything construction-related. "
+            "Ignore marketing emails or newsletters. "
+            "Format: bullet points only. Max 6 bullets. If nothing urgent, say so.\n\n"
+            f"EMAILS:\n{inbox_text}"
+        )
+
+        client = OpenAI()
+        model  = current_app.config.get("AI_MODEL") or "gpt-4o-mini"
+        resp   = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": ai_prompt}],
+            temperature=0.4,
+            max_tokens=300,
+        )
+        summary = resp.choices[0].message.content.strip()
+        return jsonify({"ok": True, "summary": summary, "count": len(snippets)})
+
+    except Exception as exc:
+        current_app.logger.warning("[email-sync] %s", exc)
+        return jsonify({"ok": False, "error": "Could not read emails right now."})
 
 
 @executive_bp.route("/demo-center")
