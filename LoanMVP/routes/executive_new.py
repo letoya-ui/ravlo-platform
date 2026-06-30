@@ -15,7 +15,11 @@ from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.loan_models import BorrowerProfile, LoanApplication
 from LoanMVP.models.system_models import SystemLog
 from LoanMVP.models.user_model import User
+from LoanMVP.models.contractor_models import ContractorBidOpportunity
+from LoanMVP.models.company_finance_models import CMFinanceEntry
 from LoanMVP.routes import admin as admin_routes
+
+_JAMAINE_EMAIL = "jamaine.caughman@ravlohq.com"
 
 executive_bp = Blueprint("executive", __name__, url_prefix="/executive")
 
@@ -144,6 +148,9 @@ def dashboard():
     access_redirect = _ensure_executive_access()
     if access_redirect:
         return access_redirect
+
+    if (getattr(current_user, "email", "") or "").strip().lower() == _JAMAINE_EMAIL:
+        return redirect(url_for("executive.construction_center"))
 
     company  = _executive_company()
     all_users = _executive_user_query().all()
@@ -367,6 +374,135 @@ def ai_briefing():
         )
 
     return jsonify({"briefing": briefing, "first_name": first_name})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JAMAINE — CONSTRUCTION COMMAND CENTER
+# ─────────────────────────────────────────────────────────────────────────────
+
+@executive_bp.route("/construction")
+@login_required
+def construction_center():
+    access_redirect = _ensure_executive_access()
+    if access_redirect:
+        return access_redirect
+
+    from datetime import date, timedelta
+    from LoanMVP.models.partner_models import PartnerConnectionRequest
+    from LoanMVP.models.crm_models import Partner
+
+    now        = datetime.utcnow()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # ── Construction bid pipeline ────────────────────────────────────
+    partner = Partner.query.filter_by(
+        user_id=current_user.id
+    ).first() or Partner.query.filter(
+        func.lower(Partner.company) == "caughman mason construction"
+    ).first()
+
+    bid_opps   = []
+    inbound_jobs = []
+    if partner:
+        bid_opps = (
+            ContractorBidOpportunity.query
+            .filter_by(partner_id=partner.id)
+            .order_by(ContractorBidOpportunity.created_at.desc())
+            .limit(20).all()
+        )
+        inbound_jobs = (
+            PartnerConnectionRequest.query
+            .filter_by(partner_id=partner.id)
+            .filter(PartnerConnectionRequest.status.in_(["pending", "awaiting_match"]))
+            .order_by(PartnerConnectionRequest.created_at.desc())
+            .limit(10).all()
+        )
+
+    active_bids    = [o for o in bid_opps if o.status in ("reviewing", "bid_submitted")]
+    won_bids       = [o for o in bid_opps if o.status == "won"]
+    value_in_play  = sum(o.estimated_value or 0 for o in active_bids)
+
+    # ── Finance this month (construction) ───────────────────────────
+    month_entries = CMFinanceEntry.query.filter(
+        CMFinanceEntry.division == "construction",
+        CMFinanceEntry.entry_date >= month_start.date(),
+    ).all()
+    month_income  = sum(e.amount for e in month_entries if e.entry_type == "income")
+    month_expense = sum(e.amount for e in month_entries if e.entry_type == "expense")
+
+    # ── Ravlo OS snapshot (ownership view) ──────────────────────────
+    all_users    = _executive_user_query().all()
+    scoped_loans = _executive_loan_query()
+    total_users  = len(all_users)
+    total_loans  = scoped_loans.count()
+    req_waiting  = PartnerConnectionRequest.query.filter(
+        PartnerConnectionRequest.status.in_(["pending", "awaiting_match"])
+    ).count()
+
+    return render_template(
+        "executive/construction_center.html",
+        partner         = partner,
+        bid_opps        = bid_opps,
+        active_bids     = active_bids,
+        won_bids        = won_bids,
+        value_in_play   = value_in_play,
+        inbound_jobs    = inbound_jobs,
+        month_income    = month_income,
+        month_expense   = month_expense,
+        month_net       = month_income - month_expense,
+        total_users     = total_users,
+        total_loans     = total_loans,
+        req_waiting     = req_waiting,
+        now             = now,
+    )
+
+
+@executive_bp.route("/construction/ai", methods=["POST"])
+@login_required
+def construction_ai():
+    """AI Office Assistant for Jamaine — handles admin so he can stay in the field."""
+    from flask import jsonify
+    from openai import OpenAI
+
+    access_redirect = _ensure_executive_access()
+    if access_redirect:
+        return jsonify({"ok": False, "reply": "Access restricted."}), 403
+
+    message = (request.json or {}).get("message", "").strip() if request.is_json \
+        else (request.form.get("message") or "").strip()
+    if not message:
+        return jsonify({"ok": False, "reply": "No message received."})
+
+    system_prompt = (
+        "You are the AI Office Assistant for Caughman Mason Construction, "
+        "a general contracting company based in Tampa, FL. "
+        "Your job is to handle all the office and admin work so the operator can stay focused on field work. "
+        "You can help with: drafting invoices, bid follow-up emails, expense logging reminders, "
+        "scheduling notes, proposal outlines, subcontractor agreements, permit checklists, "
+        "safety notes, client updates, and any other admin task. "
+        "Be direct, practical, and field-friendly. No fluff. "
+        "When drafting documents, make them professional and ready to use. "
+        "Always sign off as 'Caughman Mason Construction' — never use personal names. "
+        "If the request is unclear, ask one short clarifying question."
+    )
+
+    try:
+        client = OpenAI()
+        model  = current_app.config.get("AI_MODEL") or "gpt-4o-mini"
+        resp   = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": message},
+            ],
+            temperature=0.55,
+            max_tokens=600,
+        )
+        reply = resp.choices[0].message.content.strip()
+        return jsonify({"ok": True, "reply": reply})
+    except Exception as exc:
+        current_app.logger.warning("[construction-ai] %s", exc)
+        return jsonify({"ok": False, "reply": "Office assistant is unavailable right now. Try again in a moment."})
 
 
 @executive_bp.route("/demo-center")

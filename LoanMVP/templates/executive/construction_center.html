@@ -1,0 +1,295 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Caughman Mason Construction — Command Center{% endblock %}
+{% block page_title %}Construction Command Center{% endblock %}
+{% block page_subline %}Caughman Mason Construction · Tampa, FL — your office is running. Go build.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.contractor_dashboard') }}" class="re-btn ghost sm">
+    <i class="lucide lucide-hammer"></i> Field Dashboard
+  </a>
+  <a href="{{ url_for('admin.company_finances') }}" class="re-btn ghost sm">
+    <i class="lucide lucide-landmark"></i> Finances
+  </a>
+  <a href="{{ url_for('partners.requests_inbox') }}" class="re-btn primary sm">
+    <i class="lucide lucide-inbox"></i> Job Inbox
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  {# ── TOP STATS ── #}
+  <section style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
+
+    <div class="re-stat" style="border-color:rgba(245,185,66,.2);background:rgba(245,185,66,.04);">
+      <div class="re-stat-label">Bids Active</div>
+      <div class="re-stat-value" style="color:#f5b942;">{{ active_bids|length }}</div>
+      <div class="re-stat-meta">Reviewing or submitted</div>
+    </div>
+
+    <div class="re-stat" style="border-color:rgba(44,182,125,.2);background:rgba(44,182,125,.04);">
+      <div class="re-stat-label">Jobs Won</div>
+      <div class="re-stat-value" style="color:#2cb67d;">{{ won_bids|length }}</div>
+      <div class="re-stat-meta">This pipeline</div>
+    </div>
+
+    <div class="re-stat" style="border-color:rgba(245,185,66,.2);background:rgba(245,185,66,.04);">
+      <div class="re-stat-label">Value in Play</div>
+      <div class="re-stat-value" style="color:#f5b942;font-size:1.2rem;">${{ '{:,.0f}'.format(value_in_play) }}</div>
+      <div class="re-stat-meta">Active bid estimates</div>
+    </div>
+
+    <div class="re-stat" style="border-color:rgba(44,182,125,.2);background:rgba(44,182,125,.04);">
+      <div class="re-stat-label">This Month Net</div>
+      <div class="re-stat-value" style="color:{% if month_net >= 0 %}#2cb67d{% else %}#f87171{% endif %};font-size:1.2rem;">
+        {% if month_net < 0 %}–{% endif %}${{ '{:,.0f}'.format(month_net|abs) }}
+      </div>
+      <div class="re-stat-meta">Construction P&amp;L</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">Inbound Jobs</div>
+      <div class="re-stat-value">{{ inbound_jobs|length }}</div>
+      <div class="re-stat-meta">Waiting in Ravlo inbox</div>
+    </div>
+
+  </section>
+
+  {# ── AI OFFICE ASSISTANT ── #}
+  <section class="re-card pad" style="border-color:rgba(167,139,250,.2);background:rgba(167,139,250,.03);">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+      <div style="width:44px;height:44px;border-radius:12px;background:rgba(167,139,250,.15);display:grid;place-items:center;flex-shrink:0;">
+        <i class="lucide lucide-bot" style="color:#a78bfa;font-size:20px;"></i>
+      </div>
+      <div>
+        <div style="font-size:10px;letter-spacing:.15em;font-weight:800;color:#a78bfa;text-transform:uppercase;">AI OFFICE ASSISTANT</div>
+        <h3 style="margin:.2rem 0 0;font-size:1rem;">Your office is handled. Tell me what you need.</h3>
+      </div>
+    </div>
+
+    {# Quick action chips #}
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;" id="aiChips">
+      {% for chip in [
+        "Draft a bid follow-up email",
+        "Write an invoice for a completed job",
+        "Create a subcontractor agreement",
+        "Write a client project update",
+        "Give me a permit checklist for Tampa",
+        "Draft a change order notice",
+        "OSHA safety checklist for demo work",
+        "Write a materials list request",
+      ] %}
+      <button type="button" class="re-btn ghost sm" style="font-size:.78rem;" onclick="cmAiChip(this.textContent)">{{ chip }}</button>
+      {% endfor %}
+    </div>
+
+    {# Chat area #}
+    <div id="cmAiMessages" style="min-height:80px;max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:14px;padding:4px 0;">
+      <div style="padding:12px 16px;border-radius:10px;background:rgba(255,255,255,.04);font-size:.88rem;color:rgba(255,255,255,.5);font-style:italic;">
+        Ask me anything — invoices, emails, checklists, agreements, follow-ups. I handle the paperwork so you can stay on site.
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:flex-end;">
+      <textarea id="cmAiInput" rows="2" placeholder="e.g. Draft a follow-up for the City of Tampa demo bid..." style="flex:1;padding:11px 14px;border-radius:10px;border:1px solid rgba(167,139,250,.25);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;resize:none;font-family:inherit;"></textarea>
+      <button type="button" onclick="cmAiSend()" id="cmAiBtn" style="padding:11px 20px;border-radius:10px;background:#a78bfa;color:#fff;border:none;font-weight:700;font-size:.88rem;cursor:pointer;white-space:nowrap;flex-shrink:0;">Send</button>
+    </div>
+    <div id="cmAiStatus" style="font-size:.78rem;color:rgba(255,255,255,.25);margin-top:6px;min-height:18px;"></div>
+  </section>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+    {# ── BID PIPELINE ── #}
+    <section class="re-card pad">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div>
+          <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#f5b942;text-transform:uppercase;">BID PIPELINE</div>
+          <h3 style="margin:.25rem 0 0;font-size:.95rem;">Jobs Being Pursued</h3>
+        </div>
+        <a href="{{ url_for('vip.contractor_dashboard') }}#bid-pipeline" class="re-btn ghost sm" style="font-size:.75rem;">Full Pipeline</a>
+      </div>
+
+      {% if bid_opps %}
+        {% set status_color = {"reviewing":"#a78bfa","bid_submitted":"#f5b942","won":"#2cb67d","lost":"#f87171","no_bid":"#6b7280"} %}
+        <div style="display:grid;gap:8px;">
+          {% for opp in bid_opps[:6] %}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+            <div style="min-width:0;">
+              <div style="font-size:.85rem;font-weight:600;color:#f4f7fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">{{ opp.project_name }}</div>
+              <div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-top:2px;">
+                {{ opp.category or '—' }}{% if opp.location %} · {{ opp.location }}{% endif %}
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;margin-left:10px;">
+              <div style="font-size:.72rem;font-weight:700;color:{{ status_color.get(opp.status,'#6b7280') }};">
+                {{ opp.status|replace('_',' ')|title }}
+              </div>
+              {% if opp.estimated_value %}
+              <div style="font-size:.78rem;color:rgba(255,255,255,.4);">${{ '{:,.0f}'.format(opp.estimated_value) }}</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% if bid_opps|length > 6 %}
+        <div style="margin-top:10px;font-size:.78rem;color:rgba(255,255,255,.3);text-align:center;">+{{ bid_opps|length - 6 }} more in pipeline</div>
+        {% endif %}
+      {% else %}
+        <div style="padding:20px;text-align:center;color:rgba(255,255,255,.25);font-size:.85rem;">No bids tracked yet.<br>Add opportunities in your Field Dashboard.</div>
+      {% endif %}
+    </section>
+
+    {# ── INBOUND RAVLO JOBS ── #}
+    <section class="re-card pad">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div>
+          <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">RAVLO INVESTORS</div>
+          <h3 style="margin:.25rem 0 0;font-size:.95rem;">Inbound Job Requests</h3>
+        </div>
+        <a href="{{ url_for('partners.requests_inbox') }}" class="re-btn primary sm" style="font-size:.75rem;">Review All</a>
+      </div>
+
+      {% if inbound_jobs %}
+        <div style="display:grid;gap:8px;">
+          {% for req in inbound_jobs %}
+          <div style="padding:10px 12px;border-radius:9px;background:rgba(95,168,255,.05);border:1px solid rgba(95,168,255,.15);">
+            <div style="font-size:.85rem;font-weight:600;color:#f4f7fb;">{{ req.title or req.category or 'Build Request' }}</div>
+            <div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-top:3px;">
+              {{ req.created_at.strftime('%b %d') if req.created_at else 'Recent' }}
+              {% if req.message %} · {{ req.message[:60] }}{% if req.message|length > 60 %}…{% endif %}{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="padding:20px;text-align:center;color:rgba(255,255,255,.25);font-size:.85rem;">No open requests right now.<br>Investors will appear here when they need a contractor.</div>
+      {% endif %}
+    </section>
+
+  </div>
+
+  {# ── FINANCE THIS MONTH ── #}
+  <section class="re-card pad" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:center;">
+    <div>
+      <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:6px;">Construction · This Month</div>
+      <div style="font-size:1.5rem;font-weight:800;color:{% if month_net >= 0 %}#2cb67d{% else %}#f87171{% endif %};">
+        {% if month_net < 0 %}–{% endif %}${{ '{:,.0f}'.format(month_net|abs) }}
+      </div>
+      <div style="font-size:.78rem;color:rgba(255,255,255,.35);margin-top:3px;">Net this month</div>
+    </div>
+    <div>
+      <div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-bottom:3px;">Income</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#2cb67d;">${{ '{:,.0f}'.format(month_income) }}</div>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-bottom:3px;">Expenses</div>
+        <div style="font-size:1.1rem;font-weight:700;color:#f87171;">${{ '{:,.0f}'.format(month_expense) }}</div>
+      </div>
+      <a href="{{ url_for('admin.company_finances') }}?division=construction" class="re-btn ghost sm" style="align-self:center;">Full View</a>
+    </div>
+  </section>
+
+  {# ── RAVLO OS SNAPSHOT ── #}
+  <section class="re-card pad" style="border-color:rgba(95,168,255,.15);background:rgba(95,168,255,.03);">
+    <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#5FA8FF;text-transform:uppercase;margin-bottom:12px;">RAVLO OS — YOUR PLATFORM</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;">
+      <div>
+        <div style="font-size:.75rem;color:rgba(255,255,255,.35);">Platform Users</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#f4f7fb;margin-top:2px;">{{ total_users }}</div>
+      </div>
+      <div>
+        <div style="font-size:.75rem;color:rgba(255,255,255,.35);">Loan Files</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#f4f7fb;margin-top:2px;">{{ total_loans }}</div>
+      </div>
+      <div>
+        <div style="font-size:.75rem;color:rgba(255,255,255,.35);">Partner Requests</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#f5b942;margin-top:2px;">{{ req_waiting }}</div>
+      </div>
+      <div style="display:flex;align-items:center;">
+        <a href="{{ url_for('executive.dashboard') }}" class="re-btn ghost sm" style="font-size:.78rem;white-space:nowrap;">Full OS View →</a>
+      </div>
+    </div>
+  </section>
+
+  {# ── QUICK FIELD ACTIONS ── #}
+  <section class="re-card pad">
+    <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:14px;">QUICK ACTIONS</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;">
+      <a href="{{ url_for('vip.contractor_dashboard') }}" class="re-btn primary" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-hammer" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Field Dashboard</a>
+      <a href="{{ url_for('vip.contractor_dashboard') }}#bid-pipeline" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-file-plus" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Add Bid</a>
+      <a href="{{ url_for('admin.company_finances') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-receipt" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Log Expense</a>
+      <a href="{{ url_for('university.portal') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-graduation-cap" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Academy</a>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  var ENDPOINT = "{{ url_for('executive.construction_ai') }}";
+  var CSRF     = "{{ csrf_token() }}";
+
+  function addMessage(role, text) {
+    var box = document.getElementById('cmAiMessages');
+    var div = document.createElement('div');
+    div.style.cssText = 'padding:12px 16px;border-radius:10px;font-size:.88rem;line-height:1.6;white-space:pre-wrap;';
+    if (role === 'user') {
+      div.style.background = 'rgba(167,139,250,.12)';
+      div.style.color = '#f4f7fb';
+      div.style.alignSelf = 'flex-end';
+      div.style.maxWidth = '85%';
+    } else {
+      div.style.background = 'rgba(255,255,255,.04)';
+      div.style.color = 'rgba(255,255,255,.8)';
+      div.style.border = '1px solid rgba(255,255,255,.06)';
+    }
+    div.textContent = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function cmAiSend() {
+    var inp = document.getElementById('cmAiInput');
+    var msg = inp.value.trim();
+    if (!msg) return;
+    inp.value = '';
+    addMessage('user', msg);
+    document.getElementById('cmAiStatus').textContent = 'Office assistant is working on it…';
+    document.getElementById('cmAiBtn').disabled = true;
+
+    fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ message: msg })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      addMessage('assistant', data.reply || 'Something went wrong — try again.');
+      document.getElementById('cmAiStatus').textContent = '';
+    })
+    .catch(function(){
+      addMessage('assistant', 'Could not reach the assistant right now.');
+      document.getElementById('cmAiStatus').textContent = '';
+    })
+    .finally(function(){
+      document.getElementById('cmAiBtn').disabled = false;
+    });
+  }
+
+  function cmAiChip(text) {
+    document.getElementById('cmAiInput').value = text;
+    document.getElementById('cmAiInput').focus();
+  }
+
+  // Enter to send
+  document.getElementById('cmAiInput').addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); cmAiSend(); }
+  });
+
+  window.cmAiSend = cmAiSend;
+  window.cmAiChip = cmAiChip;
+}());
+</script>
+{% endblock %}
