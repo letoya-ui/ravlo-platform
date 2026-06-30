@@ -93,7 +93,7 @@ from LoanMVP.models.campaign_model import Campaign, CampaignRecipient, CampaignM
 from LoanMVP.models.call_model import CallLog, CommunicationLog
 
 from LoanMVP.models.contractor_models import Contractor, ContractorPayment, ContractorBidOpportunity
-from LoanMVP.models.company_finance_models import CMFinanceEntry, UserEmailConnection, ChallengeEnrollment
+from LoanMVP.models.company_finance_models import CMFinanceEntry, UserEmailConnection, ChallengeEnrollment, FeedbackSurvey
 
 from LoanMVP.models.activity_models import BorrowerActivity
 

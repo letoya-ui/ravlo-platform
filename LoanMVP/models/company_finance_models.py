@@ -81,6 +81,23 @@ class ChallengeEnrollment(db.Model):
         return f"<ChallengeEnrollment {self.user_id} {self.slug}>"
 
 
+class FeedbackSurvey(db.Model):
+    """NPS + qualitative feedback submitted via /feedback."""
+    __tablename__ = "feedback_surveys"
+
+    id          = db.Column(db.Integer, primary_key=True)
+    name        = db.Column(db.String(150), nullable=True)
+    email       = db.Column(db.String(255), nullable=True)
+    nps_score   = db.Column(db.Integer,     nullable=False)   # 0–10
+    liked       = db.Column(db.Text,        nullable=True)
+    improve     = db.Column(db.Text,        nullable=True)
+    source      = db.Column(db.String(50),  nullable=True)    # e.g. "email", "platform"
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<FeedbackSurvey {self.id} NPS={self.nps_score} {self.email}>"
+
+
 class UserEmailConnection(db.Model):
     """Stores OAuth tokens for a user's connected email account (Gmail, Outlook)."""
     __tablename__ = "user_email_connections"
