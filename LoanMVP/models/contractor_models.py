@@ -24,3 +24,30 @@ class ContractorPayment(db.Model):
     status = db.Column(db.String(20), default="pending")  # pending, paid, expired
     transaction_id = db.Column(db.String(120))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class ContractorBidOpportunity(db.Model):
+    """Tracks external/self-sourced jobs Jamaine is pursuing from any channel."""
+    __tablename__ = "contractor_bid_opportunities"
+
+    id         = db.Column(db.Integer, primary_key=True)
+    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=False, index=True)
+
+    project_name    = db.Column(db.String(255), nullable=False)
+    source          = db.Column(db.String(120), nullable=True)   # where it came from
+    category        = db.Column(db.String(100), nullable=True)   # Demo, Renovation, etc.
+    location        = db.Column(db.String(255), nullable=True)
+    estimated_value = db.Column(db.Float,       nullable=True)
+    bid_deadline    = db.Column(db.DateTime,    nullable=True)
+    notes           = db.Column(db.Text,        nullable=True)
+
+    # reviewing → bid_submitted → won / lost / no_bid
+    status     = db.Column(db.String(50), default="reviewing", nullable=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    partner = db.relationship("Partner", backref=db.backref("bid_opportunities", lazy="dynamic"))
+
+    def __repr__(self):
+        return f"<ContractorBidOpportunity {self.id} {self.project_name} {self.status}>"

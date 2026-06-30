@@ -53,6 +53,7 @@ from LoanMVP.models.partner_models import (
     PartnerProposal,
     PartnerJob,
 )
+from LoanMVP.models.contractor_models import ContractorBidOpportunity
 
 # ── Lending models ────────────────────────────────────────────────────────────
 from LoanMVP.models.loan_models import (
@@ -1345,6 +1346,15 @@ def contractor_dashboard():
             .all()
         )
 
+    bid_opportunities = []
+    if partner:
+        bid_opportunities = (
+            ContractorBidOpportunity.query
+            .filter_by(partner_id=partner.id)
+            .order_by(ContractorBidOpportunity.created_at.desc())
+            .limit(50).all()
+        )
+
     realtor_ctx = _realtor_context(profile, partner) if is_hybrid_partner else {}
     # Always use the contractor-scoped suggestions; prevents duplicate-kwarg
     # error when realtor_ctx also contains 'copilot_suggestions'.
@@ -1364,11 +1374,94 @@ def contractor_dashboard():
         design_annotation_counts = design_annotation_counts,
         stats                 = stats,
         studio_snapshot       = studio_snapshot,
+        bid_opportunities     = bid_opportunities,
         portal                = "vip",
         portal_name           = "VIP",
         portal_home           = url_for("vip.contractor_dashboard"),
         **realtor_ctx,
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BID PIPELINE — contractor-sourced opportunities
+# ─────────────────────────────────────────────────────────────────────────────
+
+@vip_bp.post("/contractor/bids/add")
+@role_required("partner_group", "admin")
+def contractor_bid_add():
+    partner = getattr(current_user, "partner_profile", None)
+    if not partner:
+        flash("No contractor profile found.", "warning")
+        return redirect(url_for("vip.contractor_dashboard"))
+
+    project_name = (request.form.get("project_name") or "").strip()
+    if not project_name:
+        flash("Project name is required.", "warning")
+        return redirect(url_for("vip.contractor_dashboard"))
+
+    raw_deadline = (request.form.get("bid_deadline") or "").strip()
+    bid_deadline = None
+    if raw_deadline:
+        try:
+            from datetime import datetime as _dt
+            bid_deadline = _dt.strptime(raw_deadline, "%Y-%m-%d")
+        except ValueError:
+            pass
+
+    raw_value = (request.form.get("estimated_value") or "").strip().replace(",", "").replace("$", "")
+    estimated_value = None
+    try:
+        estimated_value = float(raw_value) if raw_value else None
+    except ValueError:
+        pass
+
+    opp = ContractorBidOpportunity(
+        partner_id      = partner.id,
+        project_name    = project_name,
+        source          = (request.form.get("source") or "").strip() or None,
+        category        = (request.form.get("category") or "").strip() or None,
+        location        = (request.form.get("location") or "").strip() or None,
+        estimated_value = estimated_value,
+        bid_deadline    = bid_deadline,
+        notes           = (request.form.get("notes") or "").strip() or None,
+        status          = "reviewing",
+    )
+    db.session.add(opp)
+    db.session.commit()
+    flash(f"'{project_name}' added to your bid pipeline.", "success")
+    return redirect(url_for("vip.contractor_dashboard") + "#bid-pipeline")
+
+
+@vip_bp.post("/contractor/bids/<int:opp_id>/status")
+@role_required("partner_group", "admin")
+def contractor_bid_status(opp_id):
+    partner = getattr(current_user, "partner_profile", None)
+    opp = ContractorBidOpportunity.query.get_or_404(opp_id)
+    if not partner or opp.partner_id != partner.id:
+        flash("Not found.", "warning")
+        return redirect(url_for("vip.contractor_dashboard"))
+
+    new_status = (request.form.get("status") or "").strip()
+    valid = {"reviewing", "bid_submitted", "won", "lost", "no_bid"}
+    if new_status in valid:
+        opp.status = new_status
+        db.session.commit()
+    return redirect(url_for("vip.contractor_dashboard") + "#bid-pipeline")
+
+
+@vip_bp.post("/contractor/bids/<int:opp_id>/delete")
+@role_required("partner_group", "admin")
+def contractor_bid_delete(opp_id):
+    partner = getattr(current_user, "partner_profile", None)
+    opp = ContractorBidOpportunity.query.get_or_404(opp_id)
+    if not partner or opp.partner_id != partner.id:
+        flash("Not found.", "warning")
+        return redirect(url_for("vip.contractor_dashboard"))
+
+    db.session.delete(opp)
+    db.session.commit()
+    flash("Removed from pipeline.", "success")
+    return redirect(url_for("vip.contractor_dashboard") + "#bid-pipeline")
 
 
 def _build_request_deal_context(req):
