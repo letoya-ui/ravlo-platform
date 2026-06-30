@@ -16,21 +16,16 @@
       </p>
 
       <div class="mk-hero-actions">
-        {% if current_user.is_authenticated and current_user.role == 'investor' and not current_user.trial_ends_at %}
-          <form method="POST" action="{{ url_for('investor.activate_trial') }}" style="display:inline;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="mk-btn mk-btn-primary">Start the Challenge — 15 Days Free</button>
-          </form>
-        {% elif current_user.is_authenticated and current_user.role == 'investor' %}
+        {% if current_user.is_authenticated and current_user.trial_ends_at %}
           <a href="{{ url_for('investor.command_center') }}" class="mk-btn mk-btn-primary">Go to Your Dashboard</a>
         {% else %}
-          <a href="{{ url_for('auth.register') }}?next={{ url_for('marketing.investor_access') }}" class="mk-btn mk-btn-primary">Join the Challenge</a>
+          <a href="{{ url_for('challenge.join_page', slug='investor') }}" class="mk-btn mk-btn-primary">Join the Challenge — 30 Days Free</a>
         {% endif %}
         <a href="#how-it-works" class="mk-btn mk-btn-ghost">See How It Works</a>
       </div>
 
       <p style="margin-top:14px; font-size:.82rem; color:rgba(255,255,255,.35);">
-        No credit card. No commitment. 15 days of full platform access.
+        No credit card. No commitment. 30 days of full platform access.
       </p>
     </div>
   </div>
