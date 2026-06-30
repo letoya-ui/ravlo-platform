@@ -179,6 +179,59 @@
     </article>
   </section>
 
+  {# ── JOBS TO BID ── #}
+  <section class="ravlo-card pad" style="margin-top:4px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.15em;font-weight:800;color:#f5b942;text-transform:uppercase;">DAILY REMINDER</div>
+        <h3 style="margin:.3rem 0 0;font-size:1.05rem;">Jobs to Bid On</h3>
+      </div>
+      <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">View All Requests</a>
+    </div>
+
+    {% set open_bids = requests_with_context | selectattr("request.status", "in", ["pending", "awaiting_match"]) | list %}
+
+    {% if open_bids %}
+      <div style="display:grid;gap:10px;">
+        {% for item in open_bids[:8] %}
+        {% set req = item.request %}
+        {% set ctx = item.context or {} %}
+        <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-radius:12px;border:1px solid rgba(245,185,66,.18);background:rgba(245,185,66,.04);">
+          <div style="flex-shrink:0;width:36px;height:36px;border-radius:10px;background:rgba(245,185,66,.1);display:grid;place-items:center;">
+            <i class="lucide lucide-hammer" style="color:#f5b942;font-size:16px;"></i>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:.9rem;color:#f4f7fb;margin-bottom:3px;">
+              {{ ctx.address or "Address pending" }}
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:.78rem;color:rgba(255,255,255,.45);">
+              {% if ctx.requester %}<span>From: {{ ctx.requester }}</span>{% endif %}
+              {% if ctx.strategy %}<span>· {{ ctx.strategy }}</span>{% endif %}
+              {% if ctx.ai_rehab_estimate %}<span>· Est. ${{ '{:,.0f}'.format(ctx.ai_rehab_estimate) }}</span>{% endif %}
+              {% if ctx.arv %}<span>· ARV ${{ '{:,.0f}'.format(ctx.arv) }}</span>{% endif %}
+              <span>· {{ req.created_at.strftime("%b %d") if req.created_at else "Recent" }}</span>
+            </div>
+          </div>
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm" style="flex-shrink:0;white-space:nowrap;">Review</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% if open_bids | length > 8 %}
+      <p style="margin:12px 0 0;font-size:.82rem;color:rgba(255,255,255,.3);text-align:center;">
+        {{ open_bids | length - 8 }} more in your inbox →
+      </p>
+      {% endif %}
+    {% elif requests_with_context %}
+      <div style="padding:16px;border-radius:10px;background:rgba(255,255,255,.03);text-align:center;color:rgba(255,255,255,.35);font-size:.88rem;">
+        No open bids right now — all current requests are accepted or in progress.
+      </div>
+    {% else %}
+      <div style="padding:16px;border-radius:10px;background:rgba(255,255,255,.03);text-align:center;color:rgba(255,255,255,.35);font-size:.88rem;">
+        No bid requests yet. When investors request a contractor, they'll appear here.
+      </div>
+    {% endif %}
+  </section>
+
   <section class="contractor-studio-grid">
     <div class="contractor-studio-main">
 
@@ -616,6 +669,126 @@
       </article>
     </aside>
   </section>
+
+  {# ── FIELD QUICK ACTIONS ── #}
+  <section class="ravlo-card pad" style="margin-top:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.15em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">FIELD TOOLS</div>
+        <h3 style="margin:.35rem 0 0;font-size:1.05rem;">Quick Actions</h3>
+      </div>
+      <span style="font-size:.78rem;color:rgba(255,255,255,.3);">Tap to open</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;">
+      <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost" style="padding:18px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;border-radius:14px;font-size:.9rem;">
+        <i class="lucide lucide-inbox" style="font-size:22px;color:#5FA8FF;"></i>
+        <span>Open Requests</span>
+      </a>
+      <a href="{{ url_for('vip.client_session_list') }}" class="ravlo-btn ghost" style="padding:18px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;border-radius:14px;font-size:.9rem;">
+        <i class="lucide lucide-hard-hat" style="font-size:22px;color:#5FA8FF;"></i>
+        <span>Client Sessions</span>
+      </a>
+      <a href="{{ url_for('vip.design_studio') }}" class="ravlo-btn ghost" style="padding:18px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;border-radius:14px;font-size:.9rem;">
+        <i class="lucide lucide-pencil-ruler" style="font-size:22px;color:#5FA8FF;"></i>
+        <span>Design Studio</span>
+      </a>
+      <a href="{{ url_for('university.portal') }}" class="ravlo-btn ghost" style="padding:18px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;border-radius:14px;font-size:.9rem;">
+        <i class="lucide lucide-graduation-cap" style="font-size:22px;color:#5FA8FF;"></i>
+        <span>Academy</span>
+      </a>
+    </div>
+  </section>
+
+  {# ── TAMPA CONSTRUCTION — GETTING STARTED CHECKLIST ── #}
+  <section class="ravlo-card pad" style="margin-top:20px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.15em;font-weight:800;color:#2cb67d;text-transform:uppercase;">TAMPA, FL</div>
+        <h3 style="margin:.35rem 0 .25rem;font-size:1.1rem;">Construction Business — Getting Started</h3>
+        <p style="margin:0;font-size:.85rem;color:rgba(255,255,255,.45);">Check off each step as you complete it. Progress saves in your browser.</p>
+      </div>
+    </div>
+
+    {% set phases = [
+      ("Phase 1 — Legal Setup", [
+        ("biz-name", "Choose a business name and check availability at sunbiz.org"),
+        ("biz-llc", "Form an LLC in Florida — $125 filing fee at sunbiz.org"),
+        ("biz-ein", "Get an EIN from the IRS — free at irs.gov, takes 5 minutes"),
+        ("biz-bank", "Open a dedicated business bank account"),
+      ]),
+      ("Phase 2 — Florida Contractor Licensing", [
+        ("lic-type", "Decide your license type: Certified General Contractor (CGC) or Certified Building Contractor (CBC) for larger projects, or Hillsborough County Registered Contractor for smaller work"),
+        ("lic-exam", "Pass the Florida contractor exam through PSI Exams (if going CGC/CBC)"),
+        ("lic-dbpr", "Apply with the Florida DBPR (floridalicensed.com)"),
+        ("lic-hillsborough", "Get your Hillsborough County local business tax receipt"),
+        ("lic-tampa", "Get City of Tampa business tax receipt if working inside city limits"),
+      ]),
+      ("Phase 3 — Insurance &amp; Bonding", [
+        ("ins-gl", "Get general liability insurance — minimum $300k, recommend $1M+"),
+        ("ins-wc", "Get workers' compensation insurance — required in FL with 1+ employee"),
+        ("ins-auto", "Get commercial auto insurance for any work vehicles"),
+        ("ins-bond", "Get a surety bond if required by your license type"),
+      ]),
+      ("Phase 4 — Operations", [
+        ("ops-contracts", "Create standard client contract templates"),
+        ("ops-osha", "Complete OSHA 10-Hour Construction Safety training"),
+        ("ops-tools", "Make a startup tools and equipment list and budget"),
+        ("ops-subs", "Create a subcontractor agreement if you'll use subs"),
+        ("ops-ravlo", "Set up your Ravlo workspace — scopes, client sessions, Deal Architect"),
+      ]),
+      ("Phase 5 — Visibility", [
+        ("vis-google", "Claim and fill out your Google Business Profile — critical for Tampa local search"),
+        ("vis-photos", "Add job photos to Google and your Ravlo profile as you complete work"),
+        ("vis-insurance-cert", "Prepare a certificate of insurance to send to clients on request"),
+      ]),
+    ] %}
+
+    <div style="display:grid;gap:24px;" id="tampaChecklist">
+      {% for phase_label, items in phases %}
+      <div>
+        <div style="font-size:.75rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:10px;">{{ phase_label }}</div>
+        <div style="display:grid;gap:8px;">
+          {% for item_id, item_text in items %}
+          <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);transition:background .15s;" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background='rgba(255,255,255,.02)'" id="label-{{ item_id }}">
+            <input type="checkbox" id="chk-{{ item_id }}" style="margin-top:3px;accent-color:#2cb67d;flex-shrink:0;width:16px;height:16px;cursor:pointer;"
+              onchange="tampaChecklistSave('{{ item_id }}', this.checked); tampaChecklistStyle('{{ item_id }}', this.checked)">
+            <span id="text-{{ item_id }}" style="font-size:.875rem;color:rgba(255,255,255,.7);line-height:1.5;">{{ item_text }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <script>
+  (function(){
+    var PREFIX = 'tampa_cl_';
+    var ids = [{% for _, items in phases %}{% for item_id, _ in items %}'{{ item_id }}',{% endfor %}{% endfor %}];
+    function tampaChecklistSave(id, checked) {
+      try { localStorage.setItem(PREFIX + id, checked ? '1' : '0'); } catch(e) {}
+    }
+    function tampaChecklistStyle(id, checked) {
+      var lbl = document.getElementById('label-' + id);
+      var txt = document.getElementById('text-' + id);
+      if (lbl) lbl.style.borderColor = checked ? 'rgba(44,182,125,.3)' : 'rgba(255,255,255,.06)';
+      if (lbl) lbl.style.background  = checked ? 'rgba(44,182,125,.06)' : 'rgba(255,255,255,.02)';
+      if (txt) txt.style.color = checked ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.7)';
+      if (txt) txt.style.textDecoration = checked ? 'line-through' : 'none';
+    }
+    window.tampaChecklistSave  = tampaChecklistSave;
+    window.tampaChecklistStyle = tampaChecklistStyle;
+    document.addEventListener('DOMContentLoaded', function(){
+      ids.forEach(function(id){
+        var checked = false;
+        try { checked = localStorage.getItem(PREFIX + id) === '1'; } catch(e) {}
+        var chk = document.getElementById('chk-' + id);
+        if (chk) { chk.checked = checked; tampaChecklistStyle(id, checked); }
+      });
+    });
+  }());
+  </script>
+
 </div>
 {% endblock %}
 
