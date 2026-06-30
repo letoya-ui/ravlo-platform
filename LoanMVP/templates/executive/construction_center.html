@@ -2,16 +2,16 @@
 
 {% block title %}Caughman Mason Construction — Command Center{% endblock %}
 {% block page_title %}Construction Command Center{% endblock %}
-{% block page_subline %}Caughman Mason Construction · Tampa, FL — your office is running. Go build.{% endblock %}
+{% block page_subline %}Caughman Mason Construction · Powered by Ravlo — find work, hand off bid packages, and stay in the field.{% endblock %}
 
 {% block topbar_actions %}
+  <a href="{{ url_for('construction_bids.search_page') if safe_url_for('construction_bids.search_page') else '#bid-search' }}" class="re-btn primary sm">
+    <i class="lucide lucide-search"></i> Bid Search
+  </a>
   <a href="{{ url_for('vip.contractor_dashboard') }}" class="re-btn ghost sm">
     <i class="lucide lucide-hammer"></i> Field Dashboard
   </a>
-  <a href="{{ url_for('admin.company_finances') }}" class="re-btn ghost sm">
-    <i class="lucide lucide-landmark"></i> Finances
-  </a>
-  <a href="{{ url_for('partners.requests_inbox') }}" class="re-btn primary sm">
+  <a href="{{ url_for('partners.requests_inbox') }}" class="re-btn ghost sm">
     <i class="lucide lucide-inbox"></i> Job Inbox
   </a>
 {% endblock %}
@@ -19,7 +19,6 @@
 {% block content %}
 <div class="re-grid">
 
-  {# ── MORNING BRIEF ── #}
   <section class="re-card pad" id="morningBriefCard" style="border-color:rgba(245,185,66,.2);background:rgba(245,185,66,.03);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:14px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:14px;">
@@ -31,156 +30,113 @@
           <div style="font-size:.8rem;color:rgba(255,255,255,.35);margin-top:1px;" id="briefDate">Loading…</div>
         </div>
       </div>
-      <button type="button" onclick="loadMorningBrief()" id="briefRefreshBtn"
-        style="padding:7px 14px;border-radius:8px;border:1px solid rgba(245,185,66,.3);background:transparent;color:#f5b942;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;">
-        Refresh
-      </button>
+      <button type="button" onclick="loadMorningBrief()" id="briefRefreshBtn" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(245,185,66,.3);background:transparent;color:#f5b942;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;">Refresh</button>
     </div>
     <div id="morningBriefText" style="font-size:.88rem;color:rgba(255,255,255,.75);line-height:1.7;white-space:pre-wrap;min-height:60px;">
       <span style="color:rgba(255,255,255,.25);font-style:italic;">Loading your briefing…</span>
     </div>
   </section>
 
-  {# ── TOP STATS ── #}
   <section style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
-
-    <div class="re-stat" style="border-color:rgba(245,185,66,.2);background:rgba(245,185,66,.04);">
-      <div class="re-stat-label">Bids Active</div>
-      <div class="re-stat-value" style="color:#f5b942;">{{ active_bids|length }}</div>
-      <div class="re-stat-meta">Reviewing or submitted</div>
-    </div>
-
-    <div class="re-stat" style="border-color:rgba(44,182,125,.2);background:rgba(44,182,125,.04);">
-      <div class="re-stat-label">Jobs Won</div>
-      <div class="re-stat-value" style="color:#2cb67d;">{{ won_bids|length }}</div>
-      <div class="re-stat-meta">This pipeline</div>
-    </div>
-
-    <div class="re-stat" style="border-color:rgba(245,185,66,.2);background:rgba(245,185,66,.04);">
-      <div class="re-stat-label">Value in Play</div>
-      <div class="re-stat-value" style="color:#f5b942;font-size:1.2rem;">${{ '{:,.0f}'.format(value_in_play) }}</div>
-      <div class="re-stat-meta">Active bid estimates</div>
-    </div>
-
-    <div class="re-stat" style="border-color:rgba(44,182,125,.2);background:rgba(44,182,125,.04);">
-      <div class="re-stat-label">This Month Net</div>
-      <div class="re-stat-value" style="color:{% if month_net >= 0 %}#2cb67d{% else %}#f87171{% endif %};font-size:1.2rem;">
-        {% if month_net < 0 %}–{% endif %}${{ '{:,.0f}'.format(month_net|abs) }}
-      </div>
-      <div class="re-stat-meta">Construction P&amp;L</div>
-    </div>
-
-    <div class="re-stat">
-      <div class="re-stat-label">Inbound Jobs</div>
-      <div class="re-stat-value">{{ inbound_jobs|length }}</div>
-      <div class="re-stat-meta">Waiting in Ravlo inbox</div>
-    </div>
-
+    <div class="re-stat" style="border-color:rgba(245,185,66,.2);background:rgba(245,185,66,.04);"><div class="re-stat-label">Bids Active</div><div class="re-stat-value" style="color:#f5b942;">{{ active_bids|length }}</div><div class="re-stat-meta">Reviewing or submitted</div></div>
+    <div class="re-stat" style="border-color:rgba(44,182,125,.2);background:rgba(44,182,125,.04);"><div class="re-stat-label">Jobs Won</div><div class="re-stat-value" style="color:#2cb67d;">{{ won_bids|length }}</div><div class="re-stat-meta">This pipeline</div></div>
+    <div class="re-stat" style="border-color:rgba(245,185,66,.2);background:rgba(245,185,66,.04);"><div class="re-stat-label">Value in Play</div><div class="re-stat-value" style="color:#f5b942;font-size:1.2rem;">${{ '{:,.0f}'.format(value_in_play) }}</div><div class="re-stat-meta">Active bid estimates</div></div>
+    <div class="re-stat" style="border-color:rgba(44,182,125,.2);background:rgba(44,182,125,.04);"><div class="re-stat-label">This Month Net</div><div class="re-stat-value" style="color:{% if month_net >= 0 %}#2cb67d{% else %}#f87171{% endif %};font-size:1.2rem;">{% if month_net < 0 %}–{% endif %}${{ '{:,.0f}'.format(month_net|abs) }}</div><div class="re-stat-meta">Construction P&amp;L</div></div>
+    <div class="re-stat"><div class="re-stat-label">Inbound Jobs</div><div class="re-stat-value">{{ inbound_jobs|length }}</div><div class="re-stat-meta">Waiting in Ravlo inbox</div></div>
   </section>
 
-  {# ── AI OFFICE ASSISTANT ── #}
-  <section class="re-card pad" style="border-color:rgba(167,139,250,.2);background:rgba(167,139,250,.03);">
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
-      <div style="width:44px;height:44px;border-radius:12px;background:rgba(167,139,250,.15);display:grid;place-items:center;flex-shrink:0;">
-        <i class="lucide lucide-bot" style="color:#a78bfa;font-size:20px;"></i>
-      </div>
+  <section class="re-card pad" id="bid-search" style="border-color:rgba(95,168,255,.18);background:rgba(95,168,255,.025);">
+    <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px;">
       <div>
-        <div style="font-size:10px;letter-spacing:.15em;font-weight:800;color:#a78bfa;text-transform:uppercase;">AI OFFICE ASSISTANT</div>
-        <h3 style="margin:.2rem 0 0;font-size:1rem;">Your office is handled. Tell me what you need.</h3>
+        <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">BID SEARCH + HANDOFF</div>
+        <h3 style="margin:.25rem 0 0;font-size:1.05rem;">Find work. Save it. Send it to Sandra.</h3>
+        <p style="margin:6px 0 0;color:rgba(255,255,255,.5);font-size:.86rem;line-height:1.55;">Use quick Tampa searches, then save the real opportunity into Ravlo. Sandra prepares the bid package; Jamaine approves the field scope and number.</p>
       </div>
     </div>
 
-    {# Quick action chips #}
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;" id="aiChips">
-      {% for chip in [
-        "Draft a bid follow-up email",
-        "Write an invoice for a completed job",
-        "Create a subcontractor agreement",
-        "Write a client project update",
-        "Give me a permit checklist for Tampa",
-        "Draft a change order notice",
-        "OSHA safety checklist for demo work",
-        "Write a materials list request",
-      ] %}
-      <button type="button" class="re-btn ghost sm" style="font-size:.78rem;" onclick="cmAiChip(this.textContent)">{{ chip }}</button>
-      {% endfor %}
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">
+      <a class="re-btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=Tampa+demo+construction+bid+opportunities">Tampa Demo Jobs</a>
+      <a class="re-btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=Tampa+small+GC+construction+bid+opportunities">Small GC Jobs</a>
+      <a class="re-btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=Hillsborough+County+construction+bids+demo+repair">Hillsborough Bids</a>
+      <a class="re-btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=Pinellas+County+construction+bids+renovation+demo">Pinellas Bids</a>
+      <a class="re-btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=Tampa+ironwork+subcontractor+bid+opportunities">Ironwork</a>
+      <a class="re-btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=Tampa+property+preservation+contractor+opportunities">Property Preservation</a>
     </div>
 
-    {# Chat area #}
-    <div id="cmAiMessages" style="min-height:80px;max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:14px;padding:4px 0;">
-      <div style="padding:12px 16px;border-radius:10px;background:rgba(255,255,255,.04);font-size:.88rem;color:rgba(255,255,255,.5);font-style:italic;">
-        Ask me anything — invoices, emails, checklists, agreements, follow-ups. I handle the paperwork so you can stay on site.
+    <form method="POST" action="{{ url_for('construction_bids.create_bid_opportunity') }}" style="display:grid;gap:12px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:10px;">
+        <input name="project_name" required placeholder="Project / opportunity name" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(95,168,255,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
+        <input name="category" placeholder="Demo, GC, rehab, ironwork" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(95,168,255,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
+        <input name="location" placeholder="Tampa / county / address" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(95,168,255,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
       </div>
-    </div>
-
-    <div style="display:flex;gap:10px;align-items:flex-end;">
-      <textarea id="cmAiInput" rows="2" placeholder="e.g. Draft a follow-up for the City of Tampa demo bid..." style="flex:1;padding:11px 14px;border-radius:10px;border:1px solid rgba(167,139,250,.25);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;resize:none;font-family:inherit;"></textarea>
-      <button type="button" onclick="cmAiSend()" id="cmAiBtn" style="padding:11px 20px;border-radius:10px;background:#a78bfa;color:#fff;border:none;font-weight:700;font-size:.88rem;cursor:pointer;white-space:nowrap;flex-shrink:0;">Send</button>
-    </div>
-    <div id="cmAiStatus" style="font-size:.78rem;color:rgba(255,255,255,.25);margin-top:6px;min-height:18px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <input name="source" placeholder="Source or link" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(95,168,255,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
+        <input name="estimated_value" placeholder="Estimated value" inputmode="decimal" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(95,168,255,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
+        <input name="bid_deadline" type="date" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(95,168,255,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
+      </div>
+      <textarea name="notes" rows="3" placeholder="Paste notes, requirements, contact info, walk-through details, or what Sandra needs to collect." style="padding:11px 13px;border-radius:10px;border:1px solid rgba(95,168,255,.22);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+      <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+        <button type="submit" class="re-btn primary"><i class="lucide lucide-plus"></i> Save Opportunity</button>
+      </div>
+    </form>
   </section>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-
-    {# ── BID PIPELINE ── #}
     <section class="re-card pad">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div>
-          <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#f5b942;text-transform:uppercase;">BID PIPELINE</div>
-          <h3 style="margin:.25rem 0 0;font-size:.95rem;">Jobs Being Pursued</h3>
-        </div>
-        <a href="{{ url_for('vip.contractor_dashboard') }}#bid-pipeline" class="re-btn ghost sm" style="font-size:.75rem;">Full Pipeline</a>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;">
+        <div><div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#f5b942;text-transform:uppercase;">BID PIPELINE</div><h3 style="margin:.25rem 0 0;font-size:.95rem;">Jobs Being Pursued</h3></div>
+        <a href="#bid-search" class="re-btn ghost sm" style="font-size:.75rem;">Add Opportunity</a>
       </div>
-
       {% if bid_opps %}
-        {% set status_color = {"reviewing":"#a78bfa","bid_submitted":"#f5b942","won":"#2cb67d","lost":"#f87171","no_bid":"#6b7280"} %}
-        <div style="display:grid;gap:8px;">
-          {% for opp in bid_opps[:6] %}
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
-            <div style="min-width:0;">
-              <div style="font-size:.85rem;font-weight:600;color:#f4f7fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">{{ opp.project_name }}</div>
-              <div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-top:2px;">
-                {{ opp.category or '—' }}{% if opp.location %} · {{ opp.location }}{% endif %}
+        {% set status_color = {"saved_opportunity":"#5FA8FF","bid_package_needed":"#f5b942","draft_bid_prepared":"#a78bfa","jamaine_review_needed":"#f5b942","ready_to_send":"#2cb67d","bid_submitted":"#f5b942","won":"#2cb67d","lost":"#f87171","no_bid":"#6b7280","reviewing":"#a78bfa"} %}
+        <div style="display:grid;gap:10px;">
+          {% for opp in bid_opps[:8] %}
+          <div style="padding:12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+              <div style="min-width:0;">
+                <div style="font-size:.88rem;font-weight:700;color:#f4f7fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;">{{ opp.project_name }}</div>
+                <div style="font-size:.75rem;color:rgba(255,255,255,.38);margin-top:3px;">{{ opp.category or '—' }}{% if opp.location %} · {{ opp.location }}{% endif %}{% if opp.bid_deadline %} · Due {{ opp.bid_deadline.strftime('%b %d') }}{% endif %}</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0;">
+                <div style="font-size:.72rem;font-weight:800;color:{{ status_color.get(opp.status,'#6b7280') }};text-transform:uppercase;letter-spacing:.04em;">{{ opp.status|replace('_',' ')|title }}</div>
+                {% if opp.estimated_value %}<div style="font-size:.78rem;color:rgba(255,255,255,.4);margin-top:3px;">${{ '{:,.0f}'.format(opp.estimated_value) }}</div>{% endif %}
               </div>
             </div>
-            <div style="text-align:right;flex-shrink:0;margin-left:10px;">
-              <div style="font-size:.72rem;font-weight:700;color:{{ status_color.get(opp.status,'#6b7280') }};">
-                {{ opp.status|replace('_',' ')|title }}
-              </div>
-              {% if opp.estimated_value %}
-              <div style="font-size:.78rem;color:rgba(255,255,255,.4);">${{ '{:,.0f}'.format(opp.estimated_value) }}</div>
-              {% endif %}
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+              <form method="POST" action="{{ url_for('construction_bids.send_to_sandra', opportunity_id=opp.id) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="re-btn primary sm" style="font-size:.74rem;">Send to Sandra</button>
+              </form>
+              <form method="POST" action="{{ url_for('construction_bids.update_bid_status', opportunity_id=opp.id) }}" style="display:flex;gap:6px;align-items:center;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="status" style="padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:#111827;color:#f4f7fb;font-size:.74rem;">
+                  {% for value,label in [("site_visit_needed","Site Visit Needed"),("estimate_needed","Estimate Needed"),("jamaine_review_needed","Jamaine Review"),("ready_to_send","Ready to Send"),("bid_submitted","Bid Sent"),("follow_up_needed","Follow-Up"),("won","Awarded"),("lost","Lost"),("no_bid","No Bid")] %}
+                    <option value="{{ value }}" {% if opp.status == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="re-btn ghost sm" style="font-size:.74rem;">Update</button>
+              </form>
             </div>
           </div>
           {% endfor %}
         </div>
-        {% if bid_opps|length > 6 %}
-        <div style="margin-top:10px;font-size:.78rem;color:rgba(255,255,255,.3);text-align:center;">+{{ bid_opps|length - 6 }} more in pipeline</div>
-        {% endif %}
       {% else %}
-        <div style="padding:20px;text-align:center;color:rgba(255,255,255,.25);font-size:.85rem;">No bids tracked yet.<br>Add opportunities in your Field Dashboard.</div>
+        <div style="padding:20px;text-align:center;color:rgba(255,255,255,.25);font-size:.85rem;">No bids tracked yet.<br>Use Bid Search to save the first opportunity.</div>
       {% endif %}
     </section>
 
-    {# ── INBOUND RAVLO JOBS ── #}
     <section class="re-card pad">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div>
-          <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">RAVLO INVESTORS</div>
-          <h3 style="margin:.25rem 0 0;font-size:.95rem;">Inbound Job Requests</h3>
-        </div>
+        <div><div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">RAVLO INVESTORS</div><h3 style="margin:.25rem 0 0;font-size:.95rem;">Inbound Job Requests</h3></div>
         <a href="{{ url_for('partners.requests_inbox') }}" class="re-btn primary sm" style="font-size:.75rem;">Review All</a>
       </div>
-
       {% if inbound_jobs %}
         <div style="display:grid;gap:8px;">
           {% for req in inbound_jobs %}
           <div style="padding:10px 12px;border-radius:9px;background:rgba(95,168,255,.05);border:1px solid rgba(95,168,255,.15);">
             <div style="font-size:.85rem;font-weight:600;color:#f4f7fb;">{{ req.title or req.category or 'Build Request' }}</div>
-            <div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-top:3px;">
-              {{ req.created_at.strftime('%b %d') if req.created_at else 'Recent' }}
-              {% if req.message %} · {{ req.message[:60] }}{% if req.message|length > 60 %}…{% endif %}{% endif %}
-            </div>
+            <div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-top:3px;">{{ req.created_at.strftime('%b %d') if req.created_at else 'Recent' }}{% if req.message %} · {{ req.message[:60] }}{% if req.message|length > 60 %}…{% endif %}{% endif %}</div>
           </div>
           {% endfor %}
         </div>
@@ -188,240 +144,82 @@
         <div style="padding:20px;text-align:center;color:rgba(255,255,255,.25);font-size:.85rem;">No open requests right now.<br>Investors will appear here when they need a contractor.</div>
       {% endif %}
     </section>
-
   </div>
 
-  {# ── FINANCE THIS MONTH ── #}
-  <section class="re-card pad" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:center;">
-    <div>
-      <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:6px;">Construction · This Month</div>
-      <div style="font-size:1.5rem;font-weight:800;color:{% if month_net >= 0 %}#2cb67d{% else %}#f87171{% endif %};">
-        {% if month_net < 0 %}–{% endif %}${{ '{:,.0f}'.format(month_net|abs) }}
-      </div>
-      <div style="font-size:.78rem;color:rgba(255,255,255,.35);margin-top:3px;">Net this month</div>
+  <section class="re-card pad" style="border-color:rgba(167,139,250,.2);background:rgba(167,139,250,.03);">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+      <div style="width:44px;height:44px;border-radius:12px;background:rgba(167,139,250,.15);display:grid;place-items:center;flex-shrink:0;"><i class="lucide lucide-bot" style="color:#a78bfa;font-size:20px;"></i></div>
+      <div><div style="font-size:10px;letter-spacing:.15em;font-weight:800;color:#a78bfa;text-transform:uppercase;">AI OFFICE ASSISTANT</div><h3 style="margin:.2rem 0 0;font-size:1rem;">Your office is handled. Tell me what you need.</h3></div>
     </div>
-    <div>
-      <div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-bottom:3px;">Income</div>
-      <div style="font-size:1.1rem;font-weight:700;color:#2cb67d;">${{ '{:,.0f}'.format(month_income) }}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;" id="aiChips">
+      {% for chip in ["Draft a bid follow-up email","Write an invoice for a completed job","Create a subcontractor agreement","Write a client project update","Give me a permit checklist for Tampa","Draft a change order notice","OSHA safety checklist for demo work","Write a materials list request"] %}
+      <button type="button" class="re-btn ghost sm" style="font-size:.78rem;" onclick="cmAiChip(this.textContent)">{{ chip }}</button>
+      {% endfor %}
     </div>
-    <div style="display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;">
-      <div>
-        <div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-bottom:3px;">Expenses</div>
-        <div style="font-size:1.1rem;font-weight:700;color:#f87171;">${{ '{:,.0f}'.format(month_expense) }}</div>
-      </div>
-      <a href="{{ url_for('admin.company_finances') }}?division=construction" class="re-btn ghost sm" style="align-self:center;">Full View</a>
-    </div>
+    <div id="cmAiMessages" style="min-height:80px;max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:14px;padding:4px 0;"><div style="padding:12px 16px;border-radius:10px;background:rgba(255,255,255,.04);font-size:.88rem;color:rgba(255,255,255,.5);font-style:italic;">Ask me anything — invoices, emails, checklists, agreements, follow-ups. I handle the paperwork so you can stay on site.</div></div>
+    <div style="display:flex;gap:10px;align-items:flex-end;"><textarea id="cmAiInput" rows="2" placeholder="e.g. Draft a follow-up for the Tampa demo bid..." style="flex:1;padding:11px 14px;border-radius:10px;border:1px solid rgba(167,139,250,.25);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;resize:none;font-family:inherit;"></textarea><button type="button" onclick="cmAiSend()" id="cmAiBtn" style="padding:11px 20px;border-radius:10px;background:#a78bfa;color:#fff;border:none;font-weight:700;font-size:.88rem;cursor:pointer;white-space:nowrap;flex-shrink:0;">Send</button></div>
+    <div id="cmAiStatus" style="font-size:.78rem;color:rgba(255,255,255,.25);margin-top:6px;min-height:18px;"></div>
   </section>
 
-  {# ── EMAIL OFFICE ── #}
+  <section class="re-card pad" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:center;">
+    <div><div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:6px;">Construction · This Month</div><div style="font-size:1.5rem;font-weight:800;color:{% if month_net >= 0 %}#2cb67d{% else %}#f87171{% endif %};">{% if month_net < 0 %}–{% endif %}${{ '{:,.0f}'.format(month_net|abs) }}</div><div style="font-size:.78rem;color:rgba(255,255,255,.35);margin-top:3px;">Net this month</div></div>
+    <div><div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-bottom:3px;">Income</div><div style="font-size:1.1rem;font-weight:700;color:#2cb67d;">${{ '{:,.0f}'.format(month_income) }}</div></div>
+    <div style="display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;"><div><div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-bottom:3px;">Expenses</div><div style="font-size:1.1rem;font-weight:700;color:#f87171;">${{ '{:,.0f}'.format(month_expense) }}</div></div><a href="{{ url_for('admin.company_finances') }}?division=construction" class="re-btn ghost sm" style="align-self:center;">Full View</a></div>
+  </section>
+
   <section class="re-card pad" style="border-color:rgba(95,168,255,.15);background:rgba(95,168,255,.02);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:38px;height:38px;border-radius:9px;background:rgba(95,168,255,.1);display:grid;place-items:center;flex-shrink:0;">
-          <i class="lucide lucide-mail" style="color:#5FA8FF;font-size:16px;"></i>
-        </div>
-        <div>
-          <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">EMAIL OFFICE</div>
-          <div style="font-size:.78rem;color:rgba(255,255,255,.35);margin-top:1px;" id="emailStatus">
-            {% if email_conn and email_conn.email_address %}
-              Connected: {{ email_conn.email_address }}
-              {% if email_conn.last_synced_at %} · Last sync {{ email_conn.last_synced_at.strftime('%b %d %I:%M %p') }}{% endif %}
-            {% else %}
-              Not connected
-            {% endif %}
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        {% if email_conn and email_conn.email_address %}
-          <button type="button" onclick="syncEmail()" id="emailSyncBtn"
-            style="padding:7px 14px;border-radius:8px;border:1px solid rgba(95,168,255,.3);background:transparent;color:#5FA8FF;font-size:.78rem;font-weight:600;cursor:pointer;">
-            Scan Inbox
-          </button>
-          <form method="POST" action="{{ url_for('executive.email_disconnect') }}" style="display:inline;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit"
-              style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:transparent;color:rgba(255,255,255,.35);font-size:.78rem;cursor:pointer;">
-              Disconnect
-            </button>
-          </form>
-        {% else %}
-          <a href="{{ url_for('executive.email_connect') }}"
-            style="padding:8px 16px;border-radius:8px;background:#5FA8FF;color:#fff;font-size:.8rem;font-weight:700;text-decoration:none;white-space:nowrap;">
-            Connect Gmail
-          </a>
-        {% endif %}
-      </div>
+      <div style="display:flex;align-items:center;gap:12px;"><div style="width:38px;height:38px;border-radius:9px;background:rgba(95,168,255,.1);display:grid;place-items:center;flex-shrink:0;"><i class="lucide lucide-mail" style="color:#5FA8FF;font-size:16px;"></i></div><div><div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">EMAIL OFFICE</div><div style="font-size:.78rem;color:rgba(255,255,255,.35);margin-top:1px;" id="emailStatus">{% if email_conn and email_conn.email_address %}Connected: {{ email_conn.email_address }}{% if email_conn.last_synced_at %} · Last sync {{ email_conn.last_synced_at.strftime('%b %d %I:%M %p') }}{% endif %}{% else %}Not connected{% endif %}</div></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">{% if email_conn and email_conn.email_address %}<button type="button" onclick="syncEmail()" id="emailSyncBtn" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(95,168,255,.3);background:transparent;color:#5FA8FF;font-size:.78rem;font-weight:600;cursor:pointer;">Scan Inbox</button><form method="POST" action="{{ url_for('executive.email_disconnect') }}" style="display:inline;"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:transparent;color:rgba(255,255,255,.35);font-size:.78rem;cursor:pointer;">Disconnect</button></form>{% else %}<a href="{{ url_for('executive.email_connect') }}" style="padding:8px 16px;border-radius:8px;background:#5FA8FF;color:#fff;font-size:.8rem;font-weight:700;text-decoration:none;white-space:nowrap;">Connect Gmail</a>{% endif %}</div>
     </div>
-    <div id="emailSummaryBox" style="font-size:.85rem;color:rgba(255,255,255,.65);line-height:1.65;white-space:pre-wrap;min-height:32px;">
-      {% if email_conn and email_conn.email_address %}
-        <span style="color:rgba(255,255,255,.25);font-style:italic;">Click "Scan Inbox" to get an AI summary of your unread emails.</span>
-      {% else %}
-        <span style="color:rgba(255,255,255,.25);font-style:italic;">Connect Gmail so the AI can scan your inbox and surface anything that needs attention — bids, client replies, invoices.</span>
-      {% endif %}
-    </div>
+    <div id="emailSummaryBox" style="font-size:.85rem;color:rgba(255,255,255,.65);line-height:1.65;white-space:pre-wrap;min-height:32px;">{% if email_conn and email_conn.email_address %}<span style="color:rgba(255,255,255,.25);font-style:italic;">Click "Scan Inbox" to get an AI summary of unread emails.</span>{% else %}<span style="color:rgba(255,255,255,.25);font-style:italic;">Connect Gmail so the AI can surface bids, client replies, invoices, and supplier quotes.</span>{% endif %}</div>
   </section>
 
-  {# ── RAVLO OS SNAPSHOT ── #}
   <section class="re-card pad" style="border-color:rgba(95,168,255,.15);background:rgba(95,168,255,.03);">
     <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#5FA8FF;text-transform:uppercase;margin-bottom:12px;">RAVLO OS — YOUR PLATFORM</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;">
-      <div>
-        <div style="font-size:.75rem;color:rgba(255,255,255,.35);">Platform Users</div>
-        <div style="font-size:1.4rem;font-weight:800;color:#f4f7fb;margin-top:2px;">{{ total_users }}</div>
-      </div>
-      <div>
-        <div style="font-size:.75rem;color:rgba(255,255,255,.35);">Loan Files</div>
-        <div style="font-size:1.4rem;font-weight:800;color:#f4f7fb;margin-top:2px;">{{ total_loans }}</div>
-      </div>
-      <div>
-        <div style="font-size:.75rem;color:rgba(255,255,255,.35);">Partner Requests</div>
-        <div style="font-size:1.4rem;font-weight:800;color:#f5b942;margin-top:2px;">{{ req_waiting }}</div>
-      </div>
-      <div style="display:flex;align-items:center;">
-        <a href="{{ url_for('executive.dashboard') }}" class="re-btn ghost sm" style="font-size:.78rem;white-space:nowrap;">Full OS View →</a>
-      </div>
-    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;"><div><div style="font-size:.75rem;color:rgba(255,255,255,.35);">Platform Users</div><div style="font-size:1.4rem;font-weight:800;color:#f4f7fb;margin-top:2px;">{{ total_users }}</div></div><div><div style="font-size:.75rem;color:rgba(255,255,255,.35);">Loan Files</div><div style="font-size:1.4rem;font-weight:800;color:#f4f7fb;margin-top:2px;">{{ total_loans }}</div></div><div><div style="font-size:.75rem;color:rgba(255,255,255,.35);">Partner Requests</div><div style="font-size:1.4rem;font-weight:800;color:#f5b942;margin-top:2px;">{{ req_waiting }}</div></div><div style="display:flex;align-items:center;"><a href="{{ url_for('executive.dashboard') }}" class="re-btn ghost sm" style="font-size:.78rem;white-space:nowrap;">Full OS View →</a></div></div>
   </section>
 
-  {# ── QUICK FIELD ACTIONS ── #}
   <section class="re-card pad">
     <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:14px;">QUICK ACTIONS</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;">
-      <a href="{{ url_for('vip.contractor_dashboard') }}" class="re-btn primary" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-hammer" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Field Dashboard</a>
-      <a href="{{ url_for('vip.contractor_dashboard') }}#bid-pipeline" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-file-plus" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Add Bid</a>
-      <a href="{{ url_for('admin.company_finances') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-receipt" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Log Expense</a>
-      <a href="{{ url_for('university.portal') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-graduation-cap" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Academy</a>
-    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;"><a href="#bid-search" class="re-btn primary" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-search" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Bid Search</a><a href="{{ url_for('vip.contractor_dashboard') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-hammer" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Field Dashboard</a><a href="{{ url_for('admin.company_finances') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-receipt" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Log Expense</a><a href="{{ url_for('university.portal') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-graduation-cap" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Construction Academy</a></div>
   </section>
 
 </div>
 
 <script>
 (function(){
-  var AI_ENDPOINT    = "{{ url_for('executive.construction_ai') }}";
+  var AI_ENDPOINT = "{{ url_for('executive.construction_ai') }}";
   var BRIEF_ENDPOINT = "{{ url_for('executive.construction_morning_brief') }}";
-  var SYNC_ENDPOINT  = "{{ url_for('executive.email_sync') }}";
-  var CSRF           = "{{ csrf_token() }}";
+  var SYNC_ENDPOINT = "{{ url_for('executive.email_sync') }}";
+  var CSRF = "{{ csrf_token() }}";
 
-  // ── Morning brief ──────────────────────────────────────────────
-  function loadMorningBrief() {
-    var btn = document.getElementById('briefRefreshBtn');
-    var box = document.getElementById('morningBriefText');
-    box.innerHTML = '<span style="color:rgba(255,255,255,.25);font-style:italic;">Generating your briefing…</span>';
-    if (btn) btn.disabled = true;
-    fetch(BRIEF_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({})
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      box.textContent = d.brief || 'Could not load briefing.';
-      var dateEl = document.getElementById('briefDate');
-      if (dateEl && d.date) dateEl.textContent = d.date;
-    })
-    .catch(function(){
-      box.textContent = 'Briefing unavailable — check back in a moment.';
-    })
-    .finally(function(){ if (btn) btn.disabled = false; });
+  function loadMorningBrief(){
+    var btn=document.getElementById('briefRefreshBtn');
+    var box=document.getElementById('morningBriefText');
+    box.innerHTML='<span style="color:rgba(255,255,255,.25);font-style:italic;">Generating your briefing…</span>';
+    if(btn) btn.disabled=true;
+    fetch(BRIEF_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},body:JSON.stringify({})})
+      .then(function(r){return r.json();}).then(function(d){box.textContent=d.brief||'Could not load briefing.';var dateEl=document.getElementById('briefDate');if(dateEl&&d.date)dateEl.textContent=d.date;})
+      .catch(function(){box.textContent='Briefing unavailable — check back in a moment.';}).finally(function(){if(btn)btn.disabled=false;});
   }
-  window.loadMorningBrief = loadMorningBrief;
-  // Auto-load on page open
-  loadMorningBrief();
+  window.loadMorningBrief=loadMorningBrief; loadMorningBrief();
 
-  // ── Email sync ─────────────────────────────────────────────────
-  function syncEmail() {
-    var btn = document.getElementById('emailSyncBtn');
-    var box = document.getElementById('emailSummaryBox');
-    if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
-    box.innerHTML = '<span style="color:rgba(255,255,255,.25);font-style:italic;">Reading your inbox…</span>';
-    fetch(SYNC_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({})
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (d.ok) {
-        box.textContent = d.summary || 'Nothing urgent in your inbox.';
-        var status = document.getElementById('emailStatus');
-        if (status) status.textContent = 'Synced just now · ' + (d.count || 0) + ' unread emails scanned';
-      } else {
-        box.textContent = d.error || 'Could not read emails.';
-      }
-    })
-    .catch(function(){
-      box.textContent = 'Email sync failed — try again.';
-    })
-    .finally(function(){
-      if (btn) { btn.disabled = false; btn.textContent = 'Scan Inbox'; }
-    });
+  function syncEmail(){
+    var btn=document.getElementById('emailSyncBtn');var box=document.getElementById('emailSummaryBox');
+    if(btn){btn.disabled=true;btn.textContent='Scanning…';}
+    box.innerHTML='<span style="color:rgba(255,255,255,.25);font-style:italic;">Reading your inbox…</span>';
+    fetch(SYNC_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},body:JSON.stringify({})})
+      .then(function(r){return r.json();}).then(function(d){if(d.ok){box.textContent=d.summary||'Nothing urgent in your inbox.';var status=document.getElementById('emailStatus');if(status)status.textContent='Synced just now · '+(d.count||0)+' unread emails scanned';}else{box.textContent=d.error||'Could not read emails.';}})
+      .catch(function(){box.textContent='Email sync failed — try again.';}).finally(function(){if(btn){btn.disabled=false;btn.textContent='Scan Inbox';}});
   }
-  window.syncEmail = syncEmail;
+  window.syncEmail=syncEmail;
 
-  // ── AI Office Assistant ────────────────────────────────────────
-  var ENDPOINT = AI_ENDPOINT;
-
-  function addMessage(role, text) {
-    var box = document.getElementById('cmAiMessages');
-    var div = document.createElement('div');
-    div.style.cssText = 'padding:12px 16px;border-radius:10px;font-size:.88rem;line-height:1.6;white-space:pre-wrap;';
-    if (role === 'user') {
-      div.style.background = 'rgba(167,139,250,.12)';
-      div.style.color = '#f4f7fb';
-      div.style.alignSelf = 'flex-end';
-      div.style.maxWidth = '85%';
-    } else {
-      div.style.background = 'rgba(255,255,255,.04)';
-      div.style.color = 'rgba(255,255,255,.8)';
-      div.style.border = '1px solid rgba(255,255,255,.06)';
-    }
-    div.textContent = text;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-  }
-
-  function cmAiSend() {
-    var inp = document.getElementById('cmAiInput');
-    var msg = inp.value.trim();
-    if (!msg) return;
-    inp.value = '';
-    addMessage('user', msg);
-    document.getElementById('cmAiStatus').textContent = 'Office assistant is working on it…';
-    document.getElementById('cmAiBtn').disabled = true;
-
-    fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({ message: msg })
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      addMessage('assistant', data.reply || 'Something went wrong — try again.');
-      document.getElementById('cmAiStatus').textContent = '';
-    })
-    .catch(function(){
-      addMessage('assistant', 'Could not reach the assistant right now.');
-      document.getElementById('cmAiStatus').textContent = '';
-    })
-    .finally(function(){
-      document.getElementById('cmAiBtn').disabled = false;
-    });
-  }
-
-  function cmAiChip(text) {
-    document.getElementById('cmAiInput').value = text;
-    document.getElementById('cmAiInput').focus();
-  }
-
-  // Enter to send
-  document.getElementById('cmAiInput').addEventListener('keydown', function(e){
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); cmAiSend(); }
-  });
-
-  window.cmAiSend = cmAiSend;
-  window.cmAiChip = cmAiChip;
+  function addMessage(role,text){var box=document.getElementById('cmAiMessages');var div=document.createElement('div');div.style.cssText='padding:12px 16px;border-radius:10px;font-size:.88rem;line-height:1.6;white-space:pre-wrap;';if(role==='user'){div.style.background='rgba(167,139,250,.12)';div.style.color='#f4f7fb';div.style.alignSelf='flex-end';div.style.maxWidth='85%';}else{div.style.background='rgba(255,255,255,.04)';div.style.color='rgba(255,255,255,.8)';div.style.border='1px solid rgba(255,255,255,.06)';}div.textContent=text;box.appendChild(div);box.scrollTop=box.scrollHeight;}
+  function cmAiSend(){var inp=document.getElementById('cmAiInput');var msg=inp.value.trim();if(!msg)return;inp.value='';addMessage('user',msg);document.getElementById('cmAiStatus').textContent='Office assistant is working on it…';document.getElementById('cmAiBtn').disabled=true;fetch(AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},body:JSON.stringify({message:msg})}).then(function(r){return r.json();}).then(function(data){addMessage('assistant',data.reply||'Something went wrong — try again.');document.getElementById('cmAiStatus').textContent='';}).catch(function(){addMessage('assistant','Could not reach the assistant right now.');document.getElementById('cmAiStatus').textContent='';}).finally(function(){document.getElementById('cmAiBtn').disabled=false;});}
+  function cmAiChip(text){document.getElementById('cmAiInput').value=text;document.getElementById('cmAiInput').focus();}
+  var input=document.getElementById('cmAiInput');if(input){input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();cmAiSend();}});}
+  window.cmAiSend=cmAiSend;window.cmAiChip=cmAiChip;
 }());
 </script>
 {% endblock %}
