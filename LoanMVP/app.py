@@ -700,7 +700,7 @@ def create_app():
     def make_session_permanent():
         session.permanent = True
 
-    _TRIAL_EXEMPT_PREFIXES = ("auth.", "marketing.", "public_pages.", "preview.")
+    _TRIAL_EXEMPT_PREFIXES = ("auth.", "marketing.", "public_pages.", "preview.", "checkout.")
     _TRIAL_EXEMPT_EXACT = {"static", "favicon", "marketing_home", "robots_txt", "sitemap_xml", "index"}
 
     @app.before_request
