@@ -28,13 +28,48 @@
     </div>
   </section>
 
-  {# ── ADD STAFF MEMBER ── #}
+  {# ── LINK EXISTING ACCOUNT ── #}
   <section class="re-card pad">
     <div class="section-head">
       <div>
-        <div class="eyebrow">ADD STAFF</div>
-        <h3 style="margin:.35rem 0 .2rem;">Invite a Team Member</h3>
-        <div class="re-card-subtitle">Send a registration link to a new Ravlo employee. They'll set their own password when they accept.</div>
+        <div class="eyebrow">ADD EXISTING USER</div>
+        <h3 style="margin:.35rem 0 .2rem;">Add Someone Who Already Has an Account</h3>
+        <div class="re-card-subtitle">If Sandra, Jamaine, or anyone else already has a Ravlo account, enter their email to link them to the team roster.</div>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('admin.link_staff_member') }}" class="re-form mt-16" style="max-width:560px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="re-form-group">
+        <label class="re-label">Email Address</label>
+        <input class="re-input" type="email" name="email" placeholder="sandra@ravlohq.com" required>
+      </div>
+
+      <div class="re-form-group">
+        <label class="re-label">Update Role (optional)</label>
+        <select class="re-input" name="role">
+          <option value="">Keep current role</option>
+          {% for value, label in ravlo_roles %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="re-btn primary">
+        <i class="lucide lucide-user-check"></i>
+        Add to Ravlo Team
+      </button>
+    </form>
+  </section>
+
+  {# ── INVITE NEW ACCOUNT ── #}
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">INVITE NEW EMPLOYEE</div>
+        <h3 style="margin:.35rem 0 .2rem;">Send a Registration Link</h3>
+        <div class="re-card-subtitle">For someone who doesn't have a Ravlo account yet. They'll get an email to set their own password.</div>
       </div>
     </div>
 
