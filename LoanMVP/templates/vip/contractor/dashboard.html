@@ -179,6 +179,59 @@
     </article>
   </section>
 
+  {# ── JOBS TO BID ── #}
+  <section class="ravlo-card pad" style="margin-top:4px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.15em;font-weight:800;color:#f5b942;text-transform:uppercase;">DAILY REMINDER</div>
+        <h3 style="margin:.3rem 0 0;font-size:1.05rem;">Jobs to Bid On</h3>
+      </div>
+      <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">View All Requests</a>
+    </div>
+
+    {% set open_bids = requests_with_context | selectattr("request.status", "in", ["pending", "awaiting_match"]) | list %}
+
+    {% if open_bids %}
+      <div style="display:grid;gap:10px;">
+        {% for item in open_bids[:8] %}
+        {% set req = item.request %}
+        {% set ctx = item.context or {} %}
+        <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-radius:12px;border:1px solid rgba(245,185,66,.18);background:rgba(245,185,66,.04);">
+          <div style="flex-shrink:0;width:36px;height:36px;border-radius:10px;background:rgba(245,185,66,.1);display:grid;place-items:center;">
+            <i class="lucide lucide-hammer" style="color:#f5b942;font-size:16px;"></i>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:.9rem;color:#f4f7fb;margin-bottom:3px;">
+              {{ ctx.address or "Address pending" }}
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:.78rem;color:rgba(255,255,255,.45);">
+              {% if ctx.requester %}<span>From: {{ ctx.requester }}</span>{% endif %}
+              {% if ctx.strategy %}<span>· {{ ctx.strategy }}</span>{% endif %}
+              {% if ctx.ai_rehab_estimate %}<span>· Est. ${{ '{:,.0f}'.format(ctx.ai_rehab_estimate) }}</span>{% endif %}
+              {% if ctx.arv %}<span>· ARV ${{ '{:,.0f}'.format(ctx.arv) }}</span>{% endif %}
+              <span>· {{ req.created_at.strftime("%b %d") if req.created_at else "Recent" }}</span>
+            </div>
+          </div>
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm" style="flex-shrink:0;white-space:nowrap;">Review</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% if open_bids | length > 8 %}
+      <p style="margin:12px 0 0;font-size:.82rem;color:rgba(255,255,255,.3);text-align:center;">
+        {{ open_bids | length - 8 }} more in your inbox →
+      </p>
+      {% endif %}
+    {% elif requests_with_context %}
+      <div style="padding:16px;border-radius:10px;background:rgba(255,255,255,.03);text-align:center;color:rgba(255,255,255,.35);font-size:.88rem;">
+        No open bids right now — all current requests are accepted or in progress.
+      </div>
+    {% else %}
+      <div style="padding:16px;border-radius:10px;background:rgba(255,255,255,.03);text-align:center;color:rgba(255,255,255,.35);font-size:.88rem;">
+        No bid requests yet. When investors request a contractor, they'll appear here.
+      </div>
+    {% endif %}
+  </section>
+
   <section class="contractor-studio-grid">
     <div class="contractor-studio-main">
 
