@@ -73,7 +73,8 @@ _ROLE_TRACK = {
     "realtor":       "realtor",
     "property_mgmt": "property_mgmt",
     "contractor":    "contractor",
-    # admin/master_admin/executive see all tracks — no restriction
+    "admin":         "operations",
+    # master_admin/executive see all tracks — no restriction
 }
 
 # ── Tier metadata (matches ACCESS_TIERS in the JSX) ───────────────────────

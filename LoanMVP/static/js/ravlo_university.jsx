@@ -231,6 +231,47 @@ const TRACKS = {
       ]},
     ],
   },
+  operations: {
+    label: 'Operations & Admin', color: '#8ec5ff', icon: '⚙',
+    levels: [
+      { title: 'Platform Operations', modules: [
+        { id: 'ops-l1-m1', title: 'Access & Onboarding', lessons: [
+          { title: 'Managing Access Requests', desc: 'How to review, approve, and deny access requests — what to look for and when to escalate.' },
+          { title: 'Inviting Team Members', desc: 'Adding staff, setting roles, and making sure new users land in the right workspace from day one.' },
+          { title: 'User Roles & Permissions', desc: 'What each role can see and do — investor, partner, admin, executive — and why role assignment matters.' },
+        ]},
+        { id: 'ops-l1-m2', title: 'Daily Operations Rhythm', lessons: [
+          { title: 'Morning Queue Review', desc: 'How to start each day — access requests, messages, open bids, and any flagged items.' },
+          { title: 'Tracking Open Items', desc: 'Keeping nothing in your head — how to use the dashboard, reports, and notes to stay clear on what is pending.' },
+          { title: 'Escalation & Handoffs', desc: 'When to handle it yourself, when to loop in Letoya or Jamaine, and how to hand off cleanly.' },
+        ]},
+      ]},
+      { title: 'Bid Support Workflow', modules: [
+        { id: 'ops-l2-m1', title: 'Package Preparation', lessons: [
+          { title: 'What Goes in a Bid Package', desc: 'Scope of work, drawings, specs, insurance requirements, and anything a GC needs to submit a competitive number.' },
+          { title: 'Collecting Missing Information', desc: 'How to identify what is missing, who to ask, and how to document the request so nothing falls through.' },
+          { title: 'Drafting & Formatting Bids', desc: 'Structure, tone, and what makes a bid package look professional to a municipality or GC.' },
+        ]},
+        { id: 'ops-l2-m2', title: 'Status & Follow-Up', lessons: [
+          { title: 'Moving a Bid Through the Queue', desc: 'Package Needed → Draft Prepared → Waiting on Jamaine → Ready to Send — how each stage change gets handled.' },
+          { title: 'Following Up After Submission', desc: 'How long to wait, who to contact, and what information to capture from follow-up conversations.' },
+          { title: 'Tracking Outcomes', desc: 'Recording won, lost, and no-bid decisions — and what that history tells you about where to focus next.' },
+        ]},
+      ]},
+      { title: 'Communications & Reporting', modules: [
+        { id: 'ops-l3-m1', title: 'Professional Communications', lessons: [
+          { title: 'Writing for External Parties', desc: 'Email tone, structure, and clarity when representing Ravlo or Caughman Mason to clients, municipalities, or GCs.' },
+          { title: 'Internal Handoff Notes', desc: 'Writing notes Jamaine and Letoya can act on immediately — context, action needed, deadline.' },
+          { title: 'Documenting Conversations', desc: 'What to capture from a call or site visit so the information stays in the system and does not live in your memory.' },
+        ]},
+        { id: 'ops-l3-m2', title: 'Reports & Records', lessons: [
+          { title: 'Reading the Reports Dashboard', desc: 'What each report shows, how often to check it, and what patterns signal a problem before it becomes one.' },
+          { title: 'Compensation Prep', desc: 'Collecting work notes and activity records so compensation review conversations are easy and clear.' },
+          { title: 'Operations Metrics That Matter', desc: 'Bids in queue, access request turnaround, onboarding completion rate — what to track and why.' },
+        ]},
+      ]},
+    ],
+  },
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -922,6 +963,7 @@ You have deep expertise across: deal analysis, BRRRR strategy, multifamily, fix 
     realtor:  ['How do I build a listing presentation that wins against established agents?', 'Walk me through how to do a CMA the right way', 'What does a strong SOI system look like for a new agent?', 'How do I break into working with investors as a realtor?'],
     property_mgmt: ['How do I set rent prices in a new market?', 'Walk me through a solid lease renewal process', 'What maintenance issues do landlords most often ignore until they become expensive?', 'How do I screen tenants effectively?'],
     contractor: ['How do I write a bid that protects my margin?', 'Walk me through how to read construction drawings for estimating', 'What are the most common budget busters on residential rehabs?', 'How do draw schedules typically work on a renovation project?'],
+    operations: ['Walk me through what should be in a complete bid package for a municipal contract', 'How do I handle an access request where the person has given me minimal information?', 'What is the best way to write a follow-up email after submitting a bid with no response?', 'How do I structure handoff notes so Jamaine or Letoya can act on them without asking me questions?'],
   };
   const starters = startersByTrack[track] || startersByTrack.investor;
 
