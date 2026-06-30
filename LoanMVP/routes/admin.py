@@ -1544,6 +1544,33 @@ def delete_staff_invite(invite_id):
     return redirect(url_for("admin.staff"))
 
 
+@admin_bp.route("/staff/<int:user_id>/remove", methods=["POST"])
+@login_required
+@role_required("admin_group")
+def remove_staff_member(user_id):
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user) or (getattr(current_user, "role", "") or "").strip().lower() == "executive"):
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    if user_id == current_user.id:
+        flash("You cannot remove yourself from the team.", "warning")
+        return redirect(url_for("admin.staff"))
+
+    ravlo_co = _get_or_create_ravlo_company()
+    user = User.query.get_or_404(user_id)
+
+    if user.company_id != ravlo_co.id:
+        flash("That user is not on the Ravlo team.", "warning")
+        return redirect(url_for("admin.staff"))
+
+    user.company_id = None
+    db.session.commit()
+
+    name = ((user.first_name or "") + " " + (user.last_name or "")).strip() or user.email
+    flash(f"{name} has been removed from the Ravlo team.", "success")
+    return redirect(url_for("admin.staff"))
+
+
 @admin_bp.route("/staff/link", methods=["POST"])
 @login_required
 @role_required("admin_group")

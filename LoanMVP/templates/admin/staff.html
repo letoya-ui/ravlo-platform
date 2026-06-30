@@ -130,6 +130,7 @@
               <th>Email</th>
               <th>Role</th>
               <th>Joined</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -146,13 +147,24 @@
               <td style="font-size:.85rem;color:var(--muted,#8a9db5);">
                 {{ user.created_at.strftime("%b %d, %Y") if user.created_at else "—" }}
               </td>
+              <td>
+                {% if user.id != current_user.id %}
+                <form method="post" action="{{ url_for('admin.remove_staff_member', user_id=user.id) }}" style="margin:0;"
+                      onsubmit="return confirm('Remove {{ ((user.first_name or '') ~ ' ' ~ (user.last_name or '')).strip() or user.email }} from the Ravlo team?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="re-btn ghost sm" style="color:var(--danger,#f87171);">Remove</button>
+                </form>
+                {% else %}
+                  <span class="text-muted" style="font-size:.8rem;">You</span>
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     {% else %}
-      <div class="re-empty mt-16">No staff accounts yet — send the first invite above.</div>
+      <div class="re-empty mt-16">No staff accounts yet — use the forms above to add someone.</div>
     {% endif %}
   </section>
 
