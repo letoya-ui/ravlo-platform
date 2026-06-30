@@ -94,7 +94,7 @@
         <a href="#bid-search" class="re-btn ghost sm" style="font-size:.75rem;">Add Opportunity</a>
       </div>
       {% if bid_opps %}
-        {% set status_color = {"saved_opportunity":"#5FA8FF","bid_package_needed":"#f5b942","draft_bid_prepared":"#a78bfa","jamaine_review_needed":"#f5b942","ready_to_send":"#2cb67d","bid_submitted":"#f5b942","won":"#2cb67d","lost":"#f87171","no_bid":"#6b7280","reviewing":"#a78bfa"} %}
+        {% set status_color = {"saved_opportunity":"#5FA8FF","bid_package_needed":"#f5b942","missing_information":"#f87171","draft_bid_prepared":"#a78bfa","jamaine_review_needed":"#f5b942","ready_to_send":"#2cb67d","follow_up_needed":"#f97316","bid_submitted":"#f5b942","won":"#2cb67d","lost":"#f87171","no_bid":"#6b7280","reviewing":"#a78bfa"} %}
         <div style="display:grid;gap:10px;">
           {% for opp in bid_opps[:8] %}
           <div style="padding:12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">

@@ -13,12 +13,12 @@
 {% block content %}
 
 {% set status_meta = {
-  "package_needed":      {"color": "#5FA8FF", "bg": "rgba(95,168,255,.1)",  "border": "rgba(95,168,255,.25)"},
-  "missing_information": {"color": "#f87171", "bg": "rgba(248,113,113,.1)", "border": "rgba(248,113,113,.25)"},
-  "draft_prepared":      {"color": "#eab308", "bg": "rgba(234,179,8,.1)",   "border": "rgba(234,179,8,.25)"},
-  "waiting_on_jamaine":  {"color": "#a78bfa", "bg": "rgba(167,139,250,.1)", "border": "rgba(167,139,250,.25)"},
-  "ready_to_send":       {"color": "#2cb67d", "bg": "rgba(44,182,125,.1)",  "border": "rgba(44,182,125,.25)"},
-  "follow_up_needed":    {"color": "#f97316", "bg": "rgba(249,115,22,.1)",  "border": "rgba(249,115,22,.25)"},
+  "bid_package_needed":    {"color": "#5FA8FF", "bg": "rgba(95,168,255,.1)",  "border": "rgba(95,168,255,.25)"},
+  "missing_information":   {"color": "#f87171", "bg": "rgba(248,113,113,.1)", "border": "rgba(248,113,113,.25)"},
+  "draft_bid_prepared":    {"color": "#eab308", "bg": "rgba(234,179,8,.1)",   "border": "rgba(234,179,8,.25)"},
+  "jamaine_review_needed": {"color": "#a78bfa", "bg": "rgba(167,139,250,.1)", "border": "rgba(167,139,250,.25)"},
+  "ready_to_send":         {"color": "#2cb67d", "bg": "rgba(44,182,125,.1)",  "border": "rgba(44,182,125,.25)"},
+  "follow_up_needed":      {"color": "#f97316", "bg": "rgba(249,115,22,.1)",  "border": "rgba(249,115,22,.25)"},
 } %}
 
 <div class="re-grid">
@@ -66,14 +66,13 @@
             <th>Category</th>
             <th>Value</th>
             <th>Deadline</th>
-            <th>Bid Status</th>
-            <th>Support Status</th>
+            <th>Status</th>
             <th>Notes</th>
           </tr>
         </thead>
         <tbody>
           {% for bid in bids %}
-          {% set sk = bid.support_status or "package_needed" %}
+          {% set sk = bid.status or "bid_package_needed" %}
           {% set sm = status_meta.get(sk, {"color": "#5FA8FF", "bg": "rgba(95,168,255,.1)", "border": "rgba(95,168,255,.25)"}) %}
           <tr id="bid-row-{{ bid.id }}">
             <td>
@@ -103,22 +102,15 @@
               {% else %}—{% endif %}
             </td>
 
-            <td>
-              <span style="font-size:.75rem;font-weight:700;padding:3px 9px;border-radius:6px;
-                background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);">
-                {{ bid.status|replace('_',' ')|title }}
-              </span>
-            </td>
-
-            {# ── Support status dropdown ── #}
+            {# ── Status dropdown ── #}
             <td>
               <form method="POST"
                     action="{{ url_for('executive.bid_support_update_status', bid_id=bid.id) }}"
                     style="margin:0;" id="status-form-{{ bid.id }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="support_notes" class="notes-hidden-{{ bid.id }}"
-                       value="{{ bid.support_notes or '' }}">
-                <select name="support_status"
+                <input type="hidden" name="notes" class="notes-hidden-{{ bid.id }}"
+                       value="{{ bid.notes or '' }}">
+                <select name="status"
                         onchange="document.getElementById('status-form-{{ bid.id }}').submit()"
                         style="padding:5px 8px;border-radius:8px;
                         border:1.5px solid {{ sm.border }};
@@ -139,9 +131,9 @@
                     action="{{ url_for('executive.bid_support_update_status', bid_id=bid.id) }}"
                     style="margin:0;display:flex;gap:6px;align-items:center;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="support_status" value="{{ bid.support_status or 'package_needed' }}">
-                <input type="text" name="support_notes"
-                       value="{{ bid.support_notes or '' }}"
+                <input type="hidden" name="status" value="{{ bid.status or 'bid_package_needed' }}">
+                <input type="text" name="notes"
+                       value="{{ bid.notes or '' }}"
                        placeholder="Add note…"
                        style="flex:1;padding:5px 10px;border-radius:8px;
                        border:1px solid rgba(255,255,255,.1);
@@ -193,10 +185,10 @@
         <div>
           <div style="font-size:.82rem;font-weight:800;color:{{ color }};margin-bottom:2px;">{{ label }}</div>
           <div style="font-size:.76rem;color:rgba(255,255,255,.4);line-height:1.4;">
-            {% if key == "package_needed" %}Gather scope, drawings, and specs to start the package.
+            {% if key == "bid_package_needed" %}Gather scope, drawings, and specs to start the package.
             {% elif key == "missing_information" %}Blocked — waiting on info from client or project source.
-            {% elif key == "draft_prepared" %}Package drafted and ready for Jamaine's review.
-            {% elif key == "waiting_on_jamaine" %}Draft sent to Jamaine — awaiting approval or signature.
+            {% elif key == "draft_bid_prepared" %}Package drafted and ready for Jamaine's review.
+            {% elif key == "jamaine_review_needed" %}Draft sent to Jamaine — awaiting approval or signature.
             {% elif key == "ready_to_send" %}Approved and queued to go out to the client or GC.
             {% elif key == "follow_up_needed" %}Submitted — follow up with client to check status.
             {% endif %}
@@ -230,7 +222,7 @@
           row.style.display = "";
         } else {
           // check the selected option in the status select
-          var sel = row.querySelector("select[name='support_status']");
+          var sel = row.querySelector("select[name='status']");
           var val = sel ? sel.value : "";
           row.style.display = (val === f) ? "" : "none";
         }

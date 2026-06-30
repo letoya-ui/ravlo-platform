@@ -41,12 +41,9 @@ class ContractorBidOpportunity(db.Model):
     bid_deadline    = db.Column(db.DateTime,    nullable=True)
     notes           = db.Column(db.Text,        nullable=True)
 
-    # reviewing → bid_submitted → won / lost / no_bid
+    # saved_opportunity → bid_package_needed → missing_information → draft_bid_prepared →
+    # jamaine_review_needed → ready_to_send → bid_submitted → follow_up_needed → won / lost / no_bid
     status     = db.Column(db.String(50), default="reviewing", nullable=False)
-
-    # Sandra's bid-preparation workflow (independent of bid outcome)
-    support_status = db.Column(db.String(60), nullable=True)   # see BID_SUPPORT_STATUSES
-    support_notes  = db.Column(db.Text,       nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -856,13 +856,15 @@ def email_sync():
 # BID SUPPORT QUEUE — Sandra's workflow view
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Sandra's preparation stages — a focused slice of ContractorBidOpportunity.status,
+# the same field used by the general Bid Pipeline (construction_bids blueprint).
 BID_SUPPORT_STATUSES = [
-    ("package_needed",      "Package Needed",       "#5FA8FF", "lucide-package"),
-    ("missing_information", "Missing Information",  "#f87171", "lucide-alert-circle"),
-    ("draft_prepared",      "Draft Prepared",       "#eab308", "lucide-file-pen-line"),
-    ("waiting_on_jamaine",  "Waiting on Jamaine",   "#a78bfa", "lucide-user-clock"),
-    ("ready_to_send",       "Ready to Send",        "#2cb67d", "lucide-send"),
-    ("follow_up_needed",    "Follow-Up Needed",     "#f97316", "lucide-rotate-ccw"),
+    ("bid_package_needed",   "Package Needed",       "#5FA8FF", "lucide-package"),
+    ("missing_information",  "Missing Information",  "#f87171", "lucide-alert-circle"),
+    ("draft_bid_prepared",   "Draft Prepared",       "#eab308", "lucide-file-pen-line"),
+    ("jamaine_review_needed","Waiting on Jamaine",   "#a78bfa", "lucide-user-clock"),
+    ("ready_to_send",        "Ready to Send",        "#2cb67d", "lucide-send"),
+    ("follow_up_needed",     "Follow-Up Needed",     "#f97316", "lucide-rotate-ccw"),
 ]
 
 _BID_SUPPORT_EMAILS: set[str] = {
@@ -908,18 +910,20 @@ def bid_support():
             current_app.logger.warning("[bid_support] table not ready: %s", exc)
             flash("Bid table is still setting up — check back shortly.", "info")
 
-    # Group by support_status (unset bids fall into package_needed)
+    # Sandra's queue is the subset of bids currently in a prep stage —
+    # bids not yet handed off (saved_opportunity) or already past prep
+    # (bid_submitted, won, lost, etc.) belong on the general Bid Pipeline instead.
     status_keys = [s[0] for s in BID_SUPPORT_STATUSES]
+    queue_bids = [b for b in bids if b.status in status_keys]
     by_status = {k: [] for k in status_keys}
-    for b in bids:
-        key = b.support_status if b.support_status in status_keys else "package_needed"
-        by_status[key].append(b)
+    for b in queue_bids:
+        by_status[b.status].append(b)
 
     needs_attention = len(by_status.get("missing_information", [])) + len(by_status.get("follow_up_needed", []))
 
     return render_template(
         "executive/bid_support.html",
-        bids=bids,
+        bids=queue_bids,
         by_status=by_status,
         statuses=BID_SUPPORT_STATUSES,
         needs_attention=needs_attention,
@@ -934,13 +938,13 @@ def bid_support_update_status(bid_id):
 
     try:
         bid = ContractorBidOpportunity.query.get_or_404(bid_id)
-        new_status = (request.form.get("support_status") or "").strip()
+        new_status = (request.form.get("status") or "").strip()
         status_keys = [s[0] for s in BID_SUPPORT_STATUSES]
         if new_status in status_keys:
-            bid.support_status = new_status
-        notes = request.form.get("support_notes")
+            bid.status = new_status
+        notes = request.form.get("notes")
         if notes is not None:
-            bid.support_notes = notes.strip() or None
+            bid.notes = notes.strip() or None
         db.session.commit()
     except Exception as exc:
         db.session.rollback()

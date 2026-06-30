@@ -4,25 +4,26 @@
   Requires: bid_opps (list of ContractorBidOpportunity), now (datetime)
 #}
 {% set _support_statuses = [
-  ("package_needed",      "Package Needed",       "#5FA8FF"),
-  ("missing_information", "Missing Information",  "#f87171"),
-  ("draft_prepared",      "Draft Prepared",       "#eab308"),
-  ("waiting_on_jamaine",  "Waiting on Jamaine",   "#a78bfa"),
-  ("ready_to_send",       "Ready to Send",        "#2cb67d"),
-  ("follow_up_needed",    "Follow-Up Needed",     "#f97316"),
+  ("bid_package_needed",    "Package Needed",       "#5FA8FF"),
+  ("missing_information",   "Missing Information",  "#f87171"),
+  ("draft_bid_prepared",    "Draft Prepared",       "#eab308"),
+  ("jamaine_review_needed", "Waiting on Jamaine",   "#a78bfa"),
+  ("ready_to_send",         "Ready to Send",        "#2cb67d"),
+  ("follow_up_needed",      "Follow-Up Needed",     "#f97316"),
 ] %}
 {% set _support_keys = _support_statuses | map(attribute=0) | list %}
+{% set _queue_opps = bid_opps | selectattr("status", "in", _support_keys) | list %}
 
 {% set _ns = namespace(
-  package_needed=0, missing_information=0, draft_prepared=0,
-  waiting_on_jamaine=0, ready_to_send=0, follow_up_needed=0, needs_action=0
+  bid_package_needed=0, missing_information=0, draft_bid_prepared=0,
+  jamaine_review_needed=0, ready_to_send=0, follow_up_needed=0, needs_action=0
 ) %}
-{% for b in bid_opps %}
-  {% set sk = b.support_status if b.support_status in _support_keys else "package_needed" %}
-  {% if sk == "package_needed" %}{% set _ns.package_needed = _ns.package_needed + 1 %}{% endif %}
+{% for b in _queue_opps %}
+  {% set sk = b.status %}
+  {% if sk == "bid_package_needed" %}{% set _ns.bid_package_needed = _ns.bid_package_needed + 1 %}{% endif %}
   {% if sk == "missing_information" %}{% set _ns.missing_information = _ns.missing_information + 1 %}{% set _ns.needs_action = _ns.needs_action + 1 %}{% endif %}
-  {% if sk == "draft_prepared" %}{% set _ns.draft_prepared = _ns.draft_prepared + 1 %}{% endif %}
-  {% if sk == "waiting_on_jamaine" %}{% set _ns.waiting_on_jamaine = _ns.waiting_on_jamaine + 1 %}{% endif %}
+  {% if sk == "draft_bid_prepared" %}{% set _ns.draft_bid_prepared = _ns.draft_bid_prepared + 1 %}{% endif %}
+  {% if sk == "jamaine_review_needed" %}{% set _ns.jamaine_review_needed = _ns.jamaine_review_needed + 1 %}{% endif %}
   {% if sk == "ready_to_send" %}{% set _ns.ready_to_send = _ns.ready_to_send + 1 %}{% endif %}
   {% if sk == "follow_up_needed" %}{% set _ns.follow_up_needed = _ns.follow_up_needed + 1 %}{% set _ns.needs_action = _ns.needs_action + 1 %}{% endif %}
 {% endfor %}
@@ -32,7 +33,7 @@
     <div>
       <div class="eyebrow">BID SUPPORT QUEUE</div>
       <h3 style="margin:.35rem 0 .2rem;">Bid Preparation</h3>
-      <div class="re-card-subtitle">Sandra's workflow — {{ bid_opps|length }} bid{{ 's' if bid_opps|length != 1 }} in queue</div>
+      <div class="re-card-subtitle">Sandra's workflow — {{ _queue_opps|length }} bid{{ 's' if _queue_opps|length != 1 }} in queue</div>
     </div>
     <a href="{{ url_for('executive.bid_support') }}" class="re-btn ghost sm">
       <i class="lucide lucide-arrow-right"></i> Open Queue
@@ -65,11 +66,10 @@
     {% endfor %}
   </div>
 
-  {% if bid_opps %}
+  {% if _queue_opps %}
   <div style="margin-top:14px;display:grid;gap:6px;">
-    {% for b in bid_opps[:4] %}
-    {% set sk = b.support_status if b.support_status in _support_keys else "package_needed" %}
-    {% set sc = {"package_needed":"#5FA8FF","missing_information":"#f87171","draft_prepared":"#eab308","waiting_on_jamaine":"#a78bfa","ready_to_send":"#2cb67d","follow_up_needed":"#f97316"} %}
+    {% for b in _queue_opps[:4] %}
+    {% set sc = {"bid_package_needed":"#5FA8FF","missing_information":"#f87171","draft_bid_prepared":"#eab308","jamaine_review_needed":"#a78bfa","ready_to_send":"#2cb67d","follow_up_needed":"#f97316"} %}
     <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;
       border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
       <div style="flex:1;min-width:0;">
@@ -83,16 +83,16 @@
         {% endif %}
       </div>
       <span style="flex-shrink:0;font-size:.7rem;font-weight:800;padding:3px 8px;border-radius:6px;
-        background:rgba(0,0,0,.2);color:{{ sc.get(sk,'#5FA8FF') }};">
-        {{ sk|replace('_',' ')|title }}
+        background:rgba(0,0,0,.2);color:{{ sc.get(b.status,'#5FA8FF') }};">
+        {{ b.status|replace('_',' ')|title }}
       </span>
     </div>
     {% endfor %}
-    {% if bid_opps|length > 4 %}
+    {% if _queue_opps|length > 4 %}
     <a href="{{ url_for('executive.bid_support') }}"
       style="text-align:center;font-size:.78rem;color:rgba(255,255,255,.3);
       padding:6px;text-decoration:none;display:block;">
-      +{{ bid_opps|length - 4 }} more →
+      +{{ _queue_opps|length - 4 }} more →
     </a>
     {% endif %}
   </div>
