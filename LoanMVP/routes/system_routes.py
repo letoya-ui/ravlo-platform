@@ -604,6 +604,17 @@ def delete_user(user_id):
             {"created_by": None}, synchronize_session="fetch"
         )
 
+        # -- Challenge enrollments (table may not exist in all envs) ------
+        try:
+            sp = db.session.begin_nested()
+            from LoanMVP.models.company_finance_models import ChallengeEnrollment
+            ChallengeEnrollment.query.filter_by(user_id=user.id).delete(
+                synchronize_session="fetch"
+            )
+            sp.commit()
+        except Exception:
+            sp.rollback()
+
         # Force the ORM to reload all relationship collections from the
         # database so the cascade triggered by db.session.delete(user)
         # sees the nullified FK values rather than stale in-memory state.
