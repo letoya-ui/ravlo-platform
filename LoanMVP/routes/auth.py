@@ -97,7 +97,8 @@ _PARTNER_DASHBOARD_PRESETS: dict[str, dict[str, str | bool]] = {
         "portfolio_showcase_enabled": True,
         "is_verified": True,
     },
-    "jamaine.caughman@ravlohq.com": {
+    "jamaine.caughman@caughmanmason.com": {
+        "_user_role": "partner",
         "name": "Caughman Mason Construction",
         "company": "Caughman Mason Construction",
         "category": "contractor",
@@ -162,12 +163,18 @@ def _ensure_partner_dashboard_profile(user) -> None:
     if not preset:
         return
 
+    user_role = preset.get("_user_role")
+    if user_role and getattr(user, "role", None) != user_role:
+        user.role = user_role
+
     partner = Partner.query.filter_by(user_id=user.id).first()
     if not partner:
         partner = Partner(user_id=user.id, name=str(preset.get("name") or user.full_name or email))
         db.session.add(partner)
 
     for field, value in preset.items():
+        if field.startswith("_"):
+            continue
         setattr(partner, field, value)
 
     if not partner.email:
