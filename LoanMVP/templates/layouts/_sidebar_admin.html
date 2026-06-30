@@ -77,6 +77,12 @@
         <i class="icon lucide lucide-users-2"></i>
         <span>Ravlo Team</span>
       </a>
+
+      <a href="{{ url_for('admin.company_finances') }}"
+         class="re-nav-link {% if ep in ['admin.company_finances', 'admin.company_finances_add', 'admin.company_finances_delete'] %}active{% endif %}">
+        <i class="icon lucide lucide-landmark"></i>
+        <span>CM Finances</span>
+      </a>
     {% endif %}
 
     <div class="re-nav-section-label">Operations</div>

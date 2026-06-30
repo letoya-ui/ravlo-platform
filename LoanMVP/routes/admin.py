@@ -31,6 +31,7 @@ from LoanMVP.models.admin import Company, AccessRequest, UserInvite, LicenseAppl
 from LoanMVP.models.ai_models import AIAssistantInteraction
 from LoanMVP.models.payment_models import PaymentRecord
 from LoanMVP.models.vip_models import VIPIncome, VIPProfile
+from LoanMVP.models.company_finance_models import CMFinanceEntry, DIVISIONS, INCOME_CATEGORIES, EXPENSE_CATEGORIES
 from LoanMVP.services.notify_service import notify
 
 import io
@@ -1628,6 +1629,125 @@ def link_staff_member():
     name = ((user.first_name or "") + " " + (user.last_name or "")).strip() or user.email
     flash(f"{name} has been added to the Ravlo team.", "success")
     return redirect(url_for("admin.staff"))
+
+
+# =========================================================
+# 💰 CAUGHMAN MASON FINANCE HUB
+# =========================================================
+
+def _cm_finance_guard():
+    role = (getattr(current_user, "role", "") or "").strip().lower()
+    return (
+        _is_full_admin(current_user)
+        or _is_owner_account(current_user)
+        or role == "executive"
+        or role == "partner"
+    )
+
+
+@admin_bp.route("/finances", methods=["GET"])
+@login_required
+def company_finances():
+    if not _cm_finance_guard():
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    selected_division = request.args.get("division", "all")
+    selected_type     = request.args.get("type", "all")
+
+    q = CMFinanceEntry.query
+    if selected_division != "all":
+        q = q.filter_by(division=selected_division)
+    if selected_type in ("income", "expense"):
+        q = q.filter_by(entry_type=selected_type)
+
+    entries = q.order_by(CMFinanceEntry.entry_date.desc(), CMFinanceEntry.created_at.desc()).limit(200).all()
+
+    # Totals per division
+    all_entries = CMFinanceEntry.query.all()
+    division_summary = {}
+    for e in all_entries:
+        d = e.division
+        if d not in division_summary:
+            division_summary[d] = {"income": 0.0, "expense": 0.0}
+        if e.entry_type == "income":
+            division_summary[d]["income"] += e.amount or 0
+        else:
+            division_summary[d]["expense"] += e.amount or 0
+
+    for d in division_summary:
+        division_summary[d]["net"] = division_summary[d]["income"] - division_summary[d]["expense"]
+
+    total_income  = sum(e.amount for e in all_entries if e.entry_type == "income")
+    total_expense = sum(e.amount for e in all_entries if e.entry_type == "expense")
+
+    from datetime import datetime as _dt
+    return render_template(
+        "admin/company_finances.html",
+        entries           = entries,
+        divisions         = DIVISIONS,
+        income_categories = INCOME_CATEGORIES,
+        expense_categories= EXPENSE_CATEGORIES,
+        division_summary  = division_summary,
+        total_income      = total_income,
+        now               = _dt.utcnow(),
+        total_expense     = total_expense,
+        total_net         = total_income - total_expense,
+        selected_division = selected_division,
+        selected_type     = selected_type,
+    )
+
+
+@admin_bp.route("/finances/add", methods=["POST"])
+@login_required
+def company_finances_add():
+    if not _cm_finance_guard():
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    amount_raw = (request.form.get("amount") or "").replace(",", "").replace("$", "").strip()
+    try:
+        amount = float(amount_raw)
+    except ValueError:
+        flash("Invalid amount.", "danger")
+        return redirect(url_for("admin.company_finances"))
+
+    date_raw = (request.form.get("entry_date") or "").strip()
+    from datetime import date as _date, datetime as _dt
+    try:
+        entry_date = _dt.strptime(date_raw, "%Y-%m-%d").date() if date_raw else _date.today()
+    except ValueError:
+        entry_date = _date.today()
+
+    entry = CMFinanceEntry(
+        created_by_id = current_user.id,
+        division      = (request.form.get("division") or "construction").strip(),
+        entry_type    = (request.form.get("entry_type") or "expense").strip(),
+        category      = (request.form.get("category") or "").strip() or None,
+        description   = (request.form.get("description") or "").strip() or None,
+        amount        = amount,
+        entry_date    = entry_date,
+        project_name  = (request.form.get("project_name") or "").strip() or None,
+        notes         = (request.form.get("notes") or "").strip() or None,
+    )
+    db.session.add(entry)
+    db.session.commit()
+    flash("Entry added.", "success")
+    return redirect(url_for("admin.company_finances"))
+
+
+@admin_bp.route("/finances/<int:entry_id>/delete", methods=["POST"])
+@login_required
+def company_finances_delete(entry_id):
+    if not _cm_finance_guard():
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    entry = CMFinanceEntry.query.get_or_404(entry_id)
+    db.session.delete(entry)
+    db.session.commit()
+    flash("Entry removed.", "success")
+    return redirect(url_for("admin.company_finances"))
 
 
 # =========================================================
