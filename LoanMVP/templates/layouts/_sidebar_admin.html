@@ -125,7 +125,19 @@
       </a>
     {% endif %}
 
+    <a href="{{ url_for('executive.bid_support') }}"
+       class="re-nav-link {% if ep == 'executive.bid_support' %}active{% endif %}">
+      <i class="icon lucide lucide-clipboard-list"></i>
+      <span>Bid Support Queue</span>
+    </a>
+
     <div class="re-nav-section-label">Growth</div>
+
+    <a href="{{ url_for('university.portal') }}"
+       class="re-nav-link {% if ep == 'university.portal' %}active{% endif %}">
+      <i class="icon lucide lucide-graduation-cap"></i>
+      <span>{% if is_company_admin %}Academy{% else %}Operations Academy{% endif %}</span>
+    </a>
 
     <a href="{{ url_for('elena.template_studio') }}"
        class="re-nav-link {% if ep in ['elena.template_studio', 'elena.template_studio_preview', 'elena.template_studio_generate', 'elena.template_studio_generate_and_save'] %}active{% endif %}">

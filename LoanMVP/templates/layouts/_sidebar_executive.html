@@ -75,6 +75,12 @@
 
     <div class="re-nav-section-label">Operations</div>
 
+    <a href="{{ url_for('executive.bid_support') }}"
+       class="re-nav-link {% if ep == 'executive.bid_support' %}active{% endif %}">
+      <i class="icon lucide lucide-clipboard-list"></i>
+      <span>Bid Support Queue</span>
+    </a>
+
     <a href="{{ url_for('admin.verify_data') }}"
        class="re-nav-link {% if ep in ['admin.verify_data', 'admin.verify_doc'] %}active{% endif %}">
       <i class="icon lucide lucide-badge-check"></i>
