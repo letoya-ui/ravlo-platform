@@ -149,9 +149,14 @@
         <span>CRM</span>
       </a>
 
-      <a href="{{ url_for('system.users') }}" class="re-nav-link">
+      <a href="{{ url_for('system.users') }}" class="re-nav-link {% if ep == 'system.users' %}active{% endif %}">
         <i class="icon lucide lucide-user-cog"></i>
         <span>Users</span>
+      </a>
+
+      <a href="{{ url_for('system.feedback_responses') }}" class="re-nav-link {% if ep == 'system.feedback_responses' %}active{% endif %}">
+        <i class="icon lucide lucide-message-square-heart"></i>
+        <span>Feedback</span>
       </a>
 
       <a href="{{ url_for('property.manage') }}" class="re-nav-link">

@@ -631,6 +631,38 @@ def delete_user(user_id):
 
 
 # =========================================================
+# 📋 Feedback Survey Responses
+# =========================================================
+@system_bp.route("/feedback")
+@role_required("system", "admin")
+def feedback_responses():
+    try:
+        from LoanMVP.models.company_finance_models import FeedbackSurvey
+        responses = FeedbackSurvey.query.order_by(FeedbackSurvey.submitted_at.desc()).all()
+        total = len(responses)
+        avg_nps = round(sum(r.nps_score for r in responses) / total, 1) if total else None
+        promoters   = sum(1 for r in responses if r.nps_score >= 9)
+        passives    = sum(1 for r in responses if 7 <= r.nps_score <= 8)
+        detractors  = sum(1 for r in responses if r.nps_score <= 6)
+        nps_index   = round(((promoters - detractors) / total) * 100) if total else None
+    except Exception:
+        db.session.rollback()
+        responses = []
+        total = avg_nps = nps_index = promoters = passives = detractors = 0
+
+    return render_template(
+        "system/feedback_responses.html",
+        responses=responses,
+        total=total,
+        avg_nps=avg_nps,
+        nps_index=nps_index,
+        promoters=promoters,
+        passives=passives,
+        detractors=detractors,
+    )
+
+
+# =========================================================
 # 🔬 Diagnostics
 # =========================================================
 @system_bp.route("/diagnostics")

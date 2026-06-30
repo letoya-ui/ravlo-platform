@@ -382,6 +382,48 @@ def _notify_admin_contact(name: str, email: str, subject: str, message: str) -> 
         current_app.logger.warning("Contact admin notification failed: %s", e)
 
 
+# ---------------------------------------------------------
+# FEEDBACK / NPS SURVEY
+# ---------------------------------------------------------
+@marketing_bp.route("/feedback", methods=["GET", "POST"])
+@csrf.exempt
+@limiter.limit("10 per hour", methods=["POST"])
+def feedback():
+    if request.method == "POST":
+        from LoanMVP.models.company_finance_models import FeedbackSurvey
+        name     = (request.form.get("name") or "").strip() or None
+        email    = (request.form.get("email") or "").strip().lower() or None
+        liked    = (request.form.get("liked") or "").strip() or None
+        improve  = (request.form.get("improve") or "").strip() or None
+        source   = (request.form.get("source") or "email").strip()
+
+        try:
+            nps_score = int(request.form.get("nps_score", -1))
+        except (ValueError, TypeError):
+            nps_score = -1
+
+        if nps_score < 0 or nps_score > 10:
+            flash("Please select a score from 0 to 10.", "warning")
+            return render_template("marketing/feedback.html", submitted=False)
+
+        try:
+            row = FeedbackSurvey(
+                name=name, email=email,
+                nps_score=nps_score,
+                liked=liked, improve=improve,
+                source=source,
+            )
+            db.session.add(row)
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning("[feedback] save failed: %s", exc)
+
+        return render_template("marketing/feedback.html", submitted=True)
+
+    return render_template("marketing/feedback.html", submitted=False)
+
+
 @marketing_bp.route("/lenders-contact")
 def lenders_contact():
     topic = request.args.get("topic", "")
