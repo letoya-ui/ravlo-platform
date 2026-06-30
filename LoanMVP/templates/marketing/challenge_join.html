@@ -1,0 +1,173 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block title %}{{ ch.title }} — Join | Ravlo{% endblock %}
+
+{% block hero %}
+<section class="mk-hero" style="min-height:auto;padding:80px 0 60px;">
+  <div class="mk-container">
+    <div style="display:flex;gap:56px;align-items:flex-start;flex-wrap:wrap;">
+
+      {# ── Left: challenge info ── #}
+      <div style="flex:1;min-width:280px;max-width:460px;">
+        <div style="display:inline-flex;align-items:center;gap:8px;
+          background:{% if full %}rgba(107,114,128,.12){% else %}rgba(95,168,255,.1){% endif %};
+          border:1px solid {% if full %}rgba(107,114,128,.3){% else %}rgba(95,168,255,.22){% endif %};
+          border-radius:999px;padding:5px 16px;margin-bottom:20px;">
+          <span style="width:7px;height:7px;border-radius:50%;
+            background:{% if full %}#6b7280{% else %}{{ ch.color }}{% endif %};
+            {% if not full %}animation:pulse 2s infinite;{% endif %}
+            display:inline-block;"></span>
+          <span style="font-size:.78rem;font-weight:800;letter-spacing:2.5px;
+            color:{% if full %}#6b7280{% else %}{{ ch.color }}{% endif %};text-transform:uppercase;">
+            {% if full %}Challenge Full — All {{ enrolled }} Spots Taken
+            {% elif spots_left == 1 %}1 Spot Left
+            {% else %}{{ spots_left }} of 5 Spots Remaining
+            {% endif %}
+          </span>
+        </div>
+
+        <h1 class="mk-title-xl" style="margin-bottom:12px;">{{ ch.title }}</h1>
+        <p class="mk-copy-lg" style="color:{{ ch.color }};font-weight:700;font-size:1.05rem;margin-bottom:10px;">{{ ch.tagline }}</p>
+        <p class="mk-copy-lg" style="color:rgba(255,255,255,.7);margin-bottom:28px;">{{ ch.description }}</p>
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          {% for perk in ch.perks %}
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:22px;height:22px;border-radius:50%;
+              background:{% if full %}rgba(107,114,128,.1){% else %}rgba(44,182,125,.15){% endif %};
+              border:1.5px solid {% if full %}rgba(107,114,128,.3){% else %}rgba(44,182,125,.4){% endif %};
+              display:grid;place-items:center;flex-shrink:0;">
+              <span style="font-size:.65rem;color:{% if full %}#6b7280{% else %}#2cb67d{% endif %};">✓</span>
+            </div>
+            <span style="font-size:.93rem;font-weight:600;color:rgba(255,255,255,{% if full %}.35{% else %}.8{% endif %});">{{ perk }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ── Right: form or closed message ── #}
+      <div style="flex:1;min-width:300px;max-width:420px;">
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:36px 32px;">
+
+          {% if full %}
+            {# ── CLOSED STATE ── #}
+            <div style="text-align:center;padding:20px 0;">
+              <div style="width:56px;height:56px;border-radius:50%;background:rgba(107,114,128,.12);border:1px solid rgba(107,114,128,.25);display:grid;place-items:center;margin:0 auto 18px;">
+                <span style="font-size:1.4rem;">🔒</span>
+              </div>
+              <h2 style="font-size:1.15rem;font-weight:800;margin:0 0 10px;">All Spots Filled</h2>
+              <p style="font-size:.88rem;color:rgba(255,255,255,.45);line-height:1.6;margin:0 0 24px;">
+                All 5 spots for this challenge have been claimed. The next round will open soon — sign up to be notified.
+              </p>
+
+              {# Notify me form #}
+              <form method="POST" action="{{ url_for('marketing.contact') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="subject" value="Notify me: {{ ch.title }} next round">
+                <input type="email" name="email" required placeholder="your@email.com"
+                  style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);
+                  background:rgba(255,255,255,.05);color:#f4f7fb;font-size:.9rem;box-sizing:border-box;
+                  font-family:inherit;margin-bottom:12px;">
+                <button type="submit"
+                  style="width:100%;padding:13px;border-radius:12px;background:rgba(255,255,255,.08);
+                  color:rgba(255,255,255,.7);font-weight:700;font-size:.9rem;border:1px solid rgba(255,255,255,.12);cursor:pointer;">
+                  Notify Me for Next Round
+                </button>
+              </form>
+            </div>
+
+          {% else %}
+            {# ── SIGN-UP FORM ── #}
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <h2 style="font-size:1.2rem;font-weight:800;margin:0;">
+                {% if current_user.is_authenticated %}Activate Your Trial{% else %}Create Your Account{% endif %}
+              </h2>
+              {% if spots_left <= 2 %}
+              <span style="font-size:.72rem;font-weight:800;color:#f5b942;background:rgba(245,185,66,.1);
+                border:1px solid rgba(245,185,66,.25);border-radius:6px;padding:3px 8px;white-space:nowrap;">
+                {{ spots_left }} spot{{ 's' if spots_left != 1 }} left
+              </span>
+              {% endif %}
+            </div>
+            <p style="font-size:.85rem;color:rgba(255,255,255,.4);margin:0 0 24px;">
+              No credit card. No commitment. Cancel anytime.
+            </p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% for cat, msg in messages %}
+                <div style="padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:.85rem;
+                  background:{% if cat=='danger' %}rgba(248,113,113,.12){% elif cat=='warning' %}rgba(245,185,66,.12){% else %}rgba(44,182,125,.12){% endif %};
+                  color:{% if cat=='danger' %}#f87171{% elif cat=='warning' %}#f5b942{% else %}#2cb67d{% endif %};
+                  border:1px solid {% if cat=='danger' %}rgba(248,113,113,.3){% elif cat=='warning' %}rgba(245,185,66,.3){% else %}rgba(44,182,125,.3){% endif %};">
+                  {{ msg }}
+                </div>
+              {% endfor %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('challenge.join', slug=slug) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+              {% if current_user.is_authenticated %}
+                <div style="padding:12px 16px;border-radius:10px;background:rgba(255,255,255,.04);
+                  border:1px solid rgba(255,255,255,.08);margin-bottom:20px;font-size:.88rem;color:rgba(255,255,255,.6);">
+                  Signed in as <strong style="color:#f4f7fb;">{{ current_user.email }}</strong>
+                </div>
+                <input type="hidden" name="full_name" value="{{ current_user.full_name or current_user.username or '' }}">
+                <input type="hidden" name="email" value="{{ current_user.email }}">
+              {% else %}
+                <div style="margin-bottom:14px;">
+                  <label style="display:block;font-size:.8rem;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Full Name</label>
+                  <input type="text" name="full_name" required value="{{ prefill_name or '' }}"
+                    placeholder="Your full name"
+                    style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);
+                    background:rgba(255,255,255,.05);color:#f4f7fb;font-size:.9rem;box-sizing:border-box;font-family:inherit;">
+                </div>
+
+                <div style="margin-bottom:14px;">
+                  <label style="display:block;font-size:.8rem;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Email Address</label>
+                  <input type="email" name="email" required value="{{ prefill_email or '' }}"
+                    placeholder="you@email.com"
+                    style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);
+                    background:rgba(255,255,255,.05);color:#f4f7fb;font-size:.9rem;box-sizing:border-box;font-family:inherit;">
+                </div>
+
+                <div style="margin-bottom:22px;">
+                  <label style="display:block;font-size:.8rem;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">
+                    Password{% if show_password %} — enter to continue{% endif %}
+                  </label>
+                  <input type="password" name="password" {% if not show_password %}required{% endif %} minlength="8"
+                    placeholder="At least 8 characters"
+                    style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.12);
+                    background:rgba(255,255,255,.05);color:#f4f7fb;font-size:.9rem;box-sizing:border-box;font-family:inherit;">
+                  <div style="font-size:.75rem;color:rgba(255,255,255,.3);margin-top:5px;">
+                    Already have an account? Enter your existing password.
+                  </div>
+                </div>
+              {% endif %}
+
+              <button type="submit"
+                style="width:100%;padding:14px;border-radius:12px;background:{{ ch.color }};
+                color:#fff;font-weight:800;font-size:.95rem;border:none;cursor:pointer;letter-spacing:.02em;">
+                {{ ch.cta }} →
+              </button>
+            </form>
+
+            <p style="text-align:center;font-size:.78rem;color:rgba(255,255,255,.25);margin:14px 0 0;">
+              By joining you agree to our <a href="{{ url_for('marketing.terms') }}" style="color:rgba(255,255,255,.4);">Terms</a>.
+            </p>
+          {% endif %}
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<style>
+  @keyframes pulse { 0%, 100% { opacity:1; } 50% { opacity:.4; } }
+  input:focus { outline:none; border-color:{{ ch.color }} !important; }
+</style>
+{% endblock %}
+
+{% block content %}{% endblock %}
