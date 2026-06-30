@@ -166,10 +166,6 @@
     {% include "layouts/_ravlo_ai_chat.html" %}
   {% endif %}
 
-  {% if active_portal == "investor" and ep not in ['investor.property_tool', 'investor.property_search'] %}
-    {% include "layouts/_dealfinder_popup.html" %}
-  {% endif %}
-
   {% block scripts %}{% endblock %}
 </body>
 </html>
