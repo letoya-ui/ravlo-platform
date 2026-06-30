@@ -232,6 +232,266 @@
     {% endif %}
   </section>
 
+  {# ── WHERE TO FIND WORK ── #}
+  <section class="ravlo-card pad" style="margin-top:4px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.15em;font-weight:800;color:#2cb67d;text-transform:uppercase;">BUILD THE PIPELINE</div>
+        <h3 style="margin:.3rem 0 0;font-size:1.05rem;">Where to Find Work — Register &amp; Stay Active</h3>
+      </div>
+    </div>
+    <p style="font-size:.85rem;color:rgba(255,255,255,.45);margin:0 0 18px;">Check off each platform as you register. These are the channels that keep steady work coming in for Tampa contractors.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;" id="workSourceGrid">
+
+      {# GOVERNMENT #}
+      <div style="grid-column:1/-1;font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-top:4px;">Government Contracts — steady, public, competitive</div>
+
+      {% set _sources = [
+        ("ws_tampa_vendor",  "City of Tampa Vendor Registration",       "https://www.tampagov.net/procurement/vendor-registration",            "Register as a vendor — city posts demo, renovation, and public works bids publicly."),
+        ("ws_hc_proc",       "Hillsborough County Procurement",          "https://www.hillsboroughcounty.org/en/residents/property-owners-and-renters/doing-business-with-the-county", "County construction, maintenance, and demo projects. Steady source of local government work."),
+        ("ws_mfmp",          "Florida MyFloridaMarketPlace (MFMP)",      "https://vendor.myfloridamarketplace.com/",                            "State of Florida vendor registration — opens doors to state-funded construction projects."),
+        ("ws_sam",           "SAM.gov — Federal Contracts",              "https://sam.gov/",                                                    "Required to bid on any federal project. Free to register. Essential for long-term growth."),
+      ] %}
+      {% for id, label, url, desc in _sources %}
+      <label id="wslabel-{{ id }}" for="ws-{{ id }}" style="display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);cursor:pointer;transition:border-color .2s,background .2s;">
+        <input type="checkbox" id="ws-{{ id }}" style="margin-top:2px;accent-color:#2cb67d;flex-shrink:0;" onchange="wsSave('{{ id }}',this.checked)">
+        <div>
+          <a href="{{ url }}" target="_blank" rel="noopener" id="wstext-{{ id }}" style="font-weight:700;font-size:.88rem;color:#f4f7fb;text-decoration:none;">{{ label }} ↗</a>
+          <p style="margin:3px 0 0;font-size:.78rem;color:rgba(255,255,255,.4);line-height:1.5;">{{ desc }}</p>
+        </div>
+      </label>
+      {% endfor %}
+
+      {# COMMERCIAL BID PLATFORMS #}
+      <div style="grid-column:1/-1;font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-top:8px;">Commercial Bid Platforms — construction projects posted by GCs and developers</div>
+
+      {% set _comm = [
+        ("ws_bconn",   "BuildingConnected",       "https://buildingconnected.com",              "Free for subs. General contractors post commercial bids here and invite registered contractors to bid."),
+        ("ws_bidclerk","BidClerk",                 "https://www.bidclerk.com",                   "Aggregates bid opportunities from permit filings. Good for spotting early-stage Tampa projects."),
+        ("ws_isqft",   "iSqFt / ConstructConnect","https://www.constructconnect.com",            "Large commercial project pipeline. Register as a sub to get invited to bids in your trade."),
+        ("ws_dodge",   "Dodge Construction Network","https://www.construction.com",              "Industry-standard project database. New projects are posted before permits are even pulled."),
+      ] %}
+      {% for id, label, url, desc in _comm %}
+      <label id="wslabel-{{ id }}" for="ws-{{ id }}" style="display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);cursor:pointer;transition:border-color .2s,background .2s;">
+        <input type="checkbox" id="ws-{{ id }}" style="margin-top:2px;accent-color:#2cb67d;flex-shrink:0;" onchange="wsSave('{{ id }}',this.checked)">
+        <div>
+          <a href="{{ url }}" target="_blank" rel="noopener" id="wstext-{{ id }}" style="font-weight:700;font-size:.88rem;color:#f4f7fb;text-decoration:none;">{{ label }} ↗</a>
+          <p style="margin:3px 0 0;font-size:.78rem;color:rgba(255,255,255,.4);line-height:1.5;">{{ desc }}</p>
+        </div>
+      </label>
+      {% endfor %}
+
+      {# RESIDENTIAL #}
+      <div style="grid-column:1/-1;font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-top:8px;">Residential Leads — homeowners and property owners in Tampa</div>
+
+      {% set _res = [
+        ("ws_angi",     "Angi Pro",     "https://pro.angi.com/",           "High volume of Tampa homeowner projects. Pay per lead or subscription. Good for filling slow periods."),
+        ("ws_thumb",    "Thumbtack Pro","https://www.thumbtack.com/pro/",   "Customers request quotes — you respond. Renovation, demo, and remodel requests are common."),
+        ("ws_houzz",    "Houzz Pro",    "https://www.houzz.com/pro/",       "Remodel and renovation leads. Strong for kitchen, bath, and full home rehab projects."),
+        ("ws_nextdoor", "Nextdoor Business","https://business.nextdoor.com/","Hyper-local Tampa neighborhood reach. Homeowners recommend and hire local contractors here."),
+      ] %}
+      {% for id, label, url, desc in _res %}
+      <label id="wslabel-{{ id }}" for="ws-{{ id }}" style="display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);cursor:pointer;transition:border-color .2s,background .2s;">
+        <input type="checkbox" id="ws-{{ id }}" style="margin-top:2px;accent-color:#2cb67d;flex-shrink:0;" onchange="wsSave('{{ id }}',this.checked)">
+        <div>
+          <a href="{{ url }}" target="_blank" rel="noopener" id="wstext-{{ id }}" style="font-weight:700;font-size:.88rem;color:#f4f7fb;text-decoration:none;">{{ label }} ↗</a>
+          <p style="margin:3px 0 0;font-size:.78rem;color:rgba(255,255,255,.4);line-height:1.5;">{{ desc }}</p>
+        </div>
+      </label>
+      {% endfor %}
+
+      {# LICENSING & ASSOCIATIONS #}
+      <div style="grid-column:1/-1;font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-top:8px;">Licensing &amp; Industry Associations — credibility and network</div>
+
+      {% set _lic = [
+        ("ws_dbpr",  "Florida DBPR — Contractor License",   "https://www.myfloridalicense.com/",     "Required to pull permits in Florida. Certified General Contractor (CGC) or Registered license opens all commercial work."),
+        ("ws_abc",   "ABC Florida Gulf Coast Chapter",      "https://www.abcfgc.org/",               "Associated Builders & Contractors — network, workforce, and bid opportunities in the Tampa Bay area."),
+        ("ws_tbba",  "Tampa Bay Builders Association",      "https://www.tampabaybuilders.org/",      "Local builder network. Good for referrals, subcontractor relationships, and staying current on Tampa development."),
+      ] %}
+      {% for id, label, url, desc in _lic %}
+      <label id="wslabel-{{ id }}" for="ws-{{ id }}" style="display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);cursor:pointer;transition:border-color .2s,background .2s;">
+        <input type="checkbox" id="ws-{{ id }}" style="margin-top:2px;accent-color:#2cb67d;flex-shrink:0;" onchange="wsSave('{{ id }}',this.checked)">
+        <div>
+          <a href="{{ url }}" target="_blank" rel="noopener" id="wstext-{{ id }}" style="font-weight:700;font-size:.88rem;color:#f4f7fb;text-decoration:none;">{{ label }} ↗</a>
+          <p style="margin:3px 0 0;font-size:.78rem;color:rgba(255,255,255,.4);line-height:1.5;">{{ desc }}</p>
+        </div>
+      </label>
+      {% endfor %}
+
+    </div>
+  </section>
+
+  {# ── BID PIPELINE ── #}
+  <section class="ravlo-card pad" id="bid-pipeline" style="margin-top:4px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.15em;font-weight:800;color:#a78bfa;text-transform:uppercase;">BID PIPELINE</div>
+        <h3 style="margin:.3rem 0 0;font-size:1.05rem;">Jobs You're Pursuing</h3>
+      </div>
+      <button type="button" onclick="document.getElementById('bidAddForm').style.display=document.getElementById('bidAddForm').style.display==='none'?'block':'none'" class="ravlo-btn primary sm">+ Add Opportunity</button>
+    </div>
+
+    {# Add form #}
+    <div id="bidAddForm" style="display:none;margin-bottom:20px;padding:18px;border-radius:12px;border:1px solid rgba(167,139,250,.2);background:rgba(167,139,250,.04);">
+      <form method="POST" action="{{ url_for('vip.contractor_bid_add') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+            Project / Job Name *
+            <input name="project_name" required placeholder="e.g. Demo — 1234 Ybor Ave" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;">
+          </label>
+          <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+            Source (where you found it)
+            <input name="source" placeholder="e.g. BidClerk, City of Tampa, Referral" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;">
+          </label>
+          <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+            Category
+            <select name="category" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(30,35,45,1);color:#f4f7fb;font-size:.88rem;">
+              <option value="">Select type</option>
+              <option>Demo</option>
+              <option>Renovation</option>
+              <option>New Construction</option>
+              <option>Framing</option>
+              <option>Roofing</option>
+              <option>Drywall</option>
+              <option>Flooring</option>
+              <option>Electrical</option>
+              <option>Plumbing</option>
+              <option>HVAC</option>
+              <option>Concrete</option>
+              <option>Landscaping</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+            Location
+            <input name="location" placeholder="e.g. Ybor City, Tampa FL" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;">
+          </label>
+          <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+            Estimated Value ($)
+            <input name="estimated_value" type="number" step="500" placeholder="e.g. 45000" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;">
+          </label>
+          <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+            Bid Deadline
+            <input name="bid_deadline" type="date" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;">
+          </label>
+        </div>
+        <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);margin-bottom:12px;">
+          Notes
+          <textarea name="notes" rows="2" placeholder="Scope details, contact info, anything relevant" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;resize:vertical;"></textarea>
+        </label>
+        <button type="submit" class="ravlo-btn primary sm">Add to Pipeline</button>
+      </form>
+    </div>
+
+    {% set bid_status_colors = {
+      "reviewing":      ("#a78bfa","rgba(167,139,250,.12)","rgba(167,139,250,.2)"),
+      "bid_submitted":  ("#f5b942","rgba(245,185,66,.1)","rgba(245,185,66,.2)"),
+      "won":            ("#2cb67d","rgba(44,182,125,.1)","rgba(44,182,125,.2)"),
+      "lost":           ("#f87171","rgba(248,113,113,.08)","rgba(248,113,113,.15)"),
+      "no_bid":         ("#6b7280","rgba(255,255,255,.04)","rgba(255,255,255,.1)"),
+    } %}
+
+    {% if bid_opportunities %}
+      {# Summary stats #}
+      {% set active_bids   = bid_opportunities | selectattr("status", "in", ["reviewing","bid_submitted"]) | list %}
+      {% set won_bids      = bid_opportunities | selectattr("status", "equalto", "won") | list %}
+      {% set total_in_play = active_bids | sum(attribute="estimated_value") %}
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+        <div style="padding:10px 16px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+          <div style="font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.08em;text-transform:uppercase;">In Play</div>
+          <div style="font-size:1.15rem;font-weight:800;color:#f4f7fb;margin-top:2px;">{{ active_bids|length }}</div>
+        </div>
+        <div style="padding:10px 16px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+          <div style="font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.08em;text-transform:uppercase;">Jobs Won</div>
+          <div style="font-size:1.15rem;font-weight:800;color:#2cb67d;margin-top:2px;">{{ won_bids|length }}</div>
+        </div>
+        {% if total_in_play %}
+        <div style="padding:10px 16px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+          <div style="font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.08em;text-transform:uppercase;">Value in Play</div>
+          <div style="font-size:1.15rem;font-weight:800;color:#f5b942;margin-top:2px;">${{ '{:,.0f}'.format(total_in_play) }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div style="display:grid;gap:8px;">
+        {% for opp in bid_opportunities %}
+        {% set colors = bid_status_colors.get(opp.status, ("#6b7280","rgba(255,255,255,.04)","rgba(255,255,255,.1)")) %}
+        <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-radius:12px;border:1px solid {{ colors[2] }};background:{{ colors[1] }};">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+              <strong style="font-size:.9rem;color:#f4f7fb;">{{ opp.project_name }}</strong>
+              <span style="font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:20px;background:{{ colors[1] }};border:1px solid {{ colors[2] }};color:{{ colors[0] }};white-space:nowrap;">
+                {{ opp.status|replace('_',' ')|title }}
+              </span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:.78rem;color:rgba(255,255,255,.4);">
+              {% if opp.source %}<span>{{ opp.source }}</span>{% endif %}
+              {% if opp.category %}<span>· {{ opp.category }}</span>{% endif %}
+              {% if opp.location %}<span>· {{ opp.location }}</span>{% endif %}
+              {% if opp.estimated_value %}<span>· ${{ '{:,.0f}'.format(opp.estimated_value) }}</span>{% endif %}
+              {% if opp.bid_deadline %}<span>· Deadline {{ opp.bid_deadline.strftime('%b %d') }}</span>{% endif %}
+            </div>
+            {% if opp.notes %}
+            <p style="margin:6px 0 0;font-size:.8rem;color:rgba(255,255,255,.35);">{{ opp.notes }}</p>
+            {% endif %}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;align-items:flex-end;">
+            <form method="POST" action="{{ url_for('vip.contractor_bid_status', opp_id=opp.id) }}" style="margin:0;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="status" onchange="this.form.submit()" style="padding:5px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(30,35,45,1);color:#f4f7fb;font-size:.78rem;cursor:pointer;">
+                <option value="reviewing"     {% if opp.status=='reviewing'     %}selected{% endif %}>Reviewing</option>
+                <option value="bid_submitted" {% if opp.status=='bid_submitted' %}selected{% endif %}>Bid Submitted</option>
+                <option value="won"           {% if opp.status=='won'           %}selected{% endif %}>Won</option>
+                <option value="lost"          {% if opp.status=='lost'          %}selected{% endif %}>Lost</option>
+                <option value="no_bid"        {% if opp.status=='no_bid'        %}selected{% endif %}>No Bid</option>
+              </select>
+            </form>
+            <form method="POST" action="{{ url_for('vip.contractor_bid_delete', opp_id=opp.id) }}" style="margin:0;"
+                  onsubmit="return confirm('Remove this opportunity?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" style="font-size:.75rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;padding:2px 0;">remove</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="padding:20px;border-radius:10px;border:1px dashed rgba(167,139,250,.2);text-align:center;">
+        <div style="color:rgba(255,255,255,.3);font-size:.88rem;margin-bottom:8px;">No opportunities tracked yet.</div>
+        <div style="color:rgba(255,255,255,.2);font-size:.8rem;">Add the first job you're looking at — from BidClerk, a referral, or anywhere else.</div>
+      </div>
+    {% endif %}
+  </section>
+
+  <script>
+  (function(){
+    var WS_PREFIX='ws_cl_';
+    function wsSave(id,checked){
+      try{localStorage.setItem(WS_PREFIX+id,checked?'1':'0');}catch(e){}
+      wsStyle(id,checked);
+    }
+    function wsStyle(id,checked){
+      var lbl=document.getElementById('wslabel-'+id);
+      var txt=document.getElementById('wstext-'+id);
+      if(lbl){lbl.style.borderColor=checked?'rgba(44,182,125,.3)':'rgba(255,255,255,.06)';lbl.style.background=checked?'rgba(44,182,125,.06)':'rgba(255,255,255,.02)';}
+      if(txt){txt.style.color=checked?'rgba(255,255,255,.35)':'#f4f7fb';txt.style.textDecoration=checked?'line-through':'none';}
+    }
+    document.addEventListener('DOMContentLoaded',function(){
+      var ids=['ws_tampa_vendor','ws_hc_proc','ws_mfmp','ws_sam','ws_bconn','ws_bidclerk','ws_isqft','ws_dodge','ws_angi','ws_thumb','ws_houzz','ws_nextdoor','ws_dbpr','ws_abc','ws_tbba'];
+      ids.forEach(function(id){
+        var el=document.getElementById('ws-'+id);
+        if(!el)return;
+        var stored=localStorage.getItem(WS_PREFIX+id);
+        if(stored==='1'){el.checked=true;wsStyle(id,true);}
+        el.addEventListener('change',function(){wsSave(id,this.checked);});
+      });
+    });
+    window.wsSave=wsSave;
+  }());
+  </script>
+
   <section class="contractor-studio-grid">
     <div class="contractor-studio-main">
 
