@@ -19,6 +19,28 @@
 {% block content %}
 <div class="re-grid">
 
+  {# ── MORNING BRIEF ── #}
+  <section class="re-card pad" id="morningBriefCard" style="border-color:rgba(245,185,66,.2);background:rgba(245,185,66,.03);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:14px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,185,66,.12);display:grid;place-items:center;flex-shrink:0;">
+          <i class="lucide lucide-sunrise" style="color:#f5b942;font-size:18px;"></i>
+        </div>
+        <div>
+          <div style="font-size:10px;letter-spacing:.15em;font-weight:800;color:#f5b942;text-transform:uppercase;">MORNING BRIEFING</div>
+          <div style="font-size:.8rem;color:rgba(255,255,255,.35);margin-top:1px;" id="briefDate">Loading…</div>
+        </div>
+      </div>
+      <button type="button" onclick="loadMorningBrief()" id="briefRefreshBtn"
+        style="padding:7px 14px;border-radius:8px;border:1px solid rgba(245,185,66,.3);background:transparent;color:#f5b942;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+        Refresh
+      </button>
+    </div>
+    <div id="morningBriefText" style="font-size:.88rem;color:rgba(255,255,255,.75);line-height:1.7;white-space:pre-wrap;min-height:60px;">
+      <span style="color:rgba(255,255,255,.25);font-style:italic;">Loading your briefing…</span>
+    </div>
+  </section>
+
   {# ── TOP STATS ── #}
   <section style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
 
@@ -191,6 +213,55 @@
     </div>
   </section>
 
+  {# ── EMAIL OFFICE ── #}
+  <section class="re-card pad" style="border-color:rgba(95,168,255,.15);background:rgba(95,168,255,.02);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:38px;height:38px;border-radius:9px;background:rgba(95,168,255,.1);display:grid;place-items:center;flex-shrink:0;">
+          <i class="lucide lucide-mail" style="color:#5FA8FF;font-size:16px;"></i>
+        </div>
+        <div>
+          <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">EMAIL OFFICE</div>
+          <div style="font-size:.78rem;color:rgba(255,255,255,.35);margin-top:1px;" id="emailStatus">
+            {% if email_conn and email_conn.email_address %}
+              Connected: {{ email_conn.email_address }}
+              {% if email_conn.last_synced_at %} · Last sync {{ email_conn.last_synced_at.strftime('%b %d %I:%M %p') }}{% endif %}
+            {% else %}
+              Not connected
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        {% if email_conn and email_conn.email_address %}
+          <button type="button" onclick="syncEmail()" id="emailSyncBtn"
+            style="padding:7px 14px;border-radius:8px;border:1px solid rgba(95,168,255,.3);background:transparent;color:#5FA8FF;font-size:.78rem;font-weight:600;cursor:pointer;">
+            Scan Inbox
+          </button>
+          <form method="POST" action="{{ url_for('executive.email_disconnect') }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit"
+              style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:transparent;color:rgba(255,255,255,.35);font-size:.78rem;cursor:pointer;">
+              Disconnect
+            </button>
+          </form>
+        {% else %}
+          <a href="{{ url_for('executive.email_connect') }}"
+            style="padding:8px 16px;border-radius:8px;background:#5FA8FF;color:#fff;font-size:.8rem;font-weight:700;text-decoration:none;white-space:nowrap;">
+            Connect Gmail
+          </a>
+        {% endif %}
+      </div>
+    </div>
+    <div id="emailSummaryBox" style="font-size:.85rem;color:rgba(255,255,255,.65);line-height:1.65;white-space:pre-wrap;min-height:32px;">
+      {% if email_conn and email_conn.email_address %}
+        <span style="color:rgba(255,255,255,.25);font-style:italic;">Click "Scan Inbox" to get an AI summary of your unread emails.</span>
+      {% else %}
+        <span style="color:rgba(255,255,255,.25);font-style:italic;">Connect Gmail so the AI can scan your inbox and surface anything that needs attention — bids, client replies, invoices.</span>
+      {% endif %}
+    </div>
+  </section>
+
   {# ── RAVLO OS SNAPSHOT ── #}
   <section class="re-card pad" style="border-color:rgba(95,168,255,.15);background:rgba(95,168,255,.03);">
     <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#5FA8FF;text-transform:uppercase;margin-bottom:12px;">RAVLO OS — YOUR PLATFORM</div>
@@ -228,8 +299,69 @@
 
 <script>
 (function(){
-  var ENDPOINT = "{{ url_for('executive.construction_ai') }}";
-  var CSRF     = "{{ csrf_token() }}";
+  var AI_ENDPOINT    = "{{ url_for('executive.construction_ai') }}";
+  var BRIEF_ENDPOINT = "{{ url_for('executive.construction_morning_brief') }}";
+  var SYNC_ENDPOINT  = "{{ url_for('executive.email_sync') }}";
+  var CSRF           = "{{ csrf_token() }}";
+
+  // ── Morning brief ──────────────────────────────────────────────
+  function loadMorningBrief() {
+    var btn = document.getElementById('briefRefreshBtn');
+    var box = document.getElementById('morningBriefText');
+    box.innerHTML = '<span style="color:rgba(255,255,255,.25);font-style:italic;">Generating your briefing…</span>';
+    if (btn) btn.disabled = true;
+    fetch(BRIEF_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      box.textContent = d.brief || 'Could not load briefing.';
+      var dateEl = document.getElementById('briefDate');
+      if (dateEl && d.date) dateEl.textContent = d.date;
+    })
+    .catch(function(){
+      box.textContent = 'Briefing unavailable — check back in a moment.';
+    })
+    .finally(function(){ if (btn) btn.disabled = false; });
+  }
+  window.loadMorningBrief = loadMorningBrief;
+  // Auto-load on page open
+  loadMorningBrief();
+
+  // ── Email sync ─────────────────────────────────────────────────
+  function syncEmail() {
+    var btn = document.getElementById('emailSyncBtn');
+    var box = document.getElementById('emailSummaryBox');
+    if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
+    box.innerHTML = '<span style="color:rgba(255,255,255,.25);font-style:italic;">Reading your inbox…</span>';
+    fetch(SYNC_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.ok) {
+        box.textContent = d.summary || 'Nothing urgent in your inbox.';
+        var status = document.getElementById('emailStatus');
+        if (status) status.textContent = 'Synced just now · ' + (d.count || 0) + ' unread emails scanned';
+      } else {
+        box.textContent = d.error || 'Could not read emails.';
+      }
+    })
+    .catch(function(){
+      box.textContent = 'Email sync failed — try again.';
+    })
+    .finally(function(){
+      if (btn) { btn.disabled = false; btn.textContent = 'Scan Inbox'; }
+    });
+  }
+  window.syncEmail = syncEmail;
+
+  // ── AI Office Assistant ────────────────────────────────────────
+  var ENDPOINT = AI_ENDPOINT;
 
   function addMessage(role, text) {
     var box = document.getElementById('cmAiMessages');

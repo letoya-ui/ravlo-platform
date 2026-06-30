@@ -64,3 +64,23 @@ class CMFinanceEntry(db.Model):
 
     def __repr__(self):
         return f"<CMFinanceEntry {self.id} {self.division} {self.entry_type} ${self.amount}>"
+
+
+class UserEmailConnection(db.Model):
+    """Stores OAuth tokens for a user's connected email account (Gmail, Outlook)."""
+    __tablename__ = "user_email_connections"
+
+    id              = db.Column(db.Integer, primary_key=True)
+    user_id         = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, unique=True)
+    provider        = db.Column(db.String(20), nullable=False, default="gmail")  # gmail | outlook
+    email_address   = db.Column(db.String(255), nullable=True)
+    access_token    = db.Column(db.Text, nullable=True)
+    refresh_token   = db.Column(db.Text, nullable=True)
+    token_expiry    = db.Column(db.DateTime, nullable=True)
+    connected_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    last_synced_at  = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship("User", backref=db.backref("email_connection", uselist=False))
+
+    def __repr__(self):
+        return f"<UserEmailConnection {self.user_id} {self.provider} {self.email_address}>"
