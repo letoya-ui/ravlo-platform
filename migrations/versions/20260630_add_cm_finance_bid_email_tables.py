@@ -1,4 +1,4 @@
-"""Add cm_finance_entries, contractor_bid_opportunities, user_email_connections tables
+"""Add cm_finance_entries, contractor_bid_opportunities, user_email_connections, challenge_enrollments tables
 
 Revision ID: 20260630fin01
 Revises: e1f2a3b4c5d6
@@ -66,7 +66,18 @@ def upgrade():
         )
 
 
+    if 'challenge_enrollments' not in existing:
+        op.create_table(
+            'challenge_enrollments',
+            sa.Column('id',          sa.Integer(),    primary_key=True),
+            sa.Column('user_id',     sa.Integer(),    sa.ForeignKey('user.id'), nullable=False),
+            sa.Column('slug',        sa.String(50),   nullable=False),
+            sa.Column('enrolled_at', sa.DateTime(),   nullable=True),
+        )
+
+
 def downgrade():
+    op.drop_table('challenge_enrollments')
     op.drop_table('user_email_connections')
     op.drop_table('contractor_bid_opportunities')
     op.drop_table('cm_finance_entries')
