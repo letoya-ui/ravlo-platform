@@ -1,0 +1,243 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Bid Support Queue{% endblock %}
+{% block page_title %}Bid Support Queue{% endblock %}
+{% block page_subline %}Move each bid through preparation — package it, draft it, send it.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('executive.construction_center') }}" class="re-btn ghost sm">
+    <i class="lucide lucide-hard-hat"></i> Command Center
+  </a>
+{% endblock %}
+
+{% block content %}
+
+{% set status_meta = {
+  "package_needed":      {"color": "#5FA8FF", "bg": "rgba(95,168,255,.1)",  "border": "rgba(95,168,255,.25)"},
+  "missing_information": {"color": "#f87171", "bg": "rgba(248,113,113,.1)", "border": "rgba(248,113,113,.25)"},
+  "draft_prepared":      {"color": "#eab308", "bg": "rgba(234,179,8,.1)",   "border": "rgba(234,179,8,.25)"},
+  "waiting_on_jamaine":  {"color": "#a78bfa", "bg": "rgba(167,139,250,.1)", "border": "rgba(167,139,250,.25)"},
+  "ready_to_send":       {"color": "#2cb67d", "bg": "rgba(44,182,125,.1)",  "border": "rgba(44,182,125,.25)"},
+  "follow_up_needed":    {"color": "#f97316", "bg": "rgba(249,115,22,.1)",  "border": "rgba(249,115,22,.25)"},
+} %}
+
+<div class="re-grid">
+
+  {# ── Status counters ── #}
+  <section style="display:grid;grid-template-columns:repeat(6,1fr);gap:.75rem;">
+    {% for key, label, color, icon in statuses %}
+    {% set count = by_status[key]|length %}
+    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;padding:16px;text-align:center;">
+      <div style="font-size:1.6rem;font-weight:900;color:{{ color }};">{{ count }}</div>
+      <div style="font-size:.72rem;font-weight:700;color:rgba(255,255,255,.4);
+        margin-top:4px;line-height:1.3;">{{ label }}</div>
+    </div>
+    {% endfor %}
+  </section>
+
+  {# ── Attention banner ── #}
+  {% if needs_attention > 0 %}
+  <section class="re-card pad" style="border-color:rgba(249,115,22,.3);background:rgba(249,115,22,.05);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <i class="lucide lucide-triangle-alert" style="color:#f97316;font-size:1.1rem;"></i>
+      <span style="font-weight:700;color:#f97316;">{{ needs_attention }} bid{{ 's' if needs_attention != 1 }} need immediate attention</span>
+      <span style="font-size:.83rem;color:rgba(255,255,255,.45);">— check Missing Information and Follow-Up Needed below</span>
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── Bid table ── #}
+  <section class="re-card pad">
+    <div class="section-head" style="margin-bottom:1rem;">
+      <div>
+        <div class="eyebrow">BID PREPARATION QUEUE</div>
+        <h3 style="margin:.35rem 0 .2rem;">All Active Bids</h3>
+        <div class="re-card-subtitle">Update each bid's preparation status as you work through it.</div>
+      </div>
+    </div>
+
+    {% if bids %}
+    <div class="re-table-wrap">
+      <table class="re-table" id="bidTable">
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>Category</th>
+            <th>Value</th>
+            <th>Deadline</th>
+            <th>Bid Status</th>
+            <th>Support Status</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for bid in bids %}
+          {% set sk = bid.support_status or "package_needed" %}
+          {% set sm = status_meta.get(sk, {"color": "#5FA8FF", "bg": "rgba(95,168,255,.1)", "border": "rgba(95,168,255,.25)"}) %}
+          <tr id="bid-row-{{ bid.id }}">
+            <td>
+              <div style="font-weight:700;font-size:.9rem;">{{ bid.project_name }}</div>
+              {% if bid.location %}
+              <div style="font-size:.76rem;color:rgba(255,255,255,.4);">{{ bid.location }}</div>
+              {% endif %}
+            </td>
+
+            <td style="font-size:.83rem;color:rgba(255,255,255,.6);">{{ bid.category or "—" }}</td>
+
+            <td style="font-size:.88rem;font-weight:700;">
+              {% if bid.estimated_value %}
+                ${{ "{:,.0f}".format(bid.estimated_value) }}
+              {% else %}—{% endif %}
+            </td>
+
+            <td style="font-size:.82rem;white-space:nowrap;">
+              {% if bid.bid_deadline %}
+                {% set days_left = (bid.bid_deadline.date() - now.date()).days %}
+                <span style="color:{% if days_left <= 2 %}#f87171{% elif days_left <= 7 %}#eab308{% else %}rgba(255,255,255,.6){% endif %};">
+                  {{ bid.bid_deadline.strftime("%b %d") }}
+                </span>
+                {% if days_left >= 0 %}
+                <span style="font-size:.73rem;color:rgba(255,255,255,.3);">({{ days_left }}d)</span>
+                {% endif %}
+              {% else %}—{% endif %}
+            </td>
+
+            <td>
+              <span style="font-size:.75rem;font-weight:700;padding:3px 9px;border-radius:6px;
+                background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);">
+                {{ bid.status|replace('_',' ')|title }}
+              </span>
+            </td>
+
+            {# ── Support status dropdown ── #}
+            <td>
+              <form method="POST"
+                    action="{{ url_for('executive.bid_support_update_status', bid_id=bid.id) }}"
+                    style="margin:0;" id="status-form-{{ bid.id }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="support_notes" class="notes-hidden-{{ bid.id }}"
+                       value="{{ bid.support_notes or '' }}">
+                <select name="support_status"
+                        onchange="document.getElementById('status-form-{{ bid.id }}').submit()"
+                        style="padding:5px 8px;border-radius:8px;
+                        border:1.5px solid {{ sm.border }};
+                        background:{{ sm.bg }};
+                        color:{{ sm.color }};
+                        font-size:.78rem;font-weight:700;cursor:pointer;appearance:auto;
+                        max-width:160px;">
+                  {% for key, label, color, icon in statuses %}
+                  <option value="{{ key }}" {% if sk == key %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+            </td>
+
+            {# ── Inline notes ── #}
+            <td style="min-width:180px;">
+              <form method="POST"
+                    action="{{ url_for('executive.bid_support_update_status', bid_id=bid.id) }}"
+                    style="margin:0;display:flex;gap:6px;align-items:center;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="support_status" value="{{ bid.support_status or 'package_needed' }}">
+                <input type="text" name="support_notes"
+                       value="{{ bid.support_notes or '' }}"
+                       placeholder="Add note…"
+                       style="flex:1;padding:5px 10px;border-radius:8px;
+                       border:1px solid rgba(255,255,255,.1);
+                       background:rgba(255,255,255,.04);
+                       color:#f4f7fb;font-size:.8rem;font-family:inherit;min-width:0;">
+                <button type="submit" class="re-btn ghost sm" style="padding:5px 10px;flex-shrink:0;">
+                  <i class="lucide lucide-check" style="font-size:.8rem;"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# ── Filter tabs ── #}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07);">
+      <button type="button" class="re-btn ghost sm bid-filter-tab active" data-filter="all">
+        All <span class="badge badge-info" style="margin-left:4px;">{{ bids|length }}</span>
+      </button>
+      {% for key, label, color, icon in statuses %}
+      {% set count = by_status[key]|length %}
+      {% if count > 0 %}
+      <button type="button" class="re-btn ghost sm bid-filter-tab" data-filter="{{ key }}"
+        style="--tab-color:{{ color }};">
+        {{ label }}
+        <span style="margin-left:4px;padding:1px 7px;border-radius:999px;font-size:.7rem;
+          background:{{ status_meta[key].bg }};color:{{ color }};font-weight:800;">{{ count }}</span>
+      </button>
+      {% endif %}
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="re-empty mt-16">No bids in the queue yet.</div>
+    {% endif %}
+  </section>
+
+  {# ── Status legend ── #}
+  <section class="re-card pad">
+    <div class="eyebrow" style="margin-bottom:14px;">STATUS GUIDE</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;">
+      {% for key, label, color, icon in statuses %}
+      {% set sm = status_meta[key] %}
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;
+        border-radius:10px;background:{{ sm.bg }};border:1px solid {{ sm.border }};">
+        <i class="lucide {{ icon }}" style="color:{{ color }};margin-top:2px;flex-shrink:0;"></i>
+        <div>
+          <div style="font-size:.82rem;font-weight:800;color:{{ color }};margin-bottom:2px;">{{ label }}</div>
+          <div style="font-size:.76rem;color:rgba(255,255,255,.4);line-height:1.4;">
+            {% if key == "package_needed" %}Gather scope, drawings, and specs to start the package.
+            {% elif key == "missing_information" %}Blocked — waiting on info from client or project source.
+            {% elif key == "draft_prepared" %}Package drafted and ready for Jamaine's review.
+            {% elif key == "waiting_on_jamaine" %}Draft sent to Jamaine — awaiting approval or signature.
+            {% elif key == "ready_to_send" %}Approved and queued to go out to the client or GC.
+            {% elif key == "follow_up_needed" %}Submitted — follow up with client to check status.
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+</div>
+
+<style>
+  .bid-filter-tab { opacity:.6; border-bottom:2px solid transparent; border-radius:0; }
+  .bid-filter-tab.active { opacity:1; border-bottom-color:var(--tab-color, var(--gold, #c9a84c)); }
+  @media(max-width:900px){ section > div[style*="repeat(6"] { grid-template-columns:repeat(3,1fr) !important; } }
+  @media(max-width:560px){ section > div[style*="repeat(6"] { grid-template-columns:repeat(2,1fr) !important; } }
+</style>
+
+<script>
+(function(){
+  var tabs = document.querySelectorAll(".bid-filter-tab");
+  var rows = document.querySelectorAll("#bidTable tbody tr");
+  tabs.forEach(function(tab){
+    tab.addEventListener("click", function(){
+      tabs.forEach(function(t){ t.classList.remove("active"); });
+      tab.classList.add("active");
+      var f = tab.getAttribute("data-filter");
+      rows.forEach(function(row){
+        if(f === "all"){
+          row.style.display = "";
+        } else {
+          // check the selected option in the status select
+          var sel = row.querySelector("select[name='support_status']");
+          var val = sel ? sel.value : "";
+          row.style.display = (val === f) ? "" : "none";
+        }
+      });
+    });
+  });
+})();
+</script>
+
+{% endblock %}

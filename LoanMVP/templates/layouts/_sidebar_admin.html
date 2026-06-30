@@ -125,6 +125,12 @@
       </a>
     {% endif %}
 
+    <a href="{{ url_for('executive.bid_support') }}"
+       class="re-nav-link {% if ep == 'executive.bid_support' %}active{% endif %}">
+      <i class="icon lucide lucide-clipboard-list"></i>
+      <span>Bid Support Queue</span>
+    </a>
+
     <div class="re-nav-section-label">Growth</div>
 
     <a href="{{ url_for('elena.template_studio') }}"

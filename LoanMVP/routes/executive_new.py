@@ -852,6 +852,104 @@ def email_sync():
         return jsonify({"ok": False, "error": "Could not read emails right now."})
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# BID SUPPORT QUEUE — Sandra's workflow view
+# ─────────────────────────────────────────────────────────────────────────────
+
+BID_SUPPORT_STATUSES = [
+    ("package_needed",      "Package Needed",       "#5FA8FF", "lucide-package"),
+    ("missing_information", "Missing Information",  "#f87171", "lucide-alert-circle"),
+    ("draft_prepared",      "Draft Prepared",       "#eab308", "lucide-file-pen-line"),
+    ("waiting_on_jamaine",  "Waiting on Jamaine",   "#a78bfa", "lucide-user-clock"),
+    ("ready_to_send",       "Ready to Send",        "#2cb67d", "lucide-send"),
+    ("follow_up_needed",    "Follow-Up Needed",     "#f97316", "lucide-rotate-ccw"),
+]
+
+# Add Sandra's email here once her account is created.
+_BID_SUPPORT_EMAILS: set[str] = {
+    "letoya@ravlohq.com",
+    "jamaine.caughman@ravlohq.com",
+}
+
+
+def _can_access_bid_support(user) -> bool:
+    if _can_access_executive_dashboard(user):
+        return True
+    email = (getattr(user, "email", "") or "").strip().lower()
+    return email in _BID_SUPPORT_EMAILS
+
+
+def _cm_partner():
+    from LoanMVP.models.crm_models import Partner
+    return (
+        Partner.query.filter(func.lower(Partner.company) == "caughman mason construction").first()
+    )
+
+
+@executive_bp.route("/bid-support")
+@login_required
+def bid_support():
+    if not _can_access_bid_support(current_user):
+        flash("Access restricted.", "warning")
+        return redirect(url_for("auth.post_login_redirect"))
+
+    partner = _cm_partner()
+    bids = []
+    if partner:
+        try:
+            bids = (
+                ContractorBidOpportunity.query
+                .filter_by(partner_id=partner.id)
+                .order_by(ContractorBidOpportunity.created_at.desc())
+                .all()
+            )
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning("[bid_support] table not ready: %s", exc)
+            flash("Bid table is still setting up — check back shortly.", "info")
+
+    # Group by support_status (unset bids fall into package_needed)
+    status_keys = [s[0] for s in BID_SUPPORT_STATUSES]
+    by_status = {k: [] for k in status_keys}
+    for b in bids:
+        key = b.support_status if b.support_status in status_keys else "package_needed"
+        by_status[key].append(b)
+
+    needs_attention = len(by_status.get("missing_information", [])) + len(by_status.get("follow_up_needed", []))
+
+    return render_template(
+        "executive/bid_support.html",
+        bids=bids,
+        by_status=by_status,
+        statuses=BID_SUPPORT_STATUSES,
+        needs_attention=needs_attention,
+    )
+
+
+@executive_bp.route("/bid-support/<int:bid_id>/status", methods=["POST"])
+@login_required
+def bid_support_update_status(bid_id):
+    if not _can_access_bid_support(current_user):
+        return redirect(url_for("auth.post_login_redirect"))
+
+    try:
+        bid = ContractorBidOpportunity.query.get_or_404(bid_id)
+        new_status = (request.form.get("support_status") or "").strip()
+        status_keys = [s[0] for s in BID_SUPPORT_STATUSES]
+        if new_status in status_keys:
+            bid.support_status = new_status
+        notes = request.form.get("support_notes")
+        if notes is not None:
+            bid.support_notes = notes.strip() or None
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("[bid_support_update] %s", exc)
+        flash("Could not update bid status.", "danger")
+
+    return redirect(url_for("executive.bid_support"))
+
+
 @executive_bp.route("/demo-center")
 @login_required
 def demo_center():

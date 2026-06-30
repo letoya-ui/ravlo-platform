@@ -44,6 +44,10 @@ class ContractorBidOpportunity(db.Model):
     # reviewing → bid_submitted → won / lost / no_bid
     status     = db.Column(db.String(50), default="reviewing", nullable=False)
 
+    # Sandra's bid-preparation workflow (independent of bid outcome)
+    support_status = db.Column(db.String(60), nullable=True)   # see BID_SUPPORT_STATUSES
+    support_notes  = db.Column(db.Text,       nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
