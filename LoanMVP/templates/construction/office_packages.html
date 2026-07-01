@@ -24,7 +24,7 @@
         <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">BID SUPPORT QUEUE</div>
         <h3 style="margin:.25rem 0 0;font-size:1.1rem;">Packages to prepare</h3>
         <p style="margin:6px 0 0;color:rgba(255,255,255,.55);font-size:.88rem;line-height:1.6;max-width:780px;">
-          These are construction opportunities that need office organization, missing information, package prep, review, approval, or client follow-up.
+          Build the actual bid package here: client details, scope, included work, exclusions, price notes, and missing items.
         </p>
       </div>
       <div class="re-stat" style="min-width:150px;">
@@ -54,6 +54,42 @@
             </div>
 
             {% include "construction/_opportunity_workflow_panel.html" %}
+
+            <details open style="border-radius:14px;background:rgba(95,168,255,.025);border:1px solid rgba(95,168,255,.14);padding:12px;">
+              <summary style="cursor:pointer;font-size:.78rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#5FA8FF;">Bid Package Builder</summary>
+              <form method="POST" action="{{ url_for('construction_office.update_package_status', opportunity_id=opp.id) }}" style="display:grid;gap:10px;margin-top:12px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="save_bid_package">
+                <input type="hidden" name="status" value="draft_bid_prepared">
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <input name="client_name" placeholder="Client / GC / Agency name" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;">
+                  <input name="client_email" placeholder="Client or GC email" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;">
+                </div>
+
+                <textarea name="scope_of_work" rows="3" placeholder="Scope of work — what exactly are we bidding?" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <textarea name="included_work" rows="3" placeholder="Included work" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                  <textarea name="exclusions" rows="3" placeholder="Exclusions / not included" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <textarea name="labor_materials" rows="3" placeholder="Labor, materials, subcontractor, or site notes" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                  <textarea name="price_notes" rows="3" placeholder="Price / estimate notes" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <textarea name="missing_items" rows="3" placeholder="Questions / missing items needed before approval" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                  <textarea name="package_notes" rows="3" placeholder="Sandra package notes / internal notes" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                </div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+                  <button type="submit" class="re-btn primary sm">Save Bid Package Draft</button>
+                </div>
+              </form>
+            </details>
+
             {% include "construction/_opportunity_activity_timeline.html" %}
 
             <form method="POST" action="{{ url_for('construction_office.update_package_status', opportunity_id=opp.id) }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
@@ -71,7 +107,7 @@
                 <option value="lost" {% if opp.status == 'lost' %}selected{% endif %}>Lost</option>
                 <option value="no_bid" {% if opp.status == 'no_bid' %}selected{% endif %}>No Bid</option>
               </select>
-              <button type="submit" class="re-btn primary sm">Update</button>
+              <button type="submit" class="re-btn primary sm">Update Status</button>
             </form>
           </div>
         {% endfor %}
