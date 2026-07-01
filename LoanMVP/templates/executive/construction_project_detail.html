@@ -1,0 +1,255 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% set color = status_color.get(project.status, '#5FA8FF') %}
+
+{% block title %}{{ project.project_name }}{% endblock %}
+{% block page_title %}{{ project.project_name }}{% endblock %}
+{% block page_subline %}Construction Project #{{ project.id }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('construction_projects.project_list') }}" class="re-btn ghost sm">
+    <i class="lucide lucide-arrow-left"></i> All Projects
+  </a>
+  {% if project.bid %}
+  <a href="{{ url_for('executive.construction_center') }}" class="re-btn ghost sm">
+    <i class="lucide lucide-clipboard-list"></i> Bid Pipeline
+  </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+{# ── Header strip ── #}
+<div class="re-card pad" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+  <div>
+    <div style="font-size:1.25rem;font-weight:700;color:#fff;margin-bottom:4px;">{{ project.project_name }}</div>
+    <div style="font-size:.8rem;color:rgba(255,255,255,.4);">
+      {{ project.category or '—' }}
+      {% if project.location %} &nbsp;·&nbsp; {{ project.location }}{% endif %}
+      {% if project.source %} &nbsp;·&nbsp; Source: {{ project.source }}{% endif %}
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    {% if project.contract_amount %}
+    <div style="font-size:1.4rem;font-weight:700;color:#f5b942;">${{ '{:,.0f}'.format(project.contract_amount) }}</div>
+    {% endif %}
+    <span style="display:inline-block;padding:6px 16px;border-radius:20px;font-size:.78rem;font-weight:700;letter-spacing:.05em;
+                 background:{{ color }}18;color:{{ color }};border:1px solid {{ color }}44;">
+      {{ status_label.get(project.status, project.status) }}
+    </span>
+  </div>
+</div>
+
+{# ── Two-column layout ── #}
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;">
+
+  {# ── Left column ── #}
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    {# Key dates #}
+    <section class="re-card pad">
+      <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:14px;">Key Dates</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:3px;">Bid / Award Date</div>
+          <div style="font-size:.88rem;color:rgba(255,255,255,.8);">{{ project.bid_date.strftime('%b %d, %Y') if project.bid_date else '—' }}</div>
+        </div>
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:3px;">Start Date</div>
+          <div style="font-size:.88rem;color:rgba(255,255,255,.8);">{{ project.start_date.strftime('%b %d, %Y') if project.start_date else '—' }}</div>
+        </div>
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:3px;">Est. Completion</div>
+          <div style="font-size:.88rem;color:rgba(255,255,255,.8);">{{ project.estimated_completion.strftime('%b %d, %Y') if project.estimated_completion else '—' }}</div>
+        </div>
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:3px;">Actual Completion</div>
+          <div style="font-size:.88rem;color:rgba(255,255,255,.8);">{{ project.actual_completion.strftime('%b %d, %Y') if project.actual_completion else '—' }}</div>
+        </div>
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:3px;">Created</div>
+          <div style="font-size:.88rem;color:rgba(255,255,255,.8);">{{ project.created_at.strftime('%b %d, %Y') if project.created_at else '—' }}</div>
+        </div>
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:3px;">Last Updated</div>
+          <div style="font-size:.88rem;color:rgba(255,255,255,.8);">{{ project.updated_at.strftime('%b %d, %Y') if project.updated_at else '—' }}</div>
+        </div>
+      </div>
+    </section>
+
+    {# Edit fields #}
+    <section class="re-card pad">
+      <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:14px;">Edit Project Details</div>
+      <form method="POST" action="{{ url_for('construction_projects.update_fields', project_id=project.id) }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:.75rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Contract Amount ($)</label>
+            <input type="text" name="contract_amount"
+                   value="{{ '{:,.0f}'.format(project.contract_amount) if project.contract_amount else '' }}"
+                   placeholder="e.g. 85000"
+                   style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.12);
+                          background:rgba(255,255,255,.04);color:#fff;font-size:.85rem;">
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Category</label>
+            <input type="text" name="category" value="{{ project.category or '' }}" placeholder="Demo, Renovation…"
+                   style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.12);
+                          background:rgba(255,255,255,.04);color:#fff;font-size:.85rem;">
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Location</label>
+            <input type="text" name="location" value="{{ project.location or '' }}" placeholder="City, State"
+                   style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.12);
+                          background:rgba(255,255,255,.04);color:#fff;font-size:.85rem;">
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Start Date</label>
+            <input type="date" name="start_date"
+                   value="{{ project.start_date.strftime('%Y-%m-%d') if project.start_date else '' }}"
+                   style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.12);
+                          background:rgba(255,255,255,.04);color:#fff;font-size:.85rem;">
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Est. Completion</label>
+            <input type="date" name="estimated_completion"
+                   value="{{ project.estimated_completion.strftime('%Y-%m-%d') if project.estimated_completion else '' }}"
+                   style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.12);
+                          background:rgba(255,255,255,.04);color:#fff;font-size:.85rem;">
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Actual Completion</label>
+            <input type="date" name="actual_completion"
+                   value="{{ project.actual_completion.strftime('%Y-%m-%d') if project.actual_completion else '' }}"
+                   style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.12);
+                          background:rgba(255,255,255,.04);color:#fff;font-size:.85rem;">
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Project Manager</label>
+            <input type="text" name="project_manager" value="{{ project.project_manager or '' }}"
+                   style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.12);
+                          background:rgba(255,255,255,.04);color:#fff;font-size:.85rem;">
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Office Coordinator</label>
+            <input type="text" name="office_coordinator" value="{{ project.office_coordinator or '' }}"
+                   style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.12);
+                          background:rgba(255,255,255,.04);color:#fff;font-size:.85rem;">
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">Executive</label>
+            <input type="text" name="executive" value="{{ project.executive or '' }}"
+                   style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.12);
+                          background:rgba(255,255,255,.04);color:#fff;font-size:.85rem;">
+          </div>
+        </div>
+        <div style="margin-top:14px;text-align:right;">
+          <button type="submit" class="re-btn primary sm">Save Changes</button>
+        </div>
+      </form>
+    </section>
+
+    {# Notes #}
+    <section class="re-card pad">
+      <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:14px;">Notes</div>
+      {% if project.notes %}
+      <div style="margin-bottom:16px;">
+        {% for line in project.notes.split('\n\n') %}
+        <div style="font-size:.83rem;color:rgba(255,255,255,.6);padding:10px 12px;border-left:2px solid rgba(255,255,255,.1);
+                    margin-bottom:8px;white-space:pre-wrap;word-break:break-word;">{{ line }}</div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="font-size:.83rem;color:rgba(255,255,255,.25);margin-bottom:16px;">No notes yet.</div>
+      {% endif %}
+      <form method="POST" action="{{ url_for('construction_projects.update_notes', project_id=project.id) }}">
+        <textarea name="note" rows="3" placeholder="Add a note…"
+                  style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:6px;
+                         border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);
+                         color:#fff;font-size:.85rem;resize:vertical;"></textarea>
+        <div style="margin-top:8px;text-align:right;">
+          <button type="submit" class="re-btn primary sm">Add Note</button>
+        </div>
+      </form>
+    </section>
+
+  </div>
+
+  {# ── Right column ── #}
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    {# Update status #}
+    <section class="re-card pad">
+      <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:14px;">Update Status</div>
+      <form method="POST" action="{{ url_for('construction_projects.update_status', project_id=project.id) }}">
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+          {% for key, label, sc in statuses %}
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;
+                        {% if project.status == key %}background:{{ sc }}14;border:1px solid {{ sc }}44;{% else %}background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);{% endif %}">
+            <input type="radio" name="status" value="{{ key }}" {% if project.status == key %}checked{% endif %}
+                   style="accent-color:{{ sc }};">
+            <span style="font-size:.82rem;font-weight:{% if project.status == key %}600{% else %}400{% endif %};
+                         color:{% if project.status == key %}{{ sc }}{% else %}rgba(255,255,255,.5){% endif %};">{{ label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+        <button type="submit" class="re-btn primary sm" style="width:100%;">Update Status</button>
+      </form>
+    </section>
+
+    {# Team card #}
+    <section class="re-card pad">
+      <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:14px;">Project Team</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:2px;">Project Manager</div>
+          <div style="font-size:.88rem;font-weight:600;color:#fff;">{{ project.project_manager or '—' }}</div>
+        </div>
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:2px;">Office Coordinator</div>
+          <div style="font-size:.88rem;font-weight:600;color:#fff;">{{ project.office_coordinator or '—' }}</div>
+        </div>
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:2px;">Executive</div>
+          <div style="font-size:.88rem;font-weight:600;color:#fff;">{{ project.executive or '—' }}</div>
+        </div>
+      </div>
+    </section>
+
+    {# Contract amounts #}
+    <section class="re-card pad">
+      <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:14px;">Value</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:2px;">Bid Estimate</div>
+          <div style="font-size:.95rem;font-weight:600;color:rgba(255,255,255,.7);">
+            {% if project.estimated_value %}${{ '{:,.0f}'.format(project.estimated_value) }}{% else %}—{% endif %}
+          </div>
+        </div>
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:2px;">Contract Amount</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#f5b942;">
+            {% if project.contract_amount %}${{ '{:,.0f}'.format(project.contract_amount) }}{% else %}—{% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# Original bid link #}
+    {% if project.bid %}
+    <section class="re-card pad" style="background:rgba(44,182,125,.04);border-color:rgba(44,182,125,.15);">
+      <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(44,182,125,.6);margin-bottom:10px;">Source Bid</div>
+      <div style="font-size:.85rem;color:rgba(255,255,255,.6);margin-bottom:4px;">{{ project.bid.project_name }}</div>
+      <div style="font-size:.75rem;color:rgba(255,255,255,.3);margin-bottom:10px;">
+        Status: {{ project.bid.status.replace('_', ' ').title() }}
+      </div>
+      <a href="{{ url_for('executive.construction_center') }}"
+         style="font-size:.78rem;color:#2cb67d;text-decoration:none;font-weight:600;">
+        View in Bid Pipeline →
+      </a>
+    </section>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}
