@@ -51,13 +51,7 @@
             </div>
 
             {% include "construction/_opportunity_workflow_panel.html" %}
-
-            {% if opp.notes %}
-              <details style="border-radius:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);padding:10px 12px;">
-                <summary style="cursor:pointer;font-size:.78rem;font-weight:800;color:rgba(255,255,255,.55);">View notes and workflow history</summary>
-                <div style="margin-top:8px;font-size:.78rem;color:rgba(255,255,255,.58);line-height:1.55;white-space:pre-wrap;">{{ opp.notes }}</div>
-              </details>
-            {% endif %}
+            {% include "construction/_opportunity_activity_timeline.html" %}
 
             <div style="display:grid;gap:10px;">
               <form method="POST" action="{{ url_for('construction_office.update_package_status', opportunity_id=opp.id) }}" style="display:grid;gap:8px;">
