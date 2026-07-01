@@ -8,6 +8,9 @@
   <a class="re-btn ghost sm" href="{{ safe_url_for('admin.dashboard') or '/admin/dashboard' }}">
     <i class="lucide lucide-layout-dashboard"></i> Operations Center
   </a>
+  <a class="re-btn ghost sm" href="{{ safe_url_for('construction_office.approvals') or '/construction-office/approvals' }}">
+    <i class="lucide lucide-check-circle"></i> Approval Queue
+  </a>
   <a class="re-btn primary sm" href="{{ safe_url_for('executive.construction_center') or '/executive/construction' }}">
     <i class="lucide lucide-hard-hat"></i> Construction Center
   </a>
@@ -51,10 +54,7 @@
             </div>
 
             {% include "construction/_opportunity_workflow_panel.html" %}
-
-            {% if opp.notes %}
-              <div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);font-size:.8rem;color:rgba(255,255,255,.58);line-height:1.55;white-space:pre-wrap;">{{ opp.notes }}</div>
-            {% endif %}
+            {% include "construction/_opportunity_activity_timeline.html" %}
 
             <form method="POST" action="{{ url_for('construction_office.update_package_status', opportunity_id=opp.id) }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
