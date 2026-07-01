@@ -269,8 +269,11 @@ def update_bid_status(opportunity_id):
         "estimate_needed",
         "draft_bid_prepared",
         "jamaine_review_needed",
+        "approval_needed",
+        "approved_to_submit",
         "ready_to_send",
         "bid_submitted",
+        "client_review",
         "follow_up_needed",
         "negotiating",
         "won",
@@ -288,7 +291,22 @@ def update_bid_status(opportunity_id):
         return redirect(url_for("executive.construction_center"))
 
     opportunity = ContractorBidOpportunity.query.get_or_404(opportunity_id)
+    old_status = opportunity.status
     opportunity.status = new_status
+
+    note = (request.form.get("workflow_note") or "").strip()
+    if note or old_status != new_status:
+        existing_notes = opportunity.notes or ""
+        note_lines = [existing_notes] if existing_notes else []
+        actor = (getattr(current_user, "first_name", None) or getattr(current_user, "email", "") or "Team").strip()
+        note_lines.append(
+            f"Workflow updated by {actor} on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}: "
+            f"{old_status or 'none'} → {new_status}"
+        )
+        if note:
+            note_lines.append(f"Workflow note: {note}")
+        opportunity.notes = "\n".join(note_lines)
+
     db.session.commit()
 
     flash("Bid status updated.", "success")
