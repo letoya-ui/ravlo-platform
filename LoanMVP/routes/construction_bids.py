@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Blueprint, current_app, flash, redirect, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import func
 
@@ -103,6 +103,76 @@ def _can_use_bid_handoff() -> bool:
     )
 
 
+@construction_bids_bp.route("/search", methods=["GET"])
+@login_required
+def search_page():
+    """Dedicated construction opportunity search and capture page."""
+    if not _can_use_bid_handoff():
+        flash("You do not have access to construction bid tools yet.", "warning")
+        return redirect(url_for("auth.post_login_redirect"))
+
+    partner = _current_partner()
+    recent_opportunities = []
+    if partner:
+        recent_opportunities = (
+            ContractorBidOpportunity.query
+            .filter_by(partner_id=partner.id)
+            .order_by(ContractorBidOpportunity.created_at.desc())
+            .limit(10)
+            .all()
+        )
+
+    search_terms = [
+        {
+            "label": "Tampa Demo Jobs",
+            "url": "https://www.google.com/search?q=Tampa+demo+construction+bid+opportunities",
+            "note": "Demolition, cleanout, teardown, and removal leads.",
+        },
+        {
+            "label": "Small GC Jobs",
+            "url": "https://www.google.com/search?q=Tampa+small+GC+construction+bid+opportunities",
+            "note": "Small general contracting, repair, and renovation work.",
+        },
+        {
+            "label": "Hillsborough Bids",
+            "url": "https://www.google.com/search?q=Hillsborough+County+construction+bids+demo+repair",
+            "note": "County/public bid leads around Tampa and Hillsborough.",
+        },
+        {
+            "label": "Pinellas Bids",
+            "url": "https://www.google.com/search?q=Pinellas+County+construction+bids+renovation+demo",
+            "note": "Nearby county opportunities for renovation and demo.",
+        },
+        {
+            "label": "Ironwork",
+            "url": "https://www.google.com/search?q=Tampa+ironwork+subcontractor+bid+opportunities",
+            "note": "Steel, welding, stairs, rails, structural, and subcontractor work.",
+        },
+        {
+            "label": "Property Preservation",
+            "url": "https://www.google.com/search?q=Tampa+property+preservation+contractor+opportunities",
+            "note": "REO, cleanup, turnover, maintenance, and preservation work.",
+        },
+        {
+            "label": "Commercial Maintenance",
+            "url": "https://www.google.com/search?q=Tampa+commercial+property+maintenance+contractor+opportunities",
+            "note": "Recurring repair and maintenance opportunities.",
+        },
+        {
+            "label": "Investor Renovations",
+            "url": "https://www.google.com/search?q=Tampa+investor+renovation+contractor+opportunities",
+            "note": "Fix-and-flip and rental renovation work.",
+        },
+    ]
+
+    return render_template(
+        "construction/bid_search.html",
+        partner=partner,
+        recent_opportunities=recent_opportunities,
+        search_terms=search_terms,
+    )
+
+
 @construction_bids_bp.route("/create", methods=["POST"])
 @login_required
 def create_bid_opportunity():
@@ -119,9 +189,9 @@ def create_bid_opportunity():
     project_name = (request.form.get("project_name") or "").strip()
     if not project_name:
         flash("Project name is required before saving a bid opportunity.", "warning")
-        return redirect(url_for("executive.construction_center"))
+        return redirect(request.referrer or url_for("executive.construction_center"))
 
-    estimated_value_raw = (request.form.get("estimated_value") or "").replace(",", "").strip()
+    estimated_value_raw = (request.form.get("estimated_value") or "").replace(",", "").replace("$", "").strip()
     estimated_value = None
     if estimated_value_raw:
         try:
@@ -152,7 +222,7 @@ def create_bid_opportunity():
     db.session.commit()
 
     flash("Bid opportunity saved. Send it to Sandra when it needs a bid package.", "success")
-    return redirect(url_for("executive.construction_center"))
+    return redirect(request.form.get("next") or request.referrer or url_for("executive.construction_center"))
 
 
 @construction_bids_bp.route("/<int:opportunity_id>/send-to-sandra", methods=["POST"])
@@ -179,7 +249,7 @@ def send_to_sandra(opportunity_id):
     db.session.commit()
 
     flash("Sent to Sandra for bid package.", "success")
-    return redirect(url_for("executive.construction_center"))
+    return redirect(request.referrer or url_for("executive.construction_center"))
 
 
 @construction_bids_bp.route("/<int:opportunity_id>/status", methods=["POST"])
