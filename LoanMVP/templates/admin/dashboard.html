@@ -132,6 +132,61 @@
       <section class="re-card ops-card-pad">
         <div class="ops-section-head">
           <div>
+            <div class="ops-eyebrow">BID SUPPORT QUEUE</div>
+            <h3>Construction packages to prepare</h3>
+            <p>Opportunities sent from Jamaine for office organization, missing info, package prep, and follow-up.</p>
+          </div>
+          <a class="re-btn ghost sm" href="{{ url_for('executive.construction_center') }}">Construction Center</a>
+        </div>
+
+        {% if bid_support_queue %}
+          <div class="ops-stack" style="margin-top:14px;">
+            {% for opp in bid_support_queue %}
+              <div class="ops-row" style="align-items:flex-start;">
+                <div style="min-width:0;">
+                  <strong>{{ opp.project_name or 'Construction opportunity' }}</strong>
+                  <span>
+                    {{ opp.category or 'Construction' }}
+                    {% if opp.location %} · {{ opp.location }}{% endif %}
+                    {% if opp.bid_deadline %} · Due {{ opp.bid_deadline.strftime('%b %d') }}{% endif %}
+                    {% if opp.estimated_value %} · ${{ '{:,.0f}'.format(opp.estimated_value) }}{% endif %}
+                  </span>
+                  {% if opp.notes %}
+                    <p style="margin:6px 0 0;color:var(--muted,#8a9db5);font-size:.78rem;line-height:1.45;">
+                      {{ opp.notes[:160] }}{% if opp.notes|length > 160 %}…{% endif %}
+                    </p>
+                  {% endif %}
+                </div>
+
+                <div style="display:grid;gap:8px;justify-items:end;">
+                  <span class="badge badge-warning">{{ (opp.status or 'pending')|replace('_',' ')|title }}</span>
+
+                  <form method="POST" action="{{ url_for('construction_bids.update_bid_status', opportunity_id=opp.id) }}" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <select name="status" style="padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:#111827;color:#f4f7fb;font-size:.74rem;">
+                      <option value="missing_information">Missing Info</option>
+                      <option value="draft_bid_prepared">Draft Prepared</option>
+                      <option value="jamaine_review_needed">Waiting on Jamaine</option>
+                      <option value="ready_to_send">Ready to Send</option>
+                      <option value="bid_submitted">Bid Sent</option>
+                      <option value="follow_up_needed">Follow-Up Needed</option>
+                    </select>
+                    <button type="submit" class="re-btn primary sm" style="font-size:.74rem;">Update</button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="re-empty" style="margin-top:16px;">
+            No construction bid packages waiting right now.
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="re-card ops-card-pad">
+        <div class="ops-section-head">
+          <div>
             <div class="ops-eyebrow">ONBOARDING</div>
             <h3>Recent Access Requests</h3>
             <p>Newest onboarding and access submissions.</p>

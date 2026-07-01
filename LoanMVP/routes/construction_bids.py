@@ -154,4 +154,4 @@ def update_bid_status(opportunity_id):
     db.session.commit()
 
     flash("Bid status updated.", "success")
-    return redirect(url_for("executive.construction_center"))
+    return redirect(request.referrer or url_for("executive.construction_center"))
