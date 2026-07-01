@@ -47,7 +47,7 @@ SLUG_STATIC_CONTEXT: dict[str, dict] = {
         "display_name":     "John Headen",
         "headline":         "Realtor & Contractor — Paid at Closing",
         "bio":              "",
-        "service_area":     "Columbia, SC",
+        "service_area":     "Connecticut & New York",
         "specialties":      "Full-service listing packages",
         "brand_color":      "#C9A86C",
         "logo_url":         None,
