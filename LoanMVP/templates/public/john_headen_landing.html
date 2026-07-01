@@ -100,7 +100,7 @@
     /* ── HERO ── */
     .jh-hero {
       min-height: 100vh;
-      display: flex; align-items: center;
+      display: flex; align-items: center; justify-content: center;
       padding: 120px 40px 80px;
       position: relative; overflow: hidden;
     }
@@ -122,11 +122,11 @@
     }
     .jh-eyebrow {
       display: inline-flex; align-items: center; gap: 10px;
-      font-size: .72rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
-      color: var(--gold); margin-bottom: 20px;
+      font-size: .7rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 20px; line-height: 1.4;
     }
     .jh-eyebrow::before {
-      content: ''; display: block; width: 28px; height: 2px; background: var(--gold);
+      content: ''; display: block; width: 24px; height: 2px; background: var(--gold); flex-shrink: 0;
     }
     .jh-hero h1 {
       font-family: 'Cormorant Garamond', serif;
@@ -157,8 +157,9 @@
     .jh-btn-ghost:hover { border-color: var(--gold); color: var(--gold2); }
 
     .jh-hero-stats {
-      display: flex; gap: 40px; margin-top: 60px; padding-top: 40px;
-      border-top: 1px solid rgba(255,255,255,.08); flex-wrap: wrap;
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 24px; margin-top: 48px; padding-top: 32px;
+      border-top: 1px solid rgba(255,255,255,.08);
     }
     .jh-stat-val {
       font-family: 'Cormorant Garamond', serif;
@@ -590,9 +591,18 @@
     /* ── RESPONSIVE ── */
     @media (max-width: 768px) {
       .jh-nav { padding: 14px 20px; }
-      .jh-hero { padding: 100px 20px 60px; }
-      .jh-section { padding: 64px 20px; }
-      .jh-hero-stats { gap: 24px; }
+      .jh-hero {
+        min-height: 0;
+        align-items: flex-start;
+        padding: 90px 20px 56px;
+      }
+      .jh-hero-stats {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px; margin-top: 32px; padding-top: 24px;
+      }
+      .jh-stat-val { font-size: 1.6rem; }
+      .jh-stat-lbl { font-size: .68rem; }
+      .jh-section { padding: 56px 20px; }
       .jh-diff-grid,
       .jh-contact-grid { grid-template-columns: 1fr; gap: 40px; }
       .jh-diff-visual { display: none; }
