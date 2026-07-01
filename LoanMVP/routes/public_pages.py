@@ -44,7 +44,7 @@ SLUG_TEMPLATES: dict[str, str] = {
 SLUG_STATIC_CONTEXT: dict[str, dict] = {
     "john-headen": {
         "profile":          SimpleNamespace(public_slug="john-headen"),
-        "display_name":     "John Headen",
+        "display_name":     "John Headley",
         "headline":         "Realtor & Contractor — Paid at Closing",
         "bio":              "",
         "service_area":     "Connecticut & New York",
