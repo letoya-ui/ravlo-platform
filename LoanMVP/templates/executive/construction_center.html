@@ -52,15 +52,7 @@
         <h3 style="margin:.25rem 0 0;font-size:1.05rem;">Find work. Save it. Send it to Sandra.</h3>
         <p style="margin:6px 0 0;color:rgba(255,255,255,.5);font-size:.86rem;line-height:1.55;">Use quick Tampa searches, then save the real opportunity into Ravlo. Sandra prepares the bid package; Jamaine approves the field scope and number.</p>
       </div>
-    </div>
-
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">
-      <a class="re-btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=Tampa+demo+construction+bid+opportunities">Tampa Demo Jobs</a>
-      <a class="re-btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=Tampa+small+GC+construction+bid+opportunities">Small GC Jobs</a>
-      <a class="re-btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=Hillsborough+County+construction+bids+demo+repair">Hillsborough Bids</a>
-      <a class="re-btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=Pinellas+County+construction+bids+renovation+demo">Pinellas Bids</a>
-      <a class="re-btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=Tampa+ironwork+subcontractor+bid+opportunities">Ironwork</a>
-      <a class="re-btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=Tampa+property+preservation+contractor+opportunities">Property Preservation</a>
+      <a href="{{ url_for('construction_bids.search_page') if safe_url_for('construction_bids.search_page') else '#bid-search' }}" class="re-btn primary sm">Open Search Page</a>
     </div>
 
     <form method="POST" action="{{ url_for('construction_bids.create_bid_opportunity') }}" style="display:grid;gap:12px;">
@@ -84,39 +76,40 @@
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
 
-    {# ── BID SUPPORT QUEUE CARD ── #}
     {% include "executive/_bid_support_card.html" %}
 
-    {# ── BID PIPELINE ── #}
     <section class="re-card pad">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;">
         <div><div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:#f5b942;text-transform:uppercase;">BID PIPELINE</div><h3 style="margin:.25rem 0 0;font-size:.95rem;">Jobs Being Pursued</h3></div>
-        <a href="#bid-search" class="re-btn ghost sm" style="font-size:.75rem;">Add Opportunity</a>
+        <a href="{{ url_for('construction_bids.search_page') if safe_url_for('construction_bids.search_page') else '#bid-search' }}" class="re-btn ghost sm" style="font-size:.75rem;">Add Opportunity</a>
       </div>
       {% if bid_opps %}
-        {% set status_color = {"saved_opportunity":"#5FA8FF","bid_package_needed":"#f5b942","missing_information":"#f87171","draft_bid_prepared":"#a78bfa","jamaine_review_needed":"#f5b942","ready_to_send":"#2cb67d","follow_up_needed":"#f97316","bid_submitted":"#f5b942","won":"#2cb67d","lost":"#f87171","no_bid":"#6b7280","reviewing":"#a78bfa"} %}
+        {% set status_color = {"saved_opportunity":"#5FA8FF","bid_package_needed":"#f5b942","missing_information":"#f87171","draft_bid_prepared":"#a78bfa","jamaine_review_needed":"#f5b942","approval_needed":"#2cb67d","approved_to_submit":"#2cb67d","ready_to_send":"#2cb67d","client_review":"#f97316","follow_up_needed":"#f97316","bid_submitted":"#f97316","won":"#2cb67d","lost":"#f87171","no_bid":"#6b7280","reviewing":"#a78bfa"} %}
         <div style="display:grid;gap:10px;">
           {% for opp in bid_opps[:8] %}
           <div style="padding:12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
             <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
               <div style="min-width:0;">
                 <div style="font-size:.88rem;font-weight:700;color:#f4f7fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;">{{ opp.project_name }}</div>
-                <div style="font-size:.75rem;color:rgba(255,255,255,.38);margin-top:3px;">{{ opp.category or '—' }}{% if opp.location %} · {{ opp.location }}{% endif %}{% if opp.bid_deadline %} · Due {{ opp.bid_deadline.strftime('%b %d') }}{% endif %}</div>
+                <div style="font-size:.75rem;color:rgba(255,255,255,.38);margin-top:3px;">{{ opp.category or '—' }}{% if opp.location %} · {{ opp.location }}{% endif %}</div>
               </div>
               <div style="text-align:right;flex-shrink:0;">
                 <div style="font-size:.72rem;font-weight:800;color:{{ status_color.get(opp.status,'#6b7280') }};text-transform:uppercase;letter-spacing:.04em;">{{ opp.status|replace('_',' ')|title }}</div>
                 {% if opp.estimated_value %}<div style="font-size:.78rem;color:rgba(255,255,255,.4);margin-top:3px;">${{ '{:,.0f}'.format(opp.estimated_value) }}</div>{% endif %}
               </div>
             </div>
+
+            {% include "construction/_opportunity_workflow_panel.html" %}
+
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
               <form method="POST" action="{{ url_for('construction_bids.send_to_sandra', opportunity_id=opp.id) }}" style="display:inline;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="re-btn primary sm" style="font-size:.74rem;">Send to Sandra</button>
               </form>
-              <form method="POST" action="{{ url_for('construction_bids.update_bid_status', opportunity_id=opp.id) }}" style="display:flex;gap:6px;align-items:center;">
+              <form method="POST" action="{{ url_for('construction_bids.update_bid_status', opportunity_id=opp.id) }}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <select name="status" style="padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:#111827;color:#f4f7fb;font-size:.74rem;">
-                  {% for value,label in [("site_visit_needed","Site Visit Needed"),("estimate_needed","Estimate Needed"),("jamaine_review_needed","Jamaine Review"),("ready_to_send","Ready to Send"),("bid_submitted","Bid Sent"),("follow_up_needed","Follow-Up"),("won","Awarded"),("lost","Lost"),("no_bid","No Bid")] %}
+                  {% for value,label in [("site_visit_needed","Site Visit Needed"),("estimate_needed","Estimate Needed"),("jamaine_review_needed","Jamaine Review"),("approval_needed","Ready for Approval"),("approved_to_submit","Approve / Sign Off"),("bid_submitted","Sent to Client"),("client_review","Waiting on Client"),("follow_up_needed","Follow-Up"),("won","Awarded"),("lost","Lost"),("no_bid","No Bid")] %}
                     <option value="{{ value }}" {% if opp.status == value %}selected{% endif %}>{{ label }}</option>
                   {% endfor %}
                 </select>
@@ -187,7 +180,7 @@
 
   <section class="re-card pad">
     <div style="font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:14px;">QUICK ACTIONS</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;"><a href="#bid-search" class="re-btn primary" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-search" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Bid Search</a><a href="{{ url_for('vip.contractor_dashboard') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-hammer" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Field Dashboard</a><a href="{{ url_for('admin.company_finances') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-receipt" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Log Expense</a><a href="{{ url_for('university.portal') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-graduation-cap" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Construction Academy</a></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;"><a href="{{ url_for('construction_bids.search_page') if safe_url_for('construction_bids.search_page') else '#bid-search' }}" class="re-btn primary" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-search" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Bid Search</a><a href="{{ url_for('vip.contractor_dashboard') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-hammer" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Field Dashboard</a><a href="{{ url_for('admin.company_finances') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-receipt" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Log Expense</a><a href="{{ url_for('university.portal') }}" class="re-btn ghost" style="text-align:center;padding:14px;font-size:.88rem;"><i class="lucide lucide-graduation-cap" style="display:block;font-size:1.4rem;margin-bottom:4px;"></i>Construction Academy</a></div>
   </section>
 
 </div>
