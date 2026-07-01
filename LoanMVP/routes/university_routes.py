@@ -438,6 +438,48 @@ def _save_lesson_cache(cache: dict):
     except Exception as exc:
         current_app.logger.error("lesson cache write error: %s", exc)
 
+def _fix_embedded_quotes(text: str, field: str) -> str:
+    """Walk inside a named JSON string field and escape any bare double-quotes.
+
+    The LLM sometimes outputs unescaped " inside a long string value (e.g. the
+    'content' field).  Standard json.loads() fails; _escape_strings() can't fix
+    it because unescaped quotes flip its in_string state.  This helper locates
+    the field, then scans forward byte-by-byte treating an unescaped " as a
+    closing-quote only when the look-ahead shows it is followed by the next JSON
+    key or closing brace.
+    """
+    m = re.search(r'"' + re.escape(field) + r'"\s*:\s*"', text)
+    if not m:
+        return text
+    pos = m.end()
+    result = [text[:pos]]
+    i = pos
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if c == '\\' and i + 1 < n:
+            result.append(c)
+            result.append(text[i + 1])
+            i += 2
+            continue
+        if c == '"':
+            lookahead = text[i + 1: i + 60].lstrip()
+            is_closing = lookahead.startswith('}') or bool(
+                re.match(r',\s*"(?:keyPoints|quiz|objectives|content)"', lookahead)
+            )
+            if is_closing:
+                result.append(c)
+                result.append(text[i + 1:])
+                return ''.join(result)
+            else:
+                result.append('\\"')
+                i += 1
+                continue
+        result.append(c)
+        i += 1
+    return ''.join(result)
+
+
 def _parse_ai_json(raw: str) -> dict:
     """Parse JSON from AI with aggressive repair for common LLM output issues."""
     # Attempt 1: direct parse
@@ -535,6 +577,33 @@ def _parse_ai_json(raw: str) -> dict:
         candidate = _repair_truncated(candidate)
         try:
             return json.loads(candidate)
+        except json.JSONDecodeError:
+            pass
+
+    # Attempt 5: fix unescaped double-quotes inside the 'content' field, then
+    # re-run newline escaping and truncation repair.
+    fixed5 = _fix_embedded_quotes(raw, "content")
+    fixed5 = _escape_strings(fixed5)
+    try:
+        return json.loads(fixed5)
+    except json.JSONDecodeError:
+        pass
+
+    fixed5r = _repair_truncated(fixed5)
+    try:
+        return json.loads(fixed5r)
+    except json.JSONDecodeError:
+        pass
+
+    # Attempt 6: same fix applied to the candidate extracted from attempt 4
+    match = re.search(r'\{', raw)
+    if match:
+        cand6 = raw[match.start():]
+        cand6 = _fix_embedded_quotes(cand6, "content")
+        cand6 = _escape_strings(cand6)
+        cand6 = _repair_truncated(cand6)
+        try:
+            return json.loads(cand6)
         except json.JSONDecodeError:
             pass
 
