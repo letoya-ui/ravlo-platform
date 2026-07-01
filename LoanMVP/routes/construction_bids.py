@@ -1,4 +1,5 @@
 from datetime import datetime
+from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -9,6 +10,34 @@ from LoanMVP.models.contractor_models import ContractorBidOpportunity
 from LoanMVP.models.crm_models import Partner
 
 construction_bids_bp = Blueprint("construction_bids", __name__, url_prefix="/construction/bids")
+
+
+def _construction_return_url(default_endpoint="executive.construction_center"):
+    """Return only construction-safe pages after bid actions.
+
+    Some users can enter the flow from partner pages. After saving/sending a
+    construction opportunity, never send Jamaine back to the realtor/partner
+    dashboard; keep the workflow inside construction.
+    """
+    next_url = (request.form.get("next") or "").strip()
+    referrer = (request.referrer or "").strip()
+    fallback = url_for(default_endpoint)
+
+    allowed_prefixes = (
+        "/executive/construction",
+        "/construction/bids",
+        "/construction-office/packages",
+    )
+
+    for candidate in (next_url, referrer):
+        if not candidate:
+            continue
+        parsed = urlparse(candidate)
+        path = parsed.path or candidate
+        if any(path.startswith(prefix) for prefix in allowed_prefixes):
+            return candidate if parsed.scheme else path
+
+    return fallback
 
 
 def _current_partner():
@@ -189,7 +218,7 @@ def create_bid_opportunity():
     project_name = (request.form.get("project_name") or "").strip()
     if not project_name:
         flash("Project name is required before saving a bid opportunity.", "warning")
-        return redirect(request.referrer or url_for("executive.construction_center"))
+        return redirect(_construction_return_url())
 
     estimated_value_raw = (request.form.get("estimated_value") or "").replace(",", "").replace("$", "").strip()
     estimated_value = None
@@ -222,7 +251,7 @@ def create_bid_opportunity():
     db.session.commit()
 
     flash("Bid opportunity saved. Send it to Sandra when it needs a bid package.", "success")
-    return redirect(request.form.get("next") or request.referrer or url_for("executive.construction_center"))
+    return redirect(_construction_return_url())
 
 
 @construction_bids_bp.route("/<int:opportunity_id>/send-to-sandra", methods=["POST"])
@@ -249,7 +278,7 @@ def send_to_sandra(opportunity_id):
     db.session.commit()
 
     flash("Sent to Sandra for bid package.", "success")
-    return redirect(request.referrer or url_for("executive.construction_center"))
+    return redirect(_construction_return_url())
 
 
 @construction_bids_bp.route("/<int:opportunity_id>/status", methods=["POST"])
@@ -288,7 +317,7 @@ def update_bid_status(opportunity_id):
     new_status = (request.form.get("status") or "").strip().lower()
     if new_status not in allowed_statuses:
         flash("That bid status is not available.", "warning")
-        return redirect(url_for("executive.construction_center"))
+        return redirect(_construction_return_url())
 
     opportunity = ContractorBidOpportunity.query.get_or_404(opportunity_id)
     old_status = opportunity.status
@@ -310,4 +339,4 @@ def update_bid_status(opportunity_id):
     db.session.commit()
 
     flash("Bid status updated.", "success")
-    return redirect(request.referrer or url_for("executive.construction_center"))
+    return redirect(_construction_return_url())
