@@ -11,7 +11,24 @@ construction_office_bp = Blueprint("construction_office", __name__, url_prefix="
 
 def _can_access_construction_office():
     role = (getattr(current_user, "role", "") or "").strip().lower()
-    return role in {"admin", "platform_admin", "master_admin", "lending_admin", "executive"}
+    email = (getattr(current_user, "email", "") or "").strip().lower()
+    return (
+        role in {"admin", "platform_admin", "master_admin", "lending_admin", "executive", "partner", "contractor"}
+        or email in {"jamaine.caughman@ravlohq.com", "jamaine.caughman@caughmanmason.com", "letoya@ravlohq.com"}
+    )
+
+
+def _append_workflow_note(row, old_status, new_status, note=None):
+    existing_notes = row.notes or ""
+    note_lines = [existing_notes] if existing_notes else []
+    actor = (getattr(current_user, "first_name", None) or getattr(current_user, "email", "") or "Team").strip()
+    note_lines.append(
+        f"Workflow updated by {actor} on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}: "
+        f"{old_status or 'none'} → {new_status}"
+    )
+    if note:
+        note_lines.append(f"Workflow note: {note}")
+    row.notes = "\n".join(note_lines)
 
 
 @construction_office_bp.route("/packages", methods=["GET"])
@@ -48,6 +65,27 @@ def packages():
     )
 
 
+@construction_office_bp.route("/approvals", methods=["GET"])
+@login_required
+def approvals():
+    if not _can_access_construction_office():
+        flash("You do not have access to construction approval tools yet.", "warning")
+        return redirect(url_for("auth.post_login_redirect"))
+
+    approval_rows = (
+        ContractorBidOpportunity.query
+        .filter(ContractorBidOpportunity.status.in_(["approval_needed", "approved_to_submit", "negotiating"]))
+        .order_by(ContractorBidOpportunity.updated_at.desc(), ContractorBidOpportunity.created_at.desc())
+        .limit(50)
+        .all()
+    )
+
+    return render_template(
+        "construction/approval_queue.html",
+        approval_rows=approval_rows,
+    )
+
+
 @construction_office_bp.route("/packages/<int:opportunity_id>/status", methods=["POST"])
 @login_required
 def update_package_status(opportunity_id):
@@ -65,6 +103,7 @@ def update_package_status(opportunity_id):
         "bid_submitted",
         "client_review",
         "follow_up_needed",
+        "negotiating",
         "won",
         "lost",
         "no_bid",
@@ -77,17 +116,9 @@ def update_package_status(opportunity_id):
     row = ContractorBidOpportunity.query.get_or_404(opportunity_id)
     old_status = row.status
     row.status = status
-
-    existing_notes = row.notes or ""
-    note_lines = [existing_notes] if existing_notes else []
-    actor = (getattr(current_user, "first_name", None) or getattr(current_user, "email", "") or "Operations").strip()
-    note_lines.append(
-        f"Workflow updated by {actor} on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}: "
-        f"{old_status or 'none'} → {status}"
-    )
-    row.notes = "\n".join(note_lines)
+    _append_workflow_note(row, old_status, status, (request.form.get("workflow_note") or "").strip() or None)
 
     db.session.commit()
 
     flash("Construction package status updated.", "success")
-    return redirect(url_for("construction_office.packages"))
+    return redirect(request.referrer or url_for("construction_office.packages"))
