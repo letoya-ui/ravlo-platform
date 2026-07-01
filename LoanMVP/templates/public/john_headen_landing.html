@@ -276,6 +276,90 @@
     }
     .jh-disclaimer strong { color: var(--text); }
 
+    /* ── TWO-TRACK SWITCH ── */
+    .jh-track-switch {
+      display: flex; align-items: center; justify-content: center;
+      gap: 16px; margin: 48px auto 0; flex-wrap: wrap;
+    }
+    .jh-track-label { font-size: .8rem; color: var(--gray); font-weight: 500; }
+    .jh-track-tabs {
+      display: flex; background: var(--navy3);
+      border: 1px solid rgba(255,255,255,.08); border-radius: 10px;
+      padding: 4px; gap: 4px;
+    }
+    .jh-track-tab {
+      padding: 9px 22px; border-radius: 7px; border: none; cursor: pointer;
+      font-size: .84rem; font-weight: 600; font-family: inherit;
+      background: transparent; color: var(--gray);
+      transition: background .2s, color .2s;
+    }
+    .jh-track-tab.active { background: var(--gold); color: var(--navy); }
+    .jh-track-tab:not(.active):hover { color: var(--white); }
+
+    .jh-track-panel { margin-top: 32px; }
+    .jh-track-hidden { display: none; }
+
+    /* ── LUXURY BLOCK ── */
+    .jh-luxury-block {
+      background: var(--navy2); border: 1px solid rgba(201,168,108,.2);
+      border-radius: 16px; overflow: hidden;
+    }
+    .jh-luxury-head {
+      padding: 36px 40px 32px;
+      background: linear-gradient(135deg, rgba(201,168,108,.06) 0%, transparent 60%);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .jh-luxury-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.8rem; font-weight: 700; color: var(--white);
+      margin: 8px 0 10px; line-height: 1.2;
+    }
+    .jh-luxury-sub { font-size: .88rem; color: var(--gray); line-height: 1.7; max-width: 680px; }
+    .jh-luxury-grid {
+      display: grid; grid-template-columns: 260px 1fr;
+      gap: 0;
+    }
+    .jh-luxury-commission {
+      padding: 32px 32px;
+      border-right: 1px solid rgba(255,255,255,.06);
+      background: rgba(201,168,108,.04);
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .jh-luxury-rate-label { font-size: .7rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--gray); margin-bottom: 8px; }
+    .jh-luxury-rate {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 3rem; font-weight: 700; color: var(--gold); line-height: 1;
+      margin-bottom: 14px;
+    }
+    .jh-luxury-rate-note { font-size: .78rem; color: var(--gray); line-height: 1.65; }
+    .jh-luxury-services { padding: 28px 32px; }
+    .jh-luxury-services-label { font-size: .7rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin-bottom: 18px; }
+
+    .jh-svc-table { display: flex; flex-direction: column; gap: 0; }
+    .jh-svc-row {
+      display: flex; align-items: center; gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+    }
+    .jh-svc-row:last-child { border-bottom: none; }
+    .jh-svc-icon { font-size: 1.2rem; width: 28px; flex-shrink: 0; text-align: center; }
+    .jh-svc-info { flex: 1; }
+    .jh-svc-name { font-size: .88rem; font-weight: 600; color: var(--white); margin-bottom: 2px; }
+    .jh-svc-desc { font-size: .77rem; color: var(--gray); line-height: 1.5; }
+    .jh-svc-price {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem; font-weight: 700; color: var(--gold);
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .jh-svc-note { font-size: .76rem; color: var(--gray); line-height: 1.65; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.05); }
+
+    @media (max-width: 768px) {
+      .jh-luxury-grid { grid-template-columns: 1fr; }
+      .jh-luxury-commission { border-right: none; border-bottom: 1px solid rgba(255,255,255,.06); }
+      .jh-luxury-head { padding: 28px 24px; }
+      .jh-luxury-commission, .jh-luxury-services { padding: 24px; }
+    }
+
     /* ── DIFFERENCE ── */
     .jh-diff { background: var(--navy2); }
     .jh-diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
@@ -610,12 +694,93 @@
 
     </div>
 
-    <div class="jh-disclaimer">
-      <strong>Pricing is subject to adjustment based on listing price and scope of work.</strong>
-      Final commission and included services are agreed upon in writing before any work begins.
-      All packages include full MLS listing representation through closing.
-      Contact John for a free walkthrough and written quote.
+    <!-- ── TWO-TRACK SWITCH ── -->
+    <div class="jh-track-switch" id="track-switch">
+      <div class="jh-track-label">Home priced at</div>
+      <div class="jh-track-tabs">
+        <button class="jh-track-tab active" data-track="standard" onclick="switchTrack('standard')">Under $450k</button>
+        <button class="jh-track-tab" data-track="luxury" onclick="switchTrack('luxury')">$450k &amp; Above</button>
+      </div>
     </div>
+
+    <!-- Standard track note (shown by default) -->
+    <div class="jh-track-panel" id="panel-standard">
+      <div class="jh-disclaimer">
+        <strong>The bundled percentage tiers above apply to homes priced under $450k.</strong>
+        The commission increment at each tier covers the cost of the service — no separate invoices, no coordination.
+        Final rate and scope are agreed to in writing before work begins. Contact John for a free walkthrough and written quote.
+      </div>
+    </div>
+
+    <!-- Luxury track panel -->
+    <div class="jh-track-panel jh-track-hidden" id="panel-luxury">
+      <div class="jh-luxury-block">
+        <div class="jh-luxury-head">
+          <div class="jh-section-eyebrow">$450k &amp; Above</div>
+          <h3 class="jh-luxury-title">Listing Commission + Flat-Fee Services</h3>
+          <p class="jh-luxury-sub">
+            On higher-value homes, bundling everything into a rising percentage doesn't reflect actual service costs.
+            Instead, the listing commission is negotiated based on the property, and services are priced individually
+            at transparent flat rates — so you know exactly what you're paying for.
+          </p>
+        </div>
+
+        <div class="jh-luxury-grid">
+          <div class="jh-luxury-commission">
+            <div class="jh-luxury-rate-label">Listing Commission</div>
+            <div class="jh-luxury-rate">2.5 – 3%</div>
+            <div class="jh-luxury-rate-note">Negotiated based on property price, location, and expected days on market. Includes full MLS listing, photography, pricing strategy, negotiation, and closing.</div>
+          </div>
+
+          <div class="jh-luxury-services">
+            <div class="jh-luxury-services-label">Add Services à la Carte</div>
+            <div class="jh-svc-table">
+              <div class="jh-svc-row">
+                <div class="jh-svc-icon">🧹</div>
+                <div class="jh-svc-info">
+                  <div class="jh-svc-name">Professional Deep Cleaning</div>
+                  <div class="jh-svc-desc">Full interior — kitchens, baths, floors, windows</div>
+                </div>
+                <div class="jh-svc-price">from $800</div>
+              </div>
+              <div class="jh-svc-row">
+                <div class="jh-svc-icon">🌿</div>
+                <div class="jh-svc-info">
+                  <div class="jh-svc-name">Landscaping &amp; Curb Appeal</div>
+                  <div class="jh-svc-desc">Mowing, edging, mulch, bed clean-up, pressure wash</div>
+                </div>
+                <div class="jh-svc-price">from $1,500</div>
+              </div>
+              <div class="jh-svc-row">
+                <div class="jh-svc-icon">🎨</div>
+                <div class="jh-svc-info">
+                  <div class="jh-svc-name">Interior &amp; Exterior Painting</div>
+                  <div class="jh-svc-desc">Quoted by square footage — includes color consultation, prep, and trim</div>
+                </div>
+                <div class="jh-svc-price">quoted by sqft</div>
+              </div>
+              <div class="jh-svc-row">
+                <div class="jh-svc-icon">🔧</div>
+                <div class="jh-svc-info">
+                  <div class="jh-svc-name">Minor Repairs &amp; Punch List</div>
+                  <div class="jh-svc-desc">Hardware, fixtures, drywall patches, caulk, grout, carpentry</div>
+                </div>
+                <div class="jh-svc-price">quoted by scope</div>
+              </div>
+            </div>
+            <p class="jh-svc-note">
+              All service pricing is provided in writing before work begins. No surprise invoices at closing.
+              Bundling two or more services typically reduces per-service cost.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="jh-disclaimer" style="margin-top:24px;">
+        <strong>Commission rate and service fees are negotiated and documented in writing before listing.</strong>
+        Flat service rates are starting prices — final quotes are based on property size and condition assessed during the free walkthrough.
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -820,6 +985,23 @@
   </div>
   <div class="jh-footer-powered">Powered by <a href="#">Ravlo</a></div>
 </footer>
+
+<script>
+  function switchTrack(track) {
+    document.querySelectorAll('.jh-track-tab').forEach(function(t) {
+      t.classList.toggle('active', t.dataset.track === track);
+    });
+    document.querySelectorAll('.jh-track-panel').forEach(function(p) {
+      p.classList.add('jh-track-hidden');
+    });
+    var panel = document.getElementById('panel-' + track);
+    if (panel) panel.classList.remove('jh-track-hidden');
+
+    // Scroll the switch into comfortable view
+    var sw = document.getElementById('track-switch');
+    if (sw) sw.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+</script>
 
 </body>
 </html>
