@@ -13,6 +13,7 @@
 ] %}
 {% set _support_keys = _support_statuses | map(attribute=0) | list %}
 {% set _queue_opps = bid_opps | selectattr("status", "in", _support_keys) | list %}
+{% set _queue_url = safe_url_for('construction_office.packages') or '/construction-office/packages' %}
 
 {% set _ns = namespace(
   bid_package_needed=0, missing_information=0, draft_bid_prepared=0,
@@ -35,7 +36,7 @@
       <h3 style="margin:.35rem 0 .2rem;">Bid Preparation</h3>
       <div class="re-card-subtitle">Sandra's workflow — {{ _queue_opps|length }} bid{{ 's' if _queue_opps|length != 1 }} in queue</div>
     </div>
-    <a href="{{ url_for('executive.bid_support') }}" class="re-btn ghost sm">
+    <a href="{{ _queue_url }}" class="re-btn ghost sm">
       <i class="lucide lucide-arrow-right"></i> Open Queue
     </a>
   </div>
@@ -55,7 +56,7 @@
     {% for key, label, color in _support_statuses %}
     {% set count = _ns[key] %}
     {% if count > 0 %}
-    <a href="{{ url_for('executive.bid_support') }}"
+    <a href="{{ _queue_url }}"
       style="text-decoration:none;padding:10px 12px;border-radius:10px;
       background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);
       display:flex;align-items:center;gap:10px;">
@@ -89,7 +90,7 @@
     </div>
     {% endfor %}
     {% if _queue_opps|length > 4 %}
-    <a href="{{ url_for('executive.bid_support') }}"
+    <a href="{{ _queue_url }}"
       style="text-align:center;font-size:.78rem;color:rgba(255,255,255,.3);
       padding:6px;text-decoration:none;display:block;">
       +{{ _queue_opps|length - 4 }} more →
