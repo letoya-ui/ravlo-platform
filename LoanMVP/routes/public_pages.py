@@ -27,7 +27,7 @@ from LoanMVP.extensions import db, csrf
 from LoanMVP.models.vip_models import VIPProfile, VIPNotification, VIPTestimonial, VIPBlogPost
 from LoanMVP.models.elena_models import ElenaClient, ElenaListing
 from LoanMVP.models.user_model import User
-from LoanMVP.models.crm_models import Partner
+from LoanMVP.models.crm_models import Partner, Lead
 
 public_pages_bp = Blueprint("public_pages", __name__, url_prefix="/p")
 
@@ -41,6 +41,12 @@ SLUG_TEMPLATES: dict[str, str] = {
 # Fallback context for white-label pages that don't have a VIPProfile row yet.
 # The 'profile' value is a SimpleNamespace so templates can reference
 # profile.public_slug for the form action without a DB record.
+# User email for the real account that owns each static-context slug.
+# Leads submitted through their page are created in the CRM assigned to this user.
+SLUG_OWNER_EMAILS: dict[str, str] = {
+    "john-headen": "Jsecond1212@gmail.com",
+}
+
 SLUG_STATIC_CONTEXT: dict[str, dict] = {
     "john-headen": {
         "profile":          SimpleNamespace(public_slug="john-headen"),
@@ -203,6 +209,21 @@ def _handle_lead_capture(slug: str):
         market=primary_market,
     )
     db.session.add(lead)
+
+    # For static-context slugs (no VIPProfile), route the lead to the owner's CRM.
+    owner_email = SLUG_OWNER_EMAILS.get(slug.lower())
+    if owner_email:
+        owner_user = User.query.filter(func.lower(User.email) == owner_email.lower()).first()
+        if owner_user:
+            crm_lead = Lead(
+                name=client_name,
+                email=client_email or None,
+                phone=client_phone or None,
+                message="\n".join(notes_parts),
+                assigned_to=owner_user.id,
+                status="New",
+            )
+            db.session.add(crm_lead)
 
     profile_id = getattr(profile, "id", None)
     if profile_id:
