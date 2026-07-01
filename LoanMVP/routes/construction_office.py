@@ -18,10 +18,14 @@ def _can_access_construction_office():
     )
 
 
+def _actor_name():
+    return (getattr(current_user, "first_name", None) or getattr(current_user, "email", "") or "Team").strip()
+
+
 def _append_workflow_note(row, old_status, new_status, note=None):
     existing_notes = row.notes or ""
     note_lines = [existing_notes] if existing_notes else []
-    actor = (getattr(current_user, "first_name", None) or getattr(current_user, "email", "") or "Team").strip()
+    actor = _actor_name()
     note_lines.append(
         f"Workflow updated by {actor} on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}: "
         f"{old_status or 'none'} → {new_status}"
@@ -29,6 +33,40 @@ def _append_workflow_note(row, old_status, new_status, note=None):
     if note:
         note_lines.append(f"Workflow note: {note}")
     row.notes = "\n".join(note_lines)
+
+
+def _append_bid_package(row):
+    """Store a structured bid package draft in the existing notes field.
+
+    This is the launch-safe MVP. Later, this should move into a dedicated
+    bid_packages table with documents and versioning.
+    """
+    fields = [
+        ("Client / GC", request.form.get("client_name")),
+        ("Contact Email", request.form.get("client_email")),
+        ("Scope of Work", request.form.get("scope_of_work")),
+        ("Included Work", request.form.get("included_work")),
+        ("Exclusions", request.form.get("exclusions")),
+        ("Materials / Labor Notes", request.form.get("labor_materials")),
+        ("Price / Estimate Notes", request.form.get("price_notes")),
+        ("Questions / Missing Items", request.form.get("missing_items")),
+        ("Sandra Package Notes", request.form.get("package_notes")),
+    ]
+
+    actor = _actor_name()
+    lines = [
+        "",
+        "--- BID PACKAGE DRAFT ---",
+        f"Prepared/updated by {actor} on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+    ]
+    for label, raw_value in fields:
+        value = (raw_value or "").strip()
+        if value:
+            lines.append(f"{label}: {value}")
+    lines.append("--- END BID PACKAGE DRAFT ---")
+
+    existing_notes = row.notes or ""
+    row.notes = (existing_notes + "\n" + "\n".join(lines)).strip()
 
 
 @construction_office_bp.route("/packages", methods=["GET"])
@@ -116,9 +154,18 @@ def update_package_status(opportunity_id):
     row = ContractorBidOpportunity.query.get_or_404(opportunity_id)
     old_status = row.status
     row.status = status
-    _append_workflow_note(row, old_status, status, (request.form.get("workflow_note") or "").strip() or None)
+
+    if request.form.get("action") == "save_bid_package":
+        _append_bid_package(row)
+        if status == old_status and status in {"bid_package_needed", "missing_information"}:
+            row.status = "draft_bid_prepared"
+            status = row.status
+        _append_workflow_note(row, old_status, status, "Bid package draft saved.")
+        flash("Bid package draft saved.", "success")
+    else:
+        _append_workflow_note(row, old_status, status, (request.form.get("workflow_note") or "").strip() or None)
+        flash("Construction package status updated.", "success")
 
     db.session.commit()
 
-    flash("Construction package status updated.", "success")
     return redirect(request.referrer or url_for("construction_office.packages"))
