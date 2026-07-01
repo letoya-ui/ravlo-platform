@@ -86,6 +86,120 @@
     </form>
   </section>
 
+  {# ── Suggested Opportunities board ── #}
+  <section class="re-card pad" style="border-color:rgba(44,182,125,.15);background:rgba(44,182,125,.02);">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#2cb67d;text-transform:uppercase;">SUGGESTED OPPORTUNITIES</div>
+        <h3 style="margin:.25rem 0 0;font-size:1rem;">Jobs Worth Pursuing</h3>
+        <p style="margin:5px 0 0;color:rgba(255,255,255,.45);font-size:.82rem;">Save a job to track it, or send it straight to Sandra for a bid package.</p>
+      </div>
+      <div style="font-size:.8rem;color:rgba(255,255,255,.3);">{{ (suggestions or [])|length }} active</div>
+    </div>
+
+    {% set suggestions = suggestions or [] %}
+    {% if not suggestions %}
+    <div style="padding:24px 16px;text-align:center;color:rgba(255,255,255,.25);font-size:.84rem;">
+      No suggested opportunities yet — add one below.
+    </div>
+    {% else %}
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+      {% for s in suggestions %}
+      <div style="padding:14px 16px;border-radius:10px;border:1px solid {% if s.status=='follow_up' %}rgba(245,185,66,.2){% else %}rgba(255,255,255,.08){% endif %};
+                  background:rgba(255,255,255,.025);">
+        <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;">
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:.92rem;font-weight:700;color:#fff;margin-bottom:3px;">
+              {{ s.title }}
+              {% if s.status == 'follow_up' %}<span style="font-size:.7rem;font-weight:600;color:#f5b942;margin-left:6px;">Follow-Up</span>{% endif %}
+            </div>
+            <div style="font-size:.76rem;color:rgba(255,255,255,.38);line-height:1.6;">
+              {% if s.category %}{{ s.category }}{% endif %}
+              {% if s.location %} &nbsp;·&nbsp; {{ s.location }}{% endif %}
+              {% if s.source_name %} &nbsp;·&nbsp; {{ s.source_name }}{% endif %}
+              {% if s.due_date %} &nbsp;·&nbsp; Due {{ s.due_date.strftime('%b %d, %Y') }}{% endif %}
+            </div>
+            {% if s.estimated_value %}<div style="font-size:.83rem;font-weight:600;color:#f5b942;margin-top:3px;">${{ '{:,.0f}'.format(s.estimated_value) }}</div>{% endif %}
+            {% if s.contact %}<div style="font-size:.76rem;color:rgba(255,255,255,.4);margin-top:2px;">Contact: {{ s.contact }}</div>{% endif %}
+            {% if s.summary %}<div style="font-size:.8rem;color:rgba(255,255,255,.5);margin-top:6px;line-height:1.5;">{{ s.summary }}</div>{% endif %}
+            {% if s.source_url %}<div style="margin-top:5px;"><a href="{{ s.source_url }}" target="_blank" rel="noopener" style="font-size:.74rem;color:#5FA8FF;text-decoration:none;">View Source →</a></div>{% endif %}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <form method="POST" action="{{ url_for('construction_bids.suggestion_action', suggestion_id=s.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="save">
+            <button type="submit" class="re-btn primary sm">Save Opportunity</button>
+          </form>
+          <form method="POST" action="{{ url_for('construction_bids.suggestion_action', suggestion_id=s.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="send_to_sandra">
+            <button type="submit" class="re-btn ghost sm" style="border-color:rgba(44,182,125,.4);color:#2cb67d;">Send to Sandra</button>
+          </form>
+          <form method="POST" action="{{ url_for('construction_bids.suggestion_action', suggestion_id=s.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="follow_up">
+            <button type="submit" class="re-btn ghost sm" style="border-color:rgba(245,185,66,.3);color:#f5b942;">Follow Up Later</button>
+          </form>
+          <form method="POST" action="{{ url_for('construction_bids.suggestion_action', suggestion_id=s.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="not_interested">
+            <button type="submit" class="re-btn ghost sm" style="font-size:.73rem;color:rgba(255,255,255,.3);border-color:rgba(255,255,255,.08);">Not Interested</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# Add suggestion form #}
+    <details {% if not suggestions %}open{% endif %} style="margin-top:{% if suggestions %}8px{% else %}0{% endif %};">
+      <summary style="font-size:.8rem;font-weight:700;color:#2cb67d;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+        <i class="lucide lucide-plus-circle" style="font-size:14px;"></i> Add a suggested opportunity manually
+      </summary>
+      <form method="POST" action="{{ url_for('construction_bids.add_suggestion') }}" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:10px;">
+          <input name="title" required placeholder="Opportunity title *" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(44,182,125,.2);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+          <input name="category" placeholder="Demo, GC, ironwork…" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+          <input name="location" placeholder="Tampa / county / address" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+          <input name="source_name" placeholder="Source name" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+          <input name="source_url" placeholder="Source URL" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+          <input name="estimated_value" placeholder="Est. value ($)" inputmode="decimal" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+          <input name="due_date" type="date" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px;">
+          <input name="contact" placeholder="Contact / agency / client" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+          <textarea name="summary" rows="2" placeholder="Short summary or notes" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;resize:vertical;"></textarea>
+        </div>
+        <div style="text-align:right;">
+          <button type="submit" class="re-btn primary sm"><i class="lucide lucide-plus"></i> Add to Board</button>
+        </div>
+      </form>
+    </details>
+
+    {% set dismissed = dismissed or [] %}
+    {% if dismissed %}
+    <details style="margin-top:12px;">
+      <summary style="font-size:.77rem;color:rgba(255,255,255,.3);cursor:pointer;list-style:none;">Show {{ dismissed|length }} dismissed</summary>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+        {% for s in dismissed %}
+        <div style="padding:8px 14px;border-radius:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div style="font-size:.82rem;color:rgba(255,255,255,.3);">{{ s.title }}</div>
+          <form method="POST" action="{{ url_for('construction_bids.suggestion_action', suggestion_id=s.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="follow_up">
+            <button type="submit" class="re-btn ghost sm" style="font-size:.72rem;">Restore</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+  </section>
+
   <section class="re-card pad">
     <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px;">
       <div>

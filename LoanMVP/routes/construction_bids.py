@@ -6,7 +6,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import func
 
 from LoanMVP.extensions import db
-from LoanMVP.models.contractor_models import ContractorBidOpportunity, ConstructionProject
+from LoanMVP.models.contractor_models import BidSuggestion, ContractorBidOpportunity, ConstructionProject
 from LoanMVP.models.crm_models import Partner
 
 construction_bids_bp = Blueprint("construction_bids", __name__, url_prefix="/construction/bids")
@@ -194,12 +194,138 @@ def search_page():
         },
     ]
 
+    suggestions = []
+    dismissed   = []
+    if partner:
+        try:
+            all_sugg  = (
+                BidSuggestion.query
+                .filter_by(partner_id=partner.id)
+                .order_by(BidSuggestion.created_at.desc())
+                .all()
+            )
+            suggestions = [s for s in all_sugg if s.status in ("active", "follow_up")]
+            dismissed   = [s for s in all_sugg if s.status == "not_interested"]
+        except Exception as exc:
+            current_app.logger.warning("[search_page] suggestions table not ready: %s", exc)
+            db.session.rollback()
+
     return render_template(
         "construction/bid_search.html",
         partner=partner,
         recent_opportunities=recent_opportunities,
         search_terms=search_terms,
+        suggestions=suggestions,
+        dismissed=dismissed,
     )
+
+
+@construction_bids_bp.route("/suggestions/add", methods=["POST"])
+@login_required
+def add_suggestion():
+    """Manually add a suggested opportunity to the search board."""
+    if not _can_use_bid_handoff():
+        flash("Access denied.", "warning")
+        return redirect(url_for("auth.post_login_redirect"))
+
+    partner = _current_partner()
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("construction_bids.search_page"))
+
+    title = (request.form.get("title") or "").strip()
+    if not title:
+        flash("Opportunity title is required.", "warning")
+        return redirect(url_for("construction_bids.search_page"))
+
+    est_raw = (request.form.get("estimated_value") or "").replace(",", "").strip()
+    estimated_value = None
+    if est_raw:
+        try:
+            estimated_value = float(est_raw)
+        except ValueError:
+            pass
+
+    due_date = None
+    due_raw = (request.form.get("due_date") or "").strip()
+    if due_raw:
+        try:
+            due_date = datetime.strptime(due_raw, "%Y-%m-%d")
+        except ValueError:
+            pass
+
+    sugg = BidSuggestion(
+        partner_id      = partner.id,
+        title           = title,
+        category        = (request.form.get("category") or "").strip() or None,
+        source_name     = (request.form.get("source_name") or "").strip() or None,
+        source_url      = (request.form.get("source_url") or "").strip() or None,
+        location        = (request.form.get("location") or "").strip() or None,
+        due_date        = due_date,
+        estimated_value = estimated_value,
+        contact         = (request.form.get("contact") or "").strip() or None,
+        summary         = (request.form.get("summary") or "").strip() or None,
+        status          = "active",
+    )
+    db.session.add(sugg)
+    db.session.commit()
+    flash("Opportunity added to the search board.", "success")
+    return redirect(url_for("construction_bids.search_page"))
+
+
+@construction_bids_bp.route("/suggestions/<int:suggestion_id>/action", methods=["POST"])
+@login_required
+def suggestion_action(suggestion_id):
+    """Act on a suggested opportunity: save, send to Sandra, dismiss, or follow-up."""
+    if not _can_use_bid_handoff():
+        flash("Access denied.", "warning")
+        return redirect(url_for("auth.post_login_redirect"))
+
+    sugg   = BidSuggestion.query.get_or_404(suggestion_id)
+    action = (request.form.get("action") or "").strip().lower()
+
+    if action in ("save", "send_to_sandra"):
+        bid_status = "saved_opportunity" if action == "save" else "bid_package_needed"
+        existing = ContractorBidOpportunity.query.filter_by(
+            partner_id   = sugg.partner_id,
+            project_name = sugg.title,
+        ).first()
+        if existing:
+            flash(f"'{sugg.title}' is already in the bid pipeline.", "info")
+        else:
+            opp = ContractorBidOpportunity(
+                partner_id      = sugg.partner_id,
+                project_name    = sugg.title,
+                source          = sugg.source_name or "Bid Search",
+                category        = sugg.category,
+                location        = sugg.location,
+                estimated_value = sugg.estimated_value,
+                bid_deadline    = sugg.due_date,
+                notes           = sugg.summary,
+                status          = bid_status,
+            )
+            db.session.add(opp)
+        sugg.status = "saved"
+        db.session.commit()
+        if action == "save":
+            flash(f"'{sugg.title}' saved to the bid pipeline.", "success")
+        else:
+            flash(f"'{sugg.title}' sent to Sandra for bid package preparation.", "success")
+
+    elif action == "not_interested":
+        sugg.status = "not_interested"
+        db.session.commit()
+        flash(f"'{sugg.title}' dismissed.", "info")
+
+    elif action == "follow_up":
+        sugg.status = "follow_up"
+        db.session.commit()
+        flash(f"'{sugg.title}' marked for follow-up.", "info")
+
+    else:
+        flash("Unknown action.", "warning")
+
+    return redirect(url_for("construction_bids.search_page"))
 
 
 @construction_bids_bp.route("/create", methods=["POST"])

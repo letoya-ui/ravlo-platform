@@ -23,6 +23,8 @@
 
 <div class="re-grid">
 
+  {% include "executive/_morning_priorities.html" %}
+
   {# ── Status counters ── #}
   <section style="display:grid;grid-template-columns:repeat(6,1fr);gap:.75rem;">
     {% for key, label, color, icon in statuses %}
