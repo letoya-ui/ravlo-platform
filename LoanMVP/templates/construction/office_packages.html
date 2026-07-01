@@ -21,7 +21,7 @@
         <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">BID SUPPORT QUEUE</div>
         <h3 style="margin:.25rem 0 0;font-size:1.1rem;">Packages to prepare</h3>
         <p style="margin:6px 0 0;color:rgba(255,255,255,.55);font-size:.88rem;line-height:1.6;max-width:780px;">
-          These are construction opportunities that need office organization, missing information, package prep, review, or follow-up.
+          These are construction opportunities that need office organization, missing information, package prep, review, approval, or client follow-up.
         </p>
       </div>
       <div class="re-stat" style="min-width:150px;">
@@ -50,6 +50,8 @@
               <span class="badge badge-warning">{{ (opp.status or 'pending')|replace('_',' ')|title }}</span>
             </div>
 
+            {% include "construction/_opportunity_workflow_panel.html" %}
+
             {% if opp.notes %}
               <div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);font-size:.8rem;color:rgba(255,255,255,.58);line-height:1.55;white-space:pre-wrap;">{{ opp.notes }}</div>
             {% endif %}
@@ -60,8 +62,10 @@
                 <option value="missing_information" {% if opp.status == 'missing_information' %}selected{% endif %}>Missing Info</option>
                 <option value="draft_bid_prepared" {% if opp.status == 'draft_bid_prepared' %}selected{% endif %}>Draft Prepared</option>
                 <option value="jamaine_review_needed" {% if opp.status == 'jamaine_review_needed' %}selected{% endif %}>Waiting on Field Review</option>
-                <option value="ready_to_send" {% if opp.status == 'ready_to_send' %}selected{% endif %}>Ready to Send</option>
-                <option value="bid_submitted" {% if opp.status == 'bid_submitted' %}selected{% endif %}>Bid Sent</option>
+                <option value="approval_needed" {% if opp.status == 'approval_needed' %}selected{% endif %}>Ready for Approval</option>
+                <option value="approved_to_submit" {% if opp.status == 'approved_to_submit' %}selected{% endif %}>Approved to Submit</option>
+                <option value="bid_submitted" {% if opp.status == 'bid_submitted' %}selected{% endif %}>Sent to Client</option>
+                <option value="client_review" {% if opp.status == 'client_review' %}selected{% endif %}>Waiting on Client</option>
                 <option value="follow_up_needed" {% if opp.status == 'follow_up_needed' %}selected{% endif %}>Follow-Up Needed</option>
                 <option value="won" {% if opp.status == 'won' %}selected{% endif %}>Awarded</option>
                 <option value="lost" {% if opp.status == 'lost' %}selected{% endif %}>Lost</option>
