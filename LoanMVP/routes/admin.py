@@ -32,6 +32,7 @@ from LoanMVP.models.ai_models import AIAssistantInteraction
 from LoanMVP.models.payment_models import PaymentRecord
 from LoanMVP.models.vip_models import VIPIncome, VIPProfile
 from LoanMVP.models.company_finance_models import CMFinanceEntry, DIVISIONS, INCOME_CATEGORIES, EXPENSE_CATEGORIES
+from LoanMVP.models.contractor_models import ContractorBidOpportunity
 from LoanMVP.services.notify_service import notify
 
 import io
@@ -919,6 +920,31 @@ def dashboard():
 
     server_load_value = 68
 
+    construction_office_statuses = [
+        "bid_package_needed",
+        "missing_information",
+        "draft_bid_prepared",
+        "jamaine_review_needed",
+        "ready_to_send",
+        "follow_up_needed",
+    ]
+
+    try:
+        bid_support_queue = (
+            ContractorBidOpportunity.query
+            .filter(ContractorBidOpportunity.status.in_(construction_office_statuses))
+            .order_by(
+                ContractorBidOpportunity.updated_at.desc(),
+                ContractorBidOpportunity.created_at.desc(),
+            )
+            .limit(25)
+            .all()
+        )
+    except Exception as exc:
+        current_app.logger.warning("bid support queue unavailable: %s", exc)
+        db.session.rollback()
+        bid_support_queue = []
+
     ai_summary = (
         f"Platform snapshot: {stats['pending_requests']} pending request(s), "
         f"{stats['pending_invites']} pending invite(s), "
@@ -944,6 +970,7 @@ def dashboard():
         user_growth_labels=user_growth_labels,
         user_growth_series=user_growth_series,
         server_load_value=server_load_value,
+        bid_support_queue=bid_support_queue,
     )
 
 
