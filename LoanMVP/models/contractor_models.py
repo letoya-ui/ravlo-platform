@@ -100,3 +100,35 @@ class ConstructionProject(db.Model):
 
     def __repr__(self):
         return f"<ConstructionProject {self.id} {self.project_name} {self.status}>"
+
+
+class BidSuggestion(db.Model):
+    """A suggested opportunity surfaced on the Bid Search page.
+
+    Stays in the suggestion layer until Jamaine acts on it: Save or Send to
+    Sandra converts it into a ContractorBidOpportunity; Not Interested hides
+    it; Follow Up Later keeps it visible but de-prioritised.
+    """
+    __tablename__ = "bid_suggestions"
+
+    id              = db.Column(db.Integer, primary_key=True)
+    partner_id      = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=False, index=True)
+
+    title           = db.Column(db.String(255), nullable=False)
+    category        = db.Column(db.String(100), nullable=True)
+    source_name     = db.Column(db.String(120), nullable=True)
+    source_url      = db.Column(db.String(500), nullable=True)
+    location        = db.Column(db.String(255), nullable=True)
+    due_date        = db.Column(db.DateTime,    nullable=True)
+    estimated_value = db.Column(db.Float,       nullable=True)
+    contact         = db.Column(db.String(255), nullable=True)
+    summary         = db.Column(db.Text,        nullable=True)
+
+    # active → saved / not_interested / follow_up
+    status          = db.Column(db.String(30), default="active", nullable=False)
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+
+    partner = db.relationship("Partner", backref=db.backref("bid_suggestions", lazy="dynamic"))
+
+    def __repr__(self):
+        return f"<BidSuggestion {self.id} {self.title} {self.status}>"

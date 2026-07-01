@@ -144,6 +144,7 @@ _SCHEMA_COMPAT_TABLES = [
     "partner_requests",
     "contractor_bid_opportunities",
     "construction_projects",
+    "bid_suggestions",
     "discovery_events",
 ]
 

@@ -15,7 +15,7 @@ from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.loan_models import BorrowerProfile, LoanApplication
 from LoanMVP.models.system_models import SystemLog
 from LoanMVP.models.user_model import User
-from LoanMVP.models.contractor_models import ContractorBidOpportunity
+from LoanMVP.models.contractor_models import ContractorBidOpportunity, ConstructionProject
 from LoanMVP.models.company_finance_models import CMFinanceEntry, UserEmailConnection
 from LoanMVP.routes import admin as admin_routes
 
@@ -455,6 +455,28 @@ def construction_center():
         db.session.rollback()
         email_conn = None
 
+    # ── Construction projects (needed for morning priorities) ────────
+    cc_projects = []
+    if partner:
+        try:
+            cc_projects = ConstructionProject.query.filter_by(partner_id=partner.id).all()
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning("[construction_center] projects not ready: %s", exc)
+
+    # ── Morning command center priorities ────────────────────────────
+    cc_email = (getattr(current_user, "email", "") or "").strip().lower()
+    if cc_email == "sandra@ravlohq.com":
+        cc_persona  = "sandra"
+        cc_greeting = "Sandra"
+    elif cc_email == _JAMAINE_EMAIL:
+        cc_persona  = "jamaine"
+        cc_greeting = "Jamaine"
+    else:
+        cc_persona  = "letoya"
+        cc_greeting = getattr(current_user, "first_name", None) or "Letoya"
+    priorities = _morning_priorities(bid_opps, cc_projects, cc_persona)
+
     return render_template(
         "executive/construction_center.html",
         partner         = partner,
@@ -471,6 +493,9 @@ def construction_center():
         req_waiting     = req_waiting,
         email_conn      = email_conn,
         now             = now,
+        priorities      = priorities,
+        greeting        = cc_greeting,
+        persona         = cc_persona,
     )
 
 
@@ -853,6 +878,150 @@ def email_sync():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# MORNING COMMAND CENTER — per-persona priority list
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _morning_priorities(bids, projects, persona):
+    """Build a sorted list of today's action items for the given persona.
+
+    persona: "jamaine" | "sandra" | "letoya"
+    Each item: title, stage, next_action, priority (high/medium/low),
+               url, deadline (str|None), assigned_to.
+    """
+    from datetime import timedelta
+    now        = datetime.utcnow()
+    two_days   = (now + timedelta(days=2)).date()
+    seven_days = (now + timedelta(days=7)).date()
+
+    def _dp(bid):
+        if not bid.bid_deadline:
+            return "low"
+        dl = bid.bid_deadline.date()
+        if dl <= two_days:
+            return "high"
+        if dl <= seven_days:
+            return "medium"
+        return "low"
+
+    def _dl(bid):
+        return bid.bid_deadline.strftime("%b %d") if bid.bid_deadline else None
+
+    bid_ids_with_projects = {p.bid_opportunity_id for p in projects if p.bid_opportunity_id}
+    items = []
+
+    if persona == "jamaine":
+        for b in bids:
+            if b.status == "site_visit_needed":
+                items.append(dict(title=b.project_name, stage="Site Visit Needed",
+                    next_action="Schedule and complete the site visit",
+                    priority="high" if (b.bid_deadline and b.bid_deadline.date() <= two_days) else "medium",
+                    url=url_for("executive.construction_center"), deadline=_dl(b), assigned_to="Jamaine"))
+            elif b.status == "site_visit_scheduled":
+                items.append(dict(title=b.project_name, stage="Site Visit Scheduled",
+                    next_action="Confirm attendance and capture scope notes",
+                    priority="medium", url=url_for("executive.construction_center"),
+                    deadline=_dl(b), assigned_to="Jamaine"))
+            elif b.status == "jamaine_review_needed":
+                items.append(dict(title=b.project_name, stage="Needs Your Review",
+                    next_action="Review Sandra's bid package — approve or return with notes",
+                    priority="high", url=url_for("executive.bid_support"),
+                    deadline=_dl(b), assigned_to="Jamaine"))
+            elif b.status == "follow_up_needed":
+                items.append(dict(title=b.project_name, stage="Follow-Up Needed",
+                    next_action="Follow up with the client or GC on bid status",
+                    priority="high", url=url_for("executive.construction_center"),
+                    deadline=_dl(b), assigned_to="Jamaine"))
+            elif b.status == "bid_submitted":
+                items.append(dict(title=b.project_name, stage="Bid Submitted",
+                    next_action="Check in with the client — ask for a decision timeline",
+                    priority="medium", url=url_for("executive.construction_center"),
+                    deadline=_dl(b), assigned_to="Jamaine"))
+            elif b.status == "won" and b.id not in bid_ids_with_projects:
+                items.append(dict(title=b.project_name, stage="Won — No Project Yet",
+                    next_action="Open the Projects page to activate this job",
+                    priority="high", url=url_for("construction_projects.project_list"),
+                    deadline=None, assigned_to="Jamaine"))
+            elif b.status == "saved_opportunity":
+                items.append(dict(title=b.project_name, stage="Saved — Needs Decision",
+                    next_action="Send to Sandra for bid package or update status",
+                    priority=_dp(b), url=url_for("executive.construction_center"),
+                    deadline=_dl(b), assigned_to="Jamaine"))
+        for p in projects:
+            if p.status in ("active", "punch_list"):
+                items.append(dict(title=p.project_name,
+                    stage="Punch List" if p.status == "punch_list" else "Active",
+                    next_action="Check field progress — update project notes",
+                    priority="medium",
+                    url=url_for("construction_projects.project_detail", project_id=p.id),
+                    deadline=p.estimated_completion.strftime("%b %d") if p.estimated_completion else None,
+                    assigned_to="Jamaine"))
+
+    elif persona == "sandra":
+        for b in bids:
+            if b.status == "bid_package_needed":
+                items.append(dict(title=b.project_name, stage="Package Needed",
+                    next_action="Prepare the full bid package for Jamaine's review",
+                    priority=_dp(b), url=url_for("executive.bid_support"),
+                    deadline=_dl(b), assigned_to="Sandra"))
+            elif b.status == "missing_information":
+                items.append(dict(title=b.project_name, stage="Missing Information",
+                    next_action="Reach out to client or GC — bid prep is blocked",
+                    priority="high", url=url_for("executive.bid_support"),
+                    deadline=_dl(b), assigned_to="Sandra"))
+            elif b.status == "ready_to_send":
+                items.append(dict(title=b.project_name, stage="Ready to Send",
+                    next_action="Submit bid to client — Jamaine has approved",
+                    priority="high", url=url_for("executive.bid_support"),
+                    deadline=_dl(b), assigned_to="Sandra"))
+            elif b.status == "draft_bid_prepared":
+                items.append(dict(title=b.project_name, stage="Draft Ready",
+                    next_action="Send draft to Jamaine for field review",
+                    priority="medium", url=url_for("executive.bid_support"),
+                    deadline=_dl(b), assigned_to="Sandra"))
+            elif b.status == "follow_up_needed":
+                items.append(dict(title=b.project_name, stage="Follow-Up Needed",
+                    next_action="Contact client for update on submitted bid",
+                    priority="medium", url=url_for("executive.bid_support"),
+                    deadline=_dl(b), assigned_to="Sandra"))
+
+    else:  # letoya
+        for b in bids:
+            if b.status == "jamaine_review_needed":
+                items.append(dict(title=b.project_name, stage="Jamaine Reviewing",
+                    next_action="Check with Jamaine — approve scope or return with notes",
+                    priority=_dp(b), url=url_for("executive.bid_support"),
+                    deadline=_dl(b), assigned_to="Jamaine"))
+            elif b.status == "missing_information":
+                items.append(dict(title=b.project_name, stage="Stuck — Missing Info",
+                    next_action="Ask Sandra to resolve — bid prep is blocked",
+                    priority="high", url=url_for("executive.bid_support"),
+                    deadline=_dl(b), assigned_to="Sandra"))
+            elif b.status == "won" and b.id not in bid_ids_with_projects:
+                items.append(dict(title=b.project_name, stage="Won — No Project",
+                    next_action="Project not yet created — confirm with Jamaine",
+                    priority="high", url=url_for("construction_projects.project_list"),
+                    deadline=None, assigned_to="Jamaine"))
+            elif b.status == "bid_submitted":
+                items.append(dict(title=b.project_name, stage="Bid Submitted",
+                    next_action="Monitor — follow up if no client response within a week",
+                    priority="medium", url=url_for("executive.construction_center"),
+                    deadline=_dl(b), assigned_to="Sandra"))
+        for p in projects:
+            if p.status in ("active", "punch_list"):
+                items.append(dict(title=p.project_name,
+                    stage="Active" if p.status == "active" else "Punch List",
+                    next_action="Check field progress with Jamaine",
+                    priority="low",
+                    url=url_for("construction_projects.project_detail", project_id=p.id),
+                    deadline=p.estimated_completion.strftime("%b %d") if p.estimated_completion else None,
+                    assigned_to="Jamaine"))
+
+    order = {"high": 0, "medium": 1, "low": 2}
+    items.sort(key=lambda x: order.get(x["priority"], 3))
+    return items
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # BID SUPPORT QUEUE — Sandra's workflow view
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -921,12 +1090,36 @@ def bid_support():
 
     needs_attention = len(by_status.get("missing_information", [])) + len(by_status.get("follow_up_needed", []))
 
+    # ── Morning priorities for bid support ──────────────────────────
+    bs_projects = []
+    try:
+        cm = _cm_partner()
+        if cm:
+            bs_projects = ConstructionProject.query.filter_by(partner_id=cm.id).all()
+    except Exception:
+        db.session.rollback()
+
+    bs_email = (getattr(current_user, "email", "") or "").strip().lower()
+    if bs_email == "sandra@ravlohq.com":
+        bs_persona  = "sandra"
+        bs_greeting = "Sandra"
+    elif bs_email == _JAMAINE_EMAIL:
+        bs_persona  = "jamaine"
+        bs_greeting = "Jamaine"
+    else:
+        bs_persona  = "letoya"
+        bs_greeting = getattr(current_user, "first_name", None) or "Letoya"
+    bs_priorities = _morning_priorities(bids, bs_projects, bs_persona)
+
     return render_template(
         "executive/bid_support.html",
         bids=queue_bids,
         by_status=by_status,
         statuses=BID_SUPPORT_STATUSES,
         needs_attention=needs_attention,
+        priorities=bs_priorities,
+        greeting=bs_greeting,
+        persona=bs_persona,
     )
 
 

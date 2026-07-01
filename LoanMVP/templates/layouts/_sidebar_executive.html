@@ -89,6 +89,12 @@
       <span>Bid Pipeline</span>
     </a>
 
+    <a href="{{ url_for('construction_bids.search_page') }}"
+       class="re-nav-link {% if ep == 'construction_bids.search_page' %}active{% endif %}">
+      <i class="icon lucide lucide-search"></i>
+      <span>Bid Search</span>
+    </a>
+
     <a href="{{ url_for('construction_projects.project_list') }}"
        class="re-nav-link {% if ep in ['construction_projects.project_list', 'construction_projects.project_detail'] %}active{% endif %}">
       <i class="icon lucide lucide-hard-hat"></i>
