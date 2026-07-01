@@ -166,6 +166,65 @@
     }
     .jh-stat-lbl { font-size: .78rem; color: var(--gray); margin-top: 4px; letter-spacing: .04em; text-transform: uppercase; }
 
+    /* ── HERO LAYOUT WITH PHOTO ── */
+    .jh-hero-layout {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: 1fr 420px;
+      gap: 64px; align-items: center;
+      max-width: 1100px; width: 100%;
+    }
+    .jh-hero-inner { max-width: 100%; }
+    .jh-hero-photo-wrap {
+      position: relative; display: flex;
+      justify-content: center; align-items: flex-end;
+    }
+    .jh-hero-photo-ring {
+      position: absolute; inset: -16px;
+      border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+      background: radial-gradient(ellipse, rgba(201,168,108,.12) 0%, transparent 70%);
+      border: 1px solid rgba(201,168,108,.15);
+    }
+    .jh-hero-photo {
+      width: 100%; max-width: 380px;
+      border-radius: 20px;
+      object-fit: cover; object-position: top;
+      box-shadow: 0 24px 64px rgba(0,0,0,.5);
+      position: relative; z-index: 1;
+      border: 1px solid rgba(201,168,108,.2);
+    }
+    .jh-hero-photo-badge {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(11,22,34,.9); backdrop-filter: blur(10px);
+      border: 1px solid rgba(201,168,108,.3); border-radius: 30px;
+      padding: 8px 20px; display: flex; align-items: center; gap: 8px;
+      font-size: .78rem; font-weight: 600; color: var(--gold);
+      white-space: nowrap; z-index: 2;
+    }
+    .jh-badge-dot { color: rgba(201,168,108,.5); font-size: 1rem; }
+
+    /* ── CALENDLY BUTTON ── */
+    .jh-calendly-btn {
+      display: flex; align-items: center; gap: 16px;
+      width: 100%; background: rgba(201,168,108,.1);
+      border: 1.5px solid rgba(201,168,108,.4); border-radius: 12px;
+      padding: 16px 20px; cursor: pointer; font-family: inherit;
+      transition: background .2s, border-color .2s; margin-bottom: 28px;
+      text-align: left;
+    }
+    .jh-calendly-btn:hover { background: rgba(201,168,108,.18); border-color: var(--gold); }
+    .jh-calendly-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .jh-calendly-btn strong { display: block; font-size: .95rem; color: var(--white); margin-bottom: 2px; }
+    .jh-calendly-btn small { font-size: .78rem; color: var(--gray); }
+    .jh-calendly-arrow { margin-left: auto; color: var(--gold); font-size: 1.1rem; flex-shrink: 0; }
+
+    @media (max-width: 900px) {
+      .jh-hero-layout {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+      .jh-hero-photo-wrap { display: none; }
+    }
+
     /* ── SECTION WRAPPER ── */
     .jh-section { padding: 96px 40px; }
     .jh-container { max-width: 1120px; margin: 0 auto; }
@@ -554,30 +613,46 @@
 <section class="jh-hero">
   <div class="jh-hero-bg"></div>
   <div class="jh-hero-glow"></div>
-  <div class="jh-hero-inner">
-    <div class="jh-eyebrow">Realtor &amp; Contractor | {{ _area }}</div>
-    <h1>We do the work.<br>You pay <em>at closing.</em></h1>
-    <p class="jh-hero-sub">
-      Cleaning, landscaping, painting, and repairs — all written directly into your listing contract
-      and paid from your sale proceeds at closing. Zero out of pocket. Zero coordination.
-      One agent, one crew, one contract.
-    </p>
-    <div class="jh-hero-actions">
-      <a href="#packages" class="jh-btn-primary">See How It Works</a>
-      <a href="#contact" class="jh-btn-ghost">Talk to John</a>
+  <div class="jh-hero-layout">
+    <div class="jh-hero-inner">
+      <div class="jh-eyebrow">Realtor &amp; Contractor | {{ _area }}</div>
+      <h1>We do the work.<br>You pay <em>at closing.</em></h1>
+      <p class="jh-hero-sub">
+        Cleaning, landscaping, painting, and repairs — all written directly into your listing contract
+        and paid from your sale proceeds at closing. Zero out of pocket. Zero coordination.
+        One agent, one crew, one contract.
+      </p>
+      <div class="jh-hero-actions">
+        <a href="#packages" class="jh-btn-primary">See How It Works</a>
+        <button onclick="openCalendly()" class="jh-btn-ghost">Book a Free Walkthrough</button>
+      </div>
+      <div class="jh-hero-stats">
+        <div>
+          <div class="jh-stat-val">$0</div>
+          <div class="jh-stat-lbl">Out of Pocket</div>
+        </div>
+        <div>
+          <div class="jh-stat-val">1</div>
+          <div class="jh-stat-lbl">Contract. One Closing.</div>
+        </div>
+        <div>
+          <div class="jh-stat-val">2–6<span style="font-size:1.4rem">%</span></div>
+          <div class="jh-stat-lbl">All-In Commission</div>
+        </div>
+      </div>
     </div>
-    <div class="jh-hero-stats">
-      <div>
-        <div class="jh-stat-val">$0</div>
-        <div class="jh-stat-lbl">Out of Pocket</div>
-      </div>
-      <div>
-        <div class="jh-stat-val">1</div>
-        <div class="jh-stat-lbl">Contract. One Closing.</div>
-      </div>
-      <div>
-        <div class="jh-stat-val">2–6<span style="font-size:1.4rem">%</span></div>
-        <div class="jh-stat-lbl">All-In Commission</div>
+
+    <div class="jh-hero-photo-wrap">
+      <div class="jh-hero-photo-ring"></div>
+      <img
+        src="{{ url_for('static', filename='images/partners/john_headen.jpg') }}"
+        alt="John Headen — Realtor &amp; Contractor"
+        class="jh-hero-photo"
+      >
+      <div class="jh-hero-photo-badge">
+        <span>Realtor</span>
+        <span class="jh-badge-dot">+</span>
+        <span>Contractor</span>
       </div>
     </div>
   </div>
@@ -927,6 +1002,15 @@
           I'll schedule a free walkthrough, assess the work, and give you
           a written quote — no pressure, no obligation.
         </p>
+        <button onclick="openCalendly()" class="jh-calendly-btn">
+          <span class="jh-calendly-icon">📅</span>
+          <span>
+            <strong>Book a Free Walkthrough</strong>
+            <small>Pick a time that works for you</small>
+          </span>
+          <span class="jh-calendly-arrow">→</span>
+        </button>
+
         <div class="jh-contact-details">
           {% if phone %}
           <div class="jh-contact-item">
@@ -1012,7 +1096,24 @@
   <div class="jh-footer-powered">Powered by <a href="#">Ravlo</a></div>
 </footer>
 
+<!-- Calendly popup embed -->
+<link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
+<script src="https://assets.calendly.com/assets/external/widget.js" async></script>
+
 <script>
+  /* ── Replace this URL when John's Calendly is live ── */
+  var CALENDLY_URL = 'https://calendly.com/johnheaden';
+
+  function openCalendly() {
+    if (typeof Calendly !== 'undefined') {
+      Calendly.initPopupWidget({ url: CALENDLY_URL });
+    } else {
+      /* Calendly script still loading — open in new tab as fallback */
+      window.open(CALENDLY_URL, '_blank', 'noopener');
+    }
+    return false;
+  }
+
   function switchTrack(track) {
     document.querySelectorAll('.jh-track-tab').forEach(function(t) {
       t.classList.toggle('active', t.dataset.track === track);
