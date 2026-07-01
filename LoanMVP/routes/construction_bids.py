@@ -6,7 +6,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import func
 
 from LoanMVP.extensions import db
-from LoanMVP.models.contractor_models import ContractorBidOpportunity
+from LoanMVP.models.contractor_models import ContractorBidOpportunity, ConstructionProject
 from LoanMVP.models.crm_models import Partner
 
 construction_bids_bp = Blueprint("construction_bids", __name__, url_prefix="/construction/bids")
@@ -337,6 +337,48 @@ def update_bid_status(opportunity_id):
         opportunity.notes = "\n".join(note_lines)
 
     db.session.commit()
+
+    # When a bid is won, automatically spin up a construction project
+    if new_status == "won":
+        try:
+            existing = ConstructionProject.query.filter_by(bid_opportunity_id=opportunity.id).first()
+            if existing:
+                flash(
+                    f"Bid marked as Won. Project already exists — "
+                    f"<a href=\"{url_for('construction_projects.project_detail', project_id=existing.id)}\" "
+                    f"style=\"color:#2cb67d;text-decoration:underline;\">View Project →</a>",
+                    "info",
+                )
+            else:
+                project = ConstructionProject(
+                    bid_opportunity_id = opportunity.id,
+                    partner_id         = opportunity.partner_id,
+                    project_name       = opportunity.project_name,
+                    location           = opportunity.location,
+                    category           = opportunity.category,
+                    source             = opportunity.source,
+                    estimated_value    = opportunity.estimated_value,
+                    contract_amount    = opportunity.estimated_value,
+                    notes              = opportunity.notes,
+                    bid_date           = opportunity.bid_deadline,
+                    project_manager    = "Jamaine Caughman",
+                    office_coordinator = "Sandra",
+                    executive          = "Letoya",
+                    status             = "pre_construction",
+                )
+                db.session.add(project)
+                db.session.commit()
+                flash(
+                    f"Bid marked as Won. Construction project created — "
+                    f"<a href=\"{url_for('construction_projects.project_detail', project_id=project.id)}\" "
+                    f"style=\"color:#2cb67d;text-decoration:underline;\">Open Project →</a>",
+                    "success",
+                )
+        except Exception as exc:
+            current_app.logger.error("auto project creation failed for bid %s: %s", opportunity_id, exc)
+            db.session.rollback()
+            flash("Bid marked as Won. Project creation failed — create it manually from the Projects page.", "warning")
+        return redirect(url_for("construction_projects.project_list"))
 
     flash("Bid status updated.", "success")
     return redirect(_construction_return_url())
