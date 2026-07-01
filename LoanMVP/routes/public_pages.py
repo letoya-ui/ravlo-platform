@@ -34,6 +34,7 @@ public_pages_bp = Blueprint("public_pages", __name__, url_prefix="/p")
 # generic realtor_landing.html.
 SLUG_TEMPLATES: dict[str, str] = {
     "bonnie-sells-oc-homes": "public/bonnie_landing.html",
+    "john-headen":           "public/john_headen_landing.html",
 }
 
 
