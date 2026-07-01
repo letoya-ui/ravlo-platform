@@ -145,6 +145,13 @@ _SCHEMA_COMPAT_TABLES = [
     "contractor_bid_opportunities",
     "construction_projects",
     "bid_suggestions",
+    "bid_proposals",
+    "project_daily_logs",
+    "project_photos",
+    "project_milestones",
+    "construction_project_expenses",
+    "project_invoices",
+    "project_change_orders",
     "discovery_events",
 ]
 

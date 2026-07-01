@@ -70,6 +70,7 @@
             <th>Deadline</th>
             <th>Status</th>
             <th>Notes</th>
+            <th>Proposal</th>
           </tr>
         </thead>
         <tbody>
@@ -145,6 +146,23 @@
                   <i class="lucide lucide-check" style="font-size:.8rem;"></i>
                 </button>
               </form>
+            </td>
+
+            {# ── Proposal link ── #}
+            <td style="white-space:nowrap;">
+              {% if bid.proposal %}
+              <a href="{{ url_for('construction_bids.bid_proposal', bid_id=bid.id) }}"
+                 class="re-btn ghost sm"
+                 style="border-color:rgba(44,182,125,.35);color:#2cb67d;font-size:.78rem;">
+                <i class="lucide lucide-file-check" style="font-size:.8rem;"></i> View →
+              </a>
+              {% else %}
+              <a href="{{ url_for('construction_bids.bid_proposal', bid_id=bid.id) }}"
+                 class="re-btn ghost sm"
+                 style="font-size:.78rem;">
+                <i class="lucide lucide-file-plus" style="font-size:.8rem;"></i> Build →
+              </a>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}
