@@ -12,13 +12,80 @@ construction_bids_bp = Blueprint("construction_bids", __name__, url_prefix="/con
 
 
 def _current_partner():
+    """Return the active construction partner profile for bid handoff.
+
+    Jamaine's construction workflow should not fail just because the partner
+    profile has not been manually linked yet. If the current user is Jamaine or
+    a construction-enabled operator, attach or create the Caughman Mason
+    Construction partner profile on demand.
+    """
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     if partner:
         return partner
 
-    return Partner.query.filter(
-        func.lower(Partner.company) == "caughman mason construction"
+    email = (getattr(current_user, "email", "") or "").strip().lower()
+    role = (getattr(current_user, "role", "") or "").strip().lower()
+    can_seed_construction_profile = (
+        email in {
+            "jamaine.caughman@ravlohq.com",
+            "jamaine.caughman@caughmanmason.com",
+            "letoya@ravlohq.com",
+        }
+        or role in {"executive", "platform_admin", "master_admin", "lending_admin", "partner", "contractor"}
+    )
+
+    if not can_seed_construction_profile:
+        return None
+
+    partner = Partner.query.filter(
+        func.lower(func.coalesce(Partner.company, "")) == "caughman mason construction"
     ).first()
+
+    if partner:
+        if not partner.user_id and email.startswith("jamaine"):
+            partner.user_id = current_user.id
+            partner.email = partner.email or email
+            partner.active = True
+            partner.approved = True
+            partner.status = partner.status or "Active"
+            db.session.commit()
+        return partner
+
+    display_name = (
+        getattr(current_user, "full_name", None)
+        or getattr(current_user, "username", None)
+        or "Caughman Mason Construction"
+    )
+    partner = Partner(
+        user_id=current_user.id if email.startswith("jamaine") else None,
+        name=display_name,
+        company="Caughman Mason Construction",
+        email=email or None,
+        category="contractor",
+        type="Contractor",
+        specialty="General contracting, renovation, rehab, demo, and ironwork",
+        service_area="Tampa Bay, FL",
+        city="Tampa",
+        state="FL",
+        bio="Caughman Mason Construction supports demo, renovation, repair, rehab, and small GC opportunities in the Tampa Bay market.",
+        listing_description="Construction and renovation services for investors, property owners, and commercial clients in the Tampa Bay area.",
+        active=True,
+        approved=True,
+        featured=False,
+        status="Active",
+        subscription_tier="Premium",
+        crm_enabled=True,
+        deal_visibility_enabled=True,
+        proposal_builder_enabled=True,
+        instant_quote_enabled=True,
+        ai_assist_enabled=True,
+        smart_notifications_enabled=True,
+        portfolio_showcase_enabled=True,
+        is_verified=True,
+    )
+    db.session.add(partner)
+    db.session.commit()
+    return partner
 
 
 def _can_use_bid_handoff() -> bool:
@@ -28,6 +95,7 @@ def _can_use_bid_handoff() -> bool:
     return (
         email in {
             "jamaine.caughman@ravlohq.com",
+            "jamaine.caughman@caughmanmason.com",
             "sandra@ravlohq.com",
             "letoya@ravlohq.com",
         }
@@ -45,7 +113,7 @@ def create_bid_opportunity():
 
     partner = _current_partner()
     if not partner:
-        flash("Construction partner profile not found yet.", "warning")
+        flash("Construction partner profile could not be prepared yet.", "warning")
         return redirect(url_for("executive.construction_center"))
 
     project_name = (request.form.get("project_name") or "").strip()
