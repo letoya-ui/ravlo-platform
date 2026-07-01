@@ -53,7 +53,7 @@ SLUG_STATIC_CONTEXT: dict[str, dict] = {
         "logo_url":         None,
         "profile_image_url": None,
         "cover_image_url":  None,
-        "email":            "",
+        "email":            "Jsecond1212@gmail.com",
         "phone":            "",
         "website":          "",
         "listings":         [],
