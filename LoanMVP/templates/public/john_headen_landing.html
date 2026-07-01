@@ -265,6 +265,23 @@
       border-color: var(--gold); background: rgba(201,168,108,.08);
     }
 
+    .jh-closing-banner {
+      display: flex; align-items: center; gap: 14px;
+      background: linear-gradient(135deg, rgba(201,168,108,.1), rgba(201,168,108,.05));
+      border: 1px solid rgba(201,168,108,.3);
+      border-radius: 10px; padding: 16px 24px;
+      margin-bottom: 40px;
+      font-size: .9rem; color: var(--text); line-height: 1.5;
+      max-width: 700px; margin-left: auto; margin-right: auto;
+    }
+    .jh-closing-icon {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem; font-weight: 800; flex-shrink: 0;
+    }
+    .jh-closing-banner strong { color: var(--white); }
+
     .jh-disclaimer {
       text-align: center; margin-top: 36px;
       font-size: .78rem; color: var(--gray);
@@ -539,28 +556,28 @@
   <div class="jh-hero-glow"></div>
   <div class="jh-hero-inner">
     <div class="jh-eyebrow">Realtor &amp; Contractor | {{ _area }}</div>
-    <h1>One Agent. One Crew.<br><em>One Commission.</em></h1>
+    <h1>We do the work.<br>You pay <em>at closing.</em></h1>
     <p class="jh-hero-sub">
-      I list your home and handle the work that sells it faster — cleaning, landscaping,
-      painting, repairs — all bundled into a single, transparent commission rate.
-      No separate contractors. No coordination headaches. Just results.
+      Cleaning, landscaping, painting, and repairs — all written directly into your listing contract
+      and paid from your sale proceeds at closing. Zero out of pocket. Zero coordination.
+      One agent, one crew, one contract.
     </p>
     <div class="jh-hero-actions">
-      <a href="#packages" class="jh-btn-primary">See Packages</a>
+      <a href="#packages" class="jh-btn-primary">See How It Works</a>
       <a href="#contact" class="jh-btn-ghost">Talk to John</a>
     </div>
     <div class="jh-hero-stats">
       <div>
-        <div class="jh-stat-val">2–6<span style="font-size:1.4rem">%</span></div>
-        <div class="jh-stat-lbl">Commission Tiers</div>
+        <div class="jh-stat-val">$0</div>
+        <div class="jh-stat-lbl">Out of Pocket</div>
       </div>
       <div>
         <div class="jh-stat-val">1</div>
-        <div class="jh-stat-lbl">Point of Contact</div>
+        <div class="jh-stat-lbl">Contract. One Closing.</div>
       </div>
       <div>
-        <div class="jh-stat-val">0</div>
-        <div class="jh-stat-lbl">Hidden Fees</div>
+        <div class="jh-stat-val">2–6<span style="font-size:1.4rem">%</span></div>
+        <div class="jh-stat-lbl">All-In Commission</div>
       </div>
     </div>
   </div>
@@ -570,30 +587,30 @@
 <section class="jh-section jh-how">
   <div class="jh-container">
     <div class="jh-section-head">
-      <div class="jh-section-eyebrow">Simple Process</div>
-      <h2 class="jh-section-title">From consultation to closed — handled.</h2>
-      <p class="jh-section-sub">Choose the level of service you need. I take care of the rest.</p>
+      <div class="jh-section-eyebrow">How It Works</div>
+      <h2 class="jh-section-title">Everything in the contract. Paid at closing.</h2>
+      <p class="jh-section-sub">You never write a check for services. It all comes out of your proceeds the day the sale closes.</p>
     </div>
     <div class="jh-steps">
       <div class="jh-step">
         <div class="jh-step-num">01</div>
         <h3>Free Walkthrough</h3>
-        <p>We tour your home together. I assess the work needed and recommend the right package for your goals and timeline.</p>
+        <p>We walk the property together. I identify what work will drive the most value and recommend the right service tier for your situation.</p>
       </div>
       <div class="jh-step">
         <div class="jh-step-num">02</div>
-        <h3>Pick Your Package</h3>
-        <p>Choose a commission tier. Everything included is handled by my team — no separate bids, no back-and-forth with strangers.</p>
+        <h3>Written Into the Contract</h3>
+        <p>Every service — cleaning, landscaping, painting, repairs — is itemized and written directly into your listing agreement. No verbal promises. No separate invoices.</p>
       </div>
       <div class="jh-step">
         <div class="jh-step-num">03</div>
-        <h3>We Do the Work</h3>
-        <p>My crew completes the services on a defined schedule. You stay informed without managing a single contractor.</p>
+        <h3>We Work, You Wait</h3>
+        <p>My crew completes everything before the home goes to market. You don't manage anyone, schedule anyone, or pay anyone out of pocket.</p>
       </div>
       <div class="jh-step">
         <div class="jh-step-num">04</div>
-        <h3>List &amp; Sell</h3>
-        <p>Your home hits the market move-in ready. One commission covers everything — services and my full listing representation.</p>
+        <h3>Paid at Closing</h3>
+        <p>The commission — which covers every service — is paid from your sale proceeds at closing. One line item. No surprises.</p>
       </div>
     </div>
   </div>
@@ -605,7 +622,12 @@
     <div class="jh-section-head">
       <div class="jh-section-eyebrow">Service Packages</div>
       <h2 class="jh-section-title">Choose your level of service.</h2>
-      <p class="jh-section-sub">Every package includes full listing representation. Add services at each tier — pay nothing separately.</p>
+      <p class="jh-section-sub">All services are written into your listing contract and paid from your closing proceeds. Nothing is due before or during the sale.</p>
+    </div>
+
+    <div class="jh-closing-banner">
+      <span class="jh-closing-icon">✓</span>
+      <span><strong>$0 out of pocket.</strong> Every service below is included in your listing contract and paid from sale proceeds at closing — not before.</span>
     </div>
 
     <div class="jh-packages-grid">
@@ -706,9 +728,10 @@
     <!-- Standard track note (shown by default) -->
     <div class="jh-track-panel" id="panel-standard">
       <div class="jh-disclaimer">
-        <strong>The bundled percentage tiers above apply to homes priced under $450k.</strong>
-        The commission increment at each tier covers the cost of the service — no separate invoices, no coordination.
-        Final rate and scope are agreed to in writing before work begins. Contact John for a free walkthrough and written quote.
+        <strong>All services are written into your listing contract and paid from closing proceeds — nothing is due upfront.</strong>
+        The commission increment at each tier covers the cost of the included services.
+        Final rate and scope are documented in writing before any work begins.
+        Contact John for a free walkthrough and written quote.
       </div>
     </div>
 
@@ -719,9 +742,10 @@
           <div class="jh-section-eyebrow">$450k &amp; Above</div>
           <h3 class="jh-luxury-title">Listing Commission + Flat-Fee Services</h3>
           <p class="jh-luxury-sub">
-            On higher-value homes, bundling everything into a rising percentage doesn't reflect actual service costs.
-            Instead, the listing commission is negotiated based on the property, and services are priced individually
-            at transparent flat rates — so you know exactly what you're paying for.
+            On higher-value homes, the listing commission is negotiated based on the property.
+            Services are itemized separately at flat rates — so you know exactly what each one costs.
+            <strong>Everything is written into the listing contract and paid from your closing proceeds.
+            Nothing is due before or during the sale.</strong>
           </p>
         </div>
 
@@ -769,15 +793,17 @@
               </div>
             </div>
             <p class="jh-svc-note">
-              All service pricing is provided in writing before work begins. No surprise invoices at closing.
+              All service costs are written into your listing contract and collected at closing from sale proceeds —
+              just like the commission. You pay nothing upfront.
               Bundling two or more services typically reduces per-service cost.
             </p>
           </div>
         </div>
       </div>
       <div class="jh-disclaimer" style="margin-top:24px;">
-        <strong>Commission rate and service fees are negotiated and documented in writing before listing.</strong>
-        Flat service rates are starting prices — final quotes are based on property size and condition assessed during the free walkthrough.
+        <strong>All service fees are written into the listing contract and paid from your closing proceeds — $0 due before or during the sale.</strong>
+        Flat service rates shown are starting prices. Final quotes are based on property size and condition assessed during the free walkthrough.
+        Commission rate is negotiated and documented in writing before listing.
       </div>
     </div>
 
@@ -790,33 +816,33 @@
     <div class="jh-diff-grid">
       <div class="jh-diff-copy">
         <div class="jh-section-eyebrow">Why It Works</div>
-        <h2>Why pay two people<br>to do <em>one job?</em></h2>
+        <h2>No cash out of pocket.<br><em>Not a dollar.</em></h2>
         <p>
-          Most sellers hire a realtor to list their home, then scramble to find a cleaner,
-          a landscaper, a painter, and a handyman — coordinating four different schedules
-          while trying to keep the property show-ready.
+          Most sellers have to hire cleaners, landscapers, painters, and repair crews
+          separately — paying each one upfront, weeks before the sale ever closes.
+          That's thousands out of pocket before you've made a cent.
         </p>
         <p>
-          I built these packages because I do both. My construction and trade background
-          means the work gets done right, on schedule, and without you managing anyone.
-          One call. One commission. One closing.
+          With my packages, every service is written into the listing contract from day one.
+          My crew does the work. Your home goes to market move-in ready. And everything
+          gets settled at closing from the proceeds — just like the commission always has.
         </p>
         <ul class="jh-diff-points">
           <li>
             <div class="jh-diff-icon">📋</div>
-            <span>All services are scoped and agreed to in writing before listing — no surprises at closing.</span>
+            <span><strong>In writing before we start.</strong> Every service is itemized in your listing agreement — scope, timeline, and cost. No verbal promises, no surprises at closing.</span>
           </li>
           <li>
-            <div class="jh-diff-icon">🗓</div>
-            <span>Work is scheduled and completed before photos are taken, not after you're already under contract.</span>
+            <div class="jh-diff-icon">💰</div>
+            <span><strong>Paid from proceeds, not your pocket.</strong> The commission that covers all services is collected at closing, the same way every real estate commission works.</span>
           </li>
           <li>
             <div class="jh-diff-icon">🏡</div>
-            <span>Move-in ready listings attract more offers, fewer inspection concessions, and stronger sale prices.</span>
+            <span><strong>Move-in ready listings sell for more.</strong> Buyers compete harder for homes that need nothing. Fewer inspection concessions means you keep more of the sale price.</span>
           </li>
           <li>
             <div class="jh-diff-icon">📞</div>
-            <span>One point of contact for everything — listing, contractors, buyers, and closing.</span>
+            <span><strong>One call handles everything.</strong> Listing, work crews, showings, offers, negotiation, closing — you deal with one person from start to finish.</span>
           </li>
         </ul>
       </div>
