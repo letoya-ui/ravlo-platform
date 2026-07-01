@@ -1,0 +1,105 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Construction Approval Queue{% endblock %}
+{% block page_title %}Construction Approval Queue{% endblock %}
+{% block page_subline %}Final sign-off before proposals go to the client.{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ safe_url_for('construction_office.packages') or '/construction-office/packages' }}">
+    <i class="lucide lucide-inbox"></i> Bid Support Queue
+  </a>
+  <a class="re-btn primary sm" href="{{ safe_url_for('executive.construction_center') or '/executive/construction' }}">
+    <i class="lucide lucide-hard-hat"></i> Construction Center
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+  <section class="re-card pad" style="border-color:rgba(44,182,125,.18);background:rgba(44,182,125,.025);">
+    <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#2cb67d;text-transform:uppercase;">APPROVAL QUEUE</div>
+        <h3 style="margin:.25rem 0 0;font-size:1.1rem;">Letoya or Jamaine sign-off</h3>
+        <p style="margin:6px 0 0;color:rgba(255,255,255,.55);font-size:.88rem;line-height:1.6;max-width:780px;">
+          Use this queue to approve finished bid packages, return them to Sandra for revisions, send them back to Jamaine for field review, or mark them sent to the client.
+        </p>
+      </div>
+      <div class="re-stat" style="min-width:150px;">
+        <div class="re-stat-label">Waiting</div>
+        <div class="re-stat-value" style="color:#2cb67d;">{{ approval_rows|length }}</div>
+        <div class="re-stat-meta">Approval items</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="re-card pad">
+    {% if approval_rows %}
+      <div style="display:grid;gap:12px;">
+        {% for opp in approval_rows %}
+          <div style="padding:14px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);display:grid;gap:10px;">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+              <div style="min-width:0;">
+                <div style="font-size:.95rem;font-weight:800;color:#f4f7fb;">{{ opp.project_name or 'Construction opportunity' }}</div>
+                <div style="font-size:.78rem;color:rgba(255,255,255,.42);margin-top:4px;">
+                  {{ opp.category or 'Construction' }}
+                  {% if opp.location %} · {{ opp.location }}{% endif %}
+                  {% if opp.bid_deadline %} · Due {{ opp.bid_deadline.strftime('%b %d') }}{% endif %}
+                  {% if opp.estimated_value %} · ${{ '{:,.0f}'.format(opp.estimated_value) }}{% endif %}
+                </div>
+              </div>
+              <span class="badge badge-warning">{{ (opp.status or 'pending')|replace('_',' ')|title }}</span>
+            </div>
+
+            {% include "construction/_opportunity_workflow_panel.html" %}
+
+            {% if opp.notes %}
+              <details style="border-radius:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);padding:10px 12px;">
+                <summary style="cursor:pointer;font-size:.78rem;font-weight:800;color:rgba(255,255,255,.55);">View notes and workflow history</summary>
+                <div style="margin-top:8px;font-size:.78rem;color:rgba(255,255,255,.58);line-height:1.55;white-space:pre-wrap;">{{ opp.notes }}</div>
+              </details>
+            {% endif %}
+
+            <div style="display:grid;gap:10px;">
+              <form method="POST" action="{{ url_for('construction_office.update_package_status', opportunity_id=opp.id) }}" style="display:grid;gap:8px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="status" value="approved_to_submit">
+                <textarea name="workflow_note" rows="2" placeholder="Approval note, conditions, or items to watch before sending..." style="padding:10px 12px;border-radius:10px;border:1px solid rgba(44,182,125,.22);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                <button type="submit" class="re-btn primary sm" style="justify-self:end;">Approve / Sign Off</button>
+              </form>
+
+              <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                <form method="POST" action="{{ url_for('construction_office.update_package_status', opportunity_id=opp.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="status" value="draft_bid_prepared">
+                  <input type="hidden" name="workflow_note" value="Returned to Sandra for revisions.">
+                  <button type="submit" class="re-btn ghost sm">Send Back to Sandra</button>
+                </form>
+                <form method="POST" action="{{ url_for('construction_office.update_package_status', opportunity_id=opp.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="status" value="jamaine_review_needed">
+                  <input type="hidden" name="workflow_note" value="Returned to Jamaine for field review.">
+                  <button type="submit" class="re-btn ghost sm">Send Back to Jamaine</button>
+                </form>
+                <form method="POST" action="{{ url_for('construction_office.update_package_status', opportunity_id=opp.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="status" value="bid_submitted">
+                  <input type="hidden" name="workflow_note" value="Proposal marked sent to client.">
+                  <button type="submit" class="re-btn ghost sm">Sent to Client</button>
+                </form>
+                <form method="POST" action="{{ url_for('construction_office.update_package_status', opportunity_id=opp.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="status" value="no_bid">
+                  <input type="hidden" name="workflow_note" value="Opportunity declined at approval review.">
+                  <button type="submit" class="re-btn ghost sm">No Bid</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="re-empty">No construction bids waiting for approval right now.</div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
