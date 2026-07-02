@@ -156,46 +156,58 @@ def search_page():
             .all()
         )
 
+    # City used for quick search links — param → partner city → fallback
+    bid_city = (request.args.get("bid_city") or "").strip()
+    if not bid_city and partner:
+        bid_city = (getattr(partner, "city", "") or "").strip()
+    if not bid_city:
+        bid_city = "your area"
+
+    def _qs(term):
+        """URL-encode a city+term search query for Google."""
+        from urllib.parse import quote_plus
+        return "https://www.google.com/search?q=" + quote_plus(f"{bid_city} {term}")
+
     search_terms = [
         {
-            "label": "Tampa Demo Jobs",
-            "url": "https://www.google.com/search?q=Tampa+demo+construction+bid+opportunities",
+            "label": f"Demo Jobs",
+            "url": _qs("demo construction bid opportunities"),
             "note": "Demolition, cleanout, teardown, and removal leads.",
         },
         {
             "label": "Small GC Jobs",
-            "url": "https://www.google.com/search?q=Tampa+small+GC+construction+bid+opportunities",
+            "url": _qs("small GC construction bid opportunities"),
             "note": "Small general contracting, repair, and renovation work.",
         },
         {
-            "label": "Hillsborough Bids",
-            "url": "https://www.google.com/search?q=Hillsborough+County+construction+bids+demo+repair",
-            "note": "County/public bid leads around Tampa and Hillsborough.",
-        },
-        {
-            "label": "Pinellas Bids",
-            "url": "https://www.google.com/search?q=Pinellas+County+construction+bids+renovation+demo",
-            "note": "Nearby county opportunities for renovation and demo.",
+            "label": "County Bids",
+            "url": _qs("county construction bids demo repair"),
+            "note": "County and public bid leads in the area.",
         },
         {
             "label": "Ironwork",
-            "url": "https://www.google.com/search?q=Tampa+ironwork+subcontractor+bid+opportunities",
+            "url": _qs("ironwork subcontractor bid opportunities"),
             "note": "Steel, welding, stairs, rails, structural, and subcontractor work.",
         },
         {
             "label": "Property Preservation",
-            "url": "https://www.google.com/search?q=Tampa+property+preservation+contractor+opportunities",
+            "url": _qs("property preservation contractor opportunities"),
             "note": "REO, cleanup, turnover, maintenance, and preservation work.",
         },
         {
             "label": "Commercial Maintenance",
-            "url": "https://www.google.com/search?q=Tampa+commercial+property+maintenance+contractor+opportunities",
+            "url": _qs("commercial property maintenance contractor opportunities"),
             "note": "Recurring repair and maintenance opportunities.",
         },
         {
             "label": "Investor Renovations",
-            "url": "https://www.google.com/search?q=Tampa+investor+renovation+contractor+opportunities",
+            "url": _qs("investor renovation contractor opportunities"),
             "note": "Fix-and-flip and rental renovation work.",
+        },
+        {
+            "label": "New Construction",
+            "url": _qs("new construction subcontractor bid opportunities"),
+            "note": "Framing, trades, and new-build subcontractor work.",
         },
     ]
 
@@ -220,6 +232,7 @@ def search_page():
         partner=partner,
         recent_opportunities=recent_opportunities,
         search_terms=search_terms,
+        bid_city=bid_city,
         suggestions=suggestions,
         dismissed=dismissed,
     )

@@ -67,6 +67,9 @@ def create_john_headley(password: str):
                 category="Contractor",
                 type="Realtor",
                 specialty="Residential Renovation & Real Estate",
+                service_area="Tampa Bay, FL",
+                city="Tampa",
+                state="FL",
                 subscription_tier="Featured",
                 approved=True,
                 active=True,
@@ -90,6 +93,11 @@ def create_john_headley(password: str):
             partner.active                     = True
             partner.featured                   = True
             partner.status                     = "Active"
+            partner.category                   = partner.category or "Contractor"
+            partner.type                       = partner.type or "Realtor"
+            partner.service_area               = partner.service_area or "Tampa Bay, FL"
+            partner.city                       = partner.city or "Tampa"
+            partner.state                      = partner.state or "FL"
             partner.crm_enabled                = True
             partner.deal_visibility_enabled    = True
             partner.proposal_builder_enabled   = True
@@ -105,16 +113,21 @@ def create_john_headley(password: str):
             vip = VIPProfile(
                 user_id=user.id,
                 display_name=f"{FIRST_NAME} {LAST_NAME}",
+                business_name="John Headley Real Estate & Construction",
                 role_type="contractor_realtor",   # unlocks both VIP dashboards
                 assistant_name="Ravlo",
+                public_slug="john-headen",        # ties to the /p/john-headen landing page
                 marketplace_enabled="yes",
                 enabled_modules="contractor,realtor,crm,finances",
+                service_area="Tampa Bay, FL",
+                headline="Realtor & General Contractor — Tampa Bay Area",
             )
             db.session.add(vip)
             created_vip = True
         else:
-            vip.role_type          = "contractor_realtor"
+            vip.role_type           = "contractor_realtor"
             vip.marketplace_enabled = "yes"
+            vip.public_slug         = vip.public_slug or "john-headen"
 
         db.session.commit()
 
