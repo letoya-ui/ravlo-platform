@@ -52,7 +52,7 @@
       <div>
         <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">BID SEARCH + HANDOFF</div>
         <h3 style="margin:.25rem 0 0;font-size:1.05rem;">Find work. Save it. Send it to Sandra.</h3>
-        <p style="margin:6px 0 0;color:rgba(255,255,255,.5);font-size:.86rem;line-height:1.55;">Use quick Tampa searches, then save the real opportunity into Ravlo. Sandra prepares the bid package; Jamaine approves the field scope and number.</p>
+        <p style="margin:6px 0 0;color:rgba(255,255,255,.5);font-size:.86rem;line-height:1.55;">Use targeted searches for your market, then save the real opportunity into Ravlo. Sandra prepares the bid package; Jamaine approves the field scope and number.</p>
       </div>
       <a href="{{ url_for('construction_bids.search_page') if safe_url_for('construction_bids.search_page') else '#bid-search' }}" class="re-btn primary sm">Open Search Page</a>
     </div>
@@ -62,7 +62,7 @@
       <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:10px;">
         <input name="project_name" required placeholder="Project / opportunity name" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(95,168,255,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
         <input name="category" placeholder="Demo, GC, rehab, ironwork" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(95,168,255,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
-        <input name="location" placeholder="Tampa / county / address" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(95,168,255,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
+        <input name="location" placeholder="City, county, or address" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(95,168,255,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
         <input name="source" placeholder="Source or link" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(95,168,255,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">

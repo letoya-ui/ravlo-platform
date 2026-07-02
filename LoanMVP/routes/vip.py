@@ -191,28 +191,20 @@ def _default_vip_role_for_partner(partner):
     if not partner:
         return "partner"
 
-    if _partner_role_mentions(partner, "insurance", "insurer"):
-        return "insurance"
+    is_realtor    = _partner_role_mentions(partner, "realtor", "real estate", "real-estate", "realty")
+    is_contractor = _partner_role_mentions(partner, "contractor", "construction", "builder", "general contractor")
+    is_insurance  = _partner_role_mentions(partner, "insurance", "insurer")
 
-    is_realtor = _partner_role_mentions(
-        partner,
-        "realtor",
-        "real estate",
-        "real-estate",
-        "realty",
-    )
-    is_contractor = _partner_role_mentions(
-        partner,
-        "contractor",
-        "construction",
-        "builder",
-        "general contractor",
-    )
+    if is_insurance and is_realtor:
+        return "insurance_realtor"
     if is_realtor and is_contractor:
         return "contractor_realtor"
-
-    if _partner_role_mentions(partner, "realtor", "real estate", "real-estate", "realty"):
+    if is_insurance:
+        return "insurance"
+    if is_realtor:
         return "realtor"
+    if is_contractor:
+        return "contractor"
 
     raw_category = (getattr(partner, "category", "") or "").strip().lower()
     role_map = {
@@ -618,6 +610,14 @@ def index():
     if profile.role_type in ("loan_officer", "lender"):
         return redirect(url_for("loan_officer.dashboard"))
 
+    # Auto-upgrade role_type when partner records reveal a compound profession
+    # (e.g., profile stored as "insurance" but partner is also a realtor).
+    _COMPOUND_ROLES = {"contractor_realtor", "insurance_realtor"}
+    better_role = _default_vip_role_for_partner(partner)
+    if better_role in _COMPOUND_ROLES and profile.role_type != better_role:
+        profile.role_type = better_role
+        db.session.commit()
+
     # Realtors require a paid VIP tier. Send non-upgraded realtors to the
     # upgrade page so there is a single funnel into the VIP experience.
     if profile.role_type == "realtor" and not partner_has_vip_access(current_user):
@@ -625,17 +625,22 @@ def index():
         if gate is not None:
             return gate
 
-    if profile.role_type == "realtor" and _partner_role_mentions(partner, "insurance", "insurer"):
-        return redirect(url_for("vip.insurance_dashboard"))
+    # Hybrid partners can pick which dashboard to enter via ?role=realtor/contractor
+    if profile.role_type in _COMPOUND_ROLES:
+        mode = (request.args.get("role") or "").strip().lower()
+        if mode == "realtor":
+            return redirect(url_for("vip.realtor_dashboard"))
+        if mode == "contractor":
+            return redirect(url_for("vip.contractor_dashboard"))
 
     role_map = {
-        "realtor":           "vip.realtor_dashboard",
-        "contractor":        "vip.contractor_dashboard",
+        "realtor":            "vip.realtor_dashboard",
+        "contractor":         "vip.contractor_dashboard",
         "contractor_realtor": "vip.contractor_dashboard",
-        "designer":          "vip.designer_dashboard",
-        "insurance":         "vip.insurance_dashboard",
-        "insurance_realtor": "vip.insurance_dashboard",
-        "partner":           "vip.partner_dashboard",
+        "designer":           "vip.designer_dashboard",
+        "insurance":          "vip.insurance_dashboard",
+        "insurance_realtor":  "vip.insurance_dashboard",
+        "partner":            "vip.partner_dashboard",
     }
     return redirect(url_for(role_map.get(profile.role_type, "vip.partner_dashboard")))
 
