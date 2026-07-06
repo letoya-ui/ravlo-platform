@@ -116,8 +116,7 @@ def create_john_headley(password: str):
         else:
             vip.role_type          = "contractor_realtor"
             vip.marketplace_enabled = "yes"
-            if not vip.public_slug:
-                vip.public_slug = "john-headley"
+            vip.public_slug         = "john-headley"
 
         db.session.commit()
 
