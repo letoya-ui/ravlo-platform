@@ -207,6 +207,7 @@ def _handle_lead_capture(slug: str):
         preferred_areas=preferred_areas or None,
         budget=budget or None,
         market=primary_market,
+        assigned_member_id=getattr(profile, "user_id", None),
     )
     db.session.add(lead)
 
