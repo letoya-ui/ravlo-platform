@@ -35,7 +35,7 @@ public_pages_bp = Blueprint("public_pages", __name__, url_prefix="/p")
 # generic realtor_landing.html.
 SLUG_TEMPLATES: dict[str, str] = {
     "bonnie-sells-oc-homes": "public/bonnie_landing.html",
-    "john-headen":           "public/john_headen_landing.html",
+    "john-headley":           "public/john_headen_landing.html",
 }
 
 # Fallback context for white-label pages that don't have a VIPProfile row yet.
@@ -44,12 +44,12 @@ SLUG_TEMPLATES: dict[str, str] = {
 # User email for the real account that owns each static-context slug.
 # Leads submitted through their page are created in the CRM assigned to this user.
 SLUG_OWNER_EMAILS: dict[str, str] = {
-    "john-headen": "Jsecond1212@gmail.com",
+    "john-headley": "Jsecond1212@gmail.com",
 }
 
 SLUG_STATIC_CONTEXT: dict[str, dict] = {
-    "john-headen": {
-        "profile":          SimpleNamespace(public_slug="john-headen"),
+    "john-headley": {
+        "profile":          SimpleNamespace(public_slug="john-headley"),
         "display_name":     "John Headley",
         "headline":         "Realtor & Contractor — Paid at Closing",
         "bio":              "",
