@@ -152,6 +152,7 @@ def _platform_access() -> tuple:
         allowed_track = _ROLE_TRACK.get(role)  # None = unrestricted
         return tier_key, _user_display_name(current_user), allowed_track
     except Exception:
+        current_app.logger.exception("_platform_access failed")
         return None, None, None
 
 
