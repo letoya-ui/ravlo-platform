@@ -9,6 +9,7 @@ from LoanMVP.extensions import db
 from flask_mail import Message as MailMessage
 
 from LoanMVP.extensions import mail
+from LoanMVP.utils.safe_http import safe_call
 from LoanMVP.models.contractor_models import (
     BidProposal, BidSuggestion, ContractorBidOpportunity, ConstructionProject,
 )
@@ -678,7 +679,7 @@ def bid_proposal_send(bid_id):
 </table>
 </body></html>""",
             )
-            mail.send(msg)
+            safe_call(mail.send, msg)
             flash(f"Proposal sent to {proposal.client_email}.", "success")
         except Exception as exc:
             current_app.logger.warning("[bid_proposal_send] email failed: %s", exc)

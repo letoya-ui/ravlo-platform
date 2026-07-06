@@ -1,5 +1,6 @@
 from flask_mail import Message
 from LoanMVP.app import mail
+from LoanMVP.utils.safe_http import safe_call
 
 def send_email_with_attachment(to, subject, html_body, file_path):
     msg = Message(
@@ -16,7 +17,7 @@ def send_email_with_attachment(to, subject, html_body, file_path):
             data=f.read()
         )
 
-    mail.send(msg)
+    safe_call(mail.send, msg)
 
 
 def send_email(to, subject, html_body, text_body=None):
@@ -27,4 +28,4 @@ def send_email(to, subject, html_body, text_body=None):
         body=text_body or "Please view this email in HTML format."
     )
 
-    mail.send(msg)
+    safe_call(mail.send, msg)
