@@ -1,0 +1,777 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% set color = status_color.get(project.status, '#5FA8FF') %}
+{% set active = active_tab or 'overview' %}
+
+{% block title %}{{ project.project_name }}{% endblock %}
+{% block page_title %}{{ project.project_name }}{% endblock %}
+{% block page_subline %}Construction Project #{{ project.id }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('construction_projects.project_list') }}" class="re-btn ghost sm">
+    <i class="lucide lucide-arrow-left"></i> All Projects
+  </a>
+  {% if project.bid %}
+  <a href="{{ url_for('construction_bids.bid_proposal', bid_id=project.bid.id) }}" class="re-btn ghost sm">
+    <i class="lucide lucide-file-text"></i> Proposal
+  </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+{# ── Header strip ── #}
+<div class="re-card pad" style="margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+  <div>
+    <div style="font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:4px;">{{ project.project_name }}</div>
+    <div style="font-size:.8rem;color:rgba(255,255,255,.4);">
+      {{ project.category or '—' }}
+      {% if project.location %} &nbsp;·&nbsp; {{ project.location }}{% endif %}
+      {% if project.source %} &nbsp;·&nbsp; {{ project.source }}{% endif %}
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    {% if project.contract_amount %}
+    <div style="font-size:1.35rem;font-weight:800;color:#f5b942;">${{ '{:,.0f}'.format(project.contract_amount) }}</div>
+    {% endif %}
+    {% if co_approved_total %}
+    <div style="font-size:.8rem;color:rgba(245,185,66,.6);">
+      +${{ '{:,.0f}'.format(co_approved_total) }} COs
+    </div>
+    {% endif %}
+    <span style="padding:6px 16px;border-radius:20px;font-size:.78rem;font-weight:700;
+                 background:{{ color }}18;color:{{ color }};border:1px solid {{ color }}44;">
+      {{ status_label.get(project.status, project.status) }}
+    </span>
+  </div>
+</div>
+
+{# ── Tab bar ── #}
+<div class="proj-tabs" style="margin-bottom:20px;">
+  {% for tab_key, tab_label, tab_icon in [
+    ('overview',      'Overview',       'lucide-layout-grid'),
+    ('daily-log',     'Daily Log',      'lucide-notebook-pen'),
+    ('schedule',      'Schedule',       'lucide-calendar-check'),
+    ('photos',        'Photos',         'lucide-image'),
+    ('expenses',      'Expenses',       'lucide-receipt'),
+    ('invoices',      'Invoices',       'lucide-file-invoice'),
+    ('change-orders', 'Change Orders',  'lucide-git-branch'),
+  ] %}
+  {% set counts = {
+    'daily-log':     daily_logs | length,
+    'schedule':      milestones | length,
+    'photos':        photos | length,
+    'expenses':      expense_items | length,
+    'invoices':      invoices | length,
+    'change-orders': change_orders | length,
+  } %}
+  <a href="{{ url_for('construction_projects.project_detail', project_id=project.id, tab=tab_key) }}"
+     class="proj-tab {% if active == tab_key %}active{% endif %}">
+    <i class="lucide {{ tab_icon }}"></i>
+    {{ tab_label }}
+    {% if tab_key in counts and counts[tab_key] > 0 %}
+    <span class="proj-tab-badge">{{ counts[tab_key] }}</span>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+{# ══════════════════════════════════════════════════════ OVERVIEW ══ #}
+{% if active == 'overview' %}
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;">
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    {# Key dates #}
+    <section class="re-card pad">
+      <div class="re-card-eyebrow">Key Dates</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:12px;">
+        {% for label, val in [
+          ('Bid / Award', project.bid_date),
+          ('Start Date',  project.start_date),
+          ('Est. Completion', project.estimated_completion),
+          ('Actual Completion', project.actual_completion),
+          ('Created', project.created_at),
+          ('Last Updated', project.updated_at),
+        ] %}
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:3px;">{{ label }}</div>
+          <div style="font-size:.85rem;color:rgba(255,255,255,.8);">{{ val.strftime('%b %d, %Y') if val else '—' }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    {# Summary cards #}
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+      <div class="re-card pad" style="text-align:center;">
+        <div style="font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Expenses</div>
+        <div style="font-size:1.25rem;font-weight:800;color:#f87171;">${{ '{:,.0f}'.format(expense_total) }}</div>
+      </div>
+      <div class="re-card pad" style="text-align:center;">
+        <div style="font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Invoiced</div>
+        <div style="font-size:1.25rem;font-weight:800;color:#2cb67d;">${{ '{:,.0f}'.format(invoice_total) }}</div>
+      </div>
+      <div class="re-card pad" style="text-align:center;">
+        <div style="font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Change Orders</div>
+        <div style="font-size:1.25rem;font-weight:800;color:#a78bfa;">{{ change_orders | length }}</div>
+      </div>
+    </div>
+
+    {# Edit fields #}
+    <section class="re-card pad">
+      <div class="re-card-eyebrow">Edit Project Details</div>
+      <form method="POST" action="{{ url_for('construction_projects.update_fields', project_id=project.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
+          {% for label, name, typ, val, ph in [
+            ('Contract Amount ($)', 'contract_amount', 'text',  '{:,.0f}'.format(project.contract_amount) if project.contract_amount else '', 'e.g. 85000'),
+            ('Category',           'category',        'text',  project.category or '',     'Demo, Renovation…'),
+            ('Location',           'location',        'text',  project.location or '',     'City, State'),
+            ('Start Date',         'start_date',      'date',  project.start_date.strftime('%Y-%m-%d') if project.start_date else '', ''),
+            ('Est. Completion',    'estimated_completion', 'date', project.estimated_completion.strftime('%Y-%m-%d') if project.estimated_completion else '', ''),
+            ('Actual Completion',  'actual_completion',    'date', project.actual_completion.strftime('%Y-%m-%d') if project.actual_completion else '', ''),
+            ('Project Manager',    'project_manager',    'text', project.project_manager or '',    ''),
+            ('Coordinator',        'office_coordinator', 'text', project.office_coordinator or '', ''),
+            ('Executive',          'executive',          'text', project.executive or '',          ''),
+          ] %}
+          <div>
+            <label style="font-size:.72rem;color:rgba(255,255,255,.4);display:block;margin-bottom:4px;">{{ label }}</label>
+            <input type="{{ typ }}" name="{{ name }}" value="{{ val }}" placeholder="{{ ph }}"
+                   style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#fff;font-size:.85rem;">
+          </div>
+          {% endfor %}
+        </div>
+        <div style="margin-top:12px;text-align:right;">
+          <button type="submit" class="re-btn primary sm">Save Changes</button>
+        </div>
+      </form>
+    </section>
+
+    {# Notes #}
+    <section class="re-card pad">
+      <div class="re-card-eyebrow">Notes</div>
+      {% if project.notes %}
+      <div style="margin:12px 0;">
+        {% for line in project.notes.split('\n\n') %}
+        <div style="font-size:.82rem;color:rgba(255,255,255,.6);padding:9px 12px;border-left:2px solid rgba(255,255,255,.1);margin-bottom:6px;white-space:pre-wrap;word-break:break-word;">{{ line }}</div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="font-size:.82rem;color:rgba(255,255,255,.25);margin:12px 0;">No notes yet.</div>
+      {% endif %}
+      <form method="POST" action="{{ url_for('construction_projects.update_notes', project_id=project.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <textarea name="note" rows="3" placeholder="Add a note…"
+                  style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#fff;font-size:.85rem;resize:vertical;"></textarea>
+        <div style="margin-top:8px;text-align:right;">
+          <button type="submit" class="re-btn primary sm">Add Note</button>
+        </div>
+      </form>
+    </section>
+
+  </div>
+
+  {# Right column #}
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    <section class="re-card pad">
+      <div class="re-card-eyebrow">Update Status</div>
+      <form method="POST" action="{{ url_for('construction_projects.update_status', project_id=project.id) }}" style="margin-top:12px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+          {% for key, label, sc in statuses %}
+          <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;
+                        {% if project.status == key %}background:{{ sc }}14;border:1px solid {{ sc }}44;{% else %}background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);{% endif %}">
+            <input type="radio" name="status" value="{{ key }}" {% if project.status == key %}checked{% endif %}
+                   style="accent-color:{{ sc }};">
+            <span style="font-size:.82rem;font-weight:{% if project.status == key %}600{% else %}400{% endif %};
+                         color:{% if project.status == key %}{{ sc }}{% else %}rgba(255,255,255,.5){% endif %};">{{ label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+        <button type="submit" class="re-btn primary sm" style="width:100%;">Update Status</button>
+      </form>
+    </section>
+
+    <section class="re-card pad">
+      <div class="re-card-eyebrow">Project Team</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
+        {% for role, val in [('Project Manager', project.project_manager), ('Coordinator', project.office_coordinator), ('Executive', project.executive)] %}
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:2px;">{{ role }}</div>
+          <div style="font-size:.88rem;font-weight:600;color:#fff;">{{ val or '—' }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="re-card pad">
+      <div class="re-card-eyebrow">Value</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:2px;">Bid Estimate</div>
+          <div style="font-size:.9rem;color:rgba(255,255,255,.6);">{% if project.estimated_value %}${{ '{:,.0f}'.format(project.estimated_value) }}{% else %}—{% endif %}</div>
+        </div>
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:2px;">Contract Amount</div>
+          <div style="font-size:1.05rem;font-weight:700;color:#f5b942;">{% if project.contract_amount %}${{ '{:,.0f}'.format(project.contract_amount) }}{% else %}—{% endif %}</div>
+        </div>
+        {% if co_approved_total %}
+        <div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:2px;">Approved COs</div>
+          <div style="font-size:.9rem;font-weight:600;color:#a78bfa;">+${{ '{:,.0f}'.format(co_approved_total) }}</div>
+        </div>
+        <div style="padding-top:8px;border-top:1px solid rgba(255,255,255,.07);">
+          <div style="font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:2px;">Revised Total</div>
+          <div style="font-size:1.1rem;font-weight:800;color:#f5b942;">${{ '{:,.0f}'.format((project.contract_amount or 0) + co_approved_total) }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if project.bid %}
+    <section class="re-card pad" style="background:rgba(44,182,125,.04);border-color:rgba(44,182,125,.15);">
+      <div style="font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(44,182,125,.6);margin-bottom:10px;">Source Bid</div>
+      <div style="font-size:.85rem;color:rgba(255,255,255,.6);margin-bottom:4px;">{{ project.bid.project_name }}</div>
+      <div style="font-size:.75rem;color:rgba(255,255,255,.3);margin-bottom:10px;">Status: {{ project.bid.status.replace('_',' ').title() }}</div>
+      <a href="{{ url_for('construction_bids.bid_proposal', bid_id=project.bid.id) }}"
+         style="font-size:.78rem;color:#2cb67d;text-decoration:none;font-weight:600;">View / Edit Proposal →</a>
+    </section>
+    {% endif %}
+
+  </div>
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════ DAILY LOG ══ #}
+{% if active == 'daily-log' %}
+<div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;">
+
+  <div>
+    {% if daily_logs %}
+    {% for log in daily_logs %}
+    <div class="re-card pad" style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;">
+        <div style="font-weight:700;color:#fff;font-size:.9rem;">{{ log.log_date.strftime('%A, %B %d, %Y') }}</div>
+        <div style="display:flex;gap:10px;font-size:.75rem;color:rgba(255,255,255,.35);">
+          {% if log.crew_size %}<span>{{ log.crew_size }} crew</span>{% endif %}
+          {% if log.weather %}<span>{{ log.weather }}</span>{% endif %}
+          {% if log.created_by %}<span>by {{ log.created_by }}</span>{% endif %}
+        </div>
+      </div>
+      <div style="font-size:.83rem;color:rgba(255,255,255,.7);white-space:pre-wrap;">{{ log.work_done }}</div>
+      {% if log.issues %}
+      <div style="margin-top:10px;padding:8px 12px;background:rgba(248,113,113,.07);border-left:3px solid rgba(248,113,113,.4);border-radius:4px;font-size:.8rem;color:rgba(248,113,113,.9);">
+        <strong>Issues:</strong> {{ log.issues }}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="re-empty">No log entries yet.</div>
+    {% endif %}
+  </div>
+
+  <div>
+    <section class="re-card pad">
+      <div class="re-card-eyebrow">Add Log Entry</div>
+      <form method="POST" action="{{ url_for('construction_projects.add_daily_log', project_id=project.id) }}" style="margin-top:12px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Date</label>
+          <input type="date" name="log_date" class="proj-input"
+                 value="{{ now.strftime('%Y-%m-%d') if now else '' }}">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+          <div>
+            <label class="proj-label">Crew Size</label>
+            <input type="number" name="crew_size" class="proj-input" placeholder="e.g. 4" min="0">
+          </div>
+          <div>
+            <label class="proj-label">Weather</label>
+            <input type="text" name="weather" class="proj-input" placeholder="Sunny, Rain…">
+          </div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Work Done *</label>
+          <textarea name="work_done" rows="4" class="proj-input" required placeholder="Describe what was completed today…" style="resize:vertical;"></textarea>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="proj-label">Issues / Delays</label>
+          <textarea name="issues" rows="2" class="proj-input" placeholder="Any blockers or problems…" style="resize:vertical;"></textarea>
+        </div>
+        <button type="submit" class="re-btn primary sm" style="width:100%;">Add Entry</button>
+      </form>
+    </section>
+  </div>
+
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════ SCHEDULE ══ #}
+{% if active == 'schedule' %}
+<div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;">
+
+  <div>
+    {% if milestones %}
+    {% for ms in milestones %}
+    {% set done = ms.completed_at is not none %}
+    <div class="re-card pad" style="margin-bottom:10px;{% if done %}opacity:.65;{% endif %}">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <form method="POST" action="{{ url_for('construction_projects.complete_milestone', project_id=project.id, milestone_id=ms.id) }}" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" title="Toggle complete"
+                  style="width:22px;height:22px;border-radius:50%;border:2px solid {% if done %}#2cb67d{% else %}rgba(255,255,255,.25){% endif %};background:{% if done %}#2cb67d{% else %}transparent{% endif %};cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+            {% if done %}<i class="lucide lucide-check" style="color:#fff;font-size:.7rem;"></i>{% endif %}
+          </button>
+        </form>
+        <div style="flex:1;">
+          <div style="font-size:.88rem;font-weight:{% if done %}400{% else %}600{% endif %};color:{% if done %}rgba(255,255,255,.4){% else %}#fff{% endif %};{% if done %}text-decoration:line-through;{% endif %}">{{ ms.title }}</div>
+          {% if ms.due_date %}
+          <div style="font-size:.75rem;color:rgba(255,255,255,.35);margin-top:2px;">
+            {% set days = (ms.due_date - now.date()).days if now else 0 %}
+            Due {{ ms.due_date.strftime('%b %d, %Y') }}
+            {% if not done %}
+            {% if days < 0 %}<span style="color:#f87171;"> · {{ -days }}d overdue</span>
+            {% elif days <= 3 %}<span style="color:#f5b942;"> · {{ days }}d left</span>
+            {% endif %}
+            {% endif %}
+          </div>
+          {% endif %}
+          {% if ms.notes %}<div style="font-size:.78rem;color:rgba(255,255,255,.4);margin-top:4px;">{{ ms.notes }}</div>{% endif %}
+        </div>
+        {% if done %}
+        <div style="font-size:.72rem;color:#2cb67d;">✓ {{ ms.completed_at.strftime('%b %d') }}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="re-empty">No milestones yet. Add one to track the schedule.</div>
+    {% endif %}
+  </div>
+
+  <div>
+    <section class="re-card pad">
+      <div class="re-card-eyebrow">Add Milestone</div>
+      <form method="POST" action="{{ url_for('construction_projects.add_milestone', project_id=project.id) }}" style="margin-top:12px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Title *</label>
+          <input type="text" name="title" class="proj-input" required placeholder="e.g. Demo complete">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Due Date</label>
+          <input type="date" name="due_date" class="proj-input">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="proj-label">Notes</label>
+          <textarea name="notes" rows="2" class="proj-input" placeholder="Optional details…" style="resize:vertical;"></textarea>
+        </div>
+        <button type="submit" class="re-btn primary sm" style="width:100%;">Add Milestone</button>
+      </form>
+    </section>
+  </div>
+
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════ PHOTOS ══ #}
+{% if active == 'photos' %}
+<div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;">
+
+  <div>
+    {% if photos %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
+      {% for photo in photos %}
+      <div class="re-card" style="overflow:hidden;">
+        <img src="{{ photo.url }}" alt="{{ photo.caption or 'Job photo' }}"
+             style="width:100%;height:180px;object-fit:cover;display:block;"
+             onerror="this.style.display='none'">
+        <div style="padding:10px 12px;">
+          {% if photo.phase %}
+          <span style="font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                       padding:2px 8px;border-radius:10px;
+                       background:{% if photo.phase=='before' %}rgba(248,113,113,.12){% elif photo.phase=='after' %}rgba(44,182,125,.12){% else %}rgba(95,168,255,.12){% endif %};
+                       color:{% if photo.phase=='before' %}#f87171{% elif photo.phase=='after' %}#2cb67d{% else %}#5FA8FF{% endif %};">
+            {{ photo.phase | title }}
+          </span>
+          {% endif %}
+          {% if photo.caption %}<div style="font-size:.8rem;color:rgba(255,255,255,.6);margin-top:6px;">{{ photo.caption }}</div>{% endif %}
+          <div style="font-size:.72rem;color:rgba(255,255,255,.25);margin-top:4px;">{{ photo.created_at.strftime('%b %d, %Y') }}{% if photo.created_by %} · {{ photo.created_by }}{% endif %}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="re-empty">No photos yet. Add a photo URL below.</div>
+    {% endif %}
+  </div>
+
+  <div>
+    <section class="re-card pad">
+      <div class="re-card-eyebrow">Add Photo</div>
+      <form method="POST" action="{{ url_for('construction_projects.add_photo', project_id=project.id) }}" style="margin-top:12px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Photo URL *</label>
+          <input type="url" name="url" class="proj-input" required placeholder="https://…">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Phase</label>
+          <select name="phase" class="proj-input">
+            <option value="">— select —</option>
+            <option value="before">Before</option>
+            <option value="during">During</option>
+            <option value="after">After</option>
+          </select>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="proj-label">Caption</label>
+          <input type="text" name="caption" class="proj-input" placeholder="Optional note…">
+        </div>
+        <button type="submit" class="re-btn primary sm" style="width:100%;">Add Photo</button>
+      </form>
+    </section>
+  </div>
+
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════ EXPENSES ══ #}
+{% if active == 'expenses' %}
+<div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;">
+
+  <div>
+    {% if expense_items %}
+    <div class="re-card pad" style="margin-bottom:14px;display:flex;gap:24px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Total Expenses</div>
+        <div style="font-size:1.5rem;font-weight:800;color:#f87171;">${{ '{:,.2f}'.format(expense_total) }}</div>
+      </div>
+      {% if project.contract_amount %}
+      <div>
+        <div style="font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Contract Amount</div>
+        <div style="font-size:1.5rem;font-weight:800;color:#f5b942;">${{ '{:,.2f}'.format(project.contract_amount) }}</div>
+      </div>
+      <div>
+        <div style="font-size:.65rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Remaining</div>
+        {% set remaining = (project.contract_amount or 0) - expense_total %}
+        <div style="font-size:1.5rem;font-weight:800;color:{% if remaining >= 0 %}#2cb67d{% else %}#f87171{% endif %};">
+          {% if remaining < 0 %}–{% endif %}${{ '{:,.2f}'.format(remaining | abs) }}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="re-table-wrap">
+      <table class="re-table">
+        <thead><tr>
+          <th>Description</th>
+          <th>Category</th>
+          <th>Vendor</th>
+          <th>Paid</th>
+          <th style="text-align:right;">Amount</th>
+        </tr></thead>
+        <tbody>
+          {% for e in expense_items %}
+          <tr>
+            <td style="font-size:.85rem;">{{ e.description }}</td>
+            <td style="font-size:.8rem;color:rgba(255,255,255,.5);">{{ e.category or '—' }}</td>
+            <td style="font-size:.8rem;color:rgba(255,255,255,.5);">{{ e.vendor or '—' }}</td>
+            <td style="font-size:.78rem;color:rgba(255,255,255,.4);">{{ e.paid_date.strftime('%b %d') if e.paid_date else '—' }}</td>
+            <td style="font-weight:700;color:#f87171;text-align:right;">${{ '{:,.2f}'.format(e.amount) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="re-empty">No expenses recorded yet.</div>
+    {% endif %}
+  </div>
+
+  <div>
+    <section class="re-card pad">
+      <div class="re-card-eyebrow">Add Expense</div>
+      <form method="POST" action="{{ url_for('construction_projects.add_expense', project_id=project.id) }}" style="margin-top:12px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Description *</label>
+          <input type="text" name="description" class="proj-input" required placeholder="e.g. Lumber delivery">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Category</label>
+          <select name="category" class="proj-input">
+            <option value="Labor">Labor</option>
+            <option value="Materials">Materials</option>
+            <option value="Subcontractor">Subcontractor</option>
+            <option value="Equipment">Equipment</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Amount ($) *</label>
+          <input type="number" name="amount" class="proj-input" required placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Vendor</label>
+          <input type="text" name="vendor" class="proj-input" placeholder="Vendor or payee">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="proj-label">Paid Date</label>
+          <input type="date" name="paid_date" class="proj-input">
+        </div>
+        <button type="submit" class="re-btn primary sm" style="width:100%;">Add Expense</button>
+      </form>
+    </section>
+  </div>
+
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════ INVOICES ══ #}
+{% if active == 'invoices' %}
+{% set inv_color = {'draft':'rgba(255,255,255,.3)','sent':'#5FA8FF','paid':'#2cb67d','overdue':'#f87171'} %}
+
+<div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;">
+
+  <div>
+    {% if invoices %}
+    <div class="re-table-wrap">
+      <table class="re-table">
+        <thead><tr>
+          <th>#</th>
+          <th>Description</th>
+          <th>Issued</th>
+          <th>Due</th>
+          <th style="text-align:right;">Amount</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr></thead>
+        <tbody>
+          {% for inv in invoices %}
+          <tr>
+            <td style="font-size:.8rem;font-weight:600;color:rgba(255,255,255,.5);">{{ inv.invoice_number or '—' }}</td>
+            <td style="font-size:.85rem;">{{ inv.description or '—' }}</td>
+            <td style="font-size:.78rem;color:rgba(255,255,255,.4);">{{ inv.issued_date.strftime('%b %d') if inv.issued_date else '—' }}</td>
+            <td style="font-size:.78rem;color:rgba(255,255,255,.4);">{{ inv.due_date.strftime('%b %d') if inv.due_date else '—' }}</td>
+            <td style="font-weight:700;color:#2cb67d;text-align:right;">${{ '{:,.2f}'.format(inv.amount) }}</td>
+            <td>
+              <span style="font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:10px;
+                           color:{{ inv_color.get(inv.status,'rgba(255,255,255,.4)') }};
+                           background:{{ inv_color.get(inv.status,'rgba(255,255,255,.4)') }}18;">
+                {{ inv.status | title }}
+              </span>
+            </td>
+            <td>
+              <form method="POST" action="{{ url_for('construction_projects.update_invoice_status', project_id=project.id, invoice_id=inv.id) }}" style="margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="status" onchange="this.form.submit()"
+                        style="font-size:.75rem;padding:4px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#fff;cursor:pointer;">
+                  {% for s in ['draft','sent','paid','overdue'] %}
+                  <option value="{{ s }}" {% if inv.status == s %}selected{% endif %}>{{ s | title }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;text-align:right;font-size:.85rem;color:rgba(255,255,255,.4);">
+      Total invoiced: <strong style="color:#2cb67d;">${{ '{:,.2f}'.format(invoice_total) }}</strong>
+    </div>
+    {% else %}
+    <div class="re-empty">No invoices yet.</div>
+    {% endif %}
+  </div>
+
+  <div>
+    <section class="re-card pad">
+      <div class="re-card-eyebrow">Create Invoice</div>
+      <form method="POST" action="{{ url_for('construction_projects.add_invoice', project_id=project.id) }}" style="margin-top:12px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Invoice # (auto if blank)</label>
+          <input type="text" name="invoice_number" class="proj-input" placeholder="INV-0001">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Description</label>
+          <textarea name="description" rows="2" class="proj-input" placeholder="What's being invoiced…" style="resize:vertical;"></textarea>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Amount ($) *</label>
+          <input type="number" name="amount" class="proj-input" required placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+          <div>
+            <label class="proj-label">Issued Date</label>
+            <input type="date" name="issued_date" class="proj-input">
+          </div>
+          <div>
+            <label class="proj-label">Due Date</label>
+            <input type="date" name="due_date" class="proj-input">
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="proj-label">Status</label>
+          <select name="status" class="proj-input">
+            <option value="draft">Draft</option>
+            <option value="sent">Sent</option>
+            <option value="paid">Paid</option>
+          </select>
+        </div>
+        <button type="submit" class="re-btn primary sm" style="width:100%;">Create Invoice</button>
+      </form>
+    </section>
+  </div>
+
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════ CHANGE ORDERS ══ #}
+{% if active == 'change-orders' %}
+{% set co_color = {'pending':'#f5b942','approved':'#2cb67d','rejected':'#f87171'} %}
+
+<div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;">
+
+  <div>
+    {% if change_orders %}
+    {% for co in change_orders %}
+    <div class="re-card pad" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;">
+        <div>
+          <div style="font-weight:700;font-size:.9rem;color:#fff;">{{ co.title }}</div>
+          {% if co.description %}<div style="font-size:.8rem;color:rgba(255,255,255,.5);margin-top:3px;">{{ co.description }}</div>{% endif %}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          {% if co.amount is not none %}
+          <div style="font-size:.95rem;font-weight:700;color:{% if co.amount >= 0 %}#f5b942{% else %}#f87171{% endif %};">
+            {% if co.amount >= 0 %}+{% endif %}${{ '{:,.2f}'.format(co.amount) }}
+          </div>
+          {% endif %}
+          <span style="font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:10px;
+                       color:{{ co_color.get(co.status,'#fff') }};
+                       background:{{ co_color.get(co.status,'rgba(255,255,255,.1)') }}18;
+                       border:1px solid {{ co_color.get(co.status,'rgba(255,255,255,.15)') }}44;">
+            {{ co.status | title }}
+          </span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;font-size:.75rem;color:rgba(255,255,255,.3);">
+        {% if co.requested_by %}<span>Requested by {{ co.requested_by }}</span>{% endif %}
+        {% if co.approved_by %}<span>· Approved by {{ co.approved_by }} {{ co.approved_at.strftime('%b %d') if co.approved_at else '' }}</span>{% endif %}
+        <span>· {{ co.created_at.strftime('%b %d, %Y') }}</span>
+      </div>
+      {% if co.status == 'pending' %}
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <form method="POST" action="{{ url_for('construction_projects.update_change_order_status', project_id=project.id, co_id=co.id) }}" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="status" value="approved">
+          <button type="submit" class="re-btn sm" style="background:rgba(44,182,125,.15);color:#2cb67d;border-color:rgba(44,182,125,.3);">Approve</button>
+        </form>
+        <form method="POST" action="{{ url_for('construction_projects.update_change_order_status', project_id=project.id, co_id=co.id) }}" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="status" value="rejected">
+          <button type="submit" class="re-btn sm" style="background:rgba(248,113,113,.1);color:#f87171;border-color:rgba(248,113,113,.25);">Reject</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="re-empty">No change orders yet.</div>
+    {% endif %}
+  </div>
+
+  <div>
+    <section class="re-card pad">
+      <div class="re-card-eyebrow">Submit Change Order</div>
+      <form method="POST" action="{{ url_for('construction_projects.add_change_order', project_id=project.id) }}" style="margin-top:12px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Title *</label>
+          <input type="text" name="title" class="proj-input" required placeholder="e.g. Additional waterproofing">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label class="proj-label">Description</label>
+          <textarea name="description" rows="3" class="proj-input" placeholder="Explain the scope change…" style="resize:vertical;"></textarea>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="proj-label">Amount ($, positive = addition)</label>
+          <input type="number" name="amount" class="proj-input" placeholder="e.g. 2500 or -500" step="0.01">
+        </div>
+        <button type="submit" class="re-btn primary sm" style="width:100%;">Submit Change Order</button>
+      </form>
+    </section>
+  </div>
+
+</div>
+{% endif %}
+
+<style>
+  .proj-tabs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    padding-bottom: 0;
+  }
+  .proj-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    font-size: .82rem;
+    font-weight: 500;
+    color: rgba(255,255,255,.45);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color .15s, border-color .15s;
+    white-space: nowrap;
+  }
+  .proj-tab:hover { color: rgba(255,255,255,.75); }
+  .proj-tab.active { color: #fff; font-weight: 700; border-bottom-color: #c9a84c; }
+  .proj-tab-badge {
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: .67rem;
+    font-weight: 800;
+    background: rgba(255,255,255,.1);
+    color: rgba(255,255,255,.6);
+  }
+  .proj-tab.active .proj-tab-badge {
+    background: rgba(201,168,76,.2);
+    color: #c9a84c;
+  }
+  .proj-label {
+    display: block;
+    font-size: .72rem;
+    font-weight: 600;
+    color: rgba(255,255,255,.4);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 4px;
+  }
+  .proj-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.04);
+    color: #fff;
+    font-size: .85rem;
+    font-family: inherit;
+    outline: none;
+  }
+  .proj-input:focus { border-color: rgba(201,168,76,.4); }
+  textarea.proj-input { display: block; }
+  .re-empty { color: rgba(255,255,255,.25); font-size: .85rem; padding: 32px; text-align: center; }
+</style>
+
+{% endblock %}

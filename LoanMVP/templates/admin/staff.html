@@ -1,0 +1,242 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Ravlo Team{% endblock %}
+{% block page_title %}Ravlo Team{% endblock %}
+{% block page_subline %}Manage internal Ravlo staff accounts and pending invitations.{% endblock %}
+
+{% block content %}
+{% set member_count = team_members|length %}
+{% set pending_invites = invites|selectattr("status", "equalto", "pending")|list %}
+
+<div class="re-grid">
+
+  <section class="re-grid-3">
+    <div class="re-stat">
+      <div class="re-stat-label">Team Members</div>
+      <div class="re-stat-value">{{ member_count }}</div>
+      <div class="re-stat-meta">Active Ravlo staff accounts</div>
+    </div>
+    <div class="re-stat">
+      <div class="re-stat-label">Pending Invites</div>
+      <div class="re-stat-value">{{ pending_invites|length }}</div>
+      <div class="re-stat-meta">Awaiting registration</div>
+    </div>
+    <div class="re-stat">
+      <div class="re-stat-label">Team Domain</div>
+      <div class="re-stat-value" style="font-size:1rem;">ravlohq.com</div>
+      <div class="re-stat-meta">Internal email domain</div>
+    </div>
+  </section>
+
+  {# ── LINK EXISTING ACCOUNT ── #}
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ADD EXISTING USER</div>
+        <h3 style="margin:.35rem 0 .2rem;">Add Someone Who Already Has an Account</h3>
+        <div class="re-card-subtitle">If Sandra, Jamaine, or anyone else already has a Ravlo account, enter their email to link them to the team roster.</div>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('admin.link_staff_member') }}" class="re-form mt-16" style="max-width:560px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="re-form-group">
+        <label class="re-label">Email Address</label>
+        <input class="re-input" type="email" name="email" placeholder="sandra@ravlohq.com" required>
+      </div>
+
+      <div class="re-form-group">
+        <label class="re-label">Update Role (optional)</label>
+        <select class="re-input" name="role">
+          <option value="">Keep current role</option>
+          {% for value, label in ravlo_roles %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="re-btn primary">
+        <i class="lucide lucide-user-check"></i>
+        Add to Ravlo Team
+      </button>
+    </form>
+  </section>
+
+  {# ── INVITE NEW ACCOUNT ── #}
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">INVITE NEW EMPLOYEE</div>
+        <h3 style="margin:.35rem 0 .2rem;">Send a Registration Link</h3>
+        <div class="re-card-subtitle">For someone who doesn't have a Ravlo account yet. They'll get an email to set their own password.</div>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('admin.invite_staff_member') }}" class="re-form mt-16" style="max-width:560px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="re-form-row">
+        <div class="re-form-group">
+          <label class="re-label">First Name</label>
+          <input class="re-input" type="text" name="first_name" placeholder="Sandra">
+        </div>
+        <div class="re-form-group">
+          <label class="re-label">Last Name</label>
+          <input class="re-input" type="text" name="last_name" placeholder="Smith">
+        </div>
+      </div>
+
+      <div class="re-form-group">
+        <label class="re-label">Email Address</label>
+        <input class="re-input" type="email" name="email" placeholder="sandra@ravlohq.com" required>
+      </div>
+
+      <div class="re-form-group">
+        <label class="re-label">Role</label>
+        <select class="re-input" name="role">
+          {% for value, label in ravlo_roles %}
+            <option value="{{ value }}" {% if value == "platform_admin" %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <div class="re-field-hint" style="margin-top:6px;font-size:.8rem;color:var(--muted,#8a9db5);">
+          Platform Admin and Master Admin have full platform access. Admin is company-scoped.
+        </div>
+      </div>
+
+      <button type="submit" class="re-btn primary">
+        <i class="lucide lucide-send"></i>
+        Send Invite
+      </button>
+    </form>
+  </section>
+
+  {# ── CURRENT TEAM ── #}
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">TEAM</div>
+        <h3 style="margin:.35rem 0 .2rem;">Current Staff</h3>
+        <div class="re-card-subtitle">All registered Ravlo team members.</div>
+      </div>
+    </div>
+
+    {% if team_members %}
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Joined</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in team_members %}
+            <tr>
+              <td>
+                <div style="display:grid;gap:3px;">
+                  <strong>{{ ((user.first_name or "") ~ " " ~ (user.last_name or "")).strip() or user.username or "Unnamed" }}</strong>
+                  <span class="text-muted" style="font-size:.8rem;">ID #{{ user.id }}</span>
+                </div>
+              </td>
+              <td>{{ user.email or "—" }}</td>
+              <td><span class="badge badge-info">{{ (user.role or "").replace("_", " ").title() }}</span></td>
+              <td style="font-size:.85rem;color:var(--muted,#8a9db5);">
+                {{ user.created_at.strftime("%b %d, %Y") if user.created_at else "—" }}
+              </td>
+              <td>
+                {% if user.id != current_user.id %}
+                <form method="post" action="{{ url_for('admin.remove_staff_member', user_id=user.id) }}" style="margin:0;"
+                      onsubmit="return confirm('Remove {{ ((user.first_name or '') ~ ' ' ~ (user.last_name or '')).strip() or user.email }} from the Ravlo team?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="re-btn ghost sm" style="color:var(--danger,#f87171);">Remove</button>
+                </form>
+                {% else %}
+                  <span class="text-muted" style="font-size:.8rem;">You</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">No staff accounts yet — use the forms above to add someone.</div>
+    {% endif %}
+  </section>
+
+  {# ── PENDING INVITES ── #}
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">INVITES</div>
+        <h3 style="margin:.35rem 0 .2rem;">Pending Invitations</h3>
+        <div class="re-card-subtitle">Registration links sent to Ravlo staff that haven't been accepted yet.</div>
+      </div>
+    </div>
+
+    {% if invites %}
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Expires</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for invite in invites %}
+            <tr>
+              <td>{{ invite.email }}</td>
+              <td style="font-size:.88rem;color:var(--muted,#8a9db5);">
+                {{ ((invite.first_name or "") ~ " " ~ (invite.last_name or "")).strip() or "—" }}
+              </td>
+              <td><span class="badge badge-info">{{ (invite.role or "").replace("_", " ").title() }}</span></td>
+              <td>
+                {% if invite.status == "accepted" %}
+                  <span class="badge badge-success">Accepted</span>
+                {% elif invite.is_expired() %}
+                  <span class="badge badge-danger">Expired</span>
+                {% else %}
+                  <span class="badge badge-warning">Pending</span>
+                {% endif %}
+              </td>
+              <td style="font-size:.85rem;color:var(--muted,#8a9db5);">
+                {{ invite.expires_at.strftime("%b %d, %Y") if invite.expires_at else "—" }}
+              </td>
+              <td>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  {% if invite.status != "accepted" %}
+                    <form method="post" action="{{ url_for('admin.resend_staff_invite', invite_id=invite.id) }}" style="margin:0;">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="re-btn ghost sm">Resend</button>
+                    </form>
+                    <form method="post" action="{{ url_for('admin.delete_staff_invite', invite_id=invite.id) }}" style="margin:0;"
+                          onsubmit="return confirm('Cancel this invite?')">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="re-btn ghost sm" style="color:var(--danger,#f87171);">Cancel</button>
+                    </form>
+                  {% else %}
+                    <span class="badge badge-neutral">Complete</span>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">No invitations sent yet.</div>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}

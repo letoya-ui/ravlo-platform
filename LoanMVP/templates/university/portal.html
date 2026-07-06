@@ -3,95 +3,143 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ravlo Academy Portal</title>
-
-  {# Portal is an authenticated app shell — Google shouldn't index it #}
+  <title>Ravlo Academy</title>
   <meta name="robots" content="noindex, nofollow">
 
-  {# Load fonts here so they're ready before React paints (prevents FOUC) #}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; background: #080808; }
-    #ravlo-university-root { height: 100%; }
+    html, body { min-height: 100%; background: #070c12; font-family: 'Inter', sans-serif; color: #ffffff; }
+    #ravlo-university-root { min-height: 100vh; }
 
-    /* Show a subtle spinner while Babel compiles the JSX */
     .ru-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      background: #080808;
-      color: #D4AF6A;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
+      background: radial-gradient(circle at top left, rgba(58,92,122,.18), transparent 40%), linear-gradient(180deg, #070c12, #0c1116);
+      color: rgba(255,255,255,0.45);
+      font-size: 12px;
       letter-spacing: 3px;
       text-transform: uppercase;
       gap: 10px;
     }
-    .ru-spinner {
-      width: 20px; height: 20px;
-      border: 2px solid rgba(212,175,106,0.2);
-      border-top-color: #D4AF6A;
-      border-radius: 50%;
-      animation: ru-spin 0.8s linear infinite;
-    }
+    .ru-spinner { width: 20px; height: 20px; border: 2px solid rgba(58,92,122,.25); border-top-color: #3A5C7A; border-radius: 50%; animation: ru-spin 0.8s linear infinite; }
     @keyframes ru-spin { to { transform: rotate(360deg); } }
+
+    .ru-fallback {
+      min-height: 100vh;
+      padding: 32px;
+      background: radial-gradient(circle at 70% -10%, rgba(58,92,122,.18), transparent 34%), linear-gradient(180deg, #070c12, #0c1116);
+    }
+    .ru-fallback-shell { max-width: 1180px; margin: 0 auto; }
+    .ru-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .ru-mark { width: 42px; height: 42px; border-radius: 14px; border: 1px solid rgba(107,127,147,.28); background: linear-gradient(135deg, rgba(58,92,122,.3), rgba(16,24,33,.9)); display: grid; place-items: center; color: #ffffff; font-size: 22px; font-weight: 800; }
+    .ru-brand-name { letter-spacing: 3px; font-size: 13px; font-weight: 800; color: #fff; }
+    .ru-brand-sub { letter-spacing: 3px; font-size: 9px; color: #6B7F93; margin-top: 2px; }
+    .ru-panel { border: 1px solid rgba(107,127,147,.18); background: linear-gradient(180deg, #101821, #0c1116); border-radius: 26px; padding: 34px; box-shadow: 0 24px 90px rgba(0,0,0,.26); }
+    .ru-eyebrow { font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: #8EA7C0; font-weight: 800; margin-bottom: 12px; }
+    .ru-title { font-size: clamp(36px,6vw,68px); line-height: 1; letter-spacing: -2px; margin: 0 0 16px; }
+    .ru-copy { color: rgba(255,255,255,0.58); line-height: 1.7; max-width: 760px; margin: 0 0 24px; }
+    .ru-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 14px; margin-top: 18px; }
+    .ru-card { border: 1px solid rgba(107,127,147,.18); background: #101821; border-radius: 20px; padding: 20px; }
+    .ru-card h2 { font-size: 20px; margin: 0 0 8px; }
+    .ru-card p { color: rgba(255,255,255,0.58); line-height: 1.6; margin: 0; }
+    .ru-link { display: inline-block; padding: 12px 18px; border-radius: 14px; background: linear-gradient(135deg, #3A5C7A, #2a4560); color: #fff; text-decoration: none; font-weight: 800; }
   </style>
 </head>
 <body>
 
-  {# Loading state shown until React mounts #}
+  {% if current_user.is_authenticated %}
+  {% if current_user.role in ["executive", "platform_admin", "master_admin", "lending_admin"] %}
+    {% set _dash_url = url_for("admin.dashboard") %}
+    {% set _dash_label = "Operations Center" %}
+  {% elif current_user.role == "admin" and current_user.company_id %}
+    {% set _dash_url = url_for("admin.company_dashboard", company_id=current_user.company_id) %}
+    {% set _dash_label = "Dashboard" %}
+  {% elif current_user.role == "investor" %}
+    {% set _dash_url = url_for("investor.command_center") %}
+    {% set _dash_label = "Investor OS" %}
+  {% elif current_user.role == "partner" %}
+    {% set _dash_url = url_for("vip.dashboard") %}
+    {% set _dash_label = "Partner Dashboard" %}
+  {% else %}
+    {% set _dash_url = "/" %}
+    {% set _dash_label = "Dashboard" %}
+  {% endif %}
+  <div id="ru-back-bar" style="position:fixed;top:0;left:0;right:0;z-index:200;padding:9px 20px;background:rgba(7,12,18,.92);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:10px;">
+    <a href="{{ _dash_url }}" style="display:inline-flex;align-items:center;gap:6px;color:rgba(255,255,255,.55);text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;transition:color .15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.55)'">
+      ← {{ _dash_label }}
+    </a>
+    <span style="color:rgba(255,255,255,.12);font-size:12px;">|</span>
+    <span style="color:rgba(255,255,255,.28);font-size:12px;letter-spacing:.1em;font-weight:800;text-transform:uppercase;">Ravlo Academy</span>
+  </div>
+  <style>#ravlo-university-root, .ru-fallback { padding-top: 38px; }</style>
+  {% endif %}
+
   <div id="ru-loader" class="ru-loading">
     <div class="ru-spinner"></div>
-    Loading Ravlo Academy…
+    Loading Ravlo Academy
   </div>
 
-  {# React mounts here #}
-  <div id="ravlo-university-root"></div>
+  <div id="ravlo-university-root">
+    <main class="ru-fallback">
+      <div class="ru-fallback-shell">
+        <div class="ru-brand">
+          <div class="ru-mark">R</div>
+          <div>
+            <div class="ru-brand-name">RAVLO</div>
+            <div class="ru-brand-sub">ACADEMY</div>
+          </div>
+        </div>
+        <section class="ru-panel">
+          <div class="ru-eyebrow">Academy portal</div>
+          <h1 class="ru-title">Build the people behind every real estate business.</h1>
+          <p class="ru-copy">Academy is loading. If the full app does not replace this screen, this fallback keeps the portal visible while the learning engine is repaired.</p>
+          <a class="ru-link" href="/academy">View Academy Overview</a>
+        </section>
+        <section class="ru-grid">
+          <article class="ru-card"><h2>Career Paths</h2><p>Investor, lending, Realtor, property management, contractor, and company training paths.</p></article>
+          <article class="ru-card"><h2>Company Academy</h2><p>Onboarding, SOP libraries, assignments, and team development.</p></article>
+          <article class="ru-card"><h2>AI Mentor</h2><p>Guided learning, workflow coaching, and company knowledge support.</p></article>
+        </section>
+      </div>
+    </main>
+  </div>
 
-  {# ── React 18 (UMD / CDN) ───────────────────────────────────────────── #}
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="{{ url_for('static', filename='js/vendors/react.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/vendors/react-dom.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/vendors/babel.min.js') }}"></script>
 
-  {#
-    Babel Standalone transforms the JSX in-browser.
-    NOTE: For production with high traffic, pre-compile with Vite / CRA and
-    serve a plain .js bundle.  For now Babel standalone is fine for an MVP.
-  #}
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  {# Hide the loader once React is about to paint #}
   <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      // Babel fires a custom event after transform — poll as fallback
-      var loader = document.getElementById('ru-loader');
-      var attempts = 0;
-      var check = setInterval(function () {
-        attempts++;
-        var root = document.getElementById('ravlo-university-root');
-        if ((root && root.childElementCount > 0) || attempts > 60) {
-          if (loader) loader.style.display = 'none';
-          clearInterval(check);
-        }
-      }, 200);
+    /* Use classic React.createElement runtime — prevents Babel 8 from emitting import statements */
+    Babel.registerPreset('react-classic', {
+      presets: [[Babel.availablePresets['react'], { runtime: 'classic' }]]
     });
   </script>
 
-  {# Server-side tier injected before JSX loads — this is authoritative, no bypass possible #}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var loader = document.getElementById('ru-loader');
+      setTimeout(function () { if (loader) loader.style.display = 'none'; }, 700);
+    });
+  </script>
+
   <script>
     window.RAVLO_ACADEMY = {
       tier: {{ server_tier | tojson }},
-      userName: {{ server_user | tojson }}
+      userName: {{ server_user | tojson }},
+      allowedTrack: {{ server_track | tojson }}
     };
   </script>
 
-  {# The component — Babel compiles JSX on load, then mounts to #ravlo-university-root #}
   <script type="text/babel"
-          data-presets="react"
+          data-presets="react-classic"
           src="{{ url_for('static', filename='js/ravlo_university.jsx') }}">
   </script>
 

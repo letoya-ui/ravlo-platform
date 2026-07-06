@@ -18,6 +18,7 @@ _render_blog_list, and _render_blog_post helpers defined here.
 import json
 import re
 from datetime import datetime
+from types import SimpleNamespace
 
 from flask import Blueprint, render_template, request, abort, flash, redirect, url_for, Response
 from sqlalchemy import func
@@ -26,7 +27,7 @@ from LoanMVP.extensions import db, csrf
 from LoanMVP.models.vip_models import VIPProfile, VIPNotification, VIPTestimonial, VIPBlogPost
 from LoanMVP.models.elena_models import ElenaClient, ElenaListing
 from LoanMVP.models.user_model import User
-from LoanMVP.models.crm_models import Partner
+from LoanMVP.models.crm_models import Partner, Lead
 
 public_pages_bp = Blueprint("public_pages", __name__, url_prefix="/p")
 
@@ -34,6 +35,40 @@ public_pages_bp = Blueprint("public_pages", __name__, url_prefix="/p")
 # generic realtor_landing.html.
 SLUG_TEMPLATES: dict[str, str] = {
     "bonnie-sells-oc-homes": "public/bonnie_landing.html",
+    "john-headen":           "public/john_headen_landing.html",
+}
+
+# Fallback context for white-label pages that don't have a VIPProfile row yet.
+# The 'profile' value is a SimpleNamespace so templates can reference
+# profile.public_slug for the form action without a DB record.
+# User email for the real account that owns each static-context slug.
+# Leads submitted through their page are created in the CRM assigned to this user.
+SLUG_OWNER_EMAILS: dict[str, str] = {
+    "john-headen": "Jsecond1212@gmail.com",
+}
+
+SLUG_STATIC_CONTEXT: dict[str, dict] = {
+    "john-headen": {
+        "profile":          SimpleNamespace(public_slug="john-headen"),
+        "display_name":     "John Headley",
+        "headline":         "Realtor & Contractor — Paid at Closing",
+        "bio":              "",
+        "service_area":     "Connecticut & New York",
+        "specialties":      "Full-service listing packages",
+        "brand_color":      "#C9A86C",
+        "logo_url":         None,
+        "profile_image_url": None,
+        "cover_image_url":  None,
+        "email":            "Jsecond1212@gmail.com",
+        "phone":            "+13479127503",
+        "website":          "",
+        "listings":         [],
+        "testimonials":     [],
+        "user":             None,
+        "partner":          None,
+        "gsc_verification_code": "",
+        "ga_measurement_id": "",
+    },
 }
 
 
@@ -105,13 +140,25 @@ def _template_for(slug: str) -> str:
     return SLUG_TEMPLATES.get(slug.lower(), "public/realtor_landing.html")
 
 
+def _load_context(slug: str) -> dict | None:
+    """Load realtor context from DB, falling back to SLUG_STATIC_CONTEXT."""
+    ctx = _load_realtor_context(slug)
+    if ctx is not None:
+        return ctx
+    static = SLUG_STATIC_CONTEXT.get(slug.lower())
+    if static is not None:
+        canonical_url = request.url_root.rstrip("/") + f"/p/{slug}"
+        return {**static, "canonical_url": canonical_url}
+    return None
+
+
 def _handle_lead_capture(slug: str):
     """Process lead capture form and return a rendered response.
 
     Extracted so it can be called both from the blueprint route and from
     the custom-domain before_request handler in app.py.
     """
-    ctx = _load_realtor_context(slug)
+    ctx = _load_context(slug)
     if ctx is None:
         abort(404)
 
@@ -163,17 +210,34 @@ def _handle_lead_capture(slug: str):
     )
     db.session.add(lead)
 
-    notification = VIPNotification(
-        vip_profile_id=profile.id,
-        notification_type="new_lead",
-        title=f"New lead: {client_name}",
-        body=(
-            f"{interest or 'Prospect'} via your public page."
-            f" {client_phone or client_email or ''}"
-        ),
-        action_url="/elena/clients",
-    )
-    db.session.add(notification)
+    # For static-context slugs (no VIPProfile), route the lead to the owner's CRM.
+    owner_email = SLUG_OWNER_EMAILS.get(slug.lower())
+    if owner_email:
+        owner_user = User.query.filter(func.lower(User.email) == owner_email.lower()).first()
+        if owner_user:
+            crm_lead = Lead(
+                name=client_name,
+                email=client_email or None,
+                phone=client_phone or None,
+                message="\n".join(notes_parts),
+                assigned_to=owner_user.id,
+                status="New",
+            )
+            db.session.add(crm_lead)
+
+    profile_id = getattr(profile, "id", None)
+    if profile_id:
+        notification = VIPNotification(
+            vip_profile_id=profile_id,
+            notification_type="new_lead",
+            title=f"New lead: {client_name}",
+            body=(
+                f"{interest or 'Prospect'} via your public page."
+                f" {client_phone or client_email or ''}"
+            ),
+            action_url="/elena/clients",
+        )
+        db.session.add(notification)
     db.session.commit()
 
     return render_template(
@@ -265,7 +329,7 @@ def _render_blog_post(slug: str, post_slug: str):
 
 @public_pages_bp.route("/<slug>", methods=["GET"])
 def realtor_landing(slug):
-    ctx = _load_realtor_context(slug)
+    ctx = _load_context(slug)
     if ctx is None:
         abort(404)
     return render_template(_template_for(slug), **ctx)

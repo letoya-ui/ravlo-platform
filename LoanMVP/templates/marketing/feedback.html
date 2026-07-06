@@ -1,0 +1,165 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block title %}Share Your Feedback | Ravlo{% endblock %}
+
+{% block hero %}{% endblock %}
+
+{% block content %}
+<section style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:80px 20px;">
+  <div style="width:100%;max-width:600px;margin:0 auto;">
+
+    {% if submitted %}
+    {# ── Thank-you state ── #}
+    <div style="text-align:center;padding:60px 40px;background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.1);border-radius:24px;">
+      <div style="width:64px;height:64px;border-radius:50%;
+        background:rgba(44,182,125,.12);border:1.5px solid rgba(44,182,125,.35);
+        display:grid;place-items:center;margin:0 auto 24px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2cb67d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h1 style="font-size:1.8rem;font-weight:800;margin:0 0 12px;color:#f4f7fb;">Thank you.</h1>
+      <p style="font-size:1rem;color:rgba(255,255,255,.55);line-height:1.7;margin:0 0 32px;">
+        Your feedback helps us build a better platform. We read every response and use it to prioritize what matters most.
+      </p>
+      <a href="https://ravlohq.com"
+        style="display:inline-block;padding:13px 28px;border-radius:12px;
+        background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+        color:rgba(255,255,255,.7);font-weight:700;font-size:.9rem;text-decoration:none;">
+        Back to Ravlo
+      </a>
+    </div>
+
+    {% else %}
+    {# ── Survey form ── #}
+    <div style="text-align:center;margin-bottom:40px;">
+      <div style="display:inline-block;padding:5px 18px;border-radius:999px;
+        background:rgba(95,168,255,.1);border:1px solid rgba(95,168,255,.22);
+        font-size:.75rem;font-weight:800;letter-spacing:2px;color:#5FA8FF;
+        text-transform:uppercase;margin-bottom:18px;">
+        Quick Feedback
+      </div>
+      <h1 style="font-size:2rem;font-weight:900;margin:0 0 12px;color:#f4f7fb;line-height:1.2;">
+        How's Ravlo working for you?
+      </h1>
+      <p style="font-size:.95rem;color:rgba(255,255,255,.5);line-height:1.6;margin:0;">
+        Takes about 60 seconds. Totally anonymous — name and email are optional.
+      </p>
+    </div>
+
+    <form method="POST" action="{{ url_for('marketing.feedback') }}" id="feedbackForm"
+      style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
+      border-radius:24px;padding:40px 36px;display:grid;gap:28px;">
+
+      <input type="hidden" name="source" value="{{ request.args.get('src', 'email') }}">
+
+      {# ── NPS Score ── #}
+      <div>
+        <div style="font-size:.8rem;font-weight:800;color:rgba(255,255,255,.5);
+          text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;">
+          How likely are you to recommend Ravlo to a friend or colleague?
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="npsRow">
+          {% for n in range(11) %}
+          <label style="flex:1;min-width:40px;cursor:pointer;">
+            <input type="radio" name="nps_score" value="{{ n }}" required
+              style="position:absolute;opacity:0;width:0;height:0;">
+            <span class="nps-btn" data-n="{{ n }}"
+              style="display:flex;align-items:center;justify-content:center;
+              height:46px;border-radius:10px;border:1.5px solid rgba(255,255,255,.12);
+              background:rgba(255,255,255,.04);color:rgba(255,255,255,.6);
+              font-size:.88rem;font-weight:700;cursor:pointer;transition:.15s;
+              user-select:none;">{{ n }}</span>
+          </label>
+          {% endfor %}
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;
+          font-size:.72rem;color:rgba(255,255,255,.3);font-weight:600;">
+          <span>Not likely at all</span>
+          <span>Extremely likely</span>
+        </div>
+      </div>
+
+      {# ── What's working ── #}
+      <div>
+        <label style="display:block;font-size:.8rem;font-weight:800;
+          color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">
+          What's been most valuable to you? <span style="font-weight:400;opacity:.5;">(optional)</span>
+        </label>
+        <textarea name="liked" rows="3" placeholder="Deal analyzer, Academy, AI tools…"
+          style="width:100%;padding:13px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.1);
+          background:rgba(255,255,255,.05);color:#f4f7fb;font-size:.9rem;
+          font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
+      </div>
+
+      {# ── What to improve ── #}
+      <div>
+        <label style="display:block;font-size:.8rem;font-weight:800;
+          color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">
+          What's one thing we should improve? <span style="font-weight:400;opacity:.5;">(optional)</span>
+        </label>
+        <textarea name="improve" rows="3" placeholder="Be as specific as you like…"
+          style="width:100%;padding:13px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.1);
+          background:rgba(255,255,255,.05);color:#f4f7fb;font-size:.9rem;
+          font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
+      </div>
+
+      {# ── Optional identity ── #}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div>
+          <label style="display:block;font-size:.8rem;font-weight:800;
+            color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">
+            Name <span style="font-weight:400;opacity:.5;">(optional)</span>
+          </label>
+          <input type="text" name="name" placeholder="Your name"
+            style="width:100%;padding:12px 14px;border-radius:10px;
+            border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);
+            color:#f4f7fb;font-size:.9rem;box-sizing:border-box;font-family:inherit;">
+        </div>
+        <div>
+          <label style="display:block;font-size:.8rem;font-weight:800;
+            color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">
+            Email <span style="font-weight:400;opacity:.5;">(optional)</span>
+          </label>
+          <input type="email" name="email" placeholder="you@email.com"
+            style="width:100%;padding:12px 14px;border-radius:10px;
+            border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);
+            color:#f4f7fb;font-size:.9rem;box-sizing:border-box;font-family:inherit;">
+        </div>
+      </div>
+
+      <button type="submit"
+        style="width:100%;padding:15px;border-radius:14px;
+        background:linear-gradient(135deg,#5FA8FF,#7c6aff);
+        color:#fff;font-weight:800;font-size:1rem;border:none;cursor:pointer;
+        letter-spacing:.02em;transition:.15s;">
+        Submit Feedback →
+      </button>
+    </form>
+
+    <p style="text-align:center;font-size:.75rem;color:rgba(255,255,255,.2);margin:18px 0 0;">
+      Responses are private and used only to improve Ravlo.
+    </p>
+    {% endif %}
+
+  </div>
+</section>
+
+<style>
+  .nps-btn:hover { background:rgba(95,168,255,.12) !important; border-color:rgba(95,168,255,.4) !important; color:#5FA8FF !important; }
+  .nps-btn.selected { background:rgba(95,168,255,.18) !important; border-color:#5FA8FF !important; color:#5FA8FF !important; }
+  .nps-btn.selected[data-n="9"], .nps-btn.selected[data-n="10"] { background:rgba(44,182,125,.18) !important; border-color:#2cb67d !important; color:#2cb67d !important; }
+  .nps-btn.selected[data-n="0"], .nps-btn.selected[data-n="1"], .nps-btn.selected[data-n="2"],
+  .nps-btn.selected[data-n="3"], .nps-btn.selected[data-n="4"], .nps-btn.selected[data-n="5"],
+  .nps-btn.selected[data-n="6"] { background:rgba(248,113,113,.12) !important; border-color:#f87171 !important; color:#f87171 !important; }
+  textarea:focus, input:focus { outline:none; border-color:rgba(95,168,255,.5) !important; }
+</style>
+
+<script>
+document.querySelectorAll('input[name="nps_score"]').forEach(function(radio) {
+  radio.addEventListener('change', function() {
+    document.querySelectorAll('.nps-btn').forEach(function(b) { b.classList.remove('selected'); });
+    radio.parentElement.querySelector('.nps-btn').classList.add('selected');
+  });
+});
+</script>
+{% endblock %}

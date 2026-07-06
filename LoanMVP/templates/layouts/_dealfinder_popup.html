@@ -1,0 +1,284 @@
+{# DealFinder quick-search popup — floating action button + modal.
+   Included in ravlo_base.html for investor-portal users only.
+   Submitting the form redirects to the full Deal Finder page with
+   query-string params so runSearch() fires automatically on load. #}
+
+{% set _df_search_url = url_for('investor.property_tool') %}
+
+<button type="button" class="df-fab" id="dfFab" onclick="dfPopupToggle()" aria-label="Open Deal Finder">
+  <i class="lucide lucide-search"></i>
+  <span class="df-fab-label">Find Deals</span>
+</button>
+
+<div id="dfPopupOverlay" class="df-popup-overlay" style="display:none;" role="dialog" aria-modal="true">
+  <div class="df-popup-card">
+    <button type="button" class="df-popup-close" onclick="dfPopupClose()" aria-label="Close">&times;</button>
+
+    <div class="df-popup-header">
+      <div class="df-popup-eyebrow">DEAL FINDER</div>
+      <h2 class="df-popup-title">Quick Search</h2>
+      <p class="df-popup-sub">Enter a ZIP, city/state, or use your location to surface the strongest deals.</p>
+    </div>
+
+    <form id="dfPopupForm" class="df-popup-form" onsubmit="return dfPopupSubmit(event)">
+
+      <div class="df-popup-row">
+        <div class="df-popup-field">
+          <label class="ravlo-label">ZIP Code</label>
+          <input id="dfPopupZip" class="ravlo-input" placeholder="e.g. 10924" inputmode="numeric" />
+        </div>
+      </div>
+
+      <div class="df-popup-row df-popup-row--half">
+        <div class="df-popup-field">
+          <label class="ravlo-label">City</label>
+          <input id="dfPopupCity" class="ravlo-input" placeholder="e.g. Otisville" />
+        </div>
+        <div class="df-popup-field">
+          <label class="ravlo-label">State</label>
+          <input id="dfPopupState" class="ravlo-input" placeholder="e.g. NY" maxlength="2" />
+        </div>
+      </div>
+
+      <div class="df-popup-row df-popup-row--half">
+        <div class="df-popup-field">
+          <label class="ravlo-label">Asset Type</label>
+          <select id="dfPopupAssetType" class="ravlo-input">
+            <option value="any">All Property Types</option>
+            <option value="single_family">Single Family</option>
+            <option value="multi_family">Multi Family</option>
+            <option value="condo">Condo</option>
+            <option value="townhome">Townhome</option>
+            <option value="land">Land</option>
+            <option value="manufactured">Manufactured</option>
+            <option value="commercial">Commercial</option>
+          </select>
+        </div>
+        <div class="df-popup-field">
+          <label class="ravlo-label">Strategy</label>
+          <select id="dfPopupStrategy" class="ravlo-input">
+            <option value="flip">Fix & Flip</option>
+            <option value="rental">Rental</option>
+            <option value="airbnb">Airbnb / STR</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="df-popup-row df-popup-row--half">
+        <div class="df-popup-field">
+          <label class="ravlo-label">Max Price</label>
+          <input id="dfPopupMaxPrice" class="ravlo-input" type="number" min="0" step="5000" placeholder="450000" />
+        </div>
+        <div class="df-popup-field">
+          <label class="ravlo-label">Min Score</label>
+          <input id="dfPopupMinScore" class="ravlo-input" type="number" min="0" max="99" step="1" placeholder="60" />
+        </div>
+      </div>
+
+      <button type="button" class="df-popup-location-btn" onclick="dfPopupUseLocation()">
+        <i class="lucide lucide-map-pin"></i> Use My Location
+      </button>
+      <div id="dfPopupLocStatus" class="df-popup-loc-status"></div>
+
+      <button type="submit" class="ravlo-btn primary w-full df-popup-submit">
+        <i class="lucide lucide-search"></i> Find Deals
+      </button>
+    </form>
+
+    <a href="{{ _df_search_url }}" class="df-popup-full-link">Open full Deal Finder &rarr;</a>
+  </div>
+</div>
+
+<style>
+/* ── FAB ─────────────────────────────────────────────────── */
+.df-fab {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 9980;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 22px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  font-size: .88rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 32px rgba(37,99,235,.45), 0 2px 8px rgba(0,0,0,.25);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.df-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(37,99,235,.55), 0 4px 12px rgba(0,0,0,.3);
+}
+.df-fab i { font-size: 1.1rem; }
+.df-fab-label { white-space: nowrap; }
+
+/* ── Overlay / card ──────────────────────────────────────── */
+.df-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.62);
+  backdrop-filter: blur(5px);
+  z-index: 9990;
+  align-items: center;
+  justify-content: center;
+}
+.df-popup-card {
+  background: #131720;
+  border: 1px solid #2a3045;
+  border-radius: 20px;
+  padding: 36px 32px 28px;
+  max-width: 520px;
+  width: calc(100% - 32px);
+  position: relative;
+  color: #f9fafb;
+  box-shadow: 0 32px 80px rgba(0,0,0,.5);
+  animation: df-rise .32s cubic-bezier(.22,.68,0,1.15) both;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+@keyframes df-rise {
+  from { opacity:0; transform:translateY(24px) scale(.96); }
+  to   { opacity:1; transform:none; }
+}
+
+/* ── Close button ────────────────────────────────────────── */
+.df-popup-close {
+  position: absolute; top: 14px; right: 18px;
+  background: none; border: none; color: #6b7280;
+  font-size: 26px; cursor: pointer; line-height: 1;
+  transition: color .15s;
+}
+.df-popup-close:hover { color: #d1d5db; }
+
+/* ── Header ──────────────────────────────────────────────── */
+.df-popup-eyebrow {
+  font-size: 11px; font-weight: 800; letter-spacing: .12em;
+  text-transform: uppercase; color: #60a5fa; margin-bottom: 6px;
+}
+.df-popup-title { font-size: 22px; font-weight: 800; margin: 0 0 6px; color: #f9fafb; }
+.df-popup-sub { font-size: 13px; color: #9ca3af; line-height: 1.5; margin: 0 0 20px; }
+
+/* ── Form layout ─────────────────────────────────────────── */
+.df-popup-form { display: grid; gap: 14px; }
+.df-popup-row { display: grid; gap: 10px; }
+.df-popup-row--half { grid-template-columns: 1fr 1fr; }
+.df-popup-field { display: flex; flex-direction: column; gap: 4px; }
+
+.df-popup-location-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 10px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+  color: #d1d5db; font-size: .82rem; font-weight: 600;
+  cursor: pointer; transition: background .15s, color .15s;
+  width: max-content;
+}
+.df-popup-location-btn:hover { background: rgba(255,255,255,.1); color: #f9fafb; }
+.df-popup-loc-status { font-size: .78rem; color: #9ca3af; min-height: 18px; }
+
+.df-popup-submit { margin-top: 4px; font-size: .92rem; }
+
+.df-popup-full-link {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+  font-size: .82rem;
+  color: #60a5fa;
+  text-decoration: none;
+  font-weight: 600;
+}
+.df-popup-full-link:hover { text-decoration: underline; color: #93c5fd; }
+
+@media (max-width: 540px) {
+  .df-popup-card { padding: 28px 18px 22px; }
+  .df-popup-row--half { grid-template-columns: 1fr; }
+  .df-fab { padding: 12px 16px; font-size: .82rem; bottom: 18px; right: 18px; }
+}
+</style>
+
+<script>
+(function () {
+  var overlay = null;
+  var fab = null;
+  var _dfLat = "";
+  var _dfLng = "";
+
+  function els() {
+    if (!overlay) overlay = document.getElementById("dfPopupOverlay");
+    if (!fab) fab = document.getElementById("dfFab");
+  }
+
+  window.dfPopupToggle = function () {
+    els();
+    if (!overlay) return;
+    var visible = overlay.style.display === "flex";
+    overlay.style.display = visible ? "none" : "flex";
+  };
+
+  window.dfPopupClose = function () {
+    els();
+    if (overlay) overlay.style.display = "none";
+  };
+
+  window.dfPopupUseLocation = function () {
+    var status = document.getElementById("dfPopupLocStatus");
+    if (!navigator.geolocation) {
+      if (status) status.innerText = "Geolocation is not supported.";
+      return;
+    }
+    if (status) status.innerText = "Reading your location...";
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        _dfLat = String(pos.coords.latitude);
+        _dfLng = String(pos.coords.longitude);
+        if (status) status.innerText = "Location found. Hit Find Deals to search.";
+      },
+      function () {
+        if (status) status.innerText = "Permission denied. Use ZIP or city/state instead.";
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
+  };
+
+  window.dfPopupSubmit = function (e) {
+    e.preventDefault();
+    var zip = (document.getElementById("dfPopupZip") || {}).value || "";
+    var city = (document.getElementById("dfPopupCity") || {}).value || "";
+    var state = (document.getElementById("dfPopupState") || {}).value || "";
+    var assetType = (document.getElementById("dfPopupAssetType") || {}).value || "any";
+    var strategy = (document.getElementById("dfPopupStrategy") || {}).value || "all";
+    var maxPrice = (document.getElementById("dfPopupMaxPrice") || {}).value || "";
+    var minScore = (document.getElementById("dfPopupMinScore") || {}).value || "";
+
+    if (!zip.trim() && !(city.trim() && state.trim()) && !(_dfLat && _dfLng)) {
+      var status = document.getElementById("dfPopupLocStatus");
+      if (status) status.innerText = "Enter a ZIP code, city/state, or use your location.";
+      return false;
+    }
+
+    var params = new URLSearchParams();
+    if (zip.trim()) params.set("zip", zip.trim());
+    if (city.trim()) params.set("city", city.trim());
+    if (state.trim()) params.set("state", state.trim());
+    if (assetType && assetType !== "any") params.set("asset_type", assetType);
+    if (strategy) params.set("strategy", strategy);
+    if (maxPrice) params.set("max_price", maxPrice);
+    if (minScore) params.set("min_score", minScore);
+    if (_dfLat) params.set("latitude", _dfLat);
+    if (_dfLng) params.set("longitude", _dfLng);
+    params.set("auto", "1");
+
+    window.location.href = "{{ _df_search_url }}" + "?" + params.toString();
+    return false;
+  };
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") dfPopupClose();
+  });
+})();
+</script>

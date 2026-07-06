@@ -1,0 +1,161 @@
+{#
+  Construction opportunity workflow panel.
+  Expected variable: opp
+#}
+{% set _workflow = {
+  "saved_opportunity": {
+    "stage": "Saved Opportunity",
+    "assigned": "Jamaine Caughman",
+    "badge": "Field Operations",
+    "next": "Qualify the lead, add field notes, then send to Sandra for package support.",
+    "color": "#5FA8FF"
+  },
+  "bid_package_needed": {
+    "stage": "Bid Package Needed",
+    "assigned": "Sandra Mason",
+    "badge": "Operations",
+    "next": "Organize the bid package, collect missing details, and prepare the proposal shell.",
+    "color": "#f5b942"
+  },
+  "missing_information": {
+    "stage": "Missing Information",
+    "assigned": "Sandra Mason",
+    "badge": "Operations",
+    "next": "Collect missing contact, scope, document, walk-through, or deadline information.",
+    "color": "#f87171"
+  },
+  "draft_bid_prepared": {
+    "stage": "Draft Bid Prepared",
+    "assigned": "Sandra Mason",
+    "badge": "Operations",
+    "next": "Finish the package and mark ready for field or executive approval.",
+    "color": "#eab308"
+  },
+  "jamaine_review_needed": {
+    "stage": "Field Review Needed",
+    "assigned": "Jamaine Caughman",
+    "badge": "Field Review",
+    "next": "Review scope, labor, material assumptions, timeline, and field risk.",
+    "color": "#a78bfa"
+  },
+  "site_visit_needed": {
+    "stage": "Site Visit Needed",
+    "assigned": "Jamaine Caughman",
+    "badge": "Field Visit",
+    "next": "Schedule or complete the site visit and add measurements, photos, and field notes.",
+    "color": "#a78bfa"
+  },
+  "site_visit_scheduled": {
+    "stage": "Site Visit Scheduled",
+    "assigned": "Jamaine Caughman",
+    "badge": "Field Visit",
+    "next": "Complete the visit, confirm scope, and update the opportunity with field notes.",
+    "color": "#a78bfa"
+  },
+  "estimate_needed": {
+    "stage": "Estimate Needed",
+    "assigned": "Jamaine Caughman",
+    "badge": "Field Pricing",
+    "next": "Provide labor, material, timeline, and field pricing assumptions.",
+    "color": "#a78bfa"
+  },
+  "approval_needed": {
+    "stage": "Approval Needed",
+    "assigned": "Letoya Mason or Jamaine Caughman",
+    "badge": "Sign-Off Queue",
+    "next": "Review the finished package and approve it for client submission or send it back for revision.",
+    "color": "#2cb67d"
+  },
+  "approved_to_submit": {
+    "stage": "Approved to Submit",
+    "assigned": "Sandra Mason",
+    "badge": "Operations",
+    "next": "Send the approved proposal to the client and update the client follow-up date.",
+    "color": "#2cb67d"
+  },
+  "ready_to_send": {
+    "stage": "Ready to Send",
+    "assigned": "Sandra Mason",
+    "badge": "Operations",
+    "next": "Send the proposal to the client or mark it submitted once sent.",
+    "color": "#2cb67d"
+  },
+  "bid_submitted": {
+    "stage": "Sent to Client",
+    "assigned": "Client / Sandra Mason",
+    "badge": "Client Review",
+    "next": "Wait for client response and schedule the next follow-up.",
+    "color": "#f97316"
+  },
+  "client_review": {
+    "stage": "Waiting on Client",
+    "assigned": "Client / Sandra Mason",
+    "badge": "Client Review",
+    "next": "Track client decision, questions, negotiations, and next follow-up.",
+    "color": "#f97316"
+  },
+  "follow_up_needed": {
+    "stage": "Follow-Up Needed",
+    "assigned": "Sandra Mason",
+    "badge": "Operations",
+    "next": "Follow up with the client and update the opportunity outcome.",
+    "color": "#f97316"
+  },
+  "negotiating": {
+    "stage": "Negotiating",
+    "assigned": "Letoya Mason or Jamaine Caughman",
+    "badge": "Decision Needed",
+    "next": "Review pricing, scope, and terms before accepting changes.",
+    "color": "#f5b942"
+  },
+  "won": {
+    "stage": "Awarded",
+    "assigned": "Jamaine Caughman",
+    "badge": "Active Work",
+    "next": "Convert this bid into an active construction project.",
+    "color": "#2cb67d"
+  },
+  "lost": {
+    "stage": "Lost",
+    "assigned": "Sandra Mason",
+    "badge": "Closed",
+    "next": "Record the reason lost and keep the contact warm if appropriate.",
+    "color": "#f87171"
+  },
+  "no_bid": {
+    "stage": "No Bid",
+    "assigned": "Jamaine Caughman or Letoya Mason",
+    "badge": "Closed",
+    "next": "Document why the opportunity was declined.",
+    "color": "#6b7280"
+  }
+} %}
+{% set _wf = _workflow.get(opp.status or 'saved_opportunity', _workflow['saved_opportunity']) %}
+
+<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);display:grid;gap:8px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+    <div style="font-size:.76rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:{{ _wf.color }};">
+      {{ _wf.stage }}
+    </div>
+    <span style="font-size:.68rem;font-weight:800;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,.22);color:{{ _wf.color }};border:1px solid rgba(255,255,255,.06);">
+      {{ _wf.badge }}
+    </span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:10px;align-items:start;">
+    <div>
+      <div style="font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.32);font-weight:800;">Assigned To</div>
+      <div style="font-size:.82rem;color:#f4f7fb;font-weight:800;margin-top:2px;">{{ _wf.assigned }}</div>
+    </div>
+    <div>
+      <div style="font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.32);font-weight:800;">Next Action</div>
+      <div style="font-size:.78rem;color:rgba(255,255,255,.58);line-height:1.45;margin-top:2px;">{{ _wf.next }}</div>
+    </div>
+  </div>
+
+  {% if opp.bid_deadline %}
+    <div style="font-size:.72rem;color:rgba(255,255,255,.42);">
+      Due / Bid Deadline: <strong style="color:#f4f7fb;">{{ opp.bid_deadline.strftime('%b %d, %Y') }}</strong>
+    </div>
+  {% endif %}
+</div>

@@ -31,6 +31,8 @@ from LoanMVP.models.admin import Company, AccessRequest, UserInvite, LicenseAppl
 from LoanMVP.models.ai_models import AIAssistantInteraction
 from LoanMVP.models.payment_models import PaymentRecord
 from LoanMVP.models.vip_models import VIPIncome, VIPProfile
+from LoanMVP.models.company_finance_models import CMFinanceEntry, DIVISIONS, INCOME_CATEGORIES, EXPENSE_CATEGORIES
+from LoanMVP.models.contractor_models import ContractorBidOpportunity
 from LoanMVP.services.notify_service import notify
 
 import io
@@ -72,6 +74,14 @@ COMPANY_INVITABLE_ROLES = [
     ("intelligence", "Intelligence"),
 ]
 COMPANY_INVITABLE_ROLE_SET = {role for role, _label in COMPANY_INVITABLE_ROLES}
+
+RAVLO_STAFF_ROLES = [
+    ("platform_admin", "Platform Admin"),
+    ("master_admin", "Master Admin"),
+    ("admin", "Admin"),
+    ("intelligence", "Intelligence"),
+]
+RAVLO_STAFF_ROLE_SET = {role for role, _ in RAVLO_STAFF_ROLES}
 
 
 def _single_admin_mode_enabled() -> bool:
@@ -910,6 +920,31 @@ def dashboard():
 
     server_load_value = 68
 
+    construction_office_statuses = [
+        "bid_package_needed",
+        "missing_information",
+        "draft_bid_prepared",
+        "jamaine_review_needed",
+        "ready_to_send",
+        "follow_up_needed",
+    ]
+
+    try:
+        bid_support_queue = (
+            ContractorBidOpportunity.query
+            .filter(ContractorBidOpportunity.status.in_(construction_office_statuses))
+            .order_by(
+                ContractorBidOpportunity.updated_at.desc(),
+                ContractorBidOpportunity.created_at.desc(),
+            )
+            .limit(25)
+            .all()
+        )
+    except Exception as exc:
+        current_app.logger.warning("bid support queue unavailable: %s", exc)
+        db.session.rollback()
+        bid_support_queue = []
+
     ai_summary = (
         f"Platform snapshot: {stats['pending_requests']} pending request(s), "
         f"{stats['pending_invites']} pending invite(s), "
@@ -935,6 +970,7 @@ def dashboard():
         user_growth_labels=user_growth_labels,
         user_growth_series=user_growth_series,
         server_load_value=server_load_value,
+        bid_support_queue=bid_support_queue,
     )
 
 
@@ -1317,6 +1353,33 @@ def resend_team_invite(company_id, invite_id):
     return redirect(url_for("admin.company_team", company_id=company.id))
 
 
+@admin_bp.route("/company/<int:company_id>/team/<int:user_id>/remove", methods=["POST"])
+@login_required
+@role_required("admin_group")
+@admin_required
+def remove_team_member(company_id, user_id):
+    company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
+    if user_id == current_user.id:
+        flash("You cannot remove yourself from the team.", "warning")
+        return redirect(url_for("admin.company_team", company_id=company.id))
+
+    user = User.query.get_or_404(user_id)
+    if user.company_id != company.id:
+        flash("That user is not on this team.", "warning")
+        return redirect(url_for("admin.company_team", company_id=company.id))
+
+    user.company_id = None
+    db.session.commit()
+
+    name = ((user.first_name or "") + " " + (user.last_name or "")).strip() or user.email
+    flash(f"{name} has been removed from {company.name}.", "success")
+    return redirect(url_for("admin.company_team", company_id=company.id))
+
+
 @admin_bp.route("/company/<int:company_id>/team/invites/<int:invite_id>/delete", methods=["POST"])
 @login_required
 @role_required("admin_group")
@@ -1344,6 +1407,383 @@ def delete_team_invite(company_id, invite_id):
     if next_url and next_url.startswith("/"):
         return redirect(next_url)
     return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+
+# =========================================================
+# 👥 RAVLO STAFF MANAGEMENT
+# =========================================================
+
+def _get_or_create_ravlo_company():
+    company = Company.query.filter_by(email_domain="ravlohq.com").first()
+    if not company:
+        company = Company(name="Ravlo HQ", email_domain="ravlohq.com", is_active=True)
+        db.session.add(company)
+        db.session.commit()
+    return company
+
+
+def _send_ravlo_staff_invite_email(invite):
+    invite_url = url_for("auth.register_from_invite", token=invite.token, _external=True)
+    role_label = (invite.role or "").replace("_", " ").title()
+    first_name = (invite.first_name or "").strip() or "there"
+
+    subject = "You've been added to the Ravlo team"
+    body = f"""
+Hi {first_name},
+
+You've been invited to join the Ravlo team.
+
+Complete your registration here:
+{invite_url}
+
+Role: {role_label}
+
+This link expires in 14 days.
+""".strip()
+
+    html = f"""
+    <div style="font-family:Inter,Arial,sans-serif;background:#071018;padding:32px;color:#f4f7fb;">
+      <div style="max-width:680px;margin:0 auto;background:#0f1a26;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;">
+        <div style="font-size:12px;letter-spacing:.18em;font-weight:800;color:#8ec5ff;margin-bottom:12px;">RAVLO TEAM INVITE</div>
+        <h1 style="margin:0 0 12px;font-size:28px;line-height:1.1;">Welcome to the team</h1>
+        <p style="margin:0 0 14px;color:#c9d6e3;">
+          Hi {first_name}, you've been added to the Ravlo platform as a <strong>{role_label}</strong>.
+        </p>
+        <a href="{invite_url}" style="display:inline-block;padding:14px 20px;background:#1f8fff;color:#fff;text-decoration:none;border-radius:12px;font-weight:700;">
+          Accept Invite &amp; Create Account
+        </a>
+        <p style="margin:18px 0 0;color:#8da3b8;font-size:13px;">This link expires in 14 days.</p>
+      </div>
+    </div>
+    """.strip()
+
+    send_email(to=invite.email, subject=subject, html_body=html, text_body=body)
+
+
+@admin_bp.route("/staff")
+@login_required
+@role_required("admin_group")
+def staff():
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user) or (getattr(current_user, "role", "") or "").strip().lower() == "executive"):
+        flash("Access restricted to platform administrators.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    ravlo_co = _get_or_create_ravlo_company()
+    team_members = (
+        User.query
+        .filter_by(company_id=ravlo_co.id)
+        .order_by(User.role, User.first_name)
+        .all()
+    )
+    invites = (
+        UserInvite.query
+        .filter_by(company_id=ravlo_co.id)
+        .order_by(UserInvite.created_at.desc())
+        .all()
+    )
+    return render_template(
+        "admin/staff.html",
+        team_members=team_members,
+        invites=invites,
+        ravlo_roles=RAVLO_STAFF_ROLES,
+    )
+
+
+@admin_bp.route("/staff/invite", methods=["POST"])
+@login_required
+@role_required("admin_group")
+def invite_staff_member():
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user) or (getattr(current_user, "role", "") or "").strip().lower() == "executive"):
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    first_name = (request.form.get("first_name") or "").strip()
+    last_name = (request.form.get("last_name") or "").strip()
+    email = (request.form.get("email") or "").strip().lower()
+    role = (request.form.get("role") or "platform_admin").strip()
+
+    if not email:
+        flash("Email is required.", "danger")
+        return redirect(url_for("admin.staff"))
+
+    if role not in RAVLO_STAFF_ROLE_SET:
+        flash("Invalid role selected.", "danger")
+        return redirect(url_for("admin.staff"))
+
+    if User.query.filter_by(email=email).first():
+        flash("A user with that email already exists.", "warning")
+        return redirect(url_for("admin.staff"))
+
+    ravlo_co = _get_or_create_ravlo_company()
+
+    existing = UserInvite.query.filter_by(email=email, company_id=ravlo_co.id, status="pending").first()
+    if existing and not existing.is_expired():
+        flash("An active invite already exists for that email.", "warning")
+        return redirect(url_for("admin.staff"))
+
+    invite = UserInvite(
+        company_id=ravlo_co.id,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        role=role,
+        token=UserInvite.generate_token(),
+        invited_by=current_user.id,
+        expires_at=UserInvite.default_expiration(days=14),
+        status="pending",
+    )
+    db.session.add(invite)
+    db.session.commit()
+
+    try:
+        _send_ravlo_staff_invite_email(invite)
+    except Exception:
+        current_app.logger.exception("Failed to send Ravlo staff invite email")
+
+    flash(f"Invite sent to {email}.", "success")
+    return redirect(url_for("admin.staff"))
+
+
+@admin_bp.route("/staff/invites/<int:invite_id>/resend", methods=["POST"])
+@login_required
+@role_required("admin_group")
+def resend_staff_invite(invite_id):
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user) or (getattr(current_user, "role", "") or "").strip().lower() == "executive"):
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    ravlo_co = _get_or_create_ravlo_company()
+    invite = UserInvite.query.get_or_404(invite_id)
+    if invite.company_id != ravlo_co.id:
+        flash("Invalid invite.", "danger")
+        return redirect(url_for("admin.staff"))
+
+    if invite.status == "accepted":
+        flash("This invite has already been accepted.", "info")
+        return redirect(url_for("admin.staff"))
+
+    _refresh_invite(invite)
+    try:
+        _send_ravlo_staff_invite_email(invite)
+        db.session.commit()
+        flash("Invite resent.", "success")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to resend Ravlo staff invite")
+        flash("Invite refreshed but email could not be sent.", "warning")
+
+    return redirect(url_for("admin.staff"))
+
+
+@admin_bp.route("/staff/invites/<int:invite_id>/delete", methods=["POST"])
+@login_required
+@role_required("admin_group")
+def delete_staff_invite(invite_id):
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user) or (getattr(current_user, "role", "") or "").strip().lower() == "executive"):
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    ravlo_co = _get_or_create_ravlo_company()
+    invite = UserInvite.query.get_or_404(invite_id)
+    if invite.company_id != ravlo_co.id:
+        flash("Invalid invite.", "danger")
+        return redirect(url_for("admin.staff"))
+
+    if invite.status == "accepted":
+        flash("Accepted invites cannot be removed here; manage the user account instead.", "warning")
+        return redirect(url_for("admin.staff"))
+
+    db.session.delete(invite)
+    db.session.commit()
+    flash("Invite cancelled.", "success")
+    return redirect(url_for("admin.staff"))
+
+
+@admin_bp.route("/staff/<int:user_id>/remove", methods=["POST"])
+@login_required
+@role_required("admin_group")
+def remove_staff_member(user_id):
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user) or (getattr(current_user, "role", "") or "").strip().lower() == "executive"):
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    if user_id == current_user.id:
+        flash("You cannot remove yourself from the team.", "warning")
+        return redirect(url_for("admin.staff"))
+
+    ravlo_co = _get_or_create_ravlo_company()
+    user = User.query.get_or_404(user_id)
+
+    if user.company_id != ravlo_co.id:
+        flash("That user is not on the Ravlo team.", "warning")
+        return redirect(url_for("admin.staff"))
+
+    user.company_id = None
+    db.session.commit()
+
+    name = ((user.first_name or "") + " " + (user.last_name or "")).strip() or user.email
+    flash(f"{name} has been removed from the Ravlo team.", "success")
+    return redirect(url_for("admin.staff"))
+
+
+@admin_bp.route("/staff/link", methods=["POST"])
+@login_required
+@role_required("admin_group")
+def link_staff_member():
+    if not (_is_full_admin(current_user) or _is_owner_account(current_user) or (getattr(current_user, "role", "") or "").strip().lower() == "executive"):
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    email = (request.form.get("email") or "").strip().lower()
+    role = (request.form.get("role") or "").strip()
+
+    if not email:
+        flash("Email is required.", "danger")
+        return redirect(url_for("admin.staff"))
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash(f"No account found for {email}. Use the invite form to send them a registration link.", "warning")
+        return redirect(url_for("admin.staff"))
+
+    ravlo_co = _get_or_create_ravlo_company()
+    user.company_id = ravlo_co.id
+
+    if role and role in RAVLO_STAFF_ROLE_SET:
+        user.role = role
+
+    db.session.commit()
+    name = ((user.first_name or "") + " " + (user.last_name or "")).strip() or user.email
+    flash(f"{name} has been added to the Ravlo team.", "success")
+    return redirect(url_for("admin.staff"))
+
+
+# =========================================================
+# 💰 CAUGHMAN MASON FINANCE HUB
+# =========================================================
+
+def _cm_finance_guard():
+    role = (getattr(current_user, "role", "") or "").strip().lower()
+    return (
+        _is_full_admin(current_user)
+        or _is_owner_account(current_user)
+        or role == "executive"
+        or role == "partner"
+    )
+
+
+@admin_bp.route("/finances", methods=["GET"])
+@login_required
+def company_finances():
+    if not _cm_finance_guard():
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    selected_division = request.args.get("division", "all")
+    selected_type     = request.args.get("type", "all")
+
+    from datetime import datetime as _dt
+
+    try:
+        q = CMFinanceEntry.query
+        if selected_division != "all":
+            q = q.filter_by(division=selected_division)
+        if selected_type in ("income", "expense"):
+            q = q.filter_by(entry_type=selected_type)
+
+        entries = q.order_by(CMFinanceEntry.entry_date.desc(), CMFinanceEntry.created_at.desc()).limit(200).all()
+
+        all_entries = CMFinanceEntry.query.all()
+        division_summary = {}
+        for e in all_entries:
+            d = e.division
+            if d not in division_summary:
+                division_summary[d] = {"income": 0.0, "expense": 0.0}
+            if e.entry_type == "income":
+                division_summary[d]["income"] += e.amount or 0
+            else:
+                division_summary[d]["expense"] += e.amount or 0
+
+        for d in division_summary:
+            division_summary[d]["net"] = division_summary[d]["income"] - division_summary[d]["expense"]
+
+        total_income  = sum(e.amount for e in all_entries if e.entry_type == "income")
+        total_expense = sum(e.amount for e in all_entries if e.entry_type == "expense")
+
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("[company_finances] table not ready yet: %s", exc)
+        flash("Financial Hub is setting up — the database table will be ready shortly after the next deploy.", "info")
+        entries = []
+        division_summary = {}
+        total_income = total_expense = 0.0
+
+    return render_template(
+        "admin/company_finances.html",
+        entries           = entries,
+        divisions         = DIVISIONS,
+        income_categories = INCOME_CATEGORIES,
+        expense_categories= EXPENSE_CATEGORIES,
+        division_summary  = division_summary,
+        total_income      = total_income,
+        now               = _dt.utcnow(),
+        total_expense     = total_expense,
+        total_net         = total_income - total_expense,
+        selected_division = selected_division,
+        selected_type     = selected_type,
+    )
+
+
+@admin_bp.route("/finances/add", methods=["POST"])
+@login_required
+def company_finances_add():
+    if not _cm_finance_guard():
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    amount_raw = (request.form.get("amount") or "").replace(",", "").replace("$", "").strip()
+    try:
+        amount = float(amount_raw)
+    except ValueError:
+        flash("Invalid amount.", "danger")
+        return redirect(url_for("admin.company_finances"))
+
+    date_raw = (request.form.get("entry_date") or "").strip()
+    from datetime import date as _date, datetime as _dt
+    try:
+        entry_date = _dt.strptime(date_raw, "%Y-%m-%d").date() if date_raw else _date.today()
+    except ValueError:
+        entry_date = _date.today()
+
+    entry = CMFinanceEntry(
+        created_by_id = current_user.id,
+        division      = (request.form.get("division") or "construction").strip(),
+        entry_type    = (request.form.get("entry_type") or "expense").strip(),
+        category      = (request.form.get("category") or "").strip() or None,
+        description   = (request.form.get("description") or "").strip() or None,
+        amount        = amount,
+        entry_date    = entry_date,
+        project_name  = (request.form.get("project_name") or "").strip() or None,
+        notes         = (request.form.get("notes") or "").strip() or None,
+    )
+    db.session.add(entry)
+    db.session.commit()
+    flash("Entry added.", "success")
+    return redirect(url_for("admin.company_finances"))
+
+
+@admin_bp.route("/finances/<int:entry_id>/delete", methods=["POST"])
+@login_required
+def company_finances_delete(entry_id):
+    if not _cm_finance_guard():
+        flash("Access restricted.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    entry = CMFinanceEntry.query.get_or_404(entry_id)
+    db.session.delete(entry)
+    db.session.commit()
+    flash("Entry removed.", "success")
+    return redirect(url_for("admin.company_finances"))
 
 
 # =========================================================
@@ -2353,3 +2793,316 @@ def unblock_company(company_id):
 
     flash(f"{company.name} was restored.", "success")
     return redirect(request.referrer or url_for("admin.companies"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AI EMAIL ASSISTANT
+# ─────────────────────────────────────────────────────────────────────────────
+
+@admin_bp.route("/ai-email-assistant", methods=["GET"])
+@login_required
+@role_required("admin_group")
+def ai_email_assistant():
+    """AI Email Assistant — generate and send outreach emails for partner leads and requests."""
+    from LoanMVP.models.partner_models import ExternalPartnerLead, PartnerConnectionRequest
+
+    external_leads_raw = (
+        ExternalPartnerLead.query
+        .filter(ExternalPartnerLead.invite_status.in_(["new", "saved"]))
+        .order_by(ExternalPartnerLead.created_at.desc())
+        .limit(30)
+        .all()
+    )
+
+    open_requests_raw = (
+        PartnerConnectionRequest.query
+        .filter(PartnerConnectionRequest.status.in_(["awaiting_match", "pending"]))
+        .filter(PartnerConnectionRequest.source.in_(["external", "fallback_search"]))
+        .order_by(PartnerConnectionRequest.created_at.desc())
+        .limit(30)
+        .all()
+    )
+
+    # Serialize to plain dicts — SQLAlchemy models are not JSON-serializable
+    external_leads = [
+        {
+            "id":            l.id,
+            "name":          l.name or "",
+            "business_name": l.business_name or "",
+            "category":      l.category or "",
+            "address":       l.address or "",
+            "city":          l.city or "",
+            "state":         l.state or "",
+            "zip_code":      l.zip_code or "",
+            "invite_status": l.invite_status or "",
+            "created_at":    l.created_at.strftime("%b %d, %Y") if l.created_at else "",
+        }
+        for l in external_leads_raw
+    ]
+
+    open_requests = [
+        {
+            "id":       r.id,
+            "title":    r.title or "",
+            "category": r.category or "",
+            "status":   r.status or "",
+            "message":  r.message or "",
+            "budget":   float(r.budget) if r.budget else None,
+            "timeline": r.timeline or "",
+            "created_at": r.created_at.strftime("%b %d, %Y") if r.created_at else "",
+            "lead_name": (r.external_partner_lead.name or r.external_partner_lead.business_name or "")
+                         if r.external_partner_lead else "",
+        }
+        for r in open_requests_raw
+    ]
+
+    return render_template(
+        "admin/ai_email_assistant.html",
+        external_leads=external_leads,
+        open_requests=open_requests,
+    )
+
+
+@admin_bp.route("/ai/generate-email", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("admin_group")
+def ai_generate_email():
+    """AJAX: AI drafts an email given a type + context payload."""
+    from openai import OpenAI
+
+    data = request.get_json(silent=True) or {}
+    email_type    = (data.get("email_type") or "partner_invite").strip()
+    context       = data.get("context") or {}
+    custom_prompt = (data.get("custom_prompt") or "").strip()
+
+    partner_name     = (context.get("partner_name") or "").strip()
+    partner_address  = (context.get("partner_address") or "").strip()
+    partner_category = (context.get("partner_category") or "contractor").strip()
+    investor_message = (context.get("investor_message") or "").strip()
+    property_title   = (context.get("property_title") or "").strip()
+    budget           = context.get("budget")
+    timeline         = (context.get("timeline") or "").strip()
+    investor_name    = (context.get("investor_name") or "a Ravlo investor").strip()
+
+    if email_type == "partner_invite":
+        system = (
+            "You are the outreach coordinator for Ravlo, a real estate investment platform that "
+            "connects investors with local contractors, realtors, and inspectors. "
+            "Your tone is professional, warm, and direct. Emails should be under 200 words. "
+            "Never mention internal platform details or use placeholder text. "
+            "Always sign off as 'The Ravlo Team'."
+        )
+        try:
+            budget_line = f"\n- Budget: ${float(budget):,.0f}" if budget else ""
+        except (TypeError, ValueError):
+            budget_line = f"\n- Budget: {budget}" if budget else ""
+        timeline_line = f"\n- Timeline: {timeline}" if timeline else ""
+        prompt = (
+            f"Write an outreach email inviting {partner_name or 'a local business'} to join the Ravlo partner network.\n\n"
+            f"Context:\n"
+            f"- Business name: {partner_name or 'unknown'}\n"
+            f"- Category: {partner_category}\n"
+            f"- Location: {partner_address or 'local area'}\n"
+            f"- One of our investors is specifically looking to work with them\n"
+            f"- Project: {property_title or 'a local real estate project'}\n"
+            f"- Investor note: {investor_message or 'Looking for a reliable local professional'}"
+            f"{budget_line}{timeline_line}\n\n"
+            f"Format:\n"
+            f"Line 1 — Subject: <subject here>\n"
+            f"Line 2 — blank\n"
+            f"Lines 3+ — email body\n\n"
+            f"Do not use any placeholder brackets like [Name]."
+        )
+
+    elif email_type == "investor_update":
+        system = (
+            "You are a client success manager at Ravlo. "
+            "Write warm, professional status updates to investors. "
+            "Keep it under 150 words. Sign off as 'The Ravlo Team'."
+        )
+        prompt = (
+            f"Write a brief update email to {investor_name} about their partner request.\n\n"
+            f"Context:\n"
+            f"- They requested a {partner_category}\n"
+            f"- Partner they selected: {partner_name or 'a local professional'}\n"
+            f"- Project: {property_title or 'their real estate project'}\n"
+            f"- Update: Ravlo has reached out to this partner and is facilitating the connection\n\n"
+            f"Format:\n"
+            f"Line 1 — Subject: <subject here>\n"
+            f"Line 2 — blank\n"
+            f"Lines 3+ — email body"
+        )
+
+    elif email_type == "custom":
+        if not custom_prompt:
+            return jsonify({"status": "error", "message": "Custom prompt is required."}), 400
+        system = (
+            "You are an AI writing assistant for Ravlo, a real estate investment platform. "
+            "Write professional, concise emails. "
+            "Always put the subject on line 1 (format: 'Subject: ...'). "
+            "Sign off as 'The Ravlo Team'. Never use placeholder brackets."
+        )
+        prompt = custom_prompt
+
+    else:
+        return jsonify({"status": "error", "message": "Unknown email type."}), 400
+
+    try:
+        ai_client = OpenAI()
+        ai_model = current_app.config.get("AI_MODEL") or "gpt-4o-mini"
+        response = ai_client.chat.completions.create(
+            model=ai_model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user",   "content": prompt},
+            ],
+            temperature=0.6,
+            max_tokens=700,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+
+        # Split subject from body
+        subject = ""
+        body = raw
+        lines = raw.split("\n")
+        if lines and lines[0].lower().startswith("subject:"):
+            subject = lines[0][8:].strip()
+            body = "\n".join(lines[2:]).strip() if len(lines) > 2 else ""
+
+        return jsonify({"status": "ok", "subject": subject, "body": body})
+
+    except Exception as exc:
+        current_app.logger.error("[ai-generate-email] %s", exc)
+        return jsonify({"status": "error", "message": "AI generation failed. Please try again."}), 500
+
+
+@admin_bp.route("/ai/send-email", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("admin_group")
+def ai_send_email():
+    """AJAX: send an AI-drafted email and update the related lead/request status."""
+    from LoanMVP.models.partner_models import ExternalPartnerLead, PartnerConnectionRequest
+
+    data       = request.get_json(silent=True) or {}
+    to_email   = (data.get("to_email") or "").strip()
+    subject    = (data.get("subject") or "").strip()
+    body       = (data.get("body") or "").strip()
+    lead_id    = data.get("lead_id")
+    request_id = data.get("request_id")
+
+    if not to_email or "@" not in to_email:
+        return jsonify({"status": "error", "message": "A valid recipient email is required."}), 400
+    if not subject:
+        return jsonify({"status": "error", "message": "Subject line cannot be empty."}), 400
+    if not body:
+        return jsonify({"status": "error", "message": "Email body cannot be empty."}), 400
+
+    safe_body = body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+    html = (
+        f"<div style='font-family:sans-serif;line-height:1.6;max-width:600px;'>"
+        f"{safe_body}"
+        f"</div>"
+    )
+
+    try:
+        send_email(to=to_email, subject=subject, html_body=html, text_body=body)
+    except Exception as exc:
+        current_app.logger.error("[ai-send-email] %s", exc)
+        return jsonify({"status": "error", "message": "Email delivery failed. Check mail configuration."}), 500
+
+    # Update lead/request status after successful send
+    try:
+        if lead_id:
+            lead = ExternalPartnerLead.query.get(int(lead_id))
+            if lead and lead.invite_status in ("new", "saved"):
+                lead.invite_status = "invited"
+                db.session.commit()
+        if request_id:
+            req = PartnerConnectionRequest.query.get(int(request_id))
+            if req and req.status == "awaiting_match":
+                req.status = "pending"
+                db.session.commit()
+    except Exception as db_exc:
+        db.session.rollback()
+        current_app.logger.error("[ai-send-email] status update failed: %s", db_exc)
+
+    return jsonify({"status": "ok", "message": "Email sent successfully."})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# UNIVERSAL AI CHAT  (login_required only — all roles may use this)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@admin_bp.route("/ai/chat", methods=["POST"])
+@csrf.exempt
+@login_required
+def ai_chat():
+    """Universal conversational AI — adapts system prompt to the user's role."""
+    from openai import OpenAI
+
+    data    = request.get_json(silent=True) or {}
+    message = (data.get("message") or "").strip()
+    raw_history = data.get("history")
+    history = raw_history if isinstance(raw_history, list) else []
+
+    if not message:
+        return jsonify({"ok": False, "reply": "Please say something."}), 400
+
+    if len(message) > 4000:
+        return jsonify({"ok": False, "reply": "Message too long."}), 400
+
+    role = (getattr(current_user, "role", "") or "").lower()
+    name = getattr(current_user, "first_name", None) or getattr(current_user, "username", None) or "there"
+
+    if role in ("admin", "platform_admin", "master_admin", "lending_admin", "executive"):
+        system = (
+            f"You are Ravlo AI — the intelligent assistant for Ravlo platform administrators and executives. "
+            f"You help with partner outreach strategy, investor request management, platform operations, team oversight, "
+            f"deal pipeline visibility, and business growth. "
+            f"When the user asks about generating emails, guide them to the AI Email Assistant (/admin/ai-email-assistant). "
+            f"When they ask about partner leads, mention the partner queue. "
+            f"Be concise, strategic, and action-oriented. Suggest specific next steps where relevant. "
+            f"You are speaking with {name}."
+        )
+    elif role == "investor":
+        system = (
+            f"You are Ravlo AI — an intelligent real estate investment assistant. "
+            f"You help investors analyze deals, evaluate rehab budgets, find contractors and realtors, "
+            f"understand market conditions, and navigate the Ravlo platform. "
+            f"Be concise, data-grounded, and practical. Focus on deal underwriting, strategy, and execution. "
+            f"You are speaking with {name}."
+        )
+    else:
+        system = (
+            f"You are Ravlo AI — a professional assistant for the Ravlo real estate platform. "
+            f"Help the user with any platform questions, workflow guidance, or real estate topics. "
+            f"Be concise and helpful. You are speaking with {name}."
+        )
+
+    # Build messages with last 12 turns of history (cap each turn at 2000 chars)
+    messages = [{"role": "system", "content": system}]
+    for turn in history[-12:]:
+        if not isinstance(turn, dict):
+            continue
+        r = (turn.get("role") or "").strip()
+        c = (turn.get("content") or "").strip()[:2000]
+        if r in ("user", "assistant") and c:
+            messages.append({"role": r, "content": c})
+    messages.append({"role": "user", "content": message})
+
+    try:
+        ai_client = OpenAI()
+        ai_model  = current_app.config.get("AI_MODEL") or "gpt-4o-mini"
+        response  = ai_client.chat.completions.create(
+            model=ai_model,
+            messages=messages,
+            temperature=0.65,
+            max_tokens=500,
+        )
+        reply = (response.choices[0].message.content or "").strip()
+        return jsonify({"ok": True, "reply": reply})
+    except Exception as exc:
+        current_app.logger.error("[ai-chat] %s", exc)
+        return jsonify({"ok": False, "reply": "I ran into an issue. Please try again."}), 500

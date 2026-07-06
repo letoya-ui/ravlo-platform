@@ -6,43 +6,41 @@
     <div class="mk-hero-grid">
 
       <div class="mk-hero-copy">
-        <div class="mk-eyebrow">Investor Operating System</div>
+        <div class="mk-eyebrow">The Operating System for Real Estate</div>
         <h1 class="mk-title-xl">
-          Run deals, design, builds, and budgets from one command center.
+          Run every investment workflow from one command center.
         </h1>
         <p class="mk-copy-lg">
-          Ravlo helps real estate investors move with more clarity. Analyze opportunities,
-          explore interior design possibilities, plan site and exterior direction, and track the financial side
-          of execution in one connected platform.
+          Ravlo brings deals, analysis, budgets, projects, capital, partners, coaching, and AI into one connected platform — so investors and real estate professionals can move from idea to execution with more clarity.
         </p>
 
         <div class="mk-hero-actions">
           <a href="{{ url_for('auth.restore_owner_admin' if recovery_mode else 'auth.register') }}" class="mk-btn mk-btn-primary">
             {{ "Restore Owner Admin" if recovery_mode else "Start Free Trial" }}
           </a>
-          <a href="{{ url_for('auth.login') }}" class="mk-btn mk-btn-ghost">Login</a>
+          <a href="{{ url_for('marketing.why_ravlo') }}" class="mk-btn mk-btn-ghost">Why Ravlo</a>
           <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">See the Platform</a>
         </div>
 
         {% if not recovery_mode %}
-        <div style="display:inline-flex;align-items:center;gap:10px;margin-top:16px;padding:.6rem 1.2rem;border-radius:999px;background:rgba(122,184,255,.08);border:1px solid rgba(122,184,255,.2);">
+        <div style="display:inline-flex;align-items:center;gap:10px;margin-top:16px;padding:.6rem 1.2rem;border-radius:999px;background:rgba(58,92,122,.14);border:1px solid rgba(107,127,147,.28);">
           <span style="font-size:.95rem;">✦</span>
-          <span style="font-weight:700;color:#bfe0ff;font-size:.88rem;">15 days free &nbsp;·&nbsp; no credit card required</span>
+          <span style="font-weight:700;color:#d7e5f2;font-size:.88rem;">15 days free &nbsp;·&nbsp; no credit card required</span>
         </div>
         {% endif %}
 
         <div class="mk-stat-row">
           <div class="mk-stat">
-            <strong>Deal-first</strong>
-            <span>Evaluate opportunities before you commit capital.</span>
+            <strong>Investor OS</strong>
+            <span>Find, analyze, budget, build, fund, refinance, and manage opportunities.</span>
           </div>
           <div class="mk-stat">
-            <strong>Studio-powered</strong>
-            <span>Use dedicated workflows for planning, design, and execution.</span>
+            <strong>Partner Network</strong>
+            <span>Connect with agents, lenders, contractors, and professionals inside the Ravlo ecosystem.</span>
           </div>
           <div class="mk-stat">
-            <strong>Investor-ready</strong>
-            <span>Built for real execution, not just pretty dashboards.</span>
+            <strong>Ravlo AI</strong>
+            <span>Real estate intelligence powered by OpenAI and Anthropic, guided by Ravlo workflows.</span>
           </div>
         </div>
       </div>
@@ -71,46 +69,25 @@
 
 {% block content %}
 
+
 <section class="mk-section">
   <div class="mk-container">
-    <div class="mk-kicker">Core Experience</div>
-    <h2 class="mk-title-lg">A cleaner way to understand what a property can become.</h2>
+    <div class="mk-kicker">Why Ravlo exists</div>
+    <h2 class="mk-title-lg">Real estate work is too fragmented.</h2>
     <p class="mk-copy-lg">
-      Ravlo is designed to help you think through acquisition, interior design, construction planning,
-      and budget execution with more structure, less guessing, and better visibility across the whole opportunity.
+      Investors are expected to jump between listing sites, spreadsheets, CRMs, budget tools, project apps, lender portals, AI tools, and endless messages. Ravlo replaces the disconnected stack with one operating system built around the way real estate actually moves.
     </p>
 
-    <div class="mk-grid-4" style="margin-top:28px;">
+    <div class="mk-grid-2" style="margin-top:28px;">
       <div class="mk-card">
-        <div class="mk-card-icon">D</div>
-        <h3>Deal Architect</h3>
-        <p>
-          Break down a potential opportunity, compare scenarios, and understand where the numbers work before you move.
-        </p>
+        <div class="mk-kicker">Before Ravlo</div>
+        <h3>Too many tools. Too little clarity.</h3>
+        <p>Deals live in one place. Budgets live somewhere else. Capital conversations are buried in emails. Project notes get lost. Every decision takes longer than it should.</p>
       </div>
-
       <div class="mk-card">
-        <div class="mk-card-icon">D</div>
-        <h3>Design Studio</h3>
-        <p>
-          Design interiors using blueprints, floor plans, or current space images with more clarity and confidence.
-        </p>
-      </div>
-
-      <div class="mk-card">
-        <div class="mk-card-icon">B</div>
-        <h3>Build Studio</h3>
-        <p>
-          Create multi-floor blueprints, exterior concepts, and floor plan layouts for new builds, renovations, and property transformations.
-        </p>
-      </div>
-
-      <div class="mk-card">
-        <div class="mk-card-icon">$</div>
-        <h3>Budget Studio</h3>
-        <p>
-          Estimate costs, track expenses, and understand the real financial side of project execution.
-        </p>
+        <div class="mk-kicker">With Ravlo</div>
+        <h3>One login. One workflow. One system.</h3>
+        <p>Find opportunities, analyze the numbers, plan the project, build the budget, connect with partners, request capital, refinance, and keep moving inside one connected environment.</p>
       </div>
     </div>
   </div>
@@ -120,75 +97,134 @@
   <div class="mk-container">
     <div class="mk-split-panel">
       <div class="mk-panel">
-        <div class="mk-kicker">What Ravlo helps you do</div>
-        <h2 class="mk-title-lg">Move from idea to action with more structure.</h2>
+        <div class="mk-kicker">The Ravlo Workflow</div>
+        <h2 class="mk-title-lg">Find → Analyze → Budget → Build → Fund → Grow</h2>
+        <p class="mk-copy">
+          Ravlo is designed around complete workflows, not isolated features. Every module supports the next decision in the investment lifecycle.
+        </p>
 
         <div class="mk-list">
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div>
-              <strong>Review opportunities faster</strong>
-              <div class="mk-copy">Organize property thinking in a way that supports smarter decisions.</div>
-            </div>
+            <div><strong>Find better opportunities</strong><div class="mk-copy">Discover, save, and organize deals before you commit capital.</div></div>
           </div>
-
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div>
-              <strong>Design interiors with clarity</strong>
-              <div class="mk-copy">Use blueprints, floor plans, or interior photos to shape the look and feel of a space before making decisions.</div>
-            </div>
+            <div><strong>Analyze before you move</strong><div class="mk-copy">Compare strategies, understand the numbers, and make decisions with more confidence.</div></div>
           </div>
-
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div>
-              <strong>Plan the exterior and build direction</strong>
-              <div class="mk-copy">Think through multi-floor blueprints, exterior concepts, and floor plan layouts before moving into execution.</div>
-            </div>
+            <div><strong>Budget every dollar</strong><div class="mk-copy">Plan rehab, build, and project costs with better visibility into projected and actual spend.</div></div>
           </div>
-
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div>
-              <strong>Control the budget</strong>
-              <div class="mk-copy">Track cost expectations, actual spend, and project financial reality in one place.</div>
-            </div>
+            <div><strong>Move from planning to capital</strong><div class="mk-copy">Keep funding, refinancing, and lending workflows connected to the investment plan.</div></div>
           </div>
         </div>
       </div>
 
       <div class="mk-panel">
-        <div class="mk-kicker">Why it feels different</div>
-        <h2 class="mk-title-lg">Built for operators, not just browsers.</h2>
+        <div class="mk-kicker">Everything included</div>
+        <h2 class="mk-title-lg">Built like an ecosystem, not another app.</h2>
         <p class="mk-copy">
-          Ravlo is meant to feel like a true command center. Instead of jumping between notes,
-          calculators, screenshots, and disconnected tools, you get a more intentional environment
-          built around real investor workflow.
+          Ravlo connects the people, tools, and intelligence behind every investment — from Investor OS to Lending OS, Partner Network, Academy coaching, and Ravlo AI.
         </p>
 
         <div class="mk-divider"></div>
 
         <div class="mk-grid-2">
-          <div class="mk-card">
-            <h4>Clear workflow</h4>
-            <p>Each studio has a purpose so the experience stays focused and usable.</p>
-          </div>
+          <div class="mk-card"><h4>Investor OS</h4><p>Deal discovery, saved properties, comparisons, dashboards, projects, and budgets.</p></div>
+          <div class="mk-card"><h4>Lending OS</h4><p>Borrower intake, capital workflows, refinance support, and lender-side execution.</p></div>
+          <div class="mk-card"><h4>Partner Network</h4><p>Agents, lenders, contractors, architects, and trusted professionals connected to the workflow.</p></div>
+          <div class="mk-card"><h4>Academy Coaching</h4><p>Practical real estate coaching, platform walkthroughs, and business-building resources included with subscription access.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-          <div class="mk-card">
-            <h4>Premium interface</h4>
-            <p>Modern, polished, and strong enough to present as a serious investor platform.</p>
-          </div>
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">Ravlo AI</div>
+    <h2 class="mk-title-lg">Your real estate intelligence layer.</h2>
+    <p class="mk-copy-lg">
+      Ravlo AI combines leading models from OpenAI and Anthropic with Ravlo’s real estate workflows to help users think through deals, budgets, funding, project planning, and platform questions. AI assists the workflow — it does not replace professional judgment.
+    </p>
 
-          <div class="mk-card">
-            <h4>Expandable system</h4>
-            <p>Ready for additional dashboards, partner tools, and role-based growth.</p>
-          </div>
+    <div class="mk-grid-4" style="margin-top:28px;">
+      <div class="mk-card"><div class="mk-card-icon">AI</div><h3>Deal Strategy</h3><p>Ask questions about investment scenarios, risks, numbers, and next steps.</p></div>
+      <div class="mk-card"><div class="mk-card-icon">$</div><h3>Budget Review</h3><p>Get help thinking through cost categories, project assumptions, and budget gaps.</p></div>
+      <div class="mk-card"><div class="mk-card-icon">L</div><h3>Lending Support</h3><p>Understand funding workflows, refinance steps, and capital readiness considerations.</p></div>
+      <div class="mk-card"><div class="mk-card-icon">A</div><h3>Academy Coaching</h3><p>Use AI-guided learning and coaching resources to build stronger real estate workflows.</p></div>
+    </div>
+  </div>
+</section>
 
-          <div class="mk-card">
-            <h4>Execution-focused</h4>
-            <p>Not just planning — Ravlo is designed to support real project movement.</p>
-          </div>
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">Enterprise value</div>
+        <h2 class="mk-title-lg">Why pay for ten subscriptions when one operating system can connect the workflow?</h2>
+        <p class="mk-copy">
+          Ravlo Enterprise is built for investors and teams who want the full ecosystem: deals, dashboards, budgets, projects, capital, refinance, AI, partners, resources, and coaching in one place.
+        </p>
+        <div class="mk-hero-actions" style="margin-top:24px;">
+          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Start Free Trial</a>
+          <a href="{{ url_for('marketing.plans') }}" class="mk-btn mk-btn-ghost">View Plans</a>
+        </div>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">Included workflows</div>
+        <div class="mk-grid-2">
+          <div class="mk-card"><h4>Deal Finder</h4><p>Search, save, and organize opportunities.</p></div>
+          <div class="mk-card"><h4>Compare Deals</h4><p>Evaluate multiple properties side by side.</p></div>
+          <div class="mk-card"><h4>Budget Studio</h4><p>Plan and track investment project costs.</p></div>
+          <div class="mk-card"><h4>Capital Studio</h4><p>Keep funding requests connected to the deal.</p></div>
+          <div class="mk-card"><h4>Refinance Studio</h4><p>Support the next capital move after execution.</p></div>
+          <div class="mk-card"><h4>Partner Network</h4><p>Bring trusted professionals into the ecosystem.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INVESTOR JOURNEY -->
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-kicker">For investors</div>
+    <h2 class="mk-title-lg">Learn it. Find it. Move on it.</h2>
+    <p class="mk-copy-lg">
+      Ravlo is built around the complete investor workflow — from building the knowledge base to finding the right deal, running the numbers, and executing. Academy and Investor OS are designed to work together inside one platform.
+    </p>
+
+    <div class="mk-split-panel" style="margin-top:28px;">
+      <div class="mk-panel">
+        <div class="mk-kicker">Step 1 — Learn</div>
+        <h3 style="font-size:1.4rem; font-weight:700; margin-bottom:12px;">Ravlo Academy builds the foundation.</h3>
+        <p class="mk-copy">8 professional courses covering real estate investing, deal structuring, creative financing, construction, and lending. AI coach, quizzes, and certificates included. Start with any course and build at your own pace.</p>
+        <div class="mk-list" style="margin-top:16px;">
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Real Estate Investing — BRRRR, multifamily, exit strategies</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Advanced Deal Structuring — creative financing, JVs, off-market</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>AI mentor available 24/7 for deal questions and coaching</div></div>
+        </div>
+        <div style="margin-top:20px;">
+          <a href="{{ url_for('marketing.academy') }}" class="mk-btn mk-btn-ghost">Explore Academy</a>
+        </div>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">Step 2 — Find &amp; Execute</div>
+        <h3 style="font-size:1.4rem; font-weight:700; margin-bottom:12px;">Investor OS puts deals in front of you.</h3>
+        <p class="mk-copy">Deal Finder surfaces ranked opportunities by market. Deal Architect runs the analysis. Budget Studio scopes the project. Capital Studio connects the funding. The whole workflow — from search to execution — inside one place.</p>
+        <div class="mk-list" style="margin-top:16px;">
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Search markets, save deals, compare opportunities side by side</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Analyze strategy, run the numbers, understand the exit before you commit</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Budget the rehab, track spend, and keep the deal organized</div></div>
+        </div>
+        <div style="margin-top:20px;">
+          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Start Free Trial</a>
         </div>
       </div>
     </div>
@@ -198,147 +234,44 @@
 <section class="mk-section">
   <div class="mk-container">
     <div class="mk-kicker">Featured Screens</div>
-    <h2 class="mk-title-lg">Use your screenshots to make the site feel real immediately.</h2>
+    <h2 class="mk-title-lg">A real platform users can see, understand, and trust.</h2>
     <p class="mk-copy-lg">
-      Since you already have platform screenshots, this section is where they start working for you.
+      Show the actual Ravlo interface so visitors immediately understand what they are paying for: one premium command center for the work behind every investment.
     </p>
 
     <div class="mk-grid-4" style="margin-top:28px;">
       <div class="mk-card mk-media-card">
         <img src="{{ url_for('static', filename='images/studios/deal_architect.jpg') }}" alt="Deal Architect preview">
-        <div class="mk-media-copy">
-          <h3>Deal Architect</h3>
-          <p>Break down opportunity, strategy, and numbers in one focused screen.</p>
-        </div>
+        <div class="mk-media-copy"><h3>Deal Analysis</h3><p>Break down opportunity, strategy, and numbers in one focused screen.</p></div>
       </div>
-
       <div class="mk-card mk-media-card">
-        <img src="{{ url_for('static', filename='images/studios/renovation_studio.jpg') }}" alt="Design Studio preview">
-        <div class="mk-media-copy">
-          <h3>Design Studio</h3>
-          <p>Show interior concepts created from blueprints, floor plans, or current space images.</p>
-        </div>
+        <img src="{{ url_for('static', filename='images/studios/renovation_studio.jpg') }}" alt="Project planning preview">
+        <div class="mk-media-copy"><h3>Project Planning</h3><p>Plan improvements, scope work, and move from concept to execution.</p></div>
       </div>
-
       <div class="mk-card mk-media-card">
         <img src="{{ url_for('static', filename='images/studios/build_studio.jpg') }}" alt="Build Studio preview">
-        <div class="mk-media-copy">
-          <h3>Build Studio</h3>
-          <p>Show multi-floor blueprints, exterior concepts, and floor plan layouts for property development.</p>
-        </div>
+        <div class="mk-media-copy"><h3>Build Studio</h3><p>Organize build concepts, exterior direction, and property development planning.</p></div>
       </div>
-
       <div class="mk-card mk-media-card">
         <img src="{{ url_for('static', filename='images/studios/budget_studio.jpg') }}" alt="Budget Studio preview">
-        <div class="mk-media-copy">
-          <h3>Budget Studio</h3>
-          <p>Show how users can track projected vs actual costs and stay financially grounded.</p>
-        </div>
+        <div class="mk-media-copy"><h3>Budget Studio</h3><p>Track projected vs actual costs and stay financially grounded.</p></div>
       </div>
-    </div>
-  </div>
-</section>
-
-<section class="mk-section">
-  <div class="mk-container">
-    <div class="mk-kicker">Ravlo Academy</div>
-    <h2 class="mk-title-lg">AI-powered coaching for every deal.</h2>
-    <p class="mk-copy-lg">
-      Ravlo Academy gives realtors, investors, and lenders a dedicated AI coach, structured learning modules,
-      and a personalized 90-day business plan — all inside the Ravlo ecosystem. Available as a standalone
-      product or included free for all VIP Partners.
-    </p>
-
-    <div class="mk-grid-3" style="margin-top:28px;">
-      <div class="mk-card">
-        <div class="mk-card-icon">🤖</div>
-        <h3>AI Coach</h3>
-        <p>24/7 real estate coaching tailored to your role and goals.</p>
-      </div>
-      <div class="mk-card">
-        <div class="mk-card-icon">📋</div>
-        <h3>Business Plans</h3>
-        <p>Personalized 90-day success plans for every member.</p>
-      </div>
-      <div class="mk-card">
-        <div class="mk-card-icon">📚</div>
-        <h3>6 Modules</h3>
-        <p>Residential, commercial, lending, investing, and more.</p>
-      </div>
-    </div>
-
-    <div class="mk-cta-actions" style="margin-top:32px;">
-      <a href="{{ url_for('marketing.academy') }}" class="mk-btn mk-btn-primary">Explore Academy →</a>
-      <a href="{{ url_for('marketing.partners') }}" class="mk-btn mk-btn-ghost">VIP Partner Access</a>
     </div>
   </div>
 </section>
 
 <section class="mk-section-tight">
   <div class="mk-container">
-    <div class="mk-kicker" style="margin-bottom:8px;">Pricing</div>
-    <h2 class="mk-title-lg" style="margin-bottom:6px;">Simple plans. Start free.</h2>
-    <p class="mk-copy" style="margin-bottom:28px;">Create a free account and explore Ravlo for 15 days — no credit card needed to get started.</p>
-
-    <div class="mk-grid-3">
-      <div class="mk-plan">
-        <div class="mk-plan-badge">Starter</div>
-        <h3>Core</h3>
-        <div class="mk-plan-price">$29<span style="font-size:1rem;font-weight:700;">/mo</span></div>
-        <div class="mk-plan-note">Capital access, property search, and messaging — built for early-stage investors.</div>
-        <div style="margin-top:16px;">
-          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Start Free Trial</a>
-        </div>
-      </div>
-
-      <div class="mk-plan featured">
-        <div class="mk-plan-badge">Most Popular</div>
-        <h3>Pro</h3>
-        <div class="mk-plan-price">$79<span style="font-size:1rem;font-weight:700;">/mo</span></div>
-        <div class="mk-plan-note">Full deal workflow, unlimited search, partner access, and Academy.</div>
-        <div style="margin-top:16px;">
-          <a href="{{ url_for('marketing.plans') }}" class="mk-btn mk-btn-primary" style="width:100%;">See Pro Plan</a>
-        </div>
-      </div>
-
-      <div class="mk-plan">
-        <div class="mk-plan-badge">Enterprise</div>
-        <h3>Enterprise</h3>
-        <div class="mk-plan-price">$149<span style="font-size:1rem;font-weight:700;">/mo</span></div>
-        <div class="mk-plan-note">Full studio access for serious operators running multiple deals.</div>
-        <div style="margin-top:16px;">
-          <a href="{{ url_for('marketing.plans') }}" class="mk-btn mk-btn-ghost" style="width:100%;">See Details</a>
-        </div>
-      </div>
-    </div>
-
-    <p style="text-align:center;margin-top:20px;font-size:.82rem;color:rgba(228,236,246,.4);">
-      Start with a free account &nbsp;·&nbsp; no credit card required &nbsp;·&nbsp;
-      <a href="{{ url_for('marketing.plans') }}" style="color:rgba(122,184,255,.6);text-decoration:none;">Compare all plans →</a>
-    </p>
-  </div>
-</section>
-
-<section class="mk-section">
-  <div class="mk-container">
-    <div class="mk-cta">
-      <div class="mk-kicker">Ready to step inside?</div>
-      <h2 class="mk-title-lg">See Ravlo in motion and start shaping the next version of your investor workflow.</h2>
-      <p>
-        Ravlo brings together strategy, design, budgeting, and execution in one connected platform.
+    <div class="mk-panel" style="text-align:center;">
+      <div class="mk-kicker">Start with clarity</div>
+      <h2 class="mk-title-lg">Every investment begins with Ravlo.</h2>
+      <p class="mk-copy-lg" style="max-width:760px;margin:0 auto;">
+        Join the real estate operating system built for investors, lenders, partners, and professionals who want one connected place to work.
       </p>
-
-      <div class="mk-cta-actions">
-        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take the Tour</a>
-        <a href="{{ url_for('auth.restore_owner_admin' if recovery_mode else 'auth.register') }}" class="mk-btn mk-btn-ghost">
-          {{ "Restore Owner Admin" if recovery_mode else "Start Free Trial" }}
-        </a>
+      <div class="mk-hero-actions" style="margin-top:24px;justify-content:center;">
+        <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Start Free Trial</a>
+        <a href="{{ url_for('marketing.why_ravlo') }}" class="mk-btn mk-btn-ghost">Read Why Ravlo</a>
       </div>
-      {% if not recovery_mode %}
-      <p style="margin-top:14px;font-size:.82rem;color:rgba(228,236,246,.4);">
-        15 days free &nbsp;·&nbsp; no credit card required
-      </p>
-      {% endif %}
     </div>
   </div>
 </section>

@@ -1,1919 +1,1113 @@
-// ─── Ravlo Academy — School Structure Build ──────────────────────────────
-// AI calls are proxied through /academy/chat (keeps ANTHROPIC_API_KEY
-// server-side).  Fonts are loaded in portal.html <head> to prevent FOUC.
-// React hooks pulled from the global React UMD bundle (no import needed).
+const { useState, useEffect, useRef } = React;
 
-const { useState, useRef, useEffect, useCallback } = React;
+// ── Design tokens — aligned to ravlo_tokens.css brand foundation ───────────
+const T = {
+  bg: '#070c12', bgSoft: '#0c1116',
+  panel: '#101821', panel2: '#131c26',
+  border: 'rgba(255,255,255,0.07)', borderSoft: 'rgba(107,127,147,0.18)',
+  text: '#ffffff', muted: 'rgba(255,255,255,0.58)', mutedDark: '#6B7F93',
+  accent: '#3A5C7A', accentLight: '#5FA8FF', accentGlow: 'rgba(95,168,255,0.15)',
+  success: '#2cb67d', warning: '#d1a246', danger: '#c46363',
+  shadow: '0 18px 48px rgba(0,0,0,0.34)',
+  radius: { sm: 12, md: 16, lg: 22, xl: 28 },
+};
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
-
-const ACCESS_TIERS = {
-  elite: {
-    label: "Elite Access", badge: "ELITE", color: "#D4AF6A",
-    bg: "rgba(212,175,106,0.12)", border: "rgba(212,175,106,0.4)", icon: "◆",
-    description: "Ravlo Investors & Partners",
-    perks: ["Unlimited AI Coaching", "All Courses", "1-on-1 Success Plans", "Priority Support", "Investor Briefings"],
-    accessCode: "RAVLO-ELITE", monthly: 0, badge_text: "Complimentary",
+// ── Career tracks ──────────────────────────────────────────────────────────
+const TRACKS = {
+  investor: {
+    label: 'Real Estate Investor', color: '#52d3a6', icon: '⬡',
+    levels: [
+      { title: 'Foundations of Investing', modules: [
+        { id: 'inv-l1-m1', title: 'The Investor Mindset', lessons: [
+          { title: 'How Wealth is Built Through Real Estate', desc: 'Core mechanics: appreciation, cash flow, equity, and tax advantages.' },
+          { title: 'Types of Real Estate Investments', desc: 'SFR, multifamily, commercial, land, notes — risk/return profiles.' },
+          { title: 'Setting Your Investment Criteria', desc: 'Define your buy box: market, price range, property type, return thresholds.' },
+        ]},
+        { id: 'inv-l1-m2', title: 'Market Fundamentals', lessons: [
+          { title: 'Reading a Real Estate Market', desc: 'Supply, demand, absorption rates — buyer vs seller market signals.' },
+          { title: 'Choosing Your Target Market', desc: 'Population growth, job diversity, affordability ratios, landlord-friendliness.' },
+          { title: 'Neighborhood Analysis', desc: 'A/B/C/D neighborhoods, crime data, school ratings, rent-to-value ratios.' },
+        ]},
+      ]},
+      { title: 'Finding & Analyzing Deals', modules: [
+        { id: 'inv-l2-m1', title: 'Deal Sourcing', lessons: [
+          { title: 'On-Market vs Off-Market Strategies', desc: 'MLS, wholesalers, direct mail, driving for dollars, agent relationships.' },
+          { title: 'Working with Wholesalers', desc: 'Evaluating wholesale deals, building buyer lists, and protecting your MAO.' },
+          { title: 'Building a Lead Pipeline', desc: 'CRM setup, follow-up sequences, and lead tracking systems.' },
+        ]},
+        { id: 'inv-l2-m2', title: 'Deal Analysis', lessons: [
+          { title: 'Running the Numbers on Rentals', desc: 'NOI, cap rate, cash-on-cash return, GRM — step-by-step underwriting.' },
+          { title: 'Estimating Repairs Accurately', desc: 'Scope of work, contractor bids, contingency buffers, and avoiding surprises.' },
+          { title: 'The Maximum Allowable Offer Formula', desc: 'ARV-based pricing, assignment fees, rehab costs, and your profit margin.' },
+        ]},
+      ]},
+      { title: 'Financing Your Deals', modules: [
+        { id: 'inv-l3-m1', title: 'Conventional & Agency Loans', lessons: [
+          { title: 'DSCR Loans for Investors', desc: 'Qualification, LTV, rates, and use cases for debt-service coverage ratio loans.' },
+          { title: 'Fannie Mae Investment Guidelines', desc: '10-property rule, reserve requirements, and portfolio strategy.' },
+          { title: 'Working with Lenders Effectively', desc: 'Pre-approval process, what lenders look for, and building banking relationships.' },
+        ]},
+        { id: 'inv-l3-m2', title: 'Creative Financing', lessons: [
+          { title: 'Hard Money & Bridge Loans', desc: 'Short-term lending, points, ARV requirements, and exit strategies.' },
+          { title: 'Seller Financing & Subject-To', desc: 'Structuring owner-carry deals, due-on-sale risks, and documentation.' },
+          { title: 'Private Money & Partnerships', desc: 'Raising capital, investor agreements, preferred returns, JV structures.' },
+        ]},
+        { id: 'inv-l3-m3', title: 'Getting Funded: Requirements & Preparation', lessons: [
+          { title: 'Qualifying Criteria by Loan Type', desc: 'Credit scores, reserve requirements, DSCR ratios, and experience tiers — what each lender actually needs before they say yes.' },
+          { title: 'LTV, LTC, and ARV — How Lenders Underwrite Investment Deals', desc: 'Loan-to-Value vs Loan-to-Cost, ARV-based lending at 65–70%, draw schedules, and why lenders think differently on investment properties.' },
+          { title: 'Building Your Deal Package', desc: 'What lenders actually want: executive summary, comp analysis, scope of work, rent projections, and borrower profile — assembled before you make the call.' },
+        ]},
+      ]},
+      { title: 'BRRRR & Flipping', modules: [
+        { id: 'inv-l4-m1', title: 'The BRRRR Method', lessons: [
+          { title: 'BRRRR Step by Step', desc: 'Buy, Rehab, Rent, Refinance, Repeat — the complete cycle explained.' },
+          { title: 'Managing Rehab Projects', desc: 'Contractor management, draw schedules, scope creep, and timelines.' },
+          { title: 'The Cash-Out Refinance', desc: 'Seasoning requirements, LTV targets, and recycling your capital.' },
+        ]},
+        { id: 'inv-l4-m2', title: 'Fix & Flip', lessons: [
+          { title: 'Flipping vs Holding — Decision Framework', desc: 'Tax implications, market timing, and personal cash flow needs.' },
+          { title: 'Flip Budgeting & Project Management', desc: 'Timeline-to-profit, holding costs, and managing contractors.' },
+          { title: 'Selling for Top Dollar', desc: 'Staging, pricing strategy, agent selection, and negotiation.' },
+        ]},
+      ]},
+      { title: 'Portfolio & Scale', modules: [
+        { id: 'inv-l5-m1', title: 'Building Systems', lessons: [
+          { title: 'Property Management: Self vs Professional', desc: 'Cost analysis, tenant screening, maintenance systems, and your time.' },
+          { title: 'Building Your Team', desc: 'Agents, lenders, CPAs, attorneys, property managers — who you need and when.' },
+          { title: 'Depreciation & Cost Segregation', desc: 'Paper losses, bonus depreciation, and how investors pay little to no tax.' },
+        ]},
+      ]},
+    ],
   },
   lending: {
-    label: "Lending Team", badge: "TEAM", color: "#6AB4D4",
-    bg: "rgba(106,180,212,0.12)", border: "rgba(106,180,212,0.4)", icon: "◈",
-    description: "Ravlo Lending Staff",
-    perks: ["Unlimited AI Coaching", "Loan Courses", "Commercial Training", "Team Dashboard", "Deal Review"],
-    accessCode: "RAVLO-LENDING", monthly: 0, badge_text: "Employment Benefit",
+    label: 'Lending Professional', color: '#59B7FF', icon: '◈',
+    levels: [
+      { title: 'Mortgage Fundamentals', modules: [
+        { id: 'len-l1-m1', title: 'Loan Products & Programs', lessons: [
+          { title: 'Conventional vs Government Loans', desc: 'FHA, VA, USDA, Conventional — eligibility, MI, limits, and use cases.' },
+          { title: 'Understanding Loan Limits & Overlays', desc: 'Conforming limits, jumbo thresholds, lender-specific requirements.' },
+          { title: 'Rate vs APR vs Points', desc: 'How pricing works, buy-down math, and presenting costs to borrowers.' },
+        ]},
+        { id: 'len-l1-m2', title: 'The Loan Process', lessons: [
+          { title: 'Application to Clear-to-Close', desc: 'Every milestone from 1003 to funding: who does what and when.' },
+          { title: 'Key Disclosures & Timelines', desc: 'LE, CD, 3-day rule, RESPA requirements, and compliance touchpoints.' },
+          { title: 'Reading a Credit Report', desc: 'Tradelines, inquiries, derogatory marks, and rapid rescoring strategy.' },
+        ]},
+      ]},
+      { title: 'Loan Officer Skills', modules: [
+        { id: 'len-l2-m1', title: 'Client Qualification', lessons: [
+          { title: 'Income Calculation: W2 & Salaried', desc: 'Base, overtime, bonus, and part-time income — what counts and what does not.' },
+          { title: 'Self-Employed Income Analysis', desc: '1084 worksheet, 24-month average, and business income adjustments.' },
+          { title: 'DTI & Residual Income', desc: 'Front-end, back-end ratios, VA residual income, and manual underwrite thresholds.' },
+        ]},
+        { id: 'len-l2-m2', title: 'Sales & Relationships', lessons: [
+          { title: 'Building a Realtor Referral Network', desc: 'Value proposition, co-marketing, open houses, and maintaining relationships.' },
+          { title: 'The Borrower Consultation Call', desc: 'Needs assessment, expectation setting, and creating pre-approval urgency.' },
+          { title: 'Objection Handling for LOs', desc: 'Rate objections, "I will wait" objections, and competitor comparisons.' },
+        ]},
+      ]},
+      { title: 'Loan Processing', modules: [
+        { id: 'len-l3-m1', title: 'File Documentation', lessons: [
+          { title: 'The Complete Loan Package', desc: 'Every document checklist: income, assets, identity, property, and title.' },
+          { title: 'Ordering & Reviewing the Appraisal', desc: 'Ordering timeline, reviewing comps, contesting low appraisals.' },
+          { title: 'Working Underwriting Conditions', desc: 'PTD vs PTC conditions, writing cover letters, and expediting approvals.' },
+        ]},
+      ]},
+      { title: 'Underwriting Fundamentals', modules: [
+        { id: 'len-l4-m1', title: 'The Four Cs of Credit', lessons: [
+          { title: 'Capacity — Income Analysis Deep Dive', desc: 'Complex scenarios: rental income, commission, seasonal employment.' },
+          { title: 'Collateral — Property Eligibility', desc: 'Non-warrantable condos, rural properties, manufactured homes, mixed-use.' },
+          { title: 'DU & LP Deep Dive', desc: 'Reading AUS findings, message codes, and resubmission strategy.' },
+        ]},
+      ]},
+      { title: 'Lending Leadership', modules: [
+        { id: 'len-l5-m1', title: 'Branch & Team Management', lessons: [
+          { title: 'Recruiting & Developing Loan Officers', desc: 'Compensation structures, onboarding plans, and production accountability.' },
+          { title: 'Pipeline Management at Scale', desc: 'Team production tracking, pull-through rates, and bottleneck identification.' },
+          { title: 'Compliance & Quality Control', desc: 'HMDA reporting, audit prep, and building a compliance-first culture.' },
+        ]},
+      ]},
+    ],
   },
-  pro: {
-    label: "Pro", badge: "PRO", color: "#B06AD4",
-    bg: "rgba(176,106,212,0.12)", border: "rgba(176,106,212,0.4)", icon: "●",
-    description: "Independent Realtors & Investors",
-    perks: ["Unlimited AI Coaching", "All Courses", "Success Plans", "Community Access"],
-    monthly: 97, badge_text: "$97 / month",
+  realtor: {
+    label: 'Real Estate Agent', color: '#ffd36f', icon: '◇',
+    levels: [
+      { title: 'Agent Foundations', modules: [
+        { id: 'rea-l1-m1', title: 'Building Your Business', lessons: [
+          { title: 'Your First 90 Days as an Agent', desc: 'Sphere of influence, database setup, and generating your first transaction.' },
+          { title: 'Lead Generation Fundamentals', desc: 'Prospecting, open houses, online leads, and referral cultivation.' },
+          { title: 'Time Blocking & Productivity', desc: 'Dollar-productive activities, non-negotiable blocks, and accountability systems.' },
+        ]},
+        { id: 'rea-l1-m2', title: 'Contract & Transaction Basics', lessons: [
+          { title: 'Reading the Purchase Agreement', desc: 'Key contract terms: contingencies, timelines, earnest money, and default.' },
+          { title: 'The Inspection Process', desc: 'Coordinating inspections, negotiating repairs, and managing client expectations.' },
+          { title: 'Closing Day Coordination', desc: 'Title, lender, and settlement timelines — keeping everyone on track.' },
+        ]},
+      ]},
+      { title: 'Buyer Representation', modules: [
+        { id: 'rea-l2-m1', title: 'Working with Buyers', lessons: [
+          { title: 'The Buyer Consultation', desc: 'Needs assessment, timeline, financing status, and buyer agency agreement.' },
+          { title: 'Writing Competitive Offers', desc: 'Escalation clauses, appraisal gaps, waiving contingencies — and when not to.' },
+          { title: 'Navigating Multiple Offers', desc: 'How to present, when to advise clients to walk, and closing on value.' },
+        ]},
+      ]},
+      { title: 'Listings & Sellers', modules: [
+        { id: 'rea-l3-m1', title: 'Winning Listings', lessons: [
+          { title: 'The Listing Presentation', desc: 'CMA delivery, marketing plan, commission defense, and closing the listing.' },
+          { title: 'Pricing Strategy', desc: 'Absorption rate analysis, days-on-market risk, and price reduction conversations.' },
+          { title: 'Marketing & Photography', desc: 'Professional photography, MLS strategy, social media, and open house execution.' },
+        ]},
+      ]},
+      { title: 'Building a Real Estate Business', modules: [
+        { id: 'rea-l4-m1', title: 'Team & Brand Building', lessons: [
+          { title: 'Solo Agent vs Team Model', desc: 'Economic comparison, leverage points, and when to hire your first assistant.' },
+          { title: 'Your Personal Brand', desc: 'Niche selection, content strategy, becoming the local market expert.' },
+          { title: 'Investor-Friendly Agent Skills', desc: 'Understanding investor math, DSCR properties, building an investor client base.' },
+        ]},
+      ]},
+    ],
   },
-  starter: {
-    label: "Starter", badge: "START", color: "#6AD4A0",
-    bg: "rgba(106,212,160,0.12)", border: "rgba(106,212,160,0.4)", icon: "○",
-    description: "New to Real Estate",
-    perks: ["Core AI Coaching", "Foundational Courses", "Basic Success Plan"],
-    monthly: 47, badge_text: "$47 / month",
+  property_mgmt: {
+    label: 'Property Manager', color: '#c4b5fd', icon: '▣',
+    levels: [
+      { title: 'PM Foundations', modules: [
+        { id: 'pm-l1-m1', title: 'Landlord-Tenant Law', lessons: [
+          { title: 'Fair Housing Compliance', desc: 'Protected classes, advertising rules, and screening criteria that survive audit.' },
+          { title: 'Lease Agreements', desc: 'Key clauses, addenda, late fees, and what courts actually enforce.' },
+          { title: 'Security Deposits & Move-In/Out', desc: 'Collection, holding, deduction documentation, and return timelines.' },
+        ]},
+        { id: 'pm-l1-m2', title: 'Tenant Screening', lessons: [
+          { title: 'Building a Screening Criteria Document', desc: 'Income requirements, credit thresholds, rental history, criminal guidelines.' },
+          { title: 'Running Background & Credit Checks', desc: 'Report interpretation, adverse action notices, and FCRA compliance.' },
+          { title: 'The Showing & Application Process', desc: 'Self-showing technology, application collection, and first-come first-served.' },
+        ]},
+      ]},
+      { title: 'Operations', modules: [
+        { id: 'pm-l2-m1', title: 'Maintenance & Vendors', lessons: [
+          { title: 'Preventive Maintenance Programs', desc: 'Annual inspection schedules, HVAC service, and roof/exterior cycles.' },
+          { title: 'Building a Vendor Network', desc: 'Contractor vetting, pricing benchmarks, and preferred vendor agreements.' },
+          { title: 'Maintenance Request Systems', desc: 'Work order software, tenant portal setup, and emergency response protocols.' },
+        ]},
+      ]},
+      { title: 'Legal & Compliance', modules: [
+        { id: 'pm-l3-m1', title: 'Evictions & Collections', lessons: [
+          { title: 'The Eviction Process Step by Step', desc: 'Notice requirements, unlawful detainer, writ of possession, and timeline.' },
+          { title: 'Collections After Eviction', desc: 'Judgment liens, collection agencies, credit reporting, and debt forgiveness.' },
+          { title: 'Navigating Rent Control', desc: 'Jurisdictions, allowable increases, just-cause eviction requirements.' },
+        ]},
+      ]},
+    ],
+  },
+  contractor: {
+    label: 'Contractor / Builder', color: '#fb923c', icon: '◆',
+    levels: [
+      { title: 'Business Foundation', modules: [
+        { id: 'con-l1-m1', title: 'Licensing & Operations', lessons: [
+          { title: 'Licensing, Bonding & Insurance', desc: 'State requirements, general liability, workers comp, and surety bonds.' },
+          { title: 'Business Entity & Accounting', desc: 'LLC structure, job costing, QuickBooks setup, separating business finances.' },
+          { title: 'Contracts & Scope of Work', desc: 'Key clauses: payment schedule, change orders, lien waivers, and warranties.' },
+        ]},
+      ]},
+      { title: 'Estimating & Bidding', modules: [
+        { id: 'con-l2-m1', title: 'Accurate Estimating', lessons: [
+          { title: 'Material Takeoffs', desc: 'Measuring and quantifying materials from plans or site visits.' },
+          { title: 'Labor Pricing & Subcontractor Bids', desc: 'Unit pricing, sub markup, and protecting your margin.' },
+          { title: 'Overhead & Profit in Your Bid', desc: 'True overhead calculation, target GP%, and presenting your price.' },
+        ]},
+      ]},
+      { title: 'Project Management', modules: [
+        { id: 'con-l3-m1', title: 'Managing Jobs', lessons: [
+          { title: 'Scheduling & Critical Path', desc: 'Gantt charts, trade sequencing, lead times, and milestone tracking.' },
+          { title: 'Managing Subcontractors', desc: 'Written agreements, lien waivers, quality inspections, and payment holdbacks.' },
+          { title: 'Change Order Management', desc: 'Documenting scope changes, pricing changes, and client communication.' },
+        ]},
+      ]},
+      { title: 'Growing the Business', modules: [
+        { id: 'con-l4-m1', title: 'Working with Investors & Agents', lessons: [
+          { title: 'Becoming an Investor-Preferred Contractor', desc: 'Scope of work literacy, rehab budgets, and reliable timelines as your brand.' },
+          { title: 'Referral Networks & Repeat Business', desc: 'Building relationships with investors, agents, and property managers.' },
+          { title: 'Scaling Your Crew', desc: 'Hiring, training, retention, and systems for running multiple jobs simultaneously.' },
+        ]},
+      ]},
+    ],
+  },
+  operations: {
+    label: 'Operations & Admin', color: '#8ec5ff', icon: '⚙',
+    levels: [
+      { title: 'Platform Operations', modules: [
+        { id: 'ops-l1-m1', title: 'Access & Onboarding', lessons: [
+          { title: 'Managing Access Requests', desc: 'How to review, approve, and deny access requests — what to look for and when to escalate.' },
+          { title: 'Inviting Team Members', desc: 'Adding staff, setting roles, and making sure new users land in the right workspace from day one.' },
+          { title: 'User Roles & Permissions', desc: 'What each role can see and do — investor, partner, admin, executive — and why role assignment matters.' },
+        ]},
+        { id: 'ops-l1-m2', title: 'Daily Operations Rhythm', lessons: [
+          { title: 'Morning Queue Review', desc: 'How to start each day — access requests, messages, open bids, and any flagged items.' },
+          { title: 'Tracking Open Items', desc: 'Keeping nothing in your head — how to use the dashboard, reports, and notes to stay clear on what is pending.' },
+          { title: 'Escalation & Handoffs', desc: 'When to handle it yourself, when to loop in Letoya or Jamaine, and how to hand off cleanly.' },
+        ]},
+      ]},
+      { title: 'Bid Support Workflow', modules: [
+        { id: 'ops-l2-m1', title: 'Package Preparation', lessons: [
+          { title: 'What Goes in a Bid Package', desc: 'Scope of work, drawings, specs, insurance requirements, and anything a GC needs to submit a competitive number.' },
+          { title: 'Collecting Missing Information', desc: 'How to identify what is missing, who to ask, and how to document the request so nothing falls through.' },
+          { title: 'Drafting & Formatting Bids', desc: 'Structure, tone, and what makes a bid package look professional to a municipality or GC.' },
+        ]},
+        { id: 'ops-l2-m2', title: 'Status & Follow-Up', lessons: [
+          { title: 'Moving a Bid Through the Queue', desc: 'Package Needed → Draft Prepared → Waiting on Jamaine → Ready to Send — how each stage change gets handled.' },
+          { title: 'Following Up After Submission', desc: 'How long to wait, who to contact, and what information to capture from follow-up conversations.' },
+          { title: 'Tracking Outcomes', desc: 'Recording won, lost, and no-bid decisions — and what that history tells you about where to focus next.' },
+        ]},
+      ]},
+      { title: 'Communications & Reporting', modules: [
+        { id: 'ops-l3-m1', title: 'Professional Communications', lessons: [
+          { title: 'Writing for External Parties', desc: 'Email tone, structure, and clarity when representing Ravlo or Caughman Mason to clients, municipalities, or GCs.' },
+          { title: 'Internal Handoff Notes', desc: 'Writing notes Jamaine and Letoya can act on immediately — context, action needed, deadline.' },
+          { title: 'Documenting Conversations', desc: 'What to capture from a call or site visit so the information stays in the system and does not live in your memory.' },
+        ]},
+        { id: 'ops-l3-m2', title: 'Reports & Records', lessons: [
+          { title: 'Reading the Reports Dashboard', desc: 'What each report shows, how often to check it, and what patterns signal a problem before it becomes one.' },
+          { title: 'Compensation Prep', desc: 'Collecting work notes and activity records so compensation review conversations are easy and clear.' },
+          { title: 'Operations Metrics That Matter', desc: 'Bids in queue, access request turnaround, onboarding completion rate — what to track and why.' },
+        ]},
+      ]},
+    ],
   },
 };
 
-const CODE_MAP = {
-  "RAVLO-ELITE": "elite",
-  "RAVLO-LENDING": "lending",
-};
+// ── Helpers ────────────────────────────────────────────────────────────────
+const pKey = (moduleId, idx) => `${moduleId}:${idx}`;
 
-// ─── XP & LEVELS ─────────────────────────────────────────────────────────────
-
-const XP_PER_LESSON = 10;
-const XP_PER_QUIZ_PASS = 25;
-const XP_PER_COURSE = 100;
-
-const LEVELS = [
-  { name: "Scholar", minXP: 0, icon: "📖" },
-  { name: "Associate", minXP: 100, icon: "📘" },
-  { name: "Professional", minXP: 300, icon: "🎓" },
-  { name: "Expert", minXP: 600, icon: "🏆" },
-  { name: "Master", minXP: 1000, icon: "👑" },
-];
-
-function getLevel(xp) {
-  for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (xp >= LEVELS[i].minXP) return { ...LEVELS[i], index: i };
-  }
-  return { ...LEVELS[0], index: 0 };
+async function apiFetch(url, opts) {
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
 }
 
-function getNextLevel(xp) {
-  const current = getLevel(xp);
-  if (current.index >= LEVELS.length - 1) return null;
-  return LEVELS[current.index + 1];
+function trackProgress(track, progress) {
+  let total = 0, done = 0;
+  TRACKS[track].levels.forEach(lv => lv.modules.forEach(mod => {
+    mod.lessons.forEach((_, i) => {
+      total++;
+      if (progress.completed[pKey(mod.id, i)]) done++;
+    });
+  }));
+  return total ? Math.round((done / total) * 100) : 0;
 }
 
-// ─── CURRICULUM: Departments → Courses → Units → Lessons ──────────────────
-
-const CURRICULUM = [
-  {
-    id: "fundamentals",
-    name: "Real Estate Fundamentals",
-    icon: "🏛️",
-    color: "#D4AF6A",
-    description: "Core knowledge every real estate professional needs.",
-    courses: [
-      {
-        id: "residential",
-        title: "Residential Mastery",
-        icon: "🏠",
-        color: "#D4AF6A",
-        credits: 3,
-        prerequisites: [],
-        tier: ["starter", "pro", "elite", "lending"],
-        desc: "Master the full residential transaction from lead to close.",
-        units: [
-          {
-            id: "res-u1",
-            title: "Listings & Pricing Strategy",
-            lessons: [
-              { id: "res-l1", title: "Listing Strategy & Pricing", duration: "15 min", description: "How to price homes competitively using CMAs and market data." },
-              { id: "res-l2", title: "CMA Deep Dive", duration: "20 min", description: "Building bulletproof comparative market analyses that win listings." },
-              { id: "res-l3", title: "Open House Optimization", duration: "12 min", description: "Convert open house visitors into buyers and listing leads." },
-            ],
-            quiz: [
-              { q: "What is the primary purpose of a CMA?", options: ["Determine tax value", "Estimate market value for pricing", "Calculate mortgage payments", "Assess insurance costs"], correct: 1 },
-              { q: "Which factor is MOST important when selecting comparables?", options: ["Paint color", "Proximity and recency of sale", "Number of bathrooms only", "Seller motivation"], correct: 1 },
-              { q: "What is the ideal pricing strategy in a competitive market?", options: ["Price 20% above market", "Price at or slightly below market value", "Always price at the Zestimate", "Price based on what the seller owes"], correct: 1 },
-            ],
-          },
-          {
-            id: "res-u2",
-            title: "Buyer Representation & Negotiation",
-            lessons: [
-              { id: "res-l4", title: "Buyer Representation", duration: "18 min", description: "Fiduciary duties, buyer agency agreements, and client advocacy." },
-              { id: "res-l5", title: "Negotiation Frameworks", duration: "22 min", description: "Win-win negotiation strategies for offers, counteroffers, and repairs." },
-            ],
-            quiz: [
-              { q: "What is a fiduciary duty?", options: ["A marketing obligation", "A legal duty to act in the client's best interest", "A requirement to sell at listing price", "A tax obligation"], correct: 1 },
-              { q: "Which negotiation approach typically yields the best results?", options: ["Hardball tactics always", "Win-win collaborative strategy", "Always accept the first offer", "Ignore the other party's needs"], correct: 1 },
-              { q: "When should you recommend a buyer walk away?", options: ["Never — always close", "When inspection reveals major undisclosed issues", "When the home is more than 1% over budget", "Only if the seller is rude"], correct: 1 },
-            ],
-          },
-          {
-            id: "res-u3",
-            title: "Lead Systems & Conversion",
-            lessons: [
-              { id: "res-l6", title: "Lead Conversion Systems", duration: "16 min", description: "Turn inquiries into appointments with proven follow-up scripts." },
-            ],
-            quiz: [
-              { q: "What is the ideal follow-up time for a new lead?", options: ["Within 24 hours", "Within 5 minutes", "Within a week", "Whenever convenient"], correct: 1 },
-              { q: "What is the average number of touchpoints needed to convert a lead?", options: ["1-2", "3-4", "5-12", "20+"], correct: 2 },
-            ],
-          },
-        ],
-      },
-      {
-        id: "commercial",
-        title: "Commercial Real Estate",
-        icon: "🏢",
-        color: "#6AB4D4",
-        credits: 4,
-        prerequisites: [],
-        tier: ["pro", "elite", "lending"],
-        desc: "Advanced commercial strategies for office, retail, and industrial.",
-        units: [
-          {
-            id: "com-u1",
-            title: "Commercial Fundamentals",
-            lessons: [
-              { id: "com-l1", title: "Office & Retail Leasing", duration: "20 min", description: "Lease structures, NNN vs gross, tenant improvements, and LOIs." },
-              { id: "com-l2", title: "Cap Rate & NOI Analysis", duration: "25 min", description: "How to calculate and interpret capitalization rates and net operating income." },
-            ],
-            quiz: [
-              { q: "What does NNN stand for in a lease?", options: ["Net Net Net (triple net)", "No Negotiation Necessary", "New Notional Net", "Nine-month Neutral Net"], correct: 0 },
-              { q: "How is Cap Rate calculated?", options: ["Sale Price / Rent", "NOI / Purchase Price", "Gross Income / Expenses", "Mortgage / Down Payment"], correct: 1 },
-              { q: "A lower cap rate generally indicates:", options: ["Higher risk, lower price", "Lower risk, higher price", "No investment value", "A distressed property"], correct: 1 },
-            ],
-          },
-          {
-            id: "com-u2",
-            title: "Investment Sales & Exchanges",
-            lessons: [
-              { id: "com-l3", title: "Investment Sales", duration: "18 min", description: "Positioning and marketing commercial properties for maximum value." },
-              { id: "com-l4", title: "1031 Exchanges", duration: "22 min", description: "Tax-deferred exchanges: timelines, rules, and strategies." },
-            ],
-            quiz: [
-              { q: "What is the identification period for a 1031 exchange?", options: ["30 days", "45 days", "90 days", "180 days"], correct: 1 },
-              { q: "Can you do a 1031 exchange on a primary residence?", options: ["Yes, always", "No — only investment/business property qualifies", "Yes, but only if owned 5+ years", "Only if the home is over $1M"], correct: 1 },
-            ],
-          },
-          {
-            id: "com-u3",
-            title: "Representation & Market Analysis",
-            lessons: [
-              { id: "com-l5", title: "Tenant & Landlord Representation", duration: "16 min", description: "Dual-sided commercial representation and conflict management." },
-              { id: "com-l6", title: "Market Analysis", duration: "20 min", description: "Vacancy rates, absorption, rent comps, and market cycle positioning." },
-            ],
-            quiz: [
-              { q: "What is absorption rate in commercial real estate?", options: ["Rate of property depreciation", "Rate at which available space is leased over time", "Percentage of tenants leaving", "Cost of tenant improvements"], correct: 1 },
-              { q: "Which metric best indicates market health?", options: ["Building age", "Vacancy rate trends", "Number of brokers", "Property color"], correct: 1 },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "finance",
-    name: "Finance & Lending",
-    icon: "💰",
-    color: "#6AD4A0",
-    description: "Complete loan structuring and underwriting knowledge.",
-    courses: [
-      {
-        id: "loans",
-        title: "Mortgage & Lending",
-        icon: "💰",
-        color: "#6AD4A0",
-        credits: 5,
-        prerequisites: [],
-        tier: ["pro", "elite", "lending"],
-        desc: "Complete loan structuring from application to close — residential, commercial, and beyond.",
-        units: [
-          {
-            id: "loan-u1",
-            title: "Government & Conventional Programs",
-            lessons: [
-              { id: "loan-l1", title: "Conventional, FHA & VA Loans", duration: "25 min", description: "Guidelines, limits, and use cases for the three main residential loan programs." },
-              { id: "loan-l2", title: "SBA 7(a) & 504 Programs", duration: "20 min", description: "Small business lending for commercial real estate acquisition." },
-            ],
-            quiz: [
-              { q: "What is the minimum down payment for a conventional loan?", options: ["0%", "3%", "10%", "20%"], correct: 1 },
-              { q: "Which loan type requires no down payment for eligible veterans?", options: ["FHA", "Conventional", "VA", "SBA 504"], correct: 2 },
-              { q: "SBA 504 loans are primarily used for:", options: ["Residential mortgages", "Fixed-asset acquisition (real estate/equipment)", "Credit card debt", "Auto loans"], correct: 1 },
-            ],
-          },
-          {
-            id: "loan-u2",
-            title: "Commercial & Alternative Lending",
-            lessons: [
-              { id: "loan-l3", title: "CMBS & Bridge Loans", duration: "22 min", description: "Securitized lending and short-term bridge financing for commercial deals." },
-              { id: "loan-l4", title: "Hard Money & Private Lending", duration: "18 min", description: "Asset-based lending, terms, and when to use private capital." },
-            ],
-            quiz: [
-              { q: "What does CMBS stand for?", options: ["Commercial Mortgage-Backed Securities", "Central Mortgage Banking System", "Certified Mortgage Broker Standards", "Commercial Money Borrowing Service"], correct: 0 },
-              { q: "Bridge loans are typically:", options: ["30-year fixed rate", "Short-term (6-36 months)", "Government-backed", "Only for residential"], correct: 1 },
-              { q: "Hard money lenders primarily evaluate:", options: ["Borrower credit score only", "The property/asset value", "Employment history", "Social media presence"], correct: 1 },
-            ],
-          },
-          {
-            id: "loan-u3",
-            title: "Underwriting & Ratios",
-            lessons: [
-              { id: "loan-l5", title: "DSCR & Underwriting", duration: "25 min", description: "Debt service coverage ratios and how lenders evaluate deal viability." },
-              { id: "loan-l6", title: "LTV / LTC Ratios", duration: "15 min", description: "Loan-to-value and loan-to-cost calculations for investment properties." },
-              { id: "loan-l7", title: "Borrower Qualification Framework", duration: "20 min", description: "Income, assets, credit — the full borrower qualification picture." },
-            ],
-            quiz: [
-              { q: "A DSCR of 1.25 means:", options: ["The property loses money", "Income is 25% more than debt payments", "The loan is 25% paid off", "The cap rate is 1.25%"], correct: 1 },
-              { q: "LTV stands for:", options: ["Loan-to-Value", "Long-term Verification", "Lender Tax Valuation", "Leverage Through Volume"], correct: 0 },
-              { q: "What DSCR do most lenders require as a minimum?", options: ["0.50", "0.75", "1.00", "1.20-1.25"], correct: 3 },
-            ],
-          },
-          {
-            id: "loan-u4",
-            title: "Rates, Processing & Pipeline",
-            lessons: [
-              { id: "loan-l8", title: "Rate Locks & Assumptions", duration: "15 min", description: "When and how to lock rates, and assumable mortgage strategies." },
-              { id: "loan-l9", title: "Adjustable Rate Mortgages & Buydowns", duration: "18 min", description: "ARM structures, rate caps, and temporary/permanent buydowns." },
-              { id: "loan-l10", title: "Loan Processing Workflows", duration: "20 min", description: "From application to closing — the processor's complete checklist." },
-            ],
-            quiz: [
-              { q: "A rate lock protects the borrower from:", options: ["Property value changes", "Interest rate increases during processing", "Appraisal fees", "Closing delays"], correct: 1 },
-              { q: "What does a 2-1 buydown mean?", options: ["2% down payment, 1% closing costs", "Rate is 2% lower year 1, 1% lower year 2, then full rate", "2 loans combined into 1", "1 buyer, 2 properties"], correct: 1 },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "growth",
-    name: "Business & Growth",
-    icon: "📈",
-    color: "#B06AD4",
-    description: "Build and scale your real estate business.",
-    courses: [
-      {
-        id: "business",
-        title: "Realtor Business Growth",
-        icon: "📈",
-        color: "#B06AD4",
-        credits: 3,
-        prerequisites: [],
-        tier: ["starter", "pro", "elite", "lending"],
-        desc: "Build a scalable real estate business that generates without you.",
-        units: [
-          {
-            id: "biz-u1",
-            title: "Lead Generation & SOI",
-            lessons: [
-              { id: "biz-l1", title: "Building Your SOI System", duration: "18 min", description: "Sphere of influence strategies that generate consistent referrals." },
-              { id: "biz-l2", title: "Geographic Farming", duration: "15 min", description: "Dominate a neighborhood with targeted marketing and community presence." },
-            ],
-            quiz: [
-              { q: "SOI stands for:", options: ["System of Investment", "Sphere of Influence", "Standard Operating Instructions", "Source of Income"], correct: 1 },
-              { q: "Geographic farming is most effective when:", options: ["You cover the entire city", "You focus on 200-500 homes consistently", "You only send one mailer", "You avoid personal contact"], correct: 1 },
-              { q: "How often should you contact your SOI?", options: ["Once a year", "Monthly with varied touchpoints", "Only when you need a deal", "Daily cold calls"], correct: 1 },
-            ],
-          },
-          {
-            id: "biz-u2",
-            title: "Systems & Branding",
-            lessons: [
-              { id: "biz-l3", title: "CRM Setup & Automation", duration: "20 min", description: "Set up a CRM that nurtures leads and automates follow-up." },
-              { id: "biz-l4", title: "Social Media & Video", duration: "16 min", description: "Content strategies that build authority and generate inbound leads." },
-            ],
-            quiz: [
-              { q: "What is the primary purpose of a real estate CRM?", options: ["Accounting", "Lead tracking, follow-up automation, and relationship management", "Website design", "Property valuation"], correct: 1 },
-              { q: "Which content type generates the most engagement for real estate?", options: ["Stock photos", "Video walkthroughs and market updates", "Plain text posts", "Memes only"], correct: 1 },
-            ],
-          },
-          {
-            id: "biz-u3",
-            title: "Scaling & Team Building",
-            lessons: [
-              { id: "biz-l5", title: "Team Building", duration: "22 min", description: "When to hire, who to hire, and how to build a production team." },
-              { id: "biz-l6", title: "Brokerage Selection", duration: "14 min", description: "Choosing the right brokerage for your career stage and goals." },
-            ],
-            quiz: [
-              { q: "When should an agent consider building a team?", options: ["On their first day", "When they consistently close 30+ deals/year", "After 1 month in the business", "Only if they dislike working alone"], correct: 1 },
-              { q: "What is the most important factor in brokerage selection?", options: ["Office decor", "Training, support, and culture fit for your goals", "Proximity to home", "Free coffee"], correct: 1 },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "advanced",
-    name: "Advanced Strategies",
-    icon: "⚡",
-    color: "#D46A6A",
-    description: "Elite-level investment and deal structuring.",
-    courses: [
-      {
-        id: "investing",
-        title: "Real Estate Investing",
-        icon: "🏗️",
-        color: "#D46A6A",
-        credits: 4,
-        prerequisites: [],
-        tier: ["pro", "elite"],
-        desc: "From first rental to multifamily portfolio — a complete investor path.",
-        units: [
-          {
-            id: "inv-u1",
-            title: "Investment Strategies",
-            lessons: [
-              { id: "inv-l1", title: "BRRRR Strategy", duration: "22 min", description: "Buy, Rehab, Rent, Refinance, Repeat — the full wealth-building cycle." },
-              { id: "inv-l2", title: "Market Selection", duration: "18 min", description: "Identify high-growth markets using data-driven analysis." },
-              { id: "inv-l3", title: "Deal Sourcing", duration: "16 min", description: "Find off-market deals, wholesalers, auctions, and direct mail campaigns." },
-            ],
-            quiz: [
-              { q: "What does BRRRR stand for?", options: ["Buy, Rent, Refinance, Repeat, Return", "Buy, Rehab, Rent, Refinance, Repeat", "Borrow, Renovate, Rent, Refi, Resell", "Build, Rent, Repair, Refinance, Retire"], correct: 1 },
-              { q: "Which metric is most important for market selection?", options: ["Population growth and job diversification", "Number of palm trees", "Distance from your home", "Average home color"], correct: 0 },
-              { q: "The best off-market deal sources include:", options: ["Zillow featured listings", "Driving for dollars, direct mail, and wholesalers", "Only MLS listings", "Social media ads"], correct: 1 },
-            ],
-          },
-          {
-            id: "inv-u2",
-            title: "Analysis & Management",
-            lessons: [
-              { id: "inv-l4", title: "Multifamily Underwriting", duration: "28 min", description: "Analyze apartment complexes: rent rolls, expenses, cap rates, and value-add plays." },
-              { id: "inv-l5", title: "Property Management", duration: "18 min", description: "Self-manage vs hire a PM — systems, screening, and maintenance." },
-              { id: "inv-l6", title: "Exit Strategies", duration: "15 min", description: "When to sell, refinance, 1031, or hold — optimizing your exit." },
-            ],
-            quiz: [
-              { q: "What is a rent roll?", options: ["A type of sushi", "A document listing all units, tenants, and current rents", "A mortgage document", "A construction technique"], correct: 1 },
-              { q: "Value-add investing means:", options: ["Buying the most expensive property", "Acquiring underperforming properties and improving them to increase NOI", "Adding a swimming pool", "Only buying new construction"], correct: 1 },
-              { q: "Which exit strategy defers capital gains tax?", options: ["Cash sale", "1031 Exchange", "Lease option", "Short sale"], correct: 1 },
-            ],
-          },
-        ],
-      },
-      {
-        id: "deal_structuring",
-        title: "Advanced Deal Structuring",
-        icon: "⚡",
-        color: "#D4A06A",
-        credits: 4,
-        prerequisites: ["investing"],
-        tier: ["elite"],
-        desc: "Elite strategies for complex, high-value transactions.",
-        units: [
-          {
-            id: "adv-u1",
-            title: "Creative Financing",
-            lessons: [
-              { id: "adv-l1", title: "Creative Financing", duration: "25 min", description: "Subject-to, lease options, and unconventional deal structures." },
-              { id: "adv-l2", title: "Seller Financing & Wraps", duration: "22 min", description: "Structure seller-financed deals and wraparound mortgages." },
-            ],
-            quiz: [
-              { q: "What is a 'subject-to' deal?", options: ["Buying subject to government approval", "Buying property subject to the existing mortgage staying in place", "A conditional inspection", "A type of short sale"], correct: 1 },
-              { q: "A wraparound mortgage means:", options: ["Adding insulation to a property", "A new mortgage that wraps around the existing one", "A construction loan", "Refinancing at a lower rate"], correct: 1 },
-              { q: "Seller financing benefits the buyer because:", options: ["It never requires a down payment", "It can offer more flexible terms than traditional lending", "Sellers always offer 0% interest", "It eliminates closing costs"], correct: 1 },
-            ],
-          },
-          {
-            id: "adv-u2",
-            title: "Partnerships & Syndication",
-            lessons: [
-              { id: "adv-l3", title: "Joint Ventures", duration: "20 min", description: "Structure JV deals with clear equity splits, roles, and exit triggers." },
-              { id: "adv-l4", title: "Syndication Basics", duration: "24 min", description: "Pool investor capital for larger deals — SEC rules, PPMs, and investor relations." },
-            ],
-            quiz: [
-              { q: "In a JV, the GP (General Partner) typically:", options: ["Just provides capital", "Manages the deal and operations", "Has no liability", "Is always a bank"], correct: 1 },
-              { q: "SEC Rule 506(b) allows:", options: ["Unlimited public advertising", "Up to 35 non-accredited investors with no general solicitation", "Only accredited investors", "No investor limits"], correct: 1 },
-            ],
-          },
-          {
-            id: "adv-u3",
-            title: "Distressed & Off-Market",
-            lessons: [
-              { id: "adv-l5", title: "Distressed Assets", duration: "20 min", description: "Foreclosures, REOs, and note buying strategies." },
-              { id: "adv-l6", title: "Off-Market Strategies", duration: "18 min", description: "Advanced sourcing: probate, tax liens, direct-to-seller campaigns." },
-            ],
-            quiz: [
-              { q: "An REO property is:", options: ["A rental property", "Real Estate Owned — a bank-owned foreclosure", "A type of mortgage", "A new construction"], correct: 1 },
-              { q: "Tax lien investing involves:", options: ["Avoiding property taxes", "Purchasing the tax debt on a property for potential returns", "Filing tax returns for owners", "Government grants"], correct: 1 },
-              { q: "Probate leads come from:", options: ["Properties with expired listings", "Estates of deceased property owners going through court", "Rental properties", "New construction"], correct: 1 },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-];
-
-// Flatten helpers
-function getAllCourses() {
-  const courses = [];
-  CURRICULUM.forEach(dept => dept.courses.forEach(c => courses.push({ ...c, departmentId: dept.id })));
-  return courses;
-}
-function getCourse(id) { return getAllCourses().find(c => c.id === id) || null; }
-function getDepartment(id) { return CURRICULUM.find(d => d.id === id) || null; }
-
-// ─── AI SYSTEM PROMPT ─────────────────────────────────────────────────────────
-
-const AI_SYSTEM = `You are the RealEdge AI Coach inside Ravlo Academy — an elite real estate education platform.
-
-You are a world-class coach with deep expertise in:
-- Residential Real Estate (listings, buyers, negotiation, CMAs, lead gen, farming)
-- Commercial Real Estate (office, retail, industrial, cap rates, NOI, 1031s, investment sales)
-- Mortgage & Lending (conventional, FHA, VA, DSCR, SBA, CMBS, bridge, ARMs, buydowns, rate locks, borrower qualification, loan processing, pipeline management)
-- Realtor Business Development (SOI, CRM, branding, team building, social media, farming)
-- Real Estate Investing (BRRRR, multifamily, deal analysis, exit strategies)
-
-Your style: Direct, no-fluff, data-driven. You speak like a top producer who has closed $100M+ and mentored 500+ agents. Use real numbers, real scenarios, real frameworks.
-
-When asked for a success plan or first-week action plan, create a structured plan with:
-1. ASSESSMENT (what you know about them)
-2. 30-DAY SPRINT (specific daily/weekly actions with real numbers)
-3. 60-DAY MILESTONES (measurable targets)
-4. 90-DAY VISION (where they should be)
-5. KEY METRICS (what to track weekly)
-6. ACCOUNTABILITY SYSTEM (how to stay on track)
-
-Always personalize. Always be specific. Never be generic.`;
-
-const ONBOARDING_ROLES = ["Realtor / Agent", "Real Estate Investor", "Mortgage Loan Officer", "Lender / Broker", "New to Real Estate"];
-const ONBOARDING_GOALS = ["Close more deals this year", "Get my first deal", "Master mortgage & lending", "Build a rental portfolio", "Grow and scale my team", "Increase my income by 50%+"];
-const ONBOARDING_CHALLENGES = ["Finding consistent leads", "Converting leads to clients", "Understanding financing & loans", "Managing my time and pipeline", "Building systems that scale", "Standing out in my market"];
-
-const STORAGE_KEY = "ravlo_academy_v3";
-
-function loadStorage() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; }
-}
-function saveStorage(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+function levelProgress(level, progress) {
+  let total = 0, done = 0;
+  level.modules.forEach(mod => mod.lessons.forEach((_, i) => {
+    total++;
+    if (progress.completed[pKey(mod.id, i)]) done++;
+  }));
+  return total ? Math.round((done / total) * 100) : 0;
 }
 
-// ─── GPA helpers ──────────────────────────────────────────────────────────────
+// Render simple markdown: **Header** → h3, - item → bullet, else paragraph
+function RichText({ text }) {
+  if (!text) return null;
+  const lines = text.split('\n');
+  const nodes = [];
+  let bullets = [];
 
-function scoreToGrade(pct) {
-  if (pct >= 97) return { letter: "A+", gpa: 4.0 };
-  if (pct >= 93) return { letter: "A", gpa: 4.0 };
-  if (pct >= 90) return { letter: "A-", gpa: 3.7 };
-  if (pct >= 87) return { letter: "B+", gpa: 3.3 };
-  if (pct >= 83) return { letter: "B", gpa: 3.0 };
-  if (pct >= 80) return { letter: "B-", gpa: 2.7 };
-  if (pct >= 77) return { letter: "C+", gpa: 2.3 };
-  if (pct >= 73) return { letter: "C", gpa: 2.0 };
-  if (pct >= 70) return { letter: "C-", gpa: 1.7 };
-  if (pct >= 67) return { letter: "D+", gpa: 1.3 };
-  if (pct >= 60) return { letter: "D", gpa: 1.0 };
-  return { letter: "F", gpa: 0.0 };
-}
-
-// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
-function RavloAcademy() {
-  const [screen, setScreen] = useState("landing");
-  const [tier, setTier] = useState(null);
-  const [userName, setUserName] = useState("");
-  const [nameInput, setNameInput] = useState("");
-  const [codeInput, setCodeInput] = useState("");
-  const [codeError, setCodeError] = useState("");
-  const [activeCourse, setActiveCourse] = useState(null);
-  const [activeUnit, setActiveUnit] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [chatInput, setChatInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [notification, setNotification] = useState(null);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Progress: { lessons: {lessonId: true}, quizzes: {unitId: {score, total, passed}}, xp: number, certificates: [courseId] }
-  const [progress, setProgress] = useState({ lessons: {}, quizzes: {}, xp: 0, certificates: [] });
-  const [chatHistory, setChatHistory] = useState([]);
-  const [onboardingStep, setOnboardingStep] = useState(0);
-  const [onboardingAnswers, setOnboardingAnswers] = useState({ role: "", goal: "", challenge: "" });
-  const [hasOnboarded, setHasOnboarded] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [historyFilter, setHistoryFilter] = useState("");
-
-  // Quiz state (unit-level)
-  const [quizAnswers, setQuizAnswers] = useState({});
-  const [quizSubmitted, setQuizSubmitted] = useState(false);
-  const [viewCertCourse, setViewCertCourse] = useState(null);
-
-  // Lesson view state
-  const [activeLesson, setActiveLesson] = useState(null); // {lesson, unit, course}
-  const [lessonContent, setLessonContent] = useState(null); // {content, keyPoints, quiz}
-  const [lessonLoading, setLessonLoading] = useState(false);
-  const [lessonQuizAnswers, setLessonQuizAnswers] = useState({});
-  const [lessonQuizSubmitted, setLessonQuizSubmitted] = useState(false);
-
-  const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
-
-  // Server-injected tier
-  useEffect(() => {
-    const srv = window.RAVLO_ACADEMY || {};
-    if (srv.tier && ACCESS_TIERS[srv.tier]) {
-      const name = (srv.userName || "").trim() || "Member";
-      setTier(srv.tier);
-      setUserName(name);
-      const store = loadStorage();
-      const userData = store[name] || {};
-      if (!userData.onboarded) {
-        setOnboardingStep(0);
-        setOnboardingAnswers({ role: "", goal: "", challenge: "" });
-        setScreen("onboarding");
-      } else {
-        setHasOnboarded(true);
-        setScreen("dashboard");
-      }
+  function flushBullets() {
+    if (bullets.length) {
+      nodes.push(
+        <ul key={`ul-${nodes.length}`} style={{ margin: '8px 0 12px 0', paddingLeft: 20 }}>
+          {bullets.map((b, i) => (
+            <li key={i} style={{ color: T.muted, lineHeight: 1.7, marginBottom: 4, fontSize: 14 }}>{b}</li>
+          ))}
+        </ul>
+      );
+      bullets = [];
     }
-  }, []);
+  }
 
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+  lines.forEach((line, i) => {
+    const trimmed = line.trim();
+    if (!trimmed) { flushBullets(); return; }
+    const hMatch = trimmed.match(/^\*\*(.+?)\*\*$/);
+    if (hMatch) {
+      flushBullets();
+      nodes.push(
+        <h3 key={i} style={{ color: T.text, fontSize: 15, fontWeight: 700, margin: '18px 0 8px', letterSpacing: '-0.3px' }}>
+          {hMatch[1]}
+        </h3>
+      );
+    } else if (trimmed.startsWith('- ')) {
+      bullets.push(trimmed.slice(2));
+    } else {
+      flushBullets();
+      nodes.push(
+        <p key={i} style={{ color: T.muted, lineHeight: 1.75, marginBottom: 10, fontSize: 14 }}>{trimmed}</p>
+      );
+    }
+  });
+  flushBullets();
+  return <div>{nodes}</div>;
+}
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+// ── LandingGate ────────────────────────────────────────────────────────────
+function LandingGate({ onAccess }) {
+  const [code, setCode] = useState('');
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!userName) return;
-    const store = loadStorage();
-    const userData = store[userName] || {};
-    setProgress(userData.progress || { lessons: {}, quizzes: {}, xp: 0, certificates: [] });
-    setChatHistory(userData.history || []);
-    setHasOnboarded(userData.onboarded || false);
-  }, [userName]);
-
-  const saveProgress = useCallback((newProgress) => {
-    const store = loadStorage();
-    store[userName] = { ...store[userName], progress: newProgress };
-    saveStorage(store);
-    setProgress(newProgress);
-  }, [userName]);
-
-  const saveHistory = useCallback((newHistory) => {
-    const store = loadStorage();
-    store[userName] = { ...store[userName], history: newHistory };
-    saveStorage(store);
-    setChatHistory(newHistory);
-  }, [userName]);
-
-  const notify = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 3000); };
-
-  // ── Access logic ──────────────────────────────────────────────────────────
-  const handleSmartCodeAccess = async () => {
-    const code = codeInput.trim().toUpperCase();
-    const name = nameInput.trim() || "Member";
-    if (!code) { setCodeError("Please enter your access code."); return; }
-    setLoading(true);
-    setCodeError("");
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!code.trim()) return;
+    setLoading(true); setError('');
     try {
-      const res = await fetch("/academy/activate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, name }),
+      const data = await apiFetch('/academy/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim(), name: name.trim() || 'Member' }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        const resolvedName = data.name || name;
-        setTier(data.tier);
-        setUserName(resolvedName);
-        const store = loadStorage();
-        const userData = store[resolvedName] || {};
-        if (!userData.onboarded) {
-          setOnboardingStep(0);
-          setOnboardingAnswers({ role: "", goal: "", challenge: "" });
-          setScreen("onboarding");
-        } else {
-          setHasOnboarded(true);
-          setScreen("dashboard");
-        }
-      } else {
-        setCodeError(data.error || "Access code not recognized.");
-      }
+      onAccess(data.tier, data.name);
     } catch {
-      setCodeError("Connection error. Please try again.");
+      setError('Access code not recognized. Contact your Ravlo representative.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handlePaidAccess = (tierKey) => {
-    const name = nameInput.trim() || "Member";
-    setTier(tierKey);
-    setUserName(name);
-    const store = loadStorage();
-    const userData = store[name] || {};
-    if (!userData.onboarded) {
-      setOnboardingStep(0);
-      setOnboardingAnswers({ role: "", goal: "", challenge: "" });
-      setScreen("onboarding");
-    } else {
-      setScreen("dashboard");
-    }
-  };
-
-  const finishOnboarding = () => {
-    const store = loadStorage();
-    const userData = store[userName] || {};
-    store[userName] = { ...userData, onboarded: true, onboardingAnswers };
-    saveStorage(store);
-    setHasOnboarded(true);
-    setMessages([]);
-    setScreen("coach");
-    const welcomePrompt = `I'm ${userName}, a ${onboardingAnswers.role || "real estate professional"}. My #1 goal is to ${(onboardingAnswers.goal || "grow my business").toLowerCase()} and my biggest challenge is ${(onboardingAnswers.challenge || "consistency").toLowerCase()}. I have ${ACCESS_TIERS[tier]?.description} access. Please greet me, then immediately build my personalized first-week action plan — specific actions I can start today with real numbers and clear milestones.`;
-    setTimeout(() => sendMessage(welcomePrompt), 100);
-  };
-
-  // ── AI chat ───────────────────────────────────────────────────────────────
-  const sendMessage = async (text) => {
-    const msg = text || chatInput.trim();
-    if (!msg || loading) return;
-    setChatInput("");
-    const newMsgs = [...messages, { role: "user", content: msg }];
-    setMessages(newMsgs);
-    setLoading(true);
-    const context = `User: ${userName} | Access: ${ACCESS_TIERS[tier]?.label} | Course: ${activeCourse?.title || "General"} | Role: ${onboardingAnswers?.role || "Not specified"} | Goal: ${onboardingAnswers?.goal || "Not specified"}`;
-    try {
-      const res = await fetch("/academy/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-opus-4-5",
-          max_tokens: 1000,
-          system: AI_SYSTEM + `\n\nContext: ${context}`,
-          messages: newMsgs,
-        }),
-      });
-      const data = await res.json();
-      const reply = data.content?.map(c => c.text || "").join("\n") || "Please try again.";
-      const finalMsgs = [...newMsgs, { role: "assistant", content: reply }];
-      setMessages(finalMsgs);
-    } catch { setMessages([...newMsgs, { role: "assistant", content: "Connection error. Please try again." }]); }
-    finally { setLoading(false); setTimeout(() => inputRef.current?.focus(), 100); }
-  };
-
-  // ── Session history ───────────────────────────────────────────────────────
-  const saveCurrentSession = () => {
-    if (messages.length === 0) return;
-    const firstUser = messages.find(m => m.role === "user");
-    const label = firstUser ? firstUser.content.slice(0, 60) + (firstUser.content.length > 60 ? "..." : "") : "Coaching Session";
-    const sess = { id: Date.now(), label, date: new Date().toLocaleDateString(), messages };
-    const updated = [sess, ...chatHistory].slice(0, 20);
-    saveHistory(updated);
-    notify("Session saved");
-  };
-
-  const loadSession = (sess) => { setMessages(sess.messages); setShowHistory(false); setScreen("coach"); };
-  const deleteSession = (id) => { saveHistory(chatHistory.filter(s => s.id !== id)); };
-
-  // ── Lesson completion ─────────────────────────────────────────────────────
-  const toggleLesson = (lessonId) => {
-    const newP = { ...progress, lessons: { ...progress.lessons } };
-    if (newP.lessons[lessonId]) {
-      delete newP.lessons[lessonId];
-      newP.xp = Math.max(0, (newP.xp || 0) - XP_PER_LESSON);
-    } else {
-      newP.lessons[lessonId] = true;
-      newP.xp = (newP.xp || 0) + XP_PER_LESSON;
-    }
-    saveProgress(newP);
-  };
-
-  // ── Quiz ──────────────────────────────────────────────────────────────────
-  const submitQuiz = (unit) => {
-    const quiz = unit.quiz || [];
-    let correct = 0;
-    quiz.forEach((q, i) => { if (quizAnswers[i] === q.correct) correct++; });
-    const pct = Math.round((correct / quiz.length) * 100);
-    const passed = pct >= 70;
-    const newP = { ...progress, quizzes: { ...progress.quizzes } };
-    const prev = newP.quizzes[unit.id];
-    const isNewPass = passed && (!prev || !prev.passed);
-    // Keep best score — never regress a passing result
-    const bestPct = prev ? Math.max(prev.pct, pct) : pct;
-    const bestScore = prev ? Math.max(prev.score, correct) : correct;
-    const bestPassed = (prev?.passed) || passed;
-    newP.quizzes[unit.id] = { score: bestScore, total: quiz.length, pct: bestPct, passed: bestPassed, lastPct: pct };
-    if (isNewPass) newP.xp = (newP.xp || 0) + XP_PER_QUIZ_PASS;
-    // Check course completion
-    if (activeCourse) {
-      const allPassed = activeCourse.units.every(u => {
-        if (u.id === unit.id) return passed;
-        return newP.quizzes[u.id]?.passed;
-      });
-      if (allPassed && !(newP.certificates || []).includes(activeCourse.id)) {
-        newP.certificates = [...(newP.certificates || []), activeCourse.id];
-        newP.xp = (newP.xp || 0) + XP_PER_COURSE;
-        setTimeout(() => notify(`Course Complete! Certificate earned for ${activeCourse.title}`), 500);
-      }
-    }
-    saveProgress(newP);
-    setQuizSubmitted(true);
-  };
-
-  const startQuiz = (unit) => {
-    setActiveUnit(unit);
-    setQuizAnswers({});
-    setQuizSubmitted(false);
-    setScreen("quiz");
-  };
-
-  // ── Progress helpers ──────────────────────────────────────────────────────
-  const getCourseProgress = (course) => {
-    const allLessons = course.units.flatMap(u => u.lessons);
-    const completed = allLessons.filter(l => progress.lessons[l.id]).length;
-    const unitsPassed = course.units.filter(u => progress.quizzes[u.id]?.passed).length;
-    return {
-      lessons: completed,
-      totalLessons: allLessons.length,
-      lessonPct: allLessons.length ? Math.round((completed / allLessons.length) * 100) : 0,
-      unitsPassed,
-      totalUnits: course.units.length,
-      allPassed: unitsPassed === course.units.length,
-    };
-  };
-
-  const getCourseGrade = (course) => {
-    const quizScores = course.units.map(u => progress.quizzes[u.id]).filter(Boolean);
-    if (quizScores.length === 0) return null;
-    const avgPct = Math.round(quizScores.reduce((s, q) => s + q.pct, 0) / quizScores.length);
-    return scoreToGrade(avgPct);
-  };
-
-  const getOverallGPA = () => {
-    const allCourses = getAllCourses().filter(c => c.tier.includes(tier));
-    let totalPoints = 0, totalCredits = 0;
-    allCourses.forEach(c => {
-      const grade = getCourseGrade(c);
-      if (grade) {
-        totalPoints += grade.gpa * c.credits;
-        totalCredits += c.credits;
-      }
-    });
-    return totalCredits ? (totalPoints / totalCredits).toFixed(2) : "N/A";
-  };
-
-  const getEarnedCredits = () => {
-    return getAllCourses().filter(c => c.tier.includes(tier) && (progress.certificates || []).includes(c.id)).reduce((s, c) => s + c.credits, 0);
-  };
-
-  const getTotalCredits = () => {
-    return getAllCourses().filter(c => c.tier.includes(tier)).reduce((s, c) => s + c.credits, 0);
-  };
-
-  const meetsPrereqs = (course) => {
-    if (!course.prerequisites || course.prerequisites.length === 0) return true;
-    return course.prerequisites.every(p => (progress.certificates || []).includes(p));
-  };
-
-  // ── Coach helpers ─────────────────────────────────────────────────────────
-  const copyReferralLink = () => {
-    const link = window.location.origin + "/academy";
-    navigator.clipboard.writeText(link).then(() => notify("Academy link copied!")).catch(() => notify("Copy: " + link));
-  };
-
-  const startCoach = (prompt = "") => {
-    setScreen("coach");
-    if (messages.length === 0 || prompt) {
-      if (!prompt) {
-        const welcome = `Hi ${userName}! I'm your RealEdge AI Coach. What's your biggest challenge right now, or what would you like to master today?`;
-        setMessages([{ role: "assistant", content: welcome }]);
-      } else { setMessages([]); setTimeout(() => sendMessage(prompt), 100); }
-    }
-  };
-
-  const startPlan = () => {
-    setMessages([]);
-    setScreen("coach");
-    const prompt = `Create my personalized 90-day success plan. My name is ${userName}, I'm a ${onboardingAnswers?.role || ACCESS_TIERS[tier]?.description} with ${ACCESS_TIERS[tier]?.label} access. My #1 goal: ${onboardingAnswers?.goal || "grow my business"}. My biggest challenge: ${onboardingAnswers?.challenge || "consistency"}. Build a complete, specific plan.`;
-    setTimeout(() => sendMessage(prompt), 100);
-  };
-
-  // ── Lesson view helpers ───────────────────────────────────────────────────
-  const openLesson = async (lesson, unit, course) => {
-    setActiveLesson({ lesson, unit, course });
-    setLessonContent(null);
-    setLessonQuizAnswers({});
-    setLessonQuizSubmitted(false);
-    setScreen("lesson");
-    setLessonLoading(true);
-    try {
-      const res = await fetch("/academy/lesson-content", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lesson_id: lesson.id,
-          title: lesson.title,
-          description: lesson.description || "",
-          course_title: course.title,
-          unit_title: unit.title,
-        }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setLessonContent(data);
-    } catch (e) {
-      setLessonContent({ error: e.message || "Could not load lesson. Please try again." });
-    } finally {
-      setLessonLoading(false);
-    }
-  };
-
-  const renderInline = (text, baseStyle, boldStyle) => {
-    const parts = text.split(/(\*\*[^*]+\*\*)/);
-    if (parts.length === 1) return React.createElement("span", { style: baseStyle }, text);
-    return React.createElement("span", { style: baseStyle },
-      parts.map((p, i) =>
-        p.startsWith("**") && p.endsWith("**")
-          ? React.createElement("span", { key: i, style: boldStyle }, p.slice(2, -2))
-          : React.createElement("span", { key: i }, p)
-      )
-    );
-  };
-
-  const renderLessonContent = (text, courseColor) => {
-    if (!text) return null;
-    const lines = text.split("\n");
-    const elements = [];
-    let i = 0;
-    while (i < lines.length) {
-      const line = lines[i];
-      // Table
-      if (line.startsWith("|")) {
-        const tableLines = [];
-        while (i < lines.length && lines[i].startsWith("|")) { tableLines.push(lines[i]); i++; }
-        const rows = tableLines
-          .filter(l => !/^\|[\s\-:|]+\|$/.test(l))
-          .map(l => l.split("|").slice(1, -1).map(c => c.trim()));
-        if (rows.length > 0) {
-          const [hdr, ...body] = rows;
-          elements.push(
-            React.createElement("div", { key: `tbl-${i}`, style: { margin: "16px 0", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, overflow: "hidden" } },
-              React.createElement("div", { style: { display: "flex", background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.08)" } },
-                hdr.map((c, ci) => React.createElement("div", { key: ci, style: { flex: 1, padding: "8px 12px", fontSize: 11, fontWeight: 700, color: "#C8C0B4" } }, c))
-              ),
-              body.map((row, ri) => React.createElement("div", { key: ri, style: { display: "flex", borderBottom: ri < body.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none", background: ri % 2 ? "rgba(255,255,255,0.01)" : "transparent" } },
-                row.map((c, ci) => React.createElement("div", { key: ci, style: { flex: 1, padding: "8px 12px", fontSize: 11, color: "#7A7268", lineHeight: 1.5 } }, c))
-              ))
-            )
-          );
-        }
-        continue;
-      }
-      // Section header
-      if (line.startsWith("**") && line.endsWith("**") && line.length > 4 && !line.slice(2, -2).includes("**")) {
-        elements.push(
-          React.createElement("div", { key: i, style: { display: "flex", alignItems: "stretch", marginTop: 24, marginBottom: 10 } },
-            React.createElement("div", { style: { width: 3, borderRadius: 2, marginRight: 12, background: courseColor, flexShrink: 0 } }),
-            React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: courseColor, lineHeight: 1.3, paddingTop: 2, paddingBottom: 2 } }, line.slice(2, -2))
-          )
-        );
-        i++; continue;
-      }
-      // Bullet
-      if (line.startsWith("- ")) {
-        elements.push(
-          React.createElement("div", { key: i, style: { display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 6 } },
-            React.createElement("div", { style: { width: 6, height: 6, borderRadius: 3, background: courseColor, flexShrink: 0, marginTop: 7 } }),
-            React.createElement("div", { style: { fontSize: 13, color: "#C8C0B4", lineHeight: 1.6, flex: 1 } },
-              renderInline(line.slice(2), { fontSize: 13, color: "#C8C0B4" }, { fontWeight: 700, color: "#EDE8DF" })
-            )
-          )
-        );
-        i++; continue;
-      }
-      // Spacer
-      if (line.trim() === "") { elements.push(React.createElement("div", { key: i, style: { height: 10 } })); i++; continue; }
-      // Paragraph
-      elements.push(
-        React.createElement("div", { key: i, style: { marginBottom: 4 } },
-          renderInline(line, { fontSize: 13, color: "#9A9288", lineHeight: "1.75", display: "block" }, { fontWeight: 700, color: "#C8C0B4" })
-        )
-      );
-      i++;
-    }
-    return elements;
-  };
-
-  const t = tier ? ACCESS_TIERS[tier] : null;
-  const availableCourses = tier ? getAllCourses().filter(c => c.tier.includes(tier)) : [];
-
-  const fmt = (txt) => txt
-    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#D4AF6A">$1</strong>')
-    .replace(/^### (.*)$/gm, '<div style="font-size:13px;font-weight:700;color:#D4AF6A;margin:14px 0 6px;letter-spacing:1px;text-transform:uppercase;font-family:\'Cormorant Garamond\',serif">$1</div>')
-    .replace(/^## (.*)$/gm, '<div style="font-size:16px;font-weight:700;color:#D4AF6A;margin:16px 0 8px;font-family:\'Cormorant Garamond\',serif">$1</div>')
-    .replace(/^- (.*)$/gm, '<div style="display:flex;gap:8px;margin:3px 0;align-items:flex-start"><span style="color:#D4AF6A;margin-top:2px;flex-shrink:0">▸</span><span>$1</span></div>')
-    .replace(/^\d+\. (.*)$/gm, (m, p1) => `<div style="display:flex;gap:8px;margin:4px 0;align-items:flex-start"><span style="color:#D4AF6A;flex-shrink:0;font-weight:700">•</span><span>${p1}</span></div>`)
-    .replace(/\n\n/g, '<div style="height:10px"></div>')
-    .replace(/\n/g, '<br/>');
-
-  const S = {
-    page: { minHeight: "100svh", background: "#080808", fontFamily: "'DM Sans',sans-serif", color: "#EDE8DF" },
-    gold: "#D4AF6A",
-  };
-
-  // XP bar component
-  const XPBar = () => {
-    const xp = progress.xp || 0;
-    const lvl = getLevel(xp);
-    const next = getNextLevel(xp);
-    const pct = next ? Math.min(100, Math.round(((xp - lvl.minXP) / (next.minXP - lvl.minXP)) * 100)) : 100;
-    return (
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontSize: 16 }}>{lvl.icon}</span>
-        <div style={{ flex: 1, minWidth: isMobile ? 60 : 100 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#7A7268", marginBottom: 3 }}>
-            <span>{lvl.name}</span>
-            <span>{xp} XP</span>
-          </div>
-          <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#D4AF6A,#9A7A3A)", borderRadius: 2, transition: "width 0.4s" }} />
-          </div>
-        </div>
-        {next && <span style={{ fontSize: 9, color: "#3A3530" }}>{next.minXP - xp} to {next.name}</span>}
-      </div>
-    );
-  };
-
-  // ── LANDING ───────────────────────────────────────────────────────────────
-  if (screen === "landing") return (
-    <div style={{ ...S.page, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
-      <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212,175,106,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 80px,rgba(212,175,106,0.02) 80px,rgba(212,175,106,0.02) 81px),repeating-linear-gradient(90deg,transparent,transparent 80px,rgba(212,175,106,0.02) 80px,rgba(212,175,106,0.02) 81px)", pointerEvents: "none" }} />
-
-      <nav style={{ padding: isMobile ? "16px 20px" : "20px 48px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(212,175,106,0.1)", position: "relative", zIndex: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: isMobile ? 30 : 36, height: isMobile ? 30 : 36, border: "1.5px solid #D4AF6A", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 14 : 16, color: "#D4AF6A", fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>R</div>
-          <div>
-            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 16 : 20, fontWeight: 700, letterSpacing: 2, color: "#EDE8DF" }}>RAVLO</div>
-            <div style={{ fontSize: 9, letterSpacing: 4, color: "#D4AF6A", textTransform: "uppercase", marginTop: -2 }}>Academy</div>
-          </div>
-        </div>
-        <button onClick={() => setScreen("access")} style={{ padding: isMobile ? "8px 18px" : "10px 28px", borderRadius: 6, border: "1px solid rgba(212,175,106,0.4)", background: "rgba(212,175,106,0.08)", color: "#D4AF6A", fontSize: isMobile ? 12 : 13, fontWeight: 600, cursor: "pointer", letterSpacing: 1, fontFamily: "'DM Sans',sans-serif" }}>
-          Access Portal
-        </button>
-      </nav>
-
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: isMobile ? "48px 20px" : "80px 24px", textAlign: "center", position: "relative", zIndex: 1 }}>
-        <div style={{ fontSize: 11, letterSpacing: 6, color: "#D4AF6A", textTransform: "uppercase", marginBottom: 24, fontWeight: 500 }}>Real Estate Education - Reimagined</div>
-        <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? "clamp(44px,12vw,64px)" : "clamp(52px,8vw,100px)", fontWeight: 300, lineHeight: 0.95, margin: "0 0 8px", letterSpacing: -2 }}>
-          <span style={{ display: "block", color: "#EDE8DF" }}>Ravlo</span>
-          <span style={{ display: "block", color: "#D4AF6A", fontWeight: 700, fontStyle: "italic" }}>Academy</span>
-        </h1>
-        <p style={{ fontSize: isMobile ? 15 : "clamp(15px,2vw,18px)", color: "#7A7268", maxWidth: 580, lineHeight: 1.7, margin: "32px auto 48px", fontWeight: 300 }}>
-          A structured school for realtors, investors, and lenders. Earn credits, pass quizzes, and build your transcript — powered by AI coaching.
-        </p>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
-          <button onClick={() => setScreen("access")} style={{ padding: isMobile ? "14px 28px" : "16px 40px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#D4AF6A,#9A7A3A)", color: "#080808", fontSize: isMobile ? 14 : 15, fontWeight: 700, cursor: "pointer", letterSpacing: 1, fontFamily: "'DM Sans',sans-serif" }}>
-            Enroll Now
-          </button>
-          <button onClick={() => setScreen("access")} style={{ padding: isMobile ? "14px 28px" : "16px 40px", borderRadius: 8, border: "1px solid rgba(212,175,106,0.3)", background: "transparent", color: "#D4AF6A", fontSize: isMobile ? 14 : 15, fontWeight: 500, cursor: "pointer", letterSpacing: 0.5, fontFamily: "'DM Sans',sans-serif" }}>
-            Partner Access
-          </button>
-        </div>
-
-        <div style={{ display: "flex", gap: isMobile ? 24 : 48, marginTop: isMobile ? 48 : 80, flexWrap: "wrap", justifyContent: "center" }}>
-          {[["4", "Departments"], ["6", "Courses"], ["20+", "Units"], ["AI", "Coaching"]].map(([n, l]) => (
-            <div key={l} style={{ textAlign: "center" }}>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 32 : 40, fontWeight: 700, color: "#D4AF6A", lineHeight: 1 }}>{n}</div>
-              <div style={{ fontSize: 10, color: "#5A5248", letterSpacing: 2, textTransform: "uppercase", marginTop: 6 }}>{l}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ padding: isMobile ? "0 16px 48px" : "0 24px 80px", maxWidth: 900, margin: "0 auto", width: "100%", position: "relative", zIndex: 1 }}>
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ fontSize: 11, letterSpacing: 4, color: "#5A5248", textTransform: "uppercase" }}>Access Tiers</div>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10 }}>
-          {Object.entries(ACCESS_TIERS).map(([key, t]) => (
-            <div key={key} onClick={() => setScreen("access")} style={{ padding: isMobile ? "14px" : "20px", borderRadius: 10, border: `1px solid ${t.border}`, background: t.bg, cursor: "pointer", transition: "all 0.2s" }}
-              onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
-              onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                <span style={{ fontSize: 18, color: t.color }}>{t.icon}</span>
-                <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 20, border: `1px solid ${t.border}`, color: t.color, letterSpacing: 0.5, fontWeight: 600 }}>{t.badge_text}</span>
-              </div>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 14 : 16, fontWeight: 700, color: "#EDE8DF", marginBottom: 2 }}>{t.label}</div>
-              <div style={{ fontSize: 10, color: "#5A5248" }}>{t.description}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  // ── ACCESS ────────────────────────────────────────────────────────────────
-  if (screen === "access") return (
-    <div style={{ ...S.page, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", position: "relative" }}>
-      <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(212,175,106,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
-      <button onClick={() => setScreen("landing")} style={{ position: "absolute", top: 20, left: 20, background: "none", border: "none", color: "#5A5248", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif" }}>&#8592; Back</button>
-
-      <div style={{ maxWidth: 680, width: "100%", position: "relative", zIndex: 1 }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 12, letterSpacing: 6, color: "#D4AF6A", textTransform: "uppercase", marginBottom: 10 }}>Enrollment</div>
-          <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 32 : 42, fontWeight: 300, margin: "0 0 8px" }}>Ravlo <strong style={{ fontWeight: 700 }}>Academy</strong></h2>
-          <p style={{ color: "#5A5248", fontSize: 13 }}>Partners &amp; investors enter your code. New students choose a plan below.</p>
-        </div>
-
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: "block", fontSize: 10, letterSpacing: 3, color: "#D4AF6A", marginBottom: 10, textTransform: "uppercase" }}>Your Name</label>
-          <input value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="First & Last Name"
-            style={{ width: "100%", padding: "14px 18px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,175,106,0.2)", borderRadius: 8, color: "#EDE8DF", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "'DM Sans',sans-serif" }} />
-        </div>
-
-        <div style={{ marginBottom: 28 }}>
-          <label style={{ display: "block", fontSize: 10, letterSpacing: 3, color: "#D4AF6A", marginBottom: 10, textTransform: "uppercase" }}>Partner / Team Access Code</label>
-          <div style={{ position: "relative" }}>
-            <input value={codeInput} onChange={e => { setCodeInput(e.target.value); setCodeError(""); }}
-              placeholder="Enter your access code (e.g. RAVLO-ELITE)"
-              onKeyDown={e => e.key === "Enter" && handleSmartCodeAccess()}
-              style={{ width: "100%", padding: "14px 18px", background: "rgba(255,255,255,0.04)", border: `1px solid ${codeError ? "#D46A6A" : "rgba(212,175,106,0.2)"}`, borderRadius: 8, color: "#EDE8DF", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "'DM Sans',sans-serif" }} />
-            {CODE_MAP[codeInput.trim().toUpperCase()] && (
-              <div style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#6AD4A0", fontWeight: 600, letterSpacing: 1 }}>
-                {ACCESS_TIERS[CODE_MAP[codeInput.trim().toUpperCase()]]?.label}
-              </div>
-            )}
-          </div>
-          {codeError && <div style={{ color: "#D46A6A", fontSize: 12, marginTop: 8 }}>{codeError}</div>}
-          <button onClick={handleSmartCodeAccess} style={{ width: "100%", marginTop: 12, padding: "13px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#D4AF6A,#9A7A3A)", color: "#080808", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", letterSpacing: 0.5 }}>
-            Enter Academy
-          </button>
-        </div>
-
-        <div style={{ height: 1, background: "rgba(255,255,255,0.05)", margin: "0 0 28px" }} />
-
-        <div>
-          <div style={{ fontSize: 10, letterSpacing: 3, color: "#5A5248", marginBottom: 16, textTransform: "uppercase" }}>Subscription Plans</div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
-            {["pro", "starter"].map(key => {
-              const pt = ACCESS_TIERS[key];
-              return (
-                <div key={key} style={{ padding: "20px", borderRadius: 10, border: `1px solid ${pt.border}`, background: pt.bg }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: "#EDE8DF" }}>{pt.label}</div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: pt.color, lineHeight: 1 }}>${pt.monthly}</div>
-                      <div style={{ fontSize: 10, color: "#5A5248" }}>/month</div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 11, color: "#5A5248", marginBottom: 10 }}>{pt.description}</div>
-                  <ul style={{ margin: "0 0 14px", padding: 0, listStyle: "none" }}>
-                    {pt.perks.map(p => <li key={p} style={{ fontSize: 11, color: "#7A7268", display: "flex", gap: 6, marginBottom: 3 }}><span style={{ color: pt.color }}>+</span>{p}</li>)}
-                  </ul>
-                  <button onClick={() => handlePaidAccess(key)} style={{ width: "100%", padding: "11px", borderRadius: 6, border: "none", background: `linear-gradient(135deg,${pt.color},${pt.color}88)`, color: "#080808", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-                    Subscribe - ${pt.monthly}/mo
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ── ONBOARDING ────────────────────────────────────────────────────────────
-  if (screen === "onboarding") {
-    const steps = [
-      { key: "role", label: "What's your primary role?", options: ONBOARDING_ROLES },
-      { key: "goal", label: "What's your #1 goal right now?", options: ONBOARDING_GOALS },
-      { key: "challenge", label: "What's your biggest challenge?", options: ONBOARDING_CHALLENGES },
-    ];
-    const currentStep = steps[onboardingStep];
-
-    return (
-      <div style={{ ...S.page, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", position: "relative" }}>
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(212,175,106,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
-
-        <div style={{ maxWidth: 600, width: "100%", position: "relative", zIndex: 1 }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 40, justifyContent: "center" }}>
-            {steps.map((s, i) => (
-              <div key={s.key} style={{ height: 3, flex: 1, maxWidth: 80, borderRadius: 2, background: i <= onboardingStep ? "#D4AF6A" : "rgba(212,175,106,0.15)", transition: "all 0.3s" }} />
-            ))}
-          </div>
-
-          <div style={{ marginBottom: 32 }}>
-            <div style={{ fontSize: 10, letterSpacing: 4, color: "#D4AF6A", textTransform: "uppercase", marginBottom: 16 }}>Step {onboardingStep + 1} of {steps.length}</div>
-            <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 28 : 38, fontWeight: 300, margin: "0 0 8px" }}>
-              Welcome, <strong style={{ fontWeight: 700, color: "#D4AF6A" }}>{userName}.</strong>
-            </h2>
-            <p style={{ color: "#7A7268", fontSize: 15, marginBottom: 32 }}>{currentStep.label}</p>
-
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              {currentStep.options.map(opt => (
-                <button key={opt} onClick={() => setOnboardingAnswers(prev => ({ ...prev, [currentStep.key]: opt }))}
-                  style={{ padding: "10px 18px", borderRadius: 24, border: `1px solid ${onboardingAnswers[currentStep.key] === opt ? "#D4AF6A" : "rgba(212,175,106,0.2)"}`, background: onboardingAnswers[currentStep.key] === opt ? "rgba(212,175,106,0.15)" : "rgba(212,175,106,0.04)", color: onboardingAnswers[currentStep.key] === opt ? "#D4AF6A" : "#7A7268", fontSize: 13, cursor: "pointer", transition: "all 0.2s", fontFamily: "'DM Sans',sans-serif" }}>
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-            {onboardingStep > 0 && (
-              <button onClick={() => setOnboardingStep(s => s - 1)} style={{ padding: "13px 24px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#5A5248", fontSize: 14, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>Back</button>
-            )}
-            {onboardingStep < steps.length - 1 ? (
-              <button onClick={() => { if (onboardingAnswers[currentStep.key]) setOnboardingStep(s => s + 1); }}
-                disabled={!onboardingAnswers[currentStep.key]}
-                style={{ padding: "13px 32px", borderRadius: 8, border: "none", background: onboardingAnswers[currentStep.key] ? "linear-gradient(135deg,#D4AF6A,#9A7A3A)" : "rgba(255,255,255,0.05)", color: onboardingAnswers[currentStep.key] ? "#080808" : "#3A3530", fontSize: 14, fontWeight: 700, cursor: onboardingAnswers[currentStep.key] ? "pointer" : "not-allowed", fontFamily: "'DM Sans',sans-serif" }}>
-                Continue
-              </button>
-            ) : (
-              <button onClick={() => { if (onboardingAnswers[currentStep.key]) finishOnboarding(); }}
-                disabled={!onboardingAnswers[currentStep.key]}
-                style={{ padding: "13px 32px", borderRadius: 8, border: "none", background: onboardingAnswers[currentStep.key] ? "linear-gradient(135deg,#D4AF6A,#9A7A3A)" : "rgba(255,255,255,0.05)", color: onboardingAnswers[currentStep.key] ? "#080808" : "#3A3530", fontSize: 14, fontWeight: 700, cursor: onboardingAnswers[currentStep.key] ? "pointer" : "not-allowed", fontFamily: "'DM Sans',sans-serif" }}>
-                Get My Plan
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
   }
 
-  // ── DASHBOARD ─────────────────────────────────────────────────────────────
-  if (screen === "dashboard") return (
-    <div style={{ ...S.page, position: "relative" }}>
+  const inp = {
+    width: '100%', padding: '12px 16px',
+    background: T.panel2, border: `1px solid ${T.border}`,
+    borderRadius: T.radius.md, color: T.text,
+    fontSize: 14, outline: 'none', fontFamily: 'Inter, sans-serif',
+  };
 
-      {notification && <div style={{ position: "fixed", top: 20, right: 20, padding: "12px 20px", borderRadius: 8, background: "rgba(212,175,106,0.15)", border: "1px solid rgba(212,175,106,0.3)", color: "#D4AF6A", fontSize: 13, zIndex: 200, fontFamily: "'DM Sans',sans-serif" }}>{notification}</div>}
-
-      {/* History panel */}
-      {showHistory && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100 }}>
-          <div onClick={() => setShowHistory(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }} />
-          <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: isMobile ? "100%" : 420, background: "#0D0D0D", borderLeft: "1px solid rgba(212,175,106,0.15)", display: "flex", flexDirection: "column" }}>
-            <div style={{ padding: "20px 24px", borderBottom: "1px solid rgba(212,175,106,0.1)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div>
-                <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700 }}>Session History</div>
-                <div style={{ fontSize: 11, color: "#5A5248", marginTop: 2 }}>{chatHistory.length} saved sessions</div>
-              </div>
-              <button onClick={() => setShowHistory(false)} style={{ background: "none", border: "none", color: "#5A5248", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>x</button>
-            </div>
-            <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-              <input value={historyFilter} onChange={e => setHistoryFilter(e.target.value)} placeholder="Search sessions..."
-                style={{ width: "100%", padding: "9px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,175,106,0.15)", borderRadius: 6, color: "#EDE8DF", fontSize: 13, outline: "none", boxSizing: "border-box", fontFamily: "'DM Sans',sans-serif" }} />
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
-              {chatHistory.length === 0 ? (
-                <div style={{ textAlign: "center", color: "#3A3530", fontSize: 13, marginTop: 40 }}>No saved sessions yet.</div>
-              ) : (
-                chatHistory.filter(s => !historyFilter || s.label.toLowerCase().includes(historyFilter.toLowerCase())).map(sess => (
-                  <div key={sess.id} style={{ padding: "14px", borderRadius: 8, border: "1px solid rgba(212,175,106,0.1)", background: "rgba(255,255,255,0.02)", marginBottom: 8, cursor: "pointer" }}
-                    onClick={() => loadSession(sess)}>
-                    <div style={{ fontSize: 13, color: "#C8C0B4", marginBottom: 4, lineHeight: 1.4 }}>{sess.label}</div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <div style={{ fontSize: 11, color: "#3A3530" }}>{sess.date} - {sess.messages.length} messages</div>
-                      <button onClick={e => { e.stopPropagation(); deleteSession(sess.id); }} style={{ background: "none", border: "none", color: "#3A3530", cursor: "pointer", fontSize: 11, padding: "2px 6px" }}>Delete</button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <div style={{ padding: isMobile ? "14px 16px" : "18px 32px", borderBottom: "1px solid rgba(212,175,106,0.1)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(8,8,8,0.95)", position: "sticky", top: 0, zIndex: 50 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14 }}>
-          <div style={{ width: isMobile ? 28 : 34, height: isMobile ? 28 : 34, border: "1.5px solid #D4AF6A", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 12 : 14, color: "#D4AF6A", fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>R</div>
+  return (
+    <div style={{ minHeight: '100vh', background: `radial-gradient(circle at top left, rgba(54,115,255,.18), transparent 40%), linear-gradient(180deg,#06101d,#081322)`, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 40 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 14, background: `linear-gradient(135deg,${T.accent},${T.accentLight})`, display: 'grid', placeItems: 'center', fontSize: 20, fontWeight: 900, color: '#fff' }}>R</div>
           <div>
-            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 13 : 16, fontWeight: 700, letterSpacing: 2 }}>RAVLO <span style={{ color: "#D4AF6A" }}>Academy</span></div>
-            {!isMobile && <div style={{ fontSize: 9, letterSpacing: 3, color: "#5A5248", textTransform: "uppercase" }}>School of Real Estate</div>}
+            <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 3, color: T.text }}>RAVLO</div>
+            <div style={{ fontSize: 9, letterSpacing: 3, color: T.muted, marginTop: 2 }}>ACADEMY OS</div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 12 }}>
-          <span style={{ fontSize: isMobile ? 9 : 11, color: t.color, padding: "3px 8px", borderRadius: 20, border: `1px solid ${t.border}`, background: t.bg, letterSpacing: 1, fontWeight: 600 }}>{t.badge}</span>
-          {!isMobile && <span style={{ fontSize: 13, color: "#7A7268" }}>{userName}</span>}
-          <button onClick={() => setScreen("transcript")} style={{ background: "none", border: "1px solid rgba(212,175,106,0.15)", borderRadius: 6, color: "#7A7268", cursor: "pointer", fontSize: isMobile ? 10 : 12, padding: "5px 10px", fontFamily: "'DM Sans',sans-serif" }}>Transcript</button>
-          <button onClick={() => setShowHistory(true)} style={{ background: "none", border: "1px solid rgba(212,175,106,0.15)", borderRadius: 6, color: "#7A7268", cursor: "pointer", fontSize: isMobile ? 10 : 12, padding: "5px 10px", fontFamily: "'DM Sans',sans-serif" }}>History</button>
-          <button onClick={() => setScreen("landing")} style={{ background: "none", border: "none", color: "#3A3530", cursor: "pointer", fontSize: 12, fontFamily: "'DM Sans',sans-serif" }}>Out</button>
+
+        <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, padding: 32, backdropFilter: 'blur(20px)' }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: T.text, marginBottom: 8, letterSpacing: '-0.5px' }}>Enter Your Access Code</h1>
+          <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 28 }}>Enter the code provided by your company or Ravlo representative to access the Academy.</p>
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <input style={inp} placeholder="Your name (optional)" value={name} onChange={e => setName(e.target.value)} />
+            <input style={{ ...inp, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }} placeholder="ACCESS CODE" value={code} onChange={e => setCode(e.target.value.toUpperCase())} required />
+            {error && <div style={{ color: T.danger, fontSize: 13, padding: '8px 12px', background: 'rgba(255,143,143,.08)', borderRadius: T.radius.sm }}>{error}</div>}
+            <button type="submit" disabled={loading} style={{ padding: '13px 0', borderRadius: T.radius.md, background: `linear-gradient(135deg,${T.accent},#1F3A56)`, color: '#fff', fontWeight: 700, fontSize: 15, border: 'none', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1, fontFamily: 'Inter, sans-serif', letterSpacing: 0.3 }}>
+              {loading ? 'Verifying…' : 'Access Academy →'}
+            </button>
+          </form>
         </div>
       </div>
+    </div>
+  );
+}
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 32px" }}>
-        {/* Welcome + XP bar */}
-        <div style={{ marginBottom: isMobile ? 28 : 40 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+// ── Sidebar ────────────────────────────────────────────────────────────────
+function Sidebar({ track, setTrack, levelIdx, setLevelIdx, view, setView, progress, xp, userName, open, setOpen, isDesktop, allowedTrack }) {
+  const trackKeys = allowedTrack ? [allowedTrack] : Object.keys(TRACKS);
+
+  function selectTrack(key) {
+    setTrack(key); setLevelIdx(0); setView('home'); if (!isDesktop) setOpen(false);
+  }
+
+  function selectLevel(i) {
+    setLevelIdx(i); setView('level'); if (!isDesktop) setOpen(false);
+  }
+
+  const sideStyle = {
+    position: 'fixed', top: 0, left: 0, bottom: 0, width: 280,
+    background: 'linear-gradient(180deg,rgba(6,14,27,.97),rgba(8,17,31,.94))',
+    borderRight: `1px solid ${T.border}`,
+    display: 'flex', flexDirection: 'column',
+    zIndex: 100,
+    transform: (isDesktop || open) ? 'translateX(0)' : 'translateX(-100%)',
+    transition: 'transform .25s cubic-bezier(.4,0,.2,1)',
+  };
+
+  const currentLevels = track ? TRACKS[track].levels : [];
+  const trackColor = track ? TRACKS[track].color : T.accentLight;
+
+  return (
+    <>
+      {!isDesktop && open && <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 99, backdropFilter: 'blur(2px)' }} />}
+      <div style={sideStyle}>
+        {/* Brand */}
+        <div style={{ padding: '20px 20px 16px', borderBottom: `1px solid ${T.borderSoft}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 12, background: `linear-gradient(135deg,${T.accent},${T.accentLight})`, display: 'grid', placeItems: 'center', fontSize: 18, fontWeight: 900, color: '#fff', flexShrink: 0 }}>R</div>
             <div>
-              <div style={{ fontSize: 10, letterSpacing: 4, color: "#5A5248", textTransform: "uppercase", marginBottom: 8 }}>Welcome back</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 28 : 44, fontWeight: 300, margin: "0 0 4px" }}>
-                Hello, <strong style={{ fontWeight: 700, color: "#D4AF6A" }}>{userName}</strong>
-              </h2>
+              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 3, color: T.text }}>RAVLO</div>
+              <div style={{ fontSize: 8, letterSpacing: 3, color: T.mutedDark }}>ACADEMY OS</div>
             </div>
-            <div style={{ minWidth: isMobile ? "100%" : 280 }}><XPBar /></div>
+          </div>
+          {userName && <div style={{ marginTop: 12, fontSize: 12, color: T.muted }}>Welcome, <strong style={{ color: T.text }}>{userName}</strong></div>}
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ flex: 1, height: 4, background: T.borderSoft, borderRadius: 2 }}>
+              <div style={{ height: '100%', width: `${Math.min((xp / 500) * 100, 100)}%`, background: `linear-gradient(90deg,${T.accent},${T.accentLight})`, borderRadius: 2, transition: 'width .5s' }} />
+            </div>
+            <span style={{ fontSize: 11, color: T.accentLight, fontWeight: 700 }}>{xp} XP</span>
           </div>
         </div>
 
-        {/* Stats row */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 10, marginBottom: isMobile ? 28 : 40 }}>
-          {[
-            { label: "GPA", value: getOverallGPA(), color: "#D4AF6A" },
-            { label: "Credits", value: `${getEarnedCredits()} / ${getTotalCredits()}`, color: "#6AD4A0" },
-            { label: "Courses", value: `${(progress.certificates || []).length} / ${availableCourses.length}`, color: "#6AB4D4" },
-            { label: "Level", value: getLevel(progress.xp || 0).name, color: "#B06AD4" },
-          ].map(stat => (
-            <div key={stat.label} style={{ padding: isMobile ? "14px 12px" : "20px", borderRadius: 10, border: `1px solid ${stat.color}25`, background: `${stat.color}08`, textAlign: "center" }}>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 22 : 28, fontWeight: 700, color: stat.color, lineHeight: 1 }}>{stat.value}</div>
-              <div style={{ fontSize: 10, color: "#5A5248", letterSpacing: 2, textTransform: "uppercase", marginTop: 6 }}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
+        {/* Track nav */}
+        <div style={{ padding: '14px 12px 8px', flex: 1, overflowY: 'auto' }}>
+          {trackKeys.length > 1 && <div style={{ fontSize: 10, letterSpacing: 2, color: T.mutedDark, fontWeight: 700, padding: '0 8px', marginBottom: 8 }}>CAREER TRACKS</div>}
+          {trackKeys.map(key => {
+            const tr = TRACKS[key];
+            const isActive = track === key;
+            const pct = trackProgress(key, progress);
+            return (
+              <div key={key}>
+                <button onClick={() => selectTrack(key)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: T.radius.md, background: isActive ? `rgba(${tr.color === '#52d3a6' ? '82,211,166' : tr.color === '#59B7FF' ? '89,183,255' : tr.color === '#ffd36f' ? '255,211,111' : tr.color === '#c4b5fd' ? '196,181,253' : '251,146,60'},.1)` : 'transparent', border: isActive ? `1px solid rgba(255,255,255,.1)` : '1px solid transparent', cursor: 'pointer', textAlign: 'left', transition: 'all .15s' }}>
+                  <span style={{ fontSize: 16, color: tr.color, flexShrink: 0 }}>{tr.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: isActive ? 700 : 500, color: isActive ? T.text : T.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr.label}</div>
+                    {pct > 0 && <div style={{ fontSize: 10, color: tr.color, marginTop: 2 }}>{pct}% complete</div>}
+                  </div>
+                </button>
 
-        {/* Action cards */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: isMobile ? 10 : 14, marginBottom: isMobile ? 32 : 48 }}>
-          {[
-            { icon: "AI", label: "AI Coach", desc: "One-on-one session", color: "#D4AF6A", action: () => startCoach() },
-            { icon: "90", label: "My Plan", desc: "90-day success plan", color: "#6AD4A0", action: startPlan },
-            { icon: "#", label: "Transcript", desc: "Grades & credits", color: "#6AB4D4", action: () => setScreen("transcript") },
-            { icon: "+", label: "Refer", desc: "Copy your link", color: "#B06AD4", action: copyReferralLink },
-          ].map(card => (
-            <button key={card.label} onClick={card.action} style={{ padding: isMobile ? "16px 12px" : "22px", borderRadius: 12, border: `1px solid ${card.color}30`, background: `${card.color}08`, cursor: "pointer", textAlign: "left", transition: "all 0.2s", fontFamily: "'DM Sans',sans-serif" }}
-              onMouseEnter={e => { e.currentTarget.style.border = `1px solid ${card.color}60`; e.currentTarget.style.transform = "translateY(-2px)"; }}
-              onMouseLeave={e => { e.currentTarget.style.border = `1px solid ${card.color}30`; e.currentTarget.style.transform = "translateY(0)"; }}>
-              <div style={{ fontSize: isMobile ? 18 : 24, marginBottom: 8, fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, color: card.color }}>{card.icon}</div>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 14 : 17, fontWeight: 700, color: "#EDE8DF", marginBottom: 3 }}>{card.label}</div>
-              <div style={{ fontSize: isMobile ? 10 : 12, color: "#5A5248" }}>{card.desc}</div>
-            </button>
-          ))}
-        </div>
-
-        {/* Departments → Courses */}
-        {CURRICULUM.map(dept => {
-          const deptCourses = dept.courses.filter(c => c.tier.includes(tier));
-          if (deptCourses.length === 0) return null;
-          return (
-            <div key={dept.id} style={{ marginBottom: isMobile ? 36 : 48 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                <span style={{ fontSize: 22 }}>{dept.icon}</span>
-                <div>
-                  <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, color: "#EDE8DF" }}>{dept.name}</div>
-                  <div style={{ fontSize: 11, color: "#5A5248" }}>{dept.description}</div>
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(300px,1fr))", gap: 12 }}>
-                {deptCourses.map(course => {
-                  const locked = !meetsPrereqs(course);
-                  const prog = getCourseProgress(course);
-                  const grade = getCourseGrade(course);
-                  const hasCert = (progress.certificates || []).includes(course.id);
+                {isActive && currentLevels.map((lv, i) => {
+                  const lvPct = levelProgress(lv, progress);
+                  const isLvActive = levelIdx === i && (view === 'level' || view === 'lesson');
                   return (
-                    <div key={course.id}
-                      onClick={() => {
-                        if (locked) { notify(`Complete "${getCourse(course.prerequisites[0])?.title}" first`); return; }
-                        setActiveCourse(course);
-                        setScreen("course");
-                      }}
-                      style={{ padding: "22px", borderRadius: 12, border: locked ? "1px solid rgba(255,255,255,0.04)" : `1px solid ${course.color}25`, background: locked ? "rgba(255,255,255,0.02)" : `${course.color}08`, cursor: locked ? "not-allowed" : "pointer", transition: "all 0.2s", opacity: locked ? 0.4 : 1, position: "relative" }}
-                      onMouseEnter={e => { if (!locked) { e.currentTarget.style.border = `1px solid ${course.color}50`; e.currentTarget.style.transform = "translateY(-2px)"; } }}
-                      onMouseLeave={e => { if (!locked) { e.currentTarget.style.border = `1px solid ${course.color}25`; e.currentTarget.style.transform = "translateY(0)"; } }}>
-                      {locked && <div style={{ position: "absolute", top: 14, right: 14, fontSize: 11, color: "#3A3530" }}>Locked</div>}
-                      {hasCert && <div style={{ position: "absolute", top: 14, right: 14, fontSize: 11, color: course.color, fontWeight: 600 }}>Certified</div>}
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                        <span style={{ fontSize: 24 }}>{course.icon}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17, fontWeight: 700, color: "#EDE8DF" }}>{course.title}</div>
-                          <div style={{ fontSize: 10, color: "#5A5248" }}>{course.credits} credits - {course.units.length} units</div>
-                        </div>
+                    <button key={i} onClick={() => selectLevel(i)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px 7px 32px', borderRadius: T.radius.sm, background: isLvActive ? T.panel2 : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'all .15s', marginTop: 2 }}>
+                      <div style={{ width: 18, height: 18, borderRadius: 6, background: lvPct === 100 ? T.success : isLvActive ? trackColor : T.borderSoft, flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 800, color: '#07111f' }}>
+                        {lvPct === 100 ? '✓' : i + 1}
                       </div>
-                      <div style={{ fontSize: 11, color: "#5A5248", marginBottom: 14, lineHeight: 1.5 }}>{course.desc}</div>
-
-                      {!locked && (
-                        <div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                            <div style={{ fontSize: 10, color: "#5A5248" }}>{prog.unitsPassed}/{prog.totalUnits} units passed</div>
-                            {grade && <div style={{ fontSize: 10, color: course.color, fontWeight: 600 }}>{grade.letter}</div>}
-                          </div>
-                          <div style={{ height: 3, borderRadius: 2, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
-                            <div style={{ height: "100%", width: `${prog.lessonPct}%`, background: course.color, borderRadius: 2, transition: "width 0.4s ease" }} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                      <span style={{ fontSize: 11, color: isLvActive ? T.text : T.muted, fontWeight: isLvActive ? 600 : 400, lineHeight: 1.3 }}>{lv.title}</span>
+                    </button>
                   );
                 })}
               </div>
+            );
+          })}
+
+          {/* Instructor */}
+          <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${T.borderSoft}` }}>
+            <button onClick={() => { setView('coach'); setOpen(false); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px', borderRadius: T.radius.md, background: view === 'coach' ? T.accentGlow : 'transparent', border: view === 'coach' ? `1px solid ${T.accentLight}30` : '1px solid transparent', cursor: 'pointer', transition: 'all .15s' }}>
+              <span style={{ fontSize: 18 }}>◎</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: view === 'coach' ? T.accentLight : T.muted }}>Instructor</div>
+                <div style={{ fontSize: 10, color: T.mutedDark }}>Ask anything</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── TrackHome ──────────────────────────────────────────────────────────────
+function TrackHome({ track, setLevelIdx, setView, progress }) {
+  const tr = TRACKS[track];
+  const pct = trackProgress(track, progress);
+  let doneLessons = 0, totalLessons = 0;
+  tr.levels.forEach(lv => lv.modules.forEach(mod => {
+    mod.lessons.forEach((_, i) => {
+      totalLessons++;
+      if (progress.completed[pKey(mod.id, i)]) doneLessons++;
+    });
+  }));
+
+  return (
+    <div>
+      {/* Hero */}
+      <div style={{ background: `linear-gradient(135deg,rgba(10,20,36,.9),rgba(6,14,27,.95))`, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, padding: '32px 36px', marginBottom: 24, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -30, right: -30, width: 160, height: 160, borderRadius: '50%', background: `radial-gradient(circle,${tr.color}22,transparent 70%)`, pointerEvents: 'none' }} />
+        <div style={{ fontSize: 11, letterSpacing: 2.5, color: tr.color, fontWeight: 800, marginBottom: 10 }}>CAREER TRACK</div>
+        <h1 style={{ fontSize: 30, fontWeight: 800, color: T.text, marginBottom: 10, letterSpacing: '-0.5px' }}>{tr.label}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 13, color: T.muted }}>{doneLessons} of {totalLessons} lessons complete</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 120 }}>
+            <div style={{ flex: 1, height: 6, background: T.borderSoft, borderRadius: 3 }}>
+              <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg,${tr.color},${tr.color}99)`, borderRadius: 3, transition: 'width .5s' }} />
+            </div>
+            <span style={{ fontSize: 13, color: tr.color, fontWeight: 700 }}>{pct}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Level cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 16 }}>
+        {tr.levels.map((lv, i) => {
+          const lvPct = levelProgress(lv, progress);
+          const totalM = lv.modules.reduce((a, m) => a + m.lessons.length, 0);
+          const doneM = lv.modules.reduce((a, m) => a + m.lessons.filter((_, li) => progress.completed[pKey(m.id, li)]).length, 0);
+          return (
+            <button key={i} onClick={() => { setLevelIdx(i); setView('level'); }} style={{ textAlign: 'left', background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.lg, padding: '22px 24px', cursor: 'pointer', transition: 'border-color .15s, box-shadow .15s', position: 'relative', overflow: 'hidden' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = `${tr.color}60`; e.currentTarget.style.boxShadow = T.shadow; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.boxShadow = 'none'; }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, height: 3, width: `${lvPct}%`, background: tr.color, transition: 'width .5s' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: lvPct === 100 ? T.success : T.borderSoft, display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 800, color: lvPct === 100 ? '#07111f' : T.muted, flexShrink: 0 }}>
+                  {lvPct === 100 ? '✓' : `L${i + 1}`}
+                </div>
+                <div style={{ fontSize: 11, letterSpacing: 1.5, color: tr.color, fontWeight: 700 }}>LEVEL {i + 1}</div>
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 6, lineHeight: 1.3 }}>{lv.title}</div>
+              <div style={{ fontSize: 12, color: T.muted }}>{lv.modules.length} modules · {totalM} lessons</div>
+              {lvPct > 0 && lvPct < 100 && (
+                <div style={{ marginTop: 10, fontSize: 11, color: tr.color }}>{doneM}/{totalM} lessons done</div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── LevelView ──────────────────────────────────────────────────────────────
+function LevelView({ track, levelIdx, setView, setLesson, progress }) {
+  const tr = TRACKS[track];
+  const level = tr.levels[levelIdx];
+  const [openMod, setOpenMod] = useState(0);
+
+  return (
+    <div>
+      <button onClick={() => setView('home')} style={{ display: 'flex', alignItems: 'center', gap: 6, color: T.muted, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, marginBottom: 20, padding: 0 }}>
+        ← Back to {tr.label}
+      </button>
+
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 11, letterSpacing: 2, color: tr.color, fontWeight: 700, marginBottom: 6 }}>LEVEL {levelIdx + 1}</div>
+        <h2 style={{ fontSize: 26, fontWeight: 800, color: T.text, letterSpacing: '-0.5px' }}>{level.title}</h2>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {level.modules.map((mod, mi) => {
+          const isOpen = openMod === mi;
+          const modDone = mod.lessons.filter((_, i) => progress.completed[pKey(mod.id, i)]).length;
+          return (
+            <div key={mod.id} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.lg, overflow: 'hidden' }}>
+              <button onClick={() => setOpenMod(isOpen ? -1 : mi)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '18px 22px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>{mod.title}</div>
+                  <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>{modDone}/{mod.lessons.length} lessons complete</div>
+                </div>
+                <span style={{ color: T.muted, fontSize: 18, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>⌄</span>
+              </button>
+
+              {isOpen && (
+                <div style={{ borderTop: `1px solid ${T.borderSoft}`, padding: '8px 0' }}>
+                  {mod.lessons.map((lesson, li) => {
+                    const done = !!progress.completed[pKey(mod.id, li)];
+                    return (
+                      <button key={li} onClick={() => { setLesson({ moduleId: mod.id, lessonIndex: li, title: lesson.title, desc: lesson.desc, moduleTitle: mod.title, trackLabel: tr.label }); setView('lesson'); }}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '13px 22px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'background .15s' }}
+                        onMouseEnter={e => e.currentTarget.style.background = T.panel2}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                        <div style={{ width: 24, height: 24, borderRadius: 8, background: done ? T.success : T.borderSoft, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 800, color: done ? '#07111f' : T.muted, flexShrink: 0 }}>
+                          {done ? '✓' : li + 1}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: done ? 500 : 600, color: done ? T.muted : T.text }}>{lesson.title}</div>
+                          <div style={{ fontSize: 12, color: T.mutedDark, marginTop: 2 }}>{lesson.desc}</div>
+                        </div>
+                        <span style={{ color: T.muted, fontSize: 13 }}>→</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
       </div>
     </div>
   );
+}
 
-  // ── COURSE VIEW (formerly MODULE) ─────────────────────────────────────────
-  if (screen === "course" && activeCourse) {
-    const prog = getCourseProgress(activeCourse);
-    const grade = getCourseGrade(activeCourse);
-    const hasCert = (progress.certificates || []).includes(activeCourse.id);
+// ── LessonViewer ───────────────────────────────────────────────────────────
+function LessonViewer({ lesson, track, levelIdx, progress, onComplete, onBack, onNext, userName }) {
+  const tr = TRACKS[track];
+  const level = tr.levels[levelIdx];
+  const [content, setContent] = useState(null);
+  const [loadErr, setLoadErr] = useState('');
+  const [articleOpen, setArticleOpen] = useState(false);
+  const [answers, setAnswers] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
+  const [personalCity, setPersonalCity] = useState('');
+  const [personalGoal, setPersonalGoal] = useState('');
+  const [personalResult, setPersonalResult] = useState('');
+  const [personalLoading, setPersonalLoading] = useState(false);
+  const alreadyDone = !!progress.completed[pKey(lesson.moduleId, lesson.lessonIndex)];
+
+  useEffect(() => {
+    setContent(null); setLoadErr(''); setAnswers({}); setSubmitted(false);
+    setArticleOpen(false); setCelebrating(false); setPersonalResult('');
+    setPersonalCity(''); setPersonalGoal('');
+    const lessonId = `${lesson.moduleId}-${lesson.lessonIndex}`;
+    apiFetch('/academy/lesson-content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lesson_id: lessonId, title: lesson.title, description: lesson.desc, course_title: tr.label, unit_title: lesson.moduleTitle }),
+    }).then(d => setContent(d)).catch(() => setLoadErr('Could not load lesson content. Please try again.'));
+  }, [lesson.moduleId, lesson.lessonIndex]);
+
+  async function handleComplete() {
+    if (alreadyDone || completing) return;
+    setCompleting(true);
+    await onComplete(lesson.moduleId, lesson.lessonIndex);
+    setCompleting(false);
+    setCelebrating(true);
+  }
+
+  async function handlePersonalize() {
+    if (!personalCity && !personalGoal) return;
+    setPersonalLoading(true);
+    const sysMsg = `You are the Ravlo Academy Instructor. The student just completed "${lesson.title}" in the ${tr.label} track. Give a personalized, concrete takeaway for their specific situation — specific numbers, examples, and next steps relevant to their market and goal. 2-3 short paragraphs max.`;
+    const userMsg = `Apply what I just learned to my situation.${personalCity ? ` I'm in ${personalCity}.` : ''}${personalGoal ? ` My goal: ${personalGoal}.` : ''} Give me specific next steps.`;
+    try {
+      const data = await apiFetch('/academy/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 600, system: sysMsg, messages: [{ role: 'user', content: userMsg }] }),
+      });
+      setPersonalResult((data.content || [{}])[0].text || '');
+    } catch {
+      setPersonalResult('Could not generate takeaway. Please try again.');
+    } finally {
+      setPersonalLoading(false);
+    }
+  }
+
+  const nextLesson = (() => {
+    const mods = level.modules;
+    const modIdx = mods.findIndex(m => m.id === lesson.moduleId);
+    if (modIdx === -1) return null;
+    const mod = mods[modIdx];
+    if (lesson.lessonIndex < mod.lessons.length - 1) {
+      const nl = mod.lessons[lesson.lessonIndex + 1];
+      return { moduleId: mod.id, lessonIndex: lesson.lessonIndex + 1, title: nl.title, desc: nl.desc, moduleTitle: mod.title, trackLabel: tr.label };
+    }
+    if (modIdx < mods.length - 1) {
+      const nm = mods[modIdx + 1];
+      return { moduleId: nm.id, lessonIndex: 0, title: nm.lessons[0].title, desc: nm.lessons[0].desc, moduleTitle: nm.title, trackLabel: tr.label };
+    }
+    return null;
+  })();
+
+  const difficulty = levelIdx === 0
+    ? { label: 'Beginner', stars: '⭐⭐' }
+    : levelIdx <= 2
+      ? { label: 'Intermediate', stars: '⭐⭐⭐' }
+      : { label: 'Advanced', stars: '⭐⭐⭐⭐' };
+  const firstName = (userName || '').split(' ')[0] || null;
+
+  const quiz = content && content.quiz;
+  const allAnswered = quiz && Object.keys(answers).length === quiz.length;
+  const quizScore = submitted && quiz ? quiz.filter((q, i) => answers[i] === q.correctIndex).length : 0;
+
+  const inpStyle = { padding: '10px 14px', background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.md, color: T.text, fontSize: 13, outline: 'none', fontFamily: 'Inter, sans-serif', width: '100%' };
+
+  if (celebrating) {
     return (
-      <div style={{ ...S.page }}>
-        <div style={{ padding: isMobile ? "14px 16px" : "18px 32px", borderBottom: "1px solid rgba(212,175,106,0.1)", display: "flex", alignItems: "center", gap: 14, background: "rgba(8,8,8,0.95)", position: "sticky", top: 0, zIndex: 50 }}>
-          <button onClick={() => setScreen("dashboard")} style={{ background: "none", border: "none", color: "#5A5248", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif", flexShrink: 0 }}>&#8592; Dashboard</button>
-          <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
-          <span style={{ fontSize: 18 }}>{activeCourse.icon}</span>
-          <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 15 : 18, fontWeight: 700, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeCourse.title}</span>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-            {grade && <span style={{ fontSize: 14, color: activeCourse.color, fontWeight: 700, fontFamily: "'Cormorant Garamond',serif" }}>{grade.letter}</span>}
-            <span style={{ fontSize: 11, color: activeCourse.color }}>{prog.unitsPassed}/{prog.totalUnits} units</span>
+      <div>
+        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, color: T.muted, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, marginBottom: 20, padding: 0 }}>← {level.title}</button>
+
+        <div style={{ background: T.panel, border: `1px solid ${T.success}40`, borderRadius: T.radius.xl, padding: '48px 40px', textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+          <div style={{ fontSize: 11, letterSpacing: 3, color: T.success, fontWeight: 800, marginBottom: 10 }}>LESSON COMPLETE</div>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: T.text, marginBottom: 16, letterSpacing: '-0.4px', lineHeight: 1.3 }}>{lesson.title}</h1>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 22px', borderRadius: 100, background: 'rgba(44,182,125,0.12)', border: `1px solid ${T.success}40`, marginBottom: 20 }}>
+            <span style={{ fontSize: 16 }}>⚡</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: T.success }}>+25 XP Earned</span>
           </div>
+          <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.7, maxWidth: 400, margin: '0 auto' }}>
+            {firstName ? `Nice work, ${firstName}.` : 'Nice work.'} Every lesson you finish is a real advantage — this knowledge pays off in real situations.
+          </p>
         </div>
 
-        <div style={{ height: 3, background: "rgba(255,255,255,0.04)" }}>
-          <div style={{ height: "100%", width: `${prog.lessonPct}%`, background: activeCourse.color, transition: "width 0.4s ease" }} />
-        </div>
+        <div style={{ background: T.panel2, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, padding: '28px 32px', marginBottom: 20 }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, color: T.accentLight, fontWeight: 800, marginBottom: 6 }}>LET'S APPLY THIS TO YOU</div>
+          <p style={{ color: T.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>Tell the Instructor your situation and get a personalized takeaway from this lesson.</p>
 
-        <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "28px 16px" : "48px 32px" }}>
-          <div style={{ marginBottom: 36 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, color: activeCourse.color, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, fontWeight: 600 }}>Course - {activeCourse.credits} Credits</div>
-                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 28 : 40, fontWeight: 300, margin: "0 0 8px" }}>{activeCourse.title}</h2>
-                <p style={{ color: "#7A7268", fontSize: 14, lineHeight: 1.7, maxWidth: 600 }}>{activeCourse.desc}</p>
+          {!personalResult ? (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <input value={personalCity} onChange={e => setPersonalCity(e.target.value)} placeholder="Your market / city" style={inpStyle} />
+                <input value={personalGoal} onChange={e => setPersonalGoal(e.target.value)} placeholder="Your goal (e.g. buy first rental)" style={inpStyle} />
               </div>
-              {hasCert && (
-                <button onClick={() => { setViewCertCourse(activeCourse); setScreen("certificate"); }}
-                  style={{ padding: "10px 20px", borderRadius: 8, border: `1px solid ${activeCourse.color}40`, background: `${activeCourse.color}12`, color: activeCourse.color, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-                  View Certificate
-                </button>
-              )}
+              <button onClick={handlePersonalize} disabled={personalLoading || (!personalCity && !personalGoal)}
+                style={{ padding: '10px 22px', borderRadius: T.radius.md, background: (personalCity || personalGoal) ? `linear-gradient(135deg,${T.accent},#1F3A56)` : T.borderSoft, color: (personalCity || personalGoal) ? '#fff' : T.muted, fontWeight: 700, fontSize: 13, border: 'none', cursor: (personalCity || personalGoal) ? 'pointer' : 'default', fontFamily: 'Inter, sans-serif', opacity: personalLoading ? 0.7 : 1 }}>
+                {personalLoading ? 'Generating…' : 'Get My Personalized Takeaway →'}
+              </button>
+            </>
+          ) : (
+            <div>
+              <div style={{ padding: '16px 20px', background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.md, fontSize: 13, color: T.text, lineHeight: 1.75, whiteSpace: 'pre-wrap', marginBottom: 12 }}>{personalResult}</div>
+              <button onClick={() => setPersonalResult('')} style={{ fontSize: 12, color: T.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>← Try different details</button>
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* Units */}
-          {activeCourse.units.map((unit, ui) => {
-            const unitLessons = unit.lessons || [];
-            const lessonsComplete = unitLessons.filter(l => progress.lessons[l.id]).length;
-            const quizResult = progress.quizzes[unit.id];
-            const allLessonsDone = lessonsComplete === unitLessons.length;
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <button onClick={onBack} style={{ padding: '12px 24px', borderRadius: T.radius.md, background: T.panel2, border: `1px solid ${T.border}`, color: T.muted, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>View Level</button>
+          {nextLesson ? (
+            <button onClick={() => onNext(nextLesson)}
+              style={{ padding: '12px 28px', borderRadius: T.radius.md, background: `linear-gradient(135deg,${T.accent},#1F3A56)`, color: '#fff', fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
+              Next: {nextLesson.title.length > 38 ? nextLesson.title.slice(0, 38) + '…' : nextLesson.title} →
+            </button>
+          ) : (
+            <div style={{ padding: '12px 22px', borderRadius: T.radius.md, background: 'rgba(44,182,125,0.1)', border: `1px solid ${T.success}40`, color: T.success, fontWeight: 700, fontSize: 14 }}>
+              🏆 Level complete!
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
-            return (
-              <div key={unit.id} style={{ marginBottom: 24, borderRadius: 12, border: `1px solid ${activeCourse.color}20`, background: `${activeCourse.color}05`, overflow: "hidden" }}>
-                {/* Unit header */}
-                <div style={{ padding: "18px 20px", borderBottom: `1px solid ${activeCourse.color}15`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: `${activeCourse.color}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: activeCourse.color, fontWeight: 700 }}>{ui + 1}</div>
-                    <div>
-                      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, color: "#EDE8DF" }}>{unit.title}</div>
-                      <div style={{ fontSize: 11, color: "#5A5248" }}>{unitLessons.length} lessons - {lessonsComplete}/{unitLessons.length} complete</div>
-                    </div>
-                  </div>
-                  {quizResult && (
-                    <div style={{ fontSize: 12, color: quizResult.passed ? "#6AD4A0" : "#D46A6A", fontWeight: 600 }}>
-                      {quizResult.passed ? `Passed ${quizResult.pct}%` : `${quizResult.pct}% — Retry`}
-                    </div>
-                  )}
+  return (
+    <div>
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, color: T.muted, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, marginBottom: 20, padding: 0 }}>
+        ← {level.title}
+      </button>
+
+      {/* Lesson header */}
+      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, padding: '32px 36px', marginBottom: 20 }}>
+        <div style={{ fontSize: 10, letterSpacing: 3, color: tr.color, fontWeight: 800, marginBottom: 10 }}>TODAY YOU'LL LEARN ONE THING</div>
+        {firstName && <div style={{ fontSize: 17, color: T.text, marginBottom: 10 }}>👋 Hi {firstName}!</div>}
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: T.text, marginBottom: 16, letterSpacing: '-0.5px', lineHeight: 1.25 }}>{lesson.title}</h1>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: alreadyDone ? 14 : 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 100, background: T.panel2, border: `1px solid ${T.border}`, fontSize: 12, color: T.muted }}>⏱ 5 min</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 100, background: T.panel2, border: `1px solid ${T.border}`, fontSize: 12, color: T.muted }}>{difficulty.stars} {difficulty.label}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 100, background: T.panel2, border: `1px solid ${T.border}`, fontSize: 12, color: tr.color }}>{lesson.moduleTitle}</div>
+        </div>
+        {alreadyDone && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 100, background: 'rgba(44,182,125,0.1)', border: `1px solid ${T.success}40`, fontSize: 12, color: T.success, fontWeight: 700 }}>✓ Completed</div>
+        )}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 24, alignItems: 'start' }}>
+        <div>
+          {/* Learning objectives */}
+          {content && content.objectives && content.objectives.length > 0 && (
+            <div style={{ background: `${tr.color}0d`, border: `1px solid ${tr.color}30`, borderRadius: T.radius.lg, padding: '18px 24px', marginBottom: 20 }}>
+              <div style={{ fontSize: 11, letterSpacing: 2, color: tr.color, fontWeight: 700, marginBottom: 12 }}>WHAT YOU'LL LEARN</div>
+              {content.objectives.map((obj, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: i < content.objectives.length - 1 ? 8 : 0 }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 5, background: `${tr.color}22`, border: `1px solid ${tr.color}40`, display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 900, color: tr.color, flexShrink: 0, marginTop: 1 }}>✓</div>
+                  <span style={{ fontSize: 13, color: T.text, lineHeight: 1.55 }}>{obj.replace(/^by the end of this lesson (you will be able to|,?\s*you('ll)?)/i, '').trim()}</span>
                 </div>
+              ))}
+            </div>
+          )}
 
-                {/* Lessons */}
-                <div style={{ padding: "12px 16px" }}>
-                  {unitLessons.map((lesson, li) => {
-                    const done = !!progress.lessons[lesson.id];
-                    return (
-                      <div key={lesson.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderRadius: 8, marginBottom: 4, transition: "all 0.2s" }}>
-                        <button onClick={e => { e.stopPropagation(); toggleLesson(lesson.id); }}
-                          style={{ width: 24, height: 24, borderRadius: 6, border: `1.5px solid ${done ? activeCourse.color : activeCourse.color + "50"}`, background: done ? activeCourse.color : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "all 0.2s" }}>
-                          {done && <span style={{ color: "#080808", fontSize: 11, fontWeight: 700 }}>+</span>}
-                        </button>
-                        <button onClick={() => openLesson(lesson, unit, activeCourse)}
-                          style={{ flex: 1, background: "none", border: "none", textAlign: "left", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", padding: 0 }}>
-                          <div style={{ fontSize: 13, color: done ? activeCourse.color : "#C8C0B4", fontWeight: done ? 600 : 500, opacity: done ? 0.7 : 1 }}>{lesson.title}</div>
-                          <div style={{ fontSize: 11, color: "#3A3530", marginTop: 2 }}>{lesson.duration} · {lesson.description}</div>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Quiz button */}
-                {unit.quiz && unit.quiz.length > 0 && (
-                  <div style={{ padding: "12px 16px", borderTop: `1px solid ${activeCourse.color}10` }}>
-                    <button onClick={() => startQuiz(unit)}
-                      style={{ width: "100%", padding: "12px", borderRadius: 8, border: `1px solid ${activeCourse.color}30`, background: allLessonsDone ? `${activeCourse.color}15` : "rgba(255,255,255,0.02)", color: allLessonsDone ? activeCourse.color : "#5A5248", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", transition: "all 0.2s" }}>
-                      {quizResult?.passed ? `Retake Quiz (Best: ${quizResult.pct}%)` : `Take Unit Quiz — ${unit.quiz.length} questions`}
-                    </button>
+          {/* Article toggle */}
+          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, overflow: 'hidden', marginBottom: 20 }}>
+            <button onClick={() => setArticleOpen(o => !o)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16 }}>📖</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Read Full Lesson</span>
+                {!content && !loadErr && <span style={{ fontSize: 12, color: T.mutedDark, marginLeft: 4 }}>Loading…</span>}
+              </div>
+              <span style={{ color: T.muted, fontSize: 16, transform: articleOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>⌄</span>
+            </button>
+            {articleOpen && (
+              <div style={{ borderTop: `1px solid ${T.borderSoft}`, padding: '24px 28px' }}>
+                {!content && !loadErr && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.muted, fontSize: 13 }}>
+                    <div style={{ width: 16, height: 16, border: `2px solid ${T.accentLight}30`, borderTopColor: T.accentLight, borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
+                    Generating lesson content…
                   </div>
                 )}
+                {loadErr && <div style={{ color: T.danger, fontSize: 14 }}>{loadErr}</div>}
+                {content && <RichText text={content.content} />}
               </div>
-            );
-          })}
-
-          {/* AI overview */}
-          <button onClick={() => startCoach(`Give me a comprehensive overview of the entire ${activeCourse.title} course. Cover all key concepts across all ${activeCourse.units.length} units, how they connect, and what I should focus on mastering first based on my profile as a ${ACCESS_TIERS[tier]?.description}.`)}
-            style={{ marginTop: 12, padding: "15px 28px", borderRadius: 8, border: `1px solid ${activeCourse.color}40`, background: `${activeCourse.color}12`, color: activeCourse.color, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-            AI Overview of Entire Course
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── LESSON VIEW ───────────────────────────────────────────────────────────
-  if (screen === "lesson" && activeLesson) {
-    const { lesson, unit, course } = activeLesson;
-    const courseColor = course.color || "#D4AF6A";
-    const lessonsDone = !!progress.lessons[lesson.id];
-
-    // Prev/next within unit
-    const unitLessons = unit.lessons || [];
-    const lessonIdx = unitLessons.findIndex(l => l.id === lesson.id);
-    const prevLesson = lessonIdx > 0 ? unitLessons[lessonIdx - 1] : null;
-    const nextLesson = lessonIdx < unitLessons.length - 1 ? unitLessons[lessonIdx + 1] : null;
-
-    // Lesson-level quiz handling
-    const lQuiz = lessonContent?.quiz || [];
-    const lAllAnswered = lQuiz.length > 0 && lQuiz.every((_, qi) => lessonQuizAnswers[qi] !== undefined);
-    const lScore = lessonQuizSubmitted
-      ? Math.round(lQuiz.filter((q, qi) => lessonQuizAnswers[qi] === q.correctIndex).length / lQuiz.length * 100)
-      : null;
-    const lPassed = lScore !== null && lScore >= 70;
-
-    const submitLessonQuiz = () => {
-      setLessonQuizSubmitted(true);
-      if (lPassed || lScore >= 70) {
-        const newP = { ...progress, lessons: { ...progress.lessons } };
-        if (!newP.lessons[lesson.id]) {
-          newP.lessons[lesson.id] = true;
-          newP.xp = (newP.xp || 0) + XP_PER_LESSON;
-          saveProgress(newP);
-        }
-      }
-    };
-
-    return (
-      <div style={{ ...S.page, background: "#080808" }}>
-        {/* Sticky header */}
-        <div style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(8,8,8,0.96)", backdropFilter: "blur(10px)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: isMobile ? "12px 16px" : "14px 32px", display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={() => setScreen("course")} style={{ background: "none", border: "none", color: "#5A5248", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif", display: "flex", alignItems: "center", gap: 6, padding: 0 }}>
-            &#8592; <span>{course.title}</span>
-          </button>
-          <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.08)" }} />
-          <div style={{ fontSize: 11, color: "#3A3530", letterSpacing: 1 }}>{unit.title}</div>
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-            {lessonsDone && <span style={{ fontSize: 10, color: courseColor, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", background: courseColor + "18", padding: "3px 10px", borderRadius: 20 }}>Completed</span>}
-          </div>
-        </div>
-
-        <div style={{ maxWidth: 760, margin: "0 auto", padding: isMobile ? "32px 16px 60px" : "48px 32px 80px" }}>
-          {/* Lesson header */}
-          <div style={{ borderLeft: `3px solid ${courseColor}`, paddingLeft: 20, marginBottom: 32 }}>
-            <div style={{ fontSize: 10, color: courseColor, fontWeight: 600, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>{unit.title}</div>
-            <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 28 : 38, fontWeight: 700, color: "#EDE8DF", lineHeight: 1.15, margin: "0 0 12px" }}>{lesson.title}</h1>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12, color: "#5A5248", display: "flex", alignItems: "center", gap: 5 }}>⏱ {lesson.duration}</span>
-              {lQuiz.length > 0 && <span style={{ fontSize: 12, color: "#5A5248" }}>· {lQuiz.length}-question quiz</span>}
-            </div>
-          </div>
-
-          {/* Loading */}
-          {lessonLoading && (
-            <div style={{ textAlign: "center", padding: "60px 0" }}>
-              <div style={{ width: 28, height: 28, border: `2px solid ${courseColor}30`, borderTopColor: courseColor, borderRadius: "50%", animation: "ru-spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-              <div style={{ fontSize: 12, color: "#5A5248", letterSpacing: 2 }}>Loading lesson…</div>
-            </div>
-          )}
-
-          {/* Error */}
-          {!lessonLoading && lessonContent?.error && (
-            <div style={{ padding: "24px", borderRadius: 10, background: "rgba(212,106,106,0.08)", border: "1px solid rgba(212,106,106,0.2)", color: "#D46A6A", fontSize: 13 }}>
-              {lessonContent.error}
-              <button onClick={() => openLesson(lesson, unit, course)} style={{ display: "block", marginTop: 12, fontSize: 12, color: courseColor, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>Try again</button>
-            </div>
-          )}
-
-          {/* Content */}
-          {!lessonLoading && lessonContent && !lessonContent.error && (
-            <>
-              {/* Lesson body */}
-              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: isMobile ? "20px 16px" : "32px 36px", marginBottom: 28 }}>
-                {renderLessonContent(lessonContent.content, courseColor)}
-              </div>
-
-              {/* Key takeaways */}
-              {lessonContent.keyPoints?.length > 0 && (
-                <div style={{ marginBottom: 28 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: "#5A5248", textTransform: "uppercase", marginBottom: 14 }}>Key Takeaways</div>
-                  <div style={{ border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, overflow: "hidden" }}>
-                    {lessonContent.keyPoints.map((pt, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "14px 20px", borderBottom: i < lessonContent.keyPoints.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                        <div style={{ width: 7, height: 7, borderRadius: "50%", background: courseColor, flexShrink: 0, marginTop: 6 }} />
-                        <div style={{ fontSize: 13, color: "#C8C0B4", lineHeight: 1.6 }}>{pt}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Lesson quiz */}
-              {lQuiz.length > 0 && (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${courseColor}22`, borderRadius: 12, padding: isMobile ? "20px 16px" : "28px 32px", marginBottom: 28 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: courseColor, textTransform: "uppercase", marginBottom: 20 }}>Knowledge Check</div>
-
-                  {!lessonQuizSubmitted ? (
-                    <>
-                      {lQuiz.map((q, qi) => (
-                        <div key={qi} style={{ marginBottom: 24 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: "#EDE8DF", marginBottom: 12, lineHeight: 1.4 }}>Q{qi + 1}. {q.question}</div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            {q.options.map((opt, oi) => {
-                              const sel = lessonQuizAnswers[qi] === oi;
-                              return (
-                                <button key={oi} onClick={() => setLessonQuizAnswers(prev => ({ ...prev, [qi]: oi }))}
-                                  style={{ textAlign: "left", padding: "12px 16px", borderRadius: 8, border: `1.5px solid ${sel ? courseColor : "rgba(255,255,255,0.08)"}`, background: sel ? courseColor + "15" : "rgba(255,255,255,0.02)", color: sel ? courseColor : "#9A9288", fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 10 }}>
-                                  <span style={{ width: 22, height: 22, borderRadius: 6, border: `1.5px solid ${sel ? courseColor : "rgba(255,255,255,0.12)"}`, background: sel ? courseColor + "20" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, flexShrink: 0, color: sel ? courseColor : "#5A5248" }}>{String.fromCharCode(65 + oi)}</span>
-                                  {opt}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                      <button onClick={submitLessonQuiz} disabled={!lAllAnswered}
-                        style={{ width: "100%", padding: "14px", borderRadius: 8, border: "none", background: lAllAnswered ? courseColor : "rgba(255,255,255,0.06)", color: lAllAnswered ? "#080808" : "#3A3530", fontWeight: 700, fontSize: 14, cursor: lAllAnswered ? "pointer" : "default", fontFamily: "'DM Sans',sans-serif", transition: "all 0.2s" }}>
-                        Submit Answers
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ textAlign: "center", padding: "24px 0 28px", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 24 }}>
-                        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 52, fontWeight: 700, color: lPassed ? "#6AD4A0" : "#D46A6A", lineHeight: 1 }}>{lScore}%</div>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: lPassed ? "#6AD4A0" : "#D46A6A", marginTop: 8 }}>{lPassed ? "Passed — Lesson Complete!" : "Not quite — review and retry"}</div>
-                        <div style={{ fontSize: 12, color: "#5A5248", marginTop: 4 }}>Need 70% to pass</div>
-                      </div>
-                      {lQuiz.map((q, qi) => {
-                        const userAns = lessonQuizAnswers[qi];
-                        const correct = userAns === q.correctIndex;
-                        return (
-                          <div key={qi} style={{ marginBottom: 20, padding: "16px", borderRadius: 8, background: correct ? "rgba(106,212,160,0.06)" : "rgba(212,106,106,0.06)", border: `1px solid ${correct ? "rgba(106,212,160,0.15)" : "rgba(212,106,106,0.15)"}` }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: "#EDE8DF", marginBottom: 8 }}>Q{qi + 1}. {q.question}</div>
-                            <div style={{ fontSize: 12, color: correct ? "#6AD4A0" : "#D46A6A", marginBottom: 6 }}>
-                              {correct ? "✓ Correct" : `✗ You chose: ${q.options[userAns]} — Correct: ${q.options[q.correctIndex]}`}
-                            </div>
-                            <div style={{ fontSize: 12, color: "#7A7268", lineHeight: 1.5 }}>{q.explanation}</div>
-                          </div>
-                        );
-                      })}
-                      {!lPassed && (
-                        <button onClick={() => { setLessonQuizAnswers({}); setLessonQuizSubmitted(false); }}
-                          style={{ width: "100%", padding: "12px", borderRadius: 8, border: `1px solid ${courseColor}40`, background: "transparent", color: courseColor, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", marginTop: 8 }}>
-                          Retry Quiz
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* Ask AI Coach */}
-              <div style={{ textAlign: "center", marginBottom: 32 }}>
-                <button onClick={() => startCoach(`I'm studying "${lesson.title}" in ${course.title}. I just completed the lesson. I want to go deeper — give me advanced insights, real-world examples, and any common mistakes practitioners make with this topic.`)}
-                  style={{ padding: "10px 24px", borderRadius: 8, border: `1px solid ${courseColor}30`, background: "transparent", color: courseColor, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-                  ✦ Ask AI Coach About This Lesson
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Prev / Next navigation */}
-          <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
-            {prevLesson ? (
-              <button onClick={() => openLesson(prevLesson, unit, course)}
-                style={{ flex: 1, padding: "13px 16px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)", color: "#9A9288", fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", textAlign: "left" }}>
-                &#8592; {prevLesson.title}
-              </button>
-            ) : <div style={{ flex: 1 }} />}
-            {nextLesson ? (
-              <button onClick={() => openLesson(nextLesson, unit, course)}
-                style={{ flex: 1, padding: "13px 16px", borderRadius: 8, border: `1px solid ${courseColor}30`, background: courseColor + "12", color: courseColor, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", textAlign: "right" }}>
-                {nextLesson.title} &#8594;
-              </button>
-            ) : (
-              <button onClick={() => setScreen("course")}
-                style={{ flex: 1, padding: "13px 16px", borderRadius: 8, border: `1px solid ${courseColor}30`, background: courseColor + "12", color: courseColor, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-                Back to Course ✓
-              </button>
             )}
           </div>
-        </div>
-      </div>
-    );
-  }
 
-  // ── QUIZ ──────────────────────────────────────────────────────────────────
-  if (screen === "quiz" && activeUnit) {
-    const quiz = activeUnit.quiz || [];
-    const allAnswered = quiz.every((_, i) => quizAnswers[i] !== undefined);
-    const result = quizSubmitted ? progress.quizzes[activeUnit.id] : null;
-
-    return (
-      <div style={{ ...S.page }}>
-        <div style={{ padding: isMobile ? "14px 16px" : "18px 32px", borderBottom: "1px solid rgba(212,175,106,0.1)", display: "flex", alignItems: "center", gap: 14, background: "rgba(8,8,8,0.95)", position: "sticky", top: 0, zIndex: 50 }}>
-          <button onClick={() => setScreen("course")} style={{ background: "none", border: "none", color: "#5A5248", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif" }}>&#8592; Back to Course</button>
-          <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.06)" }} />
-          <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 14 : 16, fontWeight: 700 }}>Unit Quiz: {activeUnit.title}</span>
-        </div>
-
-        <div style={{ maxWidth: 700, margin: "0 auto", padding: isMobile ? "28px 16px" : "48px 32px" }}>
-          {!quizSubmitted && (
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 10, letterSpacing: 4, color: "#D4AF6A", textTransform: "uppercase", marginBottom: 8 }}>Assessment</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 24 : 32, fontWeight: 300, margin: "0 0 8px" }}>{activeUnit.title}</h2>
-              <p style={{ color: "#5A5248", fontSize: 13 }}>{quiz.length} questions - Must score 70% to pass</p>
-            </div>
-          )}
-
-          {quizSubmitted && result && (() => {
-            const attemptPct = result.lastPct != null ? result.lastPct : result.pct;
-            const attemptPassed = attemptPct >= 70;
-            return (
-            <div style={{ marginBottom: 32, padding: "24px", borderRadius: 12, border: `1px solid ${attemptPassed ? "#6AD4A050" : "#D46A6A50"}`, background: attemptPassed ? "rgba(106,212,160,0.08)" : "rgba(212,106,106,0.08)", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 48, fontWeight: 700, color: attemptPassed ? "#6AD4A0" : "#D46A6A" }}>{attemptPct}%</div>
-              <div style={{ fontSize: 16, color: attemptPassed ? "#6AD4A0" : "#D46A6A", fontWeight: 600, marginBottom: 4 }}>{attemptPassed ? "Passed!" : "Not Passed"}</div>
-              <div style={{ fontSize: 13, color: "#5A5248" }}>{Math.round(attemptPct * result.total / 100)} of {result.total} correct</div>
-              {attemptPassed && !result.passed && <div style={{ fontSize: 12, color: "#D4AF6A", marginTop: 8 }}>+{XP_PER_QUIZ_PASS} XP earned</div>}
-              {!attemptPassed && result.passed && <div style={{ fontSize: 12, color: "#6AD4A0", marginTop: 8 }}>Your best score of {result.pct}% is preserved</div>}
-              {result.pct > attemptPct && <div style={{ fontSize: 11, color: "#5A5248", marginTop: 4 }}>Best: {result.pct}%</div>}
-            </div>
-            );
-          })()}
-
-          {quiz.map((q, qi) => {
-            const answered = quizAnswers[qi] !== undefined;
-            const isCorrect = quizSubmitted && quizAnswers[qi] === q.correct;
-            const isWrong = quizSubmitted && answered && quizAnswers[qi] !== q.correct;
-
-            return (
-              <div key={qi} style={{ marginBottom: 20, padding: "20px", borderRadius: 10, border: "1px solid rgba(212,175,106,0.1)", background: "rgba(255,255,255,0.02)" }}>
-                <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-                  <div style={{ width: 26, height: 26, borderRadius: 6, background: "rgba(212,175,106,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#D4AF6A", fontWeight: 700, flexShrink: 0 }}>{qi + 1}</div>
-                  <div style={{ fontSize: 14, color: "#C8C0B4", lineHeight: 1.6, flex: 1 }}>{q.q}</div>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingLeft: 36 }}>
+          {/* Quiz */}
+          {content && quiz && (
+            <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, padding: '28px 32px' }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 20 }}>Knowledge Check</h3>
+              {quiz.map((q, qi) => (
+                <div key={qi} style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 12 }}>{qi + 1}. {q.question}</div>
                   {q.options.map((opt, oi) => {
-                    const selected = quizAnswers[qi] === oi;
-                    const correctOpt = quizSubmitted && oi === q.correct;
-                    let borderColor = "rgba(212,175,106,0.15)";
-                    let bgColor = "rgba(255,255,255,0.02)";
-                    let textColor = "#7A7268";
-                    if (selected && !quizSubmitted) { borderColor = "#D4AF6A"; bgColor = "rgba(212,175,106,0.1)"; textColor = "#D4AF6A"; }
-                    if (quizSubmitted && correctOpt) { borderColor = "#6AD4A0"; bgColor = "rgba(106,212,160,0.1)"; textColor = "#6AD4A0"; }
-                    if (quizSubmitted && selected && !correctOpt) { borderColor = "#D46A6A"; bgColor = "rgba(212,106,106,0.1)"; textColor = "#D46A6A"; }
-
+                    const sel = answers[qi] === oi;
+                    const isCorrect = q.correctIndex === oi;
+                    let bg = T.panel2, border = T.border, color = T.muted;
+                    if (sel && !submitted) { bg = T.accentGlow; border = `${T.accentLight}60`; color = T.text; }
+                    if (submitted && isCorrect) { bg = 'rgba(82,211,166,.1)'; border = `${T.success}60`; color = T.success; }
+                    if (submitted && sel && !isCorrect) { bg = 'rgba(255,143,143,.08)'; border = `${T.danger}60`; color = T.danger; }
                     return (
-                      <button key={oi} onClick={() => { if (!quizSubmitted) setQuizAnswers(prev => ({ ...prev, [qi]: oi })); }}
-                        disabled={quizSubmitted}
-                        style={{ padding: "11px 16px", borderRadius: 8, border: `1px solid ${borderColor}`, background: bgColor, color: textColor, fontSize: 13, cursor: quizSubmitted ? "default" : "pointer", textAlign: "left", fontFamily: "'DM Sans',sans-serif", transition: "all 0.2s" }}>
+                      <button key={oi} disabled={submitted} onClick={() => setAnswers(a => ({ ...a, [qi]: oi }))}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 8, borderRadius: T.radius.md, background: bg, border: `1px solid ${border}`, cursor: submitted ? 'default' : 'pointer', textAlign: 'left', color, fontSize: 13, fontFamily: 'Inter, sans-serif', transition: 'all .15s' }}>
+                        <div style={{ width: 22, height: 22, borderRadius: 6, border: `1px solid ${border}`, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color, flexShrink: 0 }}>
+                          {String.fromCharCode(65 + oi)}
+                        </div>
                         {opt}
                       </button>
                     );
                   })}
-                </div>
-              </div>
-            );
-          })}
-
-          <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 16 }}>
-            {!quizSubmitted ? (
-              <button onClick={() => submitQuiz(activeUnit)} disabled={!allAnswered}
-                style={{ padding: "14px 32px", borderRadius: 8, border: "none", background: allAnswered ? "linear-gradient(135deg,#D4AF6A,#9A7A3A)" : "rgba(255,255,255,0.05)", color: allAnswered ? "#080808" : "#3A3530", fontSize: 14, fontWeight: 700, cursor: allAnswered ? "pointer" : "not-allowed", fontFamily: "'DM Sans',sans-serif" }}>
-                Submit Quiz
-              </button>
-            ) : (
-              <div style={{ display: "flex", gap: 12 }}>
-                {!result?.passed && (
-                  <button onClick={() => { setQuizAnswers({}); setQuizSubmitted(false); }}
-                    style={{ padding: "14px 28px", borderRadius: 8, border: "1px solid rgba(212,175,106,0.3)", background: "transparent", color: "#D4AF6A", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-                    Retake Quiz
-                  </button>
-                )}
-                <button onClick={() => setScreen("course")}
-                  style={{ padding: "14px 28px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#D4AF6A,#9A7A3A)", color: "#080808", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-                  Back to Course
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── TRANSCRIPT ────────────────────────────────────────────────────────────
-  if (screen === "transcript") return (
-    <div style={{ ...S.page }}>
-      <div style={{ padding: isMobile ? "14px 16px" : "18px 32px", borderBottom: "1px solid rgba(212,175,106,0.1)", display: "flex", alignItems: "center", gap: 14, background: "rgba(8,8,8,0.95)", position: "sticky", top: 0, zIndex: 50 }}>
-        <button onClick={() => setScreen("dashboard")} style={{ background: "none", border: "none", color: "#5A5248", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif" }}>&#8592; Dashboard</button>
-        <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.06)" }} />
-        <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 15 : 18, fontWeight: 700 }}>Academic Transcript</span>
-      </div>
-
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "28px 16px" : "48px 32px" }}>
-        {/* Transcript header */}
-        <div style={{ textAlign: "center", marginBottom: 40, padding: "32px", borderRadius: 12, border: "1px solid rgba(212,175,106,0.15)", background: "rgba(212,175,106,0.04)" }}>
-          <div style={{ fontSize: 10, letterSpacing: 6, color: "#D4AF6A", textTransform: "uppercase", marginBottom: 12 }}>Ravlo Academy</div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 20 : 26, fontWeight: 700, color: "#EDE8DF", marginBottom: 4 }}>{userName}</div>
-          <div style={{ fontSize: 12, color: "#5A5248", marginBottom: 20 }}>{ACCESS_TIERS[tier]?.label} - {ACCESS_TIERS[tier]?.description}</div>
-
-          <div style={{ display: "flex", justifyContent: "center", gap: isMobile ? 24 : 48, flexWrap: "wrap" }}>
-            <div>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: "#D4AF6A" }}>{getOverallGPA()}</div>
-              <div style={{ fontSize: 10, color: "#5A5248", letterSpacing: 2, textTransform: "uppercase" }}>Cumulative GPA</div>
-            </div>
-            <div>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: "#6AD4A0" }}>{getEarnedCredits()}</div>
-              <div style={{ fontSize: 10, color: "#5A5248", letterSpacing: 2, textTransform: "uppercase" }}>Credits Earned</div>
-            </div>
-            <div>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: "#6AB4D4" }}>{(progress.certificates || []).length}</div>
-              <div style={{ fontSize: 10, color: "#5A5248", letterSpacing: 2, textTransform: "uppercase" }}>Certificates</div>
-            </div>
-            <div>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: "#B06AD4" }}>{progress.xp || 0}</div>
-              <div style={{ fontSize: 10, color: "#5A5248", letterSpacing: 2, textTransform: "uppercase" }}>Total XP</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Course records */}
-        <div style={{ fontSize: 10, letterSpacing: 3, color: "#5A5248", textTransform: "uppercase", marginBottom: 16 }}>Course Records</div>
-
-        {/* Table header */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 80px 80px 80px", gap: 8, padding: "10px 16px", borderRadius: "8px 8px 0 0", background: "rgba(212,175,106,0.06)", fontSize: 10, color: "#5A5248", letterSpacing: 1, textTransform: "uppercase", fontWeight: 600 }}>
-          <div>Course</div>
-          <div style={{ textAlign: "center" }}>Credits</div>
-          <div style={{ textAlign: "center" }}>Units</div>
-          <div style={{ textAlign: "center" }}>Grade</div>
-          <div style={{ textAlign: "center" }}>Status</div>
-        </div>
-
-        {availableCourses.map(course => {
-          const prog = getCourseProgress(course);
-          const grade = getCourseGrade(course);
-          const hasCert = (progress.certificates || []).includes(course.id);
-          const started = prog.lessons > 0 || prog.unitsPassed > 0;
-          const status = hasCert ? "Completed" : started ? "In Progress" : "Not Started";
-          const statusColor = hasCert ? "#6AD4A0" : started ? "#D4AF6A" : "#3A3530";
-
-          return (
-            <div key={course.id} style={{ display: "grid", gridTemplateColumns: "1fr 60px 80px 80px 80px", gap: 8, padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 16 }}>{course.icon}</span>
-                <div>
-                  <div style={{ fontSize: 13, color: "#C8C0B4", fontWeight: 500 }}>{course.title}</div>
-                  {hasCert && (
-                    <button onClick={() => { setViewCertCourse(course); setScreen("certificate"); }}
-                      style={{ fontSize: 10, color: "#D4AF6A", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "'DM Sans',sans-serif", marginTop: 2 }}>
-                      View Certificate
-                    </button>
+                  {submitted && q.explanation && (
+                    <div style={{ marginTop: 8, padding: '10px 14px', background: 'rgba(255,255,255,.03)', borderRadius: T.radius.sm, fontSize: 12, color: T.muted, lineHeight: 1.6 }}>
+                      {q.explanation}
+                    </div>
                   )}
                 </div>
-              </div>
-              <div style={{ textAlign: "center", fontSize: 13, color: "#7A7268" }}>{course.credits}</div>
-              <div style={{ textAlign: "center", fontSize: 13, color: "#7A7268" }}>{prog.unitsPassed}/{prog.totalUnits}</div>
-              <div style={{ textAlign: "center", fontSize: 14, color: grade ? "#D4AF6A" : "#3A3530", fontWeight: 700, fontFamily: "'Cormorant Garamond',serif" }}>{grade ? grade.letter : "—"}</div>
-              <div style={{ textAlign: "center", fontSize: 11, color: statusColor, fontWeight: 500 }}>{status}</div>
+              ))}
+
+              {!submitted ? (
+                <button disabled={!allAnswered} onClick={() => setSubmitted(true)} style={{ padding: '12px 28px', borderRadius: T.radius.md, background: allAnswered ? `linear-gradient(135deg,${T.accent},#1F3A56)` : T.borderSoft, color: allAnswered ? '#fff' : T.muted, fontWeight: 700, fontSize: 14, border: 'none', cursor: allAnswered ? 'pointer' : 'default', fontFamily: 'Inter, sans-serif' }}>
+                  Submit Answers
+                </button>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: quizScore === quiz.length ? T.success : T.warning }}>
+                    {quizScore}/{quiz.length} correct
+                  </div>
+                  {!alreadyDone && (
+                    <button onClick={handleComplete} disabled={completing} style={{ padding: '11px 24px', borderRadius: T.radius.md, background: `linear-gradient(135deg,${T.success},#36b88a)`, color: '#07111f', fontWeight: 800, fontSize: 14, border: 'none', cursor: completing ? 'default' : 'pointer', fontFamily: 'Inter, sans-serif', opacity: completing ? 0.7 : 1 }}>
+                      {completing ? 'Saving…' : '✓ Mark Complete +25 XP'}
+                    </button>
+                  )}
+                  {alreadyDone && <span style={{ fontSize: 13, color: T.success }}>✓ Completed</span>}
+                </div>
+              )}
             </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+          )}
 
-  // ── CERTIFICATE ───────────────────────────────────────────────────────────
-  if (screen === "certificate" && viewCertCourse) return (
-    <div style={{ ...S.page, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", position: "relative" }}>
-      <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(ellipse 60% 40% at 50% 30%, rgba(212,175,106,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
-      <button onClick={() => { if (activeCourse) setScreen("course"); else setScreen("transcript"); }}
-        style={{ position: "absolute", top: 20, left: 20, background: "none", border: "none", color: "#5A5248", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif" }}>&#8592; Back</button>
-
-      <div style={{ maxWidth: 600, width: "100%", position: "relative", zIndex: 1, padding: "48px 40px", borderRadius: 16, border: "2px solid rgba(212,175,106,0.3)", background: "linear-gradient(180deg, rgba(212,175,106,0.06) 0%, rgba(8,8,8,0.95) 100%)", textAlign: "center" }}>
-        <div style={{ width: 60, height: 60, margin: "0 auto 20px", border: "2px solid #D4AF6A", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#D4AF6A", fontFamily: "'Cormorant Garamond',serif", fontWeight: 700 }}>R</div>
-        <div style={{ fontSize: 10, letterSpacing: 6, color: "#D4AF6A", textTransform: "uppercase", marginBottom: 24 }}>Certificate of Completion</div>
-        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 14, color: "#5A5248", marginBottom: 8, fontStyle: "italic" }}>This certifies that</div>
-        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 28 : 36, fontWeight: 700, color: "#D4AF6A", marginBottom: 8 }}>{userName}</div>
-        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 14, color: "#5A5248", marginBottom: 24, fontStyle: "italic" }}>has successfully completed</div>
-        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMobile ? 22 : 28, fontWeight: 700, color: "#EDE8DF", marginBottom: 8 }}>{viewCertCourse.title}</div>
-        <div style={{ fontSize: 13, color: "#5A5248", marginBottom: 8 }}>{viewCertCourse.credits} Credit Hours - {viewCertCourse.units.length} Units</div>
-        {getCourseGrade(viewCertCourse) && (
-          <div style={{ fontSize: 16, color: "#D4AF6A", fontWeight: 700, marginBottom: 20 }}>Grade: {getCourseGrade(viewCertCourse).letter}</div>
-        )}
-        <div style={{ height: 1, background: "rgba(212,175,106,0.2)", margin: "20px 0" }} />
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontSize: 11, color: "#3A3530" }}>Ravlo Academy</div>
-          <div style={{ fontSize: 11, color: "#3A3530" }}>{new Date().toLocaleDateString()}</div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ── COACH / CHAT ──────────────────────────────────────────────────────────
-  if (screen === "coach") return (
-    <div style={{ height: "100svh", display: "flex", flexDirection: "column", background: "#080808", fontFamily: "'DM Sans',sans-serif", color: "#EDE8DF" }}>
-
-      {notification && <div style={{ position: "fixed", top: 20, right: 20, padding: "12px 20px", borderRadius: 8, background: "rgba(212,175,106,0.15)", border: "1px solid rgba(212,175,106,0.3)", color: "#D4AF6A", fontSize: 13, zIndex: 200, fontFamily: "'DM Sans',sans-serif" }}>{notification}</div>}
-
-      <div style={{ padding: isMobile ? "12px 16px" : "16px 28px", borderBottom: "1px solid rgba(212,175,106,0.1)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(8,8,8,0.95)", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14 }}>
-          <button onClick={() => { if (activeCourse) setScreen("course"); else setScreen("dashboard"); }} style={{ background: "none", border: "none", color: "#5A5248", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans',sans-serif", flexShrink: 0 }}>&#8592; {isMobile ? "" : "Back"}</button>
-          <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
-          <div style={{ width: isMobile ? 28 : 32, height: isMobile ? 28 : 32, borderRadius: "50%", background: "linear-gradient(135deg,#D4AF6A,#8A6A2A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 11 : 13, fontWeight: 700, color: "#080808", flexShrink: 0 }}>AI</div>
-          {!isMobile && (
-            <div>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700 }}>RealEdge AI Coach</div>
-              <div style={{ fontSize: 10, color: "#5A5248", letterSpacing: 1 }}>COACHING SESSION</div>
+          {/* No quiz: direct mark complete */}
+          {content && !quiz && !alreadyDone && (
+            <div style={{ padding: '20px 0' }}>
+              <button onClick={handleComplete} disabled={completing} style={{ padding: '13px 32px', borderRadius: T.radius.md, background: `linear-gradient(135deg,${T.success},#36b88a)`, color: '#07111f', fontWeight: 800, fontSize: 15, border: 'none', cursor: completing ? 'default' : 'pointer', fontFamily: 'Inter, sans-serif', opacity: completing ? 0.7 : 1 }}>
+                {completing ? 'Saving…' : '✓ Mark Complete +25 XP'}
+              </button>
             </div>
           )}
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={saveCurrentSession} style={{ padding: isMobile ? "6px 10px" : "7px 14px", borderRadius: 6, border: "1px solid rgba(212,175,106,0.2)", background: "rgba(212,175,106,0.06)", color: "#D4AF6A", fontSize: isMobile ? 10 : 11, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-            Save
-          </button>
-          <button onClick={() => { setMessages([]); startCoach(); }} style={{ padding: isMobile ? "6px 10px" : "7px 14px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)", color: "#5A5248", fontSize: isMobile ? 10 : 11, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-            + New
-          </button>
-          <button onClick={() => { setShowHistory(true); setScreen("dashboard"); }} style={{ padding: isMobile ? "6px 10px" : "7px 14px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)", color: "#5A5248", fontSize: isMobile ? 10 : 11, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-            History
-          </button>
+
+        {/* Key points sidebar */}
+        <div style={{ position: 'sticky', top: 20 }}>
+          {content && content.keyPoints && (
+            <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.lg, padding: '22px 24px' }}>
+              <div style={{ fontSize: 11, letterSpacing: 2, color: tr.color, fontWeight: 700, marginBottom: 14 }}>KEY POINTS</div>
+              {content.keyPoints.map((pt, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 6, background: `${tr.color}20`, display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 800, color: tr.color, flexShrink: 0, marginTop: 1 }}>{i + 1}</div>
+                  <span style={{ fontSize: 13, color: T.muted, lineHeight: 1.5 }}>{pt}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
-      <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "16px" : "28px", display: "flex", flexDirection: "column", gap: 18 }}>
+// ── Instructor ─────────────────────────────────────────────────────────────
+function Instructor({ track, tier, userName }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef(null);
+  const tr = track ? TRACKS[track] : null;
+
+  const systemPrompt = `You are the Ravlo Academy Instructor — a senior real estate expert and practitioner. You are mentoring ${userName || 'a member'} who is enrolled in the ${tr ? tr.label : 'Real Estate Professional'} track.
+
+Your coaching standards:
+- ALWAYS use specific numbers: percentages, dollar amounts, ratios, thresholds (e.g. "DSCR must be at least 1.25x", "budget 10-15% contingency on rehabs", "ARV-based lending is typically 65-75% of ARV")
+- Teach the WHY behind every recommendation — not just what to do but why it matters and what goes wrong when ignored
+- Give concrete examples: "On a $200k acquisition at 70% ARV of $285k, your max all-in is $199,500"
+- Call out the most common mistakes practitioners make in real situations
+- When the user asks about a concept, give the practitioner answer, not the textbook definition
+- If they share a deal or scenario, run the actual numbers with them
+- Short answers for simple questions; deep explanations for complex ones
+- Never say "consult a professional" or "it depends" without also giving the direct answer
+- Never give generic encouragement; give useful information
+
+You have deep expertise across: deal analysis, BRRRR strategy, multifamily, fix & flip, creative financing, DSCR loans, hard money, construction budgeting, renovation underwriting, lease structuring, 1031 exchanges, syndication, and market analysis.`;
+
+  useEffect(() => {
+    if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  async function sendMessage() {
+    if (!input.trim() || loading) return;
+    const userMsg = { role: 'user', content: input.trim() };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages); setInput(''); setLoading(true);
+    try {
+      const data = await apiFetch('/academy/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1200, system: systemPrompt, messages: newMessages }),
+      });
+      const text = (data.content || [{}])[0].text || '';
+      setMessages(m => [...m, { role: 'assistant', content: text }]);
+    } catch {
+      setMessages(m => [...m, { role: 'assistant', content: 'I encountered an issue. Please try again.' }]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const startersByTrack = {
+    investor: ['Walk me through how to calculate ARV and set a max offer price', 'What does a good BRRRR deal look like on paper?', 'How do I evaluate whether a market is worth investing in?', 'What are the biggest mistakes new investors make on their first deal?'],
+    lending:  ['Walk me through how DSCR loans are underwritten', 'What income documentation do I need for a self-employed borrower?', 'How does an AUS (DU/LPA) decision get overridden manually?', 'What are the most common TRID compliance mistakes?'],
+    realtor:  ['How do I build a listing presentation that wins against established agents?', 'Walk me through how to do a CMA the right way', 'What does a strong SOI system look like for a new agent?', 'How do I break into working with investors as a realtor?'],
+    property_mgmt: ['How do I set rent prices in a new market?', 'Walk me through a solid lease renewal process', 'What maintenance issues do landlords most often ignore until they become expensive?', 'How do I screen tenants effectively?'],
+    contractor: ['How do I write a bid that protects my margin?', 'Walk me through how to read construction drawings for estimating', 'What are the most common budget busters on residential rehabs?', 'How do draw schedules typically work on a renovation project?'],
+    operations: ['Walk me through what should be in a complete bid package for a municipal contract', 'How do I handle an access request where the person has given me minimal information?', 'What is the best way to write a follow-up email after submitting a bid with no response?', 'How do I structure handoff notes so Jamaine or Letoya can act on them without asking me questions?'],
+  };
+  const starters = startersByTrack[track] || startersByTrack.investor;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)' }}>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11, letterSpacing: 2, color: T.accentLight, fontWeight: 700, marginBottom: 6 }}>INSTRUCTOR</div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text }}>Ask Your Instructor</h2>
+        {tr && <p style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>Focused on {tr.label} strategies</p>}
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.xl, padding: 20, display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 14 }}>
         {messages.length === 0 && (
-          <div style={{ textAlign: "center", margin: "auto", color: "#3A3530", fontSize: 13 }}>
-            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#D4AF6A,#8A6A2A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "#080808", margin: "0 auto 12px" }}>AI</div>
-            <div>Ready when you are, {userName}.</div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 20, padding: 20 }}>
+            <div style={{ width: 60, height: 60, borderRadius: 20, background: T.accentGlow, border: `1px solid ${T.accentLight}30`, display: 'grid', placeItems: 'center', fontSize: 28 }}>◎</div>
+            <p style={{ color: T.muted, fontSize: 14, textAlign: 'center', maxWidth: 320, lineHeight: 1.6 }}>
+              Your Instructor is ready. Ask about strategies, deal analysis, market research, financing, and more.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+              {starters.map((s, i) => (
+                <button key={i} onClick={() => { setInput(s); }} style={{ padding: '8px 14px', borderRadius: T.radius.md, background: T.panel2, border: `1px solid ${T.border}`, color: T.muted, fontSize: 12, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>{s}</button>
+              ))}
+            </div>
           </div>
         )}
         {messages.map((msg, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", gap: 10, alignItems: "flex-start" }}>
-            {msg.role === "assistant" && (
-              <div style={{ width: isMobile ? 26 : 30, height: isMobile ? 26 : 30, borderRadius: "50%", background: "linear-gradient(135deg,#D4AF6A,#8A6A2A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 10 : 11, fontWeight: 700, color: "#080808", flexShrink: 0, marginTop: 2 }}>AI</div>
+          <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: 10 }}>
+            {msg.role === 'assistant' && (
+              <div style={{ width: 30, height: 30, borderRadius: 10, background: T.accentGlow, border: `1px solid ${T.accentLight}30`, display: 'grid', placeItems: 'center', fontSize: 14, flexShrink: 0, alignSelf: 'flex-end' }}>◎</div>
             )}
-            <div style={{ maxWidth: isMobile ? "90%" : "76%", padding: msg.role === "user" ? "12px 16px" : "18px 22px", borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.role === "user" ? "linear-gradient(135deg,#D4AF6A,#9A7A3A)" : "rgba(255,255,255,0.04)", border: msg.role === "assistant" ? "1px solid rgba(212,175,106,0.1)" : "none", color: msg.role === "user" ? "#080808" : "#C8C0B4", fontSize: isMobile ? 13 : 14, lineHeight: 1.75 }}>
-              {msg.role === "user" ? <span style={{ fontWeight: 500 }}>{msg.content}</span> : <span dangerouslySetInnerHTML={{ __html: fmt(msg.content) }} />}
+            <div style={{ maxWidth: '78%', padding: '12px 16px', borderRadius: msg.role === 'user' ? `${T.radius.lg}px ${T.radius.lg}px 6px ${T.radius.lg}px` : `${T.radius.lg}px ${T.radius.lg}px ${T.radius.lg}px 6px`, background: msg.role === 'user' ? `linear-gradient(135deg,${T.accent},#1F3A56)` : T.panel2, border: msg.role === 'user' ? 'none' : `1px solid ${T.border}`, fontSize: 14, color: T.text, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+              {msg.content}
             </div>
           </div>
         ))}
         {loading && (
-          <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#D4AF6A,#8A6A2A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#080808" }}>AI</div>
-            <div style={{ padding: "16px 20px", borderRadius: "18px 18px 18px 4px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,175,106,0.1)", display: "flex", gap: 5, alignItems: "center" }}>
-              {[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#D4AF6A", opacity: 0.6, animation: "dot 1.2s ease-in-out infinite", animationDelay: `${i * 0.2}s` }} />)}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 10, background: T.accentGlow, border: `1px solid ${T.accentLight}30`, display: 'grid', placeItems: 'center', fontSize: 14 }}>◎</div>
+            <div style={{ padding: '12px 16px', background: T.panel2, border: `1px solid ${T.border}`, borderRadius: T.radius.lg, display: 'flex', gap: 6, alignItems: 'center' }}>
+              {[0, 1, 2].map(d => <div key={d} style={{ width: 6, height: 6, borderRadius: '50%', background: T.muted, animation: `dot .8s ${d * 0.2}s ease-in-out infinite` }} />)}
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
+        <div ref={bottomRef} />
       </div>
 
-      {/* Quick prompts */}
-      {messages.length <= 1 && (
-        <div style={{ padding: "8px 16px 0", display: "flex", gap: 6, overflowX: "auto", flexShrink: 0 }}>
-          {(tier === "lending"
-            ? ["Explain DSCR underwriting", "Walk me through conventional vs FHA vs VA", "How do rate locks work?", "Build me a production plan"]
-            : ["Help me close more deals", "Build my 30-day prospecting plan", "Analyze this deal with me", "Create my success plan"]
-          ).map(q => (
-            <button key={q} onClick={() => sendMessage(q)} style={{ padding: "5px 12px", borderRadius: 16, border: "1px solid rgba(212,175,106,0.12)", background: "transparent", color: "#5A5248", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "'DM Sans',sans-serif", transition: "all 0.2s" }}
-              onMouseEnter={e => { e.target.style.color = "#D4AF6A"; e.target.style.borderColor = "rgba(212,175,106,0.3)"; }}
-              onMouseLeave={e => { e.target.style.color = "#5A5248"; e.target.style.borderColor = "rgba(212,175,106,0.12)"; }}>
-              {q}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div style={{ padding: isMobile ? "12px 14px" : "16px 28px", borderTop: "1px solid rgba(212,175,106,0.08)", background: "rgba(8,8,8,0.95)", flexShrink: 0 }}>
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
-          <textarea ref={inputRef} value={chatInput} onChange={e => setChatInput(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-            placeholder="Ask your coach anything..." rows={1}
-            style={{ flex: 1, padding: "13px 16px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,175,106,0.15)", borderRadius: 12, color: "#EDE8DF", fontSize: 14, outline: "none", resize: "none", lineHeight: 1.5, fontFamily: "'DM Sans',sans-serif", maxHeight: 120 }} />
-          <button onClick={() => sendMessage()} disabled={!chatInput.trim() || loading}
-            style={{ width: isMobile ? 40 : 46, height: isMobile ? 40 : 46, borderRadius: 10, border: "none", background: chatInput.trim() && !loading ? "linear-gradient(135deg,#D4AF6A,#9A7A3A)" : "rgba(255,255,255,0.05)", color: chatInput.trim() && !loading ? "#080808" : "#3A3530", fontSize: 18, cursor: chatInput.trim() && !loading ? "pointer" : "not-allowed", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>&#8593;</button>
-        </div>
-        {!isMobile && <div style={{ fontSize: 10, color: "#2A2520", textAlign: "center", marginTop: 8, letterSpacing: 1 }}>ENTER TO SEND - SHIFT+ENTER FOR NEW LINE</div>}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+          placeholder="Ask your coach anything…"
+          style={{ flex: 1, padding: '13px 18px', background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.lg, color: T.text, fontSize: 14, outline: 'none', fontFamily: 'Inter, sans-serif' }} />
+        <button onClick={sendMessage} disabled={loading || !input.trim()} style={{ padding: '0 22px', borderRadius: T.radius.lg, background: input.trim() ? `linear-gradient(135deg,${T.accent},#1F3A56)` : T.borderSoft, color: input.trim() ? '#fff' : T.muted, border: 'none', cursor: input.trim() ? 'pointer' : 'default', fontWeight: 700, fontSize: 20, fontFamily: 'Inter, sans-serif' }}>→</button>
       </div>
-      <style>{`@keyframes dot{0%,100%{transform:scale(0.7);opacity:0.3}50%{transform:scale(1.2);opacity:1}} textarea{overflow:hidden} ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-thumb{background:rgba(212,175,106,0.15);border-radius:3px}`}</style>
+      <style>{`@keyframes dot { 0%,80%,100%{opacity:.3;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }`}</style>
     </div>
   );
-
-  return null;
 }
 
-// ── Mount ─────────────────────────────────────────────────────────────────────
-(function () {
-  var container = document.getElementById("ravlo-university-root");
-  if (container) ReactDOM.createRoot(container).render(React.createElement(RavloAcademy));
-})();
+// ── App ────────────────────────────────────────────────────────────────────
+function App() {
+  const init = window.RAVLO_ACADEMY || {};
+  const allowedTrack = init.allowedTrack || null;
+  const [tier, setTier] = useState(init.tier || null);
+  const [userName, setUserName] = useState(init.userName || '');
+  const [track, setTrack] = useState(allowedTrack || 'investor');
+  const [levelIdx, setLevelIdx] = useState(0);
+  const [view, setView] = useState('home');
+  const [lesson, setLesson] = useState(null);
+  const [progress, setProgress] = useState({ completed: {}, xp: 0 });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+
+  useEffect(() => {
+    function onResize() { setIsDesktop(window.innerWidth >= 768); }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  useEffect(() => {
+    if (!tier) return;
+    apiFetch('/academy/api/progress').then(d => setProgress(d)).catch(() => {});
+  }, [tier]);
+
+  function handleAccess(newTier, newName) {
+    setTier(newTier); setUserName(newName);
+  }
+
+  async function handleComplete(moduleId, lessonIndex) {
+    try {
+      await apiFetch('/academy/api/progress/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ module_id: moduleId, lesson_index: lessonIndex }),
+      });
+      setProgress(p => ({
+        completed: { ...p.completed, [pKey(moduleId, lessonIndex)]: true },
+        xp: p.xp + 25,
+      }));
+    } catch {}
+  }
+
+  if (!tier) return <LandingGate onAccess={handleAccess} />;
+
+  const bgStyle = {
+    minHeight: '100vh',
+    background: 'radial-gradient(circle at top left,rgba(54,115,255,.18),transparent 40%), linear-gradient(180deg,#06101d,#081322)',
+    fontFamily: 'Inter, sans-serif',
+    color: T.text,
+  };
+
+  function renderMain() {
+    if (view === 'coach') return <Instructor track={track} tier={tier} userName={userName} />;
+    if (view === 'lesson' && lesson) return (
+      <LessonViewer lesson={lesson} track={track} levelIdx={levelIdx} progress={progress} onComplete={handleComplete} onBack={() => setView('level')} onNext={nextL => setLesson(nextL)} userName={userName} />
+    );
+    if (view === 'level') return (
+      <LevelView track={track} levelIdx={levelIdx} setView={setView} setLesson={setLesson} progress={progress} />
+    );
+    return <TrackHome track={track} setLevelIdx={setLevelIdx} setView={setView} progress={progress} />;
+  }
+
+  return (
+    <div style={bgStyle}>
+      <Sidebar track={track} setTrack={setTrack} levelIdx={levelIdx} setLevelIdx={setLevelIdx} view={view} setView={setView} progress={progress} xp={progress.xp} userName={userName} open={sidebarOpen} setOpen={setSidebarOpen} isDesktop={isDesktop} allowedTrack={allowedTrack} />
+
+      {/* Topbar */}
+      <div style={{ position: 'fixed', top: 0, left: isDesktop ? 280 : 0, right: 0, height: 52, background: 'rgba(7,17,31,.92)', borderBottom: `1px solid ${T.border}`, backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 12, zIndex: 50 }}>
+        <button onClick={() => setSidebarOpen(true)} style={{ display: isDesktop ? 'none' : 'block', background: 'none', border: 'none', color: T.muted, cursor: 'pointer', fontSize: 22, padding: 0, lineHeight: 1 }}>≡</button>
+        <span style={{ fontSize: 12, color: T.muted }}>{TRACKS[track]?.label}</span>
+        {view !== 'home' && view !== 'coach' && <><span style={{ color: T.mutedDark }}>›</span><span style={{ fontSize: 12, color: T.muted }}>{TRACKS[track]?.levels[levelIdx]?.title}</span></>}
+        {view === 'lesson' && lesson && <><span style={{ color: T.mutedDark }}>›</span><span style={{ fontSize: 12, color: T.text, fontWeight: 600 }}>{lesson.title}</span></>}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: T.accentLight, fontWeight: 700 }}>{progress.xp} XP</span>
+          {tier && <div style={{ padding: '3px 10px', borderRadius: 20, background: T.accentGlow, border: `1px solid ${T.accentLight}30`, fontSize: 10, color: T.accentLight, fontWeight: 700, letterSpacing: 1 }}>{tier.toUpperCase()}</div>}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ marginLeft: isDesktop ? 280 : 0, paddingTop: 52 }}>
+        <div style={{ padding: isDesktop ? '28px 32px' : '20px 16px', maxWidth: 1000 }}>
+          {renderMain()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('ravlo-university-root')).render(<App />);

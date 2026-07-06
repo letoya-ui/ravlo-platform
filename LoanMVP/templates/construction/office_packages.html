@@ -1,0 +1,120 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Construction Office Packages{% endblock %}
+{% block page_title %}Construction Office Packages{% endblock %}
+{% block page_subline %}Bid package queue for construction opportunities handed off from the field side.{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ safe_url_for('admin.dashboard') or '/admin/dashboard' }}">
+    <i class="lucide lucide-layout-dashboard"></i> Operations Center
+  </a>
+  <a class="re-btn ghost sm" href="{{ safe_url_for('construction_office.approvals') or '/construction-office/approvals' }}">
+    <i class="lucide lucide-check-circle"></i> Approval Queue
+  </a>
+  <a class="re-btn primary sm" href="{{ safe_url_for('executive.construction_center') or '/executive/construction' }}">
+    <i class="lucide lucide-hard-hat"></i> Construction Center
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+  <section class="re-card pad" style="border-color:rgba(95,168,255,.18);background:rgba(95,168,255,.025);">
+    <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">BID SUPPORT QUEUE</div>
+        <h3 style="margin:.25rem 0 0;font-size:1.1rem;">Packages to prepare</h3>
+        <p style="margin:6px 0 0;color:rgba(255,255,255,.55);font-size:.88rem;line-height:1.6;max-width:780px;">
+          Build the actual bid package here: client details, scope, included work, exclusions, price notes, and missing items.
+        </p>
+      </div>
+      <div class="re-stat" style="min-width:150px;">
+        <div class="re-stat-label">Open Packages</div>
+        <div class="re-stat-value" style="color:#5FA8FF;">{{ package_rows|length }}</div>
+        <div class="re-stat-meta">Needs support</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="re-card pad">
+    {% if package_rows %}
+      <div style="display:grid;gap:12px;">
+        {% for opp in package_rows %}
+          <div style="padding:14px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);display:grid;gap:10px;">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+              <div style="min-width:0;">
+                <div style="font-size:.95rem;font-weight:800;color:#f4f7fb;">{{ opp.project_name or 'Construction opportunity' }}</div>
+                <div style="font-size:.78rem;color:rgba(255,255,255,.42);margin-top:4px;">
+                  {{ opp.category or 'Construction' }}
+                  {% if opp.location %} · {{ opp.location }}{% endif %}
+                  {% if opp.bid_deadline %} · Due {{ opp.bid_deadline.strftime('%b %d') }}{% endif %}
+                  {% if opp.estimated_value %} · ${{ '{:,.0f}'.format(opp.estimated_value) }}{% endif %}
+                </div>
+              </div>
+              <span class="badge badge-warning">{{ (opp.status or 'pending')|replace('_',' ')|title }}</span>
+            </div>
+
+            {% include "construction/_opportunity_workflow_panel.html" %}
+
+            <details open style="border-radius:14px;background:rgba(95,168,255,.025);border:1px solid rgba(95,168,255,.14);padding:12px;">
+              <summary style="cursor:pointer;font-size:.78rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#5FA8FF;">Bid Package Builder</summary>
+              <form method="POST" action="{{ url_for('construction_office.update_package_status', opportunity_id=opp.id) }}" style="display:grid;gap:10px;margin-top:12px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="save_bid_package">
+                <input type="hidden" name="status" value="draft_bid_prepared">
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <input name="client_name" placeholder="Client / GC / Agency name" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;">
+                  <input name="client_email" placeholder="Client or GC email" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;">
+                </div>
+
+                <textarea name="scope_of_work" rows="3" placeholder="Scope of work — what exactly are we bidding?" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <textarea name="included_work" rows="3" placeholder="Included work" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                  <textarea name="exclusions" rows="3" placeholder="Exclusions / not included" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <textarea name="labor_materials" rows="3" placeholder="Labor, materials, subcontractor, or site notes" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                  <textarea name="price_notes" rows="3" placeholder="Price / estimate notes" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <textarea name="missing_items" rows="3" placeholder="Questions / missing items needed before approval" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                  <textarea name="package_notes" rows="3" placeholder="Sandra package notes / internal notes" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(95,168,255,.18);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+                </div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+                  <button type="submit" class="re-btn primary sm">Save Bid Package Draft</button>
+                </div>
+              </form>
+            </details>
+
+            {% include "construction/_opportunity_activity_timeline.html" %}
+
+            <form method="POST" action="{{ url_for('construction_office.update_package_status', opportunity_id=opp.id) }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="status" style="padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:#111827;color:#f4f7fb;font-size:.78rem;">
+                <option value="missing_information" {% if opp.status == 'missing_information' %}selected{% endif %}>Missing Info</option>
+                <option value="draft_bid_prepared" {% if opp.status == 'draft_bid_prepared' %}selected{% endif %}>Draft Prepared</option>
+                <option value="jamaine_review_needed" {% if opp.status == 'jamaine_review_needed' %}selected{% endif %}>Waiting on Field Review</option>
+                <option value="approval_needed" {% if opp.status == 'approval_needed' %}selected{% endif %}>Ready for Approval</option>
+                <option value="approved_to_submit" {% if opp.status == 'approved_to_submit' %}selected{% endif %}>Approved to Submit</option>
+                <option value="bid_submitted" {% if opp.status == 'bid_submitted' %}selected{% endif %}>Sent to Client</option>
+                <option value="client_review" {% if opp.status == 'client_review' %}selected{% endif %}>Waiting on Client</option>
+                <option value="follow_up_needed" {% if opp.status == 'follow_up_needed' %}selected{% endif %}>Follow-Up Needed</option>
+                <option value="won" {% if opp.status == 'won' %}selected{% endif %}>Awarded</option>
+                <option value="lost" {% if opp.status == 'lost' %}selected{% endif %}>Lost</option>
+                <option value="no_bid" {% if opp.status == 'no_bid' %}selected{% endif %}>No Bid</option>
+              </select>
+              <button type="submit" class="re-btn primary sm">Update Status</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="re-empty">No construction bid packages waiting right now.</div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

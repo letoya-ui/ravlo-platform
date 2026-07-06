@@ -36,7 +36,6 @@
   {% block head %}{% endblock %}
 </head>
 <body>
-  {% include "layouts/_preview_banner.html" %}
   {% include "layouts/_onboarding_tutorial.html" %}
   {% include "layouts/_trial_expiry_popup.html" %}
   <div class="ravlo-grain"></div>
@@ -67,7 +66,10 @@
     <main class="ravlo-main">
       <header class="ravlo-topbar">
         <button class="mobile-menu-button" type="button" onclick="toggleSidebar()" aria-label="Open menu">
-          R
+          <span class="mmb-bars" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
+          Menu
         </button>
 
         <div class="ravlo-top-left">
@@ -157,6 +159,11 @@
 
   {% if active_portal == "vip" %}
     {% include "layouts/_ai_pilot_fab.html" %}
+  {% endif %}
+
+  {% if current_user.is_authenticated %}
+    {% set rac_stacked = (active_portal == "vip") %}
+    {% include "layouts/_ravlo_ai_chat.html" %}
   {% endif %}
 
   {% block scripts %}{% endblock %}

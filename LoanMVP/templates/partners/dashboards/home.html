@@ -1,12 +1,15 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Partner OS{% endblock %}
-{% block page_title %}{{ partner.company or partner.name or "Partner OS" }}{% endblock %}
+{% block title %}Ravlo • Partner Network{% endblock %}
+{% block page_title %}{{ partner.company or partner.name or "Ravlo Partner Network" }}{% endblock %}
 {% block page_subline %}
-Marketplace, leads, proposals, billing, and partner operations in one place.
+Your place inside the Ravlo ecosystem — referrals, requests, proposals, visibility, Academy, and partner operations.
 {% endblock %}
 
 {% block topbar_actions %}
+  <a href="{{ url_for('university.portal') }}" class="ravlo-btn ghost sm">
+    Open Ravlo Academy
+  </a>
   {% if is_realtor and not vip_unlocked %}
     <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary sm">
       Upgrade to VIP Workspace
@@ -24,28 +27,36 @@ Marketplace, leads, proposals, billing, and partner operations in one place.
   <section class="ravlo-card partner-hero-card">
     <div class="partner-hero-grid">
       <div class="partner-hero-copy">
-        <span class="partner-eyebrow">Partner OS</span>
+        <span class="partner-eyebrow">RAVLO PARTNER NETWORK</span>
         <h2 class="partner-hero-title">
-          Manage your marketplace presence, opportunities, and partner activity.
+          Welcome to your Ravlo partner workspace.
         </h2>
         <p class="partner-hero-text">
+          You are part of Ravlo's real estate ecosystem — a network built to connect investors,
+          borrowers, lenders, real estate professionals, contractors, insurance partners, and service providers
+          through one operating system.
+        </p>
+        <p class="partner-hero-text">
           {% if is_realtor and not vip_unlocked %}
-            Partner OS handles your marketplace profile, leads, requests, proposals,
-            and billing. Upgrade to Premium to unlock the VIP Realtor Workspace —
+            Use this dashboard to manage your marketplace profile, requests, proposals, billing,
+            and referral opportunities. Upgrade to Premium to unlock the VIP Realtor Workspace —
             your personalized pipeline, listings, Canva flyers, AI Pilot, and finances.
           {% else %}
-            Partner OS handles your marketplace profile, leads, requests, proposals, and billing.
-            Your VIP Workspace is where you run your personalized dashboard, AI Pilot, finances,
-            and role-based tools.
+            Use this dashboard to manage your profile, requests, proposals, visibility, Academy path,
+            and partner activity. Your VIP Workspace is where you run your personalized dashboard,
+            AI Pilot, finances, and role-based tools.
           {% endif %}
         </p>
         <div class="partner-hero-actions">
+          <a href="{{ url_for('university.portal') }}" class="ravlo-btn primary">
+            Open Ravlo Academy
+          </a>
           {% if is_realtor and not vip_unlocked %}
-            <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary">
+            <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn ghost">
               Upgrade to VIP Workspace
             </a>
           {% else %}
-            <a href="{{ url_for('vip.index') }}" class="ravlo-btn primary">
+            <a href="{{ url_for('vip.index') }}" class="ravlo-btn ghost">
               Open My VIP Workspace
             </a>
           {% endif %}
@@ -55,6 +66,14 @@ Marketplace, leads, proposals, billing, and partner operations in one place.
       </div>
 
       <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Network Status</span>
+          <strong>{% if partner.approved %}Approved{% else %}Pending{% endif %}</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Academy</span>
+          <strong>Available</strong>
+        </div>
         <div class="partner-mini-stat">
           <span class="label">Active Plan</span>
           <strong>{{ partner.subscription_tier or "Free" }}</strong>
@@ -87,10 +106,33 @@ Marketplace, leads, proposals, billing, and partner operations in one place.
     </article>
 
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Locked Tools</div>
-      <div class="partner-stat-value">{{ locked_feature_count }}</div>
-      <div class="partner-stat-note">Upgrade to unlock more</div>
+      <div class="partner-stat-label">Ravlo Tools</div>
+      <div class="partner-stat-value">{{ feature_cards|length - locked_feature_count }}</div>
+      <div class="partner-stat-note">Enabled partner tools</div>
     </article>
+  </section>
+
+  <section class="ravlo-card partner-section-card partner-network-card">
+    <div class="section-head">
+      <div>
+        <h3>Your Role in Ravlo</h3>
+        <p>Partners are not outside vendors — they are part of the service network that helps Ravlo users move from idea to action.</p>
+      </div>
+    </div>
+    <div class="partner-network-grid">
+      <div class="partner-network-item">
+        <strong>Be visible</strong>
+        <span>Keep your profile complete so Ravlo can match you with the right users and opportunities.</span>
+      </div>
+      <div class="partner-network-item">
+        <strong>Keep learning</strong>
+        <span>Use Ravlo Academy to understand the workflows, standards, and services connected to your partner role.</span>
+      </div>
+      <div class="partner-network-item">
+        <strong>Represent the network</strong>
+        <span>Every partner interaction should help users feel supported, informed, and confident.</span>
+      </div>
+    </div>
   </section>
 
   <section class="partner-dashboard-grid">
@@ -100,12 +142,20 @@ Marketplace, leads, proposals, billing, and partner operations in one place.
       <article class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
-            <h3>Quick Actions</h3>
-            <p>Take care of your most important partner tasks.</p>
+            <h3>Partner Actions</h3>
+            <p>Take care of the work that keeps your Ravlo partner profile active.</p>
           </div>
         </div>
 
         <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('university.portal') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-graduation-cap"></i></div>
+            <div class="partner-action-copy">
+              <h4>Ravlo Academy</h4>
+              <p>Open your learning path and build the skills for your Ravlo role.</p>
+            </div>
+          </a>
+
           <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
             <div class="partner-action-icon"><i class="lucide lucide-inbox"></i></div>
             <div class="partner-action-copy">
@@ -125,8 +175,8 @@ Marketplace, leads, proposals, billing, and partner operations in one place.
           <a class="partner-action-card" href="{{ url_for('partners.listing') }}">
             <div class="partner-action-icon"><i class="lucide lucide-store"></i></div>
             <div class="partner-action-copy">
-              <h4>Marketplace Listing</h4>
-              <p>Control how your business appears in the marketplace.</p>
+              <h4>Partner Listing</h4>
+              <p>Control how your business appears in the Ravlo Partner Network.</p>
             </div>
           </a>
 
@@ -144,7 +194,7 @@ Marketplace, leads, proposals, billing, and partner operations in one place.
         <div class="section-head">
           <div>
             <h3>Recent Requests</h3>
-            <p>Your latest marketplace and partner opportunities.</p>
+            <p>Your latest Ravlo partner opportunities.</p>
           </div>
           <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
             Open Inbox
@@ -166,7 +216,7 @@ Marketplace, leads, proposals, billing, and partner operations in one place.
         {% else %}
           <div class="partner-tool-item">
             <strong>No recent requests</strong>
-            <span>New requests will show up here when they come in.</span>
+            <span>New Ravlo partner opportunities will show up here when they come in.</span>
           </div>
         {% endif %}
       </article>
@@ -179,7 +229,7 @@ Marketplace, leads, proposals, billing, and partner operations in one place.
         <div class="section-head">
           <div>
             <h3>Feature Access</h3>
-            <p>Your current Partner OS tools and upgrades.</p>
+            <p>Your current Partner Network tools and upgrades.</p>
           </div>
         </div>
 
@@ -204,7 +254,7 @@ Marketplace, leads, proposals, billing, and partner operations in one place.
         <div class="section-head">
           <div>
             <h3>Partner Snapshot</h3>
-            <p>Quick view of your business account.</p>
+            <p>Quick view of your Ravlo network account.</p>
           </div>
         </div>
 
@@ -220,4 +270,13 @@ Marketplace, leads, proposals, billing, and partner operations in one place.
 
   </section>
 </div>
+
+<style>
+.partner-network-card { margin:18px 0; }
+.partner-network-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:16px; }
+.partner-network-item { padding:16px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03); }
+.partner-network-item strong { display:block; margin-bottom:6px; }
+.partner-network-item span { display:block; color:var(--muted,#8a9db5); font-size:.88rem; line-height:1.5; }
+@media (max-width:900px) { .partner-network-grid { grid-template-columns:1fr; } }
+</style>
 {% endblock %}

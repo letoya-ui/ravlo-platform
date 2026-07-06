@@ -9,6 +9,20 @@ Open any address and let Ravlo compare the best plan before you move into scope,
 {% block topbar_actions %}
   <a href="{{ url_for('investor.property_search') }}" class="ravlo-btn ghost sm">Find Deals</a>
   <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">Deal Workspace</a>
+  {% if address %}
+  <button type="button" class="ravlo-btn ghost sm"
+    data-partner-ctx='{{ {"title": address, "address": address, "zip": zip_code or "", "city": city or "", "state": state or "", "defaultPartnerType": "Realtor", "defaultMessage": "I'd like a market opinion on " ~ address ~ ". Please review comparables, pricing, and strategy fit."}|tojson }}'
+    onclick="openSendPartnerModal(JSON.parse(this.dataset.partnerCtx))">
+    <i class="lucide lucide-home"></i>
+    <span>Find Realtor</span>
+  </button>
+  <button type="button" class="ravlo-btn ghost sm"
+    data-partner-ctx='{{ {"title": address, "address": address, "zip": zip_code or "", "city": city or "", "state": state or "", "defaultPartnerType": "Contractor", "defaultMessage": "Requesting a contractor connection for " ~ address ~ "."}|tojson }}'
+    onclick="openSendPartnerModal(JSON.parse(this.dataset.partnerCtx))">
+    <i class="lucide lucide-hard-hat"></i>
+    <span>Find Contractor</span>
+  </button>
+  {% endif %}
   <a href="{{ url_for('investor.project_studio') }}" class="ravlo-btn primary sm">Project Studio</a>
 {% endblock %}
 
@@ -75,6 +89,17 @@ Open any address and let Ravlo compare the best plan before you move into scope,
         </p>
         <p class="muted mb-0">
           This property is ready for the next Project Studio step: snapshot, strategy compare, and scope planning.
+        </p>
+      </div>
+      {% elif city or state or zip_code %}
+      <div class="ps-loaded-card" style="border-color: rgba(250,200,90,0.3); background: rgba(250,200,90,0.05);">
+        <div class="eyebrow" style="color:#f5b942;">STREET ADDRESS NEEDED</div>
+        <strong>Project Studio requires a specific property address.</strong>
+        <p class="muted mb-0" style="margin-top:8px;">
+          City, state, and ZIP work great for browsing — but Project Studio runs property-level analysis that needs a real street address (e.g. <em>123 Main St</em>).
+        </p>
+        <p class="muted mb-0" style="margin-top:6px;">
+          Use <a href="{{ url_for('investor.property_search') }}" style="color:#7ab8ff;">Deal Finder</a> to find and open a specific property, then launch Project Studio from there.
         </p>
       </div>
       {% endif %}
@@ -467,6 +492,8 @@ Open any address and let Ravlo compare the best plan before you move into scope,
     </div>
   </section>
 </div>
+
+{% include 'components/send_to_partner_modal.html' %}
 
 <style>
 .ps-shell{display:grid;gap:18px}
