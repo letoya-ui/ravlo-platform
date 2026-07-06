@@ -37,6 +37,7 @@ import requests as http
 from flask import Blueprint, render_template, request, jsonify, current_app, session
 from flask_login import current_user
 from LoanMVP.extensions import csrf
+from LoanMVP.utils.safe_http import safe_call
 
 university_bp = Blueprint("university", __name__, url_prefix="/academy")
 
@@ -322,7 +323,8 @@ def chat():
     }
 
     try:
-        resp = http.post(
+        resp = safe_call(
+            http.post,
             _ANTHROPIC_URL,
             headers={
                 "x-api-key":         _ANTHROPIC_KEY,
@@ -384,7 +386,8 @@ def business_plan_generate():
     }
 
     try:
-        resp = http.post(
+        resp = safe_call(
+            http.post,
             _ANTHROPIC_URL,
             headers={
                 "x-api-key":         _ANTHROPIC_KEY,
@@ -657,7 +660,8 @@ Critical rules:
 - Return ONLY the JSON object, no markdown fences, no extra text.
 - CRITICAL JSON RULE: The content field is a single JSON string. Do NOT use double-quote characters (") anywhere inside string values — use single quotes (') instead for any quoted terms or dialogue. Do NOT include literal newline characters inside strings."""
 
-    resp = http.post(
+    resp = safe_call(
+        http.post,
         _ANTHROPIC_URL,
         headers={
             "x-api-key": _ANTHROPIC_KEY,

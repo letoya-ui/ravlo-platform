@@ -3,6 +3,8 @@ import re
 import requests
 from typing import Dict, Any, List
 
+from LoanMVP.utils.safe_http import safe_call
+
 
 class RentCastServiceError(Exception):
     pass
@@ -24,8 +26,10 @@ def _rentcast_headers() -> Dict[str, str]:
 
 def _safe_get(url: str, params: Dict[str, Any], timeout: int = 12) -> Any:
     try:
-        resp = requests.get(url, headers=_rentcast_headers(), params=params, timeout=timeout)
+        resp = safe_call(requests.get, url, headers=_rentcast_headers(), params=params, timeout=timeout)
     except requests.RequestException as e:
+        raise RentCastServiceError(f"Request failed: {e}") from e
+    except RecursionError as e:
         raise RentCastServiceError(f"Request failed: {e}") from e
 
     if resp.status_code == 404:
