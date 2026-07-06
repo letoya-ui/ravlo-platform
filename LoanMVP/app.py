@@ -1,17 +1,5 @@
 # LoanMVP/app.py
 
-# Must run before any other import (SQLAlchemy, socket, threading, etc.) --
-# gunicorn's eventlet worker patches too late for this process to avoid a
-# mix of native and green locks in the connection pool ("cannot wait on
-# un-acquired lock").
-import os as _os
-if _os.environ.get(
-    "SOCKETIO_ASYNC_MODE",
-    "threading" if _os.environ.get("FLASK_ENV", "production").strip().lower() in {"dev", "development", "local"} else "eventlet",
-).strip().lower() == "eventlet":
-    import eventlet
-    eventlet.monkey_patch()
-
 import os
 import sys
 import importlib
