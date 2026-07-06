@@ -47,27 +47,37 @@ if SOCKETIO_ASYNC_MODE == "threading":
         engineio.Server = engineio.server.Server
 
 if SOCKETIO_ASYNC_MODE == "eventlet":
-    # Work around a longstanding eventlet bug: GreenSSLContext doesn't
-    # properly override verify_mode/verify_flags/options, so CPython's own
-    # property setter recurses into itself infinitely when called on a
-    # GreenSSLContext instance ("RecursionError: maximum recursion depth
-    # exceeded" from ssl.py's verify_mode setter calling itself).
-    # https://github.com/eventlet/eventlet/issues/618
-    # https://github.com/eventlet/eventlet/issues/726
+    # Work around a longstanding eventlet bug: GreenSSLContext does not
+    # override verify_mode/verify_flags/options, so CPython's own property
+    # setter recurses into itself forever when called on a GreenSSLContext
+    # instance ("RecursionError: maximum recursion depth exceeded" from
+    # ssl.py's verify_mode setter). The setter resolves the class name
+    # `SSLContext` via super(), and monkey-patching rebinds that name to
+    # GreenSSLContext, so super() lands back on the same Python-level setter.
+    # https://github.com/eventlet/eventlet/issues/371
+    #
+    # Rebind the affected descriptors on GreenSSLContext straight to the
+    # C-level _ssl._SSLContext getset descriptors. Those set the value
+    # directly and can never re-enter the recursive Python-level property,
+    # so this holds regardless of which eventlet build is installed. (The
+    # previous workaround delegated to ssl.SSLContext, which is itself the
+    # recursive property once eventlet's own override is absent.)
     try:
-        import ssl as _stdlib_ssl
+        import _ssl
         from eventlet.green import ssl as _green_ssl
 
+        _c_ssl_context = _ssl._SSLContext
+
         def _rebind_ssl_context_property(prop_name):
-            real_prop = getattr(_stdlib_ssl.SSLContext, prop_name, None)
-            if real_prop is None:
+            c_descriptor = getattr(_c_ssl_context, prop_name, None)
+            if c_descriptor is None:
                 return
 
-            def _getter(self):
-                return real_prop.__get__(self, _stdlib_ssl.SSLContext)
+            def _getter(self, _d=c_descriptor):
+                return _d.__get__(self, _c_ssl_context)
 
-            def _setter(self, value):
-                real_prop.__set__(self, value)
+            def _setter(self, value, _d=c_descriptor):
+                _d.__set__(self, value)
 
             setattr(_green_ssl.GreenSSLContext, prop_name, property(_getter, _setter))
 
