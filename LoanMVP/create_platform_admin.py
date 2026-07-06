@@ -16,7 +16,7 @@ DEFAULT_ROLE = "platform_admin"
 SANDRA_EMAIL = "sandra@ravlohq.com"
 SANDRA_PASSWORD = os.environ.get("SANDRA_ADMIN_PASSWORD", "")
 SANDRA_FIRST_NAME = "Sandra"
-SANDRA_LAST_NAME = ""
+SANDRA_LAST_NAME = "Fultz"
 SANDRA_ROLE = "admin"
 
 
@@ -72,7 +72,7 @@ def ensure_sandra_admin(email: str = SANDRA_EMAIL, password: str = SANDRA_PASSWO
                 email=email.lower().strip(),
                 first_name=SANDRA_FIRST_NAME,
                 last_name=SANDRA_LAST_NAME,
-                username=SANDRA_FIRST_NAME,
+                username=f"{SANDRA_FIRST_NAME} {SANDRA_LAST_NAME}",
                 role=SANDRA_ROLE,
                 is_active=True,
                 invite_accepted=True,
