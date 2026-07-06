@@ -2,6 +2,7 @@ import os
 from datetime import timedelta
 
 from dotenv import load_dotenv
+from sqlalchemy.pool import NullPool
 
 # ===================================================
 # 🏗 BASE CONFIG PATH SETUP
@@ -119,12 +120,12 @@ class Config:
     # DATABASE
     SQLALCHEMY_DATABASE_URI = _resolve_database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # NullPool: eventlet doesn't green-patch psycopg2, so QueuePool's shared
+    # Condition/lock is fundamentally unsafe here ("cannot wait/notify on
+    # un-acquired lock"). NullPool opens/closes a connection per checkout
+    # instead of sharing a locked queue, sidestepping that class of bug.
     SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 10,
-        "max_overflow": 10,     # 20 max connections from this app, well under the Basic-256mb plan's 97-connection cap
-        "pool_timeout": 30,
-        "pool_recycle": 280,    # Render's proxy tends to drop idle connections around 5 min
-        "pool_pre_ping": True,  # avoids handing out stale/dropped connections
+        "poolclass": NullPool,
     }
 
 
