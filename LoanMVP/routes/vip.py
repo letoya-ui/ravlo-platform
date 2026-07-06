@@ -1362,6 +1362,7 @@ def contractor_dashboard():
 
     return render_template(
         "vip/contractor/dashboard.html",
+        partner                = partner,
         vip_profile           = profile,
         modules               = get_enabled_modules(profile),
         header_name           = get_dashboard_name(profile),

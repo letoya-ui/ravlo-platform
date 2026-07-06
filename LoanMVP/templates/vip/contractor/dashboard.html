@@ -240,19 +240,31 @@
         <h3 style="margin:.3rem 0 0;font-size:1.05rem;">Where to Find Work — Register &amp; Stay Active</h3>
       </div>
     </div>
-    <p style="font-size:.85rem;color:rgba(255,255,255,.45);margin:0 0 18px;">Check off each platform as you register. These are the channels that keep steady work coming in for Tampa contractors.</p>
+    {% set _partner_state = (partner.state or '')|upper if partner else '' %}
+    {% set _partner_area = (partner.city or partner.service_area or '') if partner else '' %}
+    {% set _area_label = _partner_area if _partner_area else 'your area' %}
+    <p style="font-size:.85rem;color:rgba(255,255,255,.45);margin:0 0 18px;">Check off each platform as you register. These are the channels that keep steady work coming in for contractors in {{ _area_label }}.</p>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;" id="workSourceGrid">
 
       {# GOVERNMENT #}
       <div style="grid-column:1/-1;font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-top:4px;">Government Contracts — steady, public, competitive</div>
 
+      {% if _partner_state == 'FL' %}
       {% set _sources = [
         ("ws_tampa_vendor",  "City of Tampa Vendor Registration",       "https://www.tampagov.net/procurement/vendor-registration",            "Register as a vendor — city posts demo, renovation, and public works bids publicly."),
         ("ws_hc_proc",       "Hillsborough County Procurement",          "https://www.hillsboroughcounty.org/en/residents/property-owners-and-renters/doing-business-with-the-county", "County construction, maintenance, and demo projects. Steady source of local government work."),
         ("ws_mfmp",          "Florida MyFloridaMarketPlace (MFMP)",      "https://vendor.myfloridamarketplace.com/",                            "State of Florida vendor registration — opens doors to state-funded construction projects."),
         ("ws_sam",           "SAM.gov — Federal Contracts",              "https://sam.gov/",                                                    "Required to bid on any federal project. Free to register. Essential for long-term growth."),
       ] %}
+      {% else %}
+      <div style="grid-column:1/-1;padding:14px;border-radius:10px;border:1px dashed rgba(255,255,255,.1);background:rgba(255,255,255,.02);font-size:.82rem;color:rgba(255,255,255,.45);">
+        Look up your own state and county procurement/vendor registration portals — search "[your state] vendor registration" and "[your county] procurement" to find them.
+      </div>
+      {% set _sources = [
+        ("ws_sam",           "SAM.gov — Federal Contracts",              "https://sam.gov/",                                                    "Required to bid on any federal project. Free to register. Essential for long-term growth."),
+      ] %}
+      {% endif %}
       {% for id, label, url, desc in _sources %}
       <label id="wslabel-{{ id }}" for="ws-{{ id }}" style="display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);cursor:pointer;transition:border-color .2s,background .2s;">
         <input type="checkbox" id="ws-{{ id }}" style="margin-top:2px;accent-color:#2cb67d;flex-shrink:0;" onchange="wsSave('{{ id }}',this.checked)">
@@ -268,7 +280,7 @@
 
       {% set _comm = [
         ("ws_bconn",   "BuildingConnected",       "https://buildingconnected.com",              "Free for subs. General contractors post commercial bids here and invite registered contractors to bid."),
-        ("ws_bidclerk","BidClerk",                 "https://www.bidclerk.com",                   "Aggregates bid opportunities from permit filings. Good for spotting early-stage Tampa projects."),
+        ("ws_bidclerk","BidClerk",                 "https://www.bidclerk.com",                   "Aggregates bid opportunities from permit filings. Good for spotting early-stage projects in " ~ _area_label ~ "."),
         ("ws_isqft",   "iSqFt / ConstructConnect","https://www.constructconnect.com",            "Large commercial project pipeline. Register as a sub to get invited to bids in your trade."),
         ("ws_dodge",   "Dodge Construction Network","https://www.construction.com",              "Industry-standard project database. New projects are posted before permits are even pulled."),
       ] %}
@@ -283,13 +295,13 @@
       {% endfor %}
 
       {# RESIDENTIAL #}
-      <div style="grid-column:1/-1;font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-top:8px;">Residential Leads — homeowners and property owners in Tampa</div>
+      <div style="grid-column:1/-1;font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-top:8px;">Residential Leads — homeowners and property owners in {{ _area_label }}</div>
 
       {% set _res = [
-        ("ws_angi",     "Angi Pro",     "https://pro.angi.com/",           "High volume of Tampa homeowner projects. Pay per lead or subscription. Good for filling slow periods."),
+        ("ws_angi",     "Angi Pro",     "https://pro.angi.com/",           "High volume of homeowner projects in " ~ _area_label ~ ". Pay per lead or subscription. Good for filling slow periods."),
         ("ws_thumb",    "Thumbtack Pro","https://www.thumbtack.com/pro/",   "Customers request quotes — you respond. Renovation, demo, and remodel requests are common."),
         ("ws_houzz",    "Houzz Pro",    "https://www.houzz.com/pro/",       "Remodel and renovation leads. Strong for kitchen, bath, and full home rehab projects."),
-        ("ws_nextdoor", "Nextdoor Business","https://business.nextdoor.com/","Hyper-local Tampa neighborhood reach. Homeowners recommend and hire local contractors here."),
+        ("ws_nextdoor", "Nextdoor Business","https://business.nextdoor.com/","Hyper-local " ~ _area_label ~ " neighborhood reach. Homeowners recommend and hire local contractors here."),
       ] %}
       {% for id, label, url, desc in _res %}
       <label id="wslabel-{{ id }}" for="ws-{{ id }}" style="display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);cursor:pointer;transition:border-color .2s,background .2s;">
@@ -304,11 +316,18 @@
       {# LICENSING & ASSOCIATIONS #}
       <div style="grid-column:1/-1;font-size:10px;letter-spacing:.12em;font-weight:800;color:rgba(255,255,255,.3);text-transform:uppercase;margin-top:8px;">Licensing &amp; Industry Associations — credibility and network</div>
 
+      {% if _partner_state == 'FL' %}
       {% set _lic = [
         ("ws_dbpr",  "Florida DBPR — Contractor License",   "https://www.myfloridalicense.com/",     "Required to pull permits in Florida. Certified General Contractor (CGC) or Registered license opens all commercial work."),
         ("ws_abc",   "ABC Florida Gulf Coast Chapter",      "https://www.abcfgc.org/",               "Associated Builders & Contractors — network, workforce, and bid opportunities in the Tampa Bay area."),
         ("ws_tbba",  "Tampa Bay Builders Association",      "https://www.tampabaybuilders.org/",      "Local builder network. Good for referrals, subcontractor relationships, and staying current on Tampa development."),
       ] %}
+      {% else %}
+      <div style="grid-column:1/-1;padding:14px;border-radius:10px;border:1px dashed rgba(255,255,255,.1);background:rgba(255,255,255,.02);font-size:.82rem;color:rgba(255,255,255,.45);">
+        Look up your state's contractor licensing board and local Associated Builders &amp; Contractors (ABC) or home builders association chapter — search "[your state] contractor license board" and "[your area] builders association."
+      </div>
+      {% set _lic = [] %}
+      {% endif %}
       {% for id, label, url, desc in _lic %}
       <label id="wslabel-{{ id }}" for="ws-{{ id }}" style="display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);cursor:pointer;transition:border-color .2s,background .2s;">
         <input type="checkbox" id="ws-{{ id }}" style="margin-top:2px;accent-color:#2cb67d;flex-shrink:0;" onchange="wsSave('{{ id }}',this.checked)">
@@ -963,12 +982,13 @@
   <section class="ravlo-card pad" style="margin-top:20px;">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
       <div>
-        <div style="font-size:10px;letter-spacing:.15em;font-weight:800;color:#2cb67d;text-transform:uppercase;">TAMPA, FL</div>
+        <div style="font-size:10px;letter-spacing:.15em;font-weight:800;color:#2cb67d;text-transform:uppercase;">{{ _partner_state ~ ', ' ~ _area_label if _partner_state else _area_label|upper }}</div>
         <h3 style="margin:.35rem 0 .25rem;font-size:1.1rem;">Construction Business — Getting Started</h3>
         <p style="margin:0;font-size:.85rem;color:rgba(255,255,255,.45);">Check off each step as you complete it. Progress saves in your browser.</p>
       </div>
     </div>
 
+    {% if _partner_state == 'FL' %}
     {% set phases = [
       ("Phase 1 — Legal Setup", [
         ("biz-name", "Choose a business name and check availability at sunbiz.org"),
@@ -1009,11 +1029,56 @@
         ("fin-ravlo-fin",    "Use the Caughman Mason Finance Hub to log income and expenses across all divisions"),
       ]),
       ("Phase 6 — Visibility", [
-        ("vis-google", "Claim and fill out your Google Business Profile — critical for Tampa local search"),
+        ("vis-google", "Claim and fill out your Google Business Profile — critical for local search"),
         ("vis-photos", "Add job photos to Google and your Ravlo profile as you complete work"),
         ("vis-insurance-cert", "Prepare a certificate of insurance to send to clients on request"),
       ]),
     ] %}
+    {% else %}
+    {% set phases = [
+      ("Phase 1 — Legal Setup", [
+        ("biz-name", "Choose a business name and check availability with your state's Secretary of State"),
+        ("biz-llc", "Form an LLC in your state — check your Secretary of State's site for the filing fee"),
+        ("biz-ein", "Get an EIN from the IRS — free at irs.gov, takes 5 minutes"),
+        ("biz-bank", "Open a dedicated business bank account"),
+      ]),
+      ("Phase 2 — Contractor Licensing", [
+        ("lic-type", "Look up your state's contractor license requirements and decide which license type/tier fits your work"),
+        ("lic-exam", "Schedule and pass your state's contractor licensing exam, if required"),
+        ("lic-apply", "Apply with your state's contractor licensing board"),
+        ("lic-local", "Get any required local (city/county) business tax receipt or permit"),
+      ]),
+      ("Phase 3 — Insurance &amp; Bonding", [
+        ("ins-gl", "Get general liability insurance — minimum $300k, recommend $1M+"),
+        ("ins-wc", "Get workers' compensation insurance — required in most states once you have employees"),
+        ("ins-auto", "Get commercial auto insurance for any work vehicles"),
+        ("ins-bond", "Get a surety bond if required by your license type"),
+      ]),
+      ("Phase 4 — Operations", [
+        ("ops-contracts", "Create standard client contract templates"),
+        ("ops-osha", "Complete OSHA 10-Hour Construction Safety training"),
+        ("ops-tools", "Make a startup tools and equipment list and budget"),
+        ("ops-subs", "Create a subcontractor agreement if you'll use subs"),
+        ("ops-ravlo", "Set up your Ravlo workspace — scopes, client sessions, Deal Architect"),
+      ]),
+      ("Phase 5 — Financial Setup", [
+        ("fin-bank-check",   "Open a business checking account — keep it separate from personal, always"),
+        ("fin-bank-save",    "Open a business savings account — put aside 15–20% of every payment for taxes"),
+        ("fin-biz-card",     "Get a business credit card — builds business credit, tracks expenses automatically"),
+        ("fin-accounting",   "Set up QuickBooks Online (Contractor plan) or Wave (free) for bookkeeping"),
+        ("fin-chart",        "Create your chart of accounts: Revenue, Materials, Labor, Subcontractors, Equipment, Insurance, Admin"),
+        ("fin-invoicing",    "Set up invoicing — QuickBooks, Wave, or Invoice Simple. Send invoices same day as job completion"),
+        ("fin-state-tax",    "Register for your state's sales and use tax, if required when reselling materials"),
+        ("fin-payroll",      "Set up payroll through Gusto or ADP when you hire your first employee — don't skip this"),
+        ("fin-job-cost",     "Track profit and loss per job — use the Bid Pipeline here to log revenue and flag overruns"),
+      ]),
+      ("Phase 6 — Visibility", [
+        ("vis-google", "Claim and fill out your Google Business Profile — critical for local search"),
+        ("vis-photos", "Add job photos to Google and your Ravlo profile as you complete work"),
+        ("vis-insurance-cert", "Prepare a certificate of insurance to send to clients on request"),
+      ]),
+    ] %}
+    {% endif %}
 
     <div style="display:grid;gap:24px;" id="tampaChecklist">
       {% for phase_label, items in phases %}
