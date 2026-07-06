@@ -314,7 +314,10 @@ def create_app():
 
     # Best-effort schema self-heal for columns added by recent migrations.
     # Keeps prod from hard-crashing when a deploy beats the Alembic run.
-    _ensure_schema_compat(app)
+    # Schema is now fully caught up (bootstrapped via create_all + stamp head),
+    # so this is redundant weight on every boot unless explicitly re-enabled.
+    if os.environ.get("RUN_SCHEMA_COMPAT", "false").strip().lower() == "true":
+        _ensure_schema_compat(app)
 
     # -----------------------------------------------------
     # Routes
