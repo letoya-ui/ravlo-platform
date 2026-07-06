@@ -108,6 +108,7 @@ def create_john_headley(password: str):
                 role_type="contractor_realtor",   # unlocks both VIP dashboards
                 assistant_name="Ravlo",
                 marketplace_enabled="yes",
+                public_slug="john-headley",        # public landing page at /p/john-headley
                 enabled_modules="contractor,realtor,crm,finances",
             )
             db.session.add(vip)
@@ -115,6 +116,8 @@ def create_john_headley(password: str):
         else:
             vip.role_type          = "contractor_realtor"
             vip.marketplace_enabled = "yes"
+            if not vip.public_slug:
+                vip.public_slug = "john-headley"
 
         db.session.commit()
 
@@ -134,6 +137,7 @@ def create_john_headley(password: str):
         print("    /vip/contractor  — Contractor VIP workspace")
         print("    /vip/realtor     — Realtor VIP workspace")
         print("    /partners/       — Partner OS")
+        print(f"    /p/{vip.public_slug}      — Public landing page")
         print("=" * 55 + "\n")
 
 
