@@ -67,6 +67,7 @@ def create_john_headley(password: str):
                 category="Contractor",
                 type="Realtor",
                 specialty="Residential Renovation & Real Estate",
+                service_area="Connecticut & New York",
                 subscription_tier="Featured",
                 approved=True,
                 active=True,
@@ -85,6 +86,7 @@ def create_john_headley(password: str):
             db.session.flush()
             created_partner = True
         else:
+            partner.service_area               = partner.service_area or "Connecticut & New York"
             partner.subscription_tier          = "Featured"
             partner.approved                   = True
             partner.active                     = True
