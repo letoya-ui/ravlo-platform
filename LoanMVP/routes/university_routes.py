@@ -821,7 +821,7 @@ def lesson_content():
                 current_app.logger.warning("lesson content parse failed (attempt 1), retrying: %s", exc)
                 continue
         except Exception as exc:
-            current_app.logger.error("lesson content generation error: %s", exc)
+            current_app.logger.exception("lesson content generation error")
             return jsonify({"error": "Could not generate lesson content. Please try again."}), 500
     else:
         current_app.logger.error("lesson content generation error after 2 attempts: %s", last_exc)
