@@ -1,0 +1,78 @@
+{#
+  Reusable Bid Support Queue summary card.
+  Include as: {% include "executive/_bid_support_card.html" %}
+  Requires: bid_opps (list of ContractorBidOpportunity), now (datetime)
+#}
+{% set _support_statuses = [
+  ("bid_package_needed",    "Package Needed",       "#5FA8FF"),
+  ("missing_information",   "Missing Info",          "#f87171"),
+  ("draft_bid_prepared",    "Draft Prepared",       "#eab308"),
+  ("jamaine_review_needed", "Jamaine Review",       "#a78bfa"),
+  ("approval_needed",       "Approval Needed",      "#2cb67d"),
+  ("approved_to_submit",    "Approved",             "#2cb67d"),
+  ("bid_submitted",         "Sent to Client",       "#f97316"),
+  ("client_review",         "Client Review",        "#f97316"),
+  ("follow_up_needed",      "Follow-Up",            "#f97316"),
+] %}
+{% set _support_keys = _support_statuses | map(attribute=0) | list %}
+{% set _queue_opps = bid_opps | selectattr("status", "in", _support_keys) | list %}
+{% set _queue_url = safe_url_for('construction_office.packages') or '/construction-office/packages' %}
+
+{% set _ns = namespace(counts={}, needs_action=0) %}
+{% for b in _queue_opps %}
+  {% if b.status in ["missing_information", "approval_needed", "follow_up_needed"] %}
+    {% set _ns.needs_action = _ns.needs_action + 1 %}
+  {% endif %}
+{% endfor %}
+
+<section class="re-card pad">
+  <div class="section-head" style="margin-bottom:14px;">
+    <div>
+      <div class="eyebrow">BID SUPPORT QUEUE</div>
+      <h3 style="margin:.35rem 0 .2rem;">Bid Preparation</h3>
+      <div class="re-card-subtitle">Sandra + approval workflow — {{ _queue_opps|length }} bid{{ 's' if _queue_opps|length != 1 }} active</div>
+    </div>
+    <a href="{{ _queue_url }}" class="re-btn ghost sm">
+      <i class="lucide lucide-arrow-right"></i> Open Queue
+    </a>
+  </div>
+
+  {% if _ns.needs_action > 0 %}
+  <div style="padding:10px 14px;border-radius:10px;margin-bottom:14px;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.25);display:flex;align-items:center;gap:8px;">
+    <i class="lucide lucide-triangle-alert" style="color:#f97316;"></i>
+    <span style="font-size:.83rem;font-weight:700;color:#f97316;">
+      {{ _ns.needs_action }} bid{{ 's' if _ns.needs_action != 1 }} need attention
+    </span>
+  </div>
+  {% endif %}
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+    {% for key, label, color in _support_statuses %}
+    {% set count = _queue_opps | selectattr("status", "equalto", key) | list | length %}
+    {% if count > 0 %}
+    <a href="{{ _queue_url }}" style="text-decoration:none;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;">
+      <span style="font-size:1.3rem;font-weight:900;color:{{ color }};line-height:1;">{{ count }}</span>
+      <span style="font-size:.73rem;font-weight:700;color:rgba(255,255,255,.5);line-height:1.3;">{{ label }}</span>
+    </a>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  {% if _queue_opps %}
+  <div style="margin-top:14px;display:grid;gap:6px;">
+    {% for b in _queue_opps[:4] %}
+    {% set sc = {"bid_package_needed":"#5FA8FF","missing_information":"#f87171","draft_bid_prepared":"#eab308","jamaine_review_needed":"#a78bfa","approval_needed":"#2cb67d","approved_to_submit":"#2cb67d","bid_submitted":"#f97316","client_review":"#f97316","follow_up_needed":"#f97316"} %}
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.84rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ b.project_name }}</div>
+        {% if b.bid_deadline %}<div style="font-size:.73rem;color:rgba(255,255,255,.35);">Due {{ b.bid_deadline.strftime("%b %d") }}</div>{% endif %}
+      </div>
+      <span style="flex-shrink:0;font-size:.7rem;font-weight:800;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.2);color:{{ sc.get(b.status,'#5FA8FF') }};">{{ b.status|replace('_',' ')|title }}</span>
+    </div>
+    {% endfor %}
+    {% if _queue_opps|length > 4 %}
+    <a href="{{ _queue_url }}" style="text-align:center;font-size:.78rem;color:rgba(255,255,255,.3);padding:6px;text-decoration:none;display:block;">+{{ _queue_opps|length - 4 }} more →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>

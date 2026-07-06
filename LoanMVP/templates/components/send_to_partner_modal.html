@@ -81,6 +81,13 @@
       </div>
     </div>
 
+    <!-- External partner contact info (shown when Google partner selected) -->
+    <div class="stp-section stp-hidden stp-external-contact" id="stpExternalContact">
+      <div class="stp-label">How to Reach Them</div>
+      <div id="stpExternalContactBody" class="stp-external-contact-body"></div>
+      <p class="stp-external-note">This partner is outside the Ravlo network. Send your request and Ravlo will reach out to invite them — or contact them directly while you wait.</p>
+    </div>
+
     <!-- Success state -->
     <div class="stp-section stp-hidden stp-success" id="stpSuccess">
       <div class="stp-success-icon">
@@ -443,6 +450,42 @@
 }
 .stp-external-toggle input { width: 14px; height: 14px; accent-color: var(--ravlo-blue, #3b82f6); }
 
+/* External contact info */
+.stp-external-contact {
+  background: rgba(234,179,8,0.06);
+  border: 1px solid rgba(234,179,8,0.2);
+  border-radius: 12px;
+  padding: 14px;
+}
+.stp-external-contact-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.stp-contact-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 8px;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.83rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.stp-contact-link:hover { background: rgba(255,255,255,0.14); }
+.stp-contact-loading { font-size: 0.8rem; color: rgba(255,255,255,0.5); }
+.stp-external-note {
+  margin: 0;
+  font-size: 0.76rem;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.5;
+}
+
 /* Package banner */
 .stp-package-banner {
   margin: 0 24px 4px;
@@ -503,7 +546,7 @@
     _type = null; _wantExternal = false;
 
     // Reset all UI elements
-    ['stpStep2','stpStep3','stpSuccess','stpExternalToggleRow','stpLocationNote'].forEach(function(id){
+    ['stpStep2','stpStep3','stpSuccess','stpExternalToggleRow','stpLocationNote','stpExternalContact'].forEach(function(id){
       document.getElementById(id).classList.add('stp-hidden');
     });
     document.getElementById('stpStep1').classList.remove('stp-hidden');
@@ -630,7 +673,7 @@
     el.innerHTML = list.map(function(p) {
       var isGoogle = p.source === 'google';
       var badge = isGoogle
-        ? '<span class="stp-badge-google">Google</span>'
+        ? '<span class="stp-badge-google">External</span>'
         : '<span class="stp-badge-ravlo">Ravlo</span>';
       var meta = [p.company, p.city, p.state].filter(Boolean).join(' · ');
       var rating = p.rating ? ' ★ ' + p.rating : '';
@@ -638,7 +681,9 @@
         JSON.stringify(p.id) + ',' +
         JSON.stringify(p.name) + ',' +
         JSON.stringify(p.company||p.name) + ',' +
-        JSON.stringify(p.source||\'ravlo\') + ')">' +
+        JSON.stringify(p.source||'ravlo') + ',' +
+        JSON.stringify(p.external_id||null) + ',' +
+        JSON.stringify(p.service_area||p.city||'') + ')">' +
         '<div style="flex:1;min-width:0;">' +
           '<div class="stp-result-name">' + _esc(p.name) + rating + '</div>' +
           '<div class="stp-result-meta">' + _esc(meta || p.service_area || '') + '</div>' +
@@ -654,11 +699,16 @@
   }
 
   /* ─── partner selection ────────────────────────────── */
-  window.selectPartner = function (id, name, company, source) {
-    _partnerId   = id;       // null for Google results
-    _partnerName = name;
-    _partnerCo   = company;
-    _partnerSrc  = source || 'ravlo';
+  var _externalId  = null;
+  var _externalAddr = null;
+
+  window.selectPartner = function (id, name, company, source, externalId, address) {
+    _partnerId    = id;
+    _partnerName  = name;
+    _partnerCo    = company;
+    _partnerSrc   = source || 'ravlo';
+    _externalId   = externalId || null;
+    _externalAddr = address || null;
 
     document.getElementById('stpSelectedName').textContent = name;
     document.getElementById('stpSelectedCompany').textContent = company ? '· ' + company : '';
@@ -666,11 +716,44 @@
     document.getElementById('stpResults').innerHTML = '';
     document.getElementById('stpResults').classList.remove('stp-has-results');
     document.getElementById('stpSearchInput').value = '';
+
+    // For external (Google) partners, show contact info section
+    var contactSection = document.getElementById('stpExternalContact');
+    var contactBody    = document.getElementById('stpExternalContactBody');
+    if (source === 'google') {
+      contactSection.classList.remove('stp-hidden');
+      contactBody.innerHTML = '<div class="stp-contact-loading">Looking up contact info…</div>';
+
+      // Always build a Google search link as fallback
+      var googleQuery = encodeURIComponent((name || '') + (address ? ' ' + address : ''));
+      var googleLink  = '<a class="stp-contact-link" href="https://www.google.com/search?q=' + googleQuery + '" target="_blank" rel="noopener">🔍 Search on Google</a>';
+
+      if (externalId) {
+        fetch('/investor/partners/place-details?place_id=' + encodeURIComponent(externalId), {credentials: 'same-origin'})
+          .then(function(r){ return r.json(); })
+          .then(function(d){
+            var links = [];
+            if (d.phone) links.push('<a class="stp-contact-link" href="tel:' + _esc(d.phone) + '">📞 ' + _esc(d.phone) + '</a>');
+            if (d.website) links.push('<a class="stp-contact-link" href="' + _esc(d.website) + '" target="_blank" rel="noopener">🌐 Visit Website</a>');
+            links.push(googleLink);
+            contactBody.innerHTML = links.join('');
+          })
+          .catch(function(){ contactBody.innerHTML = googleLink; });
+      } else {
+        contactBody.innerHTML = googleLink;
+      }
+    } else {
+      contactSection.classList.add('stp-hidden');
+      contactBody.innerHTML = '';
+    }
   };
 
   window.clearPartnerSelection = function () {
     _partnerId = null; _partnerName = null; _partnerCo = null; _partnerSrc = 'ravlo';
+    _externalId = null; _externalAddr = null;
     document.getElementById('stpSelected').classList.add('stp-hidden');
+    document.getElementById('stpExternalContact').classList.add('stp-hidden');
+    document.getElementById('stpExternalContactBody').innerHTML = '';
   };
 
   /* ─── submit ───────────────────────────────────────── */
@@ -735,13 +818,13 @@
   }
 
   function showSuccess() {
-    ['stpStep1','stpStep2','stpStep3','stpFooter'].forEach(function(id){
+    ['stpStep1','stpStep2','stpStep3','stpFooter','stpExternalContact'].forEach(function(id){
       document.getElementById(id).classList.add('stp-hidden');
     });
     var isGoogle = _partnerSrc === 'google';
     var msg = _partnerName
       ? (isGoogle
-          ? _partnerName + ' was found outside the Ravlo network. We\'ll help facilitate the connection.'
+          ? 'Ravlo is reaching out to ' + _partnerName + ' to invite them to the network. Check your email — we sent you their contact info so you can reach out directly while we work on getting them onboard.'
           : 'Request sent to ' + _partnerName + '. They\'ll see it on their Ravlo dashboard under Incoming Requests.')
       : 'Request submitted — the Ravlo team will match you with the best available partner in your area.';
     document.getElementById('stpSuccessMsg').textContent = msg;

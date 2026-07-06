@@ -1,0 +1,183 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:820px;">
+
+      <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(44,182,125,.1); border:1px solid rgba(44,182,125,.22); border-radius:999px; padding:5px 16px; margin-bottom:20px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#2cb67d;animation:pulse 2s infinite;display:inline-block;"></span>
+        <span style="font-size:.78rem; font-weight:800; letter-spacing:2.5px; color:#2cb67d; text-transform:uppercase;">Ravlo Referral Program</span>
+      </div>
+
+      <h1 class="mk-title-xl">Refer a friend. You both get a month free.</h1>
+      <p class="mk-copy-lg">
+        Know someone who should be on Ravlo? Send them your way. When they sign up for a paid plan,
+        you get one free month — and so do they. No limits on how many people you can refer.
+      </p>
+
+      <div class="mk-hero-actions">
+        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Get Your Referral Link</a>
+        <a href="{{ url_for('marketing.plans') }}" class="mk-btn mk-btn-ghost">See Plans</a>
+      </div>
+
+      <p style="margin-top:14px; font-size:.82rem; color:rgba(255,255,255,.35);">
+        Already a Ravlo user? Mention "Referral" in your message and we'll set you up.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- HOW IT WORKS -->
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-kicker">How it works</div>
+    <h2 class="mk-title-lg">Simple. No catch.</h2>
+
+    <div class="mk-grid-3" style="margin-top:28px;">
+      <div class="mk-card">
+        <div class="mk-card-icon">1</div>
+        <h3>Get Your Link</h3>
+        <p>Reach out and we'll give you a personal referral link to share with anyone in your network.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">2</div>
+        <h3>They Sign Up</h3>
+        <p>Your referral creates a Ravlo account using your link and subscribes to any paid plan.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">3</div>
+        <h3>You Both Win</h3>
+        <p>You get one free month added to your account. They get one free month on theirs. Every time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SPLIT PANEL -->
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+
+      <div class="mk-panel">
+        <div class="mk-kicker">For you</div>
+        <h2 class="mk-title-lg">Every referral earns you a free month.</h2>
+        <p class="mk-copy">
+          There's no cap on referrals. Refer 3 people, earn 3 months. Refer 10, earn 10.
+          Your free months stack and apply automatically to your next billing cycle.
+        </p>
+
+        <div class="mk-list" style="margin-top:20px;">
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>No referral limit</strong>
+              <div class="mk-copy">Every successful signup earns you another free month.</div>
+            </div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Months stack</strong>
+              <div class="mk-copy">Free months accumulate on your account — use them whenever.</div>
+            </div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Works on any plan</strong>
+              <div class="mk-copy">Referrals count whether your contact signs up for Core, Pro, or Enterprise.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">For them</div>
+        <h2 class="mk-title-lg">Your referral gets a free month when they join.</h2>
+        <p class="mk-copy">
+          Anyone you send to Ravlo starts with one free month on top of the standard 15-day trial —
+          so they get a real runway to see what the platform can do before paying anything.
+        </p>
+
+        <div class="mk-divider"></div>
+
+        <div class="mk-grid-2">
+          <div class="mk-card" style="text-align:center;">
+            <div style="font-size:1.6rem; font-weight:900; color:#5FA8FF; line-height:1;">15 days</div>
+            <div style="font-size:.78rem; color:rgba(255,255,255,.4); margin-top:4px;">standard trial</div>
+          </div>
+          <div class="mk-card" style="text-align:center;">
+            <div style="font-size:1.6rem; font-weight:900; color:#2cb67d; line-height:1;">+1 month</div>
+            <div style="font-size:.78rem; color:rgba(255,255,255,.4); margin-top:4px;">referral bonus</div>
+          </div>
+        </div>
+
+        <p class="mk-copy" style="margin-top:18px;">
+          That's over 6 weeks of full access before they're asked for a credit card.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- WHO TO REFER -->
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-kicker">Who to refer</div>
+    <h2 class="mk-title-lg">Anyone doing real estate work.</h2>
+
+    <div class="mk-grid-4" style="margin-top:28px;">
+      <div class="mk-card">
+        <div class="mk-card-icon">I</div>
+        <h3>Investors</h3>
+        <p>Anyone buying, flipping, renting, or developing residential or commercial property.</p>
+      </div>
+      <div class="mk-card">
+        <div class="mk-card-icon">L</div>
+        <h3>Lenders</h3>
+        <p>Loan officers, mortgage brokers, and teams looking for a better lending workflow.</p>
+      </div>
+      <div class="mk-card">
+        <div class="mk-card-icon">R</div>
+        <h3>Realtors</h3>
+        <p>Agents and brokers who work closely with investors or manage deals at volume.</p>
+      </div>
+      <div class="mk-card">
+        <div class="mk-card-icon">T</div>
+        <h3>Teams</h3>
+        <p>Real estate companies and operators who want one operating system for their whole crew.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-panel" style="text-align:center;">
+      <div class="mk-kicker">Start referring</div>
+      <h2 class="mk-title-lg">Know someone who should be on Ravlo?</h2>
+      <p class="mk-copy-lg" style="max-width:620px; margin:0 auto 28px;">
+        Get your personal referral link and start sharing. Every person who joins puts a free month back in your pocket.
+      </p>
+      <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary" style="font-size:1rem; padding:14px 32px;">Get My Referral Link</a>
+      <p style="margin-top:12px; font-size:.8rem; color:rgba(255,255,255,.3);">Mention "Referral" — we'll get you set up same day.</p>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

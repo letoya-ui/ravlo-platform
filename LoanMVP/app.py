@@ -142,6 +142,17 @@ _SCHEMA_COMPAT_TABLES = [
     "external_partner_leads",
     "partner_connection_requests",
     "partner_requests",
+    "contractor_bid_opportunities",
+    "construction_projects",
+    "bid_suggestions",
+    "bid_proposals",
+    "project_daily_logs",
+    "project_photos",
+    "project_milestones",
+    "construction_project_expenses",
+    "project_invoices",
+    "project_change_orders",
+    "discovery_events",
 ]
 
 _SCHEMA_COMPAT_INDEXES = [
@@ -702,7 +713,7 @@ def create_app():
     def make_session_permanent():
         session.permanent = True
 
-    _TRIAL_EXEMPT_PREFIXES = ("auth.", "marketing.", "public_pages.", "preview.")
+    _TRIAL_EXEMPT_PREFIXES = ("auth.", "marketing.", "public_pages.", "preview.", "checkout.", "challenge.")
     _TRIAL_EXEMPT_EXACT = {"static", "favicon", "marketing_home", "robots_txt", "sitemap_xml", "index"}
 
     @app.before_request
@@ -724,6 +735,71 @@ def create_app():
         ):
             return None
         return redirect(url_for("preview.trial_expired"))
+
+    # Static file extensions that shouldn't be tracked
+    _STATIC_EXTS = frozenset({
+        ".css", ".js", ".map", ".ico", ".png", ".jpg", ".jpeg",
+        ".gif", ".svg", ".webp", ".woff", ".woff2", ".ttf", ".eot",
+        ".mp4", ".webm", ".pdf", ".zip",
+    })
+
+    @app.before_request
+    def track_discovery():
+        """Classify every inbound request by visitor type and persist to discovery_events."""
+        path = request.path or "/"
+        # Skip static files and the tracking write itself
+        if path.startswith("/static/"):
+            return None
+        ext = "." + path.rsplit(".", 1)[-1].lower() if "." in path.rsplit("/", 1)[-1] else ""
+        if ext in _STATIC_EXTS:
+            return None
+
+        ua = (request.headers.get("User-Agent") or "").lower()
+
+        if "claudebot" in ua or "anthropic" in ua:
+            source = "Claude"
+        elif "gptbot" in ua or "chatgpt" in ua:
+            source = "OpenAI"
+        elif "google-extended" in ua:
+            source = "Google AI"
+        elif "googlebot" in ua or "google" in ua:
+            source = "Google"
+        elif "bingbot" in ua or "msnbot" in ua:
+            source = "Bing"
+        elif "facebookexternalhit" in ua or "facebookbot" in ua:
+            source = "Facebook"
+        elif "linkedinbot" in ua:
+            source = "LinkedIn"
+        elif "twitterbot" in ua:
+            source = "Twitter"
+        elif "applebot" in ua:
+            source = "Apple"
+        elif "semrushbot" in ua or "ahrefsbot" in ua or "mj12bot" in ua or "dotbot" in ua:
+            source = "SEO Crawler"
+        elif "python-requests" in ua or "curl/" in ua or "go-http" in ua or "axios" in ua:
+            source = "Dev/API"
+        elif not ua:
+            source = "Unknown"
+        else:
+            source = "Human"
+
+        try:
+            from LoanMVP.models.discovery_models import DiscoveryEvent
+            from LoanMVP.extensions import db as _db
+            event = DiscoveryEvent(
+                source=source,
+                user_agent=(request.headers.get("User-Agent") or "")[:1000],
+                ip=request.remote_addr,
+                path=path[:500],
+            )
+            _db.session.add(event)
+            _db.session.commit()
+        except Exception:
+            try:
+                from LoanMVP.extensions import db as _db
+                _db.session.rollback()
+            except Exception:
+                pass
 
     @app.before_request
     def handle_custom_domain():

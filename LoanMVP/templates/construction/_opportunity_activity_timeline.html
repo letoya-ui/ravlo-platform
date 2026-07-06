@@ -1,0 +1,46 @@
+{#
+  Construction opportunity activity timeline.
+  Expected variable: opp
+  Uses existing notes/workflow log until a dedicated activity table is added.
+#}
+{% set _notes = (opp.notes or '').split('\n') %}
+{% set _events = [] %}
+{% for line in _notes %}
+  {% if line and ('Workflow updated' in line or 'Sent to Sandra' in line or 'Handoff note' in line or 'Workflow note' in line) %}
+    {% set _ = _events.append(line) %}
+  {% endif %}
+{% endfor %}
+
+<details style="margin-top:10px;border-radius:12px;background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.06);padding:10px 12px;">
+  <summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;list-style:none;">
+    <span style="font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.38);font-weight:900;">Activity Timeline</span>
+    <span style="font-size:.7rem;color:rgba(255,255,255,.34);">{{ _events|length }} event{{ 's' if _events|length != 1 }}</span>
+  </summary>
+
+  <div style="margin-top:10px;display:grid;gap:8px;">
+    <div style="display:flex;gap:9px;align-items:flex-start;">
+      <span style="width:8px;height:8px;border-radius:50%;background:#5FA8FF;box-shadow:0 0 0 4px rgba(95,168,255,.12);margin-top:5px;flex-shrink:0;"></span>
+      <div>
+        <div style="font-size:.78rem;color:#f4f7fb;font-weight:800;">Opportunity created</div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:2px;">
+          {% if opp.created_at %}{{ opp.created_at.strftime('%b %d, %Y %I:%M %p') }}{% else %}Date unavailable{% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% for event in _events[-8:] %}
+      <div style="display:flex;gap:9px;align-items:flex-start;">
+        <span style="width:8px;height:8px;border-radius:50%;background:#2cb67d;box-shadow:0 0 0 4px rgba(44,182,125,.12);margin-top:5px;flex-shrink:0;"></span>
+        <div style="min-width:0;">
+          <div style="font-size:.76rem;color:rgba(255,255,255,.75);line-height:1.45;white-space:pre-wrap;">{{ event }}</div>
+        </div>
+      </div>
+    {% endfor %}
+
+    {% if _events|length == 0 %}
+      <div style="font-size:.75rem;color:rgba(255,255,255,.34);line-height:1.5;">
+        No workflow updates yet. The timeline will build as the bid moves from Jamaine to Sandra, approval, client review, and award/closeout.
+      </div>
+    {% endif %}
+  </div>
+</details>

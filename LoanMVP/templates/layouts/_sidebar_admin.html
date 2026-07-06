@@ -71,6 +71,18 @@
         <i class="icon lucide lucide-building-2"></i>
         <span>Companies</span>
       </a>
+
+      <a href="{{ url_for('admin.staff') }}"
+         class="re-nav-link {% if ep in ['admin.staff', 'admin.invite_staff_member', 'admin.resend_staff_invite', 'admin.delete_staff_invite'] %}active{% endif %}">
+        <i class="icon lucide lucide-users-2"></i>
+        <span>Ravlo Team</span>
+      </a>
+
+      <a href="{{ url_for('admin.company_finances') }}"
+         class="re-nav-link {% if ep in ['admin.company_finances', 'admin.company_finances_add', 'admin.company_finances_delete'] %}active{% endif %}">
+        <i class="icon lucide lucide-landmark"></i>
+        <span>Financial Hub</span>
+      </a>
     {% endif %}
 
     <div class="re-nav-section-label">Operations</div>
@@ -113,13 +125,33 @@
       </a>
     {% endif %}
 
+    <a href="{{ url_for('executive.bid_support') }}"
+       class="re-nav-link {% if ep == 'executive.bid_support' %}active{% endif %}">
+      <i class="icon lucide lucide-clipboard-list"></i>
+      <span>Bid Support Queue</span>
+    </a>
+
     <div class="re-nav-section-label">Growth</div>
+
+    <a href="{{ url_for('university.portal') }}"
+       class="re-nav-link {% if ep == 'university.portal' %}active{% endif %}">
+      <i class="icon lucide lucide-graduation-cap"></i>
+      <span>{% if is_company_admin %}Academy{% else %}Operations Academy{% endif %}</span>
+    </a>
 
     <a href="{{ url_for('elena.template_studio') }}"
        class="re-nav-link {% if ep in ['elena.template_studio', 'elena.template_studio_preview', 'elena.template_studio_generate', 'elena.template_studio_generate_and_save'] %}active{% endif %}">
       <i class="icon lucide lucide-wand-sparkles"></i>
       <span>Content Studio</span>
     </a>
+
+    {% if not is_company_admin %}
+      <a href="{{ url_for('admin.ai_email_assistant') }}"
+         class="re-nav-link {% if ep == 'admin.ai_email_assistant' %}active{% endif %}">
+        <i class="icon lucide lucide-mail-open"></i>
+        <span>AI Email</span>
+      </a>
+    {% endif %}
 
     <div class="re-nav-section-label">Linked Systems</div>
 
@@ -129,9 +161,14 @@
         <span>CRM</span>
       </a>
 
-      <a href="{{ url_for('system.users') }}" class="re-nav-link">
+      <a href="{{ url_for('system.users') }}" class="re-nav-link {% if ep == 'system.users' %}active{% endif %}">
         <i class="icon lucide lucide-user-cog"></i>
         <span>Users</span>
+      </a>
+
+      <a href="{{ url_for('system.feedback_responses') }}" class="re-nav-link {% if ep == 'system.feedback_responses' %}active{% endif %}">
+        <i class="icon lucide lucide-message-square-heart"></i>
+        <span>Feedback</span>
       </a>
 
       <a href="{{ url_for('property.manage') }}" class="re-nav-link">

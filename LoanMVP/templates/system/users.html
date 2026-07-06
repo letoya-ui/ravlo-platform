@@ -121,9 +121,20 @@
               <td>{{ user.email or "—" }}</td>
 
               <td>
-                <span class="badge badge-info">
-                  {{ (user.role or "unknown")|replace('_', ' ')|title }}
-                </span>
+                <form method="POST" action="{{ url_for('system.change_role', user_id=user.id) }}"
+                      style="margin:0;display:flex;gap:6px;align-items:center;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <select name="role" onchange="this.form.submit()"
+                    style="padding:4px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.12);
+                    background:rgba(255,255,255,.05);color:#f4f7fb;font-size:.78rem;cursor:pointer;
+                    appearance:auto;max-width:140px;">
+                    {% for r in ['investor','borrower','loan_officer','partner','realtor','contractor','admin','executive','student','loan_officer_partner'] %}
+                      <option value="{{ r }}" {% if (user.role or '') == r %}selected{% endif %}>
+                        {{ r|replace('_',' ')|title }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </form>
               </td>
 
               <td>

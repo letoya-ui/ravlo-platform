@@ -1,0 +1,340 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:860px;">
+
+      <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(95,168,255,.1); border:1px solid rgba(95,168,255,.22); border-radius:999px; padding:5px 16px; margin-bottom:20px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#5FA8FF;animation:pulse 2s infinite;display:inline-block;"></span>
+        <span style="font-size:.78rem; font-weight:800; letter-spacing:2.5px; color:#5FA8FF; text-transform:uppercase;">The Lending Challenge — 5 Spots Open</span>
+      </div>
+
+      <h1 class="mk-title-xl">The Lending Challenge.</h1>
+      <p class="mk-copy-lg" style="color:#5FA8FF; font-weight:700; font-size:1.15rem; margin-bottom:12px; text-transform:uppercase; letter-spacing:.04em;">A smoother way to do business.</p>
+      <p class="mk-copy-lg">
+        We're looking for 5 lending professionals to take the Ravlo Lending Challenge. Experience how Ravlo Lending OS streamlines every step of the loan process — so you can close more loans with confidence.
+      </p>
+
+      <div class="lc-hero-checks" style="margin:20px 0 28px;">
+        <div class="lc-check-row"><span class="lc-chk">✓</span> One platform.</div>
+        <div class="lc-check-row"><span class="lc-chk">✓</span> One workflow.</div>
+        <div class="lc-check-row"><span class="lc-chk">✓</span> Endless possibilities.</div>
+      </div>
+
+      <div class="mk-hero-actions">
+        <a href="{{ url_for('challenge.join_page', slug='lending') }}" class="mk-btn mk-btn-primary">Take the Challenge — 90 Days Free</a>
+        <a href="#how-it-works" class="mk-btn mk-btn-ghost">See How It Works</a>
+      </div>
+
+      <p style="margin-top:14px; font-size:.82rem; color:rgba(255,255,255,.35);">
+        Mention "Lending Challenge" in your message. No credit card. No commitment.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .lc-hero-checks { display:flex; flex-direction:column; gap:10px; }
+  .lc-check-row { display:flex; align-items:center; gap:10px; font-size:.97rem; font-weight:600; color:rgba(255,255,255,.85); }
+  .lc-chk { width:22px; height:22px; border-radius:50%; background:rgba(95,168,255,.18); border:1.5px solid rgba(95,168,255,.4); display:inline-flex; align-items:center; justify-content:center; font-size:.72rem; color:#5FA8FF; flex-shrink:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- BUILT FOR EVERY ROLE -->
+<section class="mk-section-tight" id="how-it-works">
+  <div class="mk-container">
+    <div class="mk-kicker">Built for every role</div>
+    <h2 class="mk-title-lg">Built for every role. <span style="color:#5FA8FF;">Designed to work together.</span></h2>
+    <p class="mk-copy-lg">
+      Ravlo Lending OS brings your team, your data, and your deals together in one intelligent platform.
+    </p>
+
+    <div class="mk-grid-3" style="margin-top:28px;">
+      <div class="mk-card">
+        <div class="mk-card-icon" style="background:rgba(95,168,255,.12); color:#5FA8FF;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <h3>Loan Officer</h3>
+        <p>Manage leads, build relationships, and grow your pipeline.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon" style="background:rgba(95,168,255,.12); color:#5FA8FF;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <h3>Processor</h3>
+        <p>Organize documents, track conditions, and keep loans moving.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon" style="background:rgba(95,168,255,.12); color:#5FA8FF;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </div>
+        <h3>Underwriter</h3>
+        <p>Analyze with clarity, make faster decisions, and reduce risk.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon" style="background:rgba(44,182,125,.12); color:#2cb67d;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <h3>Borrower</h3>
+        <p>Enjoy a simple, transparent experience from start to finish.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon" style="background:rgba(44,182,125,.12); color:#2cb67d;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Admin</h3>
+        <p>Oversee operations, users, and performance with ease.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ONE PLATFORM. EVERY STEP. -->
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">One platform</div>
+    <h2 class="mk-title-lg">One platform. <span style="color:#5FA8FF;">Every step.</span></h2>
+
+    <div class="mk-grid-2" style="margin-top:28px;">
+      <div class="mk-card" style="border-color:rgba(95,168,255,0.2); background:rgba(95,168,255,0.05);">
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div class="mk-card-icon" style="background:rgba(95,168,255,.12); color:#5FA8FF; flex-shrink:0; margin-bottom:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div>
+            <h3 style="margin:0 0 6px; font-size:1rem;">Streamline Workflows</h3>
+            <p style="margin:0; font-size:.88rem; color:rgba(255,255,255,.6);">Built-in automation keeps everyone aligned and loans moving.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-card" style="border-color:rgba(95,168,255,0.2); background:rgba(95,168,255,0.05);">
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div class="mk-card-icon" style="background:rgba(95,168,255,.12); color:#5FA8FF; flex-shrink:0; margin-bottom:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div>
+            <h3 style="margin:0 0 6px; font-size:1rem;">Improve Accuracy</h3>
+            <p style="margin:0; font-size:.88rem; color:rgba(255,255,255,.6);">Centralized data and smart validation reduce errors and exceptions.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-card" style="border-color:rgba(95,168,255,0.2); background:rgba(95,168,255,0.05);">
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div class="mk-card-icon" style="background:rgba(95,168,255,.12); color:#5FA8FF; flex-shrink:0; margin-bottom:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div>
+            <h3 style="margin:0 0 6px; font-size:1rem;">Gain Visibility</h3>
+            <p style="margin:0; font-size:.88rem; color:rgba(255,255,255,.6);">Real-time dashboards give you the insight to make better decisions.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-card" style="border-color:rgba(44,182,125,0.2); background:rgba(44,182,125,0.05);">
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div class="mk-card-icon" style="background:rgba(44,182,125,.12); color:#2cb67d; flex-shrink:0; margin-bottom:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div>
+            <h3 style="margin:0 0 6px; font-size:1rem;">Enhance the Experience</h3>
+            <p style="margin:0; font-size:.88rem; color:rgba(255,255,255,.6);">Clear communication and a simple portal for borrowers and partners.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-card" style="border-color:rgba(44,182,125,0.2); background:rgba(44,182,125,0.05);">
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div class="mk-card-icon" style="background:rgba(44,182,125,.12); color:#2cb67d; flex-shrink:0; margin-bottom:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          </div>
+          <div>
+            <h3 style="margin:0 0 6px; font-size:1rem;">Grow Your Business</h3>
+            <p style="margin:0; font-size:.88rem; color:rgba(255,255,255,.6);">Save time, increase productivity, and close more loans.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- POWERFUL FEATURES -->
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-kicker">Features</div>
+    <h2 class="mk-title-lg">Powerful features. <span style="color:#5FA8FF;">Built for lenders.</span></h2>
+
+    <div class="mk-grid-3" style="margin-top:28px;">
+      <div class="mk-card" style="position:relative; border-color:rgba(95,168,255,0.3); background:rgba(95,168,255,0.07);">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#5FA8FF,transparent);border-radius:16px 16px 0 0;"></div>
+        <div class="mk-card-icon" style="background:rgba(95,168,255,0.12); color:#5FA8FF;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </div>
+        <h3>Pipeline Management</h3>
+        <p>Track every loan from lead to funding in a single, organized view.</p>
+      </div>
+
+      <div class="mk-card" style="position:relative; border-color:rgba(95,168,255,0.3); background:rgba(95,168,255,0.07);">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#5FA8FF,transparent);border-radius:16px 16px 0 0;"></div>
+        <div class="mk-card-icon" style="background:rgba(95,168,255,0.12); color:#5FA8FF;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <h3>Document Management</h3>
+        <p>Secure, organized, and easy to collaborate on — all in one place.</p>
+      </div>
+
+      <div class="mk-card" style="position:relative; border-color:rgba(95,168,255,0.3); background:rgba(95,168,255,0.07);">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#5FA8FF,transparent);border-radius:16px 16px 0 0;"></div>
+        <div class="mk-card-icon" style="background:rgba(95,168,255,0.12); color:#5FA8FF;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
+        </div>
+        <h3>Workflow Automation</h3>
+        <p>Reduce manual tasks and accelerate turn times across your team.</p>
+      </div>
+
+      <div class="mk-card" style="position:relative; border-color:rgba(44,182,125,0.3); background:rgba(44,182,125,0.07);">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#2cb67d,transparent);border-radius:16px 16px 0 0;"></div>
+        <div class="mk-card-icon" style="background:rgba(44,182,125,0.12); color:#2cb67d;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <h3>Reports &amp; Analytics</h3>
+        <p>Real-time data to guide your business and track what's working.</p>
+      </div>
+
+      <div class="mk-card" style="position:relative; border-color:rgba(44,182,125,0.3); background:rgba(44,182,125,0.07);">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#2cb67d,transparent);border-radius:16px 16px 0 0;"></div>
+        <div class="mk-card-icon" style="background:rgba(44,182,125,0.12); color:#2cb67d;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <h3>Seamless Integrations</h3>
+        <p>Connect with the tools you use every day — no switching required.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:28px; padding:14px 24px; border-radius:12px; background:rgba(95,168,255,0.06); border:1px solid rgba(95,168,255,.15); text-align:center;">
+      <span style="font-size:.9rem; color:rgba(255,255,255,.5);">✦</span>
+      <span style="font-size:.9rem; color:rgba(255,255,255,.7); margin-left:8px; font-weight:600;">All the tools you need. All in one place.</span>
+    </div>
+  </div>
+</section>
+
+<!-- NOT JUST SOFTWARE -->
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+
+      <div class="mk-panel">
+        <h2 class="mk-title-lg">This isn't just software. <span style="color:#5FA8FF;">It's a better way to lend.</span></h2>
+
+        <div class="mk-list" style="margin-top:24px;">
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Work smarter, not harder.</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Improve collaboration across your team.</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Deliver a better borrower experience.</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Increase efficiency and profitability.</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Scale your business with confidence.</div></div>
+        </div>
+
+        <div class="mk-divider"></div>
+        <p class="mk-copy">
+          Ravlo Lending OS brings people, process, and technology together — so you can focus on what matters most: <strong style="color:#5FA8FF;">closing loans.</strong>
+        </p>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">What you get</div>
+        <h2 class="mk-title-lg">Full Lending OS access. Not a limited trial.</h2>
+        <p class="mk-copy">
+          Challenge participants get the complete Ravlo Lending OS — every role, every workflow, the full pipeline. The same platform serious lending teams use to run their entire operation.
+        </p>
+
+        <div class="mk-grid-2" style="margin-top:22px;">
+          <div class="mk-card" style="text-align:center;">
+            <div style="font-size:2rem; font-weight:900; color:#5FA8FF; line-height:1;">5</div>
+            <div style="font-size:.8rem; color:rgba(255,255,255,.45); margin-top:4px;">lending pros selected</div>
+            <div style="font-size:.85rem; font-weight:700; margin-top:10px; color:rgba(255,255,255,.8);">Full Platform Access</div>
+          </div>
+          <div class="mk-card" style="text-align:center;">
+            <div style="font-size:2rem; font-weight:900; color:#2cb67d; line-height:1;">3 mo</div>
+            <div style="font-size:.8rem; color:rgba(255,255,255,.45); margin-top:4px;">maximum free access</div>
+            <div style="font-size:.85rem; font-weight:700; margin-top:10px; color:rgba(255,255,255,.8);">1 survey per month</div>
+          </div>
+        </div>
+
+        <div class="mk-divider"></div>
+
+        <div style="padding:16px 20px; border-radius:14px; background:rgba(44,182,125,.08); border:1px solid rgba(44,182,125,.2);">
+          <p style="margin:0; font-size:.9rem; color:rgba(255,255,255,.7); line-height:1.6;">
+            <strong style="color:#2cb67d;">Survey 1</strong> → Month 2 free &nbsp;·&nbsp;
+            <strong style="color:#2cb67d;">Survey 2</strong> → Month 3 free &nbsp;·&nbsp;
+            <strong style="color:#2cb67d;">Survey 3</strong> → Month 4 free
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHO THIS IS FOR -->
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-kicker">Who qualifies</div>
+    <h2 class="mk-title-lg">5 lending professionals ready for a better way.</h2>
+    <p class="mk-copy-lg">
+      We're choosing 5 lending professionals who are ready to experience a smoother way to do business. One platform. One team. A better lending experience.
+    </p>
+
+    <div class="mk-grid-2" style="margin-top:28px;">
+      <div class="mk-card">
+        <h3>Good fit</h3>
+        <div class="mk-list" style="margin-top:12px;">
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Active lending professionals — loan officers, processors, underwriters, or team leads</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Ready to run a real loan or pipeline through the platform</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Willing to share honest feedback on what works and what doesn't</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Looking for a more organized, efficient way to close loans</div></div>
+        </div>
+      </div>
+      <div class="mk-card">
+        <h3>What we ask</h3>
+        <div class="mk-list" style="margin-top:12px;">
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Run at least one active loan through the pipeline your first month</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Use the document and workflow tools as part of your real process</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Fill out a short survey at the end of each month you want extended</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Tell us what a smoother lending experience means to your team</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-panel" style="text-align:center; background:linear-gradient(160deg, rgba(95,168,255,0.06), rgba(16,24,33,1)); border-color:rgba(95,168,255,0.22); position:relative; overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#5FA8FF 40%,#2cb67d 60%,transparent);"></div>
+      <div class="mk-kicker">5 spots. No exceptions.</div>
+      <h2 class="mk-title-lg">Ready to take the Lending Challenge?</h2>
+      <p class="mk-copy-lg" style="max-width:620px; margin:0 auto 12px;">
+        Your challenge starts now.
+      </p>
+      <p class="mk-copy-lg" style="max-width:620px; margin:0 auto 28px; color:#5FA8FF; font-weight:600;">
+        Let's make it happen.
+      </p>
+      <a href="{{ url_for('challenge.join_page', slug='lending') }}" class="mk-btn mk-btn-primary" style="font-size:1rem; padding:14px 32px;">Take the Challenge — 90 Days Free</a>
+      <p style="margin-top:12px; font-size:.8rem; color:rgba(255,255,255,.3);">No credit card. No commitment. 5 spots only.</p>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

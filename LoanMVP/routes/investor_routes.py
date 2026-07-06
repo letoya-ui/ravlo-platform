@@ -1148,6 +1148,8 @@ def _investor_effective_subscription_plan(user):
         "free": "Core",
         "core": "Core",
         "explorer": "Core",
+        "preview": "Operator",  # 15-day trial gets full Operator access
+        "elite": "Operator",
         "operator": "Operator",
         "pro": "Operator",
         "premium": "Operator",
@@ -4364,8 +4366,8 @@ def api_property_tool_search():
         if buyer_profile:
             results.sort(key=buyer_profile_score, reverse=True)
 
-        # Increment quota only for live API calls — cache hits are free
-        if _SEARCH_LIMIT is not None and _ip and not _cache_hit:
+        # Increment quota only for live API calls that return results — cache hits and empty results are free
+        if _SEARCH_LIMIT is not None and _ip and not _cache_hit and results:
             _ip.deal_finder_search_count = (_ip.deal_finder_search_count or 0) + 1
             db.session.commit()
         elif not _cache_hit:
@@ -4469,6 +4471,92 @@ def api_property_tool_image():
     except Exception:
         current_app.logger.warning("property_tool_image proxy failed for %s", log_url, exc_info=True)
         return redirect(url_for("static", filename="images/placeholder_property.jpg"))
+
+@investor_bp.route("/api/deal-finder-ai-read", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def api_deal_finder_ai_read():
+    payload = request.get_json(silent=True) or {}
+    prop = payload.get("property") or {}
+    market = (payload.get("market") or prop.get("zip_code") or prop.get("zip") or "").strip()
+
+    address = (prop.get("address") or prop.get("address_line1") or "").strip()
+    price = prop.get("listing_price") or prop.get("price") or prop.get("display_value")
+    market_value = prop.get("estimated_value_engine") or prop.get("market_value")
+    deal_score = prop.get("deal_score")
+    tier = prop.get("opportunity_tier") or "moderate"
+    strategy_tag = prop.get("strategy_tag") or prop.get("recommended_strategy") or "Review"
+    rough_upside = prop.get("rough_upside") or "—"
+    rent = prop.get("monthly_rent_estimate") or prop.get("traditional_rent")
+    str_rev = prop.get("airbnb_revenue") or prop.get("airbnb_rent_estimate")
+    beds = prop.get("beds") or "—"
+    baths = prop.get("baths") or "—"
+    sqft = prop.get("square_feet") or prop.get("sqft") or "—"
+    days_on_market = prop.get("days_on_market") or "—"
+    reasons = []
+    ai_rec = prop.get("ai_recommendation") or {}
+    if isinstance(ai_rec.get("why"), list):
+        reasons = ai_rec["why"][:3]
+    elif isinstance(prop.get("reasons"), list):
+        reasons = prop["reasons"][:3]
+
+    def fmt_money(v):
+        try:
+            n = float(str(v).replace("$", "").replace(",", ""))
+            return f"${n:,.0f}"
+        except Exception:
+            return str(v) if v else "—"
+
+    fact_lines = [
+        f"Address: {address or 'Not specified'}",
+        f"Market / ZIP: {market or 'Not specified'}",
+        f"Price: {fmt_money(price)}",
+        f"Engine Value: {fmt_money(market_value)}",
+        f"Deal Score: {deal_score}/99" if deal_score else "Deal Score: —",
+        f"Tier: {tier}",
+        f"Recommended Strategy: {strategy_tag}",
+        f"Rough Upside: {rough_upside}",
+        f"Beds/Baths: {beds}/{baths}",
+        f"Sq Ft: {sqft}",
+        f"Days on Market: {days_on_market}",
+        f"Rent Estimate: {fmt_money(rent)}/mo" if rent else "Rent Estimate: —",
+        f"STR Revenue Estimate: {fmt_money(str_rev)}/mo" if str_rev else "STR Revenue: —",
+    ]
+    if reasons:
+        fact_lines.append("Why it ranked: " + "; ".join(reasons))
+
+    system_prompt = (
+        "You are a senior real estate investment analyst at Ravlo. "
+        "Given top-pick property data from a Deal Finder search, write a concise AI Market Read. "
+        "Structure your response as: "
+        "**Deal Summary** (2-3 sentences on why this property ranked #1), "
+        "**Market Signal** (1-2 bullets on the ZIP/market opportunity), "
+        "**Strategy Fit** (1-2 bullets on the recommended strategy and exit), "
+        "**Key Risks** (1-2 bullets), "
+        "**Next Move** (one clear sentence). "
+        "Be direct, data-grounded, and actionable. No fluff."
+    )
+    user_prompt = "TOP PICK PROPERTY DATA:\n" + "\n".join(fact_lines)
+
+    try:
+        ai_client = OpenAI()
+        ai_model = current_app.config.get("AI_MODEL") or "gpt-4o-mini"
+        response = ai_client.chat.completions.create(
+            model=ai_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.4,
+            max_tokens=500,
+        )
+        analysis = (response.choices[0].message.content or "").strip()
+        return jsonify({"status": "ok", "analysis": analysis})
+    except Exception as e:
+        current_app.logger.warning("deal_finder_ai_read failed: %s", e, exc_info=True)
+        return jsonify({"status": "error", "error": "AI Market Read unavailable."}), 500
+
 
 @investor_bp.route("/api/property_detail", methods=["POST"])
 @csrf.exempt
@@ -16581,9 +16669,24 @@ def investor_partner_search():
             "rating":       p.get("rating"),
             "source":       p.get("source", "ravlo"),
             "is_internal":  p.get("is_internal", False),
+            "external_id":  p.get("external_id"),  # Google place_id for external results
         })
 
     return jsonify(results)
+
+
+@investor_bp.route("/partners/place-details", methods=["GET"])
+@login_required
+def investor_partner_place_details():
+    """AJAX: fetch phone + website for a Google Place ID."""
+    import re
+    from LoanMVP.services.partner_marketplace_service import get_place_details
+    place_id = request.args.get("place_id", "").strip()
+    # Google Place IDs are alphanumeric + underscores/hyphens, 10-300 chars
+    if not place_id or not re.match(r'^[A-Za-z0-9_\-]{10,300}$', place_id):
+        return jsonify({"phone": None, "website": None})
+    details = get_place_details(place_id)
+    return jsonify(details)
 
 
 @investor_bp.route("/send-to-partner", methods=["POST"])
@@ -16767,6 +16870,76 @@ def investor_send_to_partner():
         import logging
         logging.getLogger(__name__).error("[send-to-partner] DB error: %s", exc)
         return jsonify({"status": "error", "message": "Could not save request"}), 500
+
+    # ── Email notifications for external leads ────────────────────────────
+    if external_lead:
+        try:
+            from LoanMVP.utils.emailer import send_email
+            from markupsafe import escape as _esc
+            _partner_label = partner_name or "Unknown Partner"
+            _loc = ", ".join(p for p in [address, city, state, zip_code] if p) or "—"
+            _investor_name = getattr(current_user, "first_name", None) or current_user.email
+
+            # Escape all user-supplied values before embedding in HTML
+            _e_partner  = _esc(_partner_label)
+            _e_loc      = _esc(_loc)
+            _e_category = _esc(partner_type or "—")
+            _e_investor = _esc(_investor_name)
+            _e_email    = _esc(current_user.email)
+            _e_title    = _esc(title or "—")
+            _e_message  = _esc(message or "—")
+            _e_timeline = _esc(timeline or "—")
+            _budget_str = "${:,.0f}".format(budget) if budget else "—"
+            _google_q   = requests.utils.quote(f"{_partner_label} {_loc}")
+
+            admin_email = (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip()
+            if admin_email:
+                send_email(
+                    to=admin_email,
+                    subject=f"[Ravlo Lead] Investor wants to work with {_partner_label} (external)",
+                    html_body=(
+                        f"<h2>New External Partner Lead</h2>"
+                        f"<p>An investor found an outside-network partner and sent a connection request through Ravlo. "
+                        f"Please reach out to this partner to invite them to the Ravlo network.</p>"
+                        f"<table style='border-collapse:collapse;width:100%;max-width:600px;'>"
+                        f"<tr><td style='padding:8px;color:#555;'>Partner name</td><td style='padding:8px;font-weight:600;'>{_e_partner}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Address / Location</td><td style='padding:8px;'>{_e_loc}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Category</td><td style='padding:8px;'>{_e_category}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Investor</td><td style='padding:8px;'>{_e_investor} ({_e_email})</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Property / Project</td><td style='padding:8px;'>{_e_title}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Investor message</td><td style='padding:8px;'>{_e_message}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Budget</td><td style='padding:8px;'>{_budget_str}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Timeline</td><td style='padding:8px;'>{_e_timeline}</td></tr>"
+                        f"<tr><td style='padding:8px;color:#555;'>Request ID</td><td style='padding:8px;'>#{req.id}</td></tr>"
+                        f"</table>"
+                        f"<p style='margin-top:18px;'>"
+                        f"<a href='https://www.google.com/search?q={_google_q}' "
+                        f"style='background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600;'>"
+                        f"Find on Google</a></p>"
+                    ),
+                )
+
+            send_email(
+                to=current_user.email,
+                subject=f"Ravlo is reaching out to {_partner_label} on your behalf",
+                html_body=(
+                    f"<h2>We're on it.</h2>"
+                    f"<p>You selected <strong>{_e_partner}</strong> — a partner outside the Ravlo network. "
+                    f"The Ravlo team will reach out to invite them and facilitate your connection.</p>"
+                    f"<p><strong>In the meantime, you can contact them directly:</strong></p>"
+                    f"<p><a href='https://www.google.com/search?q={_google_q}' "
+                    f"style='color:#2563eb;'>Search {_e_partner} on Google →</a></p>"
+                    f"<table style='border-collapse:collapse;width:100%;max-width:500px;margin-top:12px;'>"
+                    f"<tr><td style='padding:8px;color:#555;'>Partner</td><td style='padding:8px;font-weight:600;'>{_e_partner}</td></tr>"
+                    f"<tr><td style='padding:8px;color:#555;'>Location</td><td style='padding:8px;'>{_e_loc}</td></tr>"
+                    f"<tr><td style='padding:8px;color:#555;'>Type</td><td style='padding:8px;'>{_e_category}</td></tr>"
+                    f"<tr><td style='padding:8px;color:#555;'>Your message</td><td style='padding:8px;'>{_e_message}</td></tr>"
+                    f"</table>"
+                    f"<p style='margin-top:14px;color:#555;font-size:0.9em;'>Once they join Ravlo, you'll be able to communicate, share project packages, and track requests directly on the platform.</p>"
+                ),
+            )
+        except Exception:
+            pass  # Don't fail the response if email sending errors
 
     return jsonify({
         "status": "ok",

@@ -55,6 +55,18 @@
       <span>Companies</span>
     </a>
 
+    <a href="{{ url_for('admin.staff') }}"
+       class="re-nav-link {% if ep in ['admin.staff', 'admin.invite_staff_member', 'admin.resend_staff_invite', 'admin.delete_staff_invite'] %}active{% endif %}">
+      <i class="icon lucide lucide-users-2"></i>
+      <span>Ravlo Team</span>
+    </a>
+
+    <a href="{{ url_for('admin.company_finances') }}"
+       class="re-nav-link {% if ep in ['admin.company_finances', 'admin.company_finances_add', 'admin.company_finances_delete'] %}active{% endif %}">
+      <i class="icon lucide lucide-landmark"></i>
+      <span>Financial Hub</span>
+    </a>
+
     <a href="{{ url_for(exec_ns ~ '.licensing_applications') }}"
        class="re-nav-link {% if ep == exec_ns ~ '.licensing_applications' %}active{% endif %}">
       <i class="icon lucide lucide-file-text"></i>
@@ -62,6 +74,32 @@
     </a>
 
     <div class="re-nav-section-label">Operations</div>
+
+    <a href="{{ url_for('executive.bid_support') }}"
+       class="re-nav-link {% if ep == 'executive.bid_support' %}active{% endif %}">
+      <i class="icon lucide lucide-clipboard-list"></i>
+      <span>Bid Support Queue</span>
+    </a>
+
+    <div class="re-nav-section-label">Construction</div>
+
+    <a href="{{ url_for('executive.construction_center') }}"
+       class="re-nav-link {% if ep == 'executive.construction_center' %}active{% endif %}">
+      <i class="icon lucide lucide-hammer"></i>
+      <span>Bid Pipeline</span>
+    </a>
+
+    <a href="{{ url_for('construction_bids.search_page') }}"
+       class="re-nav-link {% if ep == 'construction_bids.search_page' %}active{% endif %}">
+      <i class="icon lucide lucide-search"></i>
+      <span>Bid Search</span>
+    </a>
+
+    <a href="{{ url_for('construction_projects.project_list') }}"
+       class="re-nav-link {% if ep in ['construction_projects.project_list', 'construction_projects.project_detail'] %}active{% endif %}">
+      <i class="icon lucide lucide-hard-hat"></i>
+      <span>Projects</span>
+    </a>
 
     <a href="{{ url_for('admin.verify_data') }}"
        class="re-nav-link {% if ep in ['admin.verify_data', 'admin.verify_doc'] %}active{% endif %}">

@@ -269,6 +269,40 @@ def toggle_user(user_id):
     return redirect(url_for("system.users"))
 
 # =========================================================
+# 🏷️ Change User Role
+# =========================================================
+_ASSIGNABLE_ROLES = [
+    "investor", "borrower", "loan_officer", "partner", "realtor",
+    "contractor", "admin", "executive", "student", "loan_officer_partner",
+]
+
+@system_bp.route("/change_role/<int:user_id>", methods=["POST"])
+@role_required("system", "admin")
+def change_role(user_id):
+    company_id, redirect_response = _company_admin_guard(current_user)
+    if redirect_response:
+        return redirect_response
+
+    user = User.query.get_or_404(user_id)
+
+    if _is_company_admin(current_user) and company_id is not None and user.company_id != company_id:
+        flash("You can only manage users from your own company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company_id))
+
+    new_role = (request.form.get("role") or "").strip().lower()
+    if new_role not in _ASSIGNABLE_ROLES:
+        flash(f"Invalid role: {new_role}", "danger")
+        return redirect(url_for("system.users"))
+
+    old_role = user.role or "unknown"
+    user.role = new_role
+    db.session.commit()
+
+    flash(f"{user.email} changed from {old_role} → {new_role}.", "success")
+    return redirect(url_for("system.users"))
+
+
+# =========================================================
 # 🗑️ Delete User
 # =========================================================
 @system_bp.route("/delete_user/<int:user_id>", methods=["POST"])
@@ -570,6 +604,28 @@ def delete_user(user_id):
             {"created_by": None}, synchronize_session="fetch"
         )
 
+        # -- Challenge enrollments (table may not exist in all envs) ------
+        try:
+            sp = db.session.begin_nested()
+            from LoanMVP.models.company_finance_models import ChallengeEnrollment
+            ChallengeEnrollment.query.filter_by(user_id=user.id).delete(
+                synchronize_session="fetch"
+            )
+            sp.commit()
+        except Exception:
+            sp.rollback()
+
+        # -- Email connections (table may not exist in all envs) -----------
+        try:
+            sp2 = db.session.begin_nested()
+            from LoanMVP.models.company_finance_models import UserEmailConnection
+            UserEmailConnection.query.filter_by(user_id=user.id).delete(
+                synchronize_session="fetch"
+            )
+            sp2.commit()
+        except Exception:
+            sp2.rollback()
+
         # Force the ORM to reload all relationship collections from the
         # database so the cascade triggered by db.session.delete(user)
         # sees the nullified FK values rather than stale in-memory state.
@@ -583,6 +639,38 @@ def delete_user(user_id):
         flash(f"Could not delete user: {e}", "danger")
 
     return redirect(url_for("system.users"))
+
+
+# =========================================================
+# 📋 Feedback Survey Responses
+# =========================================================
+@system_bp.route("/feedback")
+@role_required("system", "admin")
+def feedback_responses():
+    try:
+        from LoanMVP.models.company_finance_models import FeedbackSurvey
+        responses = FeedbackSurvey.query.order_by(FeedbackSurvey.submitted_at.desc()).all()
+        total = len(responses)
+        avg_nps = round(sum(r.nps_score for r in responses) / total, 1) if total else None
+        promoters   = sum(1 for r in responses if r.nps_score >= 9)
+        passives    = sum(1 for r in responses if 7 <= r.nps_score <= 8)
+        detractors  = sum(1 for r in responses if r.nps_score <= 6)
+        nps_index   = round(((promoters - detractors) / total) * 100) if total else None
+    except Exception:
+        db.session.rollback()
+        responses = []
+        total = avg_nps = nps_index = promoters = passives = detractors = 0
+
+    return render_template(
+        "system/feedback_responses.html",
+        responses=responses,
+        total=total,
+        avg_nps=avg_nps,
+        nps_index=nps_index,
+        promoters=promoters,
+        passives=passives,
+        detractors=detractors,
+    )
 
 
 # =========================================================

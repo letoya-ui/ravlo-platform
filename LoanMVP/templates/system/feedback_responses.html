@@ -1,0 +1,110 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Feedback Responses{% endblock %}
+{% block page_title %}Feedback Responses{% endblock %}
+{% block page_subline %}NPS scores and qualitative feedback from survey submissions{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="https://ravlohq.com/feedback" target="_blank">
+    <i class="lucide lucide-external-link"></i> Survey Link
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  {# ── Stats ── #}
+  <section class="re-grid-4">
+    <div class="re-stat">
+      <div class="re-stat-label">Responses</div>
+      <div class="re-stat-value">{{ total }}</div>
+      <div class="re-stat-meta">Total submissions</div>
+    </div>
+    <div class="re-stat">
+      <div class="re-stat-label">Avg Score</div>
+      <div class="re-stat-value">{{ avg_nps if avg_nps is not none else "—" }}</div>
+      <div class="re-stat-meta">Out of 10</div>
+    </div>
+    <div class="re-stat">
+      <div class="re-stat-label">NPS Index</div>
+      <div class="re-stat-value" style="color:{% if nps_index is not none and nps_index >= 50 %}#2cb67d{% elif nps_index is not none and nps_index >= 0 %}#eab308{% else %}#f87171{% endif %};">
+        {{ nps_index if nps_index is not none else "—" }}
+      </div>
+      <div class="re-stat-meta">Promoters minus detractors</div>
+    </div>
+    <div class="re-stat">
+      <div class="re-stat-label">Breakdown</div>
+      <div class="re-stat-value" style="font-size:1rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <span style="color:#2cb67d;">{{ promoters }}P</span>
+        <span style="color:#eab308;">{{ passives }}N</span>
+        <span style="color:#f87171;">{{ detractors }}D</span>
+      </div>
+      <div class="re-stat-meta">Promoters / Passives / Detractors</div>
+    </div>
+  </section>
+
+  {# ── Response table ── #}
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">SURVEY RESULTS</div>
+        <h3 style="margin:.35rem 0 .2rem;">All Feedback</h3>
+        <div class="re-card-subtitle">Most recent first.</div>
+      </div>
+    </div>
+
+    {% if responses %}
+    <div class="re-table-wrap mt-16">
+      <table class="re-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Score</th>
+            <th>Name / Email</th>
+            <th>What's working</th>
+            <th>Improve</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in responses %}
+          <tr>
+            <td style="white-space:nowrap;font-size:.82rem;color:rgba(255,255,255,.5);">
+              {{ r.submitted_at.strftime("%b %d, %Y") if r.submitted_at else "—" }}
+            </td>
+            <td>
+              <span style="display:inline-flex;align-items:center;justify-content:center;
+                width:36px;height:36px;border-radius:8px;font-weight:800;font-size:.95rem;
+                background:{% if r.nps_score >= 9 %}rgba(44,182,125,.15){% elif r.nps_score >= 7 %}rgba(234,179,8,.12){% else %}rgba(248,113,113,.12){% endif %};
+                color:{% if r.nps_score >= 9 %}#2cb67d{% elif r.nps_score >= 7 %}#eab308{% else %}#f87171{% endif %};">
+                {{ r.nps_score }}
+              </span>
+            </td>
+            <td>
+              <div style="font-size:.88rem;">{{ r.name or "—" }}</div>
+              <div style="font-size:.78rem;color:rgba(255,255,255,.4);">{{ r.email or "" }}</div>
+            </td>
+            <td style="max-width:240px;font-size:.85rem;color:rgba(255,255,255,.7);">
+              {{ r.liked or "—" }}
+            </td>
+            <td style="max-width:240px;font-size:.85rem;color:rgba(255,255,255,.7);">
+              {{ r.improve or "—" }}
+            </td>
+            <td style="font-size:.78rem;color:rgba(255,255,255,.35);">{{ r.source or "—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="re-empty mt-16">No responses yet. Share the survey link to start collecting feedback.</div>
+    {% endif %}
+  </section>
+
+</div>
+
+<style>
+  .re-grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; }
+  @media(max-width:768px){ .re-grid-4 { grid-template-columns:repeat(2,1fr); } }
+</style>
+{% endblock %}

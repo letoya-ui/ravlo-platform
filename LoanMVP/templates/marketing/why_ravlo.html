@@ -1,0 +1,159 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-grid">
+      <div class="mk-hero-copy">
+        <div class="mk-eyebrow">Why Ravlo</div>
+        <h1 class="mk-title-xl">Real estate does not need another app. It needs an operating system.</h1>
+        <p class="mk-copy-lg">
+          Ravlo was built for the work behind every investment: the deals, the numbers, the budgets, the projects, the capital, the partners, the learning, and the decisions that turn opportunity into execution.
+        </p>
+        <div class="mk-hero-actions">
+          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Start Free Trial</a>
+          <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">See the Platform</a>
+        </div>
+      </div>
+
+      <div class="mk-hero-visual">
+        <div class="mk-glow"></div>
+        <div class="mk-device">
+          <div class="mk-device-topbar">
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+          </div>
+          {% if hero_image %}
+            <img src="{{ url_for('static', filename=hero_image) }}" alt="Ravlo ecosystem preview">
+          {% else %}
+            <img src="{{ url_for('static', filename='images/marketing/hero_combined.png') }}" alt="Ravlo ecosystem preview">
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">The problem</div>
+    <h2 class="mk-title-lg">The real estate workflow is fragmented.</h2>
+    <p class="mk-copy-lg">
+      Investors and professionals are forced to make important decisions across too many disconnected tools: spreadsheets, CRMs, deal calculators, project trackers, lender portals, AI chats, emails, documents, and notes. That fragmentation creates friction, slows decisions, and makes it harder to see the full picture.
+    </p>
+
+    <div class="mk-grid-4" style="margin-top:28px;">
+      <div class="mk-card"><h3>Deals are scattered</h3><p>Properties, notes, numbers, and comparisons are often spread across tabs, screenshots, and spreadsheets.</p></div>
+      <div class="mk-card"><h3>Budgets get messy</h3><p>Projected costs, actual spend, and construction decisions are hard to manage when they live outside the deal.</p></div>
+      <div class="mk-card"><h3>Capital is disconnected</h3><p>Funding and refinance conversations often happen separately from the investment plan they are meant to support.</p></div>
+      <div class="mk-card"><h3>Teams are disconnected</h3><p>Agents, lenders, contractors, builders, and partners need one connected place to support the opportunity.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">The Ravlo answer</div>
+        <h2 class="mk-title-lg">One platform for every workflow behind the investment.</h2>
+        <p class="mk-copy">
+          Ravlo connects the full real estate operating cycle so users can move with structure instead of switching between tools. The goal is simple: give investors and real estate professionals one command center to work from.
+        </p>
+        <div class="mk-list">
+          <div class="mk-list-item"><div class="mk-check">✓</div><div><strong>Find and organize opportunities</strong><div class="mk-copy">Keep deal discovery, saved properties, and pipeline thinking connected.</div></div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div><strong>Analyze before committing</strong><div class="mk-copy">Compare strategies, understand the numbers, and see the risk before moving forward.</div></div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div><strong>Budget and build with clarity</strong><div class="mk-copy">Connect project planning, scope, budget, and execution instead of managing them separately.</div></div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div><strong>Fund and grow</strong><div class="mk-copy">Keep capital and refinance workflows aligned with the deal, the project, and the portfolio.</div></div></div>
+        </div>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">The ecosystem</div>
+        <h2 class="mk-title-lg">Ravlo is built as a connected real estate system.</h2>
+        <div class="mk-grid-2" style="margin-top:22px;">
+          <div class="mk-card"><h4>Investor OS</h4><p>Deal discovery, dashboards, comparisons, projects, budgets, capital, and refinance workflows.</p></div>
+          <div class="mk-card"><h4>Lending OS</h4><p>Lending workflow, borrower intake, capital requests, and lender-side execution.</p></div>
+          <div class="mk-card"><h4>Partner Network</h4><p>A connected ecosystem for agents, lenders, contractors, architects, and trusted professionals.</p></div>
+          <div class="mk-card"><h4>Ravlo Academy</h4><p>Practical coaching, platform education, and real-world learning resources included with the subscription.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">Founder built</div>
+    <h2 class="mk-title-lg">Built from the frustration of doing real estate across disconnected tools.</h2>
+    <p class="mk-copy-lg">
+      Ravlo was created because the industry needed a cleaner way to work. Not another dashboard. Not another isolated feature. A real operating system where investors, lenders, partners, education, and AI can work together inside one ecosystem.
+    </p>
+    <div class="mk-panel" style="margin-top:28px;">
+      <p class="mk-copy-lg" style="margin:0;">
+        “I built Ravlo because I lived the frustration of trying to connect deals, budgets, financing, partners, and execution across too many places. Ravlo is the platform I wished existed — one place to think, plan, build, fund, learn, and grow.”
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">Ravlo AI</div>
+        <h2 class="mk-title-lg">AI is useful. Workflow-aware AI is different.</h2>
+        <p class="mk-copy">
+          Ravlo AI is powered by leading AI from OpenAI and Anthropic, but the value is not just the model. The value is how the intelligence is connected to Ravlo’s real estate workflows.
+        </p>
+        <p class="mk-copy">
+          Users can use AI to think through deal strategy, budgeting assumptions, project planning, lending workflows, and learning resources while staying inside the Ravlo environment.
+        </p>
+      </div>
+      <div class="mk-panel">
+        <div class="mk-kicker">Trust and clarity</div>
+        <h2 class="mk-title-lg">Built to assist decisions, not replace judgment.</h2>
+        <p class="mk-copy">
+          Ravlo AI is designed to support users with structure, explanations, and workflow guidance. It does not replace professional, legal, financial, lending, or investment judgment.
+        </p>
+        <div class="mk-divider"></div>
+        <p class="mk-copy">As Ravlo grows, platform intelligence and logged workflow activity can help improve the product experience while keeping privacy, transparency, and responsible use at the center of the system.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">Why one platform wins</div>
+    <h2 class="mk-title-lg">Because every investment depends on connected decisions.</h2>
+    <div class="mk-grid-4" style="margin-top:28px;">
+      <div class="mk-card"><div class="mk-card-icon">1</div><h3>Clarity</h3><p>See the deal, project, budget, and capital picture in one place.</p></div>
+      <div class="mk-card"><div class="mk-card-icon">2</div><h3>Speed</h3><p>Reduce the time lost switching tools, rebuilding notes, and chasing information.</p></div>
+      <div class="mk-card"><div class="mk-card-icon">3</div><h3>Confidence</h3><p>Make stronger decisions with structured workflows and better visibility.</p></div>
+      <div class="mk-card"><div class="mk-card-icon">4</div><h3>Scale</h3><p>Grow from one deal to a portfolio without rebuilding your operating stack.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-panel" style="text-align:center;">
+      <div class="mk-kicker">The promise</div>
+      <h2 class="mk-title-lg">Every investment begins with Ravlo.</h2>
+      <p class="mk-copy-lg" style="max-width:760px;margin:0 auto;">
+        Start with one platform built to connect the people, capital, projects, education, and intelligence behind every real estate opportunity.
+      </p>
+      <div class="mk-hero-actions" style="margin-top:24px;justify-content:center;">
+        <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Start Free Trial</a>
+        <a href="{{ url_for('marketing.plans') }}" class="mk-btn mk-btn-ghost">View Plans</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

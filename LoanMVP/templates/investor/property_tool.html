@@ -176,6 +176,17 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
       </div>
     </div>
 
+    <div id="aiMarketReadPanel" style="display:none;" class="ravlo-card pad dfv4-ai-market-read">
+      <div class="dfv4-ai-market-head">
+        <div>
+          <div class="eyebrow">AI MARKET READ</div>
+          <h3 id="aiMarketReadTitle" class="mb-4">Top Pick Analysis</h3>
+        </div>
+        <span id="aiMarketReadSpinner" class="dfv4-ai-spinner" style="display:none;">Analyzing…</span>
+      </div>
+      <div id="aiMarketReadBody" class="dfv4-ai-market-body"></div>
+    </div>
+
     <div id="results" class="dfv4-grid">
       <div class="ravlo-card pad dfv4-empty">
         <div class="eyebrow">DEAL FINDER</div>
@@ -197,6 +208,7 @@ const VIEW_DETAILS_URL = "{{ url_for('investor.api_property_detail') }}";
 const SEARCH_URL = "{{ url_for('investor.api_property_tool_search') }}";
 const IMAGE_PROXY_URL = "{{ url_for('investor.api_property_tool_image') }}";
 const DEAL_WORKSPACE_URL = "{{ url_for('investor.deal_workspace') }}";
+const AI_MARKET_READ_URL = "{{ url_for('investor.api_deal_finder_ai_read') }}";
 
 function money(x){
   if (x === null || x === undefined || x === "") return "—";
@@ -786,7 +798,8 @@ function renderCards(results){
     const aiWhy = Array.isArray(aiRecommendation.why) ? aiRecommendation.why.slice(0, 3) : [];
 
     return `
-      <article class="ravlo-card pad dfv4-card">
+      <article class="ravlo-card pad dfv4-card${idx === 0 ? " dfv4-card--top-pick" : ""}">
+        ${idx === 0 ? `<div class="dfv4-top-pick-banner">⭐ TOP PICK${escapeHtml(r.zip_code || r.zip || "") ? " IN " + escapeHtml(r.zip_code || r.zip || "") : ""}<span class="dfv4-top-pick-score">${Number.isFinite(score) ? score + "/99" : ""}</span></div>` : ""}
         <div class="dfv4-thumb">
           <img src="${escapeHtml(resolveCardImageSrc(r))}" alt="Property photo" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
           <div class="dfv4-thumb-top">
@@ -1069,28 +1082,34 @@ async function useMyLocation(){
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
 
-      status.innerText = "Location found. Searching nearby deals...";
+      status.innerText = "Location found. Looking up your area...";
 
-      // Store lat/lng on hidden fields if backend supports it later.
-      let latInput = document.getElementById("latitude");
-      let lngInput = document.getElementById("longitude");
+      // Reverse geocode to zip/city/state so the search backend can use it
+      try {
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+          { headers: { "Accept-Language": "en-US,en;q=0.9" } }
+        );
+        const geoData = await geoRes.json();
+        const addr = geoData.address || {};
+        const zip = (addr.postcode || "").split("-")[0].trim();
+        const city = (addr.city || addr.town || addr.village || addr.county || "").trim();
+        const stateCode = (addr.state_code || "").trim().toUpperCase();
 
-      if (!latInput) {
-        latInput = document.createElement("input");
-        latInput.type = "hidden";
-        latInput.id = "latitude";
-        document.body.appendChild(latInput);
+        if (zip) {
+          document.getElementById("zip").value = zip;
+          status.innerText = `Using ZIP ${zip} — searching...`;
+        } else if (city && stateCode) {
+          document.getElementById("city").value = city;
+          document.getElementById("state").value = stateCode;
+          status.innerText = `Using ${city}, ${stateCode} — searching...`;
+        } else {
+          status.innerText = "Location found. Searching nearby deals...";
+        }
+      } catch (geoErr) {
+        // Reverse geocode failed — still try search with coordinates
+        status.innerText = "Location found. Searching nearby deals...";
       }
-
-      if (!lngInput) {
-        lngInput = document.createElement("input");
-        lngInput.type = "hidden";
-        lngInput.id = "longitude";
-        document.body.appendChild(lngInput);
-      }
-
-      latInput.value = lat;
-      lngInput.value = lng;
 
       await runSearch();
     },
@@ -1126,7 +1145,7 @@ async function runSearch(){
     return;
   }
 
-  status.innerText = "Searching for deals...";
+  status.innerHTML = '<span class="dfv4-searching-dot"></span>Searching…';
 
   const payload = {
     address,
@@ -1166,24 +1185,133 @@ async function runSearch(){
     renderSummary(zip, strategy, assetType, results.length, true, data.total_matches || results.length);
     renderCards(results);
 
+    if (results.length > 0) {
+      runAIMarketRead(results[0], zip || city);
+    }
+
     status.innerText = results.length
       ? `Found ${results.length} opportunities.`
       : "No matches found. Try another ZIP code or nearby market.";
 
   } catch (err) {
     console.error(err);
-    status.innerText = "Search failed. Try ZIP code or city/state.";
+    status.innerText = "Search error. Try ZIP code or city/state.";
     renderEmpty("Search failed", "Try another ZIP code, city/state, or use your location.");
   }
 }
+
+async function runAIMarketRead(topResult, market) {
+  const panel = document.getElementById("aiMarketReadPanel");
+  const title = document.getElementById("aiMarketReadTitle");
+  const spinner = document.getElementById("aiMarketReadSpinner");
+  const body = document.getElementById("aiMarketReadBody");
+
+  if (!panel || !body) return;
+
+  panel.style.display = "";
+  spinner.style.display = "";
+  body.innerHTML = "";
+  if (title) title.textContent = `Top Pick: ${topResult.address || market || "Market Analysis"}`;
+
+  try {
+    const res = await fetch(AI_MARKET_READ_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ property: topResult, market: market })
+    });
+    const data = await res.json();
+    spinner.style.display = "none";
+
+    if (!res.ok || data.status === "error") {
+      body.innerHTML = `<p class="muted">${escapeHtml(data.error || "AI Market Read unavailable.")}</p>`;
+      return;
+    }
+
+    const md = data.analysis || "";
+    body.innerHTML = md.split("\n").filter(l => l.trim()).map(line => {
+      if (line.startsWith("**") && line.endsWith("**")) {
+        return `<strong class="dfv4-ai-section">${escapeHtml(line.replace(/\*\*/g, ""))}</strong>`;
+      }
+      if (line.startsWith("- ")) {
+        return `<li>${escapeHtml(line.slice(2))}</li>`;
+      }
+      return `<p>${escapeHtml(line)}</p>`;
+    }).join("");
+  } catch (e) {
+    console.error("AI Market Read error:", e);
+    if (spinner) spinner.style.display = "none";
+    if (body) body.innerHTML = `<p class="muted">AI Market Read unavailable right now.</p>`;
+  }
+}
+
+(function autoSearchFromPopup() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get("auto") !== "1") return;
+
+  function setVal(id, key) {
+    var v = params.get(key);
+    var el = document.getElementById(id);
+    if (v && el) el.value = v;
+  }
+
+  setVal("zip", "zip");
+  setVal("city", "city");
+  setVal("state", "state");
+  setVal("assetType", "asset_type");
+  setVal("strategy", "strategy");
+  setVal("maxPrice", "max_price");
+  setVal("minScore", "min_score");
+  setVal("minDiscount", "min_discount");
+  setVal("buyerProfile", "buyer_profile");
+
+  var lat = params.get("latitude");
+  var lng = params.get("longitude");
+  if (lat && lng) {
+    var latInput = document.getElementById("latitude");
+    var lngInput = document.getElementById("longitude");
+    if (!latInput) {
+      latInput = document.createElement("input");
+      latInput.type = "hidden";
+      latInput.id = "latitude";
+      document.body.appendChild(latInput);
+    }
+    if (!lngInput) {
+      lngInput = document.createElement("input");
+      lngInput.type = "hidden";
+      lngInput.id = "longitude";
+      document.body.appendChild(lngInput);
+    }
+    latInput.value = lat;
+    lngInput.value = lng;
+  }
+
+  history.replaceState(null, "", window.location.pathname);
+  runSearch();
+})();
 </script>
 
 <style>
+/* TOP PICK */
+.dfv4-card--top-pick{border-color:rgba(95,168,255,0.4)!important;box-shadow:0 0 0 1px rgba(95,168,255,0.22),0 18px 46px rgba(0,0,0,0.28)!important}
+.dfv4-top-pick-banner{display:flex;align-items:center;gap:8px;padding:6px 12px;margin-bottom:12px;border-radius:10px;background:linear-gradient(90deg,rgba(95,168,255,0.18),rgba(44,182,125,0.10));color:#5FA8FF;font-size:.75rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border:1px solid rgba(95,168,255,0.22)}
+.dfv4-top-pick-score{margin-left:auto;background:rgba(95,168,255,0.15);padding:2px 8px;border-radius:6px;font-size:.7rem}
+/* AI Market Read panel */
+.dfv4-ai-market-read{margin-bottom:0}
+.dfv4-ai-market-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.dfv4-ai-market-head h3{color:#fff;margin:0}
+.dfv4-ai-spinner{color:rgba(193,209,227,.7);font-size:.8rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;animation:dfv4spin 1.2s linear infinite}
+@keyframes dfv4spin{0%,100%{opacity:1}50%{opacity:.35}}
+.dfv4-ai-market-body{display:flex;flex-direction:column;gap:6px;color:rgba(226,236,247,.82);line-height:1.6;font-size:.9rem}
+.dfv4-ai-market-body strong.dfv4-ai-section{display:block;color:#fff;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;margin-top:6px}
+.dfv4-ai-market-body li{margin-left:16px}
+/* Shell & search panel */
 .dfv4-shell{display:grid;grid-template-columns:360px minmax(0,1fr);gap:1rem}
 .dfv4-search-panel{position:sticky;top:16px;align-self:start}
 .dfv4-panel-title,.dfv4-hero-title{margin:.35rem 0}
 .dfv4-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
-.dfv4-status{color:var(--muted);margin-top:.75rem;min-height:20px}
+.dfv4-status{color:var(--muted);margin-top:.75rem;min-height:20px;font-size:.82rem;display:flex;align-items:center;gap:6px}
+.dfv4-searching-dot{width:7px;height:7px;border-radius:50%;background:var(--ravlo-accent,#5FA8FF);flex-shrink:0;animation:dfv4-pulse 1.2s ease-in-out infinite}
+@keyframes dfv4-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
 .dfv4-panel-note{margin-top:1rem;padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .dfv4-panel-note ul{margin:.55rem 0 0 1rem;padding:0;color:var(--muted)}
 .dfv4-results-wrap{display:grid;gap:1rem}

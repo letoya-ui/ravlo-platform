@@ -1,0 +1,240 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Construction Bid Search{% endblock %}
+{% block page_title %}Construction Bid Search{% endblock %}
+{% block page_subline %}Find Tampa-area opportunities, save them into Ravlo, and send qualified work to Sandra for package support.{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ safe_url_for('executive.construction_center') or '/executive/construction' }}">
+    <i class="lucide lucide-hard-hat"></i> Construction Center
+  </a>
+  <a class="re-btn ghost sm" href="{{ safe_url_for('construction_office.packages') or '/construction-office/packages' }}">
+    <i class="lucide lucide-inbox"></i> Office Packages
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+  <section class="re-card pad" style="border-color:rgba(95,168,255,.18);background:rgba(95,168,255,.025);">
+    <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">FIELD OPPORTUNITY SEARCH</div>
+        <h3 style="margin:.25rem 0 0;font-size:1.1rem;">Search, qualify, and save work</h3>
+        <p style="margin:6px 0 0;color:rgba(255,255,255,.55);font-size:.88rem;line-height:1.6;max-width:760px;">
+          Use the quick searches to find public leads and contractor opportunities. When something looks real, save it below so Ravlo can track the next step.
+        </p>
+      </div>
+      <div class="re-stat" style="min-width:150px;">
+        <div class="re-stat-label">Recent Saves</div>
+        <div class="re-stat-value" style="color:#5FA8FF;">{{ recent_opportunities|length }}</div>
+        <div class="re-stat-meta">Latest opportunities</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="re-card pad">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">QUICK SEARCHES</div>
+        <h3 style="margin:.25rem 0 0;font-size:1rem;">Tampa opportunity lanes</h3>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+      {% for item in search_terms %}
+        <a href="{{ item.url }}" target="_blank" rel="noopener" class="re-card" style="text-decoration:none;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025);display:block;">
+          <div style="font-size:.9rem;font-weight:800;color:#f4f7fb;">{{ item.label }}</div>
+          <p style="margin:6px 0 0;color:rgba(255,255,255,.48);font-size:.78rem;line-height:1.5;">{{ item.note }}</p>
+          <div style="margin-top:10px;font-size:.76rem;font-weight:800;color:#5FA8FF;">Open Search →</div>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="re-card pad" style="border-color:rgba(44,182,125,.18);background:rgba(44,182,125,.025);">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#2cb67d;text-transform:uppercase;">SAVE OPPORTUNITY</div>
+        <h3 style="margin:.25rem 0 0;font-size:1rem;">Add a real lead to the pipeline</h3>
+        <p style="margin:6px 0 0;color:rgba(255,255,255,.52);font-size:.84rem;line-height:1.55;max-width:720px;">
+          Paste the source link and notes so Sandra can build the package without chasing basic details.
+        </p>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('construction_bids.create_bid_opportunity') }}" style="display:grid;gap:12px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="next" value="{{ url_for('construction_bids.search_page') }}">
+
+      <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:10px;">
+        <input name="project_name" required placeholder="Project / opportunity name" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(44,182,125,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
+        <input name="category" placeholder="Demo, GC, rehab, ironwork" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(44,182,125,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
+        <input name="location" placeholder="Tampa / county / address" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(44,182,125,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <input name="source" placeholder="Source or link" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(44,182,125,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
+        <input name="estimated_value" placeholder="Estimated value" inputmode="decimal" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(44,182,125,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
+        <input name="bid_deadline" type="date" style="padding:11px 13px;border-radius:10px;border:1px solid rgba(44,182,125,.22);background:rgba(255,255,255,.04);color:#f4f7fb;">
+      </div>
+
+      <textarea name="notes" rows="4" placeholder="Contact info, project notes, scope details, walk-through requirements, documents needed, or what Sandra needs to collect." style="padding:11px 13px;border-radius:10px;border:1px solid rgba(44,182,125,.22);background:rgba(255,255,255,.04);color:#f4f7fb;font-family:inherit;resize:vertical;"></textarea>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+        <button type="submit" class="re-btn primary"><i class="lucide lucide-plus"></i> Save Opportunity</button>
+      </div>
+    </form>
+  </section>
+
+  {# ── Suggested Opportunities board ── #}
+  <section class="re-card pad" style="border-color:rgba(44,182,125,.15);background:rgba(44,182,125,.02);">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#2cb67d;text-transform:uppercase;">SUGGESTED OPPORTUNITIES</div>
+        <h3 style="margin:.25rem 0 0;font-size:1rem;">Jobs Worth Pursuing</h3>
+        <p style="margin:5px 0 0;color:rgba(255,255,255,.45);font-size:.82rem;">Save a job to track it, or send it straight to Sandra for a bid package.</p>
+      </div>
+      <div style="font-size:.8rem;color:rgba(255,255,255,.3);">{{ (suggestions or [])|length }} active</div>
+    </div>
+
+    {% set suggestions = suggestions or [] %}
+    {% if not suggestions %}
+    <div style="padding:24px 16px;text-align:center;color:rgba(255,255,255,.25);font-size:.84rem;">
+      No suggested opportunities yet — add one below.
+    </div>
+    {% else %}
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+      {% for s in suggestions %}
+      <div style="padding:14px 16px;border-radius:10px;border:1px solid {% if s.status=='follow_up' %}rgba(245,185,66,.2){% else %}rgba(255,255,255,.08){% endif %};
+                  background:rgba(255,255,255,.025);">
+        <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;">
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:.92rem;font-weight:700;color:#fff;margin-bottom:3px;">
+              {{ s.title }}
+              {% if s.status == 'follow_up' %}<span style="font-size:.7rem;font-weight:600;color:#f5b942;margin-left:6px;">Follow-Up</span>{% endif %}
+            </div>
+            <div style="font-size:.76rem;color:rgba(255,255,255,.38);line-height:1.6;">
+              {% if s.category %}{{ s.category }}{% endif %}
+              {% if s.location %} &nbsp;·&nbsp; {{ s.location }}{% endif %}
+              {% if s.source_name %} &nbsp;·&nbsp; {{ s.source_name }}{% endif %}
+              {% if s.due_date %} &nbsp;·&nbsp; Due {{ s.due_date.strftime('%b %d, %Y') }}{% endif %}
+            </div>
+            {% if s.estimated_value %}<div style="font-size:.83rem;font-weight:600;color:#f5b942;margin-top:3px;">${{ '{:,.0f}'.format(s.estimated_value) }}</div>{% endif %}
+            {% if s.contact %}<div style="font-size:.76rem;color:rgba(255,255,255,.4);margin-top:2px;">Contact: {{ s.contact }}</div>{% endif %}
+            {% if s.summary %}<div style="font-size:.8rem;color:rgba(255,255,255,.5);margin-top:6px;line-height:1.5;">{{ s.summary }}</div>{% endif %}
+            {% if s.source_url %}<div style="margin-top:5px;"><a href="{{ s.source_url }}" target="_blank" rel="noopener" style="font-size:.74rem;color:#5FA8FF;text-decoration:none;">View Source →</a></div>{% endif %}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <form method="POST" action="{{ url_for('construction_bids.suggestion_action', suggestion_id=s.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="save">
+            <button type="submit" class="re-btn primary sm">Save Opportunity</button>
+          </form>
+          <form method="POST" action="{{ url_for('construction_bids.suggestion_action', suggestion_id=s.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="send_to_sandra">
+            <button type="submit" class="re-btn ghost sm" style="border-color:rgba(44,182,125,.4);color:#2cb67d;">Send to Sandra</button>
+          </form>
+          <form method="POST" action="{{ url_for('construction_bids.suggestion_action', suggestion_id=s.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="follow_up">
+            <button type="submit" class="re-btn ghost sm" style="border-color:rgba(245,185,66,.3);color:#f5b942;">Follow Up Later</button>
+          </form>
+          <form method="POST" action="{{ url_for('construction_bids.suggestion_action', suggestion_id=s.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="not_interested">
+            <button type="submit" class="re-btn ghost sm" style="font-size:.73rem;color:rgba(255,255,255,.3);border-color:rgba(255,255,255,.08);">Not Interested</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# Add suggestion form #}
+    <details {% if not suggestions %}open{% endif %} style="margin-top:{% if suggestions %}8px{% else %}0{% endif %};">
+      <summary style="font-size:.8rem;font-weight:700;color:#2cb67d;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+        <i class="lucide lucide-plus-circle" style="font-size:14px;"></i> Add a suggested opportunity manually
+      </summary>
+      <form method="POST" action="{{ url_for('construction_bids.add_suggestion') }}" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:10px;">
+          <input name="title" required placeholder="Opportunity title *" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(44,182,125,.2);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+          <input name="category" placeholder="Demo, GC, ironwork…" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+          <input name="location" placeholder="Tampa / county / address" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+          <input name="source_name" placeholder="Source name" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+          <input name="source_url" placeholder="Source URL" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+          <input name="estimated_value" placeholder="Est. value ($)" inputmode="decimal" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+          <input name="due_date" type="date" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px;">
+          <input name="contact" placeholder="Contact / agency / client" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;">
+          <textarea name="summary" rows="2" placeholder="Short summary or notes" style="padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.85rem;resize:vertical;"></textarea>
+        </div>
+        <div style="text-align:right;">
+          <button type="submit" class="re-btn primary sm"><i class="lucide lucide-plus"></i> Add to Board</button>
+        </div>
+      </form>
+    </details>
+
+    {% set dismissed = dismissed or [] %}
+    {% if dismissed %}
+    <details style="margin-top:12px;">
+      <summary style="font-size:.77rem;color:rgba(255,255,255,.3);cursor:pointer;list-style:none;">Show {{ dismissed|length }} dismissed</summary>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+        {% for s in dismissed %}
+        <div style="padding:8px 14px;border-radius:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div style="font-size:.82rem;color:rgba(255,255,255,.3);">{{ s.title }}</div>
+          <form method="POST" action="{{ url_for('construction_bids.suggestion_action', suggestion_id=s.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="follow_up">
+            <button type="submit" class="re-btn ghost sm" style="font-size:.72rem;">Restore</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+  </section>
+
+  <section class="re-card pad">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#f5b942;text-transform:uppercase;">RECENT PIPELINE</div>
+        <h3 style="margin:.25rem 0 0;font-size:1rem;">Latest saved opportunities</h3>
+      </div>
+      <a class="re-btn ghost sm" href="{{ safe_url_for('executive.construction_center') or '/executive/construction' }}#bid-search">View Pipeline</a>
+    </div>
+
+    {% if recent_opportunities %}
+      <div style="display:grid;gap:10px;">
+        {% for opp in recent_opportunities %}
+          <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+            <div style="min-width:0;">
+              <strong style="color:#f4f7fb;">{{ opp.project_name or 'Construction opportunity' }}</strong>
+              <div style="font-size:.76rem;color:rgba(255,255,255,.42);margin-top:4px;">
+                {{ opp.category or 'Construction' }}{% if opp.location %} · {{ opp.location }}{% endif %}{% if opp.bid_deadline %} · Due {{ opp.bid_deadline.strftime('%b %d') }}{% endif %}
+              </div>
+              {% if opp.notes %}
+                <p style="margin:6px 0 0;color:rgba(255,255,255,.48);font-size:.76rem;line-height:1.45;">{{ opp.notes[:140] }}{% if opp.notes|length > 140 %}…{% endif %}</p>
+              {% endif %}
+            </div>
+            <div style="display:grid;gap:8px;justify-items:end;">
+              <span class="badge badge-warning">{{ (opp.status or 'pending')|replace('_',' ')|title }}</span>
+              <form method="POST" action="{{ url_for('construction_bids.send_to_sandra', opportunity_id=opp.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="re-btn primary sm" style="font-size:.74rem;">Send to Sandra</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="re-empty">No saved opportunities yet. Use the form above after finding a real lead.</div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

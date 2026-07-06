@@ -1,0 +1,222 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:860px;">
+
+      <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(95,168,255,.1); border:1px solid rgba(95,168,255,.22); border-radius:999px; padding:5px 16px; margin-bottom:20px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#5FA8FF;animation:pulse 2s infinite;display:inline-block;"></span>
+        <span style="font-size:.78rem; font-weight:800; letter-spacing:2.5px; color:#5FA8FF; text-transform:uppercase;">The 5-Investor Challenge — 5 Spots Open</span>
+      </div>
+
+      <h1 class="mk-title-xl">We're turning 5 people into full real estate investors.</h1>
+      <p class="mk-copy-lg">
+        Not trial users. Real investors. We're giving 5 people the complete Ravlo platform — Academy, Investor OS, and every studio tool — and a challenge: learn the craft, find your deal, run the numbers, and tell us what you experienced.
+      </p>
+
+      <div class="mk-hero-actions">
+        {% if current_user.is_authenticated and current_user.trial_ends_at %}
+          <a href="{{ url_for('investor.command_center') }}" class="mk-btn mk-btn-primary">Go to Your Dashboard</a>
+        {% else %}
+          <a href="{{ url_for('challenge.join_page', slug='investor') }}" class="mk-btn mk-btn-primary">Join the Challenge — 30 Days Free</a>
+        {% endif %}
+        <a href="#how-it-works" class="mk-btn mk-btn-ghost">See How It Works</a>
+      </div>
+
+      <p style="margin-top:14px; font-size:.82rem; color:rgba(255,255,255,.35);">
+        No credit card. No commitment. 30 days of full platform access.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- THE CHALLENGE -->
+<section class="mk-section-tight" id="how-it-works">
+  <div class="mk-container">
+    <div class="mk-kicker">The challenge</div>
+    <h2 class="mk-title-lg">Three steps. One goal: become a real investor.</h2>
+    <p class="mk-copy-lg">
+      Most people say they want to invest in real estate. Very few build the knowledge, find the right deal, and actually move. This challenge is designed to close that gap — with the tools, education, and structure to help you do it right.
+    </p>
+
+    <div class="mk-grid-3" style="margin-top:28px;">
+      <div class="mk-card" style="position:relative; border-color:rgba(95,168,255,0.3); background:rgba(95,168,255,0.07);">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#5FA8FF,transparent);border-radius:16px 16px 0 0;"></div>
+        <div class="mk-card-icon" style="background:rgba(95,168,255,0.12); color:#5FA8FF;">1</div>
+        <h3>Learn the Craft</h3>
+        <p>Start with Ravlo Academy — 8 professional courses covering real estate investing, deal structuring, construction, lending, and more. AI coach included. Move at your pace.</p>
+      </div>
+
+      <div class="mk-card" style="position:relative; border-color:rgba(95,168,255,0.3); background:rgba(95,168,255,0.07);">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#5FA8FF,transparent);border-radius:16px 16px 0 0;"></div>
+        <div class="mk-card-icon" style="background:rgba(95,168,255,0.12); color:#5FA8FF;">2</div>
+        <h3>Find Your Deal</h3>
+        <p>Use Investor OS to search markets, surface ranked opportunities, and run deal analysis in Deal Architect. Budget the project. Model the numbers. Work like a real investor.</p>
+      </div>
+
+      <div class="mk-card" style="position:relative; border-color:rgba(44,182,125,0.3); background:rgba(44,182,125,0.07);">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#2cb67d,transparent);border-radius:16px 16px 0 0;"></div>
+        <div class="mk-card-icon" style="background:rgba(44,182,125,0.12); color:#2cb67d;">3</div>
+        <h3>Share What You Learned</h3>
+        <p>At the end of each month, complete a short 5-minute survey. Tell us what you used, what worked, and what you'd change. Each survey earns you another free month — up to three.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT FULL ACCESS MEANS -->
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+
+      <div class="mk-panel">
+        <div class="mk-kicker">What you get</div>
+        <h2 class="mk-title-lg">The full platform. Not a limited trial.</h2>
+        <p class="mk-copy">
+          Challenge participants get Ravlo Enterprise — every tool, every studio, full Academy access. This is the same platform professional investors and real estate teams use to run their entire workflow.
+        </p>
+
+        <div class="mk-list" style="margin-top:20px;">
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Ravlo Academy — Full Access</strong>
+              <div class="mk-copy">8 courses, AI mentor, XP tracking, certificates, 90-day business plan.</div>
+            </div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Investor OS</strong>
+              <div class="mk-copy">Deal Finder, saved properties, Deal Architect, pipeline, and command center.</div>
+            </div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Renovation, Build &amp; Budget Studios</strong>
+              <div class="mk-copy">Plan the project, scope the work, and budget every dollar before you commit.</div>
+            </div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Ravlo AI</strong>
+              <div class="mk-copy">Deal strategy, budget review, and workflow support built into your process.</div>
+            </div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Partner Network</strong>
+              <div class="mk-copy">Access to aligned professionals connected to the Ravlo ecosystem.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">The reward</div>
+        <h2 class="mk-title-lg">One survey. One free month. Up to three.</h2>
+
+        <div class="mk-grid-2" style="margin-top:22px;">
+          <div class="mk-card" style="text-align:center;">
+            <div style="font-size:2rem; font-weight:900; color:#5FA8FF; line-height:1;">$149</div>
+            <div style="font-size:.8rem; color:rgba(255,255,255,.45); margin-top:4px;">/ month value</div>
+            <div style="font-size:.85rem; font-weight:700; margin-top:10px; color:rgba(255,255,255,.8);">Enterprise Plan</div>
+          </div>
+          <div class="mk-card" style="text-align:center;">
+            <div style="font-size:2rem; font-weight:900; color:#2cb67d; line-height:1;">3 mo</div>
+            <div style="font-size:.8rem; color:rgba(255,255,255,.45); margin-top:4px;">maximum free access</div>
+            <div style="font-size:.85rem; font-weight:700; margin-top:10px; color:rgba(255,255,255,.8);">1 survey per month</div>
+          </div>
+        </div>
+
+        <div class="mk-divider"></div>
+
+        <p class="mk-copy">Each survey takes about 5 minutes. We ask what you used, what worked, what a deal looked like through the platform, and what you'd want next. Your feedback directly shapes how Ravlo is built.</p>
+
+        <div style="margin-top:20px; padding:16px 20px; border-radius:14px; background:rgba(44,182,125,.08); border:1px solid rgba(44,182,125,.2);">
+          <p style="margin:0; font-size:.9rem; color:rgba(255,255,255,.7); line-height:1.6;">
+            <strong style="color:#2cb67d;">Survey 1</strong> → Month 2 free &nbsp;·&nbsp;
+            <strong style="color:#2cb67d;">Survey 2</strong> → Month 3 free &nbsp;·&nbsp;
+            <strong style="color:#2cb67d;">Survey 3</strong> → Month 4 free
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- WHO THIS IS FOR -->
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-kicker">Who qualifies</div>
+    <h2 class="mk-title-lg">New investors. Serious about actually doing it.</h2>
+    <p class="mk-copy-lg">
+      This challenge is for people at the beginning of their investing journey — not passive observers, but people committed to learning how it works and finding a real opportunity. You don't need prior experience. You need the drive to use the platform the way it's meant to be used.
+    </p>
+
+    <div class="mk-grid-2" style="margin-top:28px;">
+      <div class="mk-card">
+        <h3>Good fit</h3>
+        <div class="mk-list" style="margin-top:12px;">
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>New to real estate investing and ready to learn systematically</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Motivated to find, analyze, and evaluate a real deal</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Willing to spend real time with the platform and share honest feedback</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Ready to use Academy, Deal Finder, and Deal Architect together</div></div>
+        </div>
+      </div>
+      <div class="mk-card">
+        <h3>What we ask</h3>
+        <div class="mk-list" style="margin-top:12px;">
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Complete at least one Academy course your first month</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Run at least one deal search and analysis in Investor OS</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Fill out a short survey at the end of each month you want extended</div></div>
+          <div class="mk-list-item"><div class="mk-check">✓</div><div>Give us real feedback — what worked and what didn't</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-panel" style="text-align:center; background:linear-gradient(160deg, rgba(95,168,255,0.06), rgba(16,24,33,1)); border-color:rgba(95,168,255,0.22); position:relative; overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#5FA8FF 40%,#2cb67d 60%,transparent);"></div>
+      <div class="mk-kicker">5 spots. No exceptions.</div>
+      <h2 class="mk-title-lg">Are you one of the five?</h2>
+      <p class="mk-copy-lg" style="max-width:600px; margin:0 auto 28px;">
+        We're keeping this to 5 investors so we can actually pay attention, act on the feedback, and help each person move through the process. Once the spots are filled, this closes.
+      </p>
+      {% if current_user.is_authenticated and current_user.role == 'investor' and not current_user.trial_ends_at %}
+        <form method="POST" action="{{ url_for('investor.activate_trial') }}" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="mk-btn mk-btn-primary" style="font-size:1rem; padding:14px 32px;">Start the Challenge — 15 Days Free</button>
+        </form>
+        <p style="margin-top:12px; font-size:.8rem; color:rgba(255,255,255,.3);">Full platform access. No credit card required.</p>
+      {% elif current_user.is_authenticated and current_user.role == 'investor' %}
+        <a href="{{ url_for('investor.command_center') }}" class="mk-btn mk-btn-primary" style="font-size:1rem; padding:14px 32px;">Go to Your Dashboard</a>
+        <p style="margin-top:12px; font-size:.8rem; color:rgba(255,255,255,.3);">Your trial is already active.</p>
+      {% else %}
+        <a href="{{ url_for('auth.register') }}?next={{ url_for('marketing.investor_access') }}" class="mk-btn mk-btn-primary" style="font-size:1rem; padding:14px 32px;">Join the Challenge</a>
+        <p style="margin-top:12px; font-size:.8rem; color:rgba(255,255,255,.3);">Create your free account to get started — no credit card needed.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}

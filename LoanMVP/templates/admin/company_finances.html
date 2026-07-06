@@ -1,0 +1,245 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Caughman Mason — Finance Hub{% endblock %}
+{% block page_title %}Finance Hub{% endblock %}
+{% block page_subline %}All income and expenses across Caughman Mason divisions — one place.{% endblock %}
+
+{% block topbar_actions %}
+  <button type="button" onclick="document.getElementById('addEntryDrawer').style.display='block'" class="re-btn primary sm">
+    <i class="lucide lucide-plus"></i> Add Entry
+  </button>
+{% endblock %}
+
+{% block content %}
+
+{# ── TOTALS ── #}
+<div class="re-grid">
+
+  <section class="re-grid-3">
+    <div class="re-stat">
+      <div class="re-stat-label">Total Income</div>
+      <div class="re-stat-value" style="color:#2cb67d;">${{ '{:,.0f}'.format(total_income) }}</div>
+      <div class="re-stat-meta">All divisions combined</div>
+    </div>
+    <div class="re-stat">
+      <div class="re-stat-label">Total Expenses</div>
+      <div class="re-stat-value" style="color:#f87171;">${{ '{:,.0f}'.format(total_expense) }}</div>
+      <div class="re-stat-meta">All divisions combined</div>
+    </div>
+    <div class="re-stat">
+      <div class="re-stat-label">Net</div>
+      <div class="re-stat-value" style="color:{% if total_net >= 0 %}#2cb67d{% else %}#f87171{% endif %};">
+        {% if total_net < 0 %}–{% endif %}${{ '{:,.0f}'.format(total_net|abs) }}
+      </div>
+      <div class="re-stat-meta">Income minus expenses</div>
+    </div>
+  </section>
+
+  {# ── DIVISION SUMMARY ── #}
+  {% if division_summary %}
+  <section class="re-card pad">
+    <div class="eyebrow">BY DIVISION</div>
+    <h3 style="margin:.35rem 0 1rem;">Division Breakdown</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">
+      {% for div_key, div_label in divisions %}
+        {% if div_key in division_summary %}
+        {% set ds = division_summary[div_key] %}
+        <div style="padding:14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);">
+          <div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:8px;">{{ div_label }}</div>
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px;">
+            <span style="color:rgba(255,255,255,.4);">Income</span>
+            <span style="color:#2cb67d;font-weight:700;">${{ '{:,.0f}'.format(ds.income) }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:8px;">
+            <span style="color:rgba(255,255,255,.4);">Expenses</span>
+            <span style="color:#f87171;font-weight:700;">${{ '{:,.0f}'.format(ds.expense) }}</span>
+          </div>
+          <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:8px;display:flex;justify-content:space-between;font-size:.88rem;">
+            <span style="color:rgba(255,255,255,.5);font-weight:600;">Net</span>
+            <span style="font-weight:800;color:{% if ds.net >= 0 %}#2cb67d{% else %}#f87171{% endif %};">
+              {% if ds.net < 0 %}–{% endif %}${{ '{:,.0f}'.format(ds.net|abs) }}
+            </span>
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── FILTERS + LEDGER ── #}
+  <section class="re-card pad">
+    <div class="section-head" style="margin-bottom:16px;">
+      <div>
+        <div class="eyebrow">LEDGER</div>
+        <h3 style="margin:.35rem 0 .2rem;">All Transactions</h3>
+      </div>
+      <form method="GET" action="{{ url_for('admin.company_finances') }}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <select name="division" onchange="this.form.submit()" style="padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(30,35,45,1);color:#f4f7fb;font-size:.82rem;">
+          <option value="all" {% if selected_division=='all' %}selected{% endif %}>All Divisions</option>
+          {% for dkey, dlabel in divisions %}
+          <option value="{{ dkey }}" {% if selected_division==dkey %}selected{% endif %}>{{ dlabel }}</option>
+          {% endfor %}
+        </select>
+        <select name="type" onchange="this.form.submit()" style="padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(30,35,45,1);color:#f4f7fb;font-size:.82rem;">
+          <option value="all"     {% if selected_type=='all'     %}selected{% endif %}>Income + Expenses</option>
+          <option value="income"  {% if selected_type=='income'  %}selected{% endif %}>Income only</option>
+          <option value="expense" {% if selected_type=='expense' %}selected{% endif %}>Expenses only</option>
+        </select>
+      </form>
+    </div>
+
+    {% if entries %}
+    <div class="re-table-wrap">
+      <table class="re-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Division</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Project</th>
+            <th style="text-align:right;">Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in entries %}
+          <tr>
+            <td style="white-space:nowrap;font-size:.82rem;color:rgba(255,255,255,.45);">
+              {{ e.entry_date.strftime('%b %d, %Y') if e.entry_date else '—' }}
+            </td>
+            <td>
+              {% for dkey, dlabel in divisions %}{% if dkey == e.division %}<span style="font-size:.78rem;">{{ dlabel }}</span>{% endif %}{% endfor %}
+            </td>
+            <td>
+              {% if e.entry_type == 'income' %}
+                <span class="badge badge-success">Income</span>
+              {% else %}
+                <span class="badge badge-danger">Expense</span>
+              {% endif %}
+            </td>
+            <td style="font-size:.82rem;color:rgba(255,255,255,.5);">{{ e.category or '—' }}</td>
+            <td style="font-size:.85rem;">{{ e.description or '—' }}</td>
+            <td style="font-size:.8rem;color:rgba(255,255,255,.4);">{{ e.project_name or '—' }}</td>
+            <td style="text-align:right;font-weight:700;font-size:.9rem;white-space:nowrap;
+                       color:{% if e.entry_type=='income' %}#2cb67d{% else %}#f87171{% endif %};">
+              {% if e.entry_type=='expense' %}–{% endif %}${{ '{:,.2f}'.format(e.amount) }}
+            </td>
+            <td>
+              <form method="POST" action="{{ url_for('admin.company_finances_delete', entry_id=e.id) }}" style="margin:0;"
+                    onsubmit="return confirm('Delete this entry?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="re-btn ghost sm" style="color:var(--danger,#f87171);font-size:.75rem;">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="re-empty" style="padding:40px 0;">
+      No entries yet. Add your first income or expense to start tracking.
+    </div>
+    {% endif %}
+  </section>
+
+</div>
+
+{# ── ADD ENTRY DRAWER ── #}
+<div id="addEntryDrawer" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);" onclick="if(event.target===this)this.style.display='none'">
+  <div style="position:absolute;right:0;top:0;bottom:0;width:min(480px,100%);background:#0d1117;border-left:1px solid rgba(255,255,255,.08);overflow-y:auto;padding:32px 28px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h3 style="margin:0;font-size:1.1rem;">Add Entry</h3>
+      <button onclick="document.getElementById('addEntryDrawer').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin.company_finances_add') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div style="display:grid;gap:14px;">
+
+        <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+          Type *
+          <select name="entry_type" id="entryTypeSelect" onchange="updateCategoryOptions()" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(30,35,45,1);color:#f4f7fb;font-size:.88rem;">
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+        </label>
+
+        <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+          Division *
+          <select name="division" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(30,35,45,1);color:#f4f7fb;font-size:.88rem;">
+            {% for dkey, dlabel in divisions %}
+            <option value="{{ dkey }}">{{ dlabel }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+          Category
+          <select name="category" id="categorySelect" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(30,35,45,1);color:#f4f7fb;font-size:.88rem;">
+            {% for cat in income_categories %}
+            <option value="{{ cat }}" data-type="income">{{ cat }}</option>
+            {% endfor %}
+            {% for cat in expense_categories %}
+            <option value="{{ cat }}" data-type="expense" style="display:none;">{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+          Description *
+          <input name="description" required placeholder="e.g. Demo payment — 1234 Ybor Ave" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;">
+        </label>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+            Amount ($) *
+            <input name="amount" type="number" step="0.01" min="0" required placeholder="0.00" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;">
+          </label>
+          <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+            Date *
+            <input name="entry_date" type="date" required value="{{ now.strftime('%Y-%m-%d') if now else '' }}" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;">
+          </label>
+        </div>
+
+        <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+          Project / Job Name
+          <input name="project_name" placeholder="e.g. Caughman Mason — 1234 Ybor Ave" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;">
+        </label>
+
+        <label style="display:grid;gap:5px;font-size:.82rem;color:rgba(255,255,255,.5);">
+          Notes
+          <textarea name="notes" rows="2" placeholder="Any additional context" style="padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.88rem;resize:vertical;"></textarea>
+        </label>
+
+        <button type="submit" class="re-btn primary" style="margin-top:4px;">Save Entry</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function updateCategoryOptions() {
+  var type = document.getElementById('entryTypeSelect').value;
+  var sel  = document.getElementById('categorySelect');
+  Array.from(sel.options).forEach(function(opt) {
+    var show = opt.dataset.type === type;
+    opt.style.display = show ? '' : 'none';
+    if (show && !sel.value) sel.value = opt.value;
+  });
+  // auto-select first visible
+  var first = Array.from(sel.options).find(function(o){ return o.dataset.type===type; });
+  if (first) sel.value = first.value;
+}
+// Set today's date on drawer open
+document.addEventListener('DOMContentLoaded', function(){
+  var d = document.querySelector('[name="entry_date"]');
+  if (d && !d.value) d.value = new Date().toISOString().slice(0,10);
+});
+</script>
+
+{% endblock %}

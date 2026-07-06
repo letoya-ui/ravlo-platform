@@ -1,0 +1,673 @@
+{# layouts/_ravlo_ai_chat.html
+   Full conversational AI assistant — floating chat panel.
+   Include near </body> in any base layout.
+#}
+
+{# ── FAB button ── #}
+<div class="rac-fab-wrap" id="racFabWrap">
+  <div class="rac-unread" id="racUnread" hidden></div>
+  <button
+    type="button"
+    id="racFab"
+    class="rac-fab"
+    onclick="racToggle()"
+    aria-label="Open Ravlo AI"
+    aria-expanded="false"
+    aria-controls="racPanel"
+  >
+    <svg class="rac-fab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2a10 10 0 0 1 0 20"/>
+      <path d="M12 2a10 10 0 0 0 0 20"/>
+      <path d="M8 12h8M12 8l4 4-4 4"/>
+    </svg>
+    <svg class="rac-fab-icon rac-fab-icon--close" width="20" height="20" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+    <span class="rac-fab-label">Ravlo AI</span>
+  </button>
+</div>
+
+{# ── Chat panel ── #}
+<div class="rac-panel" id="racPanel" aria-hidden="true" role="dialog" aria-label="Ravlo AI Assistant">
+
+  {# Header #}
+  <div class="rac-header">
+    <div class="rac-header-left">
+      <div class="rac-avatar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      </div>
+      <div>
+        <div class="rac-header-title">Ravlo AI</div>
+        <div class="rac-header-sub" id="racSubline">Your platform assistant</div>
+      </div>
+    </div>
+    <div class="rac-header-actions">
+      <button type="button" class="rac-icon-btn" onclick="racClear()" title="Clear conversation">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
+          <path d="M9 6V4h6v2"/>
+        </svg>
+      </button>
+      <button type="button" class="rac-icon-btn" onclick="racClose()" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  {# Messages area #}
+  <div class="rac-messages" id="racMessages">
+    <div class="rac-welcome" id="racWelcome">
+      <div class="rac-welcome-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      </div>
+      <p id="racWelcomeMsg">How can I help you today?</p>
+    </div>
+  </div>
+
+  {# Typing indicator #}
+  <div class="rac-typing" id="racTyping" hidden>
+    <div class="rac-bubble rac-bubble--ai">
+      <span class="rac-typing-dot"></span>
+      <span class="rac-typing-dot"></span>
+      <span class="rac-typing-dot"></span>
+    </div>
+  </div>
+
+  {# Quick commands #}
+  <div class="rac-quick" id="racQuick">
+    <div class="rac-quick-chips" id="racQuickChips"></div>
+  </div>
+
+  {# Input bar #}
+  <div class="rac-input-bar">
+    <textarea
+      id="racInput"
+      class="rac-input"
+      rows="1"
+      placeholder="Ask Ravlo AI anything…"
+      aria-label="Message"
+    ></textarea>
+    <button type="button" class="rac-send" id="racSend" onclick="racSend()" aria-label="Send">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"/>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
+  </div>
+
+</div>
+
+<style>
+/* ══ Ravlo AI Chat ════════════════════════════════════════════════ */
+
+/* FAB */
+.rac-fab-wrap {
+  position: fixed;
+  right: 22px;
+  bottom: {% if rac_stacked %}84px{% else %}22px{% endif %};
+  z-index: 9800;
+}
+.rac-fab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 17px;
+  background: linear-gradient(135deg, #3b82f6, #6d28d9);
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  font-size: .88rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(59,130,246,.38), 0 2px 8px rgba(0,0,0,.3);
+  transition: transform .15s, box-shadow .15s;
+  position: relative;
+}
+.rac-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 34px rgba(59,130,246,.42), 0 2px 8px rgba(0,0,0,.3);
+}
+.rac-fab.rac-open { border-radius: 999px; }
+.rac-fab-label { letter-spacing: .01em; }
+.rac-unread {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 2px solid #0d1117;
+  animation: rac-ping 1.5s ease-in-out infinite;
+}
+@keyframes rac-ping {
+  0%,100%{ transform:scale(1); opacity:1; }
+  50%    { transform:scale(1.4); opacity:.7; }
+}
+
+/* Panel */
+.rac-panel {
+  position: fixed;
+  right: 22px;
+  bottom: 84px;
+  width: min(420px, calc(100vw - 32px));
+  height: min(580px, calc(100vh - 110px));
+  background: rgba(10, 14, 23, 0.97);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 20px;
+  z-index: 9801;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,.55), 0 0 0 1px rgba(59,130,246,.15);
+  backdrop-filter: blur(20px);
+  transform: translateY(12px) scale(.97);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .2s cubic-bezier(.16,1,.3,1), opacity .18s ease;
+}
+.rac-panel.rac-open {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Header */
+.rac-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  flex-shrink: 0;
+}
+.rac-header-left  { display: flex; align-items: center; gap: 10px; }
+.rac-avatar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(59,130,246,.25), rgba(109,40,217,.25));
+  border: 1px solid rgba(59,130,246,.3);
+  color: #93c5fd;
+  flex-shrink: 0;
+}
+.rac-header-title {
+  font-size: .9rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+.rac-header-sub {
+  font-size: .72rem;
+  color: rgba(255,255,255,.45);
+  margin-top: 3px;
+}
+.rac-header-actions { display: flex; gap: 4px; }
+.rac-icon-btn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: rgba(255,255,255,.5);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.rac-icon-btn:hover { background: rgba(255,255,255,.08); color: #fff; }
+
+/* Messages */
+.rac-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 14px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior: smooth;
+}
+.rac-messages::-webkit-scrollbar { width: 4px; }
+.rac-messages::-webkit-scrollbar-track { background: transparent; }
+.rac-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
+
+/* Welcome state */
+.rac-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  text-align: center;
+  padding: 20px;
+  color: rgba(255,255,255,.4);
+  gap: 12px;
+  min-height: 120px;
+}
+.rac-welcome-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(59,130,246,.15), rgba(109,40,217,.15));
+  border: 1px solid rgba(59,130,246,.2);
+  color: #93c5fd;
+}
+.rac-welcome p { margin: 0; font-size: .87rem; line-height: 1.5; }
+
+/* Message rows */
+.rac-msg-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.rac-msg-row--user {
+  flex-direction: row-reverse;
+}
+.rac-msg-row--ai {
+  flex-direction: row;
+}
+.rac-msg-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: .7rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.rac-msg-avatar--ai   { background: rgba(59,130,246,.2); color: #93c5fd; }
+.rac-msg-avatar--user { background: rgba(109,40,217,.2); color: #c4b5fd; }
+
+.rac-bubble {
+  max-width: 82%;
+  padding: 9px 12px;
+  border-radius: 14px;
+  font-size: .84rem;
+  line-height: 1.55;
+}
+.rac-bubble--ai {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.08);
+  color: rgba(255,255,255,.9);
+  border-bottom-left-radius: 4px;
+}
+.rac-bubble--user {
+  background: linear-gradient(135deg, rgba(59,130,246,.22), rgba(109,40,217,.22));
+  border: 1px solid rgba(59,130,246,.2);
+  color: #e0e7ff;
+  border-bottom-right-radius: 4px;
+  text-align: right;
+}
+
+/* Typing indicator */
+.rac-typing {
+  padding: 4px 14px 6px;
+  flex-shrink: 0;
+}
+.rac-typing .rac-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+}
+.rac-typing-dot {
+  width: 6px; height: 6px;
+  background: rgba(255,255,255,.5);
+  border-radius: 50%;
+  animation: rac-bounce .9s ease-in-out infinite;
+  display: inline-block;
+}
+.rac-typing-dot:nth-child(2) { animation-delay: .18s; }
+.rac-typing-dot:nth-child(3) { animation-delay: .36s; }
+@keyframes rac-bounce {
+  0%,80%,100%{ transform:translateY(0); }
+  40%        { transform:translateY(-5px); }
+}
+
+/* Quick commands */
+.rac-quick {
+  padding: 6px 12px 4px;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.rac-quick-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.rac-quick-chips::-webkit-scrollbar { display: none; }
+.rac-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 999px;
+  color: rgba(255,255,255,.65);
+  font-size: .74rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.rac-chip:hover {
+  background: rgba(59,130,246,.15);
+  border-color: rgba(59,130,246,.35);
+  color: #93c5fd;
+}
+
+/* Input bar */
+.rac-input-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  flex-shrink: 0;
+}
+.rac-input {
+  flex: 1;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  color: #fff;
+  font-size: .86rem;
+  line-height: 1.5;
+  padding: 9px 12px;
+  resize: none;
+  outline: none;
+  max-height: 120px;
+  overflow-y: auto;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+.rac-input::placeholder { color: rgba(255,255,255,.35); }
+.rac-input:focus { border-color: rgba(59,130,246,.5); box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+.rac-send {
+  width: 36px; height: 36px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #3b82f6, #6d28d9);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity .12s, transform .1s;
+}
+.rac-send:hover   { opacity: .9; transform: scale(1.05); }
+.rac-send:disabled{ opacity: .5; transform: none; cursor: not-allowed; }
+
+@media (max-width: 500px) {
+  .rac-fab-wrap { right: 14px; bottom: {% if rac_stacked %}76px{% else %}14px{% endif %}; }
+  .rac-panel    { right: 14px; bottom: {% if rac_stacked %}138px{% else %}76px{% endif %}; width: calc(100vw - 28px); }
+}
+</style>
+
+<script>
+(function(){
+  const CHAT_URL = "{{ url_for('admin.ai_chat') }}";
+  const USER_ROLE = "{{ (current_user.role or '') | lower }}";
+  const USER_NAME = "{{ current_user.first_name or current_user.username or '' }}";
+
+  var _history = [];   // [{role:"user"|"assistant", content:"..."}]
+  var _loading = false;
+  var _open    = false;
+
+  // ── Quick commands per role ────────────────────────────────────────
+  var QUICK_CMDS = {
+    admin: [
+      { label: "📋 What needs attention?",   msg: "What are the most important things that need my attention right now on the Ravlo platform?" },
+      { label: "✉️ Draft partner invite",    msg: "Help me draft a short email inviting an external contractor to join the Ravlo network." },
+      { label: "📊 Platform overview",       msg: "Give me a quick overview of key admin tasks and what to focus on today." },
+      { label: "🤝 Investor follow-up tip",  msg: "What's the best way to follow up with an investor whose partner request is still open?" },
+      { label: "🚀 Onboarding a partner",    msg: "Walk me through the steps to onboard a new external partner into Ravlo." },
+    ],
+    platform_admin: null,   // falls back to admin
+    master_admin:   null,
+    executive:      null,
+    lending_admin:  null,
+    investor: [
+      { label: "🏠 Analyze a deal",          msg: "How do I quickly analyze whether a property is worth pursuing for a flip or rental?" },
+      { label: "💰 ARV formula",             msg: "Explain the ARV formula and how to use it for a rehab deal." },
+      { label: "🔨 Find a contractor",       msg: "What should I look for when choosing a contractor for a rehab project?" },
+      { label: "📈 Market analysis tip",     msg: "How do I run a quick market analysis for a zip code I'm targeting?" },
+      { label: "🏦 Hard money basics",       msg: "Give me a quick breakdown of how hard money loans work for real estate investors." },
+    ],
+    default: [
+      { label: "❓ How can you help me?",    msg: "What can you help me with on the Ravlo platform?" },
+      { label: "📋 My tasks today",          msg: "What should I focus on today?" },
+      { label: "🔍 Platform tips",           msg: "Give me 3 tips for getting the most out of Ravlo." },
+    ],
+  };
+
+  var SUBLINES = {
+    admin:    "Admin & executive assistant",
+    platform_admin: "Admin & executive assistant",
+    master_admin:   "Admin & executive assistant",
+    executive:      "Admin & executive assistant",
+    investor: "Real estate investment assistant",
+    default:  "Your platform assistant",
+  };
+
+  function _getRoleKey() {
+    if (["admin","platform_admin","master_admin","lending_admin","executive"].includes(USER_ROLE)) return "admin";
+    if (USER_ROLE === "investor") return "investor";
+    return "default";
+  }
+
+  function _getQuickCmds() {
+    return QUICK_CMDS[_getRoleKey()] || QUICK_CMDS.default;
+  }
+
+  // ── DOM helpers ────────────────────────────────────────────────────
+  function el(id)  { return document.getElementById(id); }
+  function _esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Simple markdown-ish: bold, line breaks
+  function _fmt(s) {
+    return _esc(s)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+  }
+
+  // ── Toggle ─────────────────────────────────────────────────────────
+  window.racToggle = function() { _open ? racClose() : racOpen(); };
+
+  window.racOpen = function() {
+    _open = true;
+    el('racPanel').classList.add('rac-open');
+    el('racPanel').setAttribute('aria-hidden','false');
+    el('racFab').setAttribute('aria-expanded','true');
+    el('racFab').classList.add('rac-open');
+    el('racFab').querySelector('.rac-fab-icon').style.display = 'none';
+    el('racFab').querySelector('.rac-fab-icon--close').style.display = '';
+    el('racUnread').hidden = true;
+    setTimeout(function(){ var i = el('racInput'); if (i) i.focus(); }, 120);
+  };
+
+  window.racClose = function() {
+    _open = false;
+    el('racPanel').classList.remove('rac-open');
+    el('racPanel').setAttribute('aria-hidden','true');
+    el('racFab').setAttribute('aria-expanded','false');
+    el('racFab').classList.remove('rac-open');
+    el('racFab').querySelector('.rac-fab-icon').style.display = '';
+    el('racFab').querySelector('.rac-fab-icon--close').style.display = 'none';
+  };
+
+  // ── Clear ──────────────────────────────────────────────────────────
+  window.racClear = function() {
+    _history = [];
+    el('racMessages').innerHTML = el('racWelcome') ? '' : '';
+    el('racMessages').innerHTML =
+      '<div class="rac-welcome" id="racWelcome">' +
+        '<div class="rac-welcome-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>' +
+        '<p>' + _getWelcomeMsg() + '</p>' +
+      '</div>';
+  };
+
+  function _getWelcomeMsg() {
+    var n = USER_NAME || 'there';
+    if (_getRoleKey() === 'admin')    return 'Hi ' + _esc(n) + '! Ask me about partner leads, investor requests, email drafts, or anything platform-related.';
+    if (_getRoleKey() === 'investor') return 'Hi ' + _esc(n) + '! Ask me about deal analysis, rehab budgets, market research, or finding partners.';
+    return 'Hi ' + _esc(n) + '! How can I help you today?';
+  }
+
+  // ── Append message bubbles ─────────────────────────────────────────
+  function _appendMsg(role, content) {
+    var welcome = el('racWelcome');
+    if (welcome) welcome.remove();
+
+    var msgs = el('racMessages');
+    var row  = document.createElement('div');
+    row.className = 'rac-msg-row rac-msg-row--' + role;
+
+    var avatarHtml = role === 'ai'
+      ? '<div class="rac-msg-avatar rac-msg-avatar--ai"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>'
+      : '<div class="rac-msg-avatar rac-msg-avatar--user">' + _esc((USER_NAME||'U').charAt(0).toUpperCase()) + '</div>';
+
+    var bubble = '<div class="rac-bubble rac-bubble--' + role + '">' + _fmt(content) + '</div>';
+
+    row.innerHTML = role === 'ai'
+      ? avatarHtml + bubble
+      : bubble + avatarHtml;
+
+    msgs.appendChild(row);
+    msgs.scrollTop = msgs.scrollHeight;
+    return row;
+  }
+
+  // ── Send ───────────────────────────────────────────────────────────
+  window.racSend = function(overrideMsg) {
+    if (_loading) return;
+    var input = el('racInput');
+    var msg   = (overrideMsg || (input ? input.value : '') || '').trim();
+    if (!msg) return;
+
+    if (input && !overrideMsg) input.value = '';
+    _autoResize();
+
+    _appendMsg('user', msg);
+    _history.push({ role: 'user', content: msg });
+    _setLoading(true);
+
+    // Hide quick chips after first message
+    el('racQuickChips').style.display = 'none';
+
+    fetch(CHAT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ message: msg, history: _history.slice(0, -1) }),
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      _setLoading(false);
+      var reply = (d && d.reply) ? d.reply : 'Sorry, something went wrong.';
+      _appendMsg('ai', reply);
+      _history.push({ role: 'assistant', content: reply });
+      if (!_open) { el('racUnread').hidden = false; }
+    })
+    .catch(function(){
+      _setLoading(false);
+      _history.pop(); // remove orphaned user message so history stays consistent
+      _appendMsg('ai', 'Network error — please check your connection and try again.');
+    });
+  };
+
+  function _setLoading(on) {
+    _loading = on;
+    var typing = el('racTyping');
+    if (typing) typing.hidden = !on;
+    var send = el('racSend');
+    if (send) send.disabled = on;
+    if (!on && el('racMessages')) el('racMessages').scrollTop = el('racMessages').scrollHeight;
+  }
+
+  // ── Auto-resize textarea ───────────────────────────────────────────
+  function _autoResize() {
+    var ta = el('racInput');
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function(){
+    // Subline
+    var sub = el('racSubline');
+    if (sub) sub.textContent = SUBLINES[_getRoleKey()] || SUBLINES.default;
+
+    // Welcome message
+    var wm = el('racWelcome');
+    if (wm) {
+      var p = wm.querySelector('p');
+      if (p) p.innerHTML = _getWelcomeMsg();
+    }
+
+    // Quick chips
+    var chips = el('racQuickChips');
+    if (chips) {
+      (_getQuickCmds() || []).forEach(function(cmd){
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'rac-chip';
+        btn.textContent = cmd.label;
+        btn.onclick = function(){
+          el('racInput').value = '';
+          racSend(cmd.msg);
+        };
+        chips.appendChild(btn);
+      });
+    }
+
+    // Keyboard
+    var input = el('racInput');
+    if (input) {
+      input.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          racSend();
+        }
+      });
+      input.addEventListener('input', _autoResize);
+    }
+
+    // Close on escape
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && _open) racClose();
+    });
+
+    // Click outside to close
+    el('racPanel') && el('racPanel').addEventListener('click', function(e){ e.stopPropagation(); });
+    document.addEventListener('click', function(e){
+      if (_open && !el('racFabWrap').contains(e.target) && !el('racPanel').contains(e.target)) {
+        racClose();
+      }
+    });
+  });
+})();
+</script>

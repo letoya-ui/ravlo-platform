@@ -59,6 +59,7 @@
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -75,6 +76,17 @@
                 <span class="badge badge-info">
                   {{ get_role_display(user.role) }}
                 </span>
+              </td>
+              <td>
+                {% if user.id != current_user.id %}
+                <form method="post" action="{{ url_for('admin.remove_team_member', company_id=company.id, user_id=user.id) }}" style="margin:0;"
+                      onsubmit="return confirm('Remove {{ ((user.first_name or '') ~ ' ' ~ (user.last_name or '')).strip() or user.email }} from {{ company.name }}?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="re-btn ghost sm" style="color:var(--danger,#f87171);">Remove</button>
+                </form>
+                {% else %}
+                  <span class="text-muted" style="font-size:.8rem;">You</span>
+                {% endif %}
               </td>
             </tr>
             {% endfor %}
@@ -132,10 +144,18 @@
               <td>{{ invite.expires_at.strftime("%Y-%m-%d") if invite.expires_at else "—" }}</td>
               <td>
                 {% if invite.status != "accepted" %}
-                  <form method="post" action="{{ url_for('admin.resend_team_invite', company_id=company.id, invite_id=invite.id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="re-btn ghost sm">Resend</button>
-                  </form>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <form method="post" action="{{ url_for('admin.resend_team_invite', company_id=company.id, invite_id=invite.id) }}" style="margin:0;">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="re-btn ghost sm">Resend</button>
+                    </form>
+                    <form method="post" action="{{ url_for('admin.delete_team_invite', company_id=company.id, invite_id=invite.id) }}" style="margin:0;"
+                          onsubmit="return confirm('Cancel invite for {{ invite.email }}?')">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="next" value="{{ url_for('admin.company_team', company_id=company.id) }}">
+                      <button type="submit" class="re-btn ghost sm" style="color:var(--danger,#f87171);">Cancel</button>
+                    </form>
+                  </div>
                 {% else %}
                   <span class="badge badge-neutral">Complete</span>
                 {% endif %}
