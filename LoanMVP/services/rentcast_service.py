@@ -125,7 +125,7 @@ def normalize_rentcast_sale_listing(item: Dict[str, Any]) -> Dict[str, Any]:
     photo_list: List[str] = []
 
     def collect_photos(value: Any, depth: int = 0) -> None:
-        if not value or depth > 8:
+        if not value or depth > 3:
             return
         if isinstance(value, str):
             stripped = value.strip()

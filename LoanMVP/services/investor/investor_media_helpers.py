@@ -84,7 +84,7 @@ def _normalize_photo_list(value, _depth: int = 0) -> list[str]:
     if not value:
         return photos
 
-    if _depth > 8:
+    if _depth > 3:
         return photos
 
     # Keys that hold a direct image URL inside a photo dict, ordered by
