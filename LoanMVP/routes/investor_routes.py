@@ -20,6 +20,7 @@ from urllib.parse import urlencode, urlparse, quote_plus
 
 import requests
 
+from LoanMVP.utils.safe_http import safe_call
 from openai import OpenAI
 from PIL import Image, ImageOps, ImageStat
 from reportlab.pdfgen import canvas
@@ -793,7 +794,8 @@ def _download_streetview_image_bytes(source_url: str) -> bytes | None:
 
     sep = "&" if "?" in source_url else "?"
     try:
-        res = requests.get(
+        res = safe_call(
+            requests.get,
             f"{source_url}{sep}key={google_key}",
             timeout=15,
             headers={
@@ -4448,10 +4450,10 @@ def api_property_tool_image():
         source_url = f"{source_url}{sep}key={google_key}"
 
     try:
-        upstream = requests.get(
+        upstream = safe_call(
+            requests.get,
             source_url,
             timeout=12,
-            stream=True,
             headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
                 "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",

@@ -879,6 +879,7 @@ def ai_leads():
         # Call the Backend Lead Engine
         # -----------------------------
         import os, requests
+        from LoanMVP.utils.safe_http import safe_call
 
         ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL")
         api_key = (os.getenv("RENOVATION_API_KEY") or "").strip()
@@ -893,7 +894,8 @@ def ai_leads():
 
         generated = []
         try:
-            resp = requests.post(
+            resp = safe_call(
+                requests.post,
                 f"{ENGINE_URL}/lead-engine/ai_leads",
                 json=payload,
                 headers=headers,
@@ -1087,6 +1089,7 @@ def leads():
 def lead_capture():
     import os
     import requests
+    from LoanMVP.utils.safe_http import safe_call
 
     ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL")
     api_key = (os.getenv("RENOVATION_API_KEY") or "").strip()
@@ -1095,7 +1098,8 @@ def lead_capture():
     incoming = request.get_json(silent=True) or {}
 
     try:
-        resp = requests.post(
+        resp = safe_call(
+            requests.post,
             f"{ENGINE_URL}/lead-engine/capture",
             json=incoming,
             headers=headers,

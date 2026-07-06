@@ -8,6 +8,8 @@ from urllib.parse import urlencode, quote
 import requests
 from flask import session
 
+from LoanMVP.utils.safe_http import safe_call
+
 
 CANVA_AUTH_BASE = "https://www.canva.com/api/oauth/authorize"
 CANVA_TOKEN_URL = "https://api.canva.com/rest/v1/oauth/token"
@@ -74,7 +76,8 @@ def exchange_code_for_tokens(code: str):
 
     auth = (client_id, client_secret) if client_secret else None
 
-    response = requests.post(
+    response = safe_call(
+        requests.post,
         CANVA_TOKEN_URL,
         data=payload,
         auth=auth,
@@ -107,7 +110,8 @@ def refresh_access_token(refresh_token: str):
 
     auth = (client_id, client_secret) if client_secret else None
 
-    response = requests.post(
+    response = safe_call(
+        requests.post,
         CANVA_TOKEN_URL,
         data=payload,
         auth=auth,
@@ -157,7 +161,8 @@ def create_design(access_token: str, title: str = "Ravlo Design",
         "title": title,
     }
 
-    response = requests.post(
+    response = safe_call(
+        requests.post,
         url,
         json=payload,
         headers=canva_headers(access_token),
@@ -167,7 +172,8 @@ def create_design(access_token: str, title: str = "Ravlo Design",
     # If the preset name isn't supported, fall back to a generic flyer
     if response.status_code == 400 and design_preset != "flyer_a4":
         payload["design_type"]["name"] = "flyer_a4"
-        response = requests.post(
+        response = safe_call(
+            requests.post,
             url, json=payload, headers=canva_headers(access_token), timeout=30,
         )
 
@@ -178,7 +184,8 @@ def create_design(access_token: str, title: str = "Ravlo Design",
 def get_design(access_token: str, design_id: str):
     url = f"{CANVA_API_BASE}/designs/{design_id}"
 
-    response = requests.get(
+    response = safe_call(
+        requests.get,
         url,
         headers=canva_headers(access_token),
         timeout=30,
@@ -191,7 +198,8 @@ def list_designs(access_token: str, ownership: str = "owned"):
     url = f"{CANVA_API_BASE}/designs"
     params = {"ownership": ownership}
 
-    response = requests.get(
+    response = safe_call(
+        requests.get,
         url,
         params=params,
         headers=canva_headers(access_token),
@@ -211,7 +219,8 @@ def create_export_job(access_token: str, design_id: str, export_type: str = "pdf
         }
     }
 
-    response = requests.post(
+    response = safe_call(
+        requests.post,
         url,
         json=payload,
         headers=canva_headers(access_token),
@@ -224,7 +233,8 @@ def create_export_job(access_token: str, design_id: str, export_type: str = "pdf
 def get_export_job(access_token: str, job_id: str):
     url = f"{CANVA_API_BASE}/exports/{job_id}"
 
-    response = requests.get(
+    response = safe_call(
+        requests.get,
         url,
         headers=canva_headers(access_token),
         timeout=30,

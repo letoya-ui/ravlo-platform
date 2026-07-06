@@ -26,6 +26,7 @@ def _safe_float(value):
 from LoanMVP.services.dealfinder_normalizer import normalize_property
 from LoanMVP.services.dealfinder_scoring import compute_deal_score
 import requests
+from LoanMVP.utils.safe_http import safe_call
 
 RENTCAST_API_KEY = os.getenv("RENTCAST_API_KEY", "").strip()
 
@@ -267,7 +268,7 @@ def get_rentcast_data(address, city, state, zip_code):
             "X-Api-Key": RENTCAST_API_KEY
         }
 
-        res = requests.get(url, headers=headers, params=params, timeout=10)
+        res = safe_call(requests.get, url, headers=headers, params=params, timeout=10)
 
         if res.status_code != 200:
             return None

@@ -3,6 +3,8 @@ import requests
 from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse
 
+from LoanMVP.utils.safe_http import safe_call
+
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
 RAPIDAPI_HOST = os.getenv(
     "REALTOR_RAPIDAPI_HOST",
@@ -301,7 +303,8 @@ def search_realtor_for_sale(
     }
 
     try:
-        resp = requests.get(
+        resp = safe_call(
+            requests.get,
             REALTOR_SEARCH_URL,
             headers=_headers(host=_host_for_url(REALTOR_SEARCH_URL, RAPIDAPI_HOST)),
             params=params,
@@ -354,7 +357,8 @@ def fetch_realtor_data(
         return None
 
     try:
-        resp = requests.get(
+        resp = safe_call(
+            requests.get,
             REALTOR_DETAIL_URL,
             params={"address": location_query},
             headers=_headers(host=_host_for_url(REALTOR_DETAIL_URL, RAPIDAPI_HOST)),
@@ -420,7 +424,8 @@ def fetch_realtor_photos(property_id: str | int | None) -> List[str]:
         return []
 
     try:
-        resp = requests.get(
+        resp = safe_call(
+            requests.get,
             REALTOR_PHOTOS_URL,
             headers=_headers(host=_host_for_url(REALTOR_PHOTOS_URL, RAPIDAPI_HOST)),
             params={"id": str(property_id)},
@@ -448,7 +453,8 @@ def fetch_realtor_estimate(property_id: str | int | None) -> Dict[str, Any]:
         return {}
 
     try:
-        resp = requests.get(
+        resp = safe_call(
+            requests.get,
             REALTOR_ESTIMATES_URL,
             headers=_headers(host=_host_for_url(REALTOR_ESTIMATES_URL, RAPIDAPI_HOST)),
             params={"id": str(property_id)},

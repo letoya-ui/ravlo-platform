@@ -4,6 +4,8 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from LoanMVP.utils.safe_http import safe_call
+
 
 class MashvisorError(Exception):
     pass
@@ -51,7 +53,8 @@ class MashvisorClient:
         url = self._build_url(endpoint)
 
         try:
-            response = self.session.get(
+            response = safe_call(
+                self.session.get,
                 url,
                 params=clean_params,
                 timeout=self.config.timeout_seconds,
@@ -99,7 +102,8 @@ class MashvisorClient:
         url = self._build_url("property")
 
         try:
-            response = self.session.get(
+            response = safe_call(
+                self.session.get,
                 url,
                 params=clean_params,
                 timeout=self.config.timeout_seconds,

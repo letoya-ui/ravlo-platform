@@ -3,6 +3,7 @@ import uuid
 import base64
 import requests
 from flask import current_app
+from LoanMVP.utils.safe_http import safe_call
 
 
 def save_ai_image(base64_str, folder="uploads/studios"):
@@ -42,7 +43,7 @@ def transform_image_style(image_path, style_prompt):
 
         AI_URL = "http://localhost:5001/ai/image/transform"
 
-        resp = requests.post(AI_URL, json=payload, timeout=120)
+        resp = safe_call(requests.post, AI_URL, json=payload, timeout=120)
         resp.raise_for_status()
 
         data = resp.json()

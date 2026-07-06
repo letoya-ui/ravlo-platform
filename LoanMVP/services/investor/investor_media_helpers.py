@@ -8,6 +8,8 @@ import base64
 import requests
 from io import BytesIO
 from urllib.parse import urlparse, parse_qs
+
+from LoanMVP.utils.safe_http import safe_call
 try:
     from PIL import Image as _PILImage
     Image = _PILImage
@@ -290,7 +292,7 @@ def download_image_bytes(url: str) -> bytes | None:
         logger.info("Skipping non-image URL: %s", url[:200])
         return None
     try:
-        res = requests.get(url, timeout=15, headers=_BROWSER_HEADERS)
+        res = safe_call(requests.get, url, timeout=15, headers=_BROWSER_HEADERS)
         if not res.ok:
             logger.info("Image download returned %s for %s", res.status_code, url[:200])
             return None

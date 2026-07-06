@@ -2,6 +2,8 @@ import os
 import requests
 import logging
 
+from LoanMVP.utils.safe_http import safe_call
+
 class EquifaxAPI:
     def __init__(self):
         self.api_key = os.getenv("EQUIFAX_SANDBOX_KEY")
@@ -35,7 +37,8 @@ class EquifaxAPI:
         }
 
         try:
-            response = requests.post(
+            response = safe_call(
+                requests.post,
                 self.endpoint,
                 json=payload,
                 headers=headers,

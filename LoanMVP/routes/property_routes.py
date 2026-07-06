@@ -11,6 +11,7 @@ from LoanMVP.services.property_dto import to_property_card_dto
 from LoanMVP.services.resolver_metrics import get_metrics_snapshot
 from LoanMVP.ai import AIAssistant
 import requests
+from LoanMVP.utils.safe_http import safe_call
 
 property_bp = Blueprint("property", __name__, url_prefix="/property")
 
@@ -76,7 +77,7 @@ def autocomplete():
     }
 
     try:
-        resp = requests.get(url, params=params, timeout=5)
+        resp = safe_call(requests.get, url, params=params, timeout=5)
         data = resp.json()
     except Exception:
         return jsonify({"predictions": []})

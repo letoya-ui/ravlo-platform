@@ -10,6 +10,8 @@ _log = logging.getLogger(__name__)
 import requests
 from flask import current_app
 
+from LoanMVP.utils.safe_http import safe_call
+
 
 def _clean_url_env(name: str, default: str = "") -> str:
     """Read a URL env-var, stripping stray quotes that break requests."""
@@ -199,7 +201,7 @@ def _post_renovation_engine_json(path, payload, timeout=RENDER_TIMEOUT, max_atte
 
     for attempt in range(1, max(1, max_attempts) + 1):
         try:
-            res = requests.post(url, json=payload, headers=headers, timeout=timeout)
+            res = safe_call(requests.post, url, json=payload, headers=headers, timeout=timeout)
         except requests.Timeout as e:
             last_error = RuntimeError(_friendly_engine_timeout_message(url, timeout, e))
             _log_engine_attempt(
@@ -308,7 +310,8 @@ def _post_renovation_engine_multipart(path, files, data, timeout=UPLOAD_TIMEOUT,
 
     for attempt in range(1, max(1, max_attempts) + 1):
         try:
-            res = requests.post(
+            res = safe_call(
+                requests.post,
                 url,
                 files=files,
                 data=data,
@@ -407,7 +410,8 @@ def _post_renovation_engine_multipart(path, files, data, timeout=UPLOAD_TIMEOUT,
 def _post_scope_engine_json(path, payload, timeout=SCOPE_TIMEOUT):
     url = _scope_engine_url(path)
     try:
-        res = requests.post(
+        res = safe_call(
+            requests.post,
             url,
             json=payload,
             headers=_scope_engine_headers(),

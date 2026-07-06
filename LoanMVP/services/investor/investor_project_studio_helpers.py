@@ -245,6 +245,7 @@ def _project_studio_strategy_cards(snapshot: dict, engine_data: dict | None) -> 
 def _call_deal_architect(payload: dict) -> dict:
     import logging
     import requests
+    from LoanMVP.utils.safe_http import safe_call
 
     log = logging.getLogger(__name__)
 
@@ -257,7 +258,8 @@ def _call_deal_architect(payload: dict) -> dict:
             headers["X-API-Key"] = api_key
 
         try:
-            resp = requests.post(
+            resp = safe_call(
+                requests.post,
                 f"{engine_url}/v1/deal_architect",
                 json=payload,
                 headers=headers,

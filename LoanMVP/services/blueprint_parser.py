@@ -7,6 +7,8 @@ import requests
 from io import BytesIO
 from PIL import Image
 
+from LoanMVP.utils.safe_http import safe_call
+
 def extract_blueprint_structure(blueprint_url: str):
     img = _load_image(blueprint_url)
     h, w = img.shape[:2]
@@ -81,7 +83,7 @@ def extract_blueprint_structure(blueprint_url: str):
     }
 
 def _load_image(url: str):
-    r = requests.get(url, timeout=20)
+    r = safe_call(requests.get, url, timeout=20)
     r.raise_for_status()
     img = Image.open(BytesIO(r.content)).convert("RGB")
     arr = np.array(img)

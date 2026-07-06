@@ -16,6 +16,8 @@ import uuid
 import requests
 from datetime import datetime
 
+from LoanMVP.utils.safe_http import safe_call
+
 
 AI_ENGINE_BASE_URL = os.getenv("RENOVATION_ENGINE_URL", "http://localhost:8000")
 AI_ENGINE_API_KEY = os.getenv("RENOVATION_ENGINE_API_KEY", "")
@@ -29,7 +31,7 @@ def _post_engine(path, payload, timeout=240):
         headers["x-api-key"] = AI_ENGINE_API_KEY
 
     try:
-        res = requests.post(url, json=payload, headers=headers, timeout=timeout)
+        res = safe_call(requests.post, url, json=payload, headers=headers, timeout=timeout)
         res.raise_for_status()
         return res.json()
     except Exception as exc:

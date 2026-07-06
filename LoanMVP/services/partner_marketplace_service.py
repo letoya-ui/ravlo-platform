@@ -3,6 +3,8 @@
 import os
 import requests
 
+from LoanMVP.utils.safe_http import safe_call
+
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "").strip()
 
 
@@ -30,7 +32,8 @@ def get_place_details(place_id):
         return {}
     url = "https://maps.googleapis.com/maps/api/place/details/json"
     try:
-        res = requests.get(
+        res = safe_call(
+            requests.get,
             url,
             params={
                 "place_id": place_id,
@@ -58,7 +61,8 @@ def search_google_places(location_text, category, limit=8):
     query = f"{category} near {location_text}"
 
     try:
-        res = requests.get(
+        res = safe_call(
+            requests.get,
             url,
             params={"query": query, "key": GOOGLE_API_KEY},
             timeout=20,

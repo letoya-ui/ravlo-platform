@@ -2,6 +2,8 @@ import os
 import requests
 from typing import Optional, Dict, Any
 
+from LoanMVP.utils.safe_http import safe_call
+
 RENTCAST_API_KEY = os.getenv("RENTCAST_API_KEY")
 
 def fetch_rentcast_data(address: str, city: str, state: str, zip_code: str = "") -> Optional[Dict[str, Any]]:
@@ -20,7 +22,7 @@ def fetch_rentcast_data(address: str, city: str, state: str, zip_code: str = "")
             "X-Api-Key": RENTCAST_API_KEY
         }
 
-        res = requests.get(url, headers=headers, params=params, timeout=10)
+        res = safe_call(requests.get, url, headers=headers, params=params, timeout=10)
 
         if not res.ok:
             print("RentCast Provider Error:", res.text[:300])

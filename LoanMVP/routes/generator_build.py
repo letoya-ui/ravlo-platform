@@ -21,6 +21,7 @@ from LoanMVP.services.investor.investor_project_studio_helpers import (
     _set_deal_results,
 )
 from LoanMVP.utils.decorators import role_required
+from LoanMVP.utils.safe_http import safe_call
 
 
 generator_build_bp = Blueprint(
@@ -790,7 +791,8 @@ def _post_build_generate(engine_url, spec):
     if api_key:
         headers["X-API-Key"] = api_key
 
-    return session.post(
+    return safe_call(
+        session.post,
         f"{engine_url}/api/generator/build/generate",
         json={"spec": spec},
         headers=headers,

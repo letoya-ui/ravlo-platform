@@ -2,6 +2,8 @@ import os
 import requests
 from typing import Any, Dict, List, Optional
 
+from LoanMVP.utils.safe_http import safe_call
+
 
 ATTOM_API_KEY = os.getenv("ATTOM_API_KEY", "").strip()
 ATTOM_BASE_URL = os.getenv("ATTOM_BASE_URL", "https://api.gateway.attomdata.com/propertyapi/v1.0.0").strip()
@@ -64,7 +66,8 @@ def _to_int(value: Any) -> Optional[int]:
 def _request_attom(path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     url = f"{ATTOM_BASE_URL.rstrip('/')}/{path.lstrip('/')}"
     try:
-        res = requests.get(
+        res = safe_call(
+            requests.get,
             url,
             headers=_attom_headers(),
             params=params or {},

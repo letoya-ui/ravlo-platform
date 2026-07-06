@@ -3,6 +3,8 @@
 import requests
 import os
 
+from LoanMVP.utils.safe_http import safe_call
+
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 def search_external_partners(location, service):
@@ -15,7 +17,7 @@ def search_external_partners(location, service):
         "key": GOOGLE_API_KEY
     }
 
-    res = requests.get(url, params=params)
+    res = safe_call(requests.get, url, params=params)
     data = res.json()
 
     results = []

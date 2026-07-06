@@ -1,6 +1,8 @@
 from flask import current_app
 import requests
 
+from LoanMVP.utils.safe_http import safe_call
+
 
 class PropertyToolError(Exception):
     pass
@@ -98,7 +100,8 @@ def _attom_headers():
 def _attom_get(path: str, params: dict | None = None) -> dict:
     url = f"{_attom_base_url()}/{path.lstrip('/')}"
     try:
-        res = requests.get(
+        res = safe_call(
+            requests.get,
             url,
             headers=_attom_headers(),
             params=params or {},

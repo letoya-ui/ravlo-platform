@@ -739,7 +739,9 @@ def email_callback():
 
         # Get user's email from Google
         import requests as http_requests
-        info_resp = http_requests.get(
+        from LoanMVP.utils.safe_http import safe_call
+        info_resp = safe_call(
+            http_requests.get,
             "https://www.googleapis.com/oauth2/v2/userinfo",
             headers={"Authorization": f"Bearer {creds.token}"},
             timeout=8,
@@ -805,6 +807,7 @@ def email_sync():
         from google.oauth2.credentials import Credentials
         from google.auth.transport.requests import Request as GRequest
         import requests as http_requests
+        from LoanMVP.utils.safe_http import safe_call
 
         creds = Credentials(
             token=conn.access_token,
@@ -820,7 +823,8 @@ def email_sync():
             db.session.commit()
 
         # Fetch last 10 messages
-        list_resp = http_requests.get(
+        list_resp = safe_call(
+            http_requests.get,
             "https://gmail.googleapis.com/gmail/v1/users/me/messages",
             headers={"Authorization": f"Bearer {creds.token}"},
             params={"maxResults": 10, "q": "is:unread"},
@@ -830,7 +834,8 @@ def email_sync():
 
         snippets = []
         for msg in messages_raw[:10]:
-            msg_resp = http_requests.get(
+            msg_resp = safe_call(
+                http_requests.get,
                 f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{msg['id']}",
                 headers={"Authorization": f"Bearer {creds.token}"},
                 params={"format": "metadata", "metadataHeaders": ["Subject", "From"]},

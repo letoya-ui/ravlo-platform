@@ -4,6 +4,8 @@ import os
 import requests
 from typing import Any, Dict, List, Optional
 
+from LoanMVP.utils.safe_http import safe_call
+
 
 RAPIDAPI_REAL_ESTATE_KEY = os.getenv("RAPIDAPI_REAL_ESTATE_KEY")
 RAPIDAPI_REAL_ESTATE_HOST = os.getenv(
@@ -123,7 +125,8 @@ def fetch_zillow_photos(
         return []
 
     try:
-        resp = requests.get(
+        resp = safe_call(
+            requests.get,
             f"{BASE_URL}/real-estate/zillow/photos/{zpid}",
             headers=_headers(),
             timeout=20,

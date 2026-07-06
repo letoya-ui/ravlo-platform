@@ -3,6 +3,8 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from LoanMVP.utils.safe_http import safe_call
+
 
 RENOVATION_ENGINE_URL = os.getenv(
     "RENOVATION_ENGINE_URL",
@@ -32,7 +34,8 @@ def _post_json(
     base_url = (api_url or RENOVATION_ENGINE_URL).rstrip("/")
 
     try:
-        response = requests.post(
+        response = safe_call(
+            requests.post,
             f"{base_url}{endpoint}",
             json=payload,
             headers=_headers(api_key),
@@ -113,7 +116,8 @@ def call_renovation_engine_upload(
         data["seed"] = str(seed)
 
     try:
-        response = requests.post(
+        response = safe_call(
+            requests.post,
             f"{api_url.rstrip('/')}{endpoint}",
             headers=headers,
             files=files,

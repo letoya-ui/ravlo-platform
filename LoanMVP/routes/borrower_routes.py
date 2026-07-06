@@ -2,6 +2,8 @@ import os
 import requests
 from datetime import datetime
 
+from LoanMVP.utils.safe_http import safe_call
+
 from flask import (
     Blueprint,
     render_template,
@@ -49,7 +51,8 @@ def _safe_request(url, params=None, timeout=20):
     """
     Small helper so your route stays clean.
     """
-    resp = requests.get(
+    resp = safe_call(
+        requests.get,
         url,
         headers=_rentcast_headers(),
         params=params or {},

@@ -12,6 +12,7 @@ import requests
 import json
 from datetime import datetime, timedelta
 
+from LoanMVP.utils.safe_http import safe_call
 from LoanMVP.extensions import db
 from LoanMVP.models.property import SavedProperty
 from LoanMVP.models.loan_models import BorrowerProfile
@@ -37,7 +38,7 @@ def get_rental_comps(address, zipcode, api_key):
             "bedrooms": 2,
         }
 
-        resp = requests.get(url, params=params, timeout=10)
+        resp = safe_call(requests.get, url, params=params, timeout=10)
         resp.raise_for_status()
         data = resp.json()
 
