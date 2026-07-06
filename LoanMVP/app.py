@@ -46,6 +46,36 @@ if SOCKETIO_ASYNC_MODE == "threading":
         engineio.async_modes = ["threading"]
         engineio.Server = engineio.server.Server
 
+if SOCKETIO_ASYNC_MODE == "eventlet":
+    # Work around a longstanding eventlet bug: GreenSSLContext doesn't
+    # properly override verify_mode/verify_flags/options, so CPython's own
+    # property setter recurses into itself infinitely when called on a
+    # GreenSSLContext instance ("RecursionError: maximum recursion depth
+    # exceeded" from ssl.py's verify_mode setter calling itself).
+    # https://github.com/eventlet/eventlet/issues/618
+    # https://github.com/eventlet/eventlet/issues/726
+    try:
+        import ssl as _stdlib_ssl
+        from eventlet.green import ssl as _green_ssl
+
+        def _rebind_ssl_context_property(prop_name):
+            real_prop = getattr(_stdlib_ssl.SSLContext, prop_name, None)
+            if real_prop is None:
+                return
+
+            def _getter(self):
+                return real_prop.__get__(self, _stdlib_ssl.SSLContext)
+
+            def _setter(self, value):
+                real_prop.__set__(self, value)
+
+            setattr(_green_ssl.GreenSSLContext, prop_name, property(_getter, _setter))
+
+        for _prop_name in ("verify_mode", "verify_flags", "options", "minimum_version", "maximum_version"):
+            _rebind_ssl_context_property(_prop_name)
+    except Exception:
+        pass
+
 
 # ---------------------------------------------------------
 # Flask Extensions (local instances)
