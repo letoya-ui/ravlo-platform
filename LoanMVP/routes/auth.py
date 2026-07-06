@@ -23,7 +23,6 @@ from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestF
 from LoanMVP.services.subscriptions import sync_features_with_subscription
 from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
 from LoanMVP.utils.decorators import PARTNER_ROLES
-from LoanMVP.utils.safe_http import safe_call
 from LoanMVP.models.user_model import User
 from LoanMVP.models.admin import AccessRequest, UserInvite, LicenseApplication, Company
 from LoanMVP.models.investor_models import InvestorProfile
@@ -476,7 +475,7 @@ def _send_welcome_email(user) -> None:
 </body>
 </html>""",
         )
-        safe_call(mail.send, msg)
+        mail.send(msg)
     except Exception as exc:
         current_app.logger.warning(
             "Welcome email failed for %s: %s", getattr(user, "email", "?"), exc
@@ -893,7 +892,7 @@ def forgot_password():
         )
 
         try:
-            safe_call(mail.send, msg)
+            mail.send(msg)
         except Exception as e:
             print("Mail error:", e)
             flash("Could not send email right now. Please try again.", "danger")

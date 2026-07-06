@@ -4,7 +4,6 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from sqlalchemy import func
 
 from LoanMVP.extensions import db, csrf, limiter
-from LoanMVP.utils.safe_http import safe_call
 from LoanMVP.models.admin import LicenseApplication
 from LoanMVP.models.user_model import User
 
@@ -378,7 +377,7 @@ def _notify_admin_contact(name: str, email: str, subject: str, message: str) -> 
             f"{message}\n\n"
             f"---\nReview at https://ravlohq.com/admin/dashboard"
         )
-        safe_call(mail.send, msg)
+        mail.send(msg)
     except Exception as e:
         current_app.logger.warning("Contact admin notification failed: %s", e)
 
@@ -580,7 +579,7 @@ def _send_lending_os_lead_confirmation(first_name: str, email: str) -> None:
           <p style="margin-top:28px;font-size:13px;color:#9ca3af;">— The Ravlo Team</p>
         </div>
         """
-        safe_call(mail.send, msg)
+        mail.send(msg)
     except Exception as e:
         print(f"[lending_os] lead confirmation email failed: {e}")
 
@@ -608,7 +607,7 @@ def _notify_admin_lending_os_lead(first_name, last_name, company, email, phone) 
             f"Follow up within 2 hours, then invite them via the admin invite system.\n"
             f"https://ravlohq.com/admin/dashboard"
         )
-        safe_call(mail.send, msg)
+        mail.send(msg)
     except Exception as e:
         print(f"[lending_os] admin notification failed: {e}")
 

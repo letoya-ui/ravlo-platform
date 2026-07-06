@@ -13,7 +13,6 @@ from werkzeug.security import generate_password_hash
 
 from LoanMVP.app import mail
 from LoanMVP.extensions import db, csrf
-from LoanMVP.utils.safe_http import safe_call
 from LoanMVP.models.user_model import User
 from LoanMVP.models.admin import SubscriptionRequest
 
@@ -182,7 +181,7 @@ def _send_preview_welcome(user: User, temp_password: str) -> None:
           </p>
         </div>
         """
-        safe_call(mail.send, msg)
+        mail.send(msg)
     except Exception as e:
         print(f"[preview] welcome email failed: {e}")
 
@@ -202,6 +201,6 @@ def _notify_admin_subscription_request(user: User, plan: str) -> None:
             f"has requested a {plan} subscription upgrade.\n\n"
             f"Review at https://ravlohq.com/admin/dashboard"
         )
-        safe_call(mail.send, msg)
+        mail.send(msg)
     except Exception as e:
         print(f"[preview] admin notification failed: {e}")
