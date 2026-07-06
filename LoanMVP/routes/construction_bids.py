@@ -65,7 +65,7 @@ def _current_partner():
             "jamaine.caughman@caughmanmason.com",
             "letoya@ravlohq.com",
         }
-        or role in {"executive", "platform_admin", "master_admin", "lending_admin", "partner", "contractor"}
+        or role in {"executive", "platform_admin", "master_admin", "lending_admin"}
     )
 
     if not can_seed_construction_profile:
@@ -133,7 +133,7 @@ def _can_use_bid_handoff() -> bool:
             "sandra@ravlohq.com",
             "letoya@ravlohq.com",
         }
-        or role in {"executive", "platform_admin", "master_admin", "lending_admin", "partner", "contractor"}
+        or role in {"executive", "platform_admin", "master_admin", "lending_admin"}
     )
 
 

@@ -52,6 +52,7 @@ _ROLE_TIER = {
     "partner":       "elite",
     "admin":         "elite",
     "master_admin":  "elite",
+    "platform_admin": "elite",
     "executive":     "elite",
     "loan_officer":  "lending",
     "lending_admin": "lending",

@@ -13,7 +13,7 @@ def _can_access_construction_office():
     role = (getattr(current_user, "role", "") or "").strip().lower()
     email = (getattr(current_user, "email", "") or "").strip().lower()
     return (
-        role in {"admin", "platform_admin", "master_admin", "lending_admin", "executive", "partner", "contractor"}
+        role in {"admin", "platform_admin", "master_admin", "lending_admin", "executive"}
         or email in {"jamaine.caughman@ravlohq.com", "jamaine.caughman@caughmanmason.com", "letoya@ravlohq.com"}
     )
 
