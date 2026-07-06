@@ -171,7 +171,7 @@ def join(slug):
     if user.trial_ends_at is None:
         user.subscription  = "preview"
         user.trial_ends_at = datetime.utcnow() + timedelta(days=ch["trial_days"])
-        if user.role not in ("admin", "platform_admin", "master_admin"):
+        if user.role not in ("admin", "platform_admin", "master_admin", "lending_admin", "executive"):
             user.role = ch["role"]
         try:
             from LoanMVP.services.subscriptions import sync_features_with_subscription

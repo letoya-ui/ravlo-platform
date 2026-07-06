@@ -49,7 +49,7 @@ def grant_preview_access(user: User) -> None:
 def create_preview_account():
     """Admin endpoint to create a preview investor account and email credentials."""
     if (current_user.role or "").strip().lower() not in (
-        "admin", "platform_admin", "master_admin", "lending_admin"
+        "admin", "platform_admin", "master_admin", "lending_admin", "executive"
     ):
         return jsonify({"error": "Forbidden"}), 403
 
@@ -124,7 +124,7 @@ def request_full_access():
 @login_required
 def approve_subscription_request(request_id):
     if (current_user.role or "").strip().lower() not in (
-        "admin", "platform_admin", "master_admin", "lending_admin"
+        "admin", "platform_admin", "master_admin", "lending_admin", "executive"
     ):
         return jsonify({"error": "Forbidden"}), 403
 

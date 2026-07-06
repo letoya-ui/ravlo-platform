@@ -41,7 +41,7 @@ import time
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 assistant = AIAssistant()
-FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin"}
+FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin", "executive"}
 FUNDED_LOAN_STATUSES = {"closed", "funded", "completed", "paid"}
 ACTIVE_LOAN_STATUSES = {
     "application submitted",

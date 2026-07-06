@@ -720,7 +720,7 @@ def post_login_redirect():
         _ensure_partner_dashboard_profile(current_user)
         db.session.commit()
 
-    _skip_onboarding = {"admin", "platform_admin", "master_admin", "lending_admin", "borrower"}
+    _skip_onboarding = {"admin", "platform_admin", "master_admin", "lending_admin", "executive", "borrower"}
     if not current_user.onboarding_complete and role not in _skip_onboarding:
         return redirect(url_for("auth.complete_profile"))
 
