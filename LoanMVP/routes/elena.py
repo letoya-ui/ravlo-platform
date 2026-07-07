@@ -97,6 +97,17 @@ def _elena_profile():
     return get_or_create_vip_profile()
 
 
+def _owned_clients_query():
+    """Base ElenaClient query scoped to the current realtor's own clients.
+
+    Every read in the realtor CRM must go through this so partners never see
+    each other's leads/clients.
+    """
+    return ElenaClient.query.filter(
+        ElenaClient.vip_profile_id == _elena_profile().id
+    )
+
+
 def _elena_available_markets():
     from LoanMVP.routes.vip import get_user_markets
     return get_user_markets(_elena_profile())
@@ -432,8 +443,8 @@ def dashboard_legacy():
     current_market = get_current_market()
     partner = getattr(current_user, "partner_profile", None)
 
-    total_clients = ElenaClient.query.count()
-    new_leads = ElenaClient.query.filter(ElenaClient.created_at >= week_ago).count()
+    total_clients = _owned_clients_query().count()
+    new_leads = _owned_clients_query().filter(ElenaClient.created_at >= week_ago).count()
 
     active_listings_query = ElenaListing.query.filter_by(status="active")
     if current_market != "All Markets":
@@ -471,7 +482,7 @@ def dashboard_legacy():
 
     pipeline_groups = []
     for stage_key, stage_label in PIPELINE_STAGES:
-        stage_query = ElenaClient.query.filter(
+        stage_query = _owned_clients_query().filter(
             ElenaClient.pipeline_stage == stage_key
         )
         stage_total = stage_query.count()
@@ -495,9 +506,9 @@ def dashboard_legacy():
         ElenaClient.pipeline_stage.is_(None),
         ~ElenaClient.pipeline_stage.in_(canonical_keys),
     )
-    unstaged_total = ElenaClient.query.filter(unstaged_filter).count()
+    unstaged_total = _owned_clients_query().filter(unstaged_filter).count()
     unstaged = (
-        ElenaClient.query
+        _owned_clients_query()
         .filter(unstaged_filter)
         .order_by(ElenaClient.updated_at.desc())
         .limit(12)
@@ -608,6 +619,7 @@ def client_new():
             notes=(request.form.get("notes") or None),
             preferred_areas=(request.form.get("preferred_areas") or None),
             budget=(request.form.get("budget") or None),
+            vip_profile_id=_elena_profile().id,
         )
         db.session.add(client)
         db.session.commit()
@@ -698,7 +710,7 @@ def listing_new():
         "market": (request.args.get("market") or "").strip(),
     }
 
-    clients = ElenaClient.query.order_by(ElenaClient.name.asc()).all()
+    clients = _owned_clients_query().order_by(ElenaClient.name.asc()).all()
     return render_template(
         "elena/listing_form.html",
         listing=None,
@@ -721,7 +733,7 @@ def list_templates():
 
 @elena_bp.get("/templates/auto_fill/<int:client_id>/<template_type>")
 def template_auto_fill(client_id, template_type):
-    client = ElenaClient.query.get(client_id)
+    client = _owned_clients_query().filter(ElenaClient.id == client_id).first()
     if not client:
         return jsonify({"error": "Client not found"}), 404
 
@@ -828,7 +840,7 @@ def template_generate_and_log():
     if not template_type:
         return jsonify({"error": "template_type is required"}), 400
 
-    client = ElenaClient.query.get(client_id)
+    client = _owned_clients_query().filter(ElenaClient.id == client_id).first()
     if not client:
         return jsonify({"error": "Client not found"}), 404
 
@@ -917,7 +929,7 @@ def template_studio():
     variables = {}
 
     if client_id and template_type:
-        client = ElenaClient.query.get(client_id)
+        client = _owned_clients_query().filter(ElenaClient.id == client_id).first()
         if client:
             variables.update(
                 {
@@ -1121,7 +1133,7 @@ def template_studio_generate_and_save():
     saved_flyer_id = None
 
     if client_id:
-        client = ElenaClient.query.get(client_id)
+        client = _owned_clients_query().filter(ElenaClient.id == client_id).first()
         if client:
             interaction = ElenaInteraction(
                 client_id=client.id,
@@ -1467,10 +1479,10 @@ def import_preview():
             existing = None
 
             if email:
-                existing = ElenaClient.query.filter_by(email=email).first()
+                existing = _owned_clients_query().filter_by(email=email).first()
 
             if not existing and phone:
-                existing = ElenaClient.query.filter_by(phone=phone).first()
+                existing = _owned_clients_query().filter_by(phone=phone).first()
 
             if existing:
                 if skip_duplicates:
@@ -1494,6 +1506,7 @@ def import_preview():
                     role=row.get(mapping.get("role")),
                     tags=row.get(mapping.get("tags")),
                     notes=row.get(mapping.get("notes")),
+                    vip_profile_id=_elena_profile().id,
                 )
 
                 db.session.add(client)

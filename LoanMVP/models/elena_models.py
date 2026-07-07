@@ -30,6 +30,14 @@ class ElenaClient(BaseModel):
     assigned_member_id = Column(Integer, nullable=True)
     market = Column(String(100), nullable=True)
 
+    # Owning realtor. Every client/lead belongs to exactly one VIPProfile;
+    # the realtor CRM scopes all reads by this so partners never see each
+    # other's leads. assigned_member_id is a *sub*-assignment to a
+    # VIPTeamMember within this same profile.
+    vip_profile_id = Column(
+        Integer, ForeignKey("vip_profiles.id"), nullable=True, index=True
+    )
+
     interactions = relationship("ElenaInteraction", back_populates="client", lazy=True)
     listings = relationship("ElenaListing", back_populates="client", lazy=True)
 

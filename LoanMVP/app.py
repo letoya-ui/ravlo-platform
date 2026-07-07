@@ -89,6 +89,7 @@ _SCHEMA_COMPAT_COLUMNS = [
     ("elena_listings",            "county",             "VARCHAR(120)"),
     ("elena_clients",             "market",             "VARCHAR(100)"),
     ("elena_clients",             "assigned_member_id", "INTEGER"),
+    ("elena_clients",             "vip_profile_id",     "INTEGER"),
     ("vip_expenses",              "market",             "VARCHAR(100)"),
     ("vip_income",                "market",             "VARCHAR(100)"),
     ("vip_income",                "status",             "VARCHAR(50) DEFAULT 'received'"),

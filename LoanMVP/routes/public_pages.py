@@ -197,6 +197,20 @@ def _handle_lead_capture(slug: str):
         markets = []
     primary_market = markets[0] if markets else None
 
+    # Resolve the owning realtor for this page. For a live VIPProfile that's
+    # the profile itself; for a static-context slug (no DB profile yet) fall
+    # back to the configured owner email → their VIPProfile.
+    profile_id = getattr(profile, "id", None)
+    owner_email = SLUG_OWNER_EMAILS.get(slug.lower())
+    owner_user = None
+    if owner_email:
+        owner_user = User.query.filter(func.lower(User.email) == owner_email.lower()).first()
+
+    owner_profile_id = profile_id
+    if owner_profile_id is None and owner_user is not None:
+        owner_profile = VIPProfile.query.filter_by(user_id=owner_user.id).first()
+        owner_profile_id = owner_profile.id if owner_profile else None
+
     lead = ElenaClient(
         name=client_name,
         email=client_email or None,
@@ -207,26 +221,26 @@ def _handle_lead_capture(slug: str):
         preferred_areas=preferred_areas or None,
         budget=budget or None,
         market=primary_market,
-        assigned_member_id=getattr(profile, "user_id", None),
+        # Owned by the realtor whose page captured it. Left unassigned to a
+        # specific teammate (assigned_member_id is a VIPTeamMember FK, not a
+        # User id) so the realtor triages it from their pipeline.
+        vip_profile_id=owner_profile_id,
+        assigned_member_id=None,
     )
     db.session.add(lead)
 
     # For static-context slugs (no VIPProfile), route the lead to the owner's CRM.
-    owner_email = SLUG_OWNER_EMAILS.get(slug.lower())
-    if owner_email:
-        owner_user = User.query.filter(func.lower(User.email) == owner_email.lower()).first()
-        if owner_user:
-            crm_lead = Lead(
-                name=client_name,
-                email=client_email or None,
-                phone=client_phone or None,
-                message="\n".join(notes_parts),
-                assigned_to=owner_user.id,
-                status="New",
-            )
-            db.session.add(crm_lead)
+    if owner_user is not None:
+        crm_lead = Lead(
+            name=client_name,
+            email=client_email or None,
+            phone=client_phone or None,
+            message="\n".join(notes_parts),
+            assigned_to=owner_user.id,
+            status="New",
+        )
+        db.session.add(crm_lead)
 
-    profile_id = getattr(profile, "id", None)
     if profile_id:
         notification = VIPNotification(
             vip_profile_id=profile_id,
