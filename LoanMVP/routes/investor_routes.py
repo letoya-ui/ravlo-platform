@@ -434,6 +434,24 @@ def _budget_line_full_price(item):
     return 0.0
 
 
+# ARV tier changes the risk posture of a generated budget, not just the
+# top-line valuation: Conservative carries a larger contingency buffer
+# (cost overruns matter more against a already-cautious value), Aggressive
+# assumes a tighter one (the valuation itself already banks on upside).
+_ARV_TIER_CONTINGENCY_MULTIPLIER = {"conservative": 1.15, "base": 1.0, "aggressive": 0.9}
+_ARV_TIER_MIN_CONTINGENCY_PCT = {"conservative": 0.12, "base": 0.08, "aggressive": 0.05}
+
+
+def _apply_arv_tier_contingency(contingency, arv_tier, estimated_total=0.0):
+    tier = (arv_tier or "base").strip().lower()
+    multiplier = _ARV_TIER_CONTINGENCY_MULTIPLIER.get(tier, 1.0)
+    min_pct = _ARV_TIER_MIN_CONTINGENCY_PCT.get(tier, 0.08)
+
+    scaled = float(contingency or 0) * multiplier
+    floor = float(estimated_total or 0) * min_pct
+    return round(max(scaled, floor), 2)
+
+
 def _budget_line_name(item, fallback="Budget Item"):
     if not isinstance(item, dict):
         return fallback
@@ -7294,7 +7312,7 @@ def design_studio(deal_id=None):
     )
 
     return render_template(
-        "investor/deal_rehab_studio.html",
+        "investor/design_studio.html",
         deal=deal,
         rehab_project=rehab_project,
         rehab_scope=rehab_scope,
@@ -14606,7 +14624,10 @@ def create_budget_from_studio(deal_id):
         investor_profile_id=ip.id
     ).order_by(ProjectBudget.id.desc()).first()
 
-    if existing_budget:
+    regenerate = bool(existing_budget) and existing_budget.arv_tier != deal.arv_tier
+    force_regenerate = request.form.get("regenerate") == "1"
+
+    if existing_budget and not regenerate and not force_regenerate:
         flash("A budget already exists for this deal.", "info")
         return redirect(url_for("investor.budget_detail", budget_id=existing_budget.id))
 
@@ -14618,54 +14639,68 @@ def create_budget_from_studio(deal_id):
         payload = {}
 
     items = payload.get("items") or []
-    strategy = (
-        payload.get("budget_type")
-        or payload.get("strategy")
-        or ((deal.results_json or {}).get("workspace_analysis") or {}).get("selected_strategy")
-        or ((deal.results_json or {}).get("strategy_analysis") or {}).get("strategy")
-        or "rehab"
-    )
-    source = str(payload.get("source") or "").strip()
-    contingency = _budget_line_full_price({"total": payload.get("contingency")})
+    explicit_budget_type = str(payload.get("budget_type") or "").strip().lower()
 
-    strategy_value = str(strategy or "").lower()
-    source_value = source.lower()
-    if strategy_value in {"design", "design_studio", "design_budget"} or "design" in source_value:
-        budget_type = "design"
-    elif (
-        strategy_value in {"build_studio", "project_build", "build", "new_build"}
-        or "build" in source_value
-        or "deal_architect" in source_value
-    ):
-        budget_type = "build"
+    if explicit_budget_type in {"design", "build", "rehab"}:
+        budget_type = explicit_budget_type
     else:
-        budget_type = "rehab"
+        strategy = (
+            payload.get("strategy")
+            or ((deal.results_json or {}).get("workspace_analysis") or {}).get("selected_strategy")
+            or ((deal.results_json or {}).get("strategy_analysis") or {}).get("strategy")
+            or "rehab"
+        )
+        source = str(payload.get("source") or "").strip()
+        strategy_value = str(strategy or "").lower()
+        source_value = source.lower()
+        if strategy_value in {"design", "design_studio", "design_budget"} or "design" in source_value:
+            budget_type = "design"
+        elif (
+            strategy_value in {"build_studio", "project_build", "build", "new_build"}
+            or "build" in source_value
+            or "deal_architect" in source_value
+        ):
+            budget_type = "build"
+        else:
+            budget_type = "rehab"
+
+    contingency = _budget_line_full_price({"total": payload.get("contingency")})
 
     budget_notes = {
         "design": "Created from Design Studio budget architecture.",
         "build": "Created from Budget Studio build cost architecture.",
     }.get(budget_type, "Created from Budget Studio.")
 
-    budget = ProjectBudget(
-        borrower_profile_id=None,
-        investor_profile_id=ip.id,
-        loan_app_id=None,
-        deal_id=deal.id,
-        build_project_id=None,
-        budget_type=budget_type,
-        arv_tier=deal.arv_tier,
-        name=f"Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
-        project_name=deal.title or deal.address,
-        total_amount=0.0,
-        total_budget=0.0,
-        total_cost=0.0,
-        materials_cost=0.0,
-        labor_cost=0.0,
-        contingency=contingency,
-        paid_amount=0.0,
-        notes=budget_notes,
-    )
-    db.session.add(budget)
+    if regenerate:
+        budget = existing_budget
+        ProjectExpense.query.filter_by(budget_id=budget.id).delete()
+        budget.budget_type = budget_type
+        budget.arv_tier = deal.arv_tier
+        budget.name = f"Budget - {deal.title or deal.address or f'Deal #{deal.id}'}"
+        budget.project_name = deal.title or deal.address
+        budget.contingency = contingency
+        budget.notes = f"{budget_notes} Regenerated for the {(deal.arv_tier or 'base').title()} ARV tier."
+    else:
+        budget = ProjectBudget(
+            borrower_profile_id=None,
+            investor_profile_id=ip.id,
+            loan_app_id=None,
+            deal_id=deal.id,
+            build_project_id=None,
+            budget_type=budget_type,
+            arv_tier=deal.arv_tier,
+            name=f"Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
+            project_name=deal.title or deal.address,
+            total_amount=0.0,
+            total_budget=0.0,
+            total_cost=0.0,
+            materials_cost=0.0,
+            labor_cost=0.0,
+            contingency=contingency,
+            paid_amount=0.0,
+            notes=budget_notes,
+        )
+        db.session.add(budget)
     db.session.flush()
 
     created_count = 0
@@ -14699,6 +14734,7 @@ def create_budget_from_studio(deal_id):
         created_count += 1
         estimated_total += estimated_amount
 
+    budget.contingency = _apply_arv_tier_contingency(budget.contingency, deal.arv_tier, estimated_total)
     budget.total_cost = estimated_total
     budget.total_amount = estimated_total
     budget.total_budget = estimated_total + float(budget.contingency or 0)
@@ -14708,7 +14744,9 @@ def create_budget_from_studio(deal_id):
 
     db.session.commit()
 
-    if created_count:
+    if regenerate:
+        flash(f"Budget regenerated for the {(deal.arv_tier or 'base').title()} ARV tier with {created_count} line item(s).", "success")
+    elif created_count:
         flash(f"Budget tracker created with {created_count} line item(s).", "success")
     else:
         flash("Budget tracker created, but no line items were added.", "warning")
@@ -14780,7 +14818,9 @@ def generate_budget_from_ai(deal_id):
         budget_type="rehab"
     ).first()
 
-    if existing_budget:
+    regenerate = bool(existing_budget) and existing_budget.arv_tier != deal.arv_tier
+
+    if existing_budget and not regenerate:
         flash("A rehab budget already exists for this deal.", "info")
         return redirect(url_for("investor.budget_detail", budget_id=existing_budget.id))
 
@@ -14813,26 +14853,36 @@ def generate_budget_from_ai(deal_id):
     else:
         budget_type = "rehab"
 
-    budget = ProjectBudget(
-        borrower_profile_id=None,
-        investor_profile_id=ip.id,
-        loan_app_id=None,
-        deal_id=deal.id,
-        build_project_id=None,
-        budget_type=budget_type,
-        arv_tier=deal.arv_tier,
-        name=f"AI Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
-        project_name=deal.title or deal.address,
-        total_amount=0,
-        total_budget=0,
-        total_cost=0.0,
-        materials_cost=0.0,
-        labor_cost=0.0,
-        contingency=0.0,
-        paid_amount=0.0,
-        notes="Auto-generated from Deal Architect / AI analysis.",
-    )
-    db.session.add(budget)
+    if regenerate:
+        budget = existing_budget
+        ProjectExpense.query.filter_by(budget_id=budget.id).delete()
+        budget.budget_type = budget_type
+        budget.arv_tier = deal.arv_tier
+        budget.name = f"AI Budget - {deal.title or deal.address or f'Deal #{deal.id}'}"
+        budget.project_name = deal.title or deal.address
+        budget.contingency = 0.0
+        budget.notes = f"Regenerated for the {(deal.arv_tier or 'base').title()} ARV tier."
+    else:
+        budget = ProjectBudget(
+            borrower_profile_id=None,
+            investor_profile_id=ip.id,
+            loan_app_id=None,
+            deal_id=deal.id,
+            build_project_id=None,
+            budget_type=budget_type,
+            arv_tier=deal.arv_tier,
+            name=f"AI Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
+            project_name=deal.title or deal.address,
+            total_amount=0,
+            total_budget=0,
+            total_cost=0.0,
+            materials_cost=0.0,
+            labor_cost=0.0,
+            contingency=0.0,
+            paid_amount=0.0,
+            notes="Auto-generated from Deal Architect / AI analysis.",
+        )
+        db.session.add(budget)
     db.session.flush()
 
     created_count = 0
@@ -14901,13 +14951,16 @@ def generate_budget_from_ai(deal_id):
             created_count = 1
             estimated_total = fallback_total
 
+    budget.contingency = _apply_arv_tier_contingency(budget.contingency, deal.arv_tier, estimated_total)
     budget.total_cost = estimated_total
     budget.total_amount = estimated_total
     budget.total_budget = estimated_total + float(budget.contingency or 0)
 
     db.session.commit()
 
-    if created_count:
+    if regenerate:
+        flash(f"AI budget regenerated for the {(deal.arv_tier or 'base').title()} ARV tier with {created_count} imported item(s).", "success")
+    elif created_count:
         flash(f"AI budget created with {created_count} imported item(s).", "success")
     else:
         flash("Budget created, but no AI line items were found to import.", "warning")
