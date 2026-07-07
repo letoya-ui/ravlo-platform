@@ -21,12 +21,6 @@ def start_server():
     async_mode = app.config.get("SOCKETIO_ASYNC_MODE", "threading")
     debug = bool(app.debug)
 
-    if async_mode == "threading" and not debug:
-        raise RuntimeError(
-            "Refusing to boot production with Werkzeug/threading. "
-            "Set SOCKETIO_ASYNC_MODE=eventlet or deploy with gunicorn."
-        )
-
     log(f"Starting Ravlo on {host}:{port} using Socket.IO async mode '{async_mode}'")
     app.socketio.run(
         app,

@@ -35,8 +35,7 @@ from LoanMVP.utils.role_helpers import get_role_display, get_request_type_displa
 from LoanMVP.services.unified_resolver import resolve_property
 
 ENV_NAME = os.environ.get("FLASK_ENV", "production").strip().lower()
-DEFAULT_SOCKETIO_ASYNC_MODE = "threading" if ENV_NAME in {"dev", "development", "local"} else "eventlet"
-SOCKETIO_ASYNC_MODE = os.environ.get("SOCKETIO_ASYNC_MODE", DEFAULT_SOCKETIO_ASYNC_MODE).strip().lower()
+SOCKETIO_ASYNC_MODE = os.environ.get("SOCKETIO_ASYNC_MODE", "threading").strip().lower()
 
 if SOCKETIO_ASYNC_MODE == "threading":
     import engineio
@@ -45,13 +44,6 @@ if SOCKETIO_ASYNC_MODE == "threading":
     if not hasattr(engineio, "async_modes") or "threading" not in getattr(engineio, "async_modes", []):
         engineio.async_modes = ["threading"]
         engineio.Server = engineio.server.Server
-
-# Fallback for non-gunicorn contexts (e.g. `flask` CLI commands, which
-# never monkey-patch). Under gunicorn, the reliable call site is
-# gunicorn.conf.py's post_fork hook -- see utils/eventlet_ssl_patch.py
-# for why this one-shot, import-time call isn't enough on its own.
-from LoanMVP.utils.eventlet_ssl_patch import patch_eventlet_ssl_recursion
-patch_eventlet_ssl_recursion()
 
 
 # ---------------------------------------------------------

@@ -260,7 +260,7 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     ENV_NAME = "production"
     DEBUG = False
-    SOCKETIO_ASYNC_MODE = os.environ.get("SOCKETIO_ASYNC_MODE", "eventlet").strip().lower()
+    SOCKETIO_ASYNC_MODE = os.environ.get("SOCKETIO_ASYNC_MODE", "threading").strip().lower()
     ENABLE_DEVELOPER_TOOLS = False
 
     @classmethod
