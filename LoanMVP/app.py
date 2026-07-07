@@ -46,82 +46,12 @@ if SOCKETIO_ASYNC_MODE == "threading":
         engineio.async_modes = ["threading"]
         engineio.Server = engineio.server.Server
 
-def _patch_eventlet_ssl_recursion():
-    # Work around a longstanding eventlet bug: GreenSSLContext does not
-    # override verify_mode/verify_flags/options, so CPython's own property
-    # setter recurses into itself forever when called on a GreenSSLContext
-    # instance ("RecursionError: maximum recursion depth exceeded" from
-    # ssl.py's verify_mode setter). The setter resolves the class name
-    # `SSLContext` via super(), and monkey-patching rebinds that name to
-    # GreenSSLContext, so super() lands back on the same Python-level setter.
-    # https://github.com/eventlet/eventlet/issues/371
-    #
-    # Rebind the affected descriptors on GreenSSLContext straight to the
-    # C-level _ssl._SSLContext getset descriptors. Those set the value
-    # directly and can never re-enter the recursive Python-level property,
-    # so this holds regardless of which eventlet build is installed. (The
-    # previous workaround delegated to ssl.SSLContext, which is itself the
-    # recursive property once eventlet's own override is absent.)
-    #
-    # This is gated on eventlet having actually monkey-patched ssl rather
-    # than on SOCKETIO_ASYNC_MODE, because the gunicorn eventlet worker
-    # monkey-patches before this module is imported even when SocketIO
-    # itself is configured differently -- so the recursion can occur while
-    # SOCKETIO_ASYNC_MODE != "eventlet".
-    import logging
-    _log = logging.getLogger("ssl_recursion_patch")
-    try:
-        import eventlet.patcher
-
-        # eventlet tracks ssl patching under the "socket" key, not "ssl".
-        if not eventlet.patcher.is_monkey_patched("socket"):
-            _log.warning("[ssl-patch] socket is not monkey-patched -- skipping, patch will not apply")
-            return
-
-        import _ssl
-        import ssl as _ssl_module
-        from eventlet.green import ssl as _green_ssl
-
-        _log.warning(
-            "[ssl-patch] socket is monkey-patched. ssl.SSLContext=%r GreenSSLContext=%r same=%s",
-            _ssl_module.SSLContext, _green_ssl.GreenSSLContext,
-            _ssl_module.SSLContext is _green_ssl.GreenSSLContext,
-        )
-
-        c_ssl_context = _ssl._SSLContext
-        rebound = []
-
-        def _rebind(prop_name):
-            c_descriptor = getattr(c_ssl_context, prop_name, None)
-            if c_descriptor is None:
-                _log.warning("[ssl-patch] no C-level descriptor found for %s -- skipping", prop_name)
-                return
-
-            def _getter(self, _d=c_descriptor):
-                return _d.__get__(self, c_ssl_context)
-
-            def _setter(self, value, _d=c_descriptor):
-                _d.__set__(self, value)
-
-            setattr(_green_ssl.GreenSSLContext, prop_name, property(_getter, _setter))
-            rebound.append(prop_name)
-
-        for prop_name in ("verify_mode", "verify_flags", "options", "minimum_version", "maximum_version"):
-            _rebind(prop_name)
-
-        # Prove the fix actually works before trusting it in a real request:
-        # construct a context the same way urllib3 does and set verify_mode.
-        try:
-            _test_ctx = _green_ssl.GreenSSLContext(_ssl_module.PROTOCOL_TLS_CLIENT)
-            _test_ctx.verify_mode = _ssl_module.CERT_REQUIRED
-            _log.warning("[ssl-patch] self-test passed -- rebound %s, verify_mode set OK", rebound)
-        except RecursionError:
-            _log.error("[ssl-patch] self-test FAILED -- verify_mode still recurses after patching %s", rebound)
-    except Exception:
-        _log.exception("[ssl-patch] setup raised an exception -- patch did not apply")
-
-
-_patch_eventlet_ssl_recursion()
+# Fallback for non-gunicorn contexts (e.g. `flask` CLI commands, which
+# never monkey-patch). Under gunicorn, the reliable call site is
+# gunicorn.conf.py's post_fork hook -- see utils/eventlet_ssl_patch.py
+# for why this one-shot, import-time call isn't enough on its own.
+from LoanMVP.utils.eventlet_ssl_patch import patch_eventlet_ssl_recursion
+patch_eventlet_ssl_recursion()
 
 
 # ---------------------------------------------------------
