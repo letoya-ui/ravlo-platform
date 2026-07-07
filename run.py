@@ -28,6 +28,7 @@ def start_server():
         port=port,
         debug=debug,
         use_reloader=False,
+        allow_unsafe_werkzeug=True,
     )
 
 if __name__ == "__main__":
