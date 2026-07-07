@@ -114,6 +114,8 @@ _SCHEMA_COMPAT_COLUMNS = [
     ("vip_client_sessions",       "updated_at",         "TIMESTAMP"),
     ("project_budgets",           "status",             "VARCHAR(32) NOT NULL DEFAULT 'active'"),
     ("investor_profile",          "ssn",                "TEXT"),
+    ("bid_suggestions",           "origin",             "VARCHAR(30) NOT NULL DEFAULT 'manual'"),
+    ("bid_suggestions",           "external_ref",       "VARCHAR(255)"),
 ]
 
 # Tables that must exist at boot. If missing, we ask SQLAlchemy's metadata

@@ -5,6 +5,13 @@
 {% block page_subline %}Find Tampa-area opportunities, save them into Ravlo, and send qualified work to Sandra for package support.{% endblock %}
 
 {% block topbar_actions %}
+  {% if auto_discovery_enabled %}
+  <form method="POST" action="{{ url_for('construction_bids.discover_bids') }}" style="display:inline;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ url_for('construction_bids.search_page') }}">
+    <button type="submit" class="re-btn primary sm"><i class="lucide lucide-refresh-cw"></i> Refresh bids</button>
+  </form>
+  {% endif %}
   <a class="re-btn ghost sm" href="{{ safe_url_for('executive.construction_center') or '/executive/construction' }}">
     <i class="lucide lucide-hard-hat"></i> Construction Center
   </a>

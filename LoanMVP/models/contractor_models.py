@@ -126,6 +126,13 @@ class BidSuggestion(db.Model):
 
     # active → saved / not_interested / follow_up
     status          = db.Column(db.String(30), default="active", nullable=False)
+
+    # Where this suggestion came from. "manual" for hand-entered rows;
+    # otherwise the discovery adapter name (e.g. "samgov"). external_ref is a
+    # stable per-source id ("samgov:<noticeId>") used to dedupe auto-imports.
+    origin          = db.Column(db.String(30), default="manual", nullable=False)
+    external_ref    = db.Column(db.String(255), nullable=True, index=True)
+
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
 
     partner = db.relationship("Partner", backref=db.backref("bid_suggestions", lazy="dynamic"))
