@@ -23,7 +23,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask_cors import CORS
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
-from flask_login import LoginManager, current_user, login_required
+from flask_login import LoginManager, current_user, login_required, user_logged_in
 from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -318,6 +318,11 @@ def create_app():
         except Exception as e:
             print(f"Error loading user: {e}")
             return None
+
+    @user_logged_in.connect_via(app)
+    def _record_last_login(sender, user, **extra):
+        user.last_login = datetime.utcnow()
+        db.session.commit()
 
     # Register all route blueprints dynamically
     register_blueprints(app)
