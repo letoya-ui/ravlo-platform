@@ -456,7 +456,21 @@ def _engine_or_dalle(path: str, payload: dict, timeout: int = RENDER_TIMEOUT) ->
 
     if not _force_openai:
         try:
-            return _post_renovation_engine_json(path, payload, timeout=timeout)
+            result = _post_renovation_engine_json(path, payload, timeout=timeout)
+            try:
+                from LoanMVP.services.training_service import log_studio_batch
+                images_b64 = (result or {}).get("images_base64") or {}
+                feature = payload.get("feature") or payload.get("mode") or "studio"
+                log_studio_batch(
+                    feature=feature,
+                    provider="renovation_engine",
+                    payload=payload,
+                    images_b64_or_urls={k: "" for k in images_b64 if images_b64.get(k)},
+                    is_urls=False,
+                )
+            except Exception:
+                pass
+            return result
         except Exception as err:
             _log.warning(
                 "Renovation engine unavailable for %s (%s) — using DALL-E 3 fallback.",

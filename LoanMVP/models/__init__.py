@@ -163,6 +163,7 @@ from LoanMVP.models.training_models import (
     StudioGenerationLog,
     AcademyChatLog,
     TrainingJob,
+    RavloAIMemoryLog,
 )
 
 # 🔭 Discovery / Crawler tracking
@@ -234,6 +235,7 @@ __all__ = [
     "StudioGenerationLog",
     "AcademyChatLog",
     "TrainingJob",
+    "RavloAIMemoryLog",
 
     # Discovery / Crawler tracking
     "DiscoveryEvent",
