@@ -68,21 +68,33 @@ def _patch_eventlet_ssl_recursion():
     # monkey-patches before this module is imported even when SocketIO
     # itself is configured differently -- so the recursion can occur while
     # SOCKETIO_ASYNC_MODE != "eventlet".
+    import logging
+    _log = logging.getLogger("ssl_recursion_patch")
     try:
         import eventlet.patcher
 
         # eventlet tracks ssl patching under the "socket" key, not "ssl".
         if not eventlet.patcher.is_monkey_patched("socket"):
+            _log.warning("[ssl-patch] socket is not monkey-patched -- skipping, patch will not apply")
             return
 
         import _ssl
+        import ssl as _ssl_module
         from eventlet.green import ssl as _green_ssl
 
+        _log.warning(
+            "[ssl-patch] socket is monkey-patched. ssl.SSLContext=%r GreenSSLContext=%r same=%s",
+            _ssl_module.SSLContext, _green_ssl.GreenSSLContext,
+            _ssl_module.SSLContext is _green_ssl.GreenSSLContext,
+        )
+
         c_ssl_context = _ssl._SSLContext
+        rebound = []
 
         def _rebind(prop_name):
             c_descriptor = getattr(c_ssl_context, prop_name, None)
             if c_descriptor is None:
+                _log.warning("[ssl-patch] no C-level descriptor found for %s -- skipping", prop_name)
                 return
 
             def _getter(self, _d=c_descriptor):
@@ -92,11 +104,21 @@ def _patch_eventlet_ssl_recursion():
                 _d.__set__(self, value)
 
             setattr(_green_ssl.GreenSSLContext, prop_name, property(_getter, _setter))
+            rebound.append(prop_name)
 
         for prop_name in ("verify_mode", "verify_flags", "options", "minimum_version", "maximum_version"):
             _rebind(prop_name)
+
+        # Prove the fix actually works before trusting it in a real request:
+        # construct a context the same way urllib3 does and set verify_mode.
+        try:
+            _test_ctx = _green_ssl.GreenSSLContext(_ssl_module.PROTOCOL_TLS_CLIENT)
+            _test_ctx.verify_mode = _ssl_module.CERT_REQUIRED
+            _log.warning("[ssl-patch] self-test passed -- rebound %s, verify_mode set OK", rebound)
+        except RecursionError:
+            _log.error("[ssl-patch] self-test FAILED -- verify_mode still recurses after patching %s", rebound)
     except Exception:
-        pass
+        _log.exception("[ssl-patch] setup raised an exception -- patch did not apply")
 
 
 _patch_eventlet_ssl_recursion()
