@@ -44,7 +44,7 @@ university_bp = Blueprint("university", __name__, url_prefix="/academy")
 _ANTHROPIC_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
 _ANTHROPIC_URL  = "https://api.anthropic.com/v1/messages"
 _ANTHROPIC_VER  = "2023-06-01"
-_DEFAULT_MODEL  = "claude-opus-4-5"
+_DEFAULT_MODEL  = "claude-opus-4-8"
 _MAX_TOKENS_CAP = 2000
 
 # ── Role → tier (platform users only) ─────────────────────────────────────
@@ -350,6 +350,17 @@ def chat():
                 model=body.get("model", _DEFAULT_MODEL),
                 user_id=user_id,
             )
+            from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+            log_ai_exchange(
+                module="academy",
+                feature="chat",
+                prompt=json.dumps(messages, default=str)[:4000],
+                response=ai_text,
+                user_id=user_id,
+                role_view=tier_key,
+                provider="anthropic",
+                model=body.get("model", _DEFAULT_MODEL),
+            )
         except Exception:
             pass
 
@@ -412,6 +423,17 @@ def business_plan_generate():
                 system_prompt=body.get("system", ""),
                 model=body.get("model", _DEFAULT_MODEL),
                 user_id=user_id,
+            )
+            from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+            log_ai_exchange(
+                module="academy",
+                feature="business_plan",
+                prompt=json.dumps(messages, default=str)[:4000],
+                response=ai_text,
+                user_id=user_id,
+                role_view=tier_key,
+                provider="anthropic",
+                model=body.get("model", _DEFAULT_MODEL),
             )
         except Exception:
             pass
@@ -814,6 +836,21 @@ def lesson_content():
     for attempt in range(2):
         try:
             data = _generate_lesson_content(title, description, course_title, unit_title)
+            try:
+                from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+                log_ai_exchange(
+                    module="academy",
+                    feature="lesson_generation",
+                    prompt=f"{course_title} / {unit_title} / {title}: {description}"[:4000],
+                    response=json.dumps(data, default=str)[:8000],
+                    user_id=current_user.id if getattr(current_user, "is_authenticated", False) else None,
+                    provider="anthropic",
+                    model="claude-haiku-4-5-20251001",
+                    object_type="lesson",
+                    object_id=lesson_id,
+                )
+            except Exception:
+                pass
             break
         except json.JSONDecodeError as exc:
             last_exc = exc
