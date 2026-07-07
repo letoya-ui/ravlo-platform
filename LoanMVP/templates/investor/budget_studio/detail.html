@@ -423,6 +423,11 @@
           Build Linked
         </span>
         {% endif %}
+        {% if budget.arv_tier %}
+        <span style="padding:.32rem .7rem;border-radius:999px;font-size:.78rem;font-weight:700;background:rgba(240,198,116,.08);border:1px solid rgba(240,198,116,.18);color:#f0c674;">
+          {{ {"conservative": "Conservative", "base": "Base", "aggressive": "Aggressive"}.get(budget.arv_tier, budget.arv_tier|title) }} ARV
+        </span>
+        {% endif %}
       </div>
 
       <div style="font-size:.8rem;color:rgba(228,236,246,.55);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Budget Burn Rate</div>

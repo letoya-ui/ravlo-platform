@@ -116,6 +116,8 @@ _SCHEMA_COMPAT_COLUMNS = [
     ("investor_profile",          "ssn",                "TEXT"),
     ("bid_suggestions",           "origin",             "VARCHAR(30) NOT NULL DEFAULT 'manual'"),
     ("bid_suggestions",           "external_ref",       "VARCHAR(255)"),
+    ("deals",                     "arv_tier",           "VARCHAR(20) NOT NULL DEFAULT 'base'"),
+    ("project_budgets",           "arv_tier",           "VARCHAR(20)"),
 ]
 
 # Tables that must exist at boot. If missing, we ask SQLAlchemy's metadata

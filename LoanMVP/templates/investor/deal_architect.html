@@ -166,6 +166,12 @@
           <div class="field">
             <label for="arv">ARV / Stabilized Value</label>
             <input id="arv" name="arv" value="{{ arv or '' }}" placeholder="425000">
+            {% if deal and deal.arv_tier %}
+            <small class="field-hint muted" style="font-size:.78rem;margin-top:4px;display:block">
+              From <strong>{{ {"conservative": "Conservative", "base": "Base", "aggressive": "Aggressive"}.get(deal.arv_tier, deal.arv_tier|title) }}</strong> ARV tier —
+              <a href="{{ url_for('investor.deal_workspace', prop_id=deal.saved_property_id) }}">change in Deal Workspace</a>
+            </small>
+            {% endif %}
           </div>
 
           <div class="field">

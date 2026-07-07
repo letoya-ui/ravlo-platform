@@ -5654,6 +5654,35 @@ def deal_workspace():
         ravlo_arv_report=ravlo_arv_report,
     )
 
+@investor_bp.route("/deals/<int:deal_id>/arv-tier", methods=["POST"])
+@login_required
+@role_required("investor")
+def set_deal_arv_tier(deal_id):
+    """Persist which Ravlo ARV Engine band (conservative/base/aggressive) the
+    investor picked for this deal. Deal.arv is kept in sync with the chosen
+    band's dollar value so Deal Architect, Budget Tracker, and Build/Design
+    Studio all inherit the same selection without extra plumbing.
+    """
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+    if not deal:
+        return jsonify({"error": "Deal not found"}), 404
+
+    tier = (request.get_json(silent=True) or {}).get("tier", "").strip().lower()
+    if tier not in ("conservative", "base", "aggressive"):
+        return jsonify({"error": "tier must be conservative, base, or aggressive"}), 400
+
+    ravlo_arv = ((deal.results_json or {}).get("ravlo_arv_report") or {}).get("arv") or {}
+    tier_value = ravlo_arv.get(tier)
+    if not tier_value:
+        return jsonify({"error": "No Ravlo ARV report saved for this deal yet"}), 400
+
+    deal.arv_tier = tier
+    deal.arv = tier_value
+    db.session.commit()
+
+    return jsonify({"tier": tier, "arv": tier_value})
+
+
 @investor_bp.route("/deals", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -14624,6 +14653,7 @@ def create_budget_from_studio(deal_id):
         deal_id=deal.id,
         build_project_id=None,
         budget_type=budget_type,
+        arv_tier=deal.arv_tier,
         name=f"Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
         project_name=deal.title or deal.address,
         total_amount=0.0,
@@ -14790,6 +14820,7 @@ def generate_budget_from_ai(deal_id):
         deal_id=deal.id,
         build_project_id=None,
         budget_type=budget_type,
+        arv_tier=deal.arv_tier,
         name=f"AI Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
         project_name=deal.title or deal.address,
         total_amount=0,
