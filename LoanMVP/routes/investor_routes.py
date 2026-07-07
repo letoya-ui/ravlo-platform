@@ -7464,11 +7464,20 @@ def design_studio_generate_budget():
             except (TypeError, ValueError):
                 pass
 
-        engine_json = _post_renovation_engine_json(
-            "/v1/design_studio/generate_budget",
-            payload,
-            timeout=60,
-        )
+        try:
+            if not RENOVATION_ENGINE_URL:
+                raise RuntimeError("RENOVATION_ENGINE_URL is not configured.")
+            engine_json = _post_renovation_engine_json(
+                "/v1/design_studio/generate_budget",
+                payload,
+                timeout=60,
+            )
+        except Exception as _engine_exc:
+            current_app.logger.warning(
+                "Renovation engine design budget call failed, falling back to Claude: %s", _engine_exc
+            )
+            from LoanMVP.services.llm_studio_service import claude_design_budget_estimate
+            engine_json = claude_design_budget_estimate(payload)
 
         budget = {
             "cost_low": engine_json.get("cost_low") or 0,
@@ -12281,9 +12290,15 @@ def deal_architect_analyze():
         except Exception:
             cost_ctx = None
 
-        if RENOVATION_ENGINE_URL:
+        engine_data = {}
+        try:
+            if not RENOVATION_ENGINE_URL:
+                raise RuntimeError("RENOVATION_ENGINE_URL is not configured.")
             engine_data = _post_renovation_engine_json("/v1/deal_architect", payload, timeout=60) or {}
-        else:
+        except Exception as _engine_exc:
+            current_app.logger.warning(
+                "Renovation engine deal_architect call failed, falling back to Claude: %s", _engine_exc
+            )
             engine_data = {}
             try:
                 from LoanMVP.services.llm_studio_service import claude_deal_analysis

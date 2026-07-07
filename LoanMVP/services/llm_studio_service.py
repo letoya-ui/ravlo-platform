@@ -341,7 +341,7 @@ def claude_deal_analysis(payload: dict) -> dict:
 
     try:
         response = _anthropic_client().messages.create(
-            model="claude-opus-4-7",
+            model="claude-sonnet-5",
             max_tokens=2048,
             system=_DEAL_SYSTEM,
             messages=[{"role": "user", "content": user_msg}],
@@ -366,3 +366,86 @@ def claude_deal_analysis(payload: dict) -> dict:
     except Exception as exc:
         log.error("Claude deal analysis failed: %s", exc)
         return {"strategies": [], "error": str(exc), "meta": {"provider": "anthropic/claude"}}
+
+
+_BUDGET_SYSTEM = (
+    "You are Ravlo Design Studio's budget estimator, an expert residential renovation "
+    "cost estimator. You produce realistic, US-market line-item cost estimates. "
+    "Always respond with valid JSON only — no markdown, no prose outside the JSON."
+)
+
+_BUDGET_SCHEMA = """{
+  "cost_low": 12500,
+  "cost_high": 18000,
+  "summary": "One or two sentence plain-English summary of the estimate",
+  "line_items": [
+    {"category": "Materials", "name": "Flooring", "cost_low": 3000, "cost_high": 4500},
+    {"category": "Labor", "name": "Installation", "cost_low": 2000, "cost_high": 3000}
+  ]
+}"""
+
+
+def claude_design_budget_estimate(payload: dict) -> dict:
+    """Generate a Design/Rehab Studio room budget estimate using Claude.
+
+    Mirrors the shape the Renovation Engine's /v1/design_studio/generate_budget
+    endpoint returns (cost_low, cost_high, summary, line_items, meta) so callers
+    don't need to branch on which provider produced the estimate.
+    """
+    room_type = payload.get("room_type") or payload.get("room_focus") or "room"
+    style = payload.get("style") or payload.get("design_style") or "modern"
+    finish_level = payload.get("finish_level") or "standard"
+    rehab_level = payload.get("rehab_level") or "medium"
+    sqft = payload.get("room_square_feet") or payload.get("square_feet") or "not specified"
+    budget_min = payload.get("budget_min")
+    budget_max = payload.get("budget_max")
+    target_materials = payload.get("target_materials") or "not specified"
+    notes = payload.get("desired_updates") or payload.get("design_notes") or ""
+    market_multiplier = payload.get("market_cost_multiplier")
+
+    user_msg = (
+        f"Estimate a renovation/design budget for this project.\n\n"
+        f"Room / focus: {room_type}\n"
+        f"Style: {style}\n"
+        f"Finish level: {finish_level}\n"
+        f"Rehab level: {rehab_level}\n"
+        f"Square feet: {sqft}\n"
+        f"Target materials: {target_materials}\n"
+        f"Investor's budget range: {budget_min or 'not specified'}–{budget_max or 'not specified'}\n"
+        f"Notes: {notes}\n"
+        f"Local cost multiplier vs. national average: {market_multiplier or 1.0}\n\n"
+        f"Respond with a JSON object matching this schema exactly:\n{_BUDGET_SCHEMA}"
+    )
+
+    try:
+        response = _anthropic_client().messages.create(
+            model="claude-sonnet-5",
+            max_tokens=1536,
+            system=_BUDGET_SYSTEM,
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        raw = response.content[0].text.strip()
+
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+
+        result = json.loads(raw)
+        result.setdefault("meta", {})
+        result["meta"]["provider"] = "anthropic/claude"
+        return result
+
+    except json.JSONDecodeError as exc:
+        log.error("Claude budget estimate returned invalid JSON: %s", exc)
+        return {
+            "cost_low": 0, "cost_high": 0, "summary": "", "line_items": [],
+            "error": "Invalid JSON from Claude", "meta": {"provider": "anthropic/claude"},
+        }
+    except Exception as exc:
+        log.error("Claude budget estimate failed: %s", exc)
+        return {
+            "cost_low": 0, "cost_high": 0, "summary": "", "line_items": [],
+            "error": str(exc), "meta": {"provider": "anthropic/claude"},
+        }
