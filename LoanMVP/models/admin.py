@@ -100,11 +100,19 @@ class UserInvite(db.Model):
     def is_expired(self):
         return datetime.utcnow() > self.expires_at
 
-class LicenseApplication(db.Model):
-    __tablename__ = "license_applications"
+class BusinessInquiry(db.Model):
+    """Unified inbox for inbound submissions: license applications, plain
+    contact-us messages, lending OS leads, investor challenge signups,
+    referrals, and feedback. `inquiry_type` distinguishes the submission
+    channel; `business_type` is only meaningful for inquiry_type ==
+    'license_application' (broker, lender, fund, brokerage, enterprise)."""
+    __tablename__ = "business_inquiries"
 
     id = db.Column(db.Integer, primary_key=True)
-    company_name = db.Column(db.String(255), nullable=False)
+    inquiry_type = db.Column(db.String(50), nullable=False, default="license_application")
+    # license_application, contact, lending_os_lead, challenge_signup, referral, feedback
+
+    company_name = db.Column(db.String(255), nullable=False, default="—")
     contact_name = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(255), nullable=False, index=True)
     phone = db.Column(db.String(50))

@@ -27,7 +27,7 @@ from LoanMVP.models.processor_model import ProcessorProfile
 from LoanMVP.models.underwriter_model import UnderwriterProfile
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.system_models import SystemLog
-from LoanMVP.models.admin import Company, AccessRequest, UserInvite, LicenseApplication, LicenseInviteEvent
+from LoanMVP.models.admin import Company, AccessRequest, UserInvite, BusinessInquiry, LicenseInviteEvent
 from LoanMVP.models.ai_models import AIAssistantInteraction
 from LoanMVP.models.payment_models import PaymentRecord
 from LoanMVP.models.vip_models import VIPIncome, VIPProfile
@@ -2481,8 +2481,8 @@ def onboarding_center():
 @login_required
 @role_required("platform_admin", "master_admin", "lending_admin")
 def licensing_applications():
-    applications = LicenseApplication.query.order_by(
-        LicenseApplication.created_at.desc()
+    applications = BusinessInquiry.query.order_by(
+        BusinessInquiry.created_at.desc()
     ).all()
 
     invite_lookup = {}
@@ -2521,7 +2521,7 @@ def licensing_applications():
 @login_required
 @role_required("platform_admin", "master_admin", "lending_admin")
 def contact_license_application(app_id):
-    app_row = LicenseApplication.query.get_or_404(app_id)
+    app_row = BusinessInquiry.query.get_or_404(app_id)
 
     if app_row.status == "approved":
         flash("Approved applications are already in onboarding.", "info")
@@ -2542,10 +2542,19 @@ def contact_license_application(app_id):
 @login_required
 @role_required("platform_admin", "master_admin", "lending_admin")
 def approve_license_application(app_id):
-    app_row = LicenseApplication.query.get_or_404(app_id)
+    app_row = BusinessInquiry.query.get_or_404(app_id)
 
     if app_row.status == "approved":
         flash("This application was already approved.", "info")
+        return redirect(url_for("admin.licensing_applications"))
+
+    # Only real license applications go through the full company/invite
+    # workflow. Contact/challenge/referral/feedback entries just get
+    # marked accepted for record-keeping -- there's no company to create.
+    if app_row.inquiry_type != "license_application":
+        app_row.status = "approved"
+        db.session.commit()
+        flash("Marked as accepted.", "success")
         return redirect(url_for("admin.licensing_applications"))
 
     subscription_tier, max_users = _plan_defaults(app_row.plan_interest)
@@ -2579,7 +2588,7 @@ def approve_license_application(app_id):
         request_type="license_application",
         requested_role="admin",
         status="approved",
-        notes=f"Approved from LicenseApplication #{app_row.id}",
+        notes=f"Approved from BusinessInquiry #{app_row.id}",
         company_id=company.id,
         reviewed_by=current_user.id,
     )
@@ -2637,7 +2646,7 @@ def approve_license_application(app_id):
 @login_required
 @role_required("platform_admin", "master_admin", "lending_admin")
 def decline_license_application(app_id):
-    app_row = LicenseApplication.query.get_or_404(app_id)
+    app_row = BusinessInquiry.query.get_or_404(app_id)
 
     if app_row.status == "approved":
         flash("Approved applications cannot be declined here.", "warning")
@@ -2654,7 +2663,7 @@ def decline_license_application(app_id):
 @login_required
 @role_required("platform_admin", "master_admin", "lending_admin")
 def resend_license_application_invite(app_id):
-    app_row = LicenseApplication.query.get_or_404(app_id)
+    app_row = BusinessInquiry.query.get_or_404(app_id)
 
     if app_row.status != "approved":
         flash("Approve the application before sending an onboarding invite.", "warning")

@@ -24,7 +24,7 @@ from LoanMVP.services.subscriptions import sync_features_with_subscription
 from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
 from LoanMVP.utils.decorators import PARTNER_ROLES
 from LoanMVP.models.user_model import User
-from LoanMVP.models.admin import AccessRequest, UserInvite, LicenseApplication, Company
+from LoanMVP.models.admin import AccessRequest, UserInvite, BusinessInquiry, Company
 from LoanMVP.models.investor_models import InvestorProfile
 from LoanMVP.models.crm_models import Partner
 from LoanMVP.models.vip_models import VIPProfile
@@ -1126,8 +1126,8 @@ def accept_invite(token):
         invite.status = "accepted"
         invite.accepted_at = datetime.utcnow()
 
-        app_row = LicenseApplication.query.filter_by(email=invite.email).order_by(
-            LicenseApplication.created_at.desc()
+        app_row = BusinessInquiry.query.filter_by(email=invite.email).order_by(
+            BusinessInquiry.created_at.desc()
         ).first()
         if app_row:
             app_row.status = "onboarded"

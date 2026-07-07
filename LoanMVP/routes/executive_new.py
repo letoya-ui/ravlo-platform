@@ -9,7 +9,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import func, text
 
 from LoanMVP.extensions import db
-from LoanMVP.models.admin import AccessRequest, Company, LicenseApplication, LicenseInviteEvent, UserInvite
+from LoanMVP.models.admin import AccessRequest, Company, BusinessInquiry, LicenseInviteEvent, UserInvite
 from LoanMVP.models.crm_models import Lead, Message, Task
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.loan_models import BorrowerProfile, LoanApplication
@@ -214,8 +214,9 @@ def dashboard():
     challenge_signups = sum(1 for u in all_users
                             if u.trial_ends_at and u.trial_ends_at > now
                             and (u.role or "").lower() == "investor")
-    enterprise_leads = LicenseApplication.query.filter(
-        LicenseApplication.status == "new"
+    enterprise_leads = BusinessInquiry.query.filter(
+        BusinessInquiry.status == "new",
+        BusinessInquiry.inquiry_type == "license_application",
     ).count()
 
     # ── Lives Changed (mission metrics) ──────────────────────────────
@@ -1344,7 +1345,7 @@ def licensing_applications():
     if access_redirect:
         return access_redirect
 
-    applications = LicenseApplication.query.order_by(LicenseApplication.created_at.desc()).all()
+    applications = BusinessInquiry.query.order_by(BusinessInquiry.created_at.desc()).all()
     invite_lookup = {}
     invite_event_lookup = {}
     for app in applications:
@@ -1375,7 +1376,7 @@ def contact_license_application(app_id):
     if access_redirect:
         return access_redirect
 
-    app_row = LicenseApplication.query.get_or_404(app_id)
+    app_row = BusinessInquiry.query.get_or_404(app_id)
     if app_row.status == "approved":
         flash("Approved applications are already in onboarding.", "info")
         return redirect(url_for("executive.licensing_applications"))
@@ -1396,9 +1397,15 @@ def approve_license_application(app_id):
     if access_redirect:
         return access_redirect
 
-    app_row = LicenseApplication.query.get_or_404(app_id)
+    app_row = BusinessInquiry.query.get_or_404(app_id)
     if app_row.status == "approved":
         flash("This application was already approved.", "info")
+        return redirect(url_for("executive.licensing_applications"))
+
+    if app_row.inquiry_type != "license_application":
+        app_row.status = "approved"
+        db.session.commit()
+        flash("Marked as accepted.", "success")
         return redirect(url_for("executive.licensing_applications"))
 
     subscription_tier, max_users = admin_routes._plan_defaults(app_row.plan_interest)
@@ -1431,7 +1438,7 @@ def decline_license_application(app_id):
     if access_redirect:
         return access_redirect
 
-    app_row = LicenseApplication.query.get_or_404(app_id)
+    app_row = BusinessInquiry.query.get_or_404(app_id)
     if app_row.status == "approved":
         flash("Approved applications cannot be declined here.", "warning")
         return redirect(url_for("executive.licensing_applications"))
@@ -1449,7 +1456,7 @@ def resend_license_application_invite(app_id):
     if access_redirect:
         return access_redirect
 
-    app_row = LicenseApplication.query.get_or_404(app_id)
+    app_row = BusinessInquiry.query.get_or_404(app_id)
     if app_row.status != "approved":
         flash("Approve the application before sending an onboarding invite.", "warning")
         return redirect(url_for("executive.licensing_applications"))

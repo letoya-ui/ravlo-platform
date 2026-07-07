@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from sqlalchemy import func
 
 from LoanMVP.extensions import db, csrf, limiter
-from LoanMVP.models.admin import LicenseApplication
+from LoanMVP.models.admin import BusinessInquiry
 from LoanMVP.models.user_model import User
 
 
@@ -338,7 +338,8 @@ def contact():
             return redirect(url_for("marketing.contact"))
 
         notes_body = f"Subject: {subject}\n\n{message}" if subject else message
-        row = LicenseApplication(
+        row = BusinessInquiry(
+            inquiry_type="contact",
             company_name="—",
             contact_name=name,
             email=email,
@@ -414,6 +415,21 @@ def feedback():
                 source=source,
             )
             db.session.add(row)
+
+            notes_parts = [f"NPS score: {nps_score}/10"]
+            if liked:
+                notes_parts.append(f"Liked: {liked}")
+            if improve:
+                notes_parts.append(f"Could improve: {improve}")
+            db.session.add(BusinessInquiry(
+                inquiry_type="feedback",
+                company_name="—",
+                contact_name=name or "Anonymous",
+                email=email or "anonymous@feedback.ravlohq.com",
+                notes="\n".join(notes_parts),
+                status="new",
+            ))
+
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
@@ -532,12 +548,13 @@ def lending_os_request_preview():
         flash("Email is required.", "warning")
         return redirect(url_for("marketing.lending_os") + "#request-preview")
 
-    existing = LicenseApplication.query.filter(
-        func.lower(LicenseApplication.email) == email,
-        LicenseApplication.business_type == "lending_os_lead",
+    existing = BusinessInquiry.query.filter(
+        func.lower(BusinessInquiry.email) == email,
+        BusinessInquiry.business_type == "lending_os_lead",
     ).first()
     if not existing:
-        app_row = LicenseApplication(
+        app_row = BusinessInquiry(
+            inquiry_type="lending_os_lead",
             company_name=company or "—",
             contact_name=f"{first_name} {last_name}".strip() or email,
             email=email,
@@ -637,7 +654,8 @@ def apply():
             flash("Company name, contact name, and email are required.", "warning")
             return render_template("marketing/apply.html")
 
-        app_row = LicenseApplication(
+        app_row = BusinessInquiry(
+            inquiry_type="license_application",
             company_name=company_name,
             contact_name=contact_name,
             email=email,
@@ -698,8 +716,38 @@ def lending_challenge():
     )
 
 
-@marketing_bp.route("/refer")
+@marketing_bp.route("/refer", methods=["GET", "POST"])
+@csrf.exempt
+@limiter.limit("5 per minute", methods=["POST"])
 def referral():
+    if request.method == "POST":
+        referrer_name  = (request.form.get("referrer_name")  or "").strip()
+        referrer_email = (request.form.get("referrer_email") or "").strip().lower()
+        friend_name    = (request.form.get("friend_name")    or "").strip()
+        friend_email   = (request.form.get("friend_email")   or "").strip().lower()
+        message        = (request.form.get("message")        or "").strip()
+
+        if not referrer_name or not referrer_email or not friend_email:
+            flash("Your name, your email, and your friend's email are required.", "warning")
+            return redirect(url_for("marketing.referral"))
+
+        notes_parts = [f"Referred: {friend_name or '(no name given)'} <{friend_email}>"]
+        if message:
+            notes_parts.append(f"Message: {message}")
+
+        db.session.add(BusinessInquiry(
+            inquiry_type="referral",
+            company_name="—",
+            contact_name=referrer_name,
+            email=referrer_email,
+            notes="\n".join(notes_parts),
+            status="new",
+        ))
+        db.session.commit()
+
+        flash("Thanks! We'll reach out to your friend and get your free month set up.", "success")
+        return redirect(url_for("marketing.referral"))
+
     return render_template(
         "marketing/referral.html",
         page_title="Refer & Earn | Ravlo",

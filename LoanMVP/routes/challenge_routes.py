@@ -18,6 +18,7 @@ from flask_login import current_user, login_user
 from LoanMVP.extensions import db
 from LoanMVP.models.user_model import User
 from LoanMVP.models.company_finance_models import ChallengeEnrollment
+from LoanMVP.models.admin import BusinessInquiry
 
 challenge_bp = Blueprint("challenge", __name__, url_prefix="/challenge")
 
@@ -183,6 +184,18 @@ def join(slug):
     # ── Record enrollment ────────────────────────────────────────────────
     enrollment = ChallengeEnrollment(user_id=user.id, slug=slug)
     db.session.add(enrollment)
+
+    # Tracking entry in the unified admin inbox -- does not gate the trial,
+    # which is already active above.
+    db.session.add(BusinessInquiry(
+        inquiry_type="challenge_signup",
+        company_name="—",
+        contact_name=full_name,
+        email=email,
+        notes=f"Challenge: {ch['title']} ({slug})",
+        status="new",
+    ))
+
     db.session.commit()
 
     flash(f"You're in! Your {ch['trial_days']}-day challenge starts now — welcome to Ravlo.", "success")

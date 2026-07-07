@@ -127,7 +127,7 @@ from LoanMVP.models.admin import (
     UserInvite,
     AccessRequest,
     Company,
-    LicenseApplication,
+    BusinessInquiry,
     LicenseInviteEvent,
 )
 

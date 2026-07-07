@@ -1,6 +1,15 @@
 {% extends "layouts/ravlo_employee_base.html" %}
 {% set route_ns = route_namespace|default('admin', true) %}
-{% block title %}Licensing Applications{% endblock %}
+{% block title %}Business Inquiries{% endblock %}
+
+{% set _type_labels = {
+  "license_application": "License App",
+  "contact": "Contact Us",
+  "lending_os_lead": "Lending OS Lead",
+  "challenge_signup": "Challenge Signup",
+  "referral": "Referral",
+  "feedback": "Feedback",
+} %}
 
 {% block content %}
 <section class="ravlo-page">
@@ -8,16 +17,16 @@
   <div class="ravlo-header">
     <div>
       <div class="ravlo-eyebrow">PLATFORM ADMIN</div>
-      <h1>Licensing Applications</h1>
-      <p>Review applications, approve companies, and manage onboarding invites.</p>
+      <h1>Business Inquiries</h1>
+      <p>Contact-us messages, license applications, lending OS leads, challenge signups, referrals, and feedback — all in one place.</p>
     </div>
   </div>
 
   <div class="ravlo-card">
     <div class="ravlo-card-header">
       <div>
-        <h3>Incoming Applications</h3>
-        <p class="card-subtext">Approve qualified applicants and trigger company onboarding.</p>
+        <h3>Incoming Inquiries</h3>
+        <p class="card-subtext">Accept, decline, or follow up. Only license applications trigger company onboarding.</p>
       </div>
     </div>
 
@@ -26,6 +35,7 @@
       <table class="ravlo-table">
         <thead>
           <tr>
+            <th>Type</th>
             <th>Company</th>
             <th>Contact</th>
             <th>Plan</th>
@@ -38,6 +48,10 @@
         <tbody>
           {% for app in applications %}
           <tr>
+            <td>
+              <span class="chip type-{{ app.inquiry_type }}">{{ _type_labels.get(app.inquiry_type, app.inquiry_type|replace("_", " ")|title) }}</span>
+            </td>
+
             <td>
               <div class="company-block">
                 <strong>{{ app.company_name }}</strong>
@@ -84,7 +98,7 @@
                 {% if app.status != "approved" %}
                 <form method="POST" action="{{ url_for(route_ns ~ '.approve_license_application', app_id=app.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="ravlo-btn primary sm">Approve</button>
+                  <button type="submit" class="ravlo-btn primary sm">Accept</button>
                 </form>
                 {% endif %}
 
@@ -95,7 +109,7 @@
                 </form>
                 {% endif %}
 
-                {% if app.status == "approved" %}
+                {% if app.status == "approved" and app.inquiry_type == "license_application" %}
                 <form method="POST" action="{{ url_for(route_ns ~ '.resend_license_application_invite', app_id=app.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="ravlo-btn secondary sm">Resend Invite</button>
@@ -106,7 +120,7 @@
           </tr>
 
           <tr class="details-row">
-            <td colspan="6">
+            <td colspan="7">
               <div class="details-grid">
 
                 <div class="detail-card">
@@ -185,8 +199,8 @@
     {% else %}
     <div class="empty-state">
       <div class="empty-icon">◎</div>
-      <h3>No licensing applications yet</h3>
-      <p>When applicants submit from your pricing or apply page, they’ll appear here.</p>
+      <h3>No inquiries yet</h3>
+      <p>Contact form messages, license applications, lending OS leads, challenge signups, referrals, and feedback will appear here.</p>
     </div>
     {% endif %}
   </div>
@@ -210,6 +224,12 @@
   .small { font-size: 0.84rem; }
   .muted { color: #90a3b7; }
   .chip { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; background: rgba(93,162,255,.14); border: 1px solid rgba(93,162,255,.18); color: #dceaf9; font-size: 0.8rem; font-weight: 700; text-transform: capitalize; }
+  .chip.type-license_application { background: rgba(93,162,255,.14); border-color: rgba(93,162,255,.18); color: #dceaf9; }
+  .chip.type-contact { background: rgba(167,139,250,.14); border-color: rgba(167,139,250,.2); color: #e3d8ff; }
+  .chip.type-lending_os_lead { background: rgba(255,214,102,.14); border-color: rgba(255,214,102,.2); color: #ffe8a3; }
+  .chip.type-challenge_signup { background: rgba(94,234,165,.14); border-color: rgba(94,234,165,.2); color: #b6f3d3; }
+  .chip.type-referral { background: rgba(255,150,113,.14); border-color: rgba(255,150,113,.2); color: #ffd0bf; }
+  .chip.type-feedback { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.12); color: #dfe9f4; }
   .status { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 800; text-transform: capitalize; }
   .status.new { background: rgba(255,255,255,.08); color: #dfe9f4; }
   .status.contacted { background: rgba(255,214,102,.16); color: #ffe8a3; }
