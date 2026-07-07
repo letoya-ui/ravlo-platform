@@ -715,6 +715,9 @@ def _realtor_context(profile, partner):
         return q
 
     def _scope_clients(q):
+        # Primary isolation: only this realtor's own clients/leads. The
+        # market switcher below just narrows within the realtor's own book.
+        q = q.filter(ElenaClient.vip_profile_id == profile.id)
         if effective_market != ALL_MARKETS:
             q = q.filter(ElenaClient.market == effective_market)
         elif available_markets:
@@ -3693,34 +3696,30 @@ TEAM_ROLE_CHOICES = [
 
 
 def _unassigned_leads(profile):
-    """Unassigned leads scoped to this realtor.
+    """This realtor's own leads that aren't yet routed to a teammate.
 
-    ElenaClient has no per-user FK yet, so we filter by the realtor's
-    configured markets (case-insensitive). Realtors with no markets
-    configured fall back to the shared pool — which is the expected
-    single-tenant behavior for local / demo environments.
+    Scoped by ``vip_profile_id`` so partners never see each other's leads.
     """
-    q = (ElenaClient.query
-         .filter((ElenaClient.assigned_member_id == None) |  # noqa: E711
-                 (ElenaClient.assigned_member_id == 0)))
-
-    user_markets = get_user_markets(profile)
-    if user_markets:
-        normalized = [m.strip().lower() for m in user_markets if m]
-        if normalized:
-            q = q.filter(
-                (ElenaClient.market == None) |  # noqa: E711
-                (func.lower(func.trim(ElenaClient.market)).in_(normalized))
-            )
-
-    return q.order_by(ElenaClient.created_at.desc()).limit(50).all()
+    return (ElenaClient.query
+            .filter(ElenaClient.vip_profile_id == profile.id)
+            .filter((ElenaClient.assigned_member_id == None) |  # noqa: E711
+                    (ElenaClient.assigned_member_id == 0))
+            .order_by(ElenaClient.created_at.desc())
+            .limit(50)
+            .all())
 
 
 def _realtor_owns_lead(profile, lead) -> bool:
-    """True if the lead is unassigned or already routed to one of this
-    realtor's teammates, or falls within the realtor's configured markets."""
+    """True if this realtor's profile owns the lead.
+
+    Leads created with an explicit owner belong only to that profile. Legacy
+    leads (captured before ownership existed) have no owner, so we fall back
+    to the older teammate-routing + market-matching heuristic."""
     if lead is None:
         return False
+
+    if getattr(lead, "vip_profile_id", None) is not None:
+        return lead.vip_profile_id == profile.id
 
     if lead.assigned_member_id:
         member = VIPTeamMember.query.get(lead.assigned_member_id)
