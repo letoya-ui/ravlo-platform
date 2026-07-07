@@ -15,7 +15,8 @@ from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.loan_models import BorrowerProfile, LoanApplication
 from LoanMVP.models.system_models import SystemLog
 from LoanMVP.models.user_model import User
-from LoanMVP.models.contractor_models import ContractorBidOpportunity, ConstructionProject
+from LoanMVP.models.contractor_models import ContractorBidOpportunity, ConstructionProject, BidSuggestion
+from LoanMVP.services.bid_discovery import maybe_run_bid_discovery, any_source_available
 from LoanMVP.models.company_finance_models import CMFinanceEntry, UserEmailConnection
 from LoanMVP.routes import admin as admin_routes
 
@@ -404,7 +405,12 @@ def construction_center():
 
     bid_opps   = []
     inbound_jobs = []
+    discovered_bids = []
     if partner:
+        # Throttled auto-pull of public-procurement bids so fresh opportunities
+        # land on the dashboard without anyone searching. No-op when no source
+        # is configured; never raises.
+        maybe_run_bid_discovery(partner)
         try:
             bid_opps = (
                 ContractorBidOpportunity.query
@@ -415,6 +421,17 @@ def construction_center():
         except Exception as exc:
             db.session.rollback()
             current_app.logger.warning("[construction_center] bid table not ready: %s", exc)
+        try:
+            discovered_bids = (
+                BidSuggestion.query
+                .filter_by(partner_id=partner.id, status="active")
+                .filter(BidSuggestion.origin != "manual")
+                .order_by(BidSuggestion.created_at.desc())
+                .limit(10).all()
+            )
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning("[construction_center] suggestions not ready: %s", exc)
         inbound_jobs = (
             PartnerConnectionRequest.query
             .filter_by(partner_id=partner.id)
@@ -486,6 +503,8 @@ def construction_center():
         won_bids        = won_bids,
         value_in_play   = value_in_play,
         inbound_jobs    = inbound_jobs,
+        discovered_bids = discovered_bids,
+        discovery_enabled = any_source_available(),
         month_income    = month_income,
         month_expense   = month_expense,
         month_net       = month_income - month_expense,

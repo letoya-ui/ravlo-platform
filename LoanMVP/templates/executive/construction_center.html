@@ -45,7 +45,47 @@
     <div class="re-stat" style="border-color:rgba(245,185,66,.2);background:rgba(245,185,66,.04);"><div class="re-stat-label">Value in Play</div><div class="re-stat-value" style="color:#f5b942;font-size:1.2rem;">${{ '{:,.0f}'.format(value_in_play) }}</div><div class="re-stat-meta">Active bid estimates</div></div>
     <div class="re-stat" style="border-color:rgba(44,182,125,.2);background:rgba(44,182,125,.04);"><div class="re-stat-label">This Month Net</div><div class="re-stat-value" style="color:{% if month_net >= 0 %}#2cb67d{% else %}#f87171{% endif %};font-size:1.2rem;">{% if month_net < 0 %}–{% endif %}${{ '{:,.0f}'.format(month_net|abs) }}</div><div class="re-stat-meta">Construction P&amp;L</div></div>
     <div class="re-stat"><div class="re-stat-label">Inbound Jobs</div><div class="re-stat-value">{{ inbound_jobs|length }}</div><div class="re-stat-meta">Waiting in Ravlo inbox</div></div>
+    <div class="re-stat" style="border-color:rgba(95,168,255,.2);background:rgba(95,168,255,.04);"><div class="re-stat-label">Found for You</div><div class="re-stat-value" style="color:#5FA8FF;">{{ discovered_bids|length }}</div><div class="re-stat-meta">Public bids to review</div></div>
   </section>
+
+  {% if discovery_enabled %}
+  <section class="re-card pad" style="border-color:rgba(95,168,255,.18);background:rgba(95,168,255,.02);">
+    <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">FOUND FOR YOU</div>
+        <h3 style="margin:.25rem 0 0;font-size:1.05rem;">Public bids matched to your work</h3>
+        <p style="margin:6px 0 0;color:rgba(255,255,255,.5);font-size:.86rem;line-height:1.55;">Pulled automatically from public procurement sources and filtered to Tampa-area construction. Review and save the real ones into your pipeline.</p>
+      </div>
+      <form method="POST" action="{{ url_for('construction_bids.discover_bids') }}" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="re-btn ghost sm"><i class="lucide lucide-refresh-cw"></i> Refresh</button>
+      </form>
+    </div>
+
+    {% if discovered_bids %}
+      <div style="display:grid;gap:10px;">
+        {% for b in discovered_bids %}
+          <div class="re-card" style="padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025);display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+            <div style="min-width:0;flex:1;">
+              <div style="font-size:.92rem;font-weight:800;color:#f4f7fb;">{{ b.title }}</div>
+              <div style="margin-top:4px;color:rgba(255,255,255,.5);font-size:.78rem;">
+                {% if b.location %}<span>{{ b.location }}</span>{% endif %}
+                {% if b.due_date %}<span> · Due {{ b.due_date.strftime('%b %d, %Y') }}</span>{% endif %}
+                {% if b.source_name %}<span> · {{ b.source_name }}</span>{% endif %}
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              {% if b.source_url %}<a href="{{ b.source_url }}" target="_blank" rel="noopener" class="re-btn ghost sm">View</a>{% endif %}
+              <a href="{{ url_for('construction_bids.search_page') }}" class="re-btn primary sm">Review &amp; Save</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="margin:0;color:rgba(255,255,255,.4);font-size:.85rem;">No new public bids right now. New matches will appear here automatically, or hit Refresh to check now.</p>
+    {% endif %}
+  </section>
+  {% endif %}
 
   <section class="re-card pad" id="bid-search" style="border-color:rgba(95,168,255,.18);background:rgba(95,168,255,.025);">
     <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px;">

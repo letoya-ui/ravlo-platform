@@ -13,6 +13,9 @@ from LoanMVP.models.contractor_models import (
     BidProposal, BidSuggestion, ContractorBidOpportunity, ConstructionProject,
 )
 from LoanMVP.models.crm_models import Partner
+from LoanMVP.services.bid_discovery import (
+    any_source_available, maybe_run_bid_discovery, run_bid_discovery,
+)
 
 construction_bids_bp = Blueprint("construction_bids", __name__, url_prefix="/construction/bids")
 
@@ -146,6 +149,12 @@ def search_page():
         return redirect(url_for("auth.post_login_redirect"))
 
     partner = _current_partner()
+
+    # Auto-pull fresh public-procurement opportunities (throttled; no-op when
+    # no source is configured). Never let a discovery hiccup break the page.
+    if partner:
+        maybe_run_bid_discovery(partner)
+
     recent_opportunities = []
     if partner:
         recent_opportunities = (
@@ -222,7 +231,43 @@ def search_page():
         search_terms=search_terms,
         suggestions=suggestions,
         dismissed=dismissed,
+        auto_discovery_enabled=any_source_available(),
     )
+
+
+@construction_bids_bp.route("/discover", methods=["POST"])
+@login_required
+def discover_bids():
+    """Manually trigger a public-procurement bid pull (the 'Refresh bids' button)."""
+    if not _can_use_bid_handoff():
+        flash("Access denied.", "warning")
+        return redirect(url_for("auth.post_login_redirect"))
+
+    partner = _current_partner()
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("construction_bids.search_page"))
+
+    if not any_source_available():
+        flash(
+            "Automatic bid discovery isn't set up yet — add a SAM.gov API key "
+            "to enable it.", "warning",
+        )
+        return redirect(_construction_return_url("construction_bids.search_page"))
+
+    result = run_bid_discovery(partner)
+    added = result.get("added", 0)
+    if added:
+        flash(
+            f"Found {added} new bid opportunit{'y' if added == 1 else 'ies'}.",
+            "success",
+        )
+    elif result.get("errors"):
+        flash("Bid search ran but a source returned an error. Try again shortly.", "warning")
+    else:
+        flash("No new opportunities right now — you're all caught up.", "info")
+
+    return redirect(_construction_return_url("construction_bids.search_page"))
 
 
 @construction_bids_bp.route("/suggestions/add", methods=["POST"])
