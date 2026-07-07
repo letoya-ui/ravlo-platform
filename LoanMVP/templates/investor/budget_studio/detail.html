@@ -430,6 +430,16 @@
         {% endif %}
       </div>
 
+      {% if budget.deal and budget.deal.arv_tier and budget.arv_tier and budget.deal.arv_tier != budget.arv_tier %}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:.7rem 1rem;border-radius:12px;background:rgba(240,198,116,.08);border:1px solid rgba(240,198,116,.22);margin-bottom:14px;">
+        <span style="font-size:.82rem;color:#f0c674;">
+          This budget was built for the <strong>{{ {"conservative": "Conservative", "base": "Base", "aggressive": "Aggressive"}.get(budget.arv_tier, budget.arv_tier|title) }}</strong> tier, but the deal is now set to
+          <strong>{{ {"conservative": "Conservative", "base": "Base", "aggressive": "Aggressive"}.get(budget.deal.arv_tier, budget.deal.arv_tier|title) }}</strong>.
+        </span>
+        <a href="{{ url_for('investor.budget_studio', deal_id=budget.deal_id) }}" class="ravlo-btn ghost" style="white-space:nowrap;">Regenerate for {{ {"conservative": "Conservative", "base": "Base", "aggressive": "Aggressive"}.get(budget.deal.arv_tier, budget.deal.arv_tier|title) }}</a>
+      </div>
+      {% endif %}
+
       <div style="font-size:.8rem;color:rgba(228,236,246,.55);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Budget Burn Rate</div>
       <div class="burn-track">
         <div class="burn-fill {% if is_over %}red{% elif is_watch %}amber{% else %}green{% endif %}"
