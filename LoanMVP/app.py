@@ -46,7 +46,7 @@ if SOCKETIO_ASYNC_MODE == "threading":
         engineio.async_modes = ["threading"]
         engineio.Server = engineio.server.Server
 
-if SOCKETIO_ASYNC_MODE == "eventlet":
+def _patch_eventlet_ssl_recursion():
     # Work around a longstanding eventlet bug: GreenSSLContext does not
     # override verify_mode/verify_flags/options, so CPython's own property
     # setter recurses into itself forever when called on a GreenSSLContext
@@ -62,29 +62,44 @@ if SOCKETIO_ASYNC_MODE == "eventlet":
     # so this holds regardless of which eventlet build is installed. (The
     # previous workaround delegated to ssl.SSLContext, which is itself the
     # recursive property once eventlet's own override is absent.)
+    #
+    # This is gated on eventlet having actually monkey-patched ssl rather
+    # than on SOCKETIO_ASYNC_MODE, because the gunicorn eventlet worker
+    # monkey-patches before this module is imported even when SocketIO
+    # itself is configured differently -- so the recursion can occur while
+    # SOCKETIO_ASYNC_MODE != "eventlet".
     try:
+        import eventlet.patcher
+
+        # eventlet tracks ssl patching under the "socket" key, not "ssl".
+        if not eventlet.patcher.is_monkey_patched("socket"):
+            return
+
         import _ssl
         from eventlet.green import ssl as _green_ssl
 
-        _c_ssl_context = _ssl._SSLContext
+        c_ssl_context = _ssl._SSLContext
 
-        def _rebind_ssl_context_property(prop_name):
-            c_descriptor = getattr(_c_ssl_context, prop_name, None)
+        def _rebind(prop_name):
+            c_descriptor = getattr(c_ssl_context, prop_name, None)
             if c_descriptor is None:
                 return
 
             def _getter(self, _d=c_descriptor):
-                return _d.__get__(self, _c_ssl_context)
+                return _d.__get__(self, c_ssl_context)
 
             def _setter(self, value, _d=c_descriptor):
                 _d.__set__(self, value)
 
             setattr(_green_ssl.GreenSSLContext, prop_name, property(_getter, _setter))
 
-        for _prop_name in ("verify_mode", "verify_flags", "options", "minimum_version", "maximum_version"):
-            _rebind_ssl_context_property(_prop_name)
+        for prop_name in ("verify_mode", "verify_flags", "options", "minimum_version", "maximum_version"):
+            _rebind(prop_name)
     except Exception:
         pass
+
+
+_patch_eventlet_ssl_recursion()
 
 
 # ---------------------------------------------------------
