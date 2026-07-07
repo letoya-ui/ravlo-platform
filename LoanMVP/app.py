@@ -157,6 +157,7 @@ _SCHEMA_COMPAT_TABLES = [
     "project_invoices",
     "project_change_orders",
     "discovery_events",
+    "ravlo_ai_memory_logs",
 ]
 
 _SCHEMA_COMPAT_INDEXES = [

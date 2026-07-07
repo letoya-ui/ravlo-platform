@@ -7466,6 +7466,7 @@ def design_studio_generate_budget():
             except (TypeError, ValueError):
                 pass
 
+        used_provider = "renovation_engine"
         try:
             if not RENOVATION_ENGINE_URL:
                 raise RuntimeError("RENOVATION_ENGINE_URL is not configured.")
@@ -7478,6 +7479,7 @@ def design_studio_generate_budget():
             current_app.logger.warning(
                 "Renovation engine design budget call failed, falling back to Claude: %s", _engine_exc
             )
+            used_provider = "anthropic_claude"
             from LoanMVP.services.llm_studio_service import claude_design_budget_estimate
             engine_json = claude_design_budget_estimate(payload)
 
@@ -7488,6 +7490,22 @@ def design_studio_generate_budget():
             "line_items": engine_json.get("line_items") or [],
             "meta": engine_json.get("meta") or {},
         }
+
+        try:
+            from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+            log_ai_exchange(
+                module="investor_os",
+                feature="design_studio_generate_budget",
+                prompt=json.dumps(payload, default=str)[:4000],
+                response=json.dumps(budget, default=str)[:8000],
+                user_id=current_user.id,
+                role_view="investor",
+                provider=used_provider,
+                model="design_budget_engine" if used_provider == "renovation_engine" else "claude-sonnet-5",
+                metadata={"deal_id": deal_id, "project_id": project_id},
+            )
+        except Exception:
+            pass
 
         budget_tracker = None
         if save_to_deal and deal is not None:
@@ -12293,6 +12311,7 @@ def deal_architect_analyze():
             cost_ctx = None
 
         engine_data = {}
+        used_provider = "renovation_engine"
         try:
             if not RENOVATION_ENGINE_URL:
                 raise RuntimeError("RENOVATION_ENGINE_URL is not configured.")
@@ -12302,6 +12321,7 @@ def deal_architect_analyze():
                 "Renovation engine deal_architect call failed, falling back to Claude: %s", _engine_exc
             )
             engine_data = {}
+            used_provider = "anthropic_claude"
             try:
                 from LoanMVP.services.llm_studio_service import claude_deal_analysis
                 _claude_result = claude_deal_analysis({
@@ -12342,6 +12362,22 @@ def deal_architect_analyze():
                 }
             except Exception as _exc:
                 current_app.logger.warning("claude_deal_analysis fallback failed: %s", _exc)
+
+        try:
+            from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+            log_ai_exchange(
+                module="investor_os",
+                feature="deal_architect_analyze",
+                prompt=json.dumps(payload, default=str)[:4000],
+                response=json.dumps(engine_data, default=str)[:8000] if engine_data else "",
+                user_id=current_user.id,
+                role_view="investor",
+                provider=used_provider,
+                model="deal_architect_engine" if used_provider == "renovation_engine" else "claude-sonnet-5",
+                metadata={"deal_id": deal_id, "engine_ok": bool(engine_data)},
+            )
+        except Exception:
+            pass
 
         if cost_ctx and isinstance(engine_data, dict):
             try:

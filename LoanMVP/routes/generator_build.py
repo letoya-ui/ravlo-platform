@@ -1738,47 +1738,44 @@ def _build_generate_response(*, persist_to_investor=False):
 
     current_app.logger.info("FORWARDING BUILD GENERATOR TO RENOVATION_ENGINE_URL=%s", engine_url)
 
-    if not engine_url:
-        # GPU engine offline — fall back to OpenAI/Claude cloud generation
+    used_provider = "renovation_engine"
+    payload = None
+    _gen_ok = False
+    _status_code = 500
+
+    if engine_url:
+        try:
+            response = _post_build_generate(engine_url, spec)
+            try:
+                raw_payload = response.json()
+                payload = raw_payload if isinstance(raw_payload, dict) else {
+                    "status": "ok",
+                    "result": raw_payload,
+                }
+            except Exception:
+                payload = {
+                    "status": "error",
+                    "message": response.text,
+                }
+            _gen_ok = response.ok and _as_dict(payload).get("status") not in ("error", "failed")
+            _status_code = response.status_code
+        except Exception as exc:
+            current_app.logger.warning(
+                "Renovation engine build-generate call failed, falling back to cloud generation: %s", exc
+            )
+            _gen_ok = False
+
+    if not _gen_ok:
+        # GPU engine offline (or the call above failed) — fall back to OpenAI/Claude cloud generation
         try:
             from LoanMVP.services.cloud_studio_service import run_cloud_generation
             payload = run_cloud_generation(spec)
         except Exception as exc:
             current_app.logger.error("Cloud studio generation failed: %s", exc)
             return jsonify({"status": "error", "message": f"Cloud generation failed: {exc}"}), 500
+        used_provider = "openai_claude"
         _gen_ok = _as_dict(payload).get("status") not in ("error", "failed")
         _status_code = 200 if _gen_ok else 500
-    else:
-        try:
-            response = _post_build_generate(engine_url, spec)
-        except requests.exceptions.SSLError as exc:
-            return jsonify(
-                {
-                    "status": "error",
-                    "message": str(exc),
-                    "detail": (
-                        "The HTTPS request reached the network but TLS failed before "
-                        "certificate verification. For ngrok dev URLs this usually "
-                        "means local network security is blocking the tunnel hostname."
-                    ),
-                }
-            ), 502
-        except requests.exceptions.RequestException as exc:
-            return jsonify({"status": "error", "message": str(exc)}), 502
-
-        try:
-            raw_payload = response.json()
-            payload = raw_payload if isinstance(raw_payload, dict) else {
-                "status": "ok",
-                "result": raw_payload,
-            }
-        except Exception:
-            payload = {
-                "status": "error",
-                "message": response.text,
-            }
-        _gen_ok = response.ok and _as_dict(payload).get("status") not in ("error", "failed")
-        _status_code = response.status_code
 
     if _gen_ok:
         payload.setdefault("build_intelligence", _build_intelligence_package(spec, payload))
@@ -1804,7 +1801,7 @@ def _build_generate_response(*, persist_to_investor=False):
                 _prompt = spec.get("engine_prompt") or spec.get("prompt") or spec.get("description") or ""
                 log_studio_batch(
                     feature=spec.get("studio") or "build_studio",
-                    provider="renovation_engine",
+                    provider=used_provider,
                     payload={
                         "prompt": _prompt,
                         "style": spec.get("style", ""),

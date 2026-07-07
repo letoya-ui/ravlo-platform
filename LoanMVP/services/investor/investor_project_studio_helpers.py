@@ -250,6 +250,8 @@ def _call_deal_architect(payload: dict) -> dict:
     log = logging.getLogger(__name__)
 
     engine_url = (current_app.config.get("RENOVATION_ENGINE_URL") or "").rstrip("/")
+    used_provider = "renovation_engine"
+    result = None
 
     if engine_url:
         headers = {"Content-Type": "application/json"}
@@ -266,15 +268,34 @@ def _call_deal_architect(payload: dict) -> dict:
                 timeout=20,
             )
             resp.raise_for_status()
-            return resp.json()
+            result = resp.json()
         except Exception as engine_err:
             log.warning(
                 "Deal Architect engine unavailable (%s) — falling back to Claude.",
                 engine_err,
             )
 
-    from LoanMVP.services.llm_studio_service import claude_deal_analysis
-    return claude_deal_analysis(payload)
+    if result is None:
+        used_provider = "anthropic_claude"
+        from LoanMVP.services.llm_studio_service import claude_deal_analysis
+        result = claude_deal_analysis(payload)
+
+    try:
+        from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+        log_ai_exchange(
+            module="investor_os",
+            feature="deal_architect_proxy",
+            prompt=json.dumps(payload, default=str)[:4000],
+            response=json.dumps(result, default=str)[:8000] if result else "",
+            user_id=current_user.id if getattr(current_user, "is_authenticated", False) else None,
+            role_view="investor",
+            provider=used_provider,
+            model="deal_architect_engine" if used_provider == "renovation_engine" else "claude-sonnet-5",
+        )
+    except Exception:
+        pass
+
+    return result
 
 
 def _project_studio_lookup(address: str, city: str = "", state: str = "", zip_code: str = "") -> dict:
