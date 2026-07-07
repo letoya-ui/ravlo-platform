@@ -26,7 +26,7 @@ from typing import Optional
 log = logging.getLogger(__name__)
 
 _OPENAI_IMAGE_MODEL = os.environ.get("OPENAI_IMAGE_MODEL", "gpt-image-1")
-_ANTHROPIC_MODEL = os.environ.get("CLOUD_STUDIO_CLAUDE_MODEL", "claude-sonnet-4-6")
+_ANTHROPIC_MODEL = os.environ.get("CLOUD_STUDIO_CLAUDE_MODEL", "claude-sonnet-5")
 
 
 # ---------------------------------------------------------------------------
