@@ -90,8 +90,19 @@
     <div class="rac-quick-chips" id="racQuickChips"></div>
   </div>
 
+  {# Attached photo preview #}
+  <div class="rac-photo-preview" id="racPhotoPreview" hidden>
+    <img id="racPhotoThumb" src="" alt="Attached photo">
+    <span id="racPhotoName">Photo attached</span>
+    <button type="button" class="rac-photo-clear" id="racPhotoClear" title="Remove photo">×</button>
+  </div>
+
   {# Input bar #}
   <div class="rac-input-bar">
+    <label for="racPhotoInput" class="rac-icon-btn rac-photo-btn" title="Attach a photo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </label>
+    <input type="file" id="racPhotoInput" accept="image/*" hidden>
     <textarea
       id="racInput"
       class="rac-input"
@@ -418,6 +429,62 @@
 .rac-send:hover   { opacity: .9; transform: scale(1.05); }
 .rac-send:disabled{ opacity: .5; transform: none; cursor: not-allowed; }
 
+.rac-photo-btn {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: #b8c5d6;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+.rac-photo-btn:hover { background: rgba(255,255,255,.12); }
+.rac-photo-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  margin: 0 12px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(122,184,255,.22);
+  background: rgba(122,184,255,.08);
+}
+.rac-photo-preview img {
+  width: 40px; height: 40px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.12);
+  flex-shrink: 0;
+}
+.rac-photo-preview span {
+  flex: 1;
+  font-size: .78rem;
+  color: #b8c5d6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rac-photo-clear {
+  background: none;
+  border: none;
+  color: #7ab8ff;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0 4px;
+  line-height: 1;
+  opacity: .7;
+}
+.rac-photo-clear:hover { opacity: 1; }
+.rac-msg-thumb {
+  max-width: 180px;
+  border-radius: 10px;
+  display: block;
+  margin-bottom: 6px;
+  border: 1px solid rgba(255,255,255,.12);
+}
+
 @media (max-width: 500px) {
   .rac-fab-wrap { right: 14px; bottom: {% if rac_stacked %}76px{% else %}14px{% endif %}; }
   .rac-panel    { right: 14px; bottom: {% if rac_stacked %}138px{% else %}76px{% endif %}; width: calc(100vw - 28px); }
@@ -433,6 +500,7 @@
   var _history = [];   // [{role:"user"|"assistant", content:"..."}]
   var _loading = false;
   var _open    = false;
+  var _pendingImage = null; // data:image/...;base64,... of an attached photo, or null
 
   // ── Quick commands per role ────────────────────────────────────────
   var QUICK_CMDS = {
@@ -537,7 +605,7 @@
   }
 
   // ── Append message bubbles ─────────────────────────────────────────
-  function _appendMsg(role, content) {
+  function _appendMsg(role, content, imageDataUrl) {
     var welcome = el('racWelcome');
     if (welcome) welcome.remove();
 
@@ -549,7 +617,8 @@
       ? '<div class="rac-msg-avatar rac-msg-avatar--ai"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>'
       : '<div class="rac-msg-avatar rac-msg-avatar--user">' + _esc((USER_NAME||'U').charAt(0).toUpperCase()) + '</div>';
 
-    var bubble = '<div class="rac-bubble rac-bubble--' + role + '">' + _fmt(content) + '</div>';
+    var thumbHtml = imageDataUrl ? '<img class="rac-msg-thumb" src="' + imageDataUrl + '" alt="Attached photo">' : '';
+    var bubble = '<div class="rac-bubble rac-bubble--' + role + '">' + thumbHtml + _fmt(content) + '</div>';
 
     row.innerHTML = role === 'ai'
       ? avatarHtml + bubble
@@ -565,13 +634,15 @@
     if (_loading) return;
     var input = el('racInput');
     var msg   = (overrideMsg || (input ? input.value : '') || '').trim();
-    if (!msg) return;
+    var image = _pendingImage;
+    if (!msg && !image) return;
 
     if (input && !overrideMsg) input.value = '';
     _autoResize();
+    _clearPendingImage();
 
-    _appendMsg('user', msg);
-    _history.push({ role: 'user', content: msg });
+    _appendMsg('user', msg, image);
+    _history.push({ role: 'user', content: msg || '(photo attached)' });
     _setLoading(true);
 
     // Hide quick chips after first message
@@ -581,7 +652,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify({ message: msg, history: _history.slice(0, -1) }),
+      body: JSON.stringify({ message: msg, history: _history.slice(0, -1), image: image || undefined }),
     })
     .then(function(r){ return r.json(); })
     .then(function(d){
@@ -597,6 +668,40 @@
       _appendMsg('ai', 'Network error — please check your connection and try again.');
     });
   };
+
+  function _clearPendingImage() {
+    _pendingImage = null;
+    var preview = el('racPhotoPreview');
+    if (preview) preview.hidden = true;
+    var fileInput = el('racPhotoInput');
+    if (fileInput) fileInput.value = '';
+  }
+
+  function _wirePhotoAttach() {
+    var fileInput = el('racPhotoInput');
+    var clearBtn  = el('racPhotoClear');
+    if (!fileInput) return;
+
+    fileInput.addEventListener('change', function() {
+      var file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      if (!file.type || file.type.indexOf('image/') !== 0) return;
+
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        _pendingImage = e.target.result;
+        var thumb = el('racPhotoThumb');
+        var name  = el('racPhotoName');
+        var preview = el('racPhotoPreview');
+        if (thumb) thumb.src = _pendingImage;
+        if (name) name.textContent = file.name || 'Photo attached';
+        if (preview) preview.hidden = false;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (clearBtn) clearBtn.addEventListener('click', _clearPendingImage);
+  }
 
   function _setLoading(on) {
     _loading = on;
@@ -627,6 +732,8 @@
       var p = wm.querySelector('p');
       if (p) p.innerHTML = _getWelcomeMsg();
     }
+
+    _wirePhotoAttach();
 
     // Quick chips
     var chips = el('racQuickChips');

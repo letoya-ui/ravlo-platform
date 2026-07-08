@@ -3046,12 +3046,21 @@ def ai_chat():
     message = (data.get("message") or "").strip()
     raw_history = data.get("history")
     history = raw_history if isinstance(raw_history, list) else []
+    image_data_url = (data.get("image") or "").strip()
 
-    if not message:
+    if not message and not image_data_url:
         return jsonify({"ok": False, "reply": "Please say something."}), 400
 
     if len(message) > 4000:
         return jsonify({"ok": False, "reply": "Message too long."}), 400
+
+    if image_data_url and not image_data_url.startswith("data:image/"):
+        return jsonify({"ok": False, "reply": "That doesn't look like an image."}), 400
+
+    # A generous but bounded cap — base64 images can get large; this keeps
+    # the request payload sane without needing a separate upload endpoint.
+    if image_data_url and len(image_data_url) > 12_000_000:
+        return jsonify({"ok": False, "reply": "That photo is too large. Try a smaller image."}), 400
 
     role = (getattr(current_user, "role", "") or "").lower()
     name = getattr(current_user, "first_name", None) or getattr(current_user, "username", None) or "there"
@@ -3090,7 +3099,16 @@ def ai_chat():
         c = (turn.get("content") or "").strip()[:2000]
         if r in ("user", "assistant") and c:
             messages.append({"role": r, "content": c})
-    messages.append({"role": "user", "content": message})
+    if image_data_url:
+        messages.append({
+            "role": "user",
+            "content": [
+                {"type": "text", "text": message or "What do you see in this photo?"},
+                {"type": "image_url", "image_url": {"url": image_data_url}},
+            ],
+        })
+    else:
+        messages.append({"role": "user", "content": message})
 
     try:
         ai_client = OpenAI()
@@ -3102,6 +3120,23 @@ def ai_chat():
             max_tokens=500,
         )
         reply = (response.choices[0].message.content or "").strip()
+
+        try:
+            from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+            log_ai_exchange(
+                module="ravlo_ai_chat",
+                feature="image_chat" if image_data_url else "chat",
+                prompt=message[:4000],
+                response=reply,
+                user_id=current_user.id,
+                role_view=role,
+                provider="openai",
+                model=ai_model,
+                metadata={"has_image": bool(image_data_url)},
+            )
+        except Exception:
+            pass
+
         return jsonify({"ok": True, "reply": reply})
     except Exception as exc:
         current_app.logger.error("[ai-chat] %s", exc)
