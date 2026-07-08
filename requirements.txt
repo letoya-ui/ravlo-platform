@@ -33,7 +33,7 @@ email-validator==2.2.0
 pdfkit==1.0.0
 pdfrw==0.4
 
-openai==1.55.3
+openai==1.68.2
 anthropic>=0.28.0
 replicate>=0.30.0
 

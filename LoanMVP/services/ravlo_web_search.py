@@ -169,15 +169,20 @@ def _parse_web_results(raw_text: str) -> Dict[str, Any]:
     """Extract JSON from OpenAI response, handling markdown code blocks."""
     text = raw_text.strip()
 
-    # Try to find JSON in code blocks
-    if "```json" in text:
-        start = text.index("```json") + 7
-        end = text.index("```", start)
-        text = text[start:end].strip()
-    elif "```" in text:
-        start = text.index("```") + 3
-        end = text.index("```", start)
-        text = text[start:end].strip()
+    # Try to find JSON in code blocks. Fences can be left unclosed by a
+    # truncated model response, so bail out to the raw text instead of
+    # raising if a closing ``` isn't found.
+    try:
+        if "```json" in text:
+            start = text.index("```json") + 7
+            end = text.index("```", start)
+            text = text[start:end].strip()
+        elif "```" in text:
+            start = text.index("```") + 3
+            end = text.index("```", start)
+            text = text[start:end].strip()
+    except ValueError:
+        pass
 
     try:
         return json.loads(text)
@@ -205,7 +210,7 @@ def _fallback_search(api_key: str, query: str) -> Dict[str, Any]:
                 {"role": "user", "content": query},
             ],
             temperature=0.2,
-            max_tokens=800,
+            max_tokens=2000,
         )
         raw = response.choices[0].message.content.strip()
         parsed = _parse_web_results(raw)
