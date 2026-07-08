@@ -1253,8 +1253,21 @@ function ravloSelectPropertyPhoto(btn) {
 
   }
 
+  function triggerGeneration() {
+    syncDesignEngineIntent(currentDesignEngineIntent, gatherDesignConfig());
+    if (form) {
+      form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit'));
+    }
+  }
+
   askDesignBtn?.addEventListener('click', () => {
-    sendDesignChatMessage().catch(() => {});
+    sendDesignChatMessage()
+      .then((data) => {
+        // Ravlo signals it has everything it needs — act on it instead of
+        // waiting for a separate "Apply & Generate" click.
+        if (data && data.ready) triggerGeneration();
+      })
+      .catch(() => {});
   });
 
   applyDesignBtn?.addEventListener('click', async () => {
@@ -1266,11 +1279,7 @@ function ravloSelectPropertyPhoto(btn) {
       }
     }
 
-    syncDesignEngineIntent(currentDesignEngineIntent, gatherDesignConfig());
-
-    if (form) {
-      form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit'));
-    }
+    triggerGeneration();
   });
 
   designChatInput?.addEventListener('keydown', (e) => {
