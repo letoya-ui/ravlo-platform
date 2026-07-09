@@ -449,3 +449,72 @@ def claude_design_budget_estimate(payload: dict) -> dict:
             "cost_low": 0, "cost_high": 0, "summary": "", "line_items": [],
             "error": str(exc), "meta": {"provider": "anthropic/claude"},
         }
+
+
+_BORROWER_EXPLAINER_SYSTEM = (
+    "You are Ravlo's borrower assistant. You explain a borrower's loan status, "
+    "open conditions, and required documents in plain, reassuring English. "
+    "You must only state facts present in the data provided below — never invent "
+    "amounts, dates, dollar figures, approval decisions, or requirements that are "
+    "not in the data. If the data doesn't answer the borrower's question, say so "
+    "plainly instead of guessing. Always respond with valid JSON only — no markdown, "
+    "no prose outside the JSON."
+)
+
+_BORROWER_EXPLAINER_SCHEMA = """{
+  "summary": "2-3 sentence plain-English status summary",
+  "next_steps": ["Specific, actionable next step", "..."],
+  "documents_needed": ["Document or condition name still outstanding", "..."],
+  "flags": ["Anything high-severity or urgent the borrower should notice"]
+}"""
+
+
+def claude_borrower_explainer(payload: dict) -> dict:
+    """Explain a borrower's loan status/conditions/documents using Claude.
+
+    ``payload`` must contain a ``context`` dict (from
+    ``borrower_ai_service._shape_context``) and may contain a free-text
+    ``question``. Falls back to an empty/error result on any failure so the
+    caller can fall back to the deterministic template explanation.
+    """
+    context = payload.get("context") or {}
+    question = payload.get("question") or "What's my current status and what do I need to do next?"
+
+    user_msg = (
+        f"Here is the borrower's loan data:\n{json.dumps(context, default=str)}\n\n"
+        f"Borrower's question: {question}\n\n"
+        f"Respond with a JSON object matching this schema exactly:\n{_BORROWER_EXPLAINER_SCHEMA}"
+    )
+
+    try:
+        response = _anthropic_client().messages.create(
+            model="claude-sonnet-5",
+            max_tokens=1024,
+            system=_BORROWER_EXPLAINER_SYSTEM,
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        raw = response.content[0].text.strip()
+
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+
+        result = json.loads(raw)
+        result.setdefault("meta", {})
+        result["meta"]["provider"] = "anthropic/claude"
+        return result
+
+    except json.JSONDecodeError as exc:
+        log.error("Claude borrower explainer returned invalid JSON: %s", exc)
+        return {
+            "summary": "", "next_steps": [], "documents_needed": [], "flags": [],
+            "error": "Invalid JSON from Claude", "meta": {"provider": "anthropic/claude"},
+        }
+    except Exception as exc:
+        log.error("Claude borrower explainer failed: %s", exc)
+        return {
+            "summary": "", "next_steps": [], "documents_needed": [], "flags": [],
+            "error": str(exc), "meta": {"provider": "anthropic/claude"},
+        }

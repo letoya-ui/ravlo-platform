@@ -1,0 +1,302 @@
+{# templates/layouts/_borrower_ai_panel.html #}
+<div class="rb-ai-fab-wrap">
+  <button
+    type="button"
+    class="rb-ai-fab"
+    id="rbAiFab"
+    onclick="toggleBorrowerAi()"
+    aria-label="Open Ravlo AI assistant"
+  >
+    <i class="lucide lucide-sparkles"></i>
+    <span>Ask Ravlo</span>
+  </button>
+</div>
+
+<div class="rb-ai-panel" id="rbAiPanel" aria-hidden="true">
+  <div class="rb-ai-panel-head">
+    <div>
+      <strong>Ravlo AI</strong>
+      <div class="rb-ai-panel-sub">Your loan, explained in plain English.</div>
+    </div>
+    <button type="button" class="rb-ai-close" onclick="closeBorrowerAi()" aria-label="Close Ravlo AI">
+      <i class="lucide lucide-x"></i>
+    </button>
+  </div>
+
+  <div class="rb-ai-quick-actions">
+    <button type="button" class="rb-ai-chip" onclick="runBorrowerAi(&quot;What's my status?&quot;)">
+      What&rsquo;s my status?
+    </button>
+    <button type="button" class="rb-ai-chip" onclick="runBorrowerAi(&quot;What do I still owe?&quot;)">
+      What do I still owe?
+    </button>
+    <button type="button" class="rb-ai-chip" onclick="runBorrowerAi(&quot;Explain my conditions&quot;)">
+      Explain my conditions
+    </button>
+    <button type="button" class="rb-ai-chip" onclick="runBorrowerAi(&quot;What happens next?&quot;)">
+      What happens next?
+    </button>
+  </div>
+
+  <div class="rb-ai-form">
+    <textarea
+      id="rbAiQuestion"
+      rows="2"
+      class="rb-ai-textarea"
+      placeholder="Or ask your own question…"
+    ></textarea>
+    <button type="button" id="rbAiRun" class="rb-btn primary sm" onclick="runBorrowerAi()">
+      Ask
+    </button>
+  </div>
+
+  <div class="rb-ai-result" id="rbAiResult" hidden></div>
+</div>
+
+<style>
+  .rb-ai-fab-wrap {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 1050;
+  }
+
+  .rb-ai-fab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 18px;
+    cursor: pointer;
+    background: linear-gradient(135deg, #4f8cff, #7b61ff);
+    color: #ffffff;
+    box-shadow: 0 16px 36px rgba(79, 140, 255, 0.32);
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .rb-ai-fab:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 40px rgba(123, 97, 255, 0.38);
+  }
+
+  .rb-ai-panel {
+    position: fixed;
+    right: 20px;
+    bottom: 84px;
+    width: min(420px, calc(100vw - 32px));
+    background: rgba(14, 20, 28, 0.96);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    padding: 16px;
+    z-index: 1051;
+    box-shadow: 0 20px 56px rgba(0,0,0,0.4);
+    backdrop-filter: blur(16px);
+    display: none;
+    color: #e6eef7;
+  }
+
+  .rb-ai-panel.open { display: block; }
+
+  .rb-ai-panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: start;
+    margin-bottom: 12px;
+  }
+
+  .rb-ai-panel-sub {
+    color: #8ea4b7;
+    font-size: 0.84rem;
+    margin-top: 2px;
+  }
+
+  .rb-ai-close {
+    background: transparent;
+    border: none;
+    color: #cfe1f4;
+    cursor: pointer;
+  }
+
+  .rb-ai-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .rb-ai-chip {
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    color: #cfe1f4;
+    border-radius: 999px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.84rem;
+  }
+
+  .rb-ai-chip:hover {
+    background: rgba(255,255,255,0.08);
+    color: #ffffff;
+  }
+
+  .rb-ai-form { display: flex; flex-direction: column; gap: 10px; }
+
+  .rb-ai-textarea {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    color: #ffffff;
+    padding: 12px;
+    resize: vertical;
+  }
+
+  .rb-ai-textarea::placeholder { color: #8ea4b7; }
+
+  .rb-ai-result {
+    margin-top: 12px;
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: rgba(79,140,255,0.12);
+    color: #cfe1f4;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  .rb-ai-result.error {
+    background: rgba(255,61,113,0.18);
+    color: #ffd2dc;
+  }
+
+  .rb-ai-result h4 {
+    margin: 10px 0 4px;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #8ea4b7;
+  }
+
+  .rb-ai-result h4:first-child { margin-top: 0; }
+
+  .rb-ai-result ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  .rb-ai-result .rb-ai-flags {
+    color: #ffb4bd;
+  }
+
+  @media (max-width: 900px) {
+    .rb-ai-fab-wrap { right: 14px; bottom: 14px; }
+    .rb-ai-panel    { right: 14px; bottom: 74px; width: calc(100vw - 28px); }
+  }
+</style>
+
+<script>
+(function() {
+  const ACTION_URL = "{{ url_for('borrower.ai_assistant') }}";
+  const CSRF       = "{{ csrf_token() }}";
+
+  function el(id) { return document.getElementById(id); }
+
+  window.toggleBorrowerAi = function() {
+    const panel = el("rbAiPanel");
+    if (!panel) return;
+    panel.classList.toggle("open");
+    panel.setAttribute("aria-hidden", panel.classList.contains("open") ? "false" : "true");
+    if (panel.classList.contains("open")) {
+      setTimeout(function(){ var ta = el("rbAiQuestion"); if (ta) ta.focus(); }, 80);
+    }
+  };
+
+  window.closeBorrowerAi = function() {
+    const panel = el("rbAiPanel");
+    if (!panel) return;
+    panel.classList.remove("open");
+    panel.setAttribute("aria-hidden", "true");
+  };
+
+  function _esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function _list(items) {
+    if (!items || !items.length) return "";
+    return "<ul>" + items.map(function(i){ return "<li>" + _esc(i) + "</li>"; }).join("") + "</ul>";
+  }
+
+  function showResult(payload, isError) {
+    const box = el("rbAiResult");
+    if (!box) return;
+    box.hidden = false;
+    box.classList.toggle("error", !!isError);
+
+    if (isError) {
+      box.textContent = (payload && payload.error) || "Sorry, I couldn't get that right now.";
+      return;
+    }
+
+    let html = "<p>" + _esc(payload.summary || "") + "</p>";
+    if (payload.next_steps && payload.next_steps.length) {
+      html += "<h4>Next steps</h4>" + _list(payload.next_steps);
+    }
+    if (payload.documents_needed && payload.documents_needed.length) {
+      html += "<h4>Documents needed</h4>" + _list(payload.documents_needed);
+    }
+    if (payload.flags && payload.flags.length) {
+      html += '<h4 class="rb-ai-flags">Flags</h4><div class="rb-ai-flags">' + _list(payload.flags) + "</div>";
+    }
+    box.innerHTML = html;
+  }
+
+  window.runBorrowerAi = function(overrideText) {
+    const ta = el("rbAiQuestion");
+    const text = (overrideText || (ta ? ta.value : "") || "").trim();
+
+    const btn = el("rbAiRun");
+    if (btn) { btn.disabled = true; btn.textContent = "Asking..."; }
+
+    const panel = el("rbAiPanel");
+    if (panel && !panel.classList.contains("open")) toggleBorrowerAi();
+
+    fetch(ACTION_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-CSRFToken": CSRF,
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({ question: text }),
+    })
+      .then(function(r) { return r.json().then(function(j){ return { ok: r.ok, body: j }; }); })
+      .then(function(res) {
+        showResult(res.body, !res.ok || !res.body.ok);
+        if (res.ok && res.body.ok && ta) ta.value = "";
+      })
+      .catch(function() { showResult({ error: "Network error." }, true); })
+      .finally(function() {
+        if (btn) { btn.disabled = false; btn.textContent = "Ask"; }
+      });
+  };
+
+  document.addEventListener("DOMContentLoaded", function() {
+    const ta = el("rbAiQuestion");
+    if (ta) {
+      ta.addEventListener("keydown", function(ev) {
+        if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") { ev.preventDefault(); runBorrowerAi(); }
+      });
+    }
+  });
+})();
+</script>
