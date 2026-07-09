@@ -1006,6 +1006,11 @@ def companies():
     if _is_company_admin(current_user) and current_user.company_id:
         return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 
+    if _is_company_admin(current_user) and not _is_full_admin(current_user):
+        # Company-scoped admin with no company_id assigned — a misconfigured
+        # account, not a signal to fall through to the full company list.
+        abort(403)
+
     companies = Company.query.order_by(Company.created_at.desc()).all()
 
     return render_template(
@@ -1107,6 +1112,13 @@ def approve_access_request(req_id):
         ).first()
 
     if not company:
+        # Onboarding a brand-new licensed company is a Ravlo-only action.
+        # _can_access_request() lets a company admin approve their own
+        # employees' requests, but that must never fall through to
+        # creating an entirely new tenant.
+        if not _is_full_admin(current_user):
+            flash("Only Ravlo admins can onboard a new company.", "warning")
+            return redirect(_admin_home_endpoint())
         subscription_tier, max_users = _plan_defaults("team")
         company = Company(
             name=access_request.company_name or access_request.contact_name,
@@ -1122,6 +1134,12 @@ def approve_access_request(req_id):
         db.session.add(company)
         db.session.flush()
     else:
+        # A name/domain heuristic match could point at a company other than
+        # the approving admin's own — only a full admin may reassign a
+        # request to a company the admin doesn't belong to.
+        if not _is_full_admin(current_user) and getattr(current_user, "company_id", None) != company.id:
+            flash("You do not have access to that request.", "warning")
+            return redirect(_admin_home_endpoint())
         company.is_active = True
         if not company.subscription_tier:
             company.subscription_tier = "team"
@@ -1799,6 +1817,12 @@ def company_finances_delete(entry_id):
 @role_required("admin_group")
 def reports():
     company = _company_scope()
+    if not company and not _is_full_admin(current_user):
+        # _company_scope() returns None both for full admins (intentional,
+        # platform-wide) and for a company-admin with no company_id
+        # assigned (misconfigured) — the latter must not fall through to
+        # the platform-wide counts/CSV exports below.
+        abort(403)
     report_type = request.form.get("report_type")
     users_query = User.query.filter_by(company_id=company.id) if company else User.query
     total_users = users_query.count()
@@ -1863,6 +1887,10 @@ def reports():
 @role_required("admin_group")
 def messages():
     company = _company_scope()
+    if not company and not _is_full_admin(current_user):
+        # See reports()/analytics(): a misconfigured company-admin with no
+        # company_id must not fall through to the platform-wide branches.
+        abort(403)
     if request.method == "POST":
         content = (request.form.get("content") or "").strip()
         receiver_id = request.form.get("recipient_id", type=int)
@@ -1975,6 +2003,10 @@ def verify_doc(doc_id):
 @role_required("admin")
 def analytics():
     company = _company_scope()
+    if not company and not _is_full_admin(current_user):
+        # See reports()/messages(): a misconfigured company-admin with no
+        # company_id must not fall through to the platform-wide branch.
+        abort(403)
 
     if company:
         users_query = User.query.filter_by(company_id=company.id)
