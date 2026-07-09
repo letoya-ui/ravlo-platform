@@ -100,6 +100,7 @@ Stay connected with your assigned loan officer and processor to keep your file m
     {% if selected_receiver %}
     <section class="ravlo-card composer-card">
       <form method="POST" action="{{ url_for('borrower.messages') }}" class="composer-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="receiver_id" value="{{ selected_receiver }}">
 
         <div class="form-group">

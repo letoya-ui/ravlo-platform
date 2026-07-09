@@ -266,7 +266,6 @@ def dashboard():
 # =========================================================
 
 @borrower_bp.route("/create-profile", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("borrower")
 def create_profile():
@@ -310,7 +309,6 @@ def create_profile():
 # =========================================================
 
 @borrower_bp.route("/apply", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("borrower")
 def apply():
@@ -432,7 +430,6 @@ def loan_center():
 
 
 @borrower_bp.route("/property-intelligence", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("borrower")
 def property_intelligence():
@@ -700,7 +697,6 @@ def documents():
 
 
 @borrower_bp.route("/upload-document", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("borrower")
 def upload_document():
@@ -808,7 +804,6 @@ def view_condition(cond_id):
 
 
 @borrower_bp.route("/conditions/upload/<int:cond_id>", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("borrower")
 def upload_condition(cond_id):
@@ -856,7 +851,6 @@ def upload_condition(cond_id):
 # =========================================================
 
 @borrower_bp.route("/messages", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("borrower")
 def messages():
@@ -925,7 +919,6 @@ from flask import request
 # =========================================================
 
 @borrower_bp.route("/subscription", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("borrower")
 def subscription():
@@ -968,7 +961,6 @@ def subscription():
     )
 
 @borrower_bp.route("/consent/credit", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("borrower")
 def consent_credit():

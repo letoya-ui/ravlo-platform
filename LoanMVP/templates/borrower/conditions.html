@@ -108,6 +108,7 @@ Track underwriting requirements and stay on top of what is still needed.
             </a>
 
             <form method="POST" action="{{ url_for('borrower.upload_condition', cond_id=cond.id) }}" enctype="multipart/form-data" class="upload-inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="file" name="file" class="upload-inline-input" required>
               <button type="submit" class="ravlo-btn primary sm">Submit Item</button>
             </form>

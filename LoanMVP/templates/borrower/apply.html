@@ -30,6 +30,7 @@ Submit your deal details to start the funding review process.
       </div>
 
       <form method="POST" class="ravlo-form-grid">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="form-group">
           <label for="loan_type">Loan Type</label>

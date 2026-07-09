@@ -23,6 +23,7 @@ Manage your current access and upgrade options.
     </div>
 
     <form method="POST" class="plan-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <label class="plan-card">
         <input type="radio" name="plan" value="Basic" {% if (borrower.subscription_plan or "Basic") not in ["investor_upgrade"] %}checked{% endif %}>
