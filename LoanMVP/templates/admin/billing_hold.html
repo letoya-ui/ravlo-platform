@@ -1,0 +1,48 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Workspace Access Suspended{% endblock %}
+{% block page_title %}Workspace Access Suspended{% endblock %}
+{% block page_subline %}{{ company.name }}'s access to Ravlo is currently on hold{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+  <section class="re-card pad">
+    {% if reason == "billing_lapsed" %}
+      <div class="eyebrow">PAST DUE</div>
+      <h3 style="margin:.35rem 0 .2rem;">Your payment didn't go through</h3>
+      <p class="re-card-subtitle">
+        {{ company.name }}'s last payment failed and the grace period to update billing has passed.
+        Update your payment method to restore access.
+      </p>
+    {% elif reason == "inactive" %}
+      <div class="eyebrow">WORKSPACE DEACTIVATED</div>
+      <h3 style="margin:.35rem 0 .2rem;">This workspace is inactive</h3>
+      <p class="re-card-subtitle">
+        {{ company.name }}'s workspace has been deactivated. Contact your account admin or Ravlo support to reactivate it.
+      </p>
+    {% else %}
+      <div class="eyebrow">ACCESS BLOCKED</div>
+      <h3 style="margin:.35rem 0 .2rem;">This workspace has been blocked</h3>
+      <p class="re-card-subtitle">
+        {{ company.blocked_note or "Contact Ravlo support to resolve this." }}
+      </p>
+    {% endif %}
+
+    {% if is_company_admin %}
+      <div class="mt-16">
+        <a class="re-btn primary" href="{{ url_for('admin.company_billing', company_id=company.id) }}">
+          <i class="lucide lucide-credit-card"></i>
+          Go to Billing
+        </a>
+      </div>
+    {% else %}
+      <div class="mt-16">
+        <p class="re-card-subtitle">Please contact your company admin to resolve this.</p>
+      </div>
+    {% endif %}
+
+    <div class="mt-16">
+      <a class="re-btn ghost sm" href="{{ url_for('auth.logout') }}">Log Out</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

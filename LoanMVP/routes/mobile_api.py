@@ -6,6 +6,7 @@ import datetime
 from functools import wraps
 from flask import Blueprint, request, jsonify, current_app
 from LoanMVP.extensions import csrf, db, limiter
+from LoanMVP.utils.role_helpers import FULL_RAVLO_STAFF_ROLES
 
 mobile_api = Blueprint('mobile_api', __name__, url_prefix='/mobile')
 csrf.exempt(mobile_api)
@@ -64,6 +65,18 @@ def require_auth(f):
 
         if user is None:
             return jsonify({'error': 'User not found'}), 401
+
+        company_id = getattr(user, 'company_id', None)
+        role = (getattr(user, 'role', '') or '').strip().lower()
+        if company_id and role not in FULL_RAVLO_STAFF_ROLES:
+            from LoanMVP.models.admin import Company
+            from LoanMVP.utils.role_helpers import enforce_company_billing_hold
+            company = Company.query.get(company_id)
+            if company and enforce_company_billing_hold(company):
+                return jsonify({
+                    'error': 'Workspace access suspended. Contact your company admin to resolve billing.',
+                    'code': 'billing_hold',
+                }), 402
 
         request.current_user = user
         return f(*args, **kwargs)
