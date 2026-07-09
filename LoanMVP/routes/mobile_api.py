@@ -667,14 +667,16 @@ def processor_conditions():
 
         if profile:
             loan_ids = [l.id for l in LoanApplication.query.filter_by(processor_id=profile.id, is_active=True).all()]
-            if loan_ids:
-                q = UnderwritingCondition.query.filter(
-                    UnderwritingCondition.loan_id.in_(loan_ids)
-                )
-            else:
-                q = UnderwritingCondition.query.filter_by(status='Open')
         else:
-            q = UnderwritingCondition.query
+            company_id = getattr(user, 'company_id', None)
+            loan_ids = [l.id for l in LoanApplication.query.filter_by(company_id=company_id).all()]
+
+        if loan_ids:
+            q = UnderwritingCondition.query.filter(
+                UnderwritingCondition.loan_id.in_(loan_ids)
+            )
+        else:
+            q = UnderwritingCondition.query.filter(db.false())
 
         if status_filter and status_filter != 'All':
             q = q.filter_by(status=status_filter)
@@ -715,8 +717,12 @@ def update_condition(condition_id):
     notes = data.get('notes', '')
     try:
         from LoanMVP.models.underwriter_model import UnderwritingCondition
+        from LoanMVP.models.loan_models import LoanApplication
         cond = UnderwritingCondition.query.get(condition_id)
         if not cond:
+            return jsonify({'error': 'Condition not found'}), 404
+        loan = LoanApplication.query.get(cond.loan_id)
+        if not loan or loan.company_id != getattr(user, 'company_id', None):
             return jsonify({'error': 'Condition not found'}), 404
         cond.status = new_status
         if notes:
@@ -736,12 +742,13 @@ def update_condition(condition_id):
 @mobile_api.route('/lending/processor/loan/<int:loan_id>', methods=['GET'])
 @require_auth
 def processor_loan_detail(loan_id):
+    user = request.current_user
     try:
         from LoanMVP.models.loan_models import LoanApplication
         from LoanMVP.models.underwriter_model import UnderwritingCondition
         from LoanMVP.models.document_models import LoanDocument
         loan = LoanApplication.query.get(loan_id)
-        if not loan:
+        if not loan or loan.company_id != getattr(user, 'company_id', None):
             return jsonify({'error': 'Not found'}), 404
         bp = None
         try: bp = loan.borrower_profile
@@ -814,10 +821,12 @@ def underwriter_queue():
         from LoanMVP.models.loan_models import LoanApplication
         from LoanMVP.models.underwriter_model import UnderwriterProfile
         profile = UnderwriterProfile.query.filter_by(user_id=user.id).first()
+        company_id = getattr(user, 'company_id', None)
         if profile:
             loans = LoanApplication.query.filter_by(underwriter_id=profile.id, is_active=True).order_by(LoanApplication.updated_at.desc()).all()
         else:
             loans = LoanApplication.query.filter(
+                LoanApplication.company_id == company_id,
                 LoanApplication.status.in_(['underwriting', 'Underwriting', 'in_review', 'In Review', 'conditionally_approved'])
             ).order_by(LoanApplication.risk_score.desc()).limit(50).all()
 
@@ -852,12 +861,13 @@ def underwriter_queue():
 @mobile_api.route('/lending/underwriter/loan/<int:loan_id>', methods=['GET'])
 @require_auth
 def underwriter_loan_detail(loan_id):
+    user = request.current_user
     try:
         from LoanMVP.models.loan_models import LoanApplication
         from LoanMVP.models.underwriter_model import UnderwritingCondition
         from LoanMVP.models.document_models import LoanDocument
         loan = LoanApplication.query.get(loan_id)
-        if not loan:
+        if not loan or loan.company_id != getattr(user, 'company_id', None):
             return jsonify({'error': 'Not found'}), 404
         bp = None
         try: bp = loan.borrower_profile
@@ -932,7 +942,7 @@ def underwriter_decision(loan_id):
         from LoanMVP.models.loan_models import LoanApplication
         from datetime import datetime
         loan = LoanApplication.query.get(loan_id)
-        if not loan:
+        if not loan or loan.company_id != getattr(user, 'company_id', None):
             return jsonify({'error': 'Not found'}), 404
         loan.status = new_status
         loan.decision_notes = notes
@@ -1003,7 +1013,7 @@ def borrower_loan_detail(loan_id):
         loan = LoanApplication.query.get(loan_id)
         if not loan:
             return jsonify({'error': 'Not found'}), 404
-        if profile and loan.borrower_profile_id != profile.id:
+        if not profile or loan.borrower_profile_id != profile.id:
             return jsonify({'error': 'Not authorized'}), 403
 
         conditions = []
@@ -1740,22 +1750,34 @@ def upload_document(current_user=None):
 @require_auth
 @require_admin
 def admin_overview():
-    """Platform-wide stats mirroring the executive dashboard."""
+    """Platform-wide stats mirroring the executive dashboard (full admins),
+    or company-scoped stats for a plain company admin — require_admin's
+    ADMIN_ROLES includes the literal 'admin' role, not just full admins."""
     import datetime as dt
     from LoanMVP.extensions import db
     from sqlalchemy import func
 
+    user = request.current_user
+    full_admin = getattr(user, 'role', '') in ('platform_admin', 'master_admin', 'lending_admin', 'executive')
+    company_id = getattr(user, 'company_id', None) if not full_admin else None
+
     user_stats = {'total': 0, 'active': 0, 'blocked': 0, 'recent_signups': 0, 'subscriptions': {}, 'roles': {}}
     try:
         from LoanMVP.models import User
-        user_stats['total'] = User.query.count()
-        user_stats['active'] = User.query.filter_by(is_active=True).count()
-        user_stats['blocked'] = User.query.filter_by(is_blocked=True).count()
+        user_q = User.query if full_admin else User.query.filter_by(company_id=company_id)
+        user_stats['total'] = user_q.count()
+        user_stats['active'] = user_q.filter_by(is_active=True).count()
+        user_stats['blocked'] = user_q.filter_by(is_blocked=True).count()
         thirty_days_ago = dt.datetime.utcnow() - dt.timedelta(days=30)
-        user_stats['recent_signups'] = User.query.filter(User.created_at >= thirty_days_ago).count()
-        for row in db.session.query(User.subscription, func.count(User.id)).group_by(User.subscription).all():
+        user_stats['recent_signups'] = user_q.filter(User.created_at >= thirty_days_ago).count()
+        sub_q = db.session.query(User.subscription, func.count(User.id))
+        role_q = db.session.query(User.role, func.count(User.id))
+        if not full_admin:
+            sub_q = sub_q.filter(User.company_id == company_id)
+            role_q = role_q.filter(User.company_id == company_id)
+        for row in sub_q.group_by(User.subscription).all():
             user_stats['subscriptions'][row[0] or 'free'] = row[1]
-        for row in db.session.query(User.role, func.count(User.id)).group_by(User.role).all():
+        for row in role_q.group_by(User.role).all():
             user_stats['roles'][row[0] or 'unknown'] = row[1]
     except Exception as exc:
         current_app.logger.error('admin_overview user stats: %s', exc)
@@ -1763,11 +1785,15 @@ def admin_overview():
     loan_stats = {'total': 0, 'active': 0, 'volume': 0.0}
     try:
         from LoanMVP.models import Loan
-        loan_stats['total'] = Loan.query.count()
-        loan_stats['active'] = Loan.query.filter(
+        loan_q = Loan.query if full_admin else Loan.query.filter_by(company_id=company_id)
+        loan_stats['total'] = loan_q.count()
+        loan_stats['active'] = loan_q.filter(
             Loan.status.in_(('submitted', 'processing', 'underwriting', 'approved', 'in_review'))
         ).count()
-        vol = db.session.query(func.sum(Loan.loan_amount)).scalar()
+        vol_q = db.session.query(func.sum(Loan.loan_amount))
+        if not full_admin:
+            vol_q = vol_q.filter(Loan.company_id == company_id)
+        vol = vol_q.scalar()
         loan_stats['volume'] = float(vol or 0)
     except Exception as exc:
         current_app.logger.error('admin_overview loan stats: %s', exc)
@@ -1775,30 +1801,39 @@ def admin_overview():
     company_count = 0
     try:
         from LoanMVP.models import Company
-        company_count = Company.query.count()
+        company_count = Company.query.count() if full_admin else 1
     except Exception as exc:
         current_app.logger.error('admin_overview company stats: %s', exc)
 
     request_stats = {'pending': 0, 'approved': 0, 'total': 0}
     try:
         from LoanMVP.models import AccessRequest
-        request_stats['total'] = AccessRequest.query.count()
-        request_stats['pending'] = AccessRequest.query.filter_by(status='pending').count()
-        request_stats['approved'] = AccessRequest.query.filter_by(status='approved').count()
+        req_q = AccessRequest.query
+        if not full_admin and hasattr(AccessRequest, 'company_id'):
+            req_q = req_q.filter_by(company_id=company_id)
+        request_stats['total'] = req_q.count()
+        request_stats['pending'] = req_q.filter_by(status='pending').count()
+        request_stats['approved'] = req_q.filter_by(status='approved').count()
     except Exception as exc:
         current_app.logger.error('admin_overview access request stats: %s', exc)
 
     pending_invites = 0
     try:
         from LoanMVP.models import UserInvite
-        pending_invites = UserInvite.query.filter_by(status='pending').count()
+        invite_q = UserInvite.query
+        if not full_admin:
+            invite_q = invite_q.filter_by(company_id=company_id)
+        pending_invites = invite_q.filter_by(status='pending').count()
     except Exception as exc:
         current_app.logger.error('admin_overview invite stats: %s', exc)
 
     doc_count = 0
     try:
         from LoanMVP.models.document_models import LoanDocument
-        doc_count = LoanDocument.query.count()
+        doc_q = LoanDocument.query
+        if not full_admin:
+            doc_q = doc_q.filter_by(company_id=company_id)
+        doc_count = doc_q.count()
     except Exception as exc:
         current_app.logger.error('admin_overview doc stats: %s', exc)
 
@@ -1822,9 +1857,12 @@ def admin_users():
     search = (request.args.get('search') or '').strip()
     role_filter = (request.args.get('role') or '').strip()
 
+    user = request.current_user
+    full_admin = getattr(user, 'role', '') in ('platform_admin', 'master_admin', 'lending_admin', 'executive')
+
     try:
         from LoanMVP.models import User
-        query = User.query
+        query = User.query if full_admin else User.query.filter_by(company_id=getattr(user, 'company_id', None))
         if search:
             like = f'%{search}%'
             query = query.filter(
@@ -1871,10 +1909,15 @@ def admin_users():
 @require_admin
 def admin_activity():
     """Recent platform activity: signups, access requests, leads."""
+    user = request.current_user
+    full_admin = getattr(user, 'role', '') in ('platform_admin', 'master_admin', 'lending_admin', 'executive')
+    company_id = getattr(user, 'company_id', None)
+
     recent_users = []
     try:
         from LoanMVP.models import User
-        for u in User.query.order_by(User.created_at.desc()).limit(10).all():
+        users_q = User.query if full_admin else User.query.filter_by(company_id=company_id)
+        for u in users_q.order_by(User.created_at.desc()).limit(10).all():
             first = getattr(u, 'first_name', '') or ''
             last = getattr(u, 'last_name', '') or ''
             recent_users.append({

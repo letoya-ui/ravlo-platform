@@ -810,6 +810,11 @@ def dashboard():
     if _is_company_admin(current_user) and current_user.company_id:
         return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 
+    if _is_company_admin(current_user) and not _is_full_admin(current_user):
+        # Company-scoped admin with no company_id assigned — a misconfigured
+        # account, not a signal to fall through to platform-wide stats below.
+        abort(403)
+
     company = None
 
     if current_user.role == "master_admin":
@@ -2026,24 +2031,44 @@ def ai_dashboard():
     - recent activity feed
     """
 
+    # role_required("admin") also admits plain company admins, not just
+    # platform_admin/master_admin/executive — scope every query below to
+    # their company so one company's AI usage isn't visible to another's.
+    scoping_company_id = None
+    if not _is_full_admin(current_user):
+        scoping_company_id = getattr(current_user, "company_id", None)
+        if not scoping_company_id:
+            abort(403)
+
+    def _company_scoped(query):
+        if scoping_company_id is None:
+            return query
+        return query.join(User, AIAssistantInteraction.user_id == User.id).filter(
+            User.company_id == scoping_company_id
+        )
+
     # -----------------------------------
     # Overall stats
     # -----------------------------------
-    total_interactions = AIAssistantInteraction.query.count()
-    total_users_with_ai = (
-        db.session.query(func.count(func.distinct(AIAssistantInteraction.user_id)))
-        .scalar()
-        or 0
+    total_interactions = _company_scoped(AIAssistantInteraction.query).count()
+
+    total_users_with_ai_query = db.session.query(
+        func.count(func.distinct(AIAssistantInteraction.user_id))
     )
+    if scoping_company_id is not None:
+        total_users_with_ai_query = total_users_with_ai_query.join(
+            User, AIAssistantInteraction.user_id == User.id
+        ).filter(User.company_id == scoping_company_id)
+    total_users_with_ai = total_users_with_ai_query.scalar() or 0
 
     total_questions = (
-        AIAssistantInteraction.query
+        _company_scoped(AIAssistantInteraction.query)
         .filter(AIAssistantInteraction.question.isnot(None))
         .count()
     )
 
     total_responses = (
-        AIAssistantInteraction.query
+        _company_scoped(AIAssistantInteraction.query)
         .filter(AIAssistantInteraction.response.isnot(None))
         .count()
     )
@@ -2052,7 +2077,7 @@ def ai_dashboard():
     # Recent AI activity
     # -----------------------------------
     recent_interactions = (
-        AIAssistantInteraction.query
+        _company_scoped(AIAssistantInteraction.query)
         .order_by(AIAssistantInteraction.timestamp.desc())
         .limit(20)
         .all()
@@ -2061,12 +2086,17 @@ def ai_dashboard():
     # -----------------------------------
     # Usage by user role
     # -----------------------------------
-    interactions_by_role_rows = (
+    interactions_by_role_query = (
         db.session.query(
             User.role,
             func.count(AIAssistantInteraction.id)
         )
         .join(AIAssistantInteraction, AIAssistantInteraction.user_id == User.id)
+    )
+    if scoping_company_id is not None:
+        interactions_by_role_query = interactions_by_role_query.filter(User.company_id == scoping_company_id)
+    interactions_by_role_rows = (
+        interactions_by_role_query
         .group_by(User.role)
         .order_by(desc(func.count(AIAssistantInteraction.id)))
         .all()
@@ -2092,11 +2122,16 @@ def ai_dashboard():
     context_values = []
 
     if hasattr(AIAssistantInteraction, "context_type"):
+        context_query = db.session.query(
+            AIAssistantInteraction.context_type,
+            func.count(AIAssistantInteraction.id)
+        )
+        if scoping_company_id is not None:
+            context_query = context_query.join(
+                User, AIAssistantInteraction.user_id == User.id
+            ).filter(User.company_id == scoping_company_id)
         context_rows = (
-            db.session.query(
-                AIAssistantInteraction.context_type,
-                func.count(AIAssistantInteraction.id)
-            )
+            context_query
             .group_by(AIAssistantInteraction.context_type)
             .order_by(desc(func.count(AIAssistantInteraction.id)))
             .all()
@@ -2114,11 +2149,16 @@ def ai_dashboard():
         context_values = [row["count"] for row in interactions_by_context]
 
     elif hasattr(AIAssistantInteraction, "assistant_type"):
+        context_query = db.session.query(
+            AIAssistantInteraction.assistant_type,
+            func.count(AIAssistantInteraction.id)
+        )
+        if scoping_company_id is not None:
+            context_query = context_query.join(
+                User, AIAssistantInteraction.user_id == User.id
+            ).filter(User.company_id == scoping_company_id)
         context_rows = (
-            db.session.query(
-                AIAssistantInteraction.assistant_type,
-                func.count(AIAssistantInteraction.id)
-            )
+            context_query
             .group_by(AIAssistantInteraction.assistant_type)
             .order_by(desc(func.count(AIAssistantInteraction.id)))
             .all()
@@ -2138,7 +2178,7 @@ def ai_dashboard():
     # -----------------------------------
     # Most active AI users
     # -----------------------------------
-    most_active_users_rows = (
+    most_active_users_query = (
         db.session.query(
             User.id,
             User.first_name,
@@ -2148,6 +2188,11 @@ def ai_dashboard():
             func.count(AIAssistantInteraction.id).label("interaction_count")
         )
         .join(AIAssistantInteraction, AIAssistantInteraction.user_id == User.id)
+    )
+    if scoping_company_id is not None:
+        most_active_users_query = most_active_users_query.filter(User.company_id == scoping_company_id)
+    most_active_users_rows = (
+        most_active_users_query
         .group_by(User.id, User.first_name, User.last_name, User.email, User.role)
         .order_by(desc("interaction_count"))
         .limit(10)
@@ -2174,7 +2219,7 @@ def ai_dashboard():
 
     if hasattr(AIAssistantInteraction, "status"):
         failed_interactions = (
-            AIAssistantInteraction.query
+            _company_scoped(AIAssistantInteraction.query)
             .filter(AIAssistantInteraction.status.in_(["failed", "error"]))
             .count()
         )

@@ -89,6 +89,7 @@ from LoanMVP.utils.company_policy import (
     ALL_LOAN_TYPES,
 )
 from LoanMVP.utils.lending_utils import calc_payment, get_credit_profile
+from LoanMVP.utils.loan_access import get_loan_or_404
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Blueprint
@@ -3182,7 +3183,7 @@ def loan_officer_decline_funding(funding_id):
 @role_required("partner_group", "admin")
 def loan_officer_refer_out(loan_id):
     policy = get_user_lending_policy(current_user)
-    loan   = LoanApplication.query.get_or_404(loan_id)
+    loan   = get_loan_or_404(loan_id)
     reason = (request.form.get("reason") or "").strip()
 
     if not reason:
