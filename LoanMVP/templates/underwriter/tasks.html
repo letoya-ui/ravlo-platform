@@ -59,6 +59,7 @@
     <h2>➕ New Task</h2>
 
     <form method="POST" action="{{ url_for('underwriter.tasks') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>Title</label>
         <input type="text" name="title" required placeholder="Enter task title">
 
