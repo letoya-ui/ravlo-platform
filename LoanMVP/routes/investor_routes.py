@@ -1494,6 +1494,40 @@ def command_center():
         recent_deals=recent_deals,
     )
 
+
+@investor_bp.route("/portfolio/ai-summary", methods=["POST"], endpoint="portfolio_ai_summary")
+@login_required
+@role_required("investor")
+def portfolio_ai_summary():
+    from LoanMVP.services.investor_portfolio_ai_service import explain_investor_portfolio
+    from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+
+    data = request.get_json(silent=True) or {}
+    question = (data.get("question") or "").strip()[:500]
+
+    try:
+        outcome = explain_investor_portfolio(current_user.id, question=question or None)
+        result = outcome["result"]
+
+        try:
+            log_ai_exchange(
+                module="investor_os",
+                feature="portfolio_ai_summary",
+                prompt=json.dumps({"question": question, "context": outcome["context"]}, default=str)[:4000],
+                response=json.dumps(result, default=str)[:8000],
+                user_id=current_user.id,
+                role_view="investor",
+                provider=outcome["provider"],
+                model="claude-sonnet-5" if outcome["provider"] == "anthropic/claude" else "template",
+            )
+        except Exception:
+            pass
+
+        return jsonify({"ok": True, **result})
+    except Exception:
+        current_app.logger.exception("portfolio_ai_summary failed")
+        return jsonify({"ok": False, "error": "Portfolio AI is temporarily unavailable."}), 500
+
 @investor_bp.route("/test_blueprint", methods=["GET"])
 @login_required
 def test_blueprint():

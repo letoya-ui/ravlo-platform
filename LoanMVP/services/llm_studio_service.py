@@ -518,3 +518,71 @@ def claude_borrower_explainer(payload: dict) -> dict:
             "summary": "", "next_steps": [], "documents_needed": [], "flags": [],
             "error": str(exc), "meta": {"provider": "anthropic/claude"},
         }
+
+
+_PORTFOLIO_SYSTEM = (
+    "You are Ravlo's investor portfolio analyst. You summarize an investor's "
+    "entire tracked deal portfolio in plain, confident English: aggregate value, "
+    "aggregate projected ROI, and the biggest risks across all deals. You must "
+    "only state facts present in the data provided below — never invent dollar "
+    "figures, deal counts, or risks not present in the data. Always respond with "
+    "valid JSON only — no markdown, no prose outside the JSON."
+)
+
+_PORTFOLIO_SCHEMA = """{
+  "summary": "2-3 sentence plain-English portfolio summary (total value, aggregate ROI)",
+  "next_steps": ["Specific, actionable next step across the portfolio", "..."],
+  "flags": ["Deal-tagged risk, e.g. '123 Main St: rehab cost exceeds 50% of purchase price'"],
+  "highlight": "One sentence calling out the single best or most urgent deal"
+}"""
+
+
+def claude_portfolio_analysis(payload: dict) -> dict:
+    """Summarize an investor's whole deal portfolio using Claude.
+
+    ``payload`` must contain a ``context`` dict (from
+    ``investor_portfolio_ai_service._shape_context``) and may contain a
+    free-text ``question``. Falls back to an error result on any failure so
+    the caller can fall back to the deterministic template summary.
+    """
+    context = payload.get("context") or {}
+    question = payload.get("question") or "Summarize my portfolio and flag any risks."
+
+    user_msg = (
+        f"Here is the investor's portfolio data:\n{json.dumps(context, default=str)}\n\n"
+        f"Investor's question: {question}\n\n"
+        f"Respond with a JSON object matching this schema exactly:\n{_PORTFOLIO_SCHEMA}"
+    )
+
+    try:
+        response = _anthropic_client().messages.create(
+            model="claude-sonnet-5",
+            max_tokens=1024,
+            system=_PORTFOLIO_SYSTEM,
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        raw = response.content[0].text.strip()
+
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+
+        result = json.loads(raw)
+        result.setdefault("meta", {})
+        result["meta"]["provider"] = "anthropic/claude"
+        return result
+
+    except json.JSONDecodeError as exc:
+        log.error("Claude portfolio analysis returned invalid JSON: %s", exc)
+        return {
+            "summary": "", "next_steps": [], "flags": [], "highlight": "",
+            "error": "Invalid JSON from Claude", "meta": {"provider": "anthropic/claude"},
+        }
+    except Exception as exc:
+        log.error("Claude portfolio analysis failed: %s", exc)
+        return {
+            "summary": "", "next_steps": [], "flags": [], "highlight": "",
+            "error": str(exc), "meta": {"provider": "anthropic/claude"},
+        }
