@@ -414,6 +414,7 @@
       </div>
 
       <form class="los-form" method="POST" action="{{ url_for('marketing.lending_os_request_preview') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="los-form-row">
           <div class="los-form-group">
             <label for="los-first">First Name</label>

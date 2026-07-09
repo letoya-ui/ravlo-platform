@@ -318,7 +318,6 @@ def tour():
 # CONTACT
 # ---------------------------------------------------------
 @marketing_bp.route("/contact", methods=["GET", "POST"])
-@csrf.exempt
 @limiter.limit("5 per minute", methods=["POST"])
 def contact():
     if request.method == "POST":
@@ -387,7 +386,6 @@ def _notify_admin_contact(name: str, email: str, subject: str, message: str) -> 
 # FEEDBACK / NPS SURVEY
 # ---------------------------------------------------------
 @marketing_bp.route("/feedback", methods=["GET", "POST"])
-@csrf.exempt
 @limiter.limit("10 per hour", methods=["POST"])
 def feedback():
     if request.method == "POST":
@@ -535,7 +533,6 @@ def lending_os():
 
 
 @marketing_bp.route("/lending-os/request-preview", methods=["POST"])
-@csrf.exempt
 @limiter.limit("5 per minute")
 def lending_os_request_preview():
     first_name = (request.form.get("first_name") or "").strip()
@@ -633,7 +630,6 @@ def _notify_admin_lending_os_lead(first_name, last_name, company, email, phone) 
 # APPLICATIONS / ACADEMY
 # ---------------------------------------------------------
 @marketing_bp.route("/apply", methods=["GET", "POST"])
-@csrf.exempt
 @limiter.limit("5 per minute", methods=["POST"])
 def apply():
     if request.method == "POST":
@@ -717,7 +713,6 @@ def lending_challenge():
 
 
 @marketing_bp.route("/refer", methods=["GET", "POST"])
-@csrf.exempt
 @limiter.limit("5 per minute", methods=["POST"])
 def referral():
     if request.method == "POST":

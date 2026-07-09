@@ -50,6 +50,7 @@
       style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
       border-radius:24px;padding:40px 36px;display:grid;gap:28px;">
 
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="source" value="{{ request.args.get('src', 'email') }}">
 
       {# ── NPS Score ── #}
