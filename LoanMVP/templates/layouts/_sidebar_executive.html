@@ -20,7 +20,13 @@
     <a href="{{ url_for('executive.dashboard') }}"
        class="re-nav-link {% if ep == 'executive.dashboard' %}active{% endif %}">
       <i class="icon lucide lucide-layout-dashboard"></i>
-      <span>Dashboard</span>
+      <span>Company Overview</span>
+    </a>
+
+    <a href="{{ url_for('executive.ravlo_overview') }}"
+       class="re-nav-link {% if ep == 'executive.ravlo_overview' %}active{% endif %}">
+      <i class="icon lucide lucide-building-2"></i>
+      <span>Ravlo (Lending OS)</span>
     </a>
 
     <a href="{{ url_for(exec_ns ~ '.demo_center') }}"
