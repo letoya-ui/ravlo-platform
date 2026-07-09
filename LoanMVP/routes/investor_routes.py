@@ -4259,7 +4259,6 @@ def api_deal_architect_proxy():
 # -------------------------------------------------------------------
 
 @investor_bp.route("/api/property_tool_search", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_search():
@@ -4539,7 +4538,6 @@ def api_property_tool_image():
         return redirect(url_for("static", filename="images/placeholder_property.jpg"))
 
 @investor_bp.route("/api/deal-finder-ai-read", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def api_deal_finder_ai_read():
@@ -4625,7 +4623,6 @@ def api_deal_finder_ai_read():
 
 
 @investor_bp.route("/api/property_detail", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_detail():
@@ -4697,7 +4694,6 @@ def api_property_detail():
 
 
 @investor_bp.route("/api/property_tool_save", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_save():
@@ -4785,7 +4781,6 @@ def api_property_tool_save():
 
      
 @investor_bp.route("/api/property_tool_save_and_analyze", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_save_and_analyze():
@@ -5103,7 +5098,6 @@ def api_property_tool_save_and_analyze():
 
 @investor_bp.route("/api/intelligence/card", methods=["POST"])
 @investor_bp.route("/api/property_tool_card", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_card():
@@ -5156,7 +5150,6 @@ def api_property_tool_card():
 
 
 @investor_bp.route("/api/property_tool_view_details", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_view_details():
@@ -16873,7 +16866,6 @@ def investor_partner_place_details():
 
 
 @investor_bp.route("/send-to-partner", methods=["POST"])
-@csrf.exempt
 @login_required
 def investor_send_to_partner():
     """AJAX: create a PartnerConnectionRequest from investor to a partner."""
