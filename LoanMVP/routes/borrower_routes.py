@@ -24,8 +24,9 @@ from LoanMVP.forms import BorrowerProfileForm
 from LoanMVP.ai.base_ai import AIAssistant
 from LoanMVP.services.borrower_ai_service import explain_borrower_status
 from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+from LoanMVP.services.compliance_service import ADVERSE_ACTION_STATUSES
 
-from LoanMVP.models.loan_models import BorrowerProfile, LoanApplication, BorrowerConsent
+from LoanMVP.models.loan_models import BorrowerProfile, LoanApplication, BorrowerConsent, AdverseActionNotice
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.underwriter_model import UnderwritingCondition
 from LoanMVP.models.crm_models import Message
@@ -593,12 +594,17 @@ def loan_view(loan_id):
         .all()
     )
 
+    adverse_action_notice = None
+    if (loan.status or "").strip().lower() in ADVERSE_ACTION_STATUSES:
+        adverse_action_notice = AdverseActionNotice.query.filter_by(loan_id=loan.id).first()
+
     return render_template(
         "borrower/view_loan.html",
         borrower=borrower,
         loan=loan,
         documents=documents,
         conditions=conditions,
+        adverse_action_notice=adverse_action_notice,
         active_tab="loans",
         title=f"Loan #{loan.id}",
     )

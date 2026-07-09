@@ -515,5 +515,32 @@ class BorrowerConsent(db.Model):
     def __repr__(self):
         return f"<BorrowerConsent borrower_id={self.borrower_id} type={self.consent_type}>"
 
+
+class AdverseActionNotice(db.Model):
+    """ECOA/Regulation B adverse-action notice record.
+
+    Created the moment a loan is declined, so there's a permanent,
+    unmodified snapshot of exactly what notice was generated and sent --
+    the boilerplate text may change over time, but the record of what an
+    already-notified borrower actually received must not.
+    """
+    __tablename__ = "adverse_action_notices"
+
+    id = db.Column(db.Integer, primary_key=True)
+    loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=False, index=True)
+    borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=False, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True, index=True)
+    reasons = db.Column(db.Text, nullable=True)
+    notice_html = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    email_sent = db.Column(db.Boolean, default=False, nullable=False)
+
+    loan = db.relationship("LoanApplication", backref=db.backref("adverse_action_notices", lazy=True))
+    borrower = db.relationship("BorrowerProfile", backref=db.backref("adverse_action_notices", lazy=True))
+
+    def __repr__(self):
+        return f"<AdverseActionNotice loan_id={self.loan_id} borrower_id={self.borrower_profile_id}>"
+
+
 from LoanMVP.models.ai_models import LoanAIConversation
 
