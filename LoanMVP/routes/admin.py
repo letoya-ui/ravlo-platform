@@ -1006,6 +1006,11 @@ def companies():
     if _is_company_admin(current_user) and current_user.company_id:
         return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 
+    if _is_company_admin(current_user) and not _is_full_admin(current_user):
+        # Company-scoped admin with no company_id assigned — a misconfigured
+        # account, not a signal to fall through to the full company list.
+        abort(403)
+
     companies = Company.query.order_by(Company.created_at.desc()).all()
 
     return render_template(
@@ -1812,6 +1817,12 @@ def company_finances_delete(entry_id):
 @role_required("admin_group")
 def reports():
     company = _company_scope()
+    if not company and not _is_full_admin(current_user):
+        # _company_scope() returns None both for full admins (intentional,
+        # platform-wide) and for a company-admin with no company_id
+        # assigned (misconfigured) — the latter must not fall through to
+        # the platform-wide counts/CSV exports below.
+        abort(403)
     report_type = request.form.get("report_type")
     users_query = User.query.filter_by(company_id=company.id) if company else User.query
     total_users = users_query.count()
@@ -1876,6 +1887,10 @@ def reports():
 @role_required("admin_group")
 def messages():
     company = _company_scope()
+    if not company and not _is_full_admin(current_user):
+        # See reports()/analytics(): a misconfigured company-admin with no
+        # company_id must not fall through to the platform-wide branches.
+        abort(403)
     if request.method == "POST":
         content = (request.form.get("content") or "").strip()
         receiver_id = request.form.get("recipient_id", type=int)
@@ -1988,6 +2003,10 @@ def verify_doc(doc_id):
 @role_required("admin")
 def analytics():
     company = _company_scope()
+    if not company and not _is_full_admin(current_user):
+        # See reports()/messages(): a misconfigured company-admin with no
+        # company_id must not fall through to the platform-wide branch.
+        abort(403)
 
     if company:
         users_query = User.query.filter_by(company_id=company.id)

@@ -625,7 +625,9 @@ def processor_queue():
         if profile:
             loans = LoanApplication.query.filter_by(processor_id=profile.id, is_active=True).order_by(LoanApplication.updated_at.desc()).all()
         else:
+            company_id = getattr(user, 'company_id', None)
             loans = LoanApplication.query.filter(
+                LoanApplication.company_id == company_id,
                 LoanApplication.status.in_(['processing', 'Processing', 'submitted', 'Submitted', 'in_review', 'In Review'])
             ).order_by(LoanApplication.updated_at.desc()).limit(50).all()
 
@@ -1934,7 +1936,8 @@ def admin_activity():
     recent_requests = []
     try:
         from LoanMVP.models import AccessRequest
-        for r in AccessRequest.query.order_by(AccessRequest.created_at.desc()).limit(10).all():
+        requests_q = AccessRequest.query if full_admin else AccessRequest.query.filter_by(company_id=company_id)
+        for r in requests_q.order_by(AccessRequest.created_at.desc()).limit(10).all():
             recent_requests.append({
                 'id': r.id,
                 'name': getattr(r, 'contact_name', '') or getattr(r, 'name', '') or '',
@@ -2237,10 +2240,13 @@ def lo_tasks():
 @mobile_api.route('/lending/tasks/<int:task_id>/complete', methods=['POST'])
 @require_auth
 def lo_task_complete(task_id):
+    user = request.current_user
     try:
         from LoanMVP.models.crm_models import Task
         from LoanMVP.extensions import db as _db
         task = Task.query.get_or_404(task_id)
+        if task.assigned_to != user.id:
+            return jsonify({'error': 'Not found'}), 404
         task.completed = True
         task.status = 'Completed'
         _db.session.commit()
@@ -2301,8 +2307,12 @@ def lo_message_thread(other_user_id):
     uid = user.id
 
     try:
+        from LoanMVP.models import User
         from LoanMVP.models.crm_models import Message
         from LoanMVP.extensions import db as _db
+        other_user = User.query.get(other_user_id)
+        if not other_user or other_user.company_id != getattr(user, 'company_id', None):
+            return jsonify({'error': 'Not found'}), 404
         msgs = Message.query.filter(
             db.or_(
                 db.and_(Message.sender_id == uid, Message.receiver_id == other_user_id),
@@ -2338,6 +2348,7 @@ def lo_message_send():
     uid = user.id
 
     try:
+        from LoanMVP.models import User
         from LoanMVP.models.crm_models import Message
         from LoanMVP.extensions import db as _db
         data = request.get_json(force=True) or {}
@@ -2345,6 +2356,9 @@ def lo_message_send():
         content = (data.get('content') or '').strip()
         if not receiver_id or not content:
             return jsonify({'error': 'receiver_id and content required'}), 400
+        receiver = User.query.get(receiver_id)
+        if not receiver or receiver.company_id != getattr(user, 'company_id', None):
+            return jsonify({'error': 'Recipient not found'}), 404
         msg = Message(
             sender_id=uid,
             receiver_id=int(receiver_id),
