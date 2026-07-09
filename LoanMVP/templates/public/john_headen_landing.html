@@ -1056,6 +1056,7 @@
         <div class="jh-form-error">{{ form_error }}</div>
         {% endif %}
         <form method="POST" action="/p/{{ profile.public_slug }}/contact">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="jh-field-row">
             <div class="jh-field">
               <label for="client_name">Your Name *</label>

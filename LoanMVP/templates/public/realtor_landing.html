@@ -465,6 +465,7 @@
     {% endif %}
 
     <form method="POST" action="{{ url_for('public_pages.realtor_lead_capture', slug=profile.public_slug) }}" class="form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="form-row">
         <div class="form-group">

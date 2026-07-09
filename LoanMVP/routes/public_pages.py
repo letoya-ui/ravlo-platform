@@ -351,7 +351,6 @@ def realtor_landing(slug):
 
 
 @public_pages_bp.route("/<slug>/contact", methods=["POST"])
-@csrf.exempt
 def realtor_lead_capture(slug):
     return _handle_lead_capture(slug)
 

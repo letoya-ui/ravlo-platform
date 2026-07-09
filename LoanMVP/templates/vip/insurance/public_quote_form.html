@@ -260,6 +260,7 @@
     <p class="subtext">We'll use this to prepare your personalized quote.</p>
 
     <form method="POST" enctype="multipart/form-data" class="form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="line" value="{{ selected_line }}">
 
       <div class="form-row">

@@ -2976,7 +2976,6 @@ def ai_email_assistant():
 
 
 @admin_bp.route("/ai/generate-email", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin_group")
 def ai_generate_email():
@@ -3090,7 +3089,6 @@ def ai_generate_email():
 
 
 @admin_bp.route("/ai/send-email", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin_group")
 def ai_send_email():
@@ -3148,7 +3146,6 @@ def ai_send_email():
 # ─────────────────────────────────────────────────────────────────────────────
 
 @admin_bp.route("/ai/chat", methods=["POST"])
-@csrf.exempt
 @login_required
 def ai_chat():
     """Universal conversational AI — adapts system prompt to the user's role."""
