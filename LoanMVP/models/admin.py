@@ -31,6 +31,7 @@ class Company(db.Model):
 
     billing_status = db.Column(db.String(50), default="active", nullable=True)
     grace_period_ends_at = db.Column(db.DateTime, nullable=True)
+    stripe_customer_id = db.Column(db.String(255), nullable=True)
 
     users = db.relationship("User", back_populates="company", foreign_keys="User.company_id", lazy=True)
     invites = db.relationship("UserInvite", back_populates="company", lazy=True)
@@ -51,6 +52,19 @@ class Company(db.Model):
         if self.max_users is None:
             return True
         return self.seats_used() < self.max_users
+
+    def is_billing_current(self) -> bool:
+        """True if billing_status is active, or past_due but still inside the grace period.
+
+        Not enforced anywhere yet -- this just reports the state Stripe has
+        put the company in. A follow-up (tier-based feature gating) is what
+        will actually act on this.
+        """
+        if self.billing_status == "active":
+            return True
+        if self.billing_status == "past_due":
+            return self.grace_period_ends_at is not None and datetime.utcnow() < self.grace_period_ends_at
+        return False
 
 
 class AccessRequest(db.Model):

@@ -38,6 +38,7 @@ from LoanMVP.services.notify_service import notify
 
 import io
 import csv
+import stripe
 import time
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -241,6 +242,36 @@ def _plan_defaults(plan_interest: str):
         return "white_label", None
 
     return "team", 10
+
+
+# Self-serve Stripe plans (fixed price). "lender" (Scale) and "white_label"
+# (Enterprise) are custom-quote tiers with no fixed price -- those upgrade
+# through a sales conversation, not a Checkout button.
+#
+# Reuses the STRIPE_PRICE_INDIVIDUAL_LOAN_OFFICER / STRIPE_PRICE_BROKERAGE_SMALL_TEAM
+# price IDs already configured in config.py for these exact seat counts --
+# checkout_routes.py's "loan_officer"/"brokerage" plan entries point Stripe
+# at the same prices but only ever set User.subscription, never touching
+# Company at all, so they never actually granted Lending OS seats.
+_COMPANY_SELF_SERVE_PLANS = {
+    "individual": {
+        "label": "Starter",
+        "price": "$149/mo",
+        "price_config_key": "STRIPE_PRICE_INDIVIDUAL_LOAN_OFFICER",
+    },
+    "team": {
+        "label": "Growth",
+        "price": "$799/mo",
+        "price_config_key": "STRIPE_PRICE_BROKERAGE_SMALL_TEAM",
+    },
+}
+
+_COMPANY_PLAN_LABELS = {
+    "individual": "Starter",
+    "team": "Growth",
+    "lender": "Scale",
+    "white_label": "Enterprise",
+}
 
 
 def _company_dashboard_defaults():
@@ -2672,6 +2703,83 @@ def company_settings(company_id):
         stats=stats,
         dashboard_preferences=_company_dashboard_settings(company),
     )
+
+
+@admin_bp.route("/company/<int:company_id>/billing", methods=["GET"])
+@login_required
+@role_required("admin_group")
+@admin_required
+def company_billing(company_id):
+    company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
+    current_plan = (company.subscription_tier or "team").strip().lower()
+
+    return render_template(
+        "admin/company_billing.html",
+        company=company,
+        current_plan_label=_COMPANY_PLAN_LABELS.get(current_plan, current_plan.title()),
+        self_serve_plans=_COMPANY_SELF_SERVE_PLANS,
+        billing_enabled=bool(current_app.config.get("STRIPE_BILLING_ENABLED")),
+    )
+
+
+@admin_bp.route("/company/<int:company_id>/billing/checkout/<plan>", methods=["GET"])
+@login_required
+@role_required("admin_group")
+@admin_required
+def company_billing_checkout(company_id, plan):
+    company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
+    plan_cfg = _COMPANY_SELF_SERVE_PLANS.get((plan or "").strip().lower())
+    if not plan_cfg:
+        flash("That plan isn't available for self-service checkout. Contact us to upgrade to Scale or Enterprise.", "warning")
+        return redirect(url_for("admin.company_billing", company_id=company.id))
+
+    if not current_app.config.get("STRIPE_BILLING_ENABLED"):
+        flash("Billing is not enabled on this server.", "warning")
+        return redirect(url_for("admin.company_billing", company_id=company.id))
+
+    price_id = current_app.config.get(plan_cfg["price_config_key"], "")
+    if not price_id:
+        current_app.logger.error(
+            "company_billing_checkout: no price ID configured for plan=%s key=%s",
+            plan, plan_cfg["price_config_key"],
+        )
+        flash("This plan is not currently available. Please contact us.", "danger")
+        return redirect(url_for("admin.company_billing", company_id=company.id))
+
+    stripe.api_key = current_app.config["STRIPE_SECRET_KEY"]
+
+    base = request.host_url.rstrip("/")
+    success_url = base + url_for("admin.company_billing", company_id=company.id) + "?checkout=success"
+    cancel_url = base + url_for("admin.company_billing", company_id=company.id)
+
+    session_kwargs = dict(
+        mode="subscription",
+        line_items=[{"price": price_id, "quantity": 1}],
+        metadata={"company_id": str(company.id), "company_plan": plan.lower()},
+        success_url=success_url,
+        cancel_url=cancel_url,
+    )
+    if company.stripe_customer_id:
+        session_kwargs["customer"] = company.stripe_customer_id
+    else:
+        session_kwargs["customer_email"] = current_user.email
+
+    try:
+        session = stripe.checkout.Session.create(**session_kwargs)
+    except stripe.error.StripeError as exc:
+        current_app.logger.error("company_billing_checkout stripe error plan=%s: %s", plan, exc)
+        flash("Could not start checkout. Please try again.", "danger")
+        return redirect(url_for("admin.company_billing", company_id=company.id))
+
+    return redirect(session.url, code=303)
 
 
 @admin_bp.route("/onboarding", methods=["GET"])

@@ -2,17 +2,18 @@
 """Stripe webhook handler.
 
 Receives and verifies Stripe event notifications. Handles subscription
-lifecycle for both investor users and partner users.
+lifecycle for investor users, partner users, and company (Lending OS
+tenant) plans.
 
 Event coverage:
   checkout.session.completed      → activate subscription from metadata
   customer.subscription.updated   → sync plan changes / renewals
-  customer.subscription.deleted   → downgrade to free / core
+  customer.subscription.deleted   → downgrade to free / core / canceled
   invoice.payment_succeeded       → ensure plan stays active
   invoice.payment_failed          → flag billing_status = 'past_due'
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import stripe
 from flask import Blueprint, current_app, jsonify, request
@@ -83,7 +84,44 @@ def _get_user_by_stripe_customer(customer_id: str):
     return User.query.filter_by(stripe_customer_id=customer_id).first()
 
 
+def _get_company(company_id):
+    from LoanMVP.models.admin import Company
+    try:
+        return Company.query.get(int(company_id))
+    except (TypeError, ValueError):
+        return None
+
+
+def _get_company_by_stripe_customer(customer_id: str):
+    from LoanMVP.models.admin import Company
+    if not customer_id:
+        return None
+    return Company.query.filter_by(stripe_customer_id=customer_id).first()
+
+
 # ─── Activation helpers ───────────────────────────────────────────────────────
+
+# Mirrors LoanMVP/routes/admin.py's _plan_defaults() -- duplicated here rather
+# than importing a route module into this one. Keep the two in sync.
+_COMPANY_PLAN_DEFAULTS = {
+    "individual": ("individual", 1),
+    "team":       ("team", 10),
+    "lender":     ("lender", 50),
+    "white_label": ("white_label", None),
+}
+
+COMPANY_GRACE_PERIOD_DAYS = 7
+
+
+def _activate_company_plan(company, plan: str, customer_id: str = None):
+    tier, max_users = _COMPANY_PLAN_DEFAULTS.get((plan or "").strip().lower(), ("team", 10))
+    company.subscription_tier = tier
+    company.max_users = max_users
+    company.is_active = True
+    company.billing_status = "active"
+    company.grace_period_ends_at = None
+    if customer_id and not company.stripe_customer_id:
+        company.stripe_customer_id = customer_id
 
 def _activate_partner_tier(partner, tier: str, customer_id: str = None):
     normalized = _norm_partner_tier(tier)
@@ -138,11 +176,28 @@ def _activate_academy_tier(user, tier: str):
 def _handle_checkout_completed(session):
     """Activate subscription immediately when Stripe confirms checkout paid."""
     metadata = session.get("metadata") or {}
+    company_id = metadata.get("company_id")
+    company_plan = metadata.get("company_plan", "")
+    customer_id = session.get("customer") or ""
+
+    if company_id:
+        company = _get_company(company_id)
+        if not company:
+            current_app.logger.warning(
+                "webhook checkout.session.completed: company %s not found", company_id
+            )
+            return
+        _activate_company_plan(company, company_plan, customer_id)
+        db.session.commit()
+        current_app.logger.info(
+            "webhook: activated company plan=%s for company=%s", company_plan, company_id
+        )
+        return
+
     user_id = metadata.get("user_id")
     partner_tier = metadata.get("partner_tier", "")
     sub_plan = metadata.get("subscription_plan", "")
     academy_tier = metadata.get("academy_tier", "")
-    customer_id = session.get("customer") or ""
 
     if not user_id:
         current_app.logger.warning("webhook checkout.session.completed: no user_id in metadata")
@@ -200,6 +255,23 @@ def _handle_subscription_updated(subscription):
     partner_tier = metadata.get("partner_tier", "")
     sub_plan = metadata.get("subscription_plan", "")
     academy_tier = metadata.get("academy_tier", "")
+    company_plan = metadata.get("company_plan", "")
+
+    # Company lookup first -- a company subscription is never also a
+    # partner/investor subscription
+    company = _get_company_by_stripe_customer(customer_id)
+    if company:
+        if company_plan:
+            _activate_company_plan(company, company_plan, customer_id)
+        elif status == "active" and company.billing_status == "past_due":
+            # Renewal succeeded with no plan-change metadata -- clear past_due
+            company.billing_status = "active"
+            company.grace_period_ends_at = None
+        db.session.commit()
+        current_app.logger.info(
+            "webhook subscription.updated: company %s status=%s", company.id, status
+        )
+        return
 
     # Try partner lookup first (by customer_id, then metadata)
     partner = _get_partner_by_stripe_customer(customer_id)
@@ -242,6 +314,17 @@ def _handle_subscription_deleted(subscription):
     metadata = subscription.get("metadata") or {}
     user_id = metadata.get("user_id")
 
+    company = _get_company_by_stripe_customer(customer_id)
+    if company:
+        company.billing_status = "canceled"
+        company.is_active = False
+        company.grace_period_ends_at = None
+        db.session.commit()
+        current_app.logger.info(
+            "webhook subscription.deleted: company %s deactivated", company.id
+        )
+        return
+
     partner = _get_partner_by_stripe_customer(customer_id)
     if partner:
         _deactivate_partner(partner)
@@ -269,6 +352,17 @@ def _handle_invoice_payment_failed(invoice):
     """Flag past_due when a renewal payment fails."""
     customer_id = invoice.get("customer") or ""
 
+    company = _get_company_by_stripe_customer(customer_id)
+    if company:
+        company.billing_status = "past_due"
+        company.grace_period_ends_at = datetime.utcnow() + timedelta(days=COMPANY_GRACE_PERIOD_DAYS)
+        db.session.commit()
+        current_app.logger.warning(
+            "webhook invoice.payment_failed: company %s marked past_due, grace period ends %s",
+            company.id, company.grace_period_ends_at,
+        )
+        return
+
     partner = _get_partner_by_stripe_customer(customer_id)
     if partner:
         current_app.logger.warning(
@@ -294,6 +388,19 @@ def _handle_invoice_payment_succeeded(invoice):
 
     # Only re-activate on subscription renewals (not the initial checkout invoice)
     if billing_reason not in ("subscription_cycle", "subscription_update"):
+        return
+
+    company = _get_company_by_stripe_customer(customer_id)
+    if company:
+        if company.billing_status != "active":
+            company.billing_status = "active"
+            company.grace_period_ends_at = None
+        if not company.is_active:
+            company.is_active = True
+        db.session.commit()
+        current_app.logger.info(
+            "webhook invoice.payment_succeeded: company %s renewed", company.id
+        )
         return
 
     partner = _get_partner_by_stripe_customer(customer_id)
