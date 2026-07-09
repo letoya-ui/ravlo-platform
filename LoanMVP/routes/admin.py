@@ -2,7 +2,7 @@
 # 🏛 ADMIN ROUTES — LoanMVP 2025 (Stabilized Version)
 # =========================================================
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app, abort
 from flask_login import current_user, login_required
 from collections import defaultdict
 from sqlalchemy import func, desc, inspect, text
@@ -1936,7 +1936,10 @@ def messages():
 @login_required
 @role_required("admin")
 def verify_data():
-    docs = LoanDocument.query.order_by(LoanDocument.created_at.desc()).limit(50).all()
+    q = LoanDocument.query
+    if not _is_full_admin(current_user):
+        q = q.filter_by(company_id=getattr(current_user, "company_id", None))
+    docs = q.order_by(LoanDocument.created_at.desc()).limit(50).all()
 
     # Attach borrower name
     for d in docs:
@@ -1950,6 +1953,8 @@ def verify_data():
 @role_required("admin")
 def verify_doc(doc_id):
     doc = LoanDocument.query.get_or_404(doc_id)
+    if not _is_full_admin(current_user) and doc.company_id != getattr(current_user, "company_id", None):
+        abort(404)
     doc.status = "verified"
     db.session.commit()
     flash("Document verified.", "success")
@@ -2763,6 +2768,16 @@ def unblock_user(user_id):
 @login_required
 @role_required("admin_group")
 def block_company(company_id):
+    # Blocking an entire company workspace is a platform-operator action
+    # (e.g. non-payment), not something a company's own admin should ever
+    # trigger — even against their own company. Unlike block_user/unblock_user
+    # just above (which correctly scope company-admins to their own
+    # company's users), this route had no ownership check at all: any
+    # company-level "admin" could block or unblock *any other company's*
+    # entire workspace by ID.
+    if not _is_full_admin(current_user):
+        abort(403)
+
     company = Company.query.get_or_404(company_id)
 
     reason = (request.form.get("reason") or "non_payment").strip().lower()
@@ -2787,6 +2802,9 @@ def block_company(company_id):
 @login_required
 @role_required("admin_group")
 def unblock_company(company_id):
+    if not _is_full_admin(current_user):
+        abort(403)
+
     company = Company.query.get_or_404(company_id)
 
     company.is_blocked = False

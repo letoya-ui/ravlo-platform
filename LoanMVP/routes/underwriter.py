@@ -2,8 +2,9 @@
 #   CAUGHMAN MASON — UNDERWRITER WORKFLOW CENTER
 # ===============================================================
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, abort
 from datetime import datetime
+from sqlalchemy import or_
 import io
 from flask_login import current_user, login_required
 from LoanMVP.utils.decorators import role_required
@@ -17,6 +18,8 @@ from LoanMVP.models.crm_models import Message
 from LoanMVP.models.credit_models import SoftCreditReport      # FIXED
 
 from LoanMVP.utils.pricing_engine import calculate_dti_ltv
+from LoanMVP.utils.loan_access import get_loan_or_404, get_borrower_or_404
+from LoanMVP.utils.lending_utils import send_notification
 
 
 # PDF GENERATION
@@ -85,23 +88,34 @@ def _allowed_underwriter_partner_ids():
 @login_required
 @role_required("underwriter")
 def dashboard():
+    # Every query here previously ran platform-wide with no company scoping
+    # at all — since Lending OS is licensed to multiple companies, that let
+    # any company's underwriters see every other company's loan queue.
+    company_id = getattr(current_user, "company_id", None)
+    company_loans = LoanApplication.query.filter_by(company_id=company_id)
+
     loans = (
-        LoanApplication.query
+        company_loans
         .order_by(LoanApplication.created_at.desc())
         .limit(10)
         .all()
     )
 
-    pending = LoanApplication.query.filter(
+    pending = company_loans.filter(
         LoanApplication.status.in_(["Submitted", "In Review", "UW Review"])
     ).count()
 
-    approved = LoanApplication.query.filter_by(status="Approved").count()
-    declined = LoanApplication.query.filter_by(status="Declined").count()
-    clear_to_close = LoanApplication.query.filter_by(status="Clear to Close").count()
-    conditional = LoanApplication.query.filter_by(status="Approved with Conditions").count()
+    approved = company_loans.filter_by(status="Approved").count()
+    declined = company_loans.filter_by(status="Declined").count()
+    clear_to_close = company_loans.filter_by(status="Clear to Close").count()
+    conditional = company_loans.filter_by(status="Approved with Conditions").count()
 
-    open_conditions = UnderwritingCondition.query.filter_by(status="Open").all()
+    open_conditions = (
+        UnderwritingCondition.query
+        .join(LoanApplication, UnderwritingCondition.loan_id == LoanApplication.id)
+        .filter(LoanApplication.company_id == company_id, UnderwritingCondition.status == "Open")
+        .all()
+    )
 
     return render_template(
         "underwriter/dashboard.html",
@@ -353,7 +367,8 @@ def complete_onboarding():
 @role_required("underwriter")
 def queue():
     pending = LoanApplication.query.filter(
-        LoanApplication.status.in_(["Submitted", "In Review", "UW Review"])
+        LoanApplication.company_id == getattr(current_user, "company_id", None),
+        LoanApplication.status.in_(["Submitted", "In Review", "UW Review"]),
     ).all()
 
     return render_template(
@@ -371,7 +386,7 @@ def queue():
 @login_required
 @role_required("underwriter")
 def file_review(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = loan.borrower_profile
 
     credit = (
@@ -411,6 +426,8 @@ def file_review(loan_id):
 @role_required("underwriter")
 def verify_doc(doc_id):
     doc = LoanDocument.query.get_or_404(doc_id)
+    if doc.company_id != getattr(current_user, "company_id", None):
+        abort(404)
     doc.status = "Verified"
     db.session.commit()
 
@@ -426,7 +443,7 @@ def verify_doc(doc_id):
 @login_required
 @role_required("underwriter")
 def add_condition(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
 
     condition_types = request.form.getlist("type")
     description = request.form.get("description")
@@ -459,6 +476,9 @@ def add_condition(loan_id):
 @role_required("underwriter")
 def clear_condition(cond_id):
     c = UnderwritingCondition.query.get_or_404(cond_id)
+    # UnderwritingCondition has no company_id of its own — enforce tenancy
+    # via its loan (get_loan_or_404 aborts 404 on a company mismatch).
+    get_loan_or_404(c.loan_id)
     c.status = "Cleared"
     c.cleared_at = datetime.utcnow()
     db.session.commit()
@@ -471,6 +491,7 @@ def clear_condition(cond_id):
 @role_required("underwriter")
 def send_condition(cond_id):
     c = UnderwritingCondition.query.get_or_404(cond_id)
+    get_loan_or_404(c.loan_id)
 
     # Notify processor
     send_notification(
@@ -491,7 +512,7 @@ def send_condition(cond_id):
 @role_required("underwriter")
 @csrf.exempt
 def decision(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
 
     loan.decision_notes = request.form.get("notes")
     loan.decision_date = datetime.utcnow()
@@ -515,7 +536,7 @@ def ai():
     borrower_id = data.get("borrower_id")
     question = data.get("message")
 
-    borrower = BorrowerProfile.query.get(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
     loan = LoanApplication.query.filter_by(borrower_profile_id=borrower.id).first()
 
     credit = borrower.credit_reports[-1] if borrower.credit_reports else None
@@ -552,7 +573,7 @@ Question:
 @login_required
 @role_required("underwriter")
 def decision_sheet(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = loan.borrower_profile
 
     buffer = io.BytesIO()
@@ -589,20 +610,40 @@ def decision_sheet(loan_id):
 @login_required
 @role_required("underwriter")
 def tasks():
+    profile = _underwriter_profile()
+    company_id = getattr(current_user, "company_id", None)
+
     if request.method == "POST":
+        loan_id = request.form.get("loan_id")
+        if loan_id:
+            # Validates the loan belongs to this company (404s otherwise)
+            # before letting a task reference it.
+            get_loan_or_404(int(loan_id))
+
         t = UnderwriterTask(
             title=request.form.get("title"),  # REQUIRED
             description=request.form.get("description"),
-            loan_id=request.form.get("loan_id"),
+            loan_id=loan_id,
             priority=request.form.get("priority") or "Normal",
             status="Pending",
-            due_date=request.form.get("due_date") or None
+            due_date=request.form.get("due_date") or None,
+            assigned_to=profile.id if profile else None,
         )
         db.session.add(t)
         db.session.commit()
         return redirect("/underwriter/tasks")
 
-    tasks = UnderwriterTask.query.order_by(UnderwriterTask.created_at.desc()).all()
+    # UnderwriterTask has no company_id of its own — scope to tasks tied to
+    # a company-owned loan, or assigned directly to this underwriter.
+    tasks_query = (
+        UnderwriterTask.query
+        .outerjoin(LoanApplication, UnderwriterTask.loan_id == LoanApplication.id)
+        .filter(or_(
+            LoanApplication.company_id == company_id,
+            UnderwriterTask.assigned_to == (profile.id if profile else None),
+        ))
+    )
+    tasks = tasks_query.order_by(UnderwriterTask.created_at.desc()).all()
     return render_template("underwriter/tasks.html", tasks=tasks)
 
 
@@ -613,7 +654,7 @@ def tasks():
 @login_required
 @role_required("underwriter")
 def redflags(loan_id):
-    loan = LoanApplication.query.get_or_404(loan_id)
+    loan = get_loan_or_404(loan_id)
     borrower = loan.borrower_profile
     credit = borrower.credit_reports[-1] if borrower.credit_reports else None
 
@@ -649,7 +690,7 @@ def redflags(loan_id):
 def review_loans():
     status_filter = request.args.get("status", "all")
 
-    query = LoanApplication.query
+    query = LoanApplication.query.filter_by(company_id=getattr(current_user, "company_id", None))
 
     if status_filter != "all":
         query = query.filter_by(status=status_filter)
@@ -667,22 +708,31 @@ def review_loans():
 @login_required
 @role_required("underwriter")
 def risk_reports():
-    # Pull all loans for portfolio‑level analysis
-    loans = LoanApplication.query.order_by(LoanApplication.created_at.desc()).all()
+    company_id = getattr(current_user, "company_id", None)
+    company_loans = LoanApplication.query.filter_by(company_id=company_id)
 
-    # Conditions
-    open_conditions = UnderwritingCondition.query.filter_by(status="Open").all()
-    critical_conditions = UnderwritingCondition.query.filter_by(severity="Critical").all()
-    moderate_conditions = UnderwritingCondition.query.filter_by(severity="Moderate").all()
-    low_conditions = UnderwritingCondition.query.filter_by(severity="Low").all()
+    # Pull this company's loans for portfolio‑level analysis
+    loans = company_loans.order_by(LoanApplication.created_at.desc()).all()
+
+    # Conditions — UnderwritingCondition has no company_id of its own, so
+    # scope via a join to this company's loans.
+    conditions_base = (
+        UnderwritingCondition.query
+        .join(LoanApplication, UnderwritingCondition.loan_id == LoanApplication.id)
+        .filter(LoanApplication.company_id == company_id)
+    )
+    open_conditions = conditions_base.filter(UnderwritingCondition.status == "Open").all()
+    critical_conditions = conditions_base.filter(UnderwritingCondition.severity == "Critical").all()
+    moderate_conditions = conditions_base.filter(UnderwritingCondition.severity == "Moderate").all()
+    low_conditions = conditions_base.filter(UnderwritingCondition.severity == "Low").all()
 
     # Risk buckets
-    high_risk = LoanApplication.query.filter(
+    high_risk = company_loans.filter(
         LoanApplication.status.in_(["UW Review", "In Review"])
     ).count()
 
-    approved = LoanApplication.query.filter_by(status="Approved").count()
-    declined = LoanApplication.query.filter_by(status="Declined").count()
+    approved = company_loans.filter_by(status="Approved").count()
+    declined = company_loans.filter_by(status="Declined").count()
 
     # Credit + DTI/LTV analysis
     risk_rows = []
@@ -718,11 +768,12 @@ def risk_reports():
 @login_required
 @role_required("underwriter")
 def pipeline():
-    submitted = LoanApplication.query.filter_by(status="Submitted").all()
-    in_review = LoanApplication.query.filter_by(status="In Review").all()
-    uw_review = LoanApplication.query.filter_by(status="UW Review").all()
-    approved = LoanApplication.query.filter_by(status="Approved").all()
-    declined = LoanApplication.query.filter_by(status="Declined").all()
+    company_loans = LoanApplication.query.filter_by(company_id=getattr(current_user, "company_id", None))
+    submitted = company_loans.filter_by(status="Submitted").all()
+    in_review = company_loans.filter_by(status="In Review").all()
+    uw_review = company_loans.filter_by(status="UW Review").all()
+    approved = company_loans.filter_by(status="Approved").all()
+    declined = company_loans.filter_by(status="Declined").all()
 
     return render_template(
         "underwriter/pipeline.html",

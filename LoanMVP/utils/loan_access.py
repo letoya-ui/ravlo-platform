@@ -24,10 +24,13 @@ def _assert_loan_access(loan: LoanApplication):
 
 def _assert_company_match(record_company_id, record_id, kind: str):
     user_company_id = getattr(current_user, "company_id", None)
-    # If both are None (solo/no-company setup), allow.
-    if user_company_id is None and record_company_id is None:
-        return
-    # If company IDs are set and match, allow.
+    # Company IDs must both be set and match. Previously a pair of unset
+    # company_ids on both sides was treated as an implicit match ("solo/
+    # no-company setup") — but with multiple companies licensing this
+    # platform, any account or record missing a company_id would let every
+    # other companyless account/record through too. Deny by default instead;
+    # a real "no company" workflow should be an explicit, separate check,
+    # not a side effect of two unrelated null values matching.
     if user_company_id and record_company_id and user_company_id == record_company_id:
         return
     # Mismatch → 404 (don't leak record existence).
