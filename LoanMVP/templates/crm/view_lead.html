@@ -79,6 +79,7 @@
   <!-- Call Log Panel -->
   <div class="card" style="flex:1 1 65%;min-width:480px;">
     <form method="POST" style="margin-bottom:1rem;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
         <input name="phone" placeholder="Phone" value="{{ lead.phone or '' }}"
                style="flex:1;padding:.5rem;background:#0f0f11;border:1px solid #2a2e36;border-radius:8px;color:#e6e6e6;">

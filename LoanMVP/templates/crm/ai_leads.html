@@ -43,6 +43,7 @@
 
   <div class="card">
     <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="grid g-2">
         <div>
           <label for="market">Market</label>

@@ -14,6 +14,7 @@
 <h1>📞 AI Call Assistant</h1>
 <div class="card">
   <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Lead</label>
     <select name="lead_id" required>
       {% for lead in leads %}

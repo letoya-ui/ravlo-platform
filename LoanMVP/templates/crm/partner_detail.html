@@ -69,6 +69,7 @@
       <p class="muted">No notes yet.</p>
     {% endif %}
     <form method="POST" action="{{ url_for('crm.add_partner_note', partner_id=partner.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <textarea name="content" placeholder="Add a quick note..."></textarea>
       <button type="submit" class="btn">💬 Save Note</button>
     </form>

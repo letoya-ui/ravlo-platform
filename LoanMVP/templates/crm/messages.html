@@ -27,6 +27,7 @@
       </div>
 
       <form class="chat-input" method="POST" action="{{ url_for('crm.messages') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="message" id="msgInput" placeholder="Type your message..." required>
         <button class="btn btn-primary" type="submit">Send</button>
       </form>
