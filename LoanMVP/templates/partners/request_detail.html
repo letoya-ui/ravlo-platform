@@ -421,6 +421,7 @@ Review request details, update status, and manage the next step.
         </div>
 
         <form method="POST" action="{{ url_for('partners.update_request_status', request_id=req.id) }}" class="partner-status-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="partner-field">
             <label class="partner-label">Request Status</label>
             <select name="status" class="ravlo-input partner-select">

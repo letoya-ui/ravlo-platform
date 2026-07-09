@@ -408,7 +408,6 @@ def profile(partner_id):
 # ------------------------------------------------
 
 @partners_bp.route("/register", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("partner_group")
 def register():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -542,7 +541,6 @@ def requests_inbox():
 # ------------------------------------------------
 
 @partners_bp.route("/requests/<int:req_id>/accept", methods=["POST"])
-@csrf.exempt
 @role_required("partner_group")
 def accept_request(req_id):
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -603,7 +601,6 @@ def accept_request(req_id):
 # ------------------------------------------------
 
 @partners_bp.route("/requests/<int:req_id>/decline", methods=["POST"])
-@csrf.exempt
 @role_required("partner_group")
 def decline_request(req_id):
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -626,7 +623,6 @@ def decline_request(req_id):
 
 
 @partners_bp.route("/requests/<int:request_id>/status", methods=["POST"])
-@csrf.exempt
 @role_required("partner_group")
 def update_request_status(request_id):
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -718,7 +714,6 @@ def workspace_job(job_id):
 # ------------------------------------------------
 
 @partners_bp.route("/photos/upload", methods=["POST"])
-@csrf.exempt
 @role_required("partner_group")
 def upload_photo():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -752,7 +747,6 @@ def upload_photo():
 
 
 @partners_bp.route("/listing", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("partner_group")
 def listing():
     partner = current_user.partner_profile
@@ -787,7 +781,6 @@ def listing():
 # ------------------------------------------------
 
 @partners_bp.route("/photos/<int:photo_id>/delete", methods=["POST"])
-@csrf.exempt
 @role_required("partner_group")
 def delete_photo(photo_id):
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -938,7 +931,6 @@ def subscribe(tier):
 
 
 @partners_bp.route("/subscribe/<tier>/confirm", methods=["POST"])
-@csrf.exempt
 @role_required("partner_group")
 def confirm_subscription(tier):
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -1267,7 +1259,6 @@ def lead_charge_history():
 
 
 @partners_bp.route("/profile/edit", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("partner_group")
 def edit_profile():
     partner = Partner.query.filter_by(user_id=current_user.id).first()

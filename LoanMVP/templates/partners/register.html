@@ -10,6 +10,7 @@
     <h1>{{ "Edit Your Partner Profile" if partner else "Create Your Partner Profile" }}</h1>
 
     <form method="POST" class="partner-register-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <label>Contact Name</label>
         <input type="text" name="name" value="{{ partner.name if partner else '' }}" required>
@@ -54,6 +55,7 @@
     <h3>Photos</h3>
 
     <form method="POST" action="{{ url_for('partners.upload_photo') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="file" name="photo" required>
         <button type="submit" class="btn-primary">Upload Photo</button>
     </form>
@@ -64,6 +66,7 @@
             <img src="{{ photo.url }}" alt="Partner photo">
 
             <form method="POST" action="{{ url_for('partners.delete_photo', photo_id=photo.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn-secondary small">Delete</button>
             </form>
         </div>
