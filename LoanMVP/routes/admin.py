@@ -1288,6 +1288,14 @@ def invite_team_member(company_id):
         email = (request.form.get("email") or "").strip().lower()
         role = (request.form.get("role") or "").strip()
 
+        if not company.has_seat_available():
+            flash(
+                f"{company.name} has reached its plan's user limit "
+                f"({company.max_users}). Upgrade the plan to invite more team members.",
+                "warning",
+            )
+            return redirect(url_for("admin.company_team", company_id=company.id))
+
         if not email or not role:
             flash("Email and role are required.", "danger")
             return redirect(url_for("admin.invite_team_member", company_id=company.id))
