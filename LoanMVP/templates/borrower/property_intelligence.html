@@ -15,6 +15,7 @@
     </div>
 
     <form method="POST" class="re-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="re-form-group">
         <label for="address">Property Address</label>
         <input
