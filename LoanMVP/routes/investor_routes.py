@@ -1916,9 +1916,21 @@ def update_profile():
         if field in user_fields and clean_value:
             setattr(current_user, field, clean_value)
 
+    # Explicit whitelist, matching create_profile()'s editable field set —
+    # InvestorProfile also carries sensitive columns (ssn, is_verified,
+    # deal_finder_search_count) that must never be settable from arbitrary
+    # request JSON.
+    profile_fields = {
+        "full_name", "email", "phone", "address", "city", "state", "zip_code",
+        "employment_status", "annual_income", "credit_score",
+        "strategy", "experience_level",
+        "target_markets", "property_types", "min_price", "max_price",
+        "min_sqft", "max_sqft", "capital_available", "min_cash_on_cash",
+        "min_roi", "timeline_days", "risk_tolerance",
+    }
     for field, value in payload.items():
         clean_value = (value or "").strip() if isinstance(value, str) else value
-        if hasattr(ip, field) and (value or "").strip():
+        if field in profile_fields and (value or "").strip():
             setattr(ip, field, clean_value)
 
     ip.updated_at = datetime.utcnow()

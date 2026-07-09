@@ -904,7 +904,12 @@ def upload_doc():
             flash("❌ Please select a file.", "danger")
             return redirect(url_for("processor.upload_doc"))
 
-        filename = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{file.filename}"
+        safe_name = secure_filename(file.filename)
+        if not safe_name:
+            flash("❌ Invalid filename.", "danger")
+            return redirect(url_for("processor.upload_doc"))
+
+        filename = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{safe_name}"
         file_path = os.path.join(upload_folder, filename)
         file.save(file_path)
 
