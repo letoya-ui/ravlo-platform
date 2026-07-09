@@ -29,7 +29,7 @@
                                 <span class="msg-sender">{{ msg.sender.full_name }}</span>
                                 <span class="msg-time">{{ msg.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
                             </div>
-                            <div class="msg-content">{{ msg.content|safe }}</div>
+                            <div class="msg-content">{{ msg.content }}</div>
                         </div>
                     {% endfor %}
                 {% else %}

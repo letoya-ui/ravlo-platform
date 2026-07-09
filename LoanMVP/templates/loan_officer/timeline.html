@@ -8,7 +8,7 @@
   {% for e in events %}
   <li class="list-group-item">
     <strong>{{ e.timestamp.strftime('%b %d, %Y %I:%M %p') }}</strong> — <span class="badge bg-secondary">{{ e.label }}</span><br>
-    <div class="mt-1" style="white-space: pre-wrap;">{{ e.detail|safe }}</div>
+    <div class="mt-1" style="white-space: pre-wrap;">{{ e.detail }}</div>
   </li>
   {% else %}
   <li class="list-group-item text-muted">No timeline events found.</li>

@@ -5,7 +5,7 @@ import jwt
 import datetime
 from functools import wraps
 from flask import Blueprint, request, jsonify, current_app
-from LoanMVP.extensions import csrf, db
+from LoanMVP.extensions import csrf, db, limiter
 
 mobile_api = Blueprint('mobile_api', __name__, url_prefix='/mobile')
 csrf.exempt(mobile_api)
@@ -132,6 +132,7 @@ def _serialize_user(user) -> dict:
 # ---------------------------------------------------------------------------
 
 @mobile_api.route('/auth/login', methods=['POST'])
+@limiter.limit("10 per minute")
 def login():
     """Validate email/password and return JWT + user object."""
     data = request.get_json(silent=True) or {}
