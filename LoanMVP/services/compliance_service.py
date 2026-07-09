@@ -1,4 +1,5 @@
-"""ECOA / Regulation B adverse-action notice generation.
+"""Lending-compliance helpers: ECOA adverse-action notices and state MLO
+licensing enforcement.
 
 NOTE: the boilerplate notice text below follows the shape of Regulation B's
 model notice (Appendix C, Form C-1) for a business-credit denial, adapted
@@ -104,3 +105,40 @@ def generate_adverse_action_notice(loan):
             notice = AdverseActionNotice.query.filter_by(loan_id=loan.id).first()
 
     return notice
+
+
+# ─── State MLO licensing enforcement ───────────────────────────────────────
+
+def loan_relevant_state(loan) -> str:
+    """The state a loan officer needs to be licensed in to work this file.
+
+    LoanApplication has no structured property-state column today (only a
+    free-text property_address) -- this reads BorrowerProfile.state, which
+    is captured on intake. Uses getattr defensively so that if a real
+    property-state field is ever added to LoanApplication, this picks it up
+    automatically without another call site needing to change.
+    """
+    state = (getattr(loan, "state", None) or "").strip()
+    if state:
+        return state.upper()
+    borrower = getattr(loan, "borrower_profile", None)
+    return ((getattr(borrower, "state", None) or "").strip()).upper()
+
+
+def loan_officer_can_serve_state(officer_profile, state: str) -> bool:
+    """True if `officer_profile` is verified and licensed in `state`.
+
+    An unknown/blank state means there's nothing to check against yet --
+    returns True rather than blocking on data that was never captured.
+    """
+    state = (state or "").strip().upper()
+    if not state:
+        return True
+    if not officer_profile or not officer_profile.license_verified:
+        return False
+    licensed_states = {
+        s.strip().upper()
+        for s in (officer_profile.licensed_states or "").split(",")
+        if s.strip()
+    }
+    return state in licensed_states
