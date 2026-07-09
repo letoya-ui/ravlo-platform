@@ -16,6 +16,7 @@ from LoanMVP.ai.base_ai import AIAssistant     # ✅ Unified AI import
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.utils.emailer import send_email  # or wherever you saved it
 from LoanMVP.utils.role_helpers import is_admin, company_billing_hold_reason
+from LoanMVP.services.compliance_service import loan_relevant_state, loan_officer_can_serve_state
 
 
 # MODELS
@@ -2672,6 +2673,16 @@ def assign_company_applicant(company_id, loan_id):
     if processor_id and processor_id not in available_processors:
         flash("Please choose a processor assigned to this company.", "warning")
         return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+    if officer_id:
+        target_state = loan_relevant_state(loan)
+        if not loan_officer_can_serve_state(available_officers.get(officer_id), target_state):
+            flash(
+                f"That loan officer isn't verified/licensed in {target_state}. "
+                "Verify their license for that state first, or choose a different officer.",
+                "warning",
+            )
+            return redirect(url_for("admin.company_dashboard", company_id=company.id))
 
     borrower = getattr(loan, "borrower_profile", None)
 

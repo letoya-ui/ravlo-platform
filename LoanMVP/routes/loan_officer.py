@@ -48,6 +48,7 @@ from LoanMVP.utils.payment_engine import (
 from LoanMVP.utils.emailer import send_email_with_attachment
 
 from LoanMVP.services.equifax_api import EquifaxAPI
+from LoanMVP.services.compliance_service import loan_officer_can_serve_state
 
 # Optional AI helper / custom engine
 from LoanMVP.utils.ai import LoanMVPAI
@@ -2124,6 +2125,14 @@ def ai_intake_review(intake_id):
 def auto_create_loan(borrower_id):
     borrower = get_borrower_or_404(borrower_id)
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
+
+    target_state = (borrower.state or "").strip().upper()
+    if not loan_officer_can_serve_state(officer, target_state):
+        return jsonify({
+            "status": "error",
+            "message": f"You aren't verified/licensed to originate loans in {target_state}. "
+                       "Ask a company admin to verify your license for that state.",
+        }), 403
 
     data = request.get_json() or {}
 
