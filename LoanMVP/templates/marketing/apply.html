@@ -21,6 +21,7 @@
 
     <div class="apply-form-card">
       <form method="POST" class="apply-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-grid">
           <div class="field">
             <label>Company Name *</label>
