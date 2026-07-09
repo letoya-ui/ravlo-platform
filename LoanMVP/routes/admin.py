@@ -1107,6 +1107,13 @@ def approve_access_request(req_id):
         ).first()
 
     if not company:
+        # Onboarding a brand-new licensed company is a Ravlo-only action.
+        # _can_access_request() lets a company admin approve their own
+        # employees' requests, but that must never fall through to
+        # creating an entirely new tenant.
+        if not _is_full_admin(current_user):
+            flash("Only Ravlo admins can onboard a new company.", "warning")
+            return redirect(_admin_home_endpoint())
         subscription_tier, max_users = _plan_defaults("team")
         company = Company(
             name=access_request.company_name or access_request.contact_name,
@@ -1122,6 +1129,12 @@ def approve_access_request(req_id):
         db.session.add(company)
         db.session.flush()
     else:
+        # A name/domain heuristic match could point at a company other than
+        # the approving admin's own — only a full admin may reassign a
+        # request to a company the admin doesn't belong to.
+        if not _is_full_admin(current_user) and getattr(current_user, "company_id", None) != company.id:
+            flash("You do not have access to that request.", "warning")
+            return redirect(_admin_home_endpoint())
         company.is_active = True
         if not company.subscription_tier:
             company.subscription_tier = "team"
