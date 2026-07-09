@@ -82,6 +82,21 @@ def _allowed_underwriter_partner_ids():
     return {user.id for user in _assigned_team_users_for_underwriter()}
 
 
+def _underwriter_loans_query():
+    """LoanApplication query scoped to this underwriter's assigned files.
+
+    Falls back to the whole company's queue when the user has no
+    UnderwriterProfile yet (e.g. mid-onboarding, before any loan could
+    ever be assigned to them) -- matches mobile_api.py's
+    underwriter_queue() fallback.
+    """
+    profile = _underwriter_profile()
+    if profile:
+        return LoanApplication.query.filter_by(underwriter_id=profile.id)
+    company_id = getattr(current_user, "company_id", None)
+    return LoanApplication.query.filter_by(company_id=company_id)
+
+
 # ===============================================================
 #   DASHBOARD
 # ===============================================================
@@ -89,33 +104,34 @@ def _allowed_underwriter_partner_ids():
 @login_required
 @role_required("underwriter")
 def dashboard():
-    # Every query here previously ran platform-wide with no company scoping
-    # at all — since Lending OS is licensed to multiple companies, that let
-    # any company's underwriters see every other company's loan queue.
-    company_id = getattr(current_user, "company_id", None)
-    company_loans = LoanApplication.query.filter_by(company_id=company_id)
+    # Scoped to this underwriter's own assigned files -- previously ran
+    # company-wide (and before that, platform-wide with no scoping at all),
+    # showing every underwriter their whole company's queue instead of just
+    # their personal pipeline.
+    my_loans = _underwriter_loans_query()
+    loan_ids = [row.id for row in my_loans.with_entities(LoanApplication.id).all()]
 
     loans = (
-        company_loans
+        my_loans
         .order_by(LoanApplication.created_at.desc())
         .limit(10)
         .all()
     )
 
-    pending = company_loans.filter(
+    pending = my_loans.filter(
         LoanApplication.status.in_(["Submitted", "In Review", "UW Review"])
     ).count()
 
-    approved = company_loans.filter_by(status="Approved").count()
-    declined = company_loans.filter_by(status="Declined").count()
-    clear_to_close = company_loans.filter_by(status="Clear to Close").count()
-    conditional = company_loans.filter_by(status="Approved with Conditions").count()
+    approved = my_loans.filter_by(status="Approved").count()
+    declined = my_loans.filter_by(status="Declined").count()
+    clear_to_close = my_loans.filter_by(status="Clear to Close").count()
+    conditional = my_loans.filter_by(status="Approved with Conditions").count()
 
     open_conditions = (
         UnderwritingCondition.query
-        .join(LoanApplication, UnderwritingCondition.loan_id == LoanApplication.id)
-        .filter(LoanApplication.company_id == company_id, UnderwritingCondition.status == "Open")
+        .filter(UnderwritingCondition.loan_id.in_(loan_ids), UnderwritingCondition.status == "Open")
         .all()
+        if loan_ids else []
     )
 
     return render_template(
@@ -367,8 +383,7 @@ def complete_onboarding():
 @login_required
 @role_required("underwriter")
 def queue():
-    pending = LoanApplication.query.filter(
-        LoanApplication.company_id == getattr(current_user, "company_id", None),
+    pending = _underwriter_loans_query().filter(
         LoanApplication.status.in_(["Submitted", "In Review", "UW Review"]),
     ).all()
 
@@ -708,31 +723,27 @@ def review_loans():
 @login_required
 @role_required("underwriter")
 def risk_reports():
-    company_id = getattr(current_user, "company_id", None)
-    company_loans = LoanApplication.query.filter_by(company_id=company_id)
+    my_loans = _underwriter_loans_query()
 
-    # Pull this company's loans for portfolio‑level analysis
-    loans = company_loans.order_by(LoanApplication.created_at.desc()).all()
+    # Pull this underwriter's own assigned loans for portfolio-level analysis
+    loans = my_loans.order_by(LoanApplication.created_at.desc()).all()
+    loan_ids = [loan.id for loan in loans]
 
-    # Conditions — UnderwritingCondition has no company_id of its own, so
-    # scope via a join to this company's loans.
-    conditions_base = (
-        UnderwritingCondition.query
-        .join(LoanApplication, UnderwritingCondition.loan_id == LoanApplication.id)
-        .filter(LoanApplication.company_id == company_id)
-    )
+    # Conditions — UnderwritingCondition has no company_id/underwriter_id of
+    # its own, so scope via the underwriter's own loan IDs.
+    conditions_base = UnderwritingCondition.query.filter(UnderwritingCondition.loan_id.in_(loan_ids))
     open_conditions = conditions_base.filter(UnderwritingCondition.status == "Open").all()
     critical_conditions = conditions_base.filter(UnderwritingCondition.severity == "Critical").all()
     moderate_conditions = conditions_base.filter(UnderwritingCondition.severity == "Moderate").all()
     low_conditions = conditions_base.filter(UnderwritingCondition.severity == "Low").all()
 
     # Risk buckets
-    high_risk = company_loans.filter(
+    high_risk = my_loans.filter(
         LoanApplication.status.in_(["UW Review", "In Review"])
     ).count()
 
-    approved = company_loans.filter_by(status="Approved").count()
-    declined = company_loans.filter_by(status="Declined").count()
+    approved = my_loans.filter_by(status="Approved").count()
+    declined = my_loans.filter_by(status="Declined").count()
 
     # Credit + DTI/LTV analysis
     risk_rows = []
@@ -768,12 +779,12 @@ def risk_reports():
 @login_required
 @role_required("underwriter")
 def pipeline():
-    company_loans = LoanApplication.query.filter_by(company_id=getattr(current_user, "company_id", None))
-    submitted = company_loans.filter_by(status="Submitted").all()
-    in_review = company_loans.filter_by(status="In Review").all()
-    uw_review = company_loans.filter_by(status="UW Review").all()
-    approved = company_loans.filter_by(status="Approved").all()
-    declined = company_loans.filter_by(status="Declined").all()
+    my_loans = _underwriter_loans_query()
+    submitted = my_loans.filter_by(status="Submitted").all()
+    in_review = my_loans.filter_by(status="In Review").all()
+    uw_review = my_loans.filter_by(status="UW Review").all()
+    approved = my_loans.filter_by(status="Approved").all()
+    declined = my_loans.filter_by(status="Declined").all()
 
     return render_template(
         "underwriter/pipeline.html",

@@ -171,6 +171,12 @@
           Add at least one <strong>processor</strong> user with a linked processor profile so applicants can be routed for fulfillment.
         </div>
         {% endif %}
+        {% if not company_underwriters %}
+        <div style="margin-top:8px;padding:12px 14px;background:rgba(20,184,166,.08);border:1px solid rgba(20,184,166,.25);border-radius:8px;font-size:.82rem;color:#5eead4;">
+          <i class="lucide lucide-info" style="font-size:.9rem;vertical-align:middle;margin-right:5px;"></i>
+          Add at least one <strong>underwriter</strong> user with a linked underwriter profile so applicants can be routed for underwriting.
+        </div>
+        {% endif %}
 
         {% if applicant_loans %}
         <div class="re-table-wrap" style="margin-top:16px;">
@@ -183,6 +189,7 @@
                 <th>Status</th>
                 <th>Loan Officer</th>
                 <th>Processor</th>
+                <th>Underwriter</th>
                 <th style="width:70px;"></th>
               </tr>
             </thead>
@@ -227,6 +234,14 @@
                       <option value="">Unassigned</option>
                       {% for processor in company_processors %}
                         <option value="{{ processor.id }}" {% if loan.processor_id == processor.id %}selected{% endif %}>{{ processor.full_name or processor.email or ("Processor #" ~ processor.id) }}</option>
+                      {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <select name="underwriter_id" class="re-input" style="width:100%;min-width:130px;">
+                      <option value="">Unassigned</option>
+                      {% for underwriter in company_underwriters %}
+                        <option value="{{ underwriter.id }}" {% if loan.underwriter_id == underwriter.id %}selected{% endif %}>{{ underwriter.full_name or underwriter.email or ("Underwriter #" ~ underwriter.id) }}</option>
                       {% endfor %}
                     </select>
                 </td>
