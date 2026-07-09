@@ -11,6 +11,7 @@
 
       <!-- AI Form -->
       <form method="POST" class="ai-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <textarea name="message" placeholder="Ask the AI Assistant..." required></textarea>
         <button type="submit" class="btn">💬 Send</button>
       </form>
