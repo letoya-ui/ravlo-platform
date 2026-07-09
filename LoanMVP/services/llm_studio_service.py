@@ -655,3 +655,72 @@ def claude_loan_pipeline_summary(payload: dict) -> dict:
             "summary": "", "next_steps": [], "flags": [], "highlight": "",
             "error": str(exc), "meta": {"provider": "anthropic/claude"},
         }
+
+
+_PROCESSOR_QUEUE_SYSTEM = (
+    "You are Ravlo's processor file-queue analyst. You summarize a "
+    "processor's whole active file queue in plain, confident English: file "
+    "counts, document/condition backlog, and the biggest risks across all "
+    "files. You must only state facts present in the data provided below — "
+    "never invent dollar figures, file counts, or risks not present in the "
+    "data. Always respond with valid JSON only — no markdown, no prose "
+    "outside the JSON."
+)
+
+_PROCESSOR_QUEUE_SCHEMA = """{
+  "summary": "2-3 sentence plain-English queue summary (file count, doc/condition backlog)",
+  "next_steps": ["Specific, actionable next step across the queue", "..."],
+  "flags": ["File-tagged risk, e.g. 'Jane Doe — 123 Main St: no update in 18 days, 3 docs still pending'"],
+  "highlight": "One sentence calling out the single most urgent file"
+}"""
+
+
+def claude_processor_queue_summary(payload: dict) -> dict:
+    """Summarize a processor's whole active file queue using Claude.
+
+    ``payload`` must contain a ``context`` dict (from
+    ``processor_queue_ai_service._shape_context``) and may contain a
+    free-text ``question``. Falls back to an error result on any failure so
+    the caller can fall back to the deterministic template summary.
+    """
+    context = payload.get("context") or {}
+    question = payload.get("question") or "Summarize my queue and flag any risks."
+
+    user_msg = (
+        f"Here is the processor's file queue data:\n{json.dumps(context, default=str)}\n\n"
+        f"Processor's question: {question}\n\n"
+        f"Respond with a JSON object matching this schema exactly:\n{_PROCESSOR_QUEUE_SCHEMA}"
+    )
+
+    try:
+        response = _anthropic_client().messages.create(
+            model="claude-sonnet-5",
+            max_tokens=1024,
+            system=_PROCESSOR_QUEUE_SYSTEM,
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        raw = response.content[0].text.strip()
+
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+
+        result = json.loads(raw)
+        result.setdefault("meta", {})
+        result["meta"]["provider"] = "anthropic/claude"
+        return result
+
+    except json.JSONDecodeError as exc:
+        log.error("Claude processor queue summary returned invalid JSON: %s", exc)
+        return {
+            "summary": "", "next_steps": [], "flags": [], "highlight": "",
+            "error": "Invalid JSON from Claude", "meta": {"provider": "anthropic/claude"},
+        }
+    except Exception as exc:
+        log.error("Claude processor queue summary failed: %s", exc)
+        return {
+            "summary": "", "next_steps": [], "flags": [], "highlight": "",
+            "error": str(exc), "meta": {"provider": "anthropic/claude"},
+        }

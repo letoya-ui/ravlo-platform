@@ -1,6 +1,7 @@
 # =========================================================
 # ⚙️ LoanMVP Processor Routes — 2025 Unified Final Version
 # =========================================================
+import json
 import os
 from flask import (
     Blueprint, render_template, request, redirect,
@@ -28,6 +29,7 @@ from LoanMVP.models.user_model import User
 from LoanMVP.ai.base_ai import AIAssistant
 from LoanMVP.utils.decorators import role_required  # ✅ Added for role control
 from LoanMVP.utils.loan_access import get_loan_or_404
+from LoanMVP.utils.lending_utils import send_notification
 
 # ✅ SocketIO imported safely at the bottom
 from flask_socketio import emit, join_room
@@ -104,11 +106,14 @@ def _allowed_processor_partner_ids():
 def dashboard():
     """Main Processor Dashboard — AI summary, metrics, and capital application queue."""
     try:
-        assigned_loans = (
-            LoanApplication.query
-            .filter_by(processor_id=current_user.id)
-            .order_by(LoanApplication.created_at.desc())
-            .all()
+        # processor_id is a FK to processor_profile.id, not user.id — go
+        # through the profile-aware helper (matches _processor_assigned_loans()
+        # used elsewhere in this file) instead of filtering on current_user.id
+        # directly, which would match no rows for a real processor.
+        assigned_loans = sorted(
+            _processor_assigned_loans(),
+            key=lambda l: l.created_at or datetime.min,
+            reverse=True,
         )
     except Exception as e:
         print("Error fetching assigned loans:", e)
@@ -465,7 +470,7 @@ def complete_onboarding():
 def dashboard_data():
     """Return real-time metrics for charts or widgets."""
     try:
-        loans = LoanApplication.query.filter_by(processor_id=current_user.id).all()
+        loans = _processor_assigned_loans()
     except Exception:
         loans = []
 
@@ -485,6 +490,108 @@ def dashboard_data():
 def loan_queue():
     loans = LoanApplication.query.order_by(LoanApplication.created_at.desc()).all()
     return render_template("processor/loan_queue.html", loans=loans, title="Loan Queue")
+
+
+@processor_bp.route("/queue")
+@role_required("processor")
+def queue():
+    """Processor file queue — wires up processor/queue.html, which existed
+    fully designed but had no route rendering it until now."""
+    loans = _processor_assigned_loans()
+
+    pipeline = []
+    total_docs_pending = 0
+    total_cond_open = 0
+
+    for loan in loans:
+        borrower = BorrowerProfile.query.get(loan.borrower_profile_id)
+
+        docs = LoanDocument.query.filter_by(loan_id=loan.id).all()
+        docs_pending_list = [
+            d for d in docs
+            if (d.status or "").strip().lower() in ["pending", "requested", "under review", "uploaded"]
+        ]
+
+        conditions = UnderwritingCondition.query.filter_by(loan_id=loan.id).all()
+        cond_open_list = [
+            c for c in conditions
+            if (c.status or "").strip().lower() in ["open", "pending", "requested"]
+        ]
+
+        credit = None
+        try:
+            if borrower and getattr(borrower, "credit_reports", None):
+                credit = borrower.credit_reports[-1]
+            elif borrower and getattr(borrower, "credit_profiles", None):
+                credit = borrower.credit_profiles[-1]
+        except Exception:
+            credit = None
+
+        ltv_percent = None
+        try:
+            ratios = calculate_dti_ltv(borrower, loan, credit)
+            if ratios.get("ltv") is not None:
+                ltv_percent = round(ratios["ltv"] * 100, 1)
+        except Exception:
+            ltv_percent = None
+
+        pipeline.append({
+            "loan": loan,
+            "borrower": borrower,
+            "amount": loan.amount,
+            "ltv": ltv_percent,
+            "risk": loan.risk_level,
+            "docs_pending": len(docs_pending_list),
+            "docs_total": len(docs),
+            "cond_open": len(cond_open_list),
+            "cond_total": len(conditions),
+        })
+
+        total_docs_pending += len(docs_pending_list)
+        total_cond_open += len(cond_open_list)
+
+    return render_template(
+        "processor/queue.html",
+        pipeline=pipeline,
+        total_loans=len(loans),
+        docs_pending=total_docs_pending,
+        cond_open=total_cond_open,
+        title="Processor Queue",
+        active_tab="queue",
+    )
+
+
+@processor_bp.route("/queue/ai-summary", methods=["POST"], endpoint="queue_ai_summary")
+@role_required("processor")
+def queue_ai_summary():
+    from LoanMVP.services.processor_queue_ai_service import explain_processor_queue
+    from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+
+    data = request.get_json(silent=True) or {}
+    question = (data.get("question") or "").strip()[:500]
+
+    try:
+        outcome = explain_processor_queue(current_user.id, question=question or None)
+        result = outcome["result"]
+
+        try:
+            log_ai_exchange(
+                module="processor_os",
+                feature="queue_ai_summary",
+                prompt=json.dumps({"question": question, "context": outcome["context"]}, default=str)[:4000],
+                response=json.dumps(result, default=str)[:8000],
+                user_id=current_user.id,
+                role_view="processor",
+                provider=outcome["provider"],
+                model="claude-sonnet-5" if outcome["provider"] == "anthropic/claude" else "template",
+            )
+        except Exception:
+            pass
+
+        return jsonify({"ok": True, **result})
+    except Exception:
+        current_app.logger.exception("queue_ai_summary failed")
+        return jsonify({"ok": False, "error": "Queue AI is temporarily unavailable."}), 500
 
 @processor_bp.route("/api/loan_documents/<int:loan_id>")
 @role_required("processor")
@@ -671,12 +778,12 @@ def add_processor_note(loan_id):
     if request.method == "POST":
         note = request.form.get("note")
 
-        new_note = ProcessorNote(
-            loan_id=loan.id,
-            processor_id=current_user.id,
-            note=note
-        )
-        db.session.add(new_note)
+        # There is no ProcessorNote model — notes live on
+        # LoanApplication.processor_notes (already read by mobile_api.py).
+        # Append rather than overwrite so earlier notes aren't lost.
+        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+        existing = loan.processor_notes or ""
+        loan.processor_notes = f"{existing}\n\n[{timestamp}] {note}".strip()
         db.session.commit()
 
         send_notification(loan.id, "underwriter", "Processor added a new note.")
