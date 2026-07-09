@@ -25,7 +25,7 @@ from werkzeug.utils import secure_filename
 
 from LoanMVP.extensions import db, csrf
 from LoanMVP.utils.decorators import role_required, loan_officer_onboarding_required
-from LoanMVP.utils.loan_access import get_loan_or_404
+from LoanMVP.utils.loan_access import get_loan_or_404, get_borrower_or_404
 
 # AI
 from LoanMVP.ai.base_ai import AIAssistant
@@ -457,7 +457,7 @@ def ai_assistant():
         return jsonify({"success": False, "error": "loan_id is required"}), 400
 
     loan = LoanApplication.query.get(loan_id)
-    if not loan:
+    if not loan or loan.company_id != getattr(current_user, "company_id", None):
         return jsonify({"success": False, "error": f"Loan {loan_id} not found"}), 404
 
     borrower = getattr(loan, "borrower_profile", None)
@@ -748,6 +748,7 @@ def loan_file(loan_id):
 @role_required("loan_officer")
 def loan_search():
     query = (request.args.get("q") or "").strip()
+    company_id = getattr(current_user, "company_id", None)
     loans = []
 
     if query:
@@ -755,6 +756,7 @@ def loan_search():
             LoanApplication.query
             .join(BorrowerProfile)
             .filter(
+                LoanApplication.company_id == company_id,
                 db.or_(
                     BorrowerProfile.full_name.ilike(f"%{query}%"),
                     LoanApplication.id.cast(db.String).ilike(f"%{query}%"),
@@ -766,12 +768,13 @@ def loan_search():
         )
 
     stats = {
-        "total_loans": LoanApplication.query.count(),
+        "total_loans": LoanApplication.query.filter_by(company_id=company_id).count(),
         "active_loans": LoanApplication.query.filter(
+            LoanApplication.company_id == company_id,
             LoanApplication.status.in_(["Active", "Submitted", "Pending", "Processing"])
         ).count(),
-        "pending_loans": LoanApplication.query.filter_by(status="Pending").count(),
-        "closed_loans": LoanApplication.query.filter_by(status="Closed").count(),
+        "pending_loans": LoanApplication.query.filter_by(company_id=company_id, status="Pending").count(),
+        "closed_loans": LoanApplication.query.filter_by(company_id=company_id, status="Closed").count(),
     }
 
     try:
@@ -835,7 +838,8 @@ def ai_generator():
 @loan_officer_bp.route("/new_application", methods=["GET", "POST"])
 @role_required("loan_officer")
 def new_application():
-    borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
+    company_id = getattr(current_user, "company_id", None)
+    borrowers = BorrowerProfile.query.filter_by(company_id=company_id).order_by(BorrowerProfile.full_name.asc()).all()
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
 
     if request.method == "POST":
@@ -852,6 +856,8 @@ def new_application():
         if not borrower_id or not amount or not property_value:
             flash("Please fill in all required fields.", "warning")
             return redirect(url_for("loan_officer.new_application"))
+
+        get_borrower_or_404(borrower_id)  # enforces company scoping
 
         new_loan = LoanApplication(
             borrower_profile_id=borrower_id,
@@ -899,7 +905,8 @@ def new_application():
 @loan_officer_bp.route("/create-loan", methods=["GET", "POST"])
 @role_required("loan_officer")
 def create_loan():
-    borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
+    company_id = getattr(current_user, "company_id", None)
+    borrowers = BorrowerProfile.query.filter_by(company_id=company_id).order_by(BorrowerProfile.full_name.asc()).all()
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
 
     if request.method == "POST":
@@ -907,6 +914,8 @@ def create_loan():
         amount = request.form.get("amount")
         loan_type = request.form.get("loan_type")
         property_value = request.form.get("property_value")
+
+        get_borrower_or_404(borrower_id)  # enforces company scoping
 
         loan = LoanApplication(
             borrower_profile_id=borrower_id,
@@ -1186,8 +1195,9 @@ def quote_engine():
 
     if loan_id:
         selected_loan = LoanApplication.query.get(loan_id)
+        company_id = getattr(current_user, "company_id", None)
 
-        if not selected_loan:
+        if not selected_loan or selected_loan.company_id != company_id:
             flash("Loan not found.", "danger")
             return redirect(url_for("loan_officer.quote_engine"))
 
@@ -1252,8 +1262,9 @@ def quote_engine():
 @loan_officer_bp.route("/quotes/new", methods=["GET", "POST"])
 @role_required("loan_officer")
 def new_quote():
-    borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
-    loans = LoanApplication.query.order_by(LoanApplication.created_at.desc()).all()
+    company_id = getattr(current_user, "company_id", None)
+    borrowers = BorrowerProfile.query.filter_by(company_id=company_id).order_by(BorrowerProfile.full_name.asc()).all()
+    loans = LoanApplication.query.filter_by(company_id=company_id).order_by(LoanApplication.created_at.desc()).all()
 
     if request.method == "POST":
         borrower_id = request.form.get("borrower_id")
@@ -1261,6 +1272,10 @@ def new_quote():
         rate = request.form.get("rate")
         program = request.form.get("program")
         notes = request.form.get("notes")
+
+        get_borrower_or_404(borrower_id)  # enforces company scoping
+        if loan_id:
+            get_loan_or_404(loan_id)
 
         # IMPORTANT: build only with fields that exist on your LoanQuote model
         quote = LoanQuote(
@@ -1326,11 +1341,22 @@ def pipeline():
     stage_filter = (request.args.get("stage") or "").strip()
     name_filter = (request.args.get("name") or "").strip()
 
-    q = LoanApplication.query
+    # LoanApplication.loan_officer_id points to LoanOfficerProfile.id. Without
+    # a profile there's no valid scope to filter by — show nothing rather than
+    # falling through to every company's loans.
+    if not officer:
+        return render_template(
+            "loan_officer/pipeline.html",
+            pipeline=[],
+            grouped={},
+            selected_status=status_filter,
+            selected_stage=stage_filter,
+            name_filter=name_filter,
+            active_tab="pipeline",
+            title="Pipeline"
+        )
 
-    # LoanApplication.loan_officer_id points to LoanOfficerProfile.id
-    if officer:
-        q = q.filter(LoanApplication.loan_officer_id == officer.id)
+    q = LoanApplication.query.filter(LoanApplication.loan_officer_id == officer.id)
 
     if status_filter:
         q = q.filter(LoanApplication.status == status_filter)
@@ -1443,9 +1469,12 @@ def reports():
 @role_required("loan_officer")
 def ai_summary():
     try:
-        total_loans = LoanApplication.query.count()
-        approved = LoanApplication.query.filter_by(status="approved").count()
-        pending = LoanApplication.query.filter_by(status="pending").count()
+        company_id = getattr(current_user, "company_id", None)
+        total_loans = LoanApplication.query.filter_by(company_id=company_id).count()
+        approved = LoanApplication.query.filter_by(company_id=company_id, status="approved").count()
+        pending = LoanApplication.query.filter_by(company_id=company_id, status="pending").count()
+        # Leads stay Ravlo-internal (not part of the licensed Lending OS scope), so
+        # this count is intentionally platform-wide rather than company-scoped.
         total_leads = Lead.query.count()
 
         prompt = (
@@ -1536,20 +1565,28 @@ def task_complete(task_id):
 @loan_officer_bp.route("/tasks/new", methods=["GET", "POST"])
 @role_required("loan_officer")
 def new_task():
-    borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
-    loans = LoanApplication.query.order_by(LoanApplication.created_at.desc()).all()
+    company_id = getattr(current_user, "company_id", None)
+    borrowers = BorrowerProfile.query.filter_by(company_id=company_id).order_by(BorrowerProfile.full_name.asc()).all()
+    loans = LoanApplication.query.filter_by(company_id=company_id).order_by(LoanApplication.created_at.desc()).all()
     selected_borrower_id = request.args.get("borrower_id", type=int)
 
     if request.method == "POST":
         due_date_raw = request.form.get("due_date")
         due_date = datetime.strptime(due_date_raw, "%Y-%m-%d") if due_date_raw else None
 
+        task_borrower_id = request.form.get("borrower_id")
+        task_loan_id = request.form.get("loan_id")
+        if task_borrower_id:
+            get_borrower_or_404(task_borrower_id)  # enforces company scoping
+        if task_loan_id:
+            get_loan_or_404(task_loan_id)
+
         task = Task(
             title=request.form.get("title"),
             description=request.form.get("description"),
             assigned_to=current_user.id,
-            borrower_id=request.form.get("borrower_id"),
-            loan_id=request.form.get("loan_id"),
+            borrower_id=task_borrower_id,
+            loan_id=task_loan_id,
             due_date=due_date
         )
         db.session.add(task)
@@ -1571,7 +1608,7 @@ def new_task():
 @loan_officer_bp.route("/borrower-ai/<int:borrower_id>")
 @role_required("loan_officer")
 def borrower_ai_log(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
 
     chats = (
         BorrowerInteraction.query.filter_by(
@@ -1607,7 +1644,7 @@ def credit_check():
         borrower_profile_id = request.form.get("borrower_profile_id")
         borrower = BorrowerProfile.query.get(borrower_profile_id)
 
-        if not borrower:
+        if not borrower or borrower.company_id != getattr(current_user, "company_id", None):
             flash("Borrower not found.", "danger")
             return redirect(url_for("loan_officer.credit_check"))
 
@@ -1661,6 +1698,7 @@ def credit_check():
 
     # GET → Show latest + history
     if borrower_id:
+        get_borrower_or_404(borrower_id)  # enforces company scoping
         credit_data = CreditReport.query.filter_by(borrower_id=borrower_id)\
                                         .order_by(CreditReport.report_date.desc())\
                                         .first()
@@ -1748,10 +1786,11 @@ def ai_pricing():
     loan_id = data.get("loan_id")
     borrower_id = data.get("borrower_id")
 
+    company_id = getattr(current_user, "company_id", None)
     loan = LoanApplication.query.get(loan_id)
     borrower = BorrowerProfile.query.get(borrower_id)
 
-    if not loan or not borrower:
+    if not loan or not borrower or loan.company_id != company_id or borrower.company_id != company_id:
         return jsonify({"reply": "Loan or borrower not found."}), 404
 
     credit = borrower.credit_profiles[-1] if borrower.credit_profiles else None
@@ -1814,7 +1853,7 @@ def ai_risk():
         return jsonify({"error": "loan_id is required"}), 400
 
     loan = LoanApplication.query.get(loan_id)
-    if not loan:
+    if not loan or loan.company_id != getattr(current_user, "company_id", None):
         return jsonify({"error": f"Loan {loan_id} not found"}), 404
 
     borrower = loan.borrower_profile
@@ -1883,7 +1922,7 @@ def ai_conditions():
         return jsonify({"error": "loan_id is required"}), 400
 
     loan = LoanApplication.query.get(loan_id)
-    if not loan:
+    if not loan or loan.company_id != getattr(current_user, "company_id", None):
         return jsonify({"error": f"Loan {loan_id} not found"}), 404
 
     borrower = loan.borrower_profile
@@ -1933,7 +1972,7 @@ def ai_conditions():
 @csrf.exempt
 @role_required("loan_officer")
 def intake_ai(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
 
     loan = (
         LoanApplication.query.filter_by(borrower_profile_id=borrower.id)
@@ -2044,8 +2083,11 @@ Provide:
 @loan_officer_bp.route("/ai-intake-queue")
 @role_required("loan_officer")
 def ai_intake_queue():
+    company_id = getattr(current_user, "company_id", None)
     queue = (
         AIIntakeSummary.query
+        .join(BorrowerProfile, AIIntakeSummary.borrower_profile_id == BorrowerProfile.id)
+        .filter(BorrowerProfile.company_id == company_id)
         .order_by(AIIntakeSummary.created_at.desc())
         .limit(50)
         .all()
@@ -2064,6 +2106,7 @@ def ai_intake_queue():
 @role_required("loan_officer")
 def ai_intake_review(intake_id):
     intake = AIIntakeSummary.query.get_or_404(intake_id)
+    get_borrower_or_404(intake.borrower_profile_id)  # enforces company scoping
     form = AIIntakeReviewForm(obj=intake)
 
     if form.validate_on_submit():
@@ -2089,7 +2132,7 @@ def ai_intake_review(intake_id):
 @csrf.exempt
 @role_required("loan_officer")
 def auto_create_loan(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
 
     data = request.get_json() or {}
@@ -2151,7 +2194,7 @@ def auto_create_loan(borrower_id):
 @csrf.exempt
 @role_required("loan_officer")
 def followup_ai(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
 
     credit = borrower.credit_profiles[-1] if borrower.credit_profiles else None
 
@@ -2248,7 +2291,7 @@ Provide:
 @csrf.exempt
 @role_required("loan_officer")
 def communication_ai(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
 
     loan = (
         LoanApplication.query.filter_by(borrower_profile_id=borrower.id)
@@ -2352,7 +2395,7 @@ def campaigns():
 @loan_officer_bp.route("/call-center/<int:borrower_id>")
 @role_required("loan_officer")
 def call_center(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
 
     credit = borrower.credit_profiles[-1] if borrower.credit_profiles else None
 
@@ -2380,7 +2423,7 @@ def save_call_notes():
     tasks = data.get("tasks", [])
     missing_docs = data.get("missing_docs", [])
 
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
     loan = LoanApplication.query.filter_by(borrower_profile_id=borrower_id).first()
 
     note = BorrowerInteraction(
@@ -2492,7 +2535,7 @@ def generate_quote(loan_id):
 @loan_officer_bp.route("/intake-review/<int:borrower_id>")
 @role_required("loan_officer")
 def intake_review(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
     credit = borrower.credit_profiles[-1] if borrower.credit_profiles else None
 
     interactions = (
@@ -2560,7 +2603,7 @@ def loan_summary(loan_id):
 @loan_officer_bp.route("/messages/<int:borrower_id>")
 @role_required("loan_officer")
 def borrower_messages(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
 
     interactions = (
         BorrowerInteraction.query
@@ -2598,7 +2641,7 @@ def borrower_messages(borrower_id):
 @csrf.exempt
 @role_required("loan_officer")
 def profile(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
     form = BorrowerProfileForm(obj=borrower)
 
     if form.validate_on_submit():
@@ -2663,7 +2706,7 @@ def quote_plan(loan_id):
 @loan_officer_bp.route("/quotes/<int:borrower_id>")
 @role_required("loan_officer")
 def quotes(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
     loans = LoanApplication.query.filter_by(borrower_profile_id=borrower.id).all()
 
     quotes_by_loan = {
@@ -2692,7 +2735,8 @@ def quotes(borrower_id):
 @loan_officer_bp.route("/loan/new", methods=["GET", "POST"])
 @role_required("loan_officer")
 def new_loan():
-    borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
+    company_id = getattr(current_user, "company_id", None)
+    borrowers = BorrowerProfile.query.filter_by(company_id=company_id).order_by(BorrowerProfile.full_name.asc()).all()
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
 
     if request.method == "POST":
@@ -2704,6 +2748,8 @@ def new_loan():
         if not borrower_id or not loan_type or not amount:
             flash("Please complete all required fields.", "warning")
             return redirect(url_for("loan_officer.new_loan"))
+
+        get_borrower_or_404(borrower_id)  # enforces company scoping
 
         try:
             loan = LoanApplication(
@@ -2818,7 +2864,7 @@ def capital_funds(loan_id):
 @loan_officer_bp.route("/upload/<int:borrower_id>", methods=["GET", "POST"])
 @role_required("loan_officer")
 def upload(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
     loans = LoanApplication.query.filter_by(borrower_profile_id=borrower_id).all()
 
     uploads = (
@@ -2877,7 +2923,7 @@ def upload(borrower_id):
 @csrf.exempt
 @role_required("loan_officer")
 def follow_up(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
     form = FollowUpForm()
 
     items = (
@@ -2912,7 +2958,7 @@ def follow_up(borrower_id):
 @loan_officer_bp.route("/timeline/<int:borrower_id>")
 @role_required("loan_officer")
 def timeline(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
 
     interactions = BorrowerInteraction.query.filter_by(borrower_id=borrower_id).all()
     uploads = Upload.query.filter_by(borrower_profile_id=borrower_id).all()
@@ -2980,8 +3026,9 @@ def timeline(borrower_id):
 @role_required("loan_officer")
 def borrowers():
     q = (request.args.get("q") or "").strip()
+    company_id = getattr(current_user, "company_id", None)
 
-    qry = BorrowerProfile.query
+    qry = BorrowerProfile.query.filter_by(company_id=company_id)
 
     if q:
         qry = qry.filter(
@@ -3015,7 +3062,7 @@ def borrowers():
 @loan_officer_bp.route("/borrower/<int:borrower_id>")
 @role_required("loan_officer")
 def view_borrower(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
 
     loans = LoanApplication.query.filter_by(borrower_profile_id=borrower_id).all()
     credit = borrower.credit_profiles[-1] if borrower.credit_profiles else None
@@ -3044,7 +3091,7 @@ def view_borrower(borrower_id):
 @loan_officer_bp.route("/borrower-dashboard/<int:borrower_id>")
 @role_required("loan_officer")
 def borrower_dashboard(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
 
     loans = LoanApplication.query.filter_by(borrower_profile_id=borrower_id).all()
     uploads = Upload.query.filter_by(borrower_profile_id=borrower_id).all()
@@ -3086,7 +3133,8 @@ def borrower_search():
     results = []
 
     if form.validate_on_submit():
-        query = BorrowerProfile.query
+        company_id = getattr(current_user, "company_id", None)
+        query = BorrowerProfile.query.filter_by(company_id=company_id)
 
         if form.name.data:
             query = query.filter(BorrowerProfile.full_name.ilike(f"%{form.name.data}%"))
@@ -3332,7 +3380,7 @@ def upload_call(borrower_id):
     sentiment = analyze_sentiment(transcript_text)
     docs = detect_documents(transcript_text)
 
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
     loan = LoanApplication.query.filter_by(borrower_profile_id=borrower_id).first()
 
     ai_summary = master_ai.generate(
@@ -3410,7 +3458,7 @@ Provide:
 @loan_officer_bp.route("/auto-price/<int:borrower_id>")
 @role_required("loan_officer")
 def auto_price(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
     loan = LoanApplication.query.filter_by(borrower_profile_id=borrower.id).first()
     credit = borrower.credit_profiles[-1] if borrower.credit_profiles else None
 
@@ -3465,7 +3513,7 @@ Generate a luxury-finance explanation with:
 @loan_officer_bp.route("/preapprove/<int:borrower_id>")
 @role_required("loan_officer")
 def preapprove(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
     loan = LoanApplication.query.filter_by(borrower_profile_id=borrower.id).first()
     credit = borrower.credit_profiles[-1] if borrower.credit_profiles else None
 
@@ -3629,16 +3677,17 @@ def ai_chat():
     loan_id = data.get("loan_id")
     parent_id = data.get("parent_id")
 
+    company_id = getattr(current_user, "company_id", None)
     context = ""
 
     if borrower_id:
         borrower = BorrowerProfile.query.get(borrower_id)
-        if borrower:
+        if borrower and borrower.company_id == company_id:
             context += f"Borrower: {borrower.full_name}, Email: {borrower.email}, Phone: {borrower.phone}\n"
 
     if loan_id:
         loan = LoanApplication.query.get(loan_id)
-        if loan:
+        if loan and loan.company_id == company_id:
             context += f"Loan: {loan.loan_type}, Amount: {loan.amount}, Status: {loan.status}\n"
 
     reply = master_ai.generate(
@@ -3824,7 +3873,7 @@ def generate_1003(loan_id):
 @loan_officer_bp.route("/borrower/<int:borrower_id>/request-docs", methods=["GET", "POST"])
 @role_required("loan_officer")
 def request_documents(borrower_id):
-    borrower = BorrowerProfile.query.get_or_404(borrower_id)
+    borrower = get_borrower_or_404(borrower_id)
     loan = LoanApplication.query.filter_by(borrower_profile_id=borrower.id).first()
 
     if request.method == "POST":
