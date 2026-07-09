@@ -158,7 +158,7 @@ def dashboard():
     now = datetime.utcnow()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    # ── Ravlo (Lending OS) snapshot ──────────────────────────────────
+    # ── Ravlo snapshot (Lending + Investors) ──────────────────────────
     from LoanMVP.models.property import SavedProperty
     all_users = _executive_user_query().all()
     scoped_loans = _executive_loan_query()

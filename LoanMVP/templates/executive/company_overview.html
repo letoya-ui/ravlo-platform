@@ -2,7 +2,7 @@
 {% set exec_ns = 'executive' %}
 {% block title %}Company Overview | Ravlo{% endblock %}
 {% block page_title %}Company Overview{% endblock %}
-{% block page_subline %}Ravlo (Lending OS) and Caughman Mason Construction, side by side.{% endblock %}
+{% block page_subline %}Ravlo and Caughman Mason Construction, side by side.{% endblock %}
 
 {% block topbar_actions %}
   <a class="re-btn ghost sm" href="{{ url_for('admin.company_finances') }}">
@@ -36,7 +36,7 @@
       <div class="emc-biz-head">
         <div style="display:flex; align-items:center; gap:12px;">
           <div class="emc-biz-icon ravlo"><i class="lucide lucide-building-2"></i></div>
-          <div class="emc-biz-title">Ravlo — Lending OS</div>
+          <div class="emc-biz-title">Ravlo</div>
         </div>
         <a class="re-btn ghost sm" href="{{ url_for('executive.ravlo_overview') }}">Open Dashboard →</a>
       </div>
@@ -46,7 +46,7 @@
         <div class="emc-stat emc-card-sm"><div class="emc-stat-label">Funded</div><div class="emc-stat-value">{{ funded_loans }}</div></div>
       </div>
       <div>
-        <div class="emc-section-label" style="margin-bottom:8px;">P&amp;L — This Month</div>
+        <div class="emc-section-label" style="margin-bottom:8px;">Lending P&amp;L — This Month</div>
         <div class="emc-pnl-row">
           <div class="emc-pnl-chip income"><span class="num">${{ "{:,.0f}".format(ravlo_income) }}</span><div class="lbl">Income</div></div>
           <div class="emc-pnl-chip expense"><span class="num">${{ "{:,.0f}".format(ravlo_expense) }}</span><div class="lbl">Expenses</div></div>
