@@ -173,7 +173,6 @@ def cm_dashboard():
 # 🔁 Heartbeat (System Ping)
 # =========================================================
 @system_bp.route("/heartbeat", methods=["POST"])
-@csrf.exempt
 @role_required("system")
 def heartbeat():
     system = System.query.first()

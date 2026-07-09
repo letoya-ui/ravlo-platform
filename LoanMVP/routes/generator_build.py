@@ -1866,7 +1866,6 @@ def _build_generate_response(*, persist_to_investor=False):
 
 
 @generator_build_bp.post("/chat")
-@csrf.exempt
 def build_chat():
     try:
         return _build_chat_response()
@@ -1885,7 +1884,6 @@ def build_chat():
 
 
 @generator_build_bp.post("/generate")
-@csrf.exempt
 def build_generate():
     try:
         return _build_generate_response()

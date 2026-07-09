@@ -91,7 +91,6 @@ def create_preview_account():
 # ---------------------------------------------------------
 
 @preview_bp.route("/request-access", methods=["POST"])
-@csrf.exempt
 @login_required
 def request_full_access():
     plan = (request.form.get("plan") or "Core").strip()

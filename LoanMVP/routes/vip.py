@@ -2622,7 +2622,6 @@ def insurance_update_quote_request(request_id):
 
 # ── Public quote form (no auth) ─────────────────────────────────────────────
 @vip_bp.route("/insurance/<int:profile_id>/get-quote", methods=["GET", "POST"])
-@csrf.exempt
 def insurance_public_quote_form(profile_id):
     profile = VIPProfile.query.get_or_404(profile_id)
     partner = None
@@ -4148,7 +4147,6 @@ def design_studio():
 
 
 @vip_bp.post("/design-studio/create")
-@csrf.exempt
 @role_required("partner_group", "admin")
 def create_design_project():
     profile     = get_or_create_vip_profile()

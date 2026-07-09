@@ -1308,6 +1308,7 @@
     <form method="POST"
           action="{{ url_for('public_pages.realtor_lead_capture', slug=profile.public_slug) }}"
           class="bn-form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="bn-form-row">
         <div class="bn-form-group">
