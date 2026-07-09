@@ -72,6 +72,12 @@
         <span>Companies</span>
       </a>
 
+      <a href="{{ url_for('admin.subscription_requests') }}"
+         class="re-nav-link {% if ep == 'admin.subscription_requests' %}active{% endif %}">
+        <i class="icon lucide lucide-credit-card"></i>
+        <span>Subscription Requests</span>
+      </a>
+
       <a href="{{ url_for('admin.staff') }}"
          class="re-nav-link {% if ep in ['admin.staff', 'admin.invite_staff_member', 'admin.resend_staff_invite', 'admin.delete_staff_invite'] %}active{% endif %}">
         <i class="icon lucide lucide-users-2"></i>

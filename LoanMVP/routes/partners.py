@@ -13,6 +13,7 @@ from LoanMVP.services.partner_search_service import search_external_partners
 
 from LoanMVP.models.crm_models import Partner, Task, CRMNote, Lead
 from LoanMVP.models.vip_models import VIPProfile
+from LoanMVP.models.admin import SubscriptionRequest
 from LoanMVP.models.partner_models import (
     PartnerConnectionRequest,
     PartnerJob,
@@ -945,28 +946,40 @@ def confirm_subscription(tier):
         flash("Invalid subscription tier.", "danger")
         return redirect(url_for("partners.billing"))
 
-    partner.subscription_tier = normalized
     partner.approved = True
     partner.active = True
     partner.status = "Active"
 
-    if normalized in {"Featured", "Premium", "Enterprise"}:
-        partner.featured = True
-    else:
+    if normalized == "Free":
+        partner.subscription_tier = "Free"
         partner.featured = False
+        db.session.commit()
+        flash("Your subscription has been updated to Free.", "success")
+        return redirect(url_for("partners.billing"))
 
+    # Paid tiers have no payment step wired up yet, so applying them
+    # immediately would let anyone grant themselves a paid tier for free.
+    # Queue a pending request instead -- a Ravlo admin confirms it.
+    existing = SubscriptionRequest.query.filter_by(
+        user_id=current_user.id, context="partner_tier", status="pending"
+    ).first()
+    if existing:
+        existing.plan_requested = normalized
+        existing.created_at = datetime.utcnow()
+    else:
+        db.session.add(SubscriptionRequest(
+            user_id=current_user.id,
+            plan_requested=normalized,
+            context="partner_tier",
+            status="pending",
+        ))
     db.session.commit()
 
-    # When a realtor upgrades into a VIP-unlocking tier, send them straight
-    # into the VIP Realtor Workspace so the upgrade is immediately tangible.
-    if partner_is_realtor(partner) and normalized.lower() in _VIP_ACCESS_TIERS:
-        flash(
-            f"Your VIP Realtor Workspace is unlocked — welcome to {normalized}.",
-            "success",
-        )
-        return redirect(url_for("vip.realtor_dashboard"))
-
-    flash(f"Your subscription has been updated to {normalized}.", "success")
+    flash(
+        f"Your request to upgrade to {normalized} has been submitted for review. "
+        "A Ravlo admin will confirm your subscription shortly.",
+        "success",
+    )
     return redirect(url_for("partners.billing"))
 
 

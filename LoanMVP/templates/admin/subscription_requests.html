@@ -3,34 +3,10 @@
 
 {% block title %}Subscription Requests | Ravlo Admin{% endblock %}
 {% block page_title %}Subscription Requests{% endblock %}
-{% block page_subline %}Preview investors requesting full access{% endblock %}
+{% block page_subline %}Partner tier upgrades, borrower Investor upgrades, and preview investor access -- all require Ravlo admin confirmation{% endblock %}
 
 {% block content %}
 <div style="max-width:960px; margin:0 auto; padding: 0 4px;">
-
-  {# ── Grant Preview Access ──────────────────────────────────────────── #}
-  <div class="ravlo-card pad" style="margin-bottom:24px;">
-    <h3 style="color:#f1f5f9; margin:0 0 16px; font-size:15px; font-weight:700;">Grant Preview Access</h3>
-    <form method="POST" action="{{ url_for('preview.grant_preview_access') }}" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div style="flex:1; min-width:180px;">
-        <label style="color:#64748b; font-size:11px; font-weight:600; display:block; margin-bottom:4px;">EMAIL</label>
-        <input type="email" name="email" required placeholder="investor@example.com"
-          style="width:100%; background:#1e293b; border:1px solid #334155; color:#f1f5f9; border-radius:6px; padding:8px 12px; font-size:13px; box-sizing:border-box;">
-      </div>
-      <div style="min-width:130px;">
-        <label style="color:#64748b; font-size:11px; font-weight:600; display:block; margin-bottom:4px;">FIRST NAME</label>
-        <input type="text" name="first_name" placeholder="First"
-          style="width:100%; background:#1e293b; border:1px solid #334155; color:#f1f5f9; border-radius:6px; padding:8px 12px; font-size:13px; box-sizing:border-box;">
-      </div>
-      <div style="min-width:130px;">
-        <label style="color:#64748b; font-size:11px; font-weight:600; display:block; margin-bottom:4px;">LAST NAME</label>
-        <input type="text" name="last_name" placeholder="Last"
-          style="width:100%; background:#1e293b; border:1px solid #334155; color:#f1f5f9; border-radius:6px; padding:8px 12px; font-size:13px; box-sizing:border-box;">
-      </div>
-      <button type="submit" class="ravlo-btn primary sm">Grant Preview Access</button>
-    </form>
-  </div>
 
   {# ── Pending Requests ──────────────────────────────────────────────── #}
   <div class="ravlo-card pad" style="margin-bottom:24px;">
@@ -50,7 +26,8 @@
               <div style="color:#f1f5f9; font-weight:600; font-size:14px;">{{ inv.full_name if inv else 'Unknown' }}</div>
               <div style="color:#64748b; font-size:12px;">{{ inv.email if inv else req.user_id }}</div>
               <div style="margin-top:6px; color:#94a3b8; font-size:12px;">
-                Plan: <strong style="color:#f1f5f9;">{{ req.plan_requested or 'Core' }}</strong>
+                {% if req.context == 'partner_tier' %}Partner tier{% elif req.context == 'borrower_plan' %}Borrower plan{% else %}Preview access{% endif %}:
+                <strong style="color:#f1f5f9;">{{ req.plan_requested or 'Core' }}</strong>
                 &nbsp;·&nbsp; {{ req.created_at.strftime('%b %d, %Y') }}
               </div>
               {% if req.message %}
@@ -58,16 +35,11 @@
               {% endif %}
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <form method="POST" action="{{ url_for('preview.approve_subscription_request', req_id=req.id) }}" style="display:flex; gap:6px; align-items:center;">
+              <form method="POST" action="{{ url_for('admin.approve_subscription_request', request_id=req.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <select name="plan" style="background:#0f172a; border:1px solid #334155; color:#f1f5f9; border-radius:5px; padding:6px 8px; font-size:12px;">
-                  <option value="Core" {% if req.plan_requested == 'Core' %}selected{% endif %}>Core</option>
-                  <option value="Operator" {% if req.plan_requested == 'Operator' %}selected{% endif %}>Operator</option>
-                  <option value="Enterprise" {% if req.plan_requested == 'Enterprise' %}selected{% endif %}>Enterprise</option>
-                </select>
                 <button type="submit" class="ravlo-btn primary sm">Approve</button>
               </form>
-              <form method="POST" action="{{ url_for('preview.deny_subscription_request', req_id=req.id) }}">
+              <form method="POST" action="{{ url_for('admin.deny_subscription_request', request_id=req.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="ravlo-btn ghost sm" onclick="return confirm('Deny this request?')">Deny</button>
               </form>
