@@ -10,6 +10,7 @@
 <h1>🤖 AI Follow-Up Generator</h1>
 <div class="card">
   <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Lead / Client Name</label>
     <input name="name" placeholder="John Smith">
     <label style="margin-top:.6rem;">Context</label>

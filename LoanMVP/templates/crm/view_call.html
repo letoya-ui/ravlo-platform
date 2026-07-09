@@ -47,6 +47,7 @@
   <div class="divider"></div>
   <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
     <form action="{{ url_for('crm.delete_call', call_id=call.id) }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn" style="background:#2a1b1b;border-color:#aa4444;">🗑 Delete Call</button>
     </form>
   <a href="{{ url_for('crm.call_ai') }}" class="btn">🤖 Generate Follow-Up</a>

@@ -242,7 +242,6 @@ def dashboard():
 # ☎️ Smart Dialer
 
 @crm_bp.route("/dialer", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def dialer():
     """Manual & AI-assisted call logging system."""
@@ -328,7 +327,6 @@ def view_call(call_id):
 # 🤖 AI Call Assistant
 # -----------------------------------------
 @crm_bp.route("/call_ai", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def call_ai():
     """Logs calls and provides AI summaries & next-action prompts."""
@@ -365,7 +363,6 @@ def call_ai():
 # ✉️ AI Follow-Up Generator
 # -----------------------------------------
 @crm_bp.route("/ai_followup", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def ai_followup():
     """Generate custom follow-up messages from context."""
@@ -385,7 +382,6 @@ def ai_followup():
     return render_template("crm/ai_followup.html", message=message, title="AI Follow-Up Generator")
 
 @crm_bp.route("/call_insights", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def call_insights():
     from datetime import timedelta
@@ -494,7 +490,6 @@ def call_insights():
     )
 
 @crm_bp.route("/refresh_ai_summary", methods=["POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def refresh_ai_summary():
     """Refreshes the AI leaderboard summary dynamically via AJAX."""
@@ -547,7 +542,6 @@ def call_table_refresh():
     return render_template("crm/_call_table.html", calls=recent_calls)
 
 @crm_bp.route("/generate_ai_summaries_async", methods=["POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def generate_ai_summaries_async():
     """Asynchronous AI summary generation (AJAX version)."""
@@ -580,7 +574,6 @@ def generate_ai_summaries_async():
     return jsonify({"processed": processed_count})
 
 @crm_bp.route("/export_call_report", methods=["POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def export_call_report():
     """Exports filtered call log data as CSV including AI summaries."""
@@ -636,7 +629,6 @@ def export_call_report():
 # 💬 Message Center
 # ---------------------------------------------------------
 @crm_bp.route("/messages", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def messages():
     """Unified message thread across email/SMS/chat."""
@@ -714,7 +706,6 @@ def campaigns():
 # 🧩 Leads Management
 # ---------------------------------------------------------
 @crm_bp.route("/leads/<int:lead_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def view_lead(lead_id):
     lead = _company_scoped_lead_or_404(lead_id)
@@ -801,7 +792,6 @@ def lead_ai_followup(lead_id):
     return {"message": ai_text}
 
 @crm_bp.route("/add_lead", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def add_lead():
     """Add a new lead record."""
@@ -846,7 +836,6 @@ def add_lead():
 
 
 @crm_bp.route("/ai_leads", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "executive", "admin")
 def ai_leads():
     officers = _crm_company_loan_officers()
@@ -956,7 +945,6 @@ def ai_leads():
     )
 
 @crm_bp.route("/leads/<int:lead_id>/edit", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def update_lead(lead_id):
     """Update or assign a lead."""
@@ -1052,7 +1040,6 @@ def dialer_results():
     return render_template("crm/leads.html", leads=leads, title="Dialer Results")
 
 @crm_bp.route("/call_log/delete/<int:call_id>", methods=["POST"])
-@csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin")
 def delete_call(call_id):
     call = CallLog.query.get_or_404(call_id)
@@ -1179,7 +1166,6 @@ def partner_detail(partner_id):
     return render_template("crm/partner_detail.html", partner=partner, ai_summary=ai_summary, notes=notes, activities=activities, deals=deals)
 
 @crm_bp.route("/partners/<int:partner_id>/note", methods=["POST"])
-@csrf.exempt
 @role_required("crm" , "admin")
 def add_partner_note(partner_id):
     content = request.form.get("content")
