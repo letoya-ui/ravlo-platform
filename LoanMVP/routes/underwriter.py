@@ -20,6 +20,7 @@ from LoanMVP.models.credit_models import SoftCreditReport      # FIXED
 from LoanMVP.utils.pricing_engine import calculate_dti_ltv
 from LoanMVP.utils.loan_access import get_loan_or_404, get_borrower_or_404
 from LoanMVP.utils.lending_utils import send_notification
+from LoanMVP.services.compliance_service import generate_adverse_action_notice, ADVERSE_ACTION_STATUSES
 
 
 # PDF GENERATION
@@ -517,6 +518,9 @@ def decision(loan_id):
     loan.status = request.form.get("decision")
 
     db.session.commit()
+
+    if (loan.status or "").strip().lower() in ADVERSE_ACTION_STATUSES:
+        generate_adverse_action_notice(loan)
 
     flash(f"Loan decision updated to {loan.status}.", "success")
     return redirect(url_for("underwriter.file_review", loan_id=loan_id))

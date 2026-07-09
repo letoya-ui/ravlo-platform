@@ -15,6 +15,10 @@ import uuid
 os.environ.setdefault("FLASK_ENV", "development")
 os.environ.setdefault("OPENAI_API_KEY", "dummy")
 os.environ.setdefault("SECRET_KEY", "dummy-test-secret")
+# Flask-Mail bakes MAIL_SUPPRESS_SEND into its state at init_app() time, so
+# setting it on app.config after create_app() has no effect -- it must be
+# set before create_app() ever runs, same as the vars above.
+os.environ.setdefault("MAIL_SUPPRESS_SEND", "true")
 
 import pytest
 
