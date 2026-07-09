@@ -461,6 +461,9 @@
           <a href="{{ url_for('admin.company_settings', company_id=company.id) }}" class="cd-action-tile">
             <i class="lucide lucide-settings-2"></i><span>Settings</span>
           </a>
+          <a href="{{ url_for('admin.company_billing', company_id=company.id) }}" class="cd-action-tile">
+            <i class="lucide lucide-credit-card"></i><span>Billing</span>
+          </a>
           <a href="{{ url_for('admin.invite_team_member', company_id=company.id) }}" class="cd-action-tile cd-action-tile--primary">
             <i class="lucide lucide-user-plus"></i><span>Invite</span>
           </a>

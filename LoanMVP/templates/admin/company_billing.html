@@ -1,0 +1,102 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}{{ company.name }} Billing{% endblock %}
+{% block page_title %}Billing{% endblock %}
+{% block page_subline %}Manage your company's Ravlo plan, seats, and billing status{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('admin.company_dashboard', company_id=company.id) }}">
+    <i class="lucide lucide-layout-dashboard"></i>
+    Back to Dashboard
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">
+    <i class="lucide lucide-users"></i>
+    Team
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">CURRENT PLAN</div>
+        <h3 style="margin:.35rem 0 .2rem;">{{ current_plan_label }}</h3>
+        <div class="re-card-subtitle">
+          {{ company.seats_used() }} of
+          {% if company.max_users is none %}unlimited{% else %}{{ company.max_users }}{% endif %}
+          seats used
+        </div>
+      </div>
+      <div>
+        {% if company.billing_status == "active" %}
+          <span class="re-badge" style="background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(34,197,94,.25);">Active</span>
+        {% elif company.billing_status == "past_due" %}
+          <span class="re-badge" style="background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.25);">Past Due</span>
+        {% elif company.billing_status == "canceled" %}
+          <span class="re-badge" style="background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25);">Canceled</span>
+        {% else %}
+          <span class="re-badge">{{ company.billing_status or "Unknown" }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if company.billing_status == "past_due" and company.grace_period_ends_at %}
+      <div class="re-callout" style="margin-top:14px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:12px;padding:14px 16px;">
+        <strong>Your last payment didn't go through.</strong>
+        Please update your payment method by {{ company.grace_period_ends_at.strftime('%B %d, %Y') }}
+        to avoid losing access to your workspace.
+      </div>
+    {% endif %}
+
+    {% if not billing_enabled %}
+      <div class="re-callout" style="margin-top:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px;">
+        Self-service billing isn't enabled on this server yet. Contact your Ravlo account manager to change plans.
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">CHANGE PLAN</div>
+        <h3 style="margin:.35rem 0 .2rem;">Available Plans</h3>
+        <div class="re-card-subtitle">Starter and Growth upgrade instantly through Stripe. Scale and Enterprise are custom -- talk to us.</div>
+      </div>
+    </div>
+
+    <div class="re-grid-2 mt-16">
+      {% for plan_key, plan in self_serve_plans.items() %}
+        <div class="re-card pad" style="border:1px solid rgba(255,255,255,.08);">
+          <div class="eyebrow">{{ plan.label|upper }}</div>
+          <h4 style="margin:.35rem 0;">{{ plan.price }}</h4>
+          {% if current_plan_label == plan.label %}
+            <span class="re-badge">Current Plan</span>
+          {% else %}
+            <a class="re-btn primary sm"
+               href="{{ url_for('admin.company_billing_checkout', company_id=company.id, plan=plan_key) }}">
+              <i class="lucide lucide-arrow-up-right"></i>
+              Switch to {{ plan.label }}
+            </a>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+      <div class="re-card pad" style="border:1px solid rgba(255,255,255,.08);">
+        <div class="eyebrow">SCALE</div>
+        <h4 style="margin:.35rem 0;">Custom</h4>
+        <a class="re-btn ghost sm" href="{{ url_for('marketing.contact') }}">
+          Contact Sales
+        </a>
+      </div>
+
+      <div class="re-card pad" style="border:1px solid rgba(255,255,255,.08);">
+        <div class="eyebrow">ENTERPRISE</div>
+        <h4 style="margin:.35rem 0;">Custom / White-Label</h4>
+        <a class="re-btn ghost sm" href="{{ url_for('marketing.contact') }}">
+          Contact Sales
+        </a>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
