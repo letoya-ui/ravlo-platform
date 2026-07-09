@@ -140,6 +140,100 @@ def _executive_user_query():
 @executive_bp.route("/dashboard")
 @login_required
 def dashboard():
+    """Combined Ravlo + Caughman Mason Construction overview -- the executive
+    landing page. Jamaine still lands on his construction-only command
+    center; everyone else gets both businesses side by side here, with a
+    click-through to each business's full dashboard for the operational
+    detail.
+    """
+    from datetime import timedelta
+
+    access_redirect = _ensure_executive_access()
+    if access_redirect:
+        return access_redirect
+
+    if (getattr(current_user, "email", "") or "").strip().lower() == _JAMAINE_EMAIL:
+        return redirect(url_for("executive.construction_center"))
+
+    now = datetime.utcnow()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # ── Ravlo (Lending OS) snapshot ──────────────────────────────────
+    from LoanMVP.models.property import SavedProperty
+    all_users = _executive_user_query().all()
+    scoped_loans = _executive_loan_query()
+    total_users = len(all_users)
+    total_loans = scoped_loans.count()
+    funded_loans = scoped_loans.filter(
+        func.lower(LoanApplication.milestone_stage).contains("funded")
+    ).count()
+    saved_props = SavedProperty.query.count()
+
+    # ── Caughman Mason Construction snapshot ─────────────────────────
+    partner = _cm_partner()
+    bid_opps = []
+    if partner:
+        try:
+            bid_opps = ContractorBidOpportunity.query.filter_by(partner_id=partner.id).all()
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning("[company_overview] bid table not ready: %s", exc)
+    active_bids = [o for o in bid_opps if o.status in ("reviewing", "bid_submitted")]
+    won_bids = [o for o in bid_opps if o.status == "won"]
+    value_in_play = sum(o.estimated_value or 0 for o in active_bids)
+
+    # ── Combined P&L (this month, all Caughman Mason Holdings divisions) ──
+    try:
+        month_entries = CMFinanceEntry.query.filter(
+            CMFinanceEntry.entry_date >= month_start.date()
+        ).all()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("[company_overview] finance table not ready: %s", exc)
+        month_entries = []
+
+    def _division_totals(division):
+        income = sum(e.amount for e in month_entries if e.division == division and e.entry_type == "income")
+        expense = sum(e.amount for e in month_entries if e.division == division and e.entry_type == "expense")
+        return income, expense
+
+    ravlo_income, ravlo_expense = _division_totals("lending")
+    construction_income, construction_expense = _division_totals("construction")
+    combined_income = sum(e.amount for e in month_entries if e.entry_type == "income")
+    combined_expense = sum(e.amount for e in month_entries if e.entry_type == "expense")
+
+    first_name = getattr(current_user, "first_name", None) or \
+                 getattr(current_user, "username", None) or "there"
+
+    return render_template(
+        "executive/company_overview.html",
+        first_name=first_name,
+        now=now,
+        # Ravlo
+        total_users=total_users,
+        total_loans=total_loans,
+        funded_loans=funded_loans,
+        saved_props=saved_props,
+        ravlo_income=ravlo_income,
+        ravlo_expense=ravlo_expense,
+        ravlo_net=ravlo_income - ravlo_expense,
+        # Construction
+        active_bids=len(active_bids),
+        won_bids=len(won_bids),
+        value_in_play=value_in_play,
+        construction_income=construction_income,
+        construction_expense=construction_expense,
+        construction_net=construction_income - construction_expense,
+        # Combined
+        combined_income=combined_income,
+        combined_expense=combined_expense,
+        combined_net=combined_income - combined_expense,
+    )
+
+
+@executive_bp.route("/ravlo")
+@login_required
+def ravlo_overview():
     from datetime import timedelta
     from LoanMVP.models.property import SavedProperty
     from LoanMVP.models.partner_models import PartnerConnectionRequest, ExternalPartnerLead
@@ -149,9 +243,6 @@ def dashboard():
     access_redirect = _ensure_executive_access()
     if access_redirect:
         return access_redirect
-
-    if (getattr(current_user, "email", "") or "").strip().lower() == _JAMAINE_EMAIL:
-        return redirect(url_for("executive.construction_center"))
 
     company  = _executive_company()
     all_users = _executive_user_query().all()

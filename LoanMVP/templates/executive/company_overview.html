@@ -1,0 +1,85 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% set exec_ns = 'executive' %}
+{% block title %}Company Overview | Ravlo{% endblock %}
+{% block page_title %}Company Overview{% endblock %}
+{% block page_subline %}Ravlo (Lending OS) and Caughman Mason Construction, side by side.{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('admin.company_finances') }}">
+    <i class="lucide lucide-landmark"></i> Financial Hub
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.analytics') }}">
+    <i class="lucide lucide-bar-chart-2"></i> Analytics
+  </a>
+{% endblock %}
+
+{% block head %}
+{% include "layouts/_executive_dashboard_styles.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="emc">
+
+  <div class="emc-card">
+    <div class="emc-section-label">Combined Company P&amp;L — This Month</div>
+    <div class="emc-sub" style="margin-bottom:14px;">Caughman Mason Holdings, all divisions (Ravlo lending, Construction, and any others logged in the Financial Hub).</div>
+    <div class="emc-pnl-row">
+      <div class="emc-pnl-chip income"><span class="num">${{ "{:,.0f}".format(combined_income) }}</span><div class="lbl">Income</div></div>
+      <div class="emc-pnl-chip expense"><span class="num">${{ "{:,.0f}".format(combined_expense) }}</span><div class="lbl">Expenses</div></div>
+      <div class="emc-pnl-chip net"><span class="num">${{ "{:,.0f}".format(combined_net) }}</span><div class="lbl">Net</div></div>
+    </div>
+  </div>
+
+  <div class="emc-2col">
+
+    <div class="emc-card emc-biz-card">
+      <div class="emc-biz-head">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="emc-biz-icon ravlo"><i class="lucide lucide-building-2"></i></div>
+          <div class="emc-biz-title">Ravlo — Lending OS</div>
+        </div>
+        <a class="re-btn ghost sm" href="{{ url_for('executive.ravlo_overview') }}">Open Dashboard →</a>
+      </div>
+      <div class="emc-3col">
+        <div class="emc-stat emc-card-sm"><div class="emc-stat-label">Total Users</div><div class="emc-stat-value">{{ total_users }}</div></div>
+        <div class="emc-stat emc-card-sm"><div class="emc-stat-label">Loan Files</div><div class="emc-stat-value">{{ total_loans }}</div></div>
+        <div class="emc-stat emc-card-sm"><div class="emc-stat-label">Funded</div><div class="emc-stat-value">{{ funded_loans }}</div></div>
+      </div>
+      <div>
+        <div class="emc-section-label" style="margin-bottom:8px;">P&amp;L — This Month</div>
+        <div class="emc-pnl-row">
+          <div class="emc-pnl-chip income"><span class="num">${{ "{:,.0f}".format(ravlo_income) }}</span><div class="lbl">Income</div></div>
+          <div class="emc-pnl-chip expense"><span class="num">${{ "{:,.0f}".format(ravlo_expense) }}</span><div class="lbl">Expenses</div></div>
+          <div class="emc-pnl-chip net"><span class="num">${{ "{:,.0f}".format(ravlo_net) }}</span><div class="lbl">Net</div></div>
+        </div>
+      </div>
+      <div class="emc-stat-meta">{{ saved_props }} propert{{ 'ies' if saved_props != 1 else 'y' }} saved by investors</div>
+    </div>
+
+    <div class="emc-card emc-biz-card">
+      <div class="emc-biz-head">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="emc-biz-icon construction"><i class="lucide lucide-hammer"></i></div>
+          <div class="emc-biz-title">Caughman Mason Construction</div>
+        </div>
+        <a class="re-btn ghost sm" href="{{ url_for('executive.construction_center') }}">Open Command Center →</a>
+      </div>
+      <div class="emc-3col">
+        <div class="emc-stat emc-card-sm"><div class="emc-stat-label">Active Bids</div><div class="emc-stat-value">{{ active_bids }}</div></div>
+        <div class="emc-stat emc-card-sm"><div class="emc-stat-label">Won Bids</div><div class="emc-stat-value">{{ won_bids }}</div></div>
+        <div class="emc-stat emc-card-sm"><div class="emc-stat-label">Value In Play</div><div class="emc-stat-value" style="font-size:1.5rem;">${{ "{:,.0f}".format(value_in_play) }}</div></div>
+      </div>
+      <div>
+        <div class="emc-section-label" style="margin-bottom:8px;">P&amp;L — This Month</div>
+        <div class="emc-pnl-row">
+          <div class="emc-pnl-chip income"><span class="num">${{ "{:,.0f}".format(construction_income) }}</span><div class="lbl">Income</div></div>
+          <div class="emc-pnl-chip expense"><span class="num">${{ "{:,.0f}".format(construction_expense) }}</span><div class="lbl">Expenses</div></div>
+          <div class="emc-pnl-chip net"><span class="num">${{ "{:,.0f}".format(construction_net) }}</span><div class="lbl">Net</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
