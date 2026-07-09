@@ -1,3 +1,4 @@
+import json
 import os
 import requests
 from datetime import datetime
@@ -21,6 +22,8 @@ from LoanMVP.extensions import db, csrf
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.forms import BorrowerProfileForm
 from LoanMVP.ai.base_ai import AIAssistant
+from LoanMVP.services.borrower_ai_service import explain_borrower_status
+from LoanMVP.services.ravlo_memory_service import log_ai_exchange
 
 from LoanMVP.models.loan_models import BorrowerProfile, LoanApplication, BorrowerConsent
 from LoanMVP.models.document_models import LoanDocument
@@ -1015,3 +1018,38 @@ def ai_suggest_description():
         return jsonify({"suggestion": suggestion})
     except Exception:
         return jsonify({"suggestion": None, "error": "AI unavailable"}), 500
+
+
+@borrower_bp.route("/ai/assistant", methods=["POST"])
+@login_required
+@role_required("borrower")
+def ai_assistant():
+    borrower = get_current_borrower()
+    if not borrower:
+        return jsonify({"ok": False, "error": "Borrower profile not found."}), 404
+
+    data = request.get_json(silent=True) or {}
+    question = (data.get("question") or "").strip()[:500]
+
+    try:
+        outcome = explain_borrower_status(borrower, question=question or None)
+        result = outcome["result"]
+
+        try:
+            log_ai_exchange(
+                module="borrower_os",
+                feature="borrower_ai_assistant",
+                prompt=json.dumps({"question": question, "context": outcome["context"]}, default=str)[:4000],
+                response=json.dumps(result, default=str)[:8000],
+                user_id=current_user.id,
+                role_view="borrower",
+                provider=outcome["provider"],
+                model="claude-sonnet-5" if outcome["provider"] == "anthropic/claude" else "template",
+            )
+        except Exception:
+            pass
+
+        return jsonify({"ok": True, **result})
+    except Exception:
+        current_app.logger.exception("borrower_ai_assistant failed")
+        return jsonify({"ok": False, "error": "AI assistant is temporarily unavailable."}), 500
