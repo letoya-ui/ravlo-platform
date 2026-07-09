@@ -6,6 +6,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}Ravlo Borrower OS{% endblock %}</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -145,6 +146,7 @@
   }
 </style>
 {% include "layouts/_borrower_ai_panel.html" %}
+{% include "layouts/_csrf_fetch.html" %}
 {% block scripts %}{% endblock %}
 </body>
 </html>
