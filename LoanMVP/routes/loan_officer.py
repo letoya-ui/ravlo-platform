@@ -431,7 +431,6 @@ def complete_onboarding():
 # =============================================================
 
 @loan_officer_bp.route("/ai/assistant", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer", "admin")
 def ai_assistant():
     """
@@ -621,7 +620,6 @@ def messages():
     )
 
 @loan_officer_bp.route("/messages/send", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def send_message():
     allowed_receiver_ids = _allowed_loan_officer_contact_ids()
@@ -803,7 +801,6 @@ def loan_search():
 # AI Generator & Bulk Messaging
 # =========================================================
 @loan_officer_bp.route("/ai_generator", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def ai_generator():
     ai_reply = None
@@ -1630,7 +1627,6 @@ def borrower_ai_log(borrower_id):
 
 
 @loan_officer_bp.route("/credit-check", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def credit_check():
     borrowers = BorrowerProfile.query.filter_by(company_id=current_user.company_id).all()
@@ -1776,7 +1772,6 @@ def loan_queue():
 # AI PRICING
 # ===============================================================
 @loan_officer_bp.route("/ai/pricing", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def ai_pricing():
     if request.method == "GET":
@@ -1836,7 +1831,6 @@ def ai_pricing():
 
 
 @loan_officer_bp.route("/ai/risk", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def ai_risk():
     if request.method == "GET":
@@ -1905,7 +1899,6 @@ def ai_risk():
     return jsonify({"reply": reply})
 
 @loan_officer_bp.route("/ai/conditions", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def ai_conditions():
     if request.method == "GET":
@@ -1969,7 +1962,6 @@ def ai_conditions():
 
 
 @loan_officer_bp.route("/intake-ai/<int:borrower_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def intake_ai(borrower_id):
     borrower = get_borrower_or_404(borrower_id)
@@ -2102,7 +2094,6 @@ def ai_intake_queue():
 
 # === Review View ===
 @loan_officer_bp.route("/ai-intake-review/<int:intake_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def ai_intake_review(intake_id):
     intake = AIIntakeSummary.query.get_or_404(intake_id)
@@ -2129,7 +2120,6 @@ def ai_intake_review(intake_id):
 
 
 @loan_officer_bp.route("/auto-create-loan/<int:borrower_id>", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def auto_create_loan(borrower_id):
     borrower = get_borrower_or_404(borrower_id)
@@ -2191,7 +2181,6 @@ def auto_create_loan(borrower_id):
 
 
 @loan_officer_bp.route("/followup-ai/<int:borrower_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def followup_ai(borrower_id):
     borrower = get_borrower_or_404(borrower_id)
@@ -2288,7 +2277,6 @@ Provide:
 
 
 @loan_officer_bp.route("/communication-ai/<int:borrower_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def communication_ai(borrower_id):
     borrower = get_borrower_or_404(borrower_id)
@@ -2412,7 +2400,6 @@ def call_center(borrower_id):
 
 
 @loan_officer_bp.route("/save_call_notes", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def save_call_notes():
     data = request.get_json() or {}
@@ -2465,7 +2452,6 @@ def save_call_notes():
 
 
 @loan_officer_bp.route("/edit-loan/<int:loan_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def edit_loan(loan_id):
     loan = get_loan_or_404(loan_id)
@@ -2487,7 +2473,6 @@ def edit_loan(loan_id):
 
 
 @loan_officer_bp.route("/generate-quote/<int:loan_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def generate_quote(loan_id):
     loan = get_loan_or_404(loan_id)
@@ -2638,7 +2623,6 @@ def borrower_messages(borrower_id):
 
 
 @loan_officer_bp.route("/profile/<int:borrower_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def profile(borrower_id):
     borrower = get_borrower_or_404(borrower_id)
@@ -2661,7 +2645,6 @@ def profile(borrower_id):
 
 
 @loan_officer_bp.route("/quote-plan/<int:loan_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def quote_plan(loan_id):
     loan = get_loan_or_404(loan_id)
@@ -2920,7 +2903,6 @@ def upload(borrower_id):
 
 
 @loan_officer_bp.route("/follow-up/<int:borrower_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def follow_up(borrower_id):
     borrower = get_borrower_or_404(borrower_id)
@@ -3126,7 +3108,6 @@ def borrower_dashboard(borrower_id):
 
 
 @loan_officer_bp.route("/borrower-search", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def borrower_search():
     form = BorrowerSearchForm()
@@ -3308,7 +3289,6 @@ def resources():
     )
 
 @loan_officer_bp.route("/resources/chat", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def resources_chat():
     data = request.get_json() or {}
@@ -3327,7 +3307,6 @@ def resources_chat():
 
 
 @loan_officer_bp.route("/campaigns/create", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def create_campaign():
     if request.method == "POST":
@@ -3357,7 +3336,6 @@ def create_campaign():
 
 
 @loan_officer_bp.route("/upload-call/<int:borrower_id>", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def upload_call(borrower_id):
     file = request.files.get("file")
@@ -3668,7 +3646,6 @@ Write a professional pre-approval narrative including:
 
 
 @loan_officer_bp.route("/ai_chat", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def ai_chat():
     data = request.get_json() or {}
@@ -3745,7 +3722,6 @@ def ai_chat_history():
 
 
 @loan_officer_bp.route("/loan/<int:loan_id>/scenarios", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def loan_scenarios(loan_id):
     loan = get_loan_or_404(loan_id)
@@ -3838,7 +3814,6 @@ def add_scenario(loan_id):
 
 
 @loan_officer_bp.route("/loan/<int:loan_id>/scenario/<int:id>/delete", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def delete_scenario(loan_id, id):
     s = LoanScenario.query.get_or_404(id)
@@ -3902,7 +3877,6 @@ def request_documents(borrower_id):
 
 
 @loan_officer_bp.route("/loan/<int:loan_id>/generate_needs", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def generate_doc_needs(loan_id):
     loan = get_loan_or_404(loan_id)
@@ -3917,7 +3891,6 @@ def generate_doc_needs(loan_id):
 
 
 @loan_officer_bp.route("/save_preapproval_snapshot/<int:loan_id>", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def save_preapproval_snapshot(loan_id):
     loan = get_loan_or_404(loan_id)

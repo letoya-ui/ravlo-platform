@@ -10,6 +10,7 @@
 
   <div class="card">
     <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <textarea name="prompt" placeholder="Type your request here... (e.g., 'Summarize borrower loan readiness')"></textarea>
       <button type="submit" class="btn mt-2">⚡ Generate</button>
     </form>

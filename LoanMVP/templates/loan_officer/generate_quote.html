@@ -11,6 +11,7 @@
   <!-- Loan Quote Form -->
   <div class="card p-4 mb-4" style="background-color:#181a1b;border:1px solid #2b2b2b;border-radius:10px;">
     <form id="quoteForm" method="POST" action="{{ url_for('loan_officer.generate_quote', loan_id=loan.id) }}">
+      {{ form.hidden_tag() }}
       <div class="row">
         <div class="col-md-4 mb-3">
           <label>Borrower Name</label>

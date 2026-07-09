@@ -378,6 +378,7 @@ Review borrower details, underwriting ratios, documents, timeline, engagement, s
               <p><strong>APR:</strong> {{ s.apr or 0 }}%</p>
 
               <form method="POST" action="{{ url_for('loan_officer.delete_scenario', id=s.id, loan_id=loan.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn-danger" type="submit">Delete</button>
               </form>
             </div>
@@ -464,6 +465,7 @@ Review borrower details, underwriting ratios, documents, timeline, engagement, s
     </div>
 
     <form method="POST" action="{{ url_for('loan_officer.generate_doc_needs', loan_id=loan.id) }}" style="margin-bottom:1rem;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="rv-btn primary" type="submit">Generate Required Docs (AI)</button>
     </form>
 
