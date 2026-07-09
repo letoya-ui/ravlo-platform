@@ -59,6 +59,7 @@
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
+              <th>License</th>
               <th></th>
             </tr>
           </thead>
@@ -76,6 +77,19 @@
                 <span class="badge badge-info">
                   {{ get_role_display(user.role) }}
                 </span>
+              </td>
+              <td>
+                {% if (user.role or "")|lower == "loan_officer" %}
+                  {% set lo_profile = license_by_user_id.get(user.id) %}
+                  <a href="{{ url_for('admin.loan_officer_license', company_id=company.id, user_id=user.id) }}"
+                     class="re-badge" style="text-decoration:none;
+                       {% if lo_profile and lo_profile.license_verified %}background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(34,197,94,.25);
+                       {% else %}background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.25);{% endif %}">
+                    {% if lo_profile and lo_profile.license_verified %}Verified{% else %}Unverified{% endif %}
+                  </a>
+                {% else %}
+                  <span class="text-muted" style="font-size:.8rem;">—</span>
+                {% endif %}
               </td>
               <td>
                 {% if user.id != current_user.id %}

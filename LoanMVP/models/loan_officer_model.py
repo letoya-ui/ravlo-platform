@@ -19,8 +19,18 @@ class LoanOfficerProfile(db.Model):
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
     signature_image = db.Column(db.String(255), nullable=True)
 
+    # State MLO licensing -- comma-separated state codes (e.g. "FL,GA,TX").
+    # Self-reported by whoever fills the form; license_verified only means a
+    # company/Ravlo admin has reviewed and confirmed it, not that Ravlo has
+    # independently checked the NMLS registry.
+    licensed_states = db.Column(db.String(255), nullable=True)
+    license_verified = db.Column(db.Boolean, default=False, nullable=False)
+    license_verified_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    license_verified_at = db.Column(db.DateTime, nullable=True)
+
     # Relationships
-    user = db.relationship("User", back_populates="loan_officer_profile")
+    user = db.relationship("User", back_populates="loan_officer_profile", foreign_keys=[user_id])
+    license_verifier = db.relationship("User", foreign_keys=[license_verified_by])
     loans = db.relationship("LoanApplication", back_populates="loan_officer", cascade="all, delete-orphan")
     ai_summaries = db.relationship("LoanOfficerAISummary", back_populates="loan_officer", cascade="all, delete-orphan")
     analytics = db.relationship("LoanOfficerAnalytics", back_populates="loan_officer", cascade="all, delete-orphan")
