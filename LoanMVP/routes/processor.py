@@ -143,10 +143,12 @@ def dashboard():
         "conditions pending",
     }
 
+    company_id = getattr(current_user, "company_id", None)
     try:
         capital_queue = (
             LoanApplication.query
             .filter(
+                LoanApplication.company_id == company_id,
                 LoanApplication.status.in_([
                     "Capital Submitted",
                     "Submitted",
@@ -197,7 +199,7 @@ def dashboard():
     ])
 
     try:
-        pending_docs = LoanDocument.query.filter_by(status="pending").count()
+        pending_docs = LoanDocument.query.filter_by(company_id=company_id, status="pending").count()
     except Exception as e:
         print("Error fetching pending documents:", e)
         pending_docs = 0
@@ -474,10 +476,11 @@ def dashboard_data():
     except Exception:
         loans = []
 
+    company_id = getattr(current_user, "company_id", None)
     data = {
         "in_review": len([l for l in loans if l.status and l.status.lower() in ["in_review", "under_review"]]),
         "cleared": len([l for l in loans if l.status and l.status.lower() == "cleared"]),
-        "pending_docs": LoanDocument.query.filter_by(status="pending").count(),
+        "pending_docs": LoanDocument.query.filter_by(company_id=company_id, status="pending").count(),
         "total_loans": len(loans)
     }
     return jsonify(data)
@@ -488,7 +491,13 @@ def dashboard_data():
 @processor_bp.route("/loan_queue")
 @role_required("processor")
 def loan_queue():
-    loans = LoanApplication.query.order_by(LoanApplication.created_at.desc()).all()
+    company_id = getattr(current_user, "company_id", None)
+    loans = (
+        LoanApplication.query
+        .filter_by(company_id=company_id)
+        .order_by(LoanApplication.created_at.desc())
+        .all()
+    )
     return render_template("processor/loan_queue.html", loans=loans, title="Loan Queue")
 
 
@@ -596,6 +605,7 @@ def queue_ai_summary():
 @processor_bp.route("/api/loan_documents/<int:loan_id>")
 @role_required("processor")
 def api_loan_documents(loan_id):
+    get_loan_or_404(loan_id)  # enforces company scoping; result unused, docs come from loan_id
     docs = LoanDocument.query.filter_by(loan_id=loan_id).order_by(LoanDocument.uploaded_at.desc()).all()
     return jsonify({
         "docs": [
@@ -632,7 +642,10 @@ def loan_review(loan_id):
 
         for cid in selected_ids:
             cond = UnderwritingCondition.query.get(cid)
-            if cond:
+            # A submitted condition_id might belong to a different
+            # company's loan — only act on it if it's actually one of
+            # this (already company-scoped) loan's own conditions.
+            if cond and cond.loan_id == loan.id:
                 if action == "SendToBorrower":
                     doc_request = DocumentRequest(
                         borrower_id=borrower.id,
@@ -719,14 +732,20 @@ def edit_loan(loan_id):
 @csrf.exempt
 @role_required("processor")
 def documents():
-    docs = LoanDocument.query.order_by(LoanDocument.created_at.desc()).all()
+    company_id = getattr(current_user, "company_id", None)
+    docs = (
+        LoanDocument.query
+        .filter_by(company_id=company_id)
+        .order_by(LoanDocument.created_at.desc())
+        .all()
+    )
 
     if request.method == "POST":
         doc_id = request.form.get("doc_id")
         action = request.form.get("action")
         doc = LoanDocument.query.get(doc_id)
 
-        if not doc:
+        if not doc or doc.company_id != company_id:
             flash("❌ Document not found.", "danger")
             return redirect(url_for("processor.documents"))
 
@@ -816,11 +835,16 @@ def update_loan_status(loan_id):
 @role_required("processor")
 def assign_loan(loan_id):
     loan = get_loan_or_404(loan_id)
-    users = User.query.all()
+    company_id = getattr(current_user, "company_id", None)
+    users = User.query.filter_by(company_id=company_id).all()
 
     if request.method == "POST":
-        new_user = request.form.get("user_id")
-        loan.processor_id = new_user
+        new_user_id = request.form.get("user_id")
+        new_user = User.query.get(new_user_id)
+        if not new_user or new_user.company_id != company_id:
+            flash("❌ User not found.", "danger")
+            return redirect(f"/processor/assign/{loan.id}")
+        loan.processor_id = new_user.id
         db.session.commit()
 
         send_notification(loan.id, "processor", "A new loan has been assigned to you.")
@@ -869,8 +893,11 @@ def upload_doc():
     upload_folder = os.path.join(current_app.root_path, "uploads")
     os.makedirs(upload_folder, exist_ok=True)
 
+    company_id = getattr(current_user, "company_id", None)
+
     if request.method == "POST":
         loan_id = request.form.get("loan_id")
+        loan = get_loan_or_404(loan_id)
         file = request.files.get("file")
 
         if not file or file.filename == "":
@@ -882,7 +909,8 @@ def upload_doc():
         file.save(file_path)
 
         new_doc = LoanDocument(
-            loan_id=loan_id,
+            loan_id=loan.id,
+            company_id=company_id,
             document_name=file.filename,
             file_path=filename,
             status="Pending",
@@ -895,7 +923,7 @@ def upload_doc():
         flash(f"✅ Uploaded '{file.filename}'.", "success")
         return redirect(url_for("processor.documents"))
 
-    loans = LoanApplication.query.all()
+    loans = LoanApplication.query.filter_by(company_id=company_id).all()
     return render_template("processor/upload_center.html", loans=loans, title="Upload Document")
 
 # ---------------------------------------------------------
@@ -905,7 +933,9 @@ def upload_doc():
 @csrf.exempt
 @role_required("processor")
 def verify_docs():
+    company_id = getattr(current_user, "company_id", None)
     docs = LoanDocument.query.filter(
+        LoanDocument.company_id == company_id,
         LoanDocument.status.in_(["Pending", "Under Review", "Uploaded"])
     ).order_by(LoanDocument.created_at.desc()).all()
 
@@ -915,7 +945,7 @@ def verify_docs():
         notes = request.form.get("notes", "").strip()
 
         doc = LoanDocument.query.get(doc_id)
-        if not doc:
+        if not doc or doc.company_id != company_id:
             flash("❌ Document not found.", "danger")
             return redirect(url_for("processor.verify_docs"))
 
@@ -948,9 +978,10 @@ def verify_docs():
 @processor_bp.route("/reports")
 @role_required("processor")
 def reports():
-    total_loans = LoanApplication.query.count()
-    verified_docs = LoanDocument.query.filter_by(status="Verified").count()
-    pending_docs = LoanDocument.query.filter_by(status="Pending").count()
+    company_id = getattr(current_user, "company_id", None)
+    total_loans = LoanApplication.query.filter_by(company_id=company_id).count()
+    verified_docs = LoanDocument.query.filter_by(company_id=company_id, status="Verified").count()
+    pending_docs = LoanDocument.query.filter_by(company_id=company_id, status="Pending").count()
 
     try:
         ai_insight = assistant.generate_reply(
@@ -1010,7 +1041,7 @@ def condition_review(loan_id):
         # Processor forwards condition to Borrower
         if action == "send_to_borrower":
             cond = ConditionRequest.query.get(cond_id)
-            if cond:
+            if cond and cond.loan_id == loan.id:
                 new_req = DocumentRequest(
                     borrower_id=borrower.id,
                     requested_by=current_user.username,
@@ -1026,7 +1057,7 @@ def condition_review(loan_id):
         # Borrower returned document → Processor verifies → Underwriter notified
         elif action == "verify_document":
             doc = DocumentRequest.query.get(doc_id)
-            if doc:
+            if doc and doc.borrower_id == borrower.id:
                 doc.status = "Verified"
                 doc.verified_at = datetime.utcnow()
                 linked_cond = ConditionRequest.query.filter_by(description=doc.document_name, loan_id=loan.id).first()
@@ -1150,9 +1181,18 @@ def ai_conversations():
     loan analysis, borrower follow-ups, and workflow support.
     """
     borrower_id = request.args.get("borrower_id")
+    company_id = getattr(current_user, "company_id", None)
+    # LoanAIConversation has no user_id/company_id column of its own, so we can
+    # only attribute a conversation to a company via its linked loan. Rows with
+    # no loan_id can't be scoped at all under the current schema — exclude them
+    # rather than risk showing another company's data.
     conversations = (
         LoanAIConversation.query
-        .filter_by(user_role="processor")
+        .join(LoanApplication, LoanAIConversation.loan_id == LoanApplication.id)
+        .filter(
+            LoanAIConversation.user_role == "processor",
+            LoanApplication.company_id == company_id,
+        )
         .order_by(LoanAIConversation.created_at.desc())
         .limit(50)
         .all()
@@ -1208,9 +1248,14 @@ def live_chat():
     Live, real-time AI chat for processors.
     Uses SocketIO to stream messages instantly.
     """
+    company_id = getattr(current_user, "company_id", None)
     conversations = (
         LoanAIConversation.query
-        .filter_by(user_role="processor")
+        .join(LoanApplication, LoanAIConversation.loan_id == LoanApplication.id)
+        .filter(
+            LoanAIConversation.user_role == "processor",
+            LoanApplication.company_id == company_id,
+        )
         .order_by(LoanAIConversation.created_at.desc())
         .limit(40)
         .all()
@@ -1308,6 +1353,10 @@ def handle_processor_message(data):
 @role_required("processor")
 def chat(user_id):
     me = current_user.id
+
+    if user_id not in _allowed_processor_partner_ids():
+        flash("You can only message assigned borrowers and file teammates.", "warning")
+        return redirect(url_for("processor.messages"))
 
     # Load the other user
     other = User.query.get_or_404(user_id)
@@ -1613,6 +1662,7 @@ def calculate_dti_ltv(borrower, loan, credit):
     }
 
 @processor_bp.route("/analysis/<int:loan_id>")
+@role_required("processor")
 def processor_analysis(loan_id):
     loan = get_loan_or_404(loan_id)
     borrower = loan.borrower_profile
