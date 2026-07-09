@@ -6,6 +6,7 @@
   <title>Ravlo Academy | AI Business Plan</title>
 
   <meta name="robots" content="noindex, nofollow">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,6 +48,8 @@
   </div>
 
   <div id="ravlo-business-plan-root"></div>
+
+  {% include "layouts/_csrf_fetch.html" %}
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ravlo Academy</title>
   <meta name="robots" content="noindex, nofollow">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -111,6 +112,8 @@
       </div>
     </main>
   </div>
+
+  {% include "layouts/_csrf_fetch.html" %}
 
   <script src="{{ url_for('static', filename='js/vendors/react.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/vendors/react-dom.min.js') }}"></script>
