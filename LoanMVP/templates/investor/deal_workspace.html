@@ -490,6 +490,33 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                     Review path strength, return profile, and execution pressure before moving into architect, budget, rehab, or capital.
                 </p>
             </div>
+
+            {% if partners %}
+            <div class="workspace-highlight mt-16">
+                <span>Realtor Partners Near This Property</span>
+                {% for partner in partners %}
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;">
+                    <div>
+                        <strong>{{ partner.name }}</strong>
+                        <p class="re-stat-meta">
+                            {{ [partner.city, partner.state, partner.zip_code] | select | join(', ') }}
+                            {% if partner.rating %} &middot; {{ "%.1f"|format(partner.rating) }}★{% endif %}
+                        </p>
+                    </div>
+                    <form method="POST" action="{{ url_for('investor.create_partner_request') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="service_type" value="Realtor">
+                        <input type="hidden" name="partner_id" value="{{ partner.id }}">
+                        <input type="hidden" name="city" value="{{ partner.city or '' }}">
+                        <input type="hidden" name="state" value="{{ partner.state or '' }}">
+                        <input type="hidden" name="zip_code" value="{{ partner.zip_code or '' }}">
+                        {% if deal %}<input type="hidden" name="deal_id" value="{{ deal.id }}">{% endif %}
+                        <button type="submit" class="ravlo-btn ghost sm">Send to Realtor</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
     </section>
 
