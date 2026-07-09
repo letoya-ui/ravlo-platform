@@ -20,14 +20,15 @@ from LoanMVP.utils.role_helpers import is_admin
 
 # MODELS
 from LoanMVP.models.user_model import User
-from LoanMVP.models.crm_models import Lead, Message, Task 
+from LoanMVP.models.crm_models import Lead, Message, Task, Partner
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.processor_model import ProcessorProfile
 from LoanMVP.models.underwriter_model import UnderwriterProfile
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.system_models import SystemLog
-from LoanMVP.models.admin import Company, AccessRequest, UserInvite, BusinessInquiry, LicenseInviteEvent
+from LoanMVP.models.admin import Company, AccessRequest, UserInvite, BusinessInquiry, LicenseInviteEvent, SubscriptionRequest
+from LoanMVP.models.investor_models import InvestorProfile
 from LoanMVP.models.ai_models import AIAssistantInteraction
 from LoanMVP.models.payment_models import PaymentRecord
 from LoanMVP.models.vip_models import VIPIncome, VIPProfile
@@ -1242,6 +1243,125 @@ def reject_request(request_id):
 
     flash("Request rejected.", "warning")
     return redirect(url_for("admin.requests_dashboard"))
+
+
+# =========================================================
+# Subscription / tier upgrade requests
+#
+# Partner tier upgrades (partners.confirm_subscription) and the borrower
+# "become an Investor" upgrade (borrower.subscription) both queue a
+# SubscriptionRequest instead of applying instantly -- neither flow has a
+# real payment step wired up yet, so self-service would let anyone grant
+# themselves a paid tier or a new account role for free. Only a Ravlo
+# admin (never a company-scoped admin) can confirm one of these.
+# =========================================================
+
+@admin_bp.route("/subscription-requests", methods=["GET"])
+@login_required
+@role_required("admin_group")
+def subscription_requests():
+    if not _is_full_admin(current_user):
+        flash("Only Ravlo admins can review subscription requests.", "warning")
+        return redirect(_admin_home_endpoint())
+
+    all_requests = SubscriptionRequest.query.order_by(
+        SubscriptionRequest.created_at.desc()
+    ).all()
+    pending = [r for r in all_requests if r.status == "pending"]
+    reviewed = [r for r in all_requests if r.status != "pending"][:25]
+    user_map = {
+        u.id: u for u in User.query.filter(
+            User.id.in_({r.user_id for r in all_requests})
+        ).all()
+    } if all_requests else {}
+
+    return render_template(
+        "admin/subscription_requests.html",
+        pending=pending,
+        reviewed=reviewed,
+        user_map=user_map,
+        title="Subscription Requests",
+        active_tab="subscription_requests",
+    )
+
+
+@admin_bp.route("/subscription-requests/<int:request_id>/approve", methods=["POST"])
+@login_required
+@role_required("admin_group")
+@admin_required
+def approve_subscription_request(request_id):
+    if not _is_full_admin(current_user):
+        flash("Only Ravlo admins can approve subscription requests.", "warning")
+        return redirect(_admin_home_endpoint())
+
+    sub_request = SubscriptionRequest.query.get_or_404(request_id)
+    if sub_request.status != "pending":
+        flash("This request has already been reviewed.", "info")
+        return redirect(url_for("admin.subscription_requests"))
+
+    plan = (sub_request.plan_requested or "").strip()
+    context = sub_request.context or "investor_preview"
+
+    if context == "partner_tier":
+        partner = Partner.query.filter_by(user_id=sub_request.user_id).first()
+        if not partner:
+            flash("Partner profile no longer exists.", "danger")
+            return redirect(url_for("admin.subscription_requests"))
+        partner.subscription_tier = plan
+        partner.featured = plan.lower() in {"featured", "premium", "enterprise"}
+
+    elif context == "borrower_plan":
+        if plan == "investor_upgrade":
+            user = User.query.get(sub_request.user_id)
+            user.role = "investor"
+            if not InvestorProfile.query.filter_by(user_id=user.id).first():
+                db.session.add(InvestorProfile(
+                    user_id=user.id,
+                    full_name=f"{user.first_name or ''} {user.last_name or ''}".strip() or None,
+                    email=user.email,
+                ))
+        else:
+            borrower = BorrowerProfile.query.filter_by(user_id=sub_request.user_id).first()
+            if borrower:
+                borrower.subscription_plan = plan
+
+    else:
+        # investor_preview -- the existing self-contained flow in preview_routes.py
+        user = User.query.get(sub_request.user_id)
+        alias = {"core": "core", "explorer": "core", "operator": "operator", "pro": "operator"}
+        user.subscription = alias.get(plan.lower(), "core")
+        user.trial_ends_at = None
+
+    sub_request.status = "approved"
+    sub_request.reviewed_by = current_user.id
+    sub_request.reviewed_at = datetime.utcnow()
+    db.session.commit()
+
+    flash(f"Subscription request approved: {plan}.", "success")
+    return redirect(url_for("admin.subscription_requests"))
+
+
+@admin_bp.route("/subscription-requests/<int:request_id>/deny", methods=["POST"])
+@login_required
+@role_required("admin_group")
+@admin_required
+def deny_subscription_request(request_id):
+    if not _is_full_admin(current_user):
+        flash("Only Ravlo admins can review subscription requests.", "warning")
+        return redirect(_admin_home_endpoint())
+
+    sub_request = SubscriptionRequest.query.get_or_404(request_id)
+    if sub_request.status != "pending":
+        flash("This request has already been reviewed.", "info")
+        return redirect(url_for("admin.subscription_requests"))
+
+    sub_request.status = "denied"
+    sub_request.reviewed_by = current_user.id
+    sub_request.reviewed_at = datetime.utcnow()
+    db.session.commit()
+
+    flash("Subscription request denied.", "warning")
+    return redirect(url_for("admin.subscription_requests"))
 
 
 @admin_bp.route("/company/<int:company_id>/team")

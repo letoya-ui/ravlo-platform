@@ -32,7 +32,7 @@ from LoanMVP.models.crm_models import Message
 from LoanMVP.models.user_model import User
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.processor_model import ProcessorProfile
-from LoanMVP.models.investor_models import InvestorProfile
+from LoanMVP.models.admin import SubscriptionRequest
 
 borrower_bp = Blueprint("borrower", __name__, url_prefix="/borrower")
 
@@ -930,22 +930,27 @@ def subscription():
     if request.method == "POST":
         plan = request.form.get("plan")
         if plan == "investor_upgrade":
-            # Change role to investor and create InvestorProfile if needed
-            user = User.query.get(current_user.id)
-            user.role = "investor"
-
-            existing = InvestorProfile.query.filter_by(user_id=user.id).first()
-            if not existing:
-                profile = InvestorProfile(
-                    user_id=user.id,
-                    full_name=f"{user.first_name or ''} {user.last_name or ''}".strip() or None,
-                    email=user.email,
-                )
-                db.session.add(profile)
-
-            db.session.commit()
-            flash("Your account has been upgraded to Investor access. Welcome to the Ravlo Investor workspace!", "success")
-            return redirect(url_for("investor.dashboard"))
+            # Changing account type to Investor requires Ravlo admin
+            # approval -- there's no payment step here yet, so applying it
+            # immediately would let any borrower grant themselves full
+            # Investor access for free.
+            existing_request = SubscriptionRequest.query.filter_by(
+                user_id=current_user.id, context="borrower_plan", status="pending"
+            ).first()
+            if not existing_request:
+                db.session.add(SubscriptionRequest(
+                    user_id=current_user.id,
+                    plan_requested="investor_upgrade",
+                    context="borrower_plan",
+                    status="pending",
+                ))
+                db.session.commit()
+            flash(
+                "Your request to upgrade to Investor access has been submitted for review. "
+                "A Ravlo admin will confirm your upgrade shortly.",
+                "success",
+            )
+            return redirect(url_for("borrower.subscription"))
 
         if plan:
             borrower.subscription_plan = plan

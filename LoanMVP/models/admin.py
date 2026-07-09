@@ -163,6 +163,10 @@ class SubscriptionRequest(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     status = db.Column(db.String(50), nullable=False, default="pending")
     plan_requested = db.Column(db.String(50), nullable=True, default="Core")
+    # Which self-service upgrade flow this came from: "investor_preview",
+    # "partner_tier", or "borrower_plan". Lets one shared pending-request
+    # queue serve all of them without a separate table per flow.
+    context = db.Column(db.String(50), nullable=True, default="investor_preview")
     message = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
     reviewed_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
