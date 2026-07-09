@@ -39,6 +39,7 @@
       <div class="modal fade" id="addConditionModal" tabindex="-1">
         <div class="modal-dialog">
           <form method="POST" action="{{ url_for('processor.add_condition', loan_id=loan.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="modal-content">
 
               <div class="modal-header">
@@ -138,6 +139,7 @@
 
       <!-- Conditions Table -->
       <form method="POST" action="{{ url_for('processor.loan_review', loan_id=loan.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <table class="data-table mt-3">
           <thead>
             <tr>

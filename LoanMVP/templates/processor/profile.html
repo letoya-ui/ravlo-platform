@@ -9,6 +9,7 @@
       <p class="muted">Manage your personal details and account settings.</p>
 
       <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="profile-grid">
           <div>
             <label>First Name</label>

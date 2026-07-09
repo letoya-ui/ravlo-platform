@@ -623,7 +623,6 @@ def api_loan_documents(loan_id):
 # 🧾 Loan Review
 # ---------------------------------------------------------
 @processor_bp.route("/loan_review/<int:loan_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("processor")
 def loan_review(loan_id):
     loan = get_loan_or_404(loan_id)
@@ -674,7 +673,6 @@ def loan_review(loan_id):
     )
     
 @processor_bp.route("/add_condition/<int:loan_id>", methods=["POST"])
-@csrf.exempt
 @role_required("processor")
 def add_condition(loan_id):
     loan = get_loan_or_404(loan_id)
@@ -709,7 +707,6 @@ def add_condition(loan_id):
 # ✏️ Edit Loan
 # ---------------------------------------------------------
 @processor_bp.route("/loan/<int:loan_id>/edit", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("processor")
 def edit_loan(loan_id):
     loan = get_loan_or_404(loan_id)
@@ -729,7 +726,6 @@ def edit_loan(loan_id):
 # 📄 Document Management
 # ---------------------------------------------------------
 @processor_bp.route("/documents", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("processor")
 def documents():
     company_id = getattr(current_user, "company_id", None)
@@ -887,7 +883,6 @@ def view_file(filename):
 # 📤 Upload Document
 # ---------------------------------------------------------
 @processor_bp.route("/upload_doc", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("processor")
 def upload_doc():
     upload_folder = os.path.join(current_app.root_path, "uploads")
@@ -935,7 +930,6 @@ def upload_doc():
 # 🔍 Verify Documents
 # ---------------------------------------------------------
 @processor_bp.route("/verify_docs", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("processor")
 def verify_docs():
     company_id = getattr(current_user, "company_id", None)
@@ -1008,7 +1002,6 @@ def reports():
     )
 
 @processor_bp.route("/messages/new", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("processor")
 def new_message():
     users = _assigned_team_users_for_processor()
@@ -1177,7 +1170,6 @@ def property_search():
 
 
 @processor_bp.route("/ai_conversations", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("processor")
 def ai_conversations():
     """
@@ -1272,7 +1264,6 @@ def live_chat():
     )
 
 @processor_bp.route("/profile", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("processor")
 def profile():
     """

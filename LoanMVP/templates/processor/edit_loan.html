@@ -9,6 +9,7 @@
       <p class="muted">Modify borrower and loan details below.</p>
 
       <form method="POST" class="edit-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="grid">
           <div>
             <label>Borrower Name</label>

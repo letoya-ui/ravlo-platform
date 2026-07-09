@@ -24,6 +24,7 @@
 
             {% if users %}
                 <form method="POST" class="newmsg-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                     <label class="form-label">Select Recipient</label>
 
