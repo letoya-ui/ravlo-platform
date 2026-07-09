@@ -5273,6 +5273,45 @@ def deal_studio():
     )
 
 
+def get_workspace_partners_for_property(selected_prop, deal=None, workspace_analysis=None, category="Realtor", limit=6):
+    """Realtor partners near this property, for the workspace's "Send to a
+    Realtor" panel. Reuses the same matching helper as the Partner
+    Marketplace (`search_internal_partners`) rather than duplicating the
+    location/category filtering logic.
+    """
+    workspace_analysis = workspace_analysis or {}
+    city = (getattr(deal, "city", None) or workspace_analysis.get("city") or "").strip()
+    state = (getattr(deal, "state", None) or workspace_analysis.get("state") or "").strip()
+    zip_code = (
+        getattr(deal, "zip_code", None)
+        or workspace_analysis.get("zip_code")
+        or getattr(selected_prop, "zipcode", None)
+        or ""
+    ).strip()
+
+    if not (city or state or zip_code):
+        return []
+
+    # search_internal_partners() returns plain dicts (see
+    # partner_marketplace_service.py), not Partner ORM instances.
+    results = search_internal_partners(Partner, category=category, city=city, state=state, zip_code=zip_code)
+
+    return [
+        {
+            "id": partner.get("id"),
+            "name": partner.get("name"),
+            "city": partner.get("city"),
+            "state": partner.get("state"),
+            "zip_code": partner.get("zip_code"),
+            "phone": partner.get("phone"),
+            "email": partner.get("email"),
+            "rating": partner.get("rating"),
+            "is_verified": bool(partner.get("is_verified")),
+        }
+        for partner in results[:limit]
+    ]
+
+
 @investor_bp.route("/deals/workspace", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -5642,7 +5681,7 @@ def deal_workspace():
                 workspace_analysis = _ensure_property_image_coverage(workspace_analysis)
 
         try:
-            partners = get_workspace_partners_for_property(selected_prop)
+            partners = get_workspace_partners_for_property(selected_prop, deal=deal, workspace_analysis=workspace_analysis)
         except Exception:
             partners = []
 
@@ -12997,6 +13036,7 @@ def generate_build_costs_from_package():
 
         # Optional learning signal.
         try:
+            from LoanMVP.models.cost_models import CostObservation
             sqft = _normalize_int(data.get("square_feet") or data.get("square_feet_target"))
             db.session.add(CostObservation(
                 source="engine_estimate",
