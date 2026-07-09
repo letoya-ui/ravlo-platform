@@ -229,6 +229,7 @@ Analyze borrower strength, collateral, documents, conditions, and final decision
         </div>
 
         <form method="POST" action="{{ url_for('underwriter.add_condition', loan_id=loan.id) }}" class="uw-form-stack">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <label class="uw-label">Condition Type(s)</label>
           <select name="type" multiple required>
             <option value="W-2s (Last 2 Years)">W-2s (Last 2 Years)</option>
@@ -292,6 +293,7 @@ Analyze borrower strength, collateral, documents, conditions, and final decision
         </div>
 
         <form method="POST" action="{{ url_for('underwriter.decision', loan_id=loan.id) }}" class="uw-form-stack">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <select name="decision">
             <option value="Approved">Approve</option>
             <option value="Suspended">Suspend</option>

@@ -439,7 +439,6 @@ def verify_doc(doc_id):
 #   ADD CONDITION
 # ===============================================================
 @underwriter_bp.route("/add-condition/<int:loan_id>", methods=["POST"])
-@csrf.exempt 
 @login_required
 @role_required("underwriter")
 def add_condition(loan_id):
@@ -510,7 +509,6 @@ def send_condition(cond_id):
 @underwriter_bp.route("/decision/<int:loan_id>", methods=["POST"])
 @login_required
 @role_required("underwriter")
-@csrf.exempt
 def decision(loan_id):
     loan = get_loan_or_404(loan_id)
 
@@ -528,7 +526,6 @@ def decision(loan_id):
 #   AI UNDERWRITING INSIGHT
 # ===============================================================
 @underwriter_bp.route("/ai", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("underwriter")
 def ai():
@@ -606,7 +603,6 @@ def decision_sheet(loan_id):
 #   TASKS
 # ===============================================================
 @underwriter_bp.route("/tasks", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("underwriter")
 def tasks():
@@ -829,7 +825,6 @@ def messages():
     )
 
 @underwriter_bp.route("/messages/thread/<int:partner_id>", methods=["GET", "POST"])
-@csrf.exempt 
 @login_required
 @role_required("underwriter")
 def message_thread(partner_id):
@@ -874,7 +869,6 @@ def message_thread(partner_id):
     )
 
 @underwriter_bp.route("/messages/new", methods=["GET", "POST"])
-@csrf.exempt 
 @login_required
 @role_required("underwriter")
 def new_message():
