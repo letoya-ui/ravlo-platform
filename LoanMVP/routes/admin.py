@@ -2542,6 +2542,7 @@ def company_dashboard(company_id):
     team_members = User.query.filter_by(company_id=company.id).order_by(User.created_at.desc()).all()
     company_loan_officers = _company_loan_officers(company.id)
     company_processors = _company_processors(company.id)
+    company_underwriters = _company_underwriters(company.id)
     invites = UserInvite.query.filter_by(company_id=company.id).order_by(UserInvite.created_at.desc()).all()
     loans = _company_loans(company.id)
     borrowers = list({
@@ -2626,6 +2627,7 @@ def company_dashboard(company_id):
         applicant_loans=applicant_loans,
         company_loan_officers=company_loan_officers,
         company_processors=company_processors,
+        company_underwriters=company_underwriters,
         recent_messages=recent_messages,
         access_requests=access_requests[:5],
         compensation_summary=compensation_summary,
@@ -2662,9 +2664,11 @@ def assign_company_applicant(company_id, loan_id):
 
     available_officers = {profile.id: profile for profile in _company_loan_officers(company.id)}
     available_processors = {profile.id: profile for profile in _company_processors(company.id)}
+    available_underwriters = {profile.id: profile for profile in _company_underwriters(company.id)}
 
     officer_id = _as_int(request.form.get("loan_officer_id"))
     processor_id = _as_int(request.form.get("processor_id"))
+    underwriter_id = _as_int(request.form.get("underwriter_id"))
 
     if officer_id and officer_id not in available_officers:
         flash("Please choose a loan officer assigned to this company.", "warning")
@@ -2672,6 +2676,10 @@ def assign_company_applicant(company_id, loan_id):
 
     if processor_id and processor_id not in available_processors:
         flash("Please choose a processor assigned to this company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+    if underwriter_id and underwriter_id not in available_underwriters:
+        flash("Please choose an underwriter assigned to this company.", "warning")
         return redirect(url_for("admin.company_dashboard", company_id=company.id))
 
     if officer_id:
@@ -2688,6 +2696,7 @@ def assign_company_applicant(company_id, loan_id):
 
     loan.loan_officer_id = officer_id or None
     loan.processor_id = processor_id or None
+    loan.underwriter_id = underwriter_id or None
 
     if borrower is not None:
         borrower.assigned_officer_id = officer_id or None
