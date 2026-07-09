@@ -6,6 +6,14 @@
   <main class="dashboard-content fade-in" style="flex-grow:1;">
     <h1 style="color:var(--highlight); margin-bottom:1.5rem;">📊 Loan Pipeline</h1>
 
+    <div class="card fade-in" id="pipelineAiCard">
+      <h3>Pipeline AI</h3>
+      <button type="button" class="btn btn-primary btn-sm" id="pipelineAiBtn" onclick="runPipelineAi()">
+        Analyze My Pipeline
+      </button>
+      <div id="pipelineAiResult" style="margin-top:1rem; display:none;"></div>
+    </div>
+
     <div class="card fade-in">
       <h3>Overview by Status</h3>
 
@@ -48,4 +56,56 @@
     </div>
   </main>
 </div>
+
+<script>
+(function () {
+  const ACTION_URL = "{{ url_for('loan_officer.pipeline_ai_summary') }}";
+  const CSRF       = "{{ csrf_token() }}";
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function list(items) {
+    if (!items || !items.length) return "";
+    return "<ul>" + items.map(function (i) { return "<li>" + esc(i) + "</li>"; }).join("") + "</ul>";
+  }
+
+  window.runPipelineAi = function () {
+    const btn = document.getElementById("pipelineAiBtn");
+    const box = document.getElementById("pipelineAiResult");
+    if (!box) return;
+    if (btn) { btn.disabled = true; btn.textContent = "Analyzing..."; }
+
+    fetch(ACTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRFToken": CSRF },
+      credentials: "same-origin",
+      body: JSON.stringify({}),
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        box.style.display = "block";
+        if (!res.ok || !res.body.ok) {
+          box.textContent = (res.body && res.body.error) || "Sorry, couldn't analyze your pipeline right now.";
+          return;
+        }
+        const p = res.body;
+        let html = "<p>" + esc(p.summary || "") + "</p>";
+        if (p.highlight) html += "<p><strong>" + esc(p.highlight) + "</strong></p>";
+        if (p.next_steps && p.next_steps.length) html += "<h4>Next steps</h4>" + list(p.next_steps);
+        if (p.flags && p.flags.length) html += "<h4>Flags</h4>" + list(p.flags);
+        box.innerHTML = html;
+      })
+      .catch(function () {
+        box.style.display = "block";
+        box.textContent = "Network error.";
+      })
+      .finally(function () {
+        if (btn) { btn.disabled = false; btn.textContent = "Analyze My Pipeline"; }
+      });
+  };
+})();
+</script>
 {% endblock %}
