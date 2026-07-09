@@ -1,12 +1,18 @@
 """Pipeline AI: aggregate summary across a loan officer's whole active loan
-pipeline — total value, stage breakdown, and risk flags rolled up across
-every loan.
+pipeline — total value, stage breakdown, estimated commission, and risk
+flags rolled up across every loan.
 
 Mirrors investor_portfolio_ai_service.py's pattern: a real LLM call (Claude)
 with a deterministic, non-LLM template fallback so the feature never
-hard-fails. No commission/dollar-comp math — no rate/commission model exists
-for loan officers, so this only aggregates the real, already-modeled
-LoanApplication.amount.
+hard-fails.
+
+Estimated commission uses the same rate and "funded" status definition
+already used company-wide in LoanMVP/routes/admin.py
+(COMPENSATION_DEFAULTS["loan_officer_rate"], FUNDED_LOAN_STATUSES) — mirrored
+here as constants rather than imported, since routes importing from services
+is this codebase's convention and the reverse (a service importing a route
+module) risks pulling in admin.py's much heavier import chain. Keep these two
+values in sync with admin.py by hand if that rate or status set ever changes.
 """
 
 from __future__ import annotations
@@ -21,6 +27,11 @@ _STALE_DAYS = 14
 _HIGH_DTI_THRESHOLD = 43.0
 _HIGH_LTV_THRESHOLD = 0.95
 _CLOSED_STATUSES = {"approved", "declined", "closed"}
+
+# Mirrors LoanMVP/routes/admin.py's COMPENSATION_DEFAULTS["loan_officer_rate"]
+# and FUNDED_LOAN_STATUSES — see module docstring.
+_COMMISSION_RATE = 0.01
+_FUNDED_STATUSES = {"closed", "funded", "completed", "paid"}
 
 
 def _query_raw(user_id):
@@ -90,6 +101,12 @@ def _shape_context(loans, now=None) -> dict:
 
     total_pipeline_value = sum((l.amount or 0) for l in loans)
 
+    funded_volume = sum(
+        (l.amount or 0) for l in loans
+        if (l.status or "").strip().lower() in _FUNDED_STATUSES
+    )
+    estimated_commission = round(funded_volume * _COMMISSION_RATE, 2)
+
     stage_counts = {}
     for l in loans:
         stage = l.milestone_stage or "Unspecified"
@@ -114,6 +131,9 @@ def _shape_context(loans, now=None) -> dict:
         "has_loans": True,
         "total_loans": len(loans),
         "total_pipeline_value": total_pipeline_value,
+        "funded_volume": funded_volume,
+        "estimated_commission": estimated_commission,
+        "commission_rate": _COMMISSION_RATE,
         "stage_counts": stage_counts,
         "loan_flags": loan_flags,
         "loans": loans_summary,
@@ -144,6 +164,12 @@ def _template_pipeline_explanation(context: dict) -> dict:
         f"You're tracking {total_loans} loan{'s' if total_loans != 1 else ''} "
         f"worth ${total_value:,.0f} in total ({stage_text})."
     )
+    if context.get("funded_volume"):
+        summary += (
+            f" ${context['funded_volume']:,.0f} has funded so far, for an "
+            f"estimated commission of ${context['estimated_commission']:,.0f} "
+            f"at the company default rate of {context['commission_rate'] * 100:.1f}%."
+        )
 
     next_steps = []
     if context["loan_flags"]:

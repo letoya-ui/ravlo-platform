@@ -5,7 +5,7 @@ Covers:
 1. Empty pipeline (no loans)
 2. Single healthy loan (no flags)
 3. Stalled / high-DTI / high-LTV flags, individually and combined
-4. Aggregate math (total value, stage counts)
+4. Aggregate math (total value, stage counts, funded volume, estimated commission)
 5. Template fallback when the Claude call fails
 """
 
@@ -66,6 +66,25 @@ def test_shape_context_stage_counts_and_total_value():
     assert context["stage_counts"] == {"Underwriting": 2, "Clear to Close": 1}
 
 
+def test_shape_context_funded_volume_and_estimated_commission():
+    loans = [
+        _loan(id=1, amount=200000.0, status="in_review"),
+        _loan(id=2, amount=300000.0, status="closed"),
+        _loan(id=3, amount=100000.0, status="funded"),
+    ]
+    context = _shape_context(loans, now=NOW)
+    # Only the closed + funded loans count toward funded volume
+    assert context["funded_volume"] == 400000.0
+    assert context["commission_rate"] == 0.01
+    assert context["estimated_commission"] == round(400000.0 * 0.01, 2)
+
+
+def test_shape_context_no_funded_loans_gives_zero_commission():
+    context = _shape_context([_loan(status="in_review")], now=NOW)
+    assert context["funded_volume"] == 0
+    assert context["estimated_commission"] == 0
+
+
 # ── _loan_flags ──────────────────────────────────────────
 
 def test_loan_flags_all_healthy():
@@ -116,6 +135,22 @@ def test_template_pipeline_explanation_with_loans():
     result = _template_pipeline_explanation(context)
     assert "1 loan" in result["summary"]
     assert "123 Main St" in result["highlight"]
+
+
+def test_template_pipeline_explanation_mentions_commission_when_funded():
+    context = _shape_context(
+        [_loan(id=1, amount=500000.0, status="closed", property_address="123 Main St")],
+        now=NOW,
+    )
+    result = _template_pipeline_explanation(context)
+    assert "estimated commission" in result["summary"]
+    assert "$5,000" in result["summary"]  # 500000 * 0.01
+
+
+def test_template_pipeline_explanation_omits_commission_when_nothing_funded():
+    context = _shape_context([_loan(id=1, status="in_review")], now=NOW)
+    result = _template_pipeline_explanation(context)
+    assert "estimated commission" not in result["summary"]
 
 
 # ── explain_loan_officer_pipeline — template fallback on Claude failure ──
