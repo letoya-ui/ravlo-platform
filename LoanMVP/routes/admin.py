@@ -15,7 +15,7 @@ from werkzeug.security import generate_password_hash
 from LoanMVP.ai.base_ai import AIAssistant     # ✅ Unified AI import
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.utils.emailer import send_email  # or wherever you saved it
-from LoanMVP.utils.role_helpers import is_admin
+from LoanMVP.utils.role_helpers import is_admin, company_billing_hold_reason
 
 
 # MODELS
@@ -2780,6 +2780,25 @@ def company_billing_checkout(company_id, plan):
         return redirect(url_for("admin.company_billing", company_id=company.id))
 
     return redirect(session.url, code=303)
+
+
+@admin_bp.route("/billing-hold", methods=["GET"])
+@login_required
+def billing_hold():
+    company = Company.query.get(getattr(current_user, "company_id", None))
+    reason = company_billing_hold_reason(company) if company else None
+
+    if not reason:
+        # Nothing (or nothing anymore) to hold on -- send them back home
+        # instead of showing a stale/incorrect suspension page.
+        return redirect(_admin_home_endpoint())
+
+    return render_template(
+        "admin/billing_hold.html",
+        company=company,
+        reason=reason,
+        is_company_admin=_is_company_admin(current_user),
+    )
 
 
 @admin_bp.route("/onboarding", methods=["GET"])

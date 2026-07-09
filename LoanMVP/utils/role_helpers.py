@@ -2,6 +2,8 @@
 # 🔐 ROLE HELPERS — Ravlo
 # =========================================================
 
+from datetime import datetime
+
 ADMIN_ROLES = {
     "admin",
     "master_admin",
@@ -156,6 +158,52 @@ def auto_block_company_for_non_payment(company):
     company.blocked_reason = "non_payment"
     company.blocked_note = "Automatically blocked after failed payment and expired grace period."
     company.billing_status = "blocked"
+
+
+# Ravlo staff roles that operate across every company and are never gated
+# by any single company's billing state. Mirrors admin.py's FULL_ADMIN_ROLES
+# -- duplicated here rather than importing a route module into this one.
+FULL_RAVLO_STAFF_ROLES = {"platform_admin", "master_admin", "lending_admin", "executive"}
+
+
+def company_billing_hold_reason(company):
+    """Short reason code if a company's workspace should be held from
+    further access, or None if it's fine.
+
+    'blocked'        -- an admin (or auto-block below) explicitly blocked
+                        this workspace
+    'inactive'       -- workspace deactivated, whether by hand
+                        (company_settings) or by Stripe (subscription
+                        fully canceled)
+    'billing_lapsed' -- billing_status is past_due and the grace period
+                        (Company.is_billing_current()) has expired
+    """
+    if company is None:
+        return None
+    if company.is_blocked:
+        return "blocked"
+    if company.is_active is False:
+        return "inactive"
+    if not company.is_billing_current():
+        return "billing_lapsed"
+    return None
+
+
+def enforce_company_billing_hold(company):
+    """Check a company's billing hold state, lazily transitioning a company
+    whose grace period has just expired into is_blocked=True so
+    billing_status stays accurate without a cron sweep (Stripe only calls
+    the webhook on payment attempts, never exactly at the grace-period
+    deadline). Returns the hold reason (or None) after any transition.
+    """
+    reason = company_billing_hold_reason(company)
+    if reason == "billing_lapsed" and not company.is_blocked:
+        from LoanMVP.extensions import db
+        auto_block_company_for_non_payment(company)
+        db.session.commit()
+        return "blocked"
+    return reason
+
 
 def get_request_type_display(request_type: str) -> str:
     request_type = (request_type or "").strip().lower()

@@ -31,7 +31,10 @@ from LoanMVP.config import get_config
 from LoanMVP.extensions import db, login_manager, migrate, mail, stripe, csrf, limiter
 from LoanMVP.models import User
 from LoanMVP.models.loan_models import BorrowerProfile, LoanNotification
-from LoanMVP.utils.role_helpers import get_role_display, get_request_type_display, get_status_display, get_status_badge
+from LoanMVP.utils.role_helpers import (
+    get_role_display, get_request_type_display, get_status_display, get_status_badge,
+    enforce_company_billing_hold, FULL_RAVLO_STAFF_ROLES,
+)
 from LoanMVP.services.unified_resolver import resolve_property
 
 ENV_NAME = os.environ.get("FLASK_ENV", "production").strip().lower()
@@ -745,6 +748,37 @@ def create_app():
         ):
             return None
         return redirect(url_for("preview.trial_expired"))
+
+    _BILLING_HOLD_EXEMPT_PREFIXES = ("auth.", "marketing.", "public_pages.", "preview.", "checkout.")
+    _BILLING_HOLD_EXEMPT_EXACT = {
+        "static", "favicon", "marketing_home", "robots_txt", "sitemap_xml", "index",
+        "admin.billing_hold", "admin.company_billing", "admin.company_billing_checkout",
+    }
+
+    @app.before_request
+    def check_company_billing_hold():
+        if not current_user.is_authenticated:
+            return None
+        company_id = getattr(current_user, "company_id", None)
+        if not company_id:
+            return None
+        role = (getattr(current_user, "role", "") or "").strip().lower()
+        if role in FULL_RAVLO_STAFF_ROLES:
+            return None
+        endpoint = request.endpoint or ""
+        if (
+            any(endpoint.startswith(p) for p in _BILLING_HOLD_EXEMPT_PREFIXES)
+            or endpoint in _BILLING_HOLD_EXEMPT_EXACT
+        ):
+            return None
+
+        from LoanMVP.models.admin import Company
+        company = Company.query.get(company_id)
+        if not company:
+            return None
+        if enforce_company_billing_hold(company):
+            return redirect(url_for("admin.billing_hold"))
+        return None
 
     # Static file extensions that shouldn't be tracked
     _STATIC_EXTS = frozenset({
