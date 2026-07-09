@@ -543,6 +543,15 @@ def register_from_invite(token):
         flash("An account already exists for this email. Please log in.", "info")
         return redirect(url_for("auth.login"))
 
+    invite_company = Company.query.get(invite.company_id) if invite.company_id else None
+    if invite_company and not invite_company.has_seat_available():
+        flash(
+            f"{invite_company.name} has reached its plan's user limit. "
+            "Contact your account admin to upgrade the plan before accepting this invite.",
+            "warning",
+        )
+        return redirect(url_for("auth.login"))
+
     if request.method == "POST":
         full_name = (request.form.get("full_name") or "").strip()
         first_name = (request.form.get("first_name") or "").strip()

@@ -42,6 +42,17 @@ class Company(db.Model):
         lazy=True
     )
 
+    def seats_used(self) -> int:
+        from LoanMVP.models.user_model import User
+        return User.query.filter_by(company_id=self.id).count()
+
+    def has_seat_available(self) -> bool:
+        """max_users=None means an uncapped plan (e.g. white_label/Enterprise)."""
+        if self.max_users is None:
+            return True
+        return self.seats_used() < self.max_users
+
+
 class AccessRequest(db.Model):
     __tablename__ = "access_requests"
 
