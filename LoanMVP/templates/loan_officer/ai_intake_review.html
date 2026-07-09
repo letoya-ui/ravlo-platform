@@ -20,6 +20,7 @@
     <div style="background:var(--hover);padding:1rem;border-radius:8px;">{{ intake.ai_summary }}</div>
 
     <form method="POST" class="mt-3 d-flex gap-2">
+      {{ form.hidden_tag() }}
       <button name="action" value="approve" class="btn btn-primary">✅ Approve</button>
       <button name="action" value="convert" class="btn btn-accent">📂 Convert to Loan</button>
       <button name="action" value="reject" class="btn btn-danger">❌ Reject</button>

@@ -6,6 +6,7 @@
 
   <!-- Borrower selection form -->
   <form method="POST" class="bg-dark p-4 rounded shadow-sm mb-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="borrower_profile_id" class="form-label text-light">Select Borrower</label>
     <select name="borrower_profile_id" class="form-select bg-dark text-light border-secondary" required>
       <option value="">-- Choose Borrower --</option>
