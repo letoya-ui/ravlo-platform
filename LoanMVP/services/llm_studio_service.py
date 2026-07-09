@@ -586,3 +586,72 @@ def claude_portfolio_analysis(payload: dict) -> dict:
             "summary": "", "next_steps": [], "flags": [], "highlight": "",
             "error": str(exc), "meta": {"provider": "anthropic/claude"},
         }
+
+
+_LOAN_PIPELINE_SYSTEM = (
+    "You are Ravlo's loan officer pipeline analyst. You summarize a loan "
+    "officer's whole active loan pipeline in plain, confident English: total "
+    "pipeline value, loan counts by stage, and the biggest risks across all "
+    "loans. You must only state facts present in the data provided below — "
+    "never invent dollar figures, loan counts, or risks not present in the "
+    "data. Always respond with valid JSON only — no markdown, no prose "
+    "outside the JSON."
+)
+
+_LOAN_PIPELINE_SCHEMA = """{
+  "summary": "2-3 sentence plain-English pipeline summary (total value, stage breakdown)",
+  "next_steps": ["Specific, actionable next step across the pipeline", "..."],
+  "flags": ["Loan-tagged risk, e.g. 'Jane Doe — 123 Main St: no update in 18 days while in review'"],
+  "highlight": "One sentence calling out the single most urgent or most valuable loan"
+}"""
+
+
+def claude_loan_pipeline_summary(payload: dict) -> dict:
+    """Summarize a loan officer's whole active pipeline using Claude.
+
+    ``payload`` must contain a ``context`` dict (from
+    ``loan_officer_pipeline_ai_service._shape_context``) and may contain a
+    free-text ``question``. Falls back to an error result on any failure so
+    the caller can fall back to the deterministic template summary.
+    """
+    context = payload.get("context") or {}
+    question = payload.get("question") or "Summarize my pipeline and flag any risks."
+
+    user_msg = (
+        f"Here is the loan officer's pipeline data:\n{json.dumps(context, default=str)}\n\n"
+        f"Loan officer's question: {question}\n\n"
+        f"Respond with a JSON object matching this schema exactly:\n{_LOAN_PIPELINE_SCHEMA}"
+    )
+
+    try:
+        response = _anthropic_client().messages.create(
+            model="claude-sonnet-5",
+            max_tokens=1024,
+            system=_LOAN_PIPELINE_SYSTEM,
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        raw = response.content[0].text.strip()
+
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+
+        result = json.loads(raw)
+        result.setdefault("meta", {})
+        result["meta"]["provider"] = "anthropic/claude"
+        return result
+
+    except json.JSONDecodeError as exc:
+        log.error("Claude loan pipeline summary returned invalid JSON: %s", exc)
+        return {
+            "summary": "", "next_steps": [], "flags": [], "highlight": "",
+            "error": "Invalid JSON from Claude", "meta": {"provider": "anthropic/claude"},
+        }
+    except Exception as exc:
+        log.error("Claude loan pipeline summary failed: %s", exc)
+        return {
+            "summary": "", "next_steps": [], "flags": [], "highlight": "",
+            "error": str(exc), "meta": {"provider": "anthropic/claude"},
+        }

@@ -1358,15 +1358,53 @@ def pipeline():
 
         loan.updated_at = loan.updated_at or loan.created_at
 
+    grouped = {}
+    for loan in pipeline:
+        grouped.setdefault(loan.milestone_stage, []).append(loan)
+
     return render_template(
         "loan_officer/pipeline.html",
         pipeline=pipeline,
+        grouped=grouped,
         selected_status=status_filter,
         selected_stage=stage_filter,
         name_filter=name_filter,
         active_tab="pipeline",
         title="Pipeline"
     )
+
+
+@loan_officer_bp.route("/pipeline/ai-summary", methods=["POST"], endpoint="pipeline_ai_summary")
+@role_required("loan_officer")
+def pipeline_ai_summary():
+    from LoanMVP.services.loan_officer_pipeline_ai_service import explain_loan_officer_pipeline
+    from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+
+    data = request.get_json(silent=True) or {}
+    question = (data.get("question") or "").strip()[:500]
+
+    try:
+        outcome = explain_loan_officer_pipeline(current_user.id, question=question or None)
+        result = outcome["result"]
+
+        try:
+            log_ai_exchange(
+                module="loan_officer_os",
+                feature="pipeline_ai_summary",
+                prompt=json.dumps({"question": question, "context": outcome["context"]}, default=str)[:4000],
+                response=json.dumps(result, default=str)[:8000],
+                user_id=current_user.id,
+                role_view="loan_officer",
+                provider=outcome["provider"],
+                model="claude-sonnet-5" if outcome["provider"] == "anthropic/claude" else "template",
+            )
+        except Exception:
+            pass
+
+        return jsonify({"ok": True, **result})
+    except Exception:
+        current_app.logger.exception("pipeline_ai_summary failed")
+        return jsonify({"ok": False, "error": "Pipeline AI is temporarily unavailable."}), 500
 
 
 @loan_officer_bp.route("/reports")
@@ -1381,12 +1419,18 @@ def reports():
     total = len(loans)
     approved = sum((l.status or "").lower() == "approved" for l in loans)
     declined = sum((l.status or "").lower() == "declined" for l in loans)
+    in_review = sum(
+        (l.status or "").strip().lower() in ("in_review", "in review", "processing", "under review")
+        for l in loans
+    )
 
     return render_template(
         "loan_officer/reports.html",
-        total=total,
-        approved=approved,
-        declined=declined,
+        total_loans=total,
+        approved_loans=approved,
+        declined_loans=declined,
+        in_review=in_review,
+        summaries=[],
         active_tab="reports",
         title="Reports"
     )
@@ -3103,16 +3147,25 @@ def borrower_intake():
                 role="loan_officer"
             )
 
-            db.session.add(
-                AIIntakeSummary(
-                    borrower_id=borrower.id,
-                    summary=summary,
-                    created_at=datetime.utcnow(),
+            # AIIntakeSummary.investor_profile_id is currently required by the
+            # model, but a loan-officer-originated intake has no investor in
+            # context — BorrowerProfile carries no investor linkage at all.
+            # Only persist the row when one is actually resolvable; otherwise
+            # skip the insert rather than raise (see MR description for the
+            # follow-up: this constraint looks like a modeling mistake).
+            investor_profile_id = getattr(borrower, "investor_profile_id", None)
+            if investor_profile_id:
+                db.session.add(
+                    AIIntakeSummary(
+                        borrower_profile_id=borrower.id,
+                        investor_profile_id=investor_profile_id,
+                        summary=summary,
+                        created_at=datetime.utcnow(),
+                    )
                 )
-            )
-            db.session.commit()
+                db.session.commit()
         except Exception:
-            pass
+            current_app.logger.exception("AI intake summary creation failed")
 
         flash("Borrower created and AI summary generated.", "success")
         return redirect(url_for("loan_officer.borrower_dashboard", borrower_id=borrower.id))
