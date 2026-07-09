@@ -20,6 +20,7 @@ Build your public Ravlo profile so investors can find and trust your business.
   </section>
 
   <form method="POST" class="ravlo-card partner-form-card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if csrf_token is defined %}
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% endif %}
