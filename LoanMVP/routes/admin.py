@@ -1408,11 +1408,67 @@ def company_team(company_id):
     team_members = User.query.filter_by(company_id=company.id).order_by(User.role, User.first_name).all()
     invites = UserInvite.query.filter_by(company_id=company.id).order_by(UserInvite.created_at.desc()).all()
 
+    officer_user_ids = [u.id for u in team_members if (u.role or "").strip().lower() == "loan_officer"]
+    license_by_user_id = {
+        profile.user_id: profile
+        for profile in LoanOfficerProfile.query.filter(LoanOfficerProfile.user_id.in_(officer_user_ids)).all()
+    } if officer_user_ids else {}
+
     return render_template(
         "admin/company_team.html",
         company=company,
         team_members=team_members,
         invites=invites,
+        license_by_user_id=license_by_user_id,
+    )
+
+
+@admin_bp.route("/company/<int:company_id>/team/<int:user_id>/license", methods=["GET", "POST"])
+@login_required
+@role_required("admin_group")
+@admin_required
+def loan_officer_license(company_id, user_id):
+    company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
+    member = User.query.filter_by(id=user_id, company_id=company.id).first_or_404()
+    if (member.role or "").strip().lower() != "loan_officer":
+        flash("That team member isn't a loan officer.", "warning")
+        return redirect(url_for("admin.company_team", company_id=company.id))
+
+    profile = LoanOfficerProfile.query.filter_by(user_id=member.id).first()
+    if not profile:
+        profile = LoanOfficerProfile(user_id=member.id, name=member.first_name or member.email or "Loan Officer")
+        db.session.add(profile)
+        db.session.commit()
+
+    if request.method == "POST":
+        profile.nmls = (request.form.get("nmls") or "").strip() or None
+        states_raw = request.form.get("licensed_states") or ""
+        states = [s.strip().upper() for s in states_raw.split(",") if s.strip()]
+        profile.licensed_states = ",".join(states) or None
+
+        mark_verified = request.form.get("verified") == "on"
+        if mark_verified and not profile.license_verified:
+            profile.license_verified = True
+            profile.license_verified_by = current_user.id
+            profile.license_verified_at = datetime.utcnow()
+        elif not mark_verified:
+            profile.license_verified = False
+            profile.license_verified_by = None
+            profile.license_verified_at = None
+
+        db.session.commit()
+        flash(f"Updated license info for {member.first_name or member.email}.", "success")
+        return redirect(url_for("admin.company_team", company_id=company.id))
+
+    return render_template(
+        "admin/loan_officer_license.html",
+        company=company,
+        member=member,
+        profile=profile,
     )
 
 

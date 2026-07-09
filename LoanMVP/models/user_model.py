@@ -71,7 +71,8 @@ class User(UserMixin, db.Model):
         "LoanOfficerProfile",
         back_populates="user",
         uselist=False,
-        cascade="all, delete"
+        cascade="all, delete",
+        foreign_keys="[LoanOfficerProfile.user_id]"
     )
 
     # Investor
