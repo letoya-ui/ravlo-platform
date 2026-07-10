@@ -93,3 +93,25 @@ def test_reference_image_base64_field_also_triggers_edit():
         })
 
     fake_client.images.edit.assert_called_once()
+
+
+def test_blueprint_image_base64_field_also_triggers_edit():
+    """investor_routes.py's floor-plan heuristic can misfire on an ordinary
+    bright real estate photo and store the upload under
+    "blueprint_image_base64" instead of "image_base64" -- this must still
+    edit the real photo, not silently fall through to a blind generate()
+    that ignores it entirely.
+    """
+    fake_client = MagicMock()
+    fake_client.images.edit.return_value = _fake_image_response()
+
+    with patch("LoanMVP.services.llm_studio_service._openai_client", return_value=fake_client):
+        result = dalle_generate_images({
+            "mode": "interior",
+            "room_type": "kitchen",
+            "blueprint_image_base64": base64.b64encode(b"fake photo bytes").decode(),
+        })
+
+    fake_client.images.edit.assert_called_once()
+    fake_client.images.generate.assert_not_called()
+    assert result["ok"] is True

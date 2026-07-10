@@ -141,8 +141,9 @@ def _dalle_prompt(mode: str, payload: dict) -> str:
 def dalle_generate_images(payload: dict) -> dict:
     """Call gpt-image-1 for each requested output mode.
 
-    When the caller supplies a reference photo (payload["image_base64"] or
-    payload["reference_image_base64"]), this edits that photo directly via
+    When the caller supplies a reference photo (payload["image_base64"],
+    payload["reference_image_base64"], or payload["blueprint_image_base64"]),
+    this edits that photo directly via
     images.edit() with input_fidelity="high" instead of generating a brand
     new image from a text prompt alone -- for a "redesign this room" request,
     generating from scratch ignores the actual property photo entirely and
@@ -230,7 +231,16 @@ def dalle_generate_images(payload: dict) -> dict:
                     )
 
         prompt = _dalle_prompt(mode, payload)
-        reference_b64 = payload.get("image_base64") or payload.get("reference_image_base64")
+        # "blueprint_image_base64" is where investor_routes.py stores the
+        # upload when its floor-plan heuristic flags a reference photo --
+        # a photo of an already-built room, not a diagram, still needs to be
+        # edited from rather than ignored, so treat it as a reference photo
+        # here too instead of silently falling through to a blind generate().
+        reference_b64 = (
+            payload.get("image_base64")
+            or payload.get("reference_image_base64")
+            or payload.get("blueprint_image_base64")
+        )
         try:
             if reference_b64:
                 import base64 as _b64

@@ -7947,7 +7947,13 @@ def _image_bytes_look_like_floor_plan(raw: bytes | None) -> bool:
         pct_dark = sum(gray_hist[:55]) / total
         pct_light = sum(gray_hist[205:]) / total
         saturation_mean = ImageStat.Stat(hsv).mean[1]
-        return pct_light >= 0.38 and pct_dark >= 0.012 and saturation_mean <= 72
+        # Ordinary bright, neutral-toned real estate photos (white kitchens,
+        # coastal/farmhouse staging) satisfy a loose "mostly light, low
+        # saturation" test just as well as an actual line-drawing floor
+        # plan -- pct_dark and saturation both need to sit much closer to
+        # "black lines on white paper" before this should ever override a
+        # user's real room photo.
+        return pct_light >= 0.55 and 0.015 <= pct_dark <= 0.06 and saturation_mean <= 15
     except Exception:
         return False
 
