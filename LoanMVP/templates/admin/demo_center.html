@@ -108,6 +108,15 @@
       <li>{{ bullet }}</li>
       {% endfor %}
     </ul>
+
+    {% if demo.role_key and can_use_demo_login %}
+    <form method="POST" action="{{ url_for('admin.demo_login', role=demo.role_key) }}" style="margin-top:14px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="re-btn primary sm" style="width:100%;">
+        <i class="lucide lucide-log-in"></i> Log in as {{ demo.role }}
+      </button>
+    </form>
+    {% endif %}
   </article>
   {% endfor %}
 </section>

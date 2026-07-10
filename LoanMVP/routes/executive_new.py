@@ -1283,6 +1283,7 @@ def demo_center():
         single_admin_mode=False,
         owner_admin_email="",
         route_namespace="executive",
+        can_use_demo_login=admin_routes._can_use_demo_login(current_user),
     )
 
 
