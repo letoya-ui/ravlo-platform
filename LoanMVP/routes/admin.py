@@ -103,6 +103,7 @@ def _is_owner_account(user) -> bool:
 def _demo_dashboard_cards():
     return [
         {
+            "role_key": "investor",
             "role": "Investor",
             "tagline": "Capital pipeline, deal room, and subscription-led access.",
             "theme": "Investor OS",
@@ -118,6 +119,7 @@ def _demo_dashboard_cards():
             ],
         },
         {
+            "role_key": "partner",
             "role": "Partners",
             "tagline": "Marketplace visibility, request intake, and service ops.",
             "theme": "Partner Network",
@@ -133,6 +135,7 @@ def _demo_dashboard_cards():
             ],
         },
         {
+            "role_key": "loan_officer",
             "role": "Loan Officers",
             "tagline": "Pipeline command center for leads, files, and capital submissions.",
             "theme": "Origination Desk",
@@ -148,6 +151,23 @@ def _demo_dashboard_cards():
             ],
         },
         {
+            "role_key": "processor",
+            "role": "Processing",
+            "tagline": "Document collection, conditions, and file turn velocity.",
+            "theme": "Processing Desk",
+            "kpis": [
+                {"label": "Active Files", "value": "19"},
+                {"label": "Docs Pending", "value": "23"},
+                {"label": "Avg Turn", "value": "1.6d"},
+            ],
+            "bullets": [
+                "Shows the file queue, document requests, and condition tracking in one view.",
+                "Demonstrates the handoff between origination and underwriting.",
+                "Good pairing with the Underwriting demo for a full-file walkthrough.",
+            ],
+        },
+        {
+            "role_key": "underwriter",
             "role": "Underwriting",
             "tagline": "Conditions, risk review, and file movement through approval.",
             "theme": "Risk Console",
@@ -160,6 +180,38 @@ def _demo_dashboard_cards():
                 "Communicates operational control and review velocity for partners and investors.",
                 "Frames conditions, risk flags, and decision support as one clean workspace.",
                 "Pairs naturally with the investor funding timeline for cross-role storytelling.",
+            ],
+        },
+        {
+            "role_key": "borrower",
+            "role": "Borrower",
+            "tagline": "Application status, document upload, and AI assistant.",
+            "theme": "Borrower Portal",
+            "kpis": [
+                {"label": "Loan Files", "value": "5"},
+                {"label": "Docs Uploaded", "value": "11"},
+                {"label": "Milestone", "value": "Underwriting"},
+            ],
+            "bullets": [
+                "The consumer-facing side of the pipeline -- status, docs, and messaging.",
+                "Shows the AI assistant panel that explains status and next steps.",
+                "Useful for showing lenders what their own borrowers will experience.",
+            ],
+        },
+        {
+            "role_key": "admin",
+            "role": "Company Admin",
+            "tagline": "Team, billing, analytics, and workspace controls for a licensed company.",
+            "theme": "Company Command Center",
+            "kpis": [
+                {"label": "Team Members", "value": "7"},
+                {"label": "Active Loans", "value": "5"},
+                {"label": "Plan", "value": "Enterprise"},
+            ],
+            "bullets": [
+                "The view a licensed Lending OS customer's admin sees day to day.",
+                "Team management, applicant assignment, billing, and analytics.",
+                "The right demo for a licensing / white-label sales conversation.",
             ],
         },
     ]
@@ -1029,7 +1081,107 @@ def demo_center():
         spotlight_metrics=spotlight_metrics,
         single_admin_mode=_single_admin_mode_enabled(),
         owner_admin_email=_owner_admin_email(),
+        can_use_demo_login=_can_use_demo_login(current_user),
     )
+
+
+# =========================================================
+# 🎭 DEMO LOGIN — instant "view as" for any role's dashboard
+# =========================================================
+
+# Only these accounts can start a demo session. Deliberately tighter than
+# admin_group / executive access -- this lets someone assume a demo
+# identity, so it's scoped to the specific people who actually give demos.
+_DEMO_LOGIN_ALLOWED_EMAILS = {
+    "letoya@ravlohq.com",
+    "jamaine.caughman@ravlohq.com",
+    "sandra@ravlohq.com",
+}
+
+_DEMO_ROLE_DASHBOARD_ENDPOINTS = {
+    "admin": "admin.company_dashboard",
+    "investor": "investor.dashboard",
+    "loan_officer": "loan_officer.dashboard",
+    "processor": "processor.dashboard",
+    "underwriter": "underwriter.dashboard",
+    "borrower": "borrower.dashboard",
+    "partner": "partners.dashboard",
+}
+
+
+def _can_use_demo_login(user) -> bool:
+    email = (getattr(user, "email", "") or "").strip().lower()
+    return email in _DEMO_LOGIN_ALLOWED_EMAILS
+
+
+@admin_bp.route("/demo-login/<role>", methods=["POST"])
+@login_required
+def demo_login(role):
+    from flask import session as flask_session
+    from flask_login import login_user, logout_user
+    from LoanMVP.services.demo_environment_service import ensure_demo_environment
+
+    # Already in demo mode -> just switching roles, re-validate the stashed
+    # return account rather than the current (demo) user. Otherwise this is
+    # a fresh entry into demo mode, gated to the named staff accounts.
+    already_in_demo = bool(flask_session.get("demo_admin_user_id"))
+
+    if already_in_demo:
+        return_user = User.query.get(flask_session["demo_admin_user_id"])
+        if not return_user or not _can_use_demo_login(return_user):
+            flask_session.pop("demo_admin_user_id", None)
+            flask_session.pop("is_demo_mode", None)
+            flask_session.pop("demo_role", None)
+            flash("Demo session is no longer valid. Please log in again.", "warning")
+            return redirect(url_for("auth.login"))
+    elif not _can_use_demo_login(current_user):
+        flash("Demo login isn't available on your account.", "warning")
+        return redirect(url_for("admin.demo_center"))
+
+    if role not in _DEMO_ROLE_DASHBOARD_ENDPOINTS:
+        flash("Unknown demo role.", "danger")
+        return redirect(url_for("admin.demo_center"))
+
+    demo_users = ensure_demo_environment()
+    target_user = demo_users[role]
+
+    if not already_in_demo:
+        flask_session["demo_admin_user_id"] = current_user.id
+
+    logout_user()
+    login_user(target_user)
+    flask_session["is_demo_mode"] = True
+    flask_session["demo_role"] = role
+
+    dashboard_endpoint = _DEMO_ROLE_DASHBOARD_ENDPOINTS[role]
+    if role == "admin":
+        return redirect(url_for(dashboard_endpoint, company_id=target_user.company_id))
+    return redirect(url_for(dashboard_endpoint))
+
+
+@admin_bp.route("/demo-exit", methods=["POST"])
+@login_required
+def demo_exit():
+    from flask import session as flask_session
+    from flask_login import login_user, logout_user
+
+    return_user_id = flask_session.pop("demo_admin_user_id", None)
+    flask_session.pop("is_demo_mode", None)
+    flask_session.pop("demo_role", None)
+
+    if not return_user_id:
+        flash("You're not in demo mode.", "info")
+        return redirect(url_for("executive.dashboard"))
+
+    return_user = User.query.get(return_user_id)
+    if not return_user or not _can_use_demo_login(return_user):
+        logout_user()
+        flash("Could not restore your account — please log in again.", "warning")
+        return redirect(url_for("auth.login"))
+
+    logout_user()
+    login_user(return_user)
+    return redirect(url_for("executive.dashboard"))
 
 
 @admin_bp.route("/companies")
