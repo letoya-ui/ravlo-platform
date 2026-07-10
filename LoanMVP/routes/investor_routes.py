@@ -3428,6 +3428,38 @@ def _asset_type_label(asset_type):
     return COMMERCIAL_ASSET_LABELS.get(_normalize_asset_type(asset_type), COMMERCIAL_ASSET_LABELS["any"])
 
 
+_US_STATE_ABBREVIATIONS = {
+    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN",
+    "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV",
+    "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN",
+    "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "DC",
+}
+_ADDRESS_ZIP_RE = re.compile(r"\b(\d{5})(?:-\d{4})?\b")
+_ADDRESS_STATE_RE = re.compile(r"\b([A-Za-z]{2})\b")
+
+
+def _parse_market_from_address_text(address_text):
+    """Best-effort ZIP/state extraction from a single free-text address field.
+
+    Deal Finder's address input is one box, not a structured
+    street/city/state/zip form -- when a user types a full address there
+    and leaves the ZIP/city/state fields blank, the RentCast search has no
+    market to query (it needs a ZIP or city+state to fetch listings from
+    before it can even attempt an address match). This recovers a ZIP
+    and/or state from the trailing end of the typed text so that search
+    still has somewhere to look, instead of silently returning nothing.
+    """
+    zip_match = _ADDRESS_ZIP_RE.search(address_text)
+    parsed_zip = zip_match.group(1) if zip_match else ""
+
+    parsed_state = ""
+    for candidate in _ADDRESS_STATE_RE.findall(address_text):
+        if candidate.upper() in _US_STATE_ABBREVIATIONS:
+            parsed_state = candidate.upper()
+
+    return parsed_zip, parsed_state
+
+
 def _property_matches_asset_type(prop, asset_type):
     asset_type = _normalize_asset_type(asset_type)
     if asset_type == "any":
@@ -4273,6 +4305,16 @@ def api_property_tool_search():
         or payload.get("postal_code")
         or ""
     ).strip()
+
+    # Deal Finder's address field is a single free-text box. If someone
+    # types a full address there ("123 Main St, Otisville, NY 10924") and
+    # leaves ZIP/city/state blank, RentCast has no market to search --
+    # recover a ZIP/state from the address text itself so the search
+    # still runs instead of silently returning nothing.
+    if address and not (city or state or zip_code):
+        parsed_zip, parsed_state = _parse_market_from_address_text(address)
+        zip_code = zip_code or parsed_zip
+        state = state or parsed_state
 
     strategy = (payload.get("strategy") or "all").strip().lower()
     if strategy not in {"flip", "rental", "airbnb", "brrrr", "land", "all"}:
