@@ -1,7 +1,7 @@
 """LLM-backed fallback for studio image generation and deal analysis.
 
 Used when the GPU Renovation Engine is unavailable.
-  - Image generation  → DALL-E 3 (OpenAI)
+  - Image generation  → gpt-image-1 (OpenAI)
   - Deal analysis     → Claude (Anthropic)
 
 Set AI_IMAGE_BACKEND=openai to bypass the engine entirely, or just let
@@ -76,10 +76,17 @@ _NEGATIVE_SUFFIX = (
 
 
 def _dalle_prompt(mode: str, payload: dict) -> str:
-    prefix = _MODE_PREFIX.get(mode) or _MODE_PREFIX["exterior_front"]
+    # `mode` here is the DALL-E output-mode key ("interior", "exterior_front",
+    # etc). Some callers only set payload["mode"] to a design preset/style
+    # (e.g. "hgtv") and never set "output_mode", so `mode` can arrive as
+    # something that isn't a real key in _MODE_PREFIX. `room_type` is only
+    # ever populated for a room-photo redesign, so it's a reliable fallback
+    # signal that this is an interior request even when the mode key is off.
+    is_interior = mode == "interior" or bool(payload.get("room_type"))
+    prefix = _MODE_PREFIX.get(mode) or (_MODE_PREFIX["interior"] if is_interior else _MODE_PREFIX["exterior_front"])
     parts = [prefix]
 
-    if mode == "interior":
+    if is_interior:
         if payload.get("room_type"):
             parts.append(f"{payload['room_type'].replace('_', ' ')} room")
         if payload.get("style"):
@@ -132,7 +139,16 @@ def _dalle_prompt(mode: str, payload: dict) -> str:
 
 
 def dalle_generate_images(payload: dict) -> dict:
-    """Call DALL-E 3 for each requested output mode.
+    """Call gpt-image-1 for each requested output mode.
+
+    When the caller supplies a reference photo (payload["image_base64"] or
+    payload["reference_image_base64"]), this edits that photo directly via
+    images.edit() with input_fidelity="high" instead of generating a brand
+    new image from a text prompt alone -- for a "redesign this room" request,
+    generating from scratch ignores the actual property photo entirely and
+    the result has no relation to the real room (wrong camera angle, wrong
+    windows, wrong layout). Falls back to images.generate() only when no
+    reference photo was provided.
 
     Returns a dict shaped like the Renovation Engine response so callers
     don't need to change their parsing logic:
@@ -214,14 +230,30 @@ def dalle_generate_images(payload: dict) -> dict:
                     )
 
         prompt = _dalle_prompt(mode, payload)
+        reference_b64 = payload.get("image_base64") or payload.get("reference_image_base64")
         try:
-            resp = client.images.generate(
-                model="gpt-image-1",
-                prompt=prompt,
-                n=1,
-                size="1024x1024",
-                quality="high",
-            )
+            if reference_b64:
+                import base64 as _b64
+                import io
+                image_file = io.BytesIO(_b64.b64decode(reference_b64))
+                image_file.name = "reference.png"
+                resp = client.images.edit(
+                    model="gpt-image-1",
+                    image=image_file,
+                    prompt=prompt,
+                    n=1,
+                    size="1024x1024",
+                    quality="high",
+                    input_fidelity="high",
+                )
+            else:
+                resp = client.images.generate(
+                    model="gpt-image-1",
+                    prompt=prompt,
+                    n=1,
+                    size="1024x1024",
+                    quality="high",
+                )
             item = resp.data[0]
             b64 = getattr(item, "b64_json", None)
             if not b64:
@@ -232,7 +264,7 @@ def dalle_generate_images(payload: dict) -> dict:
                     with urllib.request.urlopen(url) as r:
                         b64 = _b64.b64encode(r.read()).decode()
             images_b64[mode] = b64
-            log.info("gpt-image-1 generated %s OK", mode)
+            log.info("gpt-image-1 %s %s OK", "edited" if reference_b64 else "generated", mode)
         except Exception as exc:
             log.error("gpt-image-1 failed for mode=%s: %s", mode, exc)
             exc_str = str(exc)
@@ -265,7 +297,7 @@ def dalle_generate_images(payload: dict) -> dict:
         feature = payload.get("feature") or payload.get("mode") or "studio"
         log_studio_batch(
             feature=feature,
-            provider="dalle3",
+            provider="openai/gpt-image-1",
             payload=payload,
             images_b64_or_urls={k: "" for k in images_b64 if images_b64[k]},
             is_urls=False,
