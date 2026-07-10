@@ -15,7 +15,9 @@ silently fell back to an exterior-elevation template for what was supposed
 to be an interior room redesign.
 """
 import base64
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, create_autospec, patch
+
+import openai.resources.images as _openai_images_module
 
 from LoanMVP.services.llm_studio_service import _dalle_prompt, dalle_generate_images
 
@@ -64,8 +66,43 @@ def test_uses_images_edit_with_input_fidelity_when_reference_photo_present():
     fake_client.images.generate.assert_not_called()
     call_kwargs = fake_client.images.edit.call_args.kwargs
     assert call_kwargs["model"] == "gpt-image-1"
-    assert call_kwargs["input_fidelity"] == "high"
-    assert call_kwargs["quality"] == "high"
+    # "input_fidelity"/"quality" must NOT be passed as direct kwargs -- the
+    # pinned openai SDK's images.edit() signature predates gpt-image-1 and
+    # doesn't have these parameters at all, so a direct kwarg raises
+    # "unexpected keyword argument" in production (see the autospec test
+    # below, which is the one that actually catches this).
+    assert call_kwargs["extra_body"] == {"quality": "high", "input_fidelity": "high"}
+    assert "input_fidelity" not in call_kwargs
+    assert "quality" not in call_kwargs
+    assert result["ok"] is True
+
+
+def test_images_edit_call_matches_the_real_openai_sdk_signature():
+    """A plain MagicMock() client accepts any kwargs, so it can't catch a
+    call shape the installed openai SDK actually rejects -- which is
+    exactly what happened in production: images.edit() was called with
+    quality=/input_fidelity= as direct kwargs, but the pinned SDK version's
+    typed edit() signature doesn't have those parameters (it still
+    documents edit() as dall-e-2-only) and raised
+    "TypeError: Images.edit() got an unexpected keyword argument 'quality'"
+    on every single reference-photo redesign.
+
+    autospec enforces the real method signature, so this fails the same
+    way production did if the call shape regresses.
+    """
+    autospec_images = create_autospec(_openai_images_module.Images, instance=True)
+    autospec_images.edit.return_value = _fake_image_response()
+    fake_client = MagicMock()
+    fake_client.images = autospec_images
+
+    with patch("LoanMVP.services.llm_studio_service._openai_client", return_value=fake_client):
+        result = dalle_generate_images({
+            "mode": "interior",
+            "room_type": "kitchen",
+            "image_base64": base64.b64encode(b"fake photo bytes").decode(),
+        })
+
+    autospec_images.edit.assert_called_once()
     assert result["ok"] is True
 
 
