@@ -115,3 +115,46 @@ def test_blueprint_image_base64_field_also_triggers_edit():
     fake_client.images.edit.assert_called_once()
     fake_client.images.generate.assert_not_called()
     assert result["ok"] is True
+
+
+def test_image_url_field_is_fetched_and_triggers_edit():
+    """Design Studio's "pick a photo from this property" gallery selects an
+    existing saved photo by URL -- it's never re-uploaded as base64. That
+    URL has to be downloaded and edited from, not silently ignored just
+    because it isn't already base64.
+    """
+    fake_client = MagicMock()
+    fake_client.images.edit.return_value = _fake_image_response()
+
+    with patch("LoanMVP.services.llm_studio_service._openai_client", return_value=fake_client), \
+         patch(
+             "LoanMVP.services.llm_studio_service._fetch_reference_b64_from_url",
+             return_value=base64.b64encode(b"downloaded photo bytes").decode(),
+         ) as mock_fetch:
+        result = dalle_generate_images({
+            "mode": "interior",
+            "room_type": "living room",
+            "image_url": "https://cdn.example.com/property-photos/abc123.jpg",
+        })
+
+    mock_fetch.assert_called_once_with("https://cdn.example.com/property-photos/abc123.jpg")
+    fake_client.images.edit.assert_called_once()
+    fake_client.images.generate.assert_not_called()
+    assert result["ok"] is True
+
+
+def test_falls_back_to_generate_when_image_url_fetch_fails():
+    fake_client = MagicMock()
+    fake_client.images.generate.return_value = _fake_image_response()
+
+    with patch("LoanMVP.services.llm_studio_service._openai_client", return_value=fake_client), \
+         patch("LoanMVP.services.llm_studio_service._fetch_reference_b64_from_url", return_value=None):
+        result = dalle_generate_images({
+            "mode": "interior",
+            "room_type": "living room",
+            "image_url": "https://cdn.example.com/unreachable.jpg",
+        })
+
+    fake_client.images.generate.assert_called_once()
+    fake_client.images.edit.assert_not_called()
+    assert result["ok"] is True
