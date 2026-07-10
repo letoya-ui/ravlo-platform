@@ -6842,6 +6842,7 @@ def design_studio_generate_variant():
         notes = (data.get("notes") or "").strip()
         finish_level = (data.get("finish_level") or "").strip()
         target_materials = (data.get("target_materials") or "").strip()
+        budget_context = _design_budget_context_for_prompt(results)
         design_prompt_notes = _compose_design_studio_prompt(
             notes=notes,
             preset=preset,
@@ -6850,6 +6851,7 @@ def design_studio_generate_variant():
             property_type=(getattr(deal, "property_type", "") or "residential property") if deal else "residential property",
             finish_level=finish_level,
             target_materials=target_materials,
+            budget_context=budget_context,
         )
 
         payload = {
@@ -6858,6 +6860,7 @@ def design_studio_generate_variant():
             "room_type": room_type,
             "room_focus": room_type,
             "finish_level": finish_level,
+            "budget_context": budget_context,
             "target_materials": target_materials,
             "image_base64": image_base64,
             "image_url": "",
@@ -6903,6 +6906,7 @@ def design_studio_generate_variant():
             "floor": floor,
             "result_key": "|".join(_design_room_result_key(room_type, floor, preset)),
             "notes": notes,
+            "budget_context": budget_context,
             "seed": engine_json.get("seed"),
             "job_id": engine_json.get("job_id"),
             "meta": engine_json.get("meta") or {},
@@ -8024,6 +8028,7 @@ def _compose_blueprint_to_interior_prompt(
     description="",
     finish_level="",
     target_materials="",
+    budget_context="",
 ):
     room_label = safe_str(room_type).strip().lower() or "living room"
     return _prompt_join(
@@ -8035,6 +8040,7 @@ def _compose_blueprint_to_interior_prompt(
         f"Interior style: {preset}" if preset else "",
         f"Finish level: {finish_level}" if finish_level else "",
         f"Target materials and finishes: {target_materials}" if target_materials else "",
+        budget_context,
         f"Project description: {description}" if description else "",
         "Camera must be inside the room at normal standing height with walls, ceiling, floor, doors, windows, and architectural openings visible",
         "Infer a believable room volume from the plan: wall positions, circulation, openings, adjacency, daylight direction, and ceiling height",
@@ -8058,6 +8064,7 @@ def _compose_photo_to_interior_prompt(
     finish_level="",
     target_materials="",
     engine_prompt="",
+    budget_context="",
 ):
     return _prompt_join(
         f"Photorealistic eye-level {safe_str(room_type).strip().lower() or 'room'} interior redesign",
@@ -8076,6 +8083,7 @@ def _compose_photo_to_interior_prompt(
             finish_level=finish_level,
             target_materials=target_materials,
             engine_prompt=engine_prompt,
+            budget_context=budget_context,
         ),
     )
 
@@ -8277,6 +8285,39 @@ def _normalize_design_chat_payload(parsed, current_config=None, messages=None):
     return parsed
 
 
+def _design_budget_context_for_prompt(results):
+    """Dollar-grounded finish guidance from this deal's already-generated
+    room budget (Design Studio's "Generate Budget" action), so the AI
+    redesign shows finishes that are actually achievable at this deal's
+    real numbers instead of a generic "Standard"/"Premium" label.
+
+    Returns "" when no budget has been generated for this deal yet.
+    """
+    if not isinstance(results, dict):
+        return ""
+
+    design_budget = results.get("design_budget")
+    if not isinstance(design_budget, dict):
+        return ""
+
+    cost_low = safe_float(design_budget.get("cost_low")) or 0
+    cost_high = safe_float(design_budget.get("cost_high")) or 0
+    if cost_low <= 0 and cost_high <= 0:
+        return ""
+
+    if cost_low and cost_high and cost_low != cost_high:
+        range_text = f"${cost_low:,.0f}-${cost_high:,.0f}"
+    else:
+        range_text = f"${(cost_high or cost_low):,.0f}"
+
+    return (
+        f"Renovation budget for this room: {range_text}. Choose finishes, "
+        f"materials, fixtures, and cabinetry that are realistically "
+        f"achievable within this budget -- do not depict finishes that "
+        f"would obviously cost significantly more than this range."
+    )
+
+
 def _compose_design_studio_prompt(
     *,
     notes="",
@@ -8289,6 +8330,7 @@ def _compose_design_studio_prompt(
     finish_level="",
     target_materials="",
     engine_prompt="",
+    budget_context="",
 ):
     return _prompt_join(
         "Professional investor-grade full-concept interior redesign for a real estate presentation",
@@ -8300,6 +8342,7 @@ def _compose_design_studio_prompt(
         f"Exact user vision: {description}" if description else "",
         f"Finish level: {finish_level}" if finish_level else "",
         f"Target materials and finishes: {target_materials}" if target_materials else "",
+        budget_context,
         engine_prompt,
         "Output must be one photorealistic interior room image, not a collage, split-screen, blueprint, mood board, or render sheet",
         "Keep the source room recognizable through its camera angle, wall/window/door placement, ceiling height, and main structural envelope",
@@ -9337,6 +9380,12 @@ def generate_build_interior():
             part for part in [description, notes, target_materials] if part
         )
 
+        # Ground the redesign in this deal's actual rehab budget (from
+        # Design Studio's "Generate Budget" action) instead of only a
+        # generic finish-level label, so the AI shows finishes that are
+        # realistically achievable at this deal's real numbers.
+        budget_context = _design_budget_context_for_prompt(source_results)
+
         if source_is_floor_plan:
             base_prompt = _compose_blueprint_to_interior_prompt(
                 notes=notes,
@@ -9348,6 +9397,7 @@ def generate_build_interior():
                 description=description,
                 finish_level=finish_level,
                 target_materials=target_materials,
+                budget_context=budget_context,
             )
         else:
             base_prompt = _compose_photo_to_interior_prompt(
@@ -9361,6 +9411,7 @@ def generate_build_interior():
                 finish_level=finish_level,
                 target_materials=target_materials,
                 engine_prompt=chat_engine_prompt,
+                budget_context=budget_context,
             )
 
         required_material_directives = []
@@ -9563,6 +9614,7 @@ def generate_build_interior():
                 "interior_notes": notes,
                 "target_materials": target_materials,
                 "finish_level": finish_level,
+                "budget_context": budget_context,
                 "lot_size": lot_size,
                 "zoning": zoning,
                 "location": location,
@@ -9635,6 +9687,7 @@ def generate_build_interior():
                 "interior_notes": notes,
                 "target_materials": target_materials,
                 "finish_level": finish_level,
+                "budget_context": budget_context,
 
                 "prompt": interior_prompt_notes,
                 "prompt_notes": interior_prompt_notes,
