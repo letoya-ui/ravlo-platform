@@ -138,18 +138,44 @@ def _dalle_prompt(mode: str, payload: dict) -> str:
     return ", ".join(p.strip() for p in parts if p.strip())
 
 
+def _fetch_reference_b64_from_url(url: str) -> str | None:
+    """Download a reference photo from a URL and base64-encode it.
+
+    Reference photos aren't only ever a fresh upload converted to base64
+    by the caller -- Design Studio also lets a user pick an existing saved
+    property photo from a gallery, which arrives here as a URL, never
+    re-uploaded. Without this, that photo has no way to reach images.edit()
+    at all and every gallery-picked redesign silently falls back to a
+    blind images.generate() that ignores it.
+    """
+    if not url:
+        return None
+    try:
+        import base64 as _b64
+        import urllib.request
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return _b64.b64encode(resp.read()).decode()
+    except Exception as exc:
+        log.warning("Failed to fetch reference photo from url=%s: %s", url, exc)
+        return None
+
+
 def dalle_generate_images(payload: dict) -> dict:
     """Call gpt-image-1 for each requested output mode.
 
-    When the caller supplies a reference photo (payload["image_base64"],
-    payload["reference_image_base64"], or payload["blueprint_image_base64"]),
-    this edits that photo directly via
+    When the caller supplies a reference photo -- as base64
+    (payload["image_base64"], payload["reference_image_base64"], or
+    payload["blueprint_image_base64"]) or as a URL (payload["image_url"],
+    payload["reference_image_url"], or payload["blueprint_image_url"], e.g.
+    a photo picked from the property's saved photo gallery rather than
+    freshly uploaded) -- this edits that photo directly via
     images.edit() with input_fidelity="high" instead of generating a brand
     new image from a text prompt alone -- for a "redesign this room" request,
     generating from scratch ignores the actual property photo entirely and
     the result has no relation to the real room (wrong camera angle, wrong
     windows, wrong layout). Falls back to images.generate() only when no
-    reference photo was provided.
+    reference photo was provided or the URL couldn't be fetched.
 
     Returns a dict shaped like the Renovation Engine response so callers
     don't need to change their parsing logic:
@@ -185,6 +211,25 @@ def dalle_generate_images(payload: dict) -> dict:
 
     images_b64: dict[str, str | None] = {}
     errors: list[str] = []
+
+    # A reference photo can arrive as base64 (a fresh upload, converted by
+    # the caller) or as a URL (a photo picked from the property's saved
+    # photo gallery, never re-uploaded) -- both need to reach images.edit(),
+    # not just the base64 case. Resolved once up front since it doesn't
+    # vary per output mode.
+    reference_b64 = (
+        payload.get("image_base64")
+        or payload.get("reference_image_base64")
+        or payload.get("blueprint_image_base64")
+    )
+    if not reference_b64:
+        reference_url = (
+            payload.get("image_url")
+            or payload.get("reference_image_url")
+            or payload.get("blueprint_image_url")
+        )
+        if reference_url:
+            reference_b64 = _fetch_reference_b64_from_url(reference_url)
 
     for mode in output_modes:
         # Blueprint — derive from the exterior image when available so both
@@ -231,16 +276,6 @@ def dalle_generate_images(payload: dict) -> dict:
                     )
 
         prompt = _dalle_prompt(mode, payload)
-        # "blueprint_image_base64" is where investor_routes.py stores the
-        # upload when its floor-plan heuristic flags a reference photo --
-        # a photo of an already-built room, not a diagram, still needs to be
-        # edited from rather than ignored, so treat it as a reference photo
-        # here too instead of silently falling through to a blind generate().
-        reference_b64 = (
-            payload.get("image_base64")
-            or payload.get("reference_image_base64")
-            or payload.get("blueprint_image_base64")
-        )
         try:
             if reference_b64:
                 import base64 as _b64
