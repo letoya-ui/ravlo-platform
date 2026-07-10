@@ -667,6 +667,30 @@ function ravloSelectPropertyPhoto(btn) {
   let designMessages = [];
   let currentDesignEngineIntent = {};
   let pendingDesignPhoto = null;
+  let pendingDesignPhotoFile = null;
+
+  // The chat paperclip attachment only ever fed the vision-only "Ask Ravlo"
+  // call (GPT describing the photo in words) -- the actual pixels never
+  // reached generation, which reads blueprint_file/blueprint_url from this
+  // form. Mirror the attachment into blueprint_file the moment it's chosen
+  // so "AI Design Inputs" -- what generation actually reads -- and the chat
+  // attachment are the same photo, not two disconnected uploads.
+  function applyPendingPhotoToReferenceInput() {
+    if (!pendingDesignPhotoFile || !blueprintFile) return;
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(pendingDesignPhotoFile);
+      blueprintFile.files = dt.files;
+    } catch (_) {
+      // DataTransfer isn't available in every browser; the photo still
+      // reaches the chat's vision call either way.
+    }
+    if (blueprintUrl) blueprintUrl.value = '';
+    if (blueprintPreview) {
+      blueprintPreview.innerHTML = '<img src="' + pendingDesignPhoto + '" alt="Reference image">';
+    }
+    document.querySelectorAll('.property-photo-thumb').forEach((thumb) => thumb.classList.remove('is-selected'));
+  }
 
   if (designChatPhotoInput) {
     designChatPhotoInput.addEventListener('change', () => {
@@ -680,9 +704,11 @@ function ravloSelectPropertyPhoto(btn) {
       const reader = new FileReader();
       reader.onload = (e) => {
         pendingDesignPhoto = e.target.result;
+        pendingDesignPhotoFile = file;
         if (designChatPhotoThumb) designChatPhotoThumb.src = pendingDesignPhoto;
         if (designChatPhotoName) designChatPhotoName.textContent = file.name;
         if (designChatPhotoPreview) designChatPhotoPreview.style.display = 'flex';
+        applyPendingPhotoToReferenceInput();
       };
       reader.readAsDataURL(file);
       designChatPhotoInput.value = '';
@@ -692,8 +718,10 @@ function ravloSelectPropertyPhoto(btn) {
   if (designChatPhotoClear) {
     designChatPhotoClear.addEventListener('click', () => {
       pendingDesignPhoto = null;
+      pendingDesignPhotoFile = null;
       if (designChatPhotoPreview) designChatPhotoPreview.style.display = 'none';
       if (designChatPhotoThumb) designChatPhotoThumb.src = '';
+      if (blueprintFile) blueprintFile.value = '';
     });
   }
 
@@ -1041,6 +1069,7 @@ function ravloSelectPropertyPhoto(btn) {
       }
       if (!message) designMessages.push({ role: 'user', content: '[Reference photo attached]' });
       pendingDesignPhoto = null;
+      pendingDesignPhotoFile = null;
       if (designChatPhotoPreview) designChatPhotoPreview.style.display = 'none';
       if (designChatPhotoThumb) designChatPhotoThumb.src = '';
     }
