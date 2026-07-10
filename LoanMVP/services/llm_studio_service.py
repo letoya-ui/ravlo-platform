@@ -288,8 +288,14 @@ def dalle_generate_images(payload: dict) -> dict:
                     prompt=prompt,
                     n=1,
                     size="1024x1024",
-                    quality="high",
-                    input_fidelity="high",
+                    # "quality" and "input_fidelity" are gpt-image-1-only
+                    # edit() fields the pinned openai SDK's typed signature
+                    # predates (it still documents edit() as dall-e-2-only)
+                    # -- extra_body is the SDK's supported escape hatch for
+                    # sending API fields it doesn't know about yet, instead
+                    # of a plain kwarg that raises
+                    # "unexpected keyword argument".
+                    extra_body={"quality": "high", "input_fidelity": "high"},
                 )
             else:
                 resp = client.images.generate(
