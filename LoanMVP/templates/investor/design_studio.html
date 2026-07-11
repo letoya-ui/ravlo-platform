@@ -44,6 +44,11 @@
         onclick="openSendPartnerModal(JSON.parse(this.dataset.partnerCtx))">
         <i class="lucide lucide-send"></i> Send to Partner
       </button>
+      <button type="button" class="ravlo-btn ghost"
+        data-plans-ctx='{{ {"dealId": deal.id, "title": deal.address or deal.title or "Design Studio", "address": deal.address or ""}|tojson }}'
+        onclick="openSendPlansModal(JSON.parse(this.dataset.plansCtx))">
+        <i class="lucide lucide-mail"></i> Send Plans
+      </button>
       {% endif %}
     </div>
   </section>
@@ -1624,4 +1629,5 @@ function ravloSelectPropertyPhoto(btn) {
 </script>
 
 {% include 'components/send_to_partner_modal.html' %}
+{% include 'components/send_deal_plans_modal.html' %}
 {% endblock %}

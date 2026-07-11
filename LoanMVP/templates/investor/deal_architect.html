@@ -24,12 +24,32 @@
           onclick="openSendPartnerModal(JSON.parse(this.dataset.partnerCtx))">
           <i class="lucide lucide-send"></i> Send to Partner
         </button>
+        <button type="button" class="ravlo-btn ghost"
+          data-plans-ctx='{{ {"dealId": deal.id, "title": property_address or deal.title or "Deal", "address": property_address or ""}|tojson }}'
+          onclick="openSendPlansModal(JSON.parse(this.dataset.plansCtx))">
+          <i class="lucide lucide-mail"></i> Send Plans
+        </button>
       {% endif %}
       {% if deal and build_project and not design_only_mode %}
         <button type="button" class="ravlo-btn primary" id="generateBuildCostsTopBtn">Generate Build Costs</button>
       {% endif %}
     </div>
   </section>
+
+  {% if deal and deal.plan_shares %}
+  <section class="ravlo-card pad" aria-label="Sent plans history">
+    <div class="eyebrow">SENT</div>
+    <ul class="plan-shares-list">
+      {% for share in deal.plan_shares|sort(attribute="created_at", reverse=True) %}
+      <li>
+        <strong>{{ share.recipient_name or share.recipient_email }}</strong>
+        <span class="muted">{{ share.recipient_email }} &middot; {{ share.created_at.strftime("%b %d, %Y") if share.created_at else "" }}</span>
+        {% if share.note %}<div class="muted">{{ share.note }}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
 
   {% if deal %}
   <section class="architect-pathways" aria-label="Deal Architect paths">
@@ -373,6 +393,8 @@
 .cost-line-main small{line-height:1.45}
 .cost-line-amount{color:#eef3ff;white-space:nowrap}
 .hidden{display:none!important}
+.plan-shares-list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:10px}
+.plan-shares-list li{padding:10px 14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03)}
 @media (max-width:900px){.architect-hero-card,.architect-grid,.architect-pathways,.form-grid.two{grid-template-columns:1fr}.hero-actions,.form-actions,.package-actions{justify-content:flex-start}.cost-line-item,.design-budget-summary>div{align-items:flex-start;flex-direction:column}}
 </style>
 
@@ -686,4 +708,5 @@
 </script>
 
 {% include 'components/send_to_partner_modal.html' %}
+{% include 'components/send_deal_plans_modal.html' %}
 {% endblock %}

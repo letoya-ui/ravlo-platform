@@ -25,6 +25,11 @@
         <i class="lucide lucide-send"></i> Send Package
       </button>
       {% endif %}
+      {% if deal %}
+      <button type="button" class="ravlo-btn ghost" onclick="openSendPlansModal(_buildStudioCtx)">
+        <i class="lucide lucide-mail"></i> Send Plans
+      </button>
+      {% endif %}
     </div>
   </section>
 
@@ -587,4 +592,5 @@ var _buildStudioCtx = {
 };
 </script>
 {% include 'components/send_to_partner_modal.html' %}
+{% include 'components/send_deal_plans_modal.html' %}
 {% endblock %}
