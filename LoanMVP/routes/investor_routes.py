@@ -7302,6 +7302,8 @@ def build_studio(deal_id=None):
         blueprint_floor3_result=build_project.get("blueprint_third", {}) or build_project.get("blueprint_floor3", {}) or {},
         siteplan_result=siteplan_result,
         exterior_result=exterior_result,
+        interior_result=interior_result,
+        interior_rooms=interior_rooms,
         property_photo_gallery=property_gallery,
         package_result=package_result,
         has_saved_package=has_saved_package,
@@ -11353,6 +11355,28 @@ def generate_build_room():
         interior_block = _safe_dict(build_project.get("interior"))
         rooms = interior_block.get("rooms", []) or []
 
+        result_key = _design_room_result_key(room_type, floor, style)
+        existing_entry = next(
+            (
+                r for r in rooms
+                if _design_room_result_key(
+                    r.get("room_type"),
+                    r.get("floor"),
+                    r.get("style") or r.get("preset"),
+                ) == result_key
+            ),
+            None,
+        )
+        # Each call only ever gets one new still back (n=1 through both the
+        # GPU engine and the gpt-image-1 fallback), so "a handful of stills
+        # at different angles" for one room means calling this endpoint more
+        # than once with different notes -- accumulate onto the same room's
+        # gallery instead of replacing it, keeping the first-ever image as
+        # the stable cover thumbnail so it doesn't jump around as more
+        # angles get added.
+        existing_images = list((existing_entry or {}).get("images") or [])
+        combined_images = existing_images + room_urls
+
         room_entry = {
             "project_name": project_name,
             "property_type": property_type,
@@ -11366,16 +11390,15 @@ def generate_build_room():
             "floor": floor,
             "finish_level": finish_level,
             "target_materials": target_materials,
-            "result_key": "|".join(_design_room_result_key(room_type, floor, style)),
-            "image_url": room_urls[0],
-            "images": room_urls,
+            "result_key": "|".join(result_key),
+            "image_url": combined_images[0],
+            "images": combined_images,
             "meta": engine_json.get("meta") or {},
             "seed": engine_json.get("seed"),
             "job_id": engine_json.get("job_id"),
             "build_reference_image": blueprint_url,
         }
 
-        result_key = _design_room_result_key(room_type, floor, style)
         rooms = [
             r for r in rooms
             if _design_room_result_key(
