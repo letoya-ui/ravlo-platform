@@ -85,6 +85,7 @@ from LoanMVP.models.borrowers import (
     BorrowerInteraction,
     Deal,
     DealShare,
+    DealPlanShare,
 )
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.processor_model import ProcessorProfile
@@ -219,6 +220,8 @@ from LoanMVP.services.investor.property_orchestrator import (
     PropertyIntelligenceOrchestrator,
     ProviderBudget,
 )
+from LoanMVP.services.investor.deal_plans_pdf import build_deal_plans_pdf
+from LoanMVP.utils.emailer import send_pdf_bytes_attachment
 from LoanMVP.services.investor.investor_media_helpers import (
     _normalize_photo_urls,
     _persist_listing_photo_refs,
@@ -14024,83 +14027,54 @@ def ai_rehab_scope():
 @role_required("investor")
 def export_deal_report_pro(deal_id):
     deal = _get_owned_deal_or_404(deal_id)
-
-    r = deal.results_json or {}
-    resolved = deal.resolved_json or {}
-    rehab = _get_rehab_export_payload(deal)
-
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=LETTER)
-    width, height = LETTER
-    y = height - 50
-
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, y, "RAVLO Deal Report")
-    y -= 22
-
-    c.setFont("Helvetica", 10)
-    c.drawString(50, y, f"Title: {deal.title or '—'}"); y -= 14
-    c.drawString(50, y, f"Property ID: {getattr(deal, 'property_id', None) or '—'}"); y -= 14
-    c.drawString(50, y, f"Strategy: {getattr(deal, 'strategy', None) or '—'}"); y -= 14
-    if getattr(deal, "created_at", None):
-        c.drawString(50, y, f"Created: {deal.created_at.strftime('%Y-%m-%d %H:%M')}"); y -= 22
-    else:
-        y -= 22
-
-    prop = (resolved.get("property") or {}) if isinstance(resolved, dict) else {}
-    addr = prop.get("address")
-    city = prop.get("city")
-    state = prop.get("state")
-    zipc = prop.get("zip")
-
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, "Property Summary"); y -= 16
-    c.setFont("Helvetica", 10)
-    c.drawString(50, y, f"Address: {addr or '—'}"); y -= 14
-    c.drawString(50, y, f"City/State/Zip: {city or '—'}, {state or '—'} {zipc or ''}"); y -= 18
-
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, "Key Results"); y -= 16
-    c.setFont("Helvetica", 10)
-
-    if "profit" in r:
-        c.drawString(50, y, f"Flip Profit: {_fmt_money(r.get('profit'))}")
-        y -= 14
-    if "net_cashflow" in r:
-        c.drawString(50, y, f"Rental Net Cashflow (mo): {_fmt_money(r.get('net_cashflow'))}")
-        y -= 14
-    if "net_monthly" in r:
-        c.drawString(50, y, f"Airbnb Net Monthly: {_fmt_money(r.get('net_monthly'))}")
-        y -= 14
-
-    y -= 10
-
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, "Rehab Summary"); y -= 16
-    c.setFont("Helvetica", 10)
-
-    if isinstance(rehab, dict) and rehab:
-        total_rehab = rehab.get("total") or rehab.get("estimated_rehab_cost")
-        scope_value = rehab.get("scope")
-        cpsf = rehab.get("cost_per_sqft")
-
-        if isinstance(scope_value, dict):
-            scope_label = scope_value.get("rehab_level") or "Detailed scope"
-        else:
-            scope_label = scope_value or "—"
-
-        c.drawString(50, y, f"Scope: {scope_label}"); y -= 14
-        c.drawString(50, y, f"Total Rehab: {_fmt_money(total_rehab)}"); y -= 14
-        c.drawString(50, y, f"Cost per Sqft: {_fmt_money(cpsf)}"); y -= 14
-    else:
-        c.drawString(50, y, "No rehab summary available."); y -= 14
-
-    c.showPage()
-    c.save()
-
-    buffer.seek(0)
+    buffer = build_deal_plans_pdf(deal)
     filename = f"ravlo_deal_report_{deal.id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
+
+
+@investor_bp.route("/deals/<int:deal_id>/send-plans", methods=["POST"])
+@login_required
+@role_required("investor")
+def send_deal_plans(deal_id):
+    deal = _get_owned_deal_or_404(deal_id)
+
+    recipient_name = (request.form.get("recipient_name") or "").strip()
+    recipient_email = (request.form.get("recipient_email") or "").strip()
+    note = (request.form.get("note") or "").strip()
+
+    if "@" not in recipient_email or "." not in recipient_email.split("@")[-1]:
+        return jsonify({"status": "error", "message": "Enter a valid recipient email."}), 400
+
+    buffer = build_deal_plans_pdf(deal)
+    filename = f"ravlo_development_report_{deal.id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
+
+    html_body = render_template(
+        "email/deal_plans_share.html",
+        deal=deal,
+        sender_name=(current_user.full_name or current_user.email),
+        recipient_name=recipient_name,
+        note=note,
+    )
+
+    send_pdf_bytes_attachment(
+        recipient_email,
+        f"{deal.title or 'Deal'} — Development Report from Ravlo",
+        html_body,
+        filename,
+        buffer.getvalue(),
+    )
+
+    share = DealPlanShare(
+        deal_id=deal.id,
+        sent_by_user_id=current_user.id,
+        recipient_name=recipient_name or None,
+        recipient_email=recipient_email,
+        note=note or None,
+    )
+    db.session.add(share)
+    db.session.commit()
+
+    return jsonify({"status": "ok", "recipient_email": recipient_email})
 
 
 @investor_bp.route("/deals/<int:deal_id>/export/rehab-scope", methods=["GET"])

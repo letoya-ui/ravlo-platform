@@ -382,3 +382,20 @@ class DealShare(db.Model):
 
     def __repr__(self):
         return f"<DealShare id={self.id} property_id={self.property_id} status={self.status}>"
+
+
+class DealPlanShare(db.Model):
+    __tablename__ = "deal_plan_shares"
+
+    id = db.Column(db.Integer, primary_key=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey("deals.id"), nullable=False)
+    sent_by_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    recipient_name = db.Column(db.String(120))
+    recipient_email = db.Column(db.String(255), nullable=False)
+    note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    deal = db.relationship("Deal", backref="plan_shares")
+
+    def __repr__(self):
+        return f"<DealPlanShare id={self.id} deal_id={self.deal_id} recipient_email={self.recipient_email}>"

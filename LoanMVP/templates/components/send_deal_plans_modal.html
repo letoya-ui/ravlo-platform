@@ -1,0 +1,248 @@
+{# components/send_deal_plans_modal.html
+   "Send Plans" modal -- emails the Deal's development-report PDF (property
+   summary, purchase price/budget, Design/Build Studio plans) to a loan
+   officer, another investor, or anyone else.
+   Include at the bottom of {% block content %} on any investor deal page.
+   Trigger by calling: openSendPlansModal({dealId, title, address})
+#}
+
+<div id="sendPlansModal" class="sdp-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="sdpModalTitle">
+  <div class="sdp-drawer">
+    <header class="sdp-header">
+      <div>
+        <div class="sdp-eyebrow">DEVELOPMENT REPORT</div>
+        <h2 id="sdpModalTitle" class="sdp-title">Send Plans</h2>
+        <p class="sdp-subtitle" id="sdpContextLine">Email the property, budget, and Design/Build Studio plans as a PDF.</p>
+      </div>
+      <button type="button" class="sdp-close" onclick="closeSendPlansModal()" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </header>
+
+    <div class="sdp-section" id="sdpForm">
+      <label class="sdp-label" for="sdpRecipientName">Recipient Name</label>
+      <input id="sdpRecipientName" type="text" class="sdp-input" placeholder="e.g. Jamie Rivera, Loan Officer">
+
+      <label class="sdp-label" for="sdpRecipientEmail">Recipient Email <span class="sdp-req">*</span></label>
+      <input id="sdpRecipientEmail" type="email" class="sdp-input" placeholder="name@example.com">
+
+      <label class="sdp-label" for="sdpNote">Note (optional)</label>
+      <textarea id="sdpNote" class="sdp-textarea" rows="3" placeholder="Anything you'd like them to know…"></textarea>
+    </div>
+
+    <div class="sdp-section sdp-hidden sdp-success" id="sdpSuccess">
+      <div class="sdp-success-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <h3 class="sdp-success-title">Plans Sent!</h3>
+      <p class="sdp-success-msg" id="sdpSuccessMsg">The development report has been emailed.</p>
+    </div>
+
+    <footer class="sdp-footer" id="sdpFooter">
+      <button type="button" class="sdp-btn-ghost" onclick="closeSendPlansModal()">Cancel</button>
+      <button type="button" class="sdp-btn-primary" id="sdpSubmitBtn" onclick="submitSendDealPlans()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Send Plans
+      </button>
+    </footer>
+  </div>
+</div>
+
+<style>
+.sdp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9900;
+  background: rgba(5, 10, 18, 0.72);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+.sdp-overlay.sdp-open { opacity: 1; pointer-events: all; }
+.sdp-drawer {
+  background: var(--ravlo-surface, #fff);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 0 0 8px;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.28);
+  transform: translateY(30px);
+  transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+}
+.sdp-overlay.sdp-open .sdp-drawer { transform: translateY(0); }
+@media (min-width: 640px) {
+  .sdp-overlay { align-items: center; }
+  .sdp-drawer { border-radius: 18px; max-height: 88vh; }
+}
+.sdp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+}
+.sdp-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ravlo-blue, #3b82f6);
+  margin-bottom: 4px;
+}
+.sdp-title { margin: 0 0 2px; font-size: 1.15rem; font-weight: 700; color: var(--ravlo-text, #111827); }
+.sdp-subtitle { margin: 0; font-size: 0.82rem; color: var(--ravlo-muted, #6b7280); }
+.sdp-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--ravlo-muted, #6b7280); padding: 4px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.sdp-close:hover { color: var(--ravlo-text, #111827); background: rgba(0,0,0,0.06); }
+.sdp-section { padding: 18px 24px 4px; }
+.sdp-label {
+  font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--ravlo-muted, #6b7280);
+  margin-bottom: 9px; margin-top: 14px; display: block;
+}
+.sdp-label:first-child { margin-top: 0; }
+.sdp-req { color: var(--ravlo-blue, #3b82f6); }
+.sdp-input {
+  width: 100%; box-sizing: border-box; padding: 9px 12px;
+  border: 1.5px solid rgba(0,0,0,0.13); border-radius: 10px;
+  font-size: 0.88rem; background: var(--ravlo-surface, #fff);
+  color: var(--ravlo-text, #111827); outline: none; transition: border-color 0.15s;
+}
+.sdp-input:focus { border-color: var(--ravlo-blue, #3b82f6); }
+.sdp-textarea {
+  width: 100%; box-sizing: border-box; padding: 10px 13px;
+  border: 1.5px solid rgba(0,0,0,0.13); border-radius: 10px;
+  font-size: 0.88rem; resize: vertical; background: var(--ravlo-surface, #fff);
+  color: var(--ravlo-text, #111827); outline: none; transition: border-color 0.15s;
+  font-family: inherit;
+}
+.sdp-textarea:focus { border-color: var(--ravlo-blue, #3b82f6); }
+.sdp-success { text-align: center; padding-top: 28px; padding-bottom: 20px; }
+.sdp-success-icon {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(34,197,94,0.12); color: #22c55e;
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
+}
+.sdp-success-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 6px; color: var(--ravlo-text, #111827); }
+.sdp-success-msg { font-size: 0.85rem; color: var(--ravlo-muted, #6b7280); margin: 0; }
+.sdp-footer {
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  padding: 14px 24px 16px; border-top: 1px solid rgba(0,0,0,0.07); margin-top: 12px;
+}
+.sdp-btn-ghost {
+  padding: 9px 18px; border: 1.5px solid rgba(0,0,0,0.13); border-radius: 10px;
+  background: transparent; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  color: var(--ravlo-text, #111827); transition: all 0.15s;
+}
+.sdp-btn-ghost:hover { background: rgba(0,0,0,0.05); }
+.sdp-btn-primary {
+  padding: 9px 20px; border: none; border-radius: 10px;
+  background: var(--ravlo-blue, #3b82f6); color: #fff;
+  font-size: 0.85rem; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; gap: 7px; transition: opacity 0.15s, transform 0.1s;
+}
+.sdp-btn-primary:hover { opacity: 0.9; }
+.sdp-btn-primary:active { transform: scale(0.97); }
+.sdp-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.sdp-hidden { display: none !important; }
+</style>
+
+<script>
+(function () {
+  var _ctx = {};
+
+  window.openSendPlansModal = function (ctx) {
+    _ctx = ctx || {};
+    document.getElementById('sdpForm').classList.remove('sdp-hidden');
+    document.getElementById('sdpFooter').classList.remove('sdp-hidden');
+    document.getElementById('sdpSuccess').classList.add('sdp-hidden');
+    document.getElementById('sdpRecipientName').value = '';
+    document.getElementById('sdpRecipientEmail').value = '';
+    document.getElementById('sdpNote').value = '';
+
+    var line = _ctx.title || '';
+    if (_ctx.address && _ctx.address !== _ctx.title) line += (line ? ' — ' : '') + _ctx.address;
+    document.getElementById('sdpContextLine').textContent = line
+      ? 'Send "' + line + '" as a PDF.'
+      : 'Email the property, budget, and Design/Build Studio plans as a PDF.';
+
+    document.getElementById('sendPlansModal').classList.add('sdp-open');
+    document.getElementById('sendPlansModal').setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.closeSendPlansModal = function () {
+    document.getElementById('sendPlansModal').classList.remove('sdp-open');
+    document.getElementById('sendPlansModal').setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  };
+
+  document.getElementById('sendPlansModal').addEventListener('click', function (e) {
+    if (e.target === this) closeSendPlansModal();
+  });
+
+  window.submitSendDealPlans = function () {
+    var email = document.getElementById('sdpRecipientEmail').value.trim();
+    if (!email || email.indexOf('@') === -1) {
+      var input = document.getElementById('sdpRecipientEmail');
+      input.focus();
+      input.style.borderColor = '#ef4444';
+      return;
+    }
+    document.getElementById('sdpRecipientEmail').style.borderColor = '';
+
+    if (!_ctx.dealId) return;
+
+    var btn = document.getElementById('sdpSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    var formData = new URLSearchParams();
+    formData.append('recipient_name', document.getElementById('sdpRecipientName').value.trim());
+    formData.append('recipient_email', email);
+    formData.append('note', document.getElementById('sdpNote').value.trim());
+
+    fetch('/investor/deals/' + _ctx.dealId + '/send-plans', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      credentials: 'same-origin',
+      body: formData.toString(),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.status === 'ok') {
+          document.getElementById('sdpForm').classList.add('sdp-hidden');
+          document.getElementById('sdpFooter').classList.add('sdp-hidden');
+          document.getElementById('sdpSuccessMsg').textContent = 'Sent to ' + data.recipient_email + '.';
+          document.getElementById('sdpSuccess').classList.remove('sdp-hidden');
+          setTimeout(function () {
+            closeSendPlansModal();
+            if (typeof window.onDealPlansSent === 'function') window.onDealPlansSent();
+          }, 2200);
+        } else {
+          _resetSendPlansBtn(btn);
+          alert(data.message || 'Something went wrong. Please try again.');
+        }
+      })
+      .catch(function () {
+        _resetSendPlansBtn(btn);
+        alert('Network error. Please try again.');
+      });
+  };
+
+  function _resetSendPlansBtn(btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Plans';
+  }
+})();
+</script>

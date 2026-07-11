@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family:Inter,Arial;background:#f8f9fb;padding:40px;color:#333;">
+  <div style="max-width:650px;margin:auto;background:white;padding:35px;border-radius:14px;
+              box-shadow:0 0 25px rgba(0,0,0,0.12);">
+
+    <h2 style="color:#1a1a1a;font-size:24px;margin-bottom:10px;">
+        {{ sender_name }} sent you a Ravlo Development Report
+    </h2>
+
+    <p style="font-size:15px;line-height:1.6;">
+      {% if recipient_name %}Dear <b>{{ recipient_name }}</b>,<br><br>{% endif %}
+      <b>{{ sender_name }}</b> shared the development report for
+      <b>{{ deal.title or "a property" }}</b>{% if deal.address %} ({{ deal.address }}){% endif %}
+      with you on Ravlo.
+    </p>
+
+    {% if note %}
+    <div style="margin:25px 0;padding:18px;background:#eef5ff;border-left:4px solid #7ab8ff;">
+      <b>Note from {{ sender_name }}:</b><br>
+      {{ note }}
+    </div>
+    {% endif %}
+
+    <p style="font-size:15px;">
+      The full development report -- purchase price, budget, and the Design
+      &amp; Build Studio plans -- is attached as a PDF.
+    </p>
+
+    <p style="margin-top:35px;font-size:14px;color:#777;">
+      Sent via Ravlo
+    </p>
+  </div>
+</body>
+</html>

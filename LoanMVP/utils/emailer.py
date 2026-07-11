@@ -28,3 +28,19 @@ def send_email(to, subject, html_body, text_body=None):
     )
 
     mail.send(msg)
+
+
+def send_pdf_bytes_attachment(to, subject, html_body, filename, pdf_bytes):
+    msg = Message(
+        subject=subject,
+        recipients=[to],
+        html=html_body
+    )
+
+    msg.attach(
+        filename=filename,
+        content_type="application/pdf",
+        data=pdf_bytes
+    )
+
+    mail.send(msg)

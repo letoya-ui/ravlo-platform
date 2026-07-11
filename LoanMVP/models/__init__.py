@@ -63,6 +63,7 @@ from LoanMVP.models.borrowers import (
     BorrowerMessage,
     Deal,
     DealShare,
+    DealPlanShare,
 )
 
 # 💬 Chat / AI conversation history
