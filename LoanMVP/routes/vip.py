@@ -192,9 +192,7 @@ def _default_vip_role_for_partner(partner):
     if not partner:
         return "partner"
 
-    if _partner_role_mentions(partner, "insurance", "insurer"):
-        return "insurance"
-
+    is_insurance = _partner_role_mentions(partner, "insurance", "insurer")
     is_realtor = _partner_role_mentions(
         partner,
         "realtor",
@@ -212,7 +210,13 @@ def _default_vip_role_for_partner(partner):
     if is_realtor and is_contractor:
         return "contractor_realtor"
 
-    if _partner_role_mentions(partner, "realtor", "real estate", "real-estate", "realty"):
+    if is_realtor and is_insurance:
+        return "insurance_realtor"
+
+    if is_insurance:
+        return "insurance"
+
+    if is_realtor:
         return "realtor"
 
     raw_category = (getattr(partner, "category", "") or "").strip().lower()
