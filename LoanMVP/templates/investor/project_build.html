@@ -7,6 +7,9 @@
   {% set pb_address = build_project.get('location') or (project.location if project else '') or (deal.address if deal else '') %}
   {% set pb_property_type = build_project.get('property_type') or (project.property_type if project else '') %}
   {% set pb_scope_detail = [pb_property_type.replace('_', ' ').title() if pb_property_type else '', ((floor_count|string) ~ ' floors') if floor_count else '', ((lot_count|string) ~ ' lots') if lot_count else '']|select|join(' / ') %}
+  {% set interior_rooms = interior_rooms|default([], true) %}
+  {% set interior_result = interior_result|default({}, true) %}
+  {% set has_blueprint = blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) %}
   <section class="studio-hero-card">
       <div>
       <div class="eyebrow">{{ hero_eyebrow or "RAVLO BUILD STUDIO" }}</div>
@@ -387,6 +390,66 @@
     </article>
   </section>
 
+  <section class="ravlo-card pad room-gallery-section">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ROOM GALLERY</div>
+        <h2>Walk Through Every Room</h2>
+        <p class="muted" style="margin-top:4px;font-size:.85rem;">
+          Generate a few AI stills of each room from different angles once your blueprint is ready — browse them like listing photos for a home that doesn't exist yet.
+        </p>
+      </div>
+    </div>
+
+    {% if not has_blueprint %}
+    <div class="empty-state-inline">Generate and save a blueprint above first — room photos are grounded in that floor plan.</div>
+    {% else %}
+    <div class="room-slot-grid" id="roomGalleryRoomGrid">
+      {% set room_gallery_slots = [
+        {"key": "living_room", "label": "Living Room", "icon_class": "lucide-sofa"},
+        {"key": "kitchen", "label": "Kitchen", "icon_class": "lucide-utensils"},
+        {"key": "primary_bedroom", "label": "Primary Bedroom", "icon_class": "lucide-bed-double"},
+        {"key": "bathroom", "label": "Bathroom", "icon_class": "lucide-bath"},
+        {"key": "dining_room", "label": "Dining Room", "icon_class": "lucide-table-2"},
+        {"key": "office", "label": "Office", "icon_class": "lucide-briefcase-business"}
+      ] %}
+      {% for slot in room_gallery_slots %}
+        {% set ns = namespace(room_images=[]) %}
+        {% for r in interior_rooms %}
+          {% if r.get('room_type', '')|lower|replace(' ', '_') == slot.key %}
+            {% set ns.room_images = r.get('images') or ([r['image_url']] if r.get('image_url') else []) %}
+          {% endif %}
+        {% endfor %}
+        <button type="button"
+          class="room-slot{% if loop.first %} is-active{% endif %}"
+          data-room-key="{{ slot.key }}"
+          data-room-label="{{ slot.label }}"
+          data-images='{{ ns.room_images|tojson }}'
+        >
+          <i class="lucide {{ slot.icon_class }} room-slot-icon" aria-hidden="true"></i>
+          <span class="room-slot-label">{{ slot.label }}</span>
+          <span class="room-slot-status {{ 'done' if ns.room_images else 'pending' }}">{{ ns.room_images|length }} photo{{ 's' if ns.room_images|length != 1 else '' }}</span>
+        </button>
+      {% endfor %}
+    </div>
+
+    <div class="room-gallery-controls">
+      <textarea id="roomGalleryNotes" rows="2" placeholder="Optional: describe this angle — e.g. 'wide shot from the entry' or 'view toward the fireplace'."></textarea>
+      <button type="button" class="ravlo-btn primary" id="roomGalleryGenerateBtn">
+        <i class="lucide lucide-camera"></i> Generate Photo of <span id="roomGalleryActiveLabel">Living Room</span>
+      </button>
+    </div>
+
+    <div class="room-gallery-grid" id="roomGalleryGrid"></div>
+    <div class="empty-state-inline" id="roomGalleryEmpty">No photos yet for this room — generate the first one above.</div>
+
+    <div class="room-gallery-lightbox hidden" id="roomGalleryLightbox">
+      <button type="button" class="room-gallery-lightbox-close" id="roomGalleryLightboxClose" aria-label="Close">&times;</button>
+      <img src="" alt="Room photo" id="roomGalleryLightboxImg">
+    </div>
+    {% endif %}
+  </section>
+
   <div class="loading-overlay hidden" id="buildLoadingOverlay">
     <div class="loading-card">
       <div class="loader-ring"></div>
@@ -526,6 +589,26 @@
 .loader-ring{width:58px;height:58px;border-radius:50%;margin:0 auto;border:4px solid rgba(255,255,255,.12);border-top-color:#7ab8ff;animation:build-spin 1s linear infinite}
 @keyframes build-spin{to{transform:rotate(360deg)}}
 @media (max-width: 900px){.studio-hero-card,.project-build-grid,.form-grid.two{grid-template-columns:1fr}.build-context-panel{position:static}.build-chat-message.user,.build-chat-message.assistant{margin-left:0;margin-right:0}.build-chat-result-grid{grid-template-columns:1fr}}
+
+/* ── Room Gallery ── */
+.room-gallery-section .room-slot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,28vw),1fr));gap:12px;margin-top:16px}
+.room-gallery-section .room-slot{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;border-radius:16px;border:2px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);cursor:pointer;transition:all .2s;color:#eef3ff;font-size:13px}
+.room-gallery-section .room-slot:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.06)}
+.room-gallery-section .room-slot.is-active{border-color:#4f8cff;background:rgba(79,140,255,.08)}
+.room-gallery-section .room-slot-icon{font-size:24px;color:#8dbdff}
+.room-gallery-section .room-slot-label{font-weight:600;text-align:center}
+.room-gallery-section .room-slot-status{font-size:11px;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;background:rgba(255,255,255,.06);color:#9fb0ca}
+.room-gallery-section .room-slot-status.done{background:rgba(34,197,94,.15);color:#22c55e}
+.room-gallery-controls{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;margin-top:18px}
+.room-gallery-controls textarea{flex:1 1 260px;min-width:220px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);color:#eef3ff;font:inherit;resize:vertical}
+.room-gallery-controls .ravlo-btn{white-space:nowrap}
+.room-gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:16px}
+.room-gallery-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.10);cursor:pointer;transition:transform .15s}
+.room-gallery-grid img:hover{transform:scale(1.03)}
+.room-gallery-lightbox{position:fixed;inset:0;background:rgba(5,8,14,.9);display:flex;align-items:center;justify-content:center;z-index:9999;padding:24px}
+.room-gallery-lightbox.hidden{display:none}
+.room-gallery-lightbox img{max-width:min(90vw,900px);max-height:85vh;border-radius:16px;box-shadow:0 26px 70px rgba(0,0,0,.4)}
+.room-gallery-lightbox-close{position:absolute;top:24px;right:28px;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:22px;line-height:1;cursor:pointer}
 </style>
 
 <script>
@@ -1391,6 +1474,119 @@ function applyBuildPreset(presetKey) {
   // If a location is already pre-filled (from saved deal/project), resolve it silently
   const prefilledAddress = locationInput.value.trim();
   if (prefilledAddress.length > 6) resolveAddress(prefilledAddress);
+})();
+</script>
+
+<script>
+(() => {
+  const roomGrid = document.getElementById('roomGalleryRoomGrid');
+  if (!roomGrid) return;
+
+  const notesInput = document.getElementById('roomGalleryNotes');
+  const activeLabelEl = document.getElementById('roomGalleryActiveLabel');
+  const generateBtn = document.getElementById('roomGalleryGenerateBtn');
+  const galleryGrid = document.getElementById('roomGalleryGrid');
+  const emptyState = document.getElementById('roomGalleryEmpty');
+  const lightbox = document.getElementById('roomGalleryLightbox');
+  const lightboxImg = document.getElementById('roomGalleryLightboxImg');
+  const lightboxClose = document.getElementById('roomGalleryLightboxClose');
+
+  function activeSlot() {
+    return roomGrid.querySelector('.room-slot.is-active');
+  }
+
+  function renderGallery(images) {
+    galleryGrid.innerHTML = '';
+    const hasImages = images && images.length > 0;
+    emptyState.classList.toggle('hidden', hasImages);
+    galleryGrid.classList.toggle('hidden', !hasImages);
+    if (!hasImages) return;
+
+    images.forEach((url) => {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = 'Room photo';
+      img.addEventListener('click', () => {
+        lightboxImg.src = url;
+        lightbox.classList.remove('hidden');
+      });
+      galleryGrid.appendChild(img);
+    });
+  }
+
+  function selectSlot(slot) {
+    roomGrid.querySelectorAll('.room-slot').forEach((s) => s.classList.remove('is-active'));
+    slot.classList.add('is-active');
+    activeLabelEl.textContent = slot.dataset.roomLabel;
+    let images = [];
+    try {
+      images = JSON.parse(slot.dataset.images || '[]');
+    } catch (_) {
+      images = [];
+    }
+    renderGallery(images);
+  }
+
+  roomGrid.querySelectorAll('.room-slot').forEach((slot) => {
+    slot.addEventListener('click', () => selectSlot(slot));
+  });
+
+  const firstSlot = activeSlot() || roomGrid.querySelector('.room-slot');
+  if (firstSlot) selectSlot(firstSlot);
+
+  lightboxClose?.addEventListener('click', () => lightbox.classList.add('hidden'));
+  lightbox?.addEventListener('click', (e) => {
+    if (e.target === lightbox) lightbox.classList.add('hidden');
+  });
+
+  generateBtn?.addEventListener('click', async () => {
+    const slot = activeSlot();
+    if (!slot) return;
+
+    const dealId = window._projectBuildPartnerCtx?.dealId;
+    if (!dealId) {
+      alert('Save this project to a deal before generating room photos.');
+      return;
+    }
+
+    generateBtn.disabled = true;
+    const originalLabel = generateBtn.innerHTML;
+    generateBtn.innerHTML = '<i class="lucide lucide-loader-circle"></i> Generating…';
+
+    try {
+      const form = new FormData();
+      form.append('deal_id', dealId);
+      form.append('room_type', slot.dataset.roomKey);
+      form.append('floor', 'main');
+      form.append('notes', notesInput?.value || '');
+
+      const response = await fetch("{{ url_for('investor.generate_build_room') }}", {
+        method: 'POST',
+        body: form,
+        headers: { 'X-CSRFToken': '{{ csrf_token() }}', 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+      });
+      const data = await response.json();
+      if (!response.ok || data.status !== 'ok') {
+        throw new Error(data.message || 'Room photo generation failed.');
+      }
+
+      const images = data.room_result?.images || (data.room_result?.image_url ? [data.room_result.image_url] : []);
+      slot.dataset.images = JSON.stringify(images);
+      const statusEl = slot.querySelector('.room-slot-status');
+      if (statusEl) {
+        statusEl.textContent = `${images.length} photo${images.length !== 1 ? 's' : ''}`;
+        statusEl.classList.toggle('done', images.length > 0);
+      }
+      renderGallery(images);
+      if (notesInput) notesInput.value = '';
+    } catch (err) {
+      alert(err.message || 'Room photo generation failed. Please try again.');
+    } finally {
+      generateBtn.disabled = false;
+      generateBtn.innerHTML = originalLabel;
+    }
+  });
 })();
 </script>
 {% include 'components/send_to_partner_modal.html' %}
