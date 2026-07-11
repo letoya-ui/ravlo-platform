@@ -366,11 +366,17 @@ def run_concept_build(
             "Use the lot/site image only as site context, not as a blueprint or exterior render. "
             "Show parcel boundary, building footprint, driveway, parking, walkways, patio or yard zones, "
             "hardscape, landscaping zones, setbacks, and orientation. Keep the building footprint "
-            "consistent with the same home package."
+            "consistent with the same home package. Convey all of this through the drawing itself -- "
+            "absolutely no text, words, letters, labels, titles, or annotations anywhere in the image."
         ),
         "prompt_notes": (
             "Output one clean top-down site development plan only. No photorealistic exterior, "
-            "no floor plan sheet, no collage, no fake labels."
+            "no floor plan sheet, no collage, no text or labels of any kind, real or fake."
+        ),
+        "negative_prompt": (
+            "text, words, letters, labels, titles, captions, annotations, callouts, legend, key, "
+            "dimension strings, title block, watermark, signature, "
+            "photorealistic exterior, satellite image, floor plan sheet, collage"
         ),
         "steps": 32,
         "guidance": 7.0,

@@ -49,7 +49,9 @@ _MODE_PREFIX = {
     ),
     "siteplan": (
         "Clean architectural site plan, bird's-eye aerial view, property boundary, "
-        "building footprint, driveway, landscaping, no text labels, no watermarks"
+        "building footprint, driveway, landscaping. Absolutely no text, words, letters, "
+        "labels, titles, or annotations of any kind anywhere in the image -- convey "
+        "everything through the drawing itself, not through writing."
     ),
     "exterior_front": (
         "Photorealistic architectural exterior rendering, front elevation, "
@@ -134,6 +136,15 @@ def _dalle_prompt(mode: str, payload: dict) -> str:
 
     parts.append("presentation-ready, photorealistic")
     parts.append(_NEGATIVE_SUFFIX)
+
+    # gpt-image-1 has no separate negative-prompt field like the GPU engine
+    # does -- avoid-concepts only work woven into the same text prompt. A
+    # caller-supplied payload["negative_prompt"] (e.g. concept_build_service
+    # asking the site plan to have zero text) was previously dropped
+    # entirely here, so it only ever reached the GPU engine, never this
+    # fallback.
+    if payload.get("negative_prompt"):
+        parts.append(f"Avoid: {payload['negative_prompt']}")
 
     return ", ".join(p.strip() for p in parts if p.strip())
 
