@@ -21,7 +21,7 @@ from LoanMVP.services.compliance_service import loan_relevant_state, loan_office
 
 # MODELS
 from LoanMVP.models.user_model import User
-from LoanMVP.models.crm_models import Lead, Message, Task, Partner
+from LoanMVP.models.crm_models import Lead, Message, Task, Partner, FacebookPageConnection
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.processor_model import ProcessorProfile
@@ -2899,6 +2899,34 @@ def company_settings(company_id):
                 flash("Dashboard layout migration is not active yet. Run the latest database migration to persist this across devices.", "warning")
             return redirect(url_for("admin.company_settings", company_id=company.id))
 
+        if action_type == "facebook_integration":
+            page_id = (request.form.get("fb_page_id") or "").strip()
+            page_name = (request.form.get("fb_page_name") or "").strip() or None
+            page_access_token = (request.form.get("fb_page_access_token") or "").strip()
+            platform = (request.form.get("fb_platform") or "facebook").strip().lower()
+            if platform not in ("facebook", "instagram"):
+                platform = "facebook"
+
+            if not page_id or not page_access_token:
+                flash("Page ID and Page Access Token are both required.", "warning")
+                return redirect(url_for("admin.company_settings", company_id=company.id))
+
+            connection = FacebookPageConnection.query.filter_by(company_id=company.id).first()
+            if not connection:
+                connection = FacebookPageConnection(company_id=company.id)
+                db.session.add(connection)
+
+            connection.page_id = page_id
+            connection.page_name = page_name
+            connection.page_access_token = page_access_token
+            connection.platform = platform
+            connection.is_active = True
+            connection.connected_by_user_id = current_user.id
+
+            db.session.commit()
+            flash("Facebook/Instagram Lead Ads connection saved.", "success")
+            return redirect(url_for("admin.company_settings", company_id=company.id))
+
         company.name = (request.form.get("name") or company.name or "").strip() or company.name
         company.email_domain = ((request.form.get("email_domain") or "").strip().lower() or None)
         company.address = (request.form.get("address") or "").strip() or None
@@ -2930,6 +2958,8 @@ def company_settings(company_id):
         company=company,
         stats=stats,
         dashboard_preferences=_company_dashboard_settings(company),
+        fb_connection=FacebookPageConnection.query.filter_by(company_id=company.id).first(),
+        fb_webhook_url=url_for("facebook_leads_webhook.verify_webhook", _external=True),
     )
 
 

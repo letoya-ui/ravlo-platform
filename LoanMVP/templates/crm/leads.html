@@ -32,7 +32,7 @@
           <td>{{ lead.name }}</td>
           <td>{{ lead.email or "—" }}</td>
           <td>{{ lead.phone or "—" }}</td>
-          <td>{{ lead.source or "—" }}</td>
+          <td>{{ lead.source.source_name if lead.source else "—" }}</td>
           <td>
             <span class="badge 
               {% if lead.status == 'Active' %}b-active{% elif lead.status == 'Closed' %}b-closed{% else %}b-new{% endif %}">

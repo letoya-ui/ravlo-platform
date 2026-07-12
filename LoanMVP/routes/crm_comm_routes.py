@@ -77,7 +77,7 @@ def _choose_auto_assignee(officers):
         )
         ranked.append((active_count, officer))
 
-    ranked.sort(key=lambda item: (item[0], (item[1].full_name or item[1].name or item[1].email or "").lower()))
+    ranked.sort(key=lambda item: (item[0], (item[1].name or item[1].email or "").lower()))
     return ranked[0][1]
 
 

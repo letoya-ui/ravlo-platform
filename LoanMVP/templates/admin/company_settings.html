@@ -76,6 +76,63 @@
   <section class="re-card pad">
     <div class="section-head">
       <div>
+        <div class="eyebrow">LEAD ADS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Facebook / Instagram Lead Ads</h3>
+        <div class="re-card-subtitle">Connect a Facebook Page (or Instagram professional account linked to one) so Lead Ad submissions flow straight into this company's Leads pipeline.</div>
+      </div>
+    </div>
+
+    <form method="POST" class="settings-form mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action_type" value="facebook_integration">
+
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="fb_page_id">Page ID</label>
+          <input id="fb_page_id" name="fb_page_id" type="text" value="{{ fb_connection.page_id if fb_connection else '' }}" required>
+        </div>
+        <div class="field">
+          <label for="fb_page_name">Page Name (optional)</label>
+          <input id="fb_page_name" name="fb_page_name" type="text" value="{{ fb_connection.page_name if fb_connection else '' }}">
+        </div>
+      </div>
+
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="fb_page_access_token">Page Access Token</label>
+          <input id="fb_page_access_token" name="fb_page_access_token" type="password" value="{{ fb_connection.page_access_token if fb_connection else '' }}" placeholder="{% if fb_connection %}•••••••• (leave as-is to keep current token){% endif %}" required>
+        </div>
+        <div class="field">
+          <label for="fb_platform">Platform</label>
+          <select id="fb_platform" name="fb_platform">
+            <option value="facebook" {% if not fb_connection or fb_connection.platform == 'facebook' %}selected{% endif %}>Facebook</option>
+            <option value="instagram" {% if fb_connection and fb_connection.platform == 'instagram' %}selected{% endif %}>Instagram</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Webhook Callback URL</label>
+        <input type="text" value="{{ fb_webhook_url }}" readonly>
+        <div class="re-card-subtitle">Give this URL to Ravlo staff to complete the one-time Meta App subscription -- it's shared across all companies, so the verify token is configured at the app level, not here.</div>
+      </div>
+
+      {% if fb_connection %}
+      <div class="re-card-subtitle mt-16">Connected {{ fb_connection.connected_at.strftime("%b %d, %Y") if fb_connection.connected_at else "" }}.</div>
+      {% endif %}
+
+      <div class="mt-16">
+        <button type="submit" class="re-btn primary">
+          <i class="lucide lucide-save"></i>
+          Save Lead Ads Connection
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
         <div class="eyebrow">WORKSPACE STATUS</div>
         <h3 style="margin:.35rem 0 .2rem;">Admin Snapshot</h3>
         <div class="re-card-subtitle">Quick operational context for company admins.</div>

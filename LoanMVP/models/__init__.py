@@ -46,11 +46,12 @@ from LoanMVP.models.crm_models import (
     LeadSource,
     Task,
     BehavioralInsight,
-    Partner, 
-    FollowUpItem, 
+    Partner,
+    FollowUpItem,
     MessageThread,
     FollowUpTask,
     LastContact,
+    FacebookPageConnection,
 )
 
 # 📈 Borrower-side tools (analysis, budgeting, plans)
