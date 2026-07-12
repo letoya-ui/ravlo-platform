@@ -31,7 +31,7 @@ from LoanMVP.services.elena_templates import (
     TemplateType,
     templates_for_role,
 )
-from LoanMVP.utils.decorators import role_required
+from LoanMVP.utils.decorators import role_required, has_full_loan_officer_access
 
 from LoanMVP.routes.canva import get_valid_access_token, get_user_canva_connection
 
@@ -967,10 +967,16 @@ def template_studio():
     is_loan_officer = role_type in ("loan_officer", "lender")
 
     # Determine the right dashboard home for the Back button
+    is_internal_loan_officer = (
+        (getattr(current_user, "role", "") or "").strip().lower() == "loan_officer"
+        and not has_full_loan_officer_access(current_user)
+    )
     if role_type in ("contractor", "contractor_realtor"):
         _portal_home = url_for("vip.contractor_dashboard")
     elif role_type in ("insurance", "insurance_realtor"):
         _portal_home = url_for("vip.insurance_dashboard")
+    elif is_internal_loan_officer:
+        _portal_home = url_for("loan_officer.dashboard")
     else:
         _portal_home = url_for("vip.realtor_dashboard")
 
