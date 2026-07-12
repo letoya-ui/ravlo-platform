@@ -252,6 +252,12 @@ def get_or_create_vip_profile():
     if has_full_loan_officer_access(current_user):
         default_role_type = "loan_officer"
         company = Company.query.filter(func.lower(Company.email_domain) == "caughmanmason.com").first()
+    elif (getattr(current_user, "role", "") or "").strip().lower() == "loan_officer":
+        # Internal Lending OS loan officers (LoanOfficerProfile holders) have
+        # no Partner record, so _default_vip_role_for_partner(None) would
+        # otherwise fall back to "partner" -- and Content Studio would show
+        # realtor listing templates instead of loan templates.
+        default_role_type = "loan_officer"
 
     profile = VIPProfile(
         user_id=current_user.id,
