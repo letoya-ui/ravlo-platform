@@ -18,7 +18,8 @@ class Lead(db.Model):
     property_id = db.Column(db.Integer, db.ForeignKey("property.id"))
     assigned_officer_id = db.Column(db.Integer, db.ForeignKey("loan_officer_profile.id"))
     status = db.Column(db.String(50), default="New")
-    assigned_to = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True) 
+    assigned_to = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    external_lead_id = db.Column(db.String(64), index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=func.now(), onupdate=func.now())
 
@@ -218,6 +219,28 @@ class LeadSource(db.Model):
 
     def __repr__(self):
         return f"<LeadSource {self.source_name}>"
+
+
+# ====================================
+# 📘 FACEBOOK / INSTAGRAM LEAD ADS
+# ====================================
+class FacebookPageConnection(db.Model):
+    __tablename__ = "facebook_page_connections"
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)
+    page_id = db.Column(db.String(64), nullable=False, index=True)
+    page_name = db.Column(db.String(255))
+    platform = db.Column(db.String(20), default="facebook")  # "facebook" | "instagram"
+    page_access_token = db.Column(db.Text, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    connected_by_user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    connected_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    company = db.relationship("Company", backref="facebook_page_connections")
+
+    def __repr__(self):
+        return f"<FacebookPageConnection page_id={self.page_id} company_id={self.company_id}>"
 
 
 # ====================================
