@@ -181,3 +181,27 @@ def test_demo_exit_when_not_in_demo_mode_is_a_noop(db_session, client):
     assert resp.status_code == 302
     with client.session_transaction() as sess:
         assert sess.get("_user_id") == str(staff.id)
+
+
+# ---------------------------------------------------------------------------
+# Demo Center is Ravlo-staff only, not a customer company admin's page
+# ---------------------------------------------------------------------------
+
+def test_company_admin_cannot_view_demo_center(db_session, client):
+    company_admin = _make_staff(db_session, "admin@customerco.com", role="admin")
+    login_as(client, company_admin)
+
+    resp = client.get("/admin/demo-center", follow_redirects=False)
+
+    assert resp.status_code == 302
+    assert "/admin/dashboard" in resp.headers["Location"]
+
+
+@pytest.mark.parametrize("role", ["master_admin", "platform_admin", "lending_admin", "executive"])
+def test_ravlo_staff_role_can_view_demo_center(db_session, client, role):
+    staff = _make_staff(db_session, f"{role}@ravlohq.com", role=role)
+    login_as(client, staff)
+
+    resp = client.get("/admin/demo-center", follow_redirects=False)
+
+    assert resp.status_code == 200
