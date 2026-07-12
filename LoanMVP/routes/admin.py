@@ -1066,7 +1066,7 @@ def dashboard():
 
 @admin_bp.route("/demo-center")
 @login_required
-@role_required("admin_group")
+@role_required("master_admin", "platform_admin", "lending_admin", "executive")
 def demo_center():
     demo_dashboards = _demo_dashboard_cards()
     spotlight_metrics = {
