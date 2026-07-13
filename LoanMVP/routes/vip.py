@@ -238,6 +238,21 @@ def _default_vip_role_for_partner(partner):
     return role_map.get(raw_category, "partner")
 
 
+def _is_ravlo_staff_or_company(user) -> bool:
+    """True for genuine Ravlo/Caughman Mason staff -- either a staff-level
+    User.role, or an account that belongs to Ravlo's own Company record --
+    as opposed to a customer lending company's own admin. Mirrors the same
+    check executive_new.py uses to gate the Executive dashboard."""
+    role = (getattr(user, "role", "") or "").strip().lower()
+    if role in ("platform_admin", "master_admin", "lending_admin", "executive"):
+        return True
+
+    from LoanMVP.routes.executive_new import _ravlo_company
+
+    ravlo_company_id = getattr(_ravlo_company(), "id", None)
+    return ravlo_company_id is not None and getattr(user, "company_id", None) == ravlo_company_id
+
+
 def get_or_create_vip_profile():
     if not getattr(current_user, "is_authenticated", False):
         return None
@@ -249,14 +264,25 @@ def get_or_create_vip_profile():
     partner = getattr(current_user, "partner_profile", None)
     default_role_type = _default_vip_role_for_partner(partner)
     company = None
+    user_role = (getattr(current_user, "role", "") or "").strip().lower()
     if has_full_loan_officer_access(current_user):
         default_role_type = "loan_officer"
         company = Company.query.filter(func.lower(Company.email_domain) == "caughmanmason.com").first()
-    elif (getattr(current_user, "role", "") or "").strip().lower() == "loan_officer":
+    elif user_role == "loan_officer":
         # Internal Lending OS loan officers (LoanOfficerProfile holders) have
         # no Partner record, so _default_vip_role_for_partner(None) would
         # otherwise fall back to "partner" -- and Content Studio would show
         # realtor listing templates instead of loan templates.
+        default_role_type = "loan_officer"
+    elif user_role == "admin" and _is_ravlo_staff_or_company(current_user):
+        # Ravlo's own admin/staff use Content Studio to advertise the Ravlo OS
+        # platform itself to prospective lending-company clients, not to
+        # market loan products to borrowers -- a different template set.
+        default_role_type = "ravlo_admin"
+    elif user_role == "admin":
+        # A customer lending company's own admin has no Partner record
+        # either, so without this they'd get realtor templates too -- they
+        # run a lending business, so loan templates are the right default.
         default_role_type = "loan_officer"
 
     profile = VIPProfile(

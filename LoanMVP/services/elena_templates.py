@@ -71,6 +71,16 @@ class TemplateType(str, Enum):
     SOCIAL_RATE_UPDATE = "social_rate_update"
     SOCIAL_LOAN_CLOSED = "social_loan_closed"
 
+    # ── Ravlo OS Platform Flyers/Emails ─────────────────────────────────────
+    PLATFORM_FEATURE_ANNOUNCEMENT = "platform_feature_announcement"
+    PLATFORM_SALES_PITCH = "platform_sales_pitch"
+    PLATFORM_CLIENT_SUCCESS = "platform_client_success"
+    PLATFORM_DEMO_INVITE = "platform_demo_invite"
+
+    # ── Ravlo OS Platform Social ─────────────────────────────────────────────
+    SOCIAL_PLATFORM_ANNOUNCEMENT = "social_platform_announcement"
+    SOCIAL_PLATFORM_TESTIMONIAL = "social_platform_testimonial"
+
 
 TEMPLATES = {
 
@@ -1265,6 +1275,155 @@ Rules:
 - No hashtags
 - Tone: celebratory, warm, inspiring
 """,
+
+    TemplateType.PLATFORM_FEATURE_ANNOUNCEMENT: """
+You are writing a FEATURE ANNOUNCEMENT flyer for {platform_name}, written by {agent_name} of {agent_company}.
+
+Platform: {platform_name}
+New Feature: {feature_name}
+Key Benefit: {key_benefit}
+Target Audience: {target_audience}
+CTA Link: {cta_link}
+
+Return the result in exactly this format:
+
+HEADLINE:
+SUBHEADLINE:
+BODY:
+BULLETS:
+-
+-
+-
+CTA:
+
+Rules:
+- Headline must spotlight the new feature (3 to 8 words)
+- Subheadline must be one short sentence on why it matters to {target_audience}
+- Body must be 2 to 3 short sentences on what the feature does and the problem it solves
+- Bullets must list 3 to 5 concrete capabilities or benefits
+- CTA must invite the reader to try it or book a walkthrough
+- Tone: confident, modern, benefit-led
+- No hashtags
+""",
+
+    TemplateType.PLATFORM_SALES_PITCH: """
+You are writing a SALES PITCH one-pager for {platform_name}, written by {agent_name} of {agent_company}.
+
+Platform: {platform_name}
+Target Audience: {target_audience}
+Key Benefit: {key_benefit}
+CTA Link: {cta_link}
+
+Return the result in exactly this format:
+
+HEADLINE:
+SUBHEADLINE:
+BODY:
+BULLETS:
+-
+-
+-
+CTA:
+
+Rules:
+- Headline must position {platform_name} as the solution for {target_audience}
+- Subheadline must be one short sentence naming the core problem it solves
+- Body must be 2 to 3 short sentences on how the platform works day to day
+- Bullets must list 3 to 5 differentiators (e.g. speed, automation, borrower experience)
+- CTA must invite a demo, trial, or intro call
+- Tone: credible, direct, outcome-focused
+- No hashtags
+""",
+
+    TemplateType.PLATFORM_CLIENT_SUCCESS: """
+You are writing a CLIENT SUCCESS STORY email about {platform_name}, written by {agent_name} of {agent_company}.
+
+Platform: {platform_name}
+Client Company: {client_name}
+Result / Metric: {key_benefit}
+Context: {context}
+
+Return the result in exactly this format:
+
+SUBJECT:
+BODY:
+CTA:
+
+Rules:
+- Subject must hint at the result achieved, not just name the client
+- Body must be 3 to 4 short sentences telling the story: the challenge, what changed after adopting {platform_name}, and the outcome
+- Keep the client company anonymous if no name is provided
+- CTA must invite the reader to see how it could work for their team
+- Tone: credible, specific, low-hype
+""",
+
+    TemplateType.PLATFORM_DEMO_INVITE: """
+You are writing a DEMO INVITE email for {platform_name}, written by {agent_name} of {agent_company}.
+
+Platform: {platform_name}
+Target Audience: {target_audience}
+Key Benefit: {key_benefit}
+CTA Link: {cta_link}
+
+Return the result in exactly this format:
+
+SUBJECT:
+BODY:
+CTA:
+
+Rules:
+- Subject must be short and specific to {target_audience}'s day-to-day pain point
+- Body must be 2 to 3 short sentences on what they'll see in the demo and why it's worth 15-20 minutes
+- CTA must invite them to book a specific time or click the link
+- Tone: warm, respectful of their time, no hard sell
+""",
+
+    TemplateType.SOCIAL_PLATFORM_ANNOUNCEMENT: """
+Write a short social post announcing {feature_name} on {platform_name}.
+
+Platform: LinkedIn + Instagram
+Posted by: {agent_name}, {agent_company}
+Key Benefit: {key_benefit}
+Target Audience: {target_audience}
+CTA Link: {cta_link}
+
+Return the result in exactly this format:
+
+HOOK:
+CAPTION:
+CTA:
+
+Rules:
+- Hook must grab attention with the news in one line
+- Caption must explain the benefit for {target_audience} in 2 to 3 sentences
+- CTA must invite a click, DM, or demo request
+- No hashtags
+- Tone: confident, modern, concise
+""",
+
+    TemplateType.SOCIAL_PLATFORM_TESTIMONIAL: """
+Write a short social caption sharing a customer testimonial about {platform_name}.
+
+Platform: LinkedIn + Instagram
+Posted by: {agent_name}, {agent_company}
+Client Company: {client_name}
+Result / Metric: {key_benefit}
+Context: {context}
+
+Return the result in exactly this format:
+
+HOOK:
+CAPTION:
+CTA:
+
+Rules:
+- Hook must lead with the result, not the client's name
+- Caption must tell the before/after in 2 to 3 short sentences
+- Keep the client company anonymous if no name is provided
+- CTA must invite others to see what {platform_name} could do for them
+- No hashtags
+- Tone: proud, specific, credible
+""",
 }
 
 
@@ -1305,6 +1464,15 @@ LENDING_TEMPLATES = {
     TemplateType.SOCIAL_RATE_UPDATE, TemplateType.SOCIAL_LOAN_CLOSED,
 }
 
+# For Ravlo's own admin/staff advertising the Ravlo OS platform itself to
+# prospective lending-company clients -- distinct from LENDING_TEMPLATES,
+# which are for a loan officer marketing loan products to their own borrowers.
+PLATFORM_TEMPLATES = {
+    TemplateType.PLATFORM_FEATURE_ANNOUNCEMENT, TemplateType.PLATFORM_SALES_PITCH,
+    TemplateType.PLATFORM_CLIENT_SUCCESS, TemplateType.PLATFORM_DEMO_INVITE,
+    TemplateType.SOCIAL_PLATFORM_ANNOUNCEMENT, TemplateType.SOCIAL_PLATFORM_TESTIMONIAL,
+}
+
 # Hybrid roles get both sets
 CONTRACTOR_REALTOR_TEMPLATES = REALTOR_TEMPLATES | CONTRACTOR_TEMPLATES
 INSURANCE_REALTOR_TEMPLATES = REALTOR_TEMPLATES | INSURANCE_TEMPLATES
@@ -1323,6 +1491,8 @@ def templates_for_role(role_type: str) -> list:
         allowed = INSURANCE_REALTOR_TEMPLATES
     elif role in ("loan_officer", "lender"):
         allowed = LENDING_TEMPLATES
+    elif role == "ravlo_admin":
+        allowed = PLATFORM_TEMPLATES
     else:
         allowed = REALTOR_TEMPLATES
     return [t.value for t in TemplateType if t in allowed]
@@ -1356,6 +1526,9 @@ def render_template(template_type: TemplateType, **kwargs) -> str:
         # lending
         "current_rate": "", "loan_type": "", "max_loan_amount": "",
         "program_name": "", "rate_lock_deadline": "",
+        # platform (Ravlo OS advertising)
+        "platform_name": "Ravlo OS", "feature_name": "", "key_benefit": "",
+        "target_audience": "lending companies", "cta_link": "",
     }
     defaults.update(kwargs)
     return template.format(**defaults)
