@@ -83,6 +83,7 @@ RAVLO_STAFF_ROLES = [
     ("master_admin", "Master Admin"),
     ("admin", "Admin"),
     ("intelligence", "Intelligence"),
+    ("account_executive", "Account Executive"),
 ]
 RAVLO_STAFF_ROLE_SET = {role for role, _ in RAVLO_STAFF_ROLES}
 

@@ -83,6 +83,7 @@ def get_role_label(role: str) -> str:
         "Investor": "Investor",
         "Borrower": "Borrower",
         "Partner": "Partner",
+        "Account Executive": "Account Executive",
     }
 
     return role_labels.get(role, role)
@@ -230,6 +231,7 @@ def get_role_display(role: str) -> str:
         "investor": "Investor",
         "borrower": "Borrower",
         "partner": "Partner",
+        "account_executive": "Account Executive",
     }
     return role_map.get(role, role.replace("_", " ").title() if role else "—")
 

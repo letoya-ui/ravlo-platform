@@ -1,0 +1,194 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}{{ deal.company_name }}{% endblock %}
+
+{% block page_title %}{{ deal.company_name }}{% endblock %}
+{% block page_subline %}{{ deal.contact_name }} · {{ deal.email }}{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('account_executive.deals') }}">
+    <i class="lucide lucide-arrow-left"></i>
+    Back to Pipeline
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  {% if not deal.assigned_ae %}
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">UNASSIGNED</div>
+        <h3 style="margin:.35rem 0 .2rem;">This deal has no owner yet</h3>
+      </div>
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action_type" value="claim">
+        <button type="submit" class="re-btn primary sm">Claim This Deal</button>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="re-grid-2">
+    <div class="re-card pad">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">STAGE</div>
+          <h3 style="margin:.35rem 0 .2rem;">Pipeline Stage: {{ (deal.ae_stage or 'prospect')|replace('_', ' ')|title }}</h3>
+        </div>
+      </div>
+
+      <form method="POST" class="mt-16" id="stageForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action_type" value="update_stage">
+
+        <div class="field">
+          <label for="ae_stage">Move To</label>
+          <select id="ae_stage" name="ae_stage" onchange="document.getElementById('signedFields').style.display = (this.value === 'signed') ? 'block' : 'none'; document.getElementById('lostFields').style.display = (this.value === 'lost') ? 'block' : 'none';">
+            {% for stage in ae_stages %}
+              <option value="{{ stage }}" {% if (deal.ae_stage or 'prospect') == stage %}selected{% endif %}>{{ stage|replace('_', ' ')|title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div id="signedFields" style="display:{{ 'block' if (deal.ae_stage or 'prospect') == 'signed' else 'none' }};">
+          <div class="re-grid-2">
+            <div class="field">
+              <label for="contract_value">Contract Value ($)</label>
+              <input id="contract_value" name="contract_value" type="number" step="0.01" value="{{ deal.contract_value or '' }}">
+            </div>
+            <div class="field">
+              <label for="commission_rate">Commission Rate (e.g. 0.10 = 10%)</label>
+              <input id="commission_rate" name="commission_rate" type="number" step="0.0001" value="{{ deal.commission_rate or '0.10' }}">
+            </div>
+          </div>
+          <div class="field">
+            <label for="billing_cycle">Billing Cycle</label>
+            <select id="billing_cycle" name="billing_cycle">
+              <option value="annual" {% if deal.billing_cycle == 'annual' %}selected{% endif %}>Annual</option>
+              <option value="monthly" {% if deal.billing_cycle == 'monthly' %}selected{% endif %}>Monthly</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="lostFields" style="display:{{ 'block' if (deal.ae_stage or 'prospect') == 'lost' else 'none' }};">
+          <div class="field">
+            <label for="lost_reason">Reason Lost</label>
+            <input id="lost_reason" name="lost_reason" type="text" value="{{ deal.lost_reason or '' }}">
+          </div>
+        </div>
+
+        <div class="mt-16">
+          <button type="submit" class="re-btn primary">Update Stage</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="re-card pad">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">CONTRACT & COMMISSION</div>
+          <h3 style="margin:.35rem 0 .2rem;">Terms</h3>
+        </div>
+      </div>
+
+      <form method="POST" class="mt-16">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action_type" value="update_terms">
+
+        <div class="re-grid-2">
+          <div class="field">
+            <label for="terms_contract_value">Contract Value ($)</label>
+            <input id="terms_contract_value" name="contract_value" type="number" step="0.01" value="{{ deal.contract_value or '' }}">
+          </div>
+          <div class="field">
+            <label for="terms_commission_rate">Commission Rate</label>
+            <input id="terms_commission_rate" name="commission_rate" type="number" step="0.0001" value="{{ deal.commission_rate or '' }}">
+          </div>
+        </div>
+        <div class="field">
+          <label for="terms_billing_cycle">Billing Cycle</label>
+          <select id="terms_billing_cycle" name="billing_cycle">
+            <option value="">— No Change —</option>
+            <option value="annual" {% if deal.billing_cycle == 'annual' %}selected{% endif %}>Annual</option>
+            <option value="monthly" {% if deal.billing_cycle == 'monthly' %}selected{% endif %}>Monthly</option>
+          </select>
+        </div>
+
+        <div class="mt-16">
+          <button type="submit" class="re-btn ghost">Save Terms</button>
+        </div>
+      </form>
+
+      {% if deal.commission_amount %}
+      <div class="re-card-subtitle mt-16">
+        Commission: <strong>${{ "%.2f"|format(deal.commission_amount) }}</strong> ({{ deal.commission_status }})
+      </div>
+      {% if is_full_visibility and deal.commission_status == "pending" %}
+      <form method="POST" class="mt-16">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action_type" value="mark_commission_paid">
+        <button type="submit" class="re-btn primary sm">Mark Commission Paid</button>
+      </form>
+      {% endif %}
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">HANDOFF</div>
+        <h3 style="margin:.35rem 0 .2rem;">Link to Company</h3>
+        <div class="re-card-subtitle">Once a Ravlo admin approves this license application and creates the live company account, link it here so this deal's commission ties to real revenue.</div>
+      </div>
+    </div>
+
+    {% if deal.linked_company %}
+      <div class="re-card-subtitle mt-16">Linked to <strong>{{ deal.linked_company.name }}</strong>.</div>
+    {% elif companies %}
+      <form method="POST" class="mt-16" style="display:flex;gap:8px;align-items:flex-end;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action_type" value="link_company">
+        <div class="field" style="flex:1;">
+          <label for="company_id">Company</label>
+          <select id="company_id" name="company_id">
+            <option value="">— Select —</option>
+            {% for company in companies %}
+              <option value="{{ company.id }}">{{ company.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="re-btn primary">Link</button>
+      </form>
+    {% else %}
+      <div class="re-card-subtitle mt-16">No company linked yet.</div>
+    {% endif %}
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">NOTES</div>
+        <h3 style="margin:.35rem 0 .2rem;">Activity Log</h3>
+      </div>
+    </div>
+
+    <div class="re-card-subtitle mt-16" style="white-space:pre-wrap;">{{ deal.notes or "No notes yet." }}</div>
+
+    <form method="POST" class="mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action_type" value="add_note">
+      <div class="field">
+        <label for="note">Add Note</label>
+        <textarea id="note" name="note" rows="3"></textarea>
+      </div>
+      <div class="mt-16">
+        <button type="submit" class="re-btn ghost">Add Note</button>
+      </div>
+    </form>
+  </section>
+
+</div>
+{% endblock %}

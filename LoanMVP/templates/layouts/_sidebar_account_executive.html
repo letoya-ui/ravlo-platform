@@ -1,0 +1,55 @@
+<div class="re-brand">
+  <div class="re-mark"><span>RV</span></div>
+  <div>
+    <div class="re-brand-name">RAVLO</div>
+    <div class="re-brand-sub">Account Executive</div>
+  </div>
+</div>
+
+<nav class="re-nav">
+
+  <div class="re-nav-group">
+    <div class="re-nav-label">Sales</div>
+
+    <a href="{{ url_for('account_executive.dashboard') }}"
+       class="re-nav-link {% if active_tab == 'dashboard' %}active{% endif %}">
+      <i class="icon lucide lucide-layout-dashboard"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('account_executive.deals') }}"
+       class="re-nav-link {% if active_tab == 'deals' %}active{% endif %}">
+      <i class="icon lucide lucide-git-branch"></i>
+      <span>Deal Pipeline</span>
+    </a>
+
+    <a href="{{ url_for('account_executive.new_deal') }}"
+       class="re-nav-link {% if active_tab == 'new_deal' %}active{% endif %}">
+      <i class="icon lucide lucide-plus-circle"></i>
+      <span>New Deal</span>
+    </a>
+  </div>
+
+  <div class="re-nav-group">
+    <div class="re-nav-label">Account</div>
+
+    <a href="{{ url_for('account.settings') }}"
+       class="re-nav-link {% if active_tab == 'settings' %}active{% endif %}">
+      <i class="icon lucide lucide-settings"></i>
+      <span>Settings</span>
+    </a>
+  </div>
+
+</nav>
+
+<div class="re-sidebar-foot">
+  <div class="re-user-chip">
+    <div class="re-user-avatar">
+      {{ (current_user.first_name[0] if current_user.first_name else "U")|upper }}
+    </div>
+    <div class="re-user-meta">
+      <div class="re-user-name">{{ current_user.first_name or "" }} {{ current_user.last_name or "" }}</div>
+      <div class="re-user-role">Account Executive</div>
+    </div>
+  </div>
+</div>

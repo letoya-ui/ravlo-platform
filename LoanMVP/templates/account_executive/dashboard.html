@@ -1,0 +1,111 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Account Executive Dashboard{% endblock %}
+
+{% block page_title %}Account Executive Dashboard{% endblock %}
+{% block page_subline %}
+Track your Lending OS licensing pipeline, contract terms, and commission.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('account_executive.deals') }}">
+    <i class="lucide lucide-git-branch"></i>
+    Deal Pipeline
+  </a>
+  <a class="re-btn primary sm" href="{{ url_for('account_executive.new_deal') }}">
+    <i class="lucide lucide-plus-circle"></i>
+    New Deal
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-grid-4">
+    <div class="ravlo-kpi">
+      <div class="label">Pipeline</div>
+      <div class="value">{{ deals|length }}</div>
+      <div class="re-card-subtitle">Total deals in your pipeline</div>
+    </div>
+
+    <div class="ravlo-kpi">
+      <div class="label">Signed</div>
+      <div class="value">{{ signed_count }}</div>
+      <div class="re-card-subtitle">Deals signed to date</div>
+    </div>
+
+    <div class="ravlo-kpi">
+      <div class="label">Commission Pending</div>
+      <div class="value">${{ "%.2f"|format(pending_commission) }}</div>
+      <div class="re-card-subtitle">Awaiting payout</div>
+    </div>
+
+    <div class="ravlo-kpi">
+      <div class="label">Commission Paid</div>
+      <div class="value">${{ "%.2f"|format(paid_commission) }}</div>
+      <div class="re-card-subtitle">Paid out to date</div>
+    </div>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">STAGES</div>
+        <h3 style="margin:.35rem 0 .2rem;">Pipeline by Stage</h3>
+      </div>
+    </div>
+
+    <div class="re-grid-4 mt-16">
+      {% for stage in ae_stages %}
+        <a class="ravlo-kpi" style="text-decoration:none;display:block;" href="{{ url_for('account_executive.deals', stage=stage) }}">
+          <div class="label">{{ stage|replace('_', ' ')|title }}</div>
+          <div class="value">{{ stage_counts.get(stage, 0) }}</div>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">RECENT</div>
+        <h3 style="margin:.35rem 0 .2rem;">Recent Deals</h3>
+      </div>
+      <a class="re-btn ghost sm" href="{{ url_for('account_executive.deals') }}">View All</a>
+    </div>
+
+    <div class="re-table-wrap mt-16">
+      <table class="re-table">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Contact</th>
+            <th>Stage</th>
+            <th>Contract Value</th>
+            <th>Commission</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for deal in recent_deals %}
+          <tr onclick="window.location='{{ url_for('account_executive.deal_detail', deal_id=deal.id) }}'" style="cursor:pointer;">
+            <td>{{ deal.company_name }}</td>
+            <td>{{ deal.contact_name }}</td>
+            <td>{{ (deal.ae_stage or 'prospect')|replace('_', ' ')|title }}</td>
+            <td>{{ "$%.2f"|format(deal.contract_value) if deal.contract_value else "—" }}</td>
+            <td>
+              {% if deal.commission_amount %}
+                ${{ "%.2f"|format(deal.commission_amount) }} ({{ deal.commission_status }})
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="re-card-subtitle">No deals yet. Add your first prospect to get started.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
