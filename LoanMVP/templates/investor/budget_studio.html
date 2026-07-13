@@ -941,7 +941,7 @@ Build the financial operating system for your deal.
           </div>
           <div class="hero-stat">
             <div class="hero-stat-label">ARV</div>
-            <div class="hero-stat-value">${{ "{:,.0f}".format(arv or 0) }}</div>
+            <div class="hero-stat-value" id="arvHeroValue">${{ "{:,.0f}".format(arv or 0) }}</div>
           </div>
           <div class="hero-stat">
             <div class="hero-stat-label">{% if is_design_budget %}Budget Avenue{% else %}Seed Source{% endif %}</div>
@@ -968,7 +968,19 @@ Build the financial operating system for your deal.
 
     <div class="kpi-card">
       <div class="kpi-label">{% if is_design_budget %}Scope{% else %}After Repair Value{% endif %}</div>
-      <div class="kpi-value" id="arvDisplay">{% if is_design_budget %}Rooms + Finishes{% else %}${{ "{:,.0f}".format(arv or 0) }}{% endif %}</div>
+      {% if is_design_budget %}
+      <div class="kpi-value" id="arvDisplay">Rooms + Finishes</div>
+      {% else %}
+      <div class="kpi-value" style="display:flex;align-items:center;gap:4px;">
+        <span style="opacity:.6;">$</span>
+        <input type="number" id="arvInput" class="studio-input" step="1000" min="0"
+               value="{{ (arv or 0)|int }}" oninput="updateArv(this.value)"
+               style="background:transparent;border:none;padding:0;font-size:inherit;font-weight:inherit;color:inherit;width:100%;">
+      </div>
+      <div class="studio-note" id="arvStaleWarning" style="display:none;color:#ffb37a;margin-top:6px;font-size:.78rem;">
+        ⚠️ This looks like an as-is valuation. For new construction, update it to the estimated value of the completed home.
+      </div>
+      {% endif %}
     </div>
 
     <div class="kpi-card">
@@ -1037,6 +1049,48 @@ Build the financial operating system for your deal.
       {% endif %}
     </div>
   </section>
+
+  {% if not is_design_budget %}
+  <section class="studio-card" id="homeValueCard">
+    <div class="studio-card-head">
+      <div>
+        <div class="studio-eyebrow">New Construction ARV</div>
+        <h3>What's the finished home worth?</h3>
+        <p class="studio-note">
+          For a ground-up build, ARV depends on what you build. Pick a starting floor plan size below --
+          {% if estimated_ppsf %}
+          priced at ${{ "%.0f"|format(estimated_ppsf) }}/sqft from comps near this deal --
+          {% else %}
+          enter your local $/sqft estimate --
+          {% endif %}
+          then use it to set your ARV.
+        </p>
+      </div>
+    </div>
+
+    <div class="pm-grid-3" style="display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:14px;">
+      {% for config in home_value_configs %}
+      <div class="studio-card" style="padding:14px;">
+        <div style="font-weight:700;margin-bottom:8px;">{{ config.label }}</div>
+        <label style="font-size:.78rem;color:rgba(228,236,246,.62);">Sqft</label>
+        <input type="number" class="studio-input home-config-sqft" data-config="{{ loop.index0 }}"
+               value="{{ config.sqft }}" min="0" step="50"
+               oninput="updateHomeConfigValue({{ loop.index0 }})" style="margin-bottom:8px;">
+        <label style="font-size:.78rem;color:rgba(228,236,246,.62);">$ / sqft</label>
+        <input type="number" class="studio-input home-config-ppsf" data-config="{{ loop.index0 }}"
+               value="{{ estimated_ppsf|round(0)|int if estimated_ppsf else '' }}" min="0" step="1"
+               oninput="updateHomeConfigValue({{ loop.index0 }})" style="margin-bottom:8px;">
+        <div style="font-size:1.1rem;font-weight:800;margin-bottom:8px;" id="homeConfigValue{{ loop.index0 }}">
+          {% if estimated_ppsf %}${{ "{:,.0f}".format(estimated_ppsf * config.sqft) }}{% else %}--{% endif %}
+        </div>
+        <button class="studio-btn secondary" type="button" onclick="useHomeConfigValue({{ loop.index0 }})" style="width:100%;">
+          Use This Value
+        </button>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
 
   <div class="studio-layout">
     <div class="studio-main">
@@ -1379,7 +1433,12 @@ Build the financial operating system for your deal.
   let activePreset = null;
 
   const PURCHASE_PRICE = Number({{ purchase_price|default(0)|tojson }}) || 0;
-  const ARV = Number({{ arv|default(0)|tojson }}) || 0;
+  // ARV is editable (see arvInput) -- a "build" preset (New Construction /
+  // Townhome Dev) needs the value of the *completed* home, not the as-is
+  // valuation Deal.arv was seeded with, so it's no longer frozen at page load.
+  let ARV = Number({{ arv|default(0)|tojson }}) || 0;
+  const ORIGINAL_ARV = ARV;
+  let arvManuallyEdited = false;
   const REHAB_COST = Number({{ rehab_cost|default(0)|tojson }}) || 0;
   const SEEDED_BREAKDOWN = {{ seeded_items|tojson }};
   const SEED_CONTINGENCY = Number({{ (seed.get('contingency') if seed else 0)|tojson }}) || 0;
@@ -1570,7 +1629,55 @@ Build the financial operating system for your deal.
       btn.classList.toggle('active', btn.dataset.preset === presetKey);
     });
 
+    updateArvWarning();
     render();
+  }
+
+  // ── ARV ──────────────────────────────────────────────────────────────────
+  function updateArv(value) {
+    ARV = normalizeCost(value);
+    arvManuallyEdited = true;
+    updateArvWarning();
+    calculate();
+  }
+
+  function updateArvWarning() {
+    const warning = document.getElementById('arvStaleWarning');
+    if (!warning) return;
+    const preset = activePreset && BUDGET_PRESETS[activePreset];
+    const isBuildPreset = preset && preset.budget_type === 'build';
+    const looksStale = !arvManuallyEdited && ARV === ORIGINAL_ARV;
+    warning.style.display = (isBuildPreset && looksStale) ? 'block' : 'none';
+  }
+
+  // ── Home value by configuration (3-bed / 4-bed / 5-bed starter sizes) ────
+  function updateHomeConfigValue(idx) {
+    const sqftInput = document.querySelector(`.home-config-sqft[data-config="${idx}"]`);
+    const ppsfInput = document.querySelector(`.home-config-ppsf[data-config="${idx}"]`);
+    const valueEl = document.getElementById(`homeConfigValue${idx}`);
+    if (!sqftInput || !ppsfInput || !valueEl) return;
+
+    const sqft = normalizeCost(sqftInput.value);
+    const ppsf = normalizeCost(ppsfInput.value);
+    if (sqft > 0 && ppsf > 0) {
+      valueEl.textContent = formatMoney(sqft * ppsf);
+    } else {
+      valueEl.textContent = "--";
+    }
+  }
+
+  function useHomeConfigValue(idx) {
+    const sqftInput = document.querySelector(`.home-config-sqft[data-config="${idx}"]`);
+    const ppsfInput = document.querySelector(`.home-config-ppsf[data-config="${idx}"]`);
+    if (!sqftInput || !ppsfInput) return;
+
+    const sqft = normalizeCost(sqftInput.value);
+    const ppsf = normalizeCost(ppsfInput.value);
+    if (sqft <= 0 || ppsf <= 0) return;
+
+    const arvInput = document.getElementById('arvInput');
+    if (arvInput) arvInput.value = Math.round(sqft * ppsf);
+    updateArv(sqft * ppsf);
   }
 
   // ── Item CRUD ────────────────────────────────────────────────────────────
@@ -1721,6 +1828,17 @@ Build the financial operating system for your deal.
     document.getElementById("budgetTotalDisplay").innerText = formatMoney(budgetTotal);
     document.getElementById("budgetTotal").innerText = formatMoney(budgetTotal);
 
+    // Keep the read-only ARV displays (hero stat, sidebar summary) in sync
+    // with the editable ARV input -- only arvInput itself is user-editable.
+    // Design budgets don't apply full deal economics, so leave their
+    // "Not Applied" copy alone.
+    if (!IS_DESIGN_BUDGET) {
+      const arvHeroEl = document.getElementById("arvHeroValue");
+      if (arvHeroEl) arvHeroEl.textContent = formatMoney(ARV);
+      const arvSummaryEl = document.getElementById("arvSummary");
+      if (arvSummaryEl) arvSummaryEl.textContent = formatMoney(ARV);
+    }
+
     // Budget burn bar
     const burnEl = document.getElementById('burnBar');
     const burnPctEl = document.getElementById('burnPct');
@@ -1837,6 +1955,7 @@ Build the financial operating system for your deal.
     return JSON.stringify({
       source: SEED_SOURCE || (IS_DESIGN_BUDGET ? "design_studio" : "budget_studio"),
       budget_type: presetType || SEED_BUDGET_TYPE || (IS_DESIGN_BUDGET ? "design" : "rehab"),
+      arv: IS_DESIGN_BUDGET ? null : ARV,
       contingency: normalizeCost(contingencyAmount),
       items: items.map(item => ({
         name: item.name || "Budget Item",

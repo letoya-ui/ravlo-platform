@@ -241,6 +241,20 @@ def _weighted_ppsf(
     return None
 
 
+def estimate_ppsf_from_comps(comps: List[Dict[str, Any]]) -> Optional[float]:
+    """Weighted $/sqft from a list of serialized comps (the shape stored in
+    deal.results_json["ravlo_arv_report"]["comps"]["included"]).
+
+    Lets a caller price out a home configuration that isn't the deal's
+    actual subject property -- e.g. Budget Studio letting an investor see
+    what a 3-bed vs. 5-bed new-construction floor plan would be worth in
+    this market -- by reusing the already-fetched comps instead of
+    re-running the comps pipeline.
+    """
+    sold = [c for c in comps if c.get("status_normalized") == "sold"]
+    return _weighted_ppsf(sold, 0) if sold else _weighted_ppsf(comps, 0)
+
+
 def _weighted_prices(comps: List[Dict[str, Any]]) -> Optional[float]:
     """Weighted average of raw prices using comp scores."""
     total_weight = 0.0
