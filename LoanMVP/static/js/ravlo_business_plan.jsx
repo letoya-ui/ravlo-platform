@@ -113,7 +113,7 @@ Build a full, specific, actionable business plan using the exact format in your 
       const res = await fetch(API_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "claude-opus-4-5", max_tokens: 1000, system: SYSTEM, messages: [{ role: "user", content: prompt }] }),
+        body: JSON.stringify({ model: "claude-opus-4-8", max_tokens: 1000, system: SYSTEM, messages: [{ role: "user", content: prompt }] }),
       });
       const data = await res.json();
       const text = data.content?.map(c => c.text || "").join("\n") || "Unable to generate plan. Please try again.";
@@ -139,7 +139,7 @@ Build a full, specific, actionable business plan using the exact format in your 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-opus-4-5", max_tokens: 1000,
+          model: "claude-opus-4-8", max_tokens: 1000,
           system: SYSTEM + `\n\nContext: ${ctx}\n\nThe user's full business plan:\n${plan}\n\nAnswer their follow-up questions with the same specificity and directness as the plan itself.`,
           messages: newMsgs,
         }),
