@@ -14682,6 +14682,25 @@ def budget_studio(deal_id=None):
     arv = float(getattr(deal, "arv", 0) or 0) if deal else 0
     rehab_cost = float(getattr(deal, "rehab_cost", 0) or 0) if deal else 0
 
+    # New-construction ARV needs the value of the *completed* home, which
+    # depends on what gets built -- reuse the deal's already-fetched ARV
+    # Engine comps (cached in results_json, no new provider calls) to price
+    # out a few starter floor-plan sizes instead of a single frozen ARV.
+    estimated_ppsf = None
+    if deal:
+        cached_comps = (
+            ((deal.results_json or {}).get("ravlo_arv_report") or {}).get("comps") or {}
+        ).get("included") or []
+        if cached_comps:
+            from LoanMVP.services.ravlo_arv_calculator import estimate_ppsf_from_comps
+            estimated_ppsf = estimate_ppsf_from_comps(cached_comps)
+
+    home_value_configs = [
+        {"label": "3 Bed / 2 Bath", "sqft": 1600},
+        {"label": "4 Bed / 3 Bath", "sqft": 2200},
+        {"label": "5 Bed / 3 Bath", "sqft": 2800},
+    ]
+
     local_cost_index = {}
     if deal:
         local_cost_index = (results.get("budget_seed") or {}).get("local_cost_index") or {}
@@ -14713,6 +14732,8 @@ def budget_studio(deal_id=None):
         purchase_price=purchase_price,
         arv=arv,
         rehab_cost=rehab_cost,
+        estimated_ppsf=estimated_ppsf,
+        home_value_configs=home_value_configs,
         local_cost_index=local_cost_index,
         budget_context=budget_context,
         page_title="Budget Studio",

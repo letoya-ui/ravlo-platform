@@ -1050,6 +1050,48 @@ Build the financial operating system for your deal.
     </div>
   </section>
 
+  {% if not is_design_budget %}
+  <section class="studio-card" id="homeValueCard">
+    <div class="studio-card-head">
+      <div>
+        <div class="studio-eyebrow">New Construction ARV</div>
+        <h3>What's the finished home worth?</h3>
+        <p class="studio-note">
+          For a ground-up build, ARV depends on what you build. Pick a starting floor plan size below --
+          {% if estimated_ppsf %}
+          priced at ${{ "%.0f"|format(estimated_ppsf) }}/sqft from comps near this deal --
+          {% else %}
+          enter your local $/sqft estimate --
+          {% endif %}
+          then use it to set your ARV.
+        </p>
+      </div>
+    </div>
+
+    <div class="pm-grid-3" style="display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:14px;">
+      {% for config in home_value_configs %}
+      <div class="studio-card" style="padding:14px;">
+        <div style="font-weight:700;margin-bottom:8px;">{{ config.label }}</div>
+        <label style="font-size:.78rem;color:rgba(228,236,246,.62);">Sqft</label>
+        <input type="number" class="studio-input home-config-sqft" data-config="{{ loop.index0 }}"
+               value="{{ config.sqft }}" min="0" step="50"
+               oninput="updateHomeConfigValue({{ loop.index0 }})" style="margin-bottom:8px;">
+        <label style="font-size:.78rem;color:rgba(228,236,246,.62);">$ / sqft</label>
+        <input type="number" class="studio-input home-config-ppsf" data-config="{{ loop.index0 }}"
+               value="{{ estimated_ppsf|round(0)|int if estimated_ppsf else '' }}" min="0" step="1"
+               oninput="updateHomeConfigValue({{ loop.index0 }})" style="margin-bottom:8px;">
+        <div style="font-size:1.1rem;font-weight:800;margin-bottom:8px;" id="homeConfigValue{{ loop.index0 }}">
+          {% if estimated_ppsf %}${{ "{:,.0f}".format(estimated_ppsf * config.sqft) }}{% else %}--{% endif %}
+        </div>
+        <button class="studio-btn secondary" type="button" onclick="useHomeConfigValue({{ loop.index0 }})" style="width:100%;">
+          Use This Value
+        </button>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   <div class="studio-layout">
     <div class="studio-main">
 
@@ -1606,6 +1648,36 @@ Build the financial operating system for your deal.
     const isBuildPreset = preset && preset.budget_type === 'build';
     const looksStale = !arvManuallyEdited && ARV === ORIGINAL_ARV;
     warning.style.display = (isBuildPreset && looksStale) ? 'block' : 'none';
+  }
+
+  // ── Home value by configuration (3-bed / 4-bed / 5-bed starter sizes) ────
+  function updateHomeConfigValue(idx) {
+    const sqftInput = document.querySelector(`.home-config-sqft[data-config="${idx}"]`);
+    const ppsfInput = document.querySelector(`.home-config-ppsf[data-config="${idx}"]`);
+    const valueEl = document.getElementById(`homeConfigValue${idx}`);
+    if (!sqftInput || !ppsfInput || !valueEl) return;
+
+    const sqft = normalizeCost(sqftInput.value);
+    const ppsf = normalizeCost(ppsfInput.value);
+    if (sqft > 0 && ppsf > 0) {
+      valueEl.textContent = formatMoney(sqft * ppsf);
+    } else {
+      valueEl.textContent = "--";
+    }
+  }
+
+  function useHomeConfigValue(idx) {
+    const sqftInput = document.querySelector(`.home-config-sqft[data-config="${idx}"]`);
+    const ppsfInput = document.querySelector(`.home-config-ppsf[data-config="${idx}"]`);
+    if (!sqftInput || !ppsfInput) return;
+
+    const sqft = normalizeCost(sqftInput.value);
+    const ppsf = normalizeCost(ppsfInput.value);
+    if (sqft <= 0 || ppsf <= 0) return;
+
+    const arvInput = document.getElementById('arvInput');
+    if (arvInput) arvInput.value = Math.round(sqft * ppsf);
+    updateArv(sqft * ppsf);
   }
 
   // ── Item CRUD ────────────────────────────────────────────────────────────
