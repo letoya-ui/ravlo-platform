@@ -184,6 +184,11 @@
         <span>Properties</span>
       </a>
     {% else %}
+      <a href="{{ url_for('crm.dashboard') }}" class="re-nav-link {% if ep and ep.startswith('crm.') %}active{% endif %}">
+        <i class="icon lucide lucide-users"></i>
+        <span>CRM</span>
+      </a>
+
       <a href="{{ url_for('system.users') }}" class="re-nav-link {% if ep in ['system.users'] %}active{% endif %}">
         <i class="icon lucide lucide-user-cog"></i>
         <span>Users</span>
