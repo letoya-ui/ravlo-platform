@@ -258,8 +258,6 @@ def get_or_create_vip_profile():
         return None
 
     profile = VIPProfile.query.filter_by(user_id=current_user.id).first()
-    if profile:
-        return profile
 
     partner = getattr(current_user, "partner_profile", None)
     default_role_type = _default_vip_role_for_partner(partner)
@@ -284,6 +282,17 @@ def get_or_create_vip_profile():
         # either, so without this they'd get realtor templates too -- they
         # run a lending business, so loan templates are the right default.
         default_role_type = "loan_officer"
+
+    if profile:
+        # Self-heal a profile that's stuck on the generic "partner" fallback
+        # now that we can compute a more specific default -- e.g. an account
+        # created before this logic existed. Never overwrites a role_type
+        # the user (or an admin) deliberately set to something else via
+        # /vip/onboarding.
+        if profile.role_type == "partner" and default_role_type != "partner":
+            profile.role_type = default_role_type
+            db.session.commit()
+        return profile
 
     profile = VIPProfile(
         user_id=current_user.id,
