@@ -920,6 +920,27 @@ def mls_import():
     )
 
 
+def _template_studio_portal_home(role_type: str) -> str:
+    """Where Content Studio's Back button should send the user, by VIP role.
+
+    Shared by template_studio() and its preview/generate/generate_and_save
+    siblings so this only needs fixing in one place.
+    """
+    is_internal_loan_officer = (
+        (getattr(current_user, "role", "") or "").strip().lower() == "loan_officer"
+        and not has_full_loan_officer_access(current_user)
+    )
+    if role_type in ("contractor", "contractor_realtor"):
+        return url_for("vip.contractor_dashboard")
+    if role_type in ("insurance", "insurance_realtor"):
+        return url_for("vip.insurance_dashboard")
+    if is_internal_loan_officer:
+        return url_for("loan_officer.dashboard")
+    if role_type == "ravlo_admin":
+        return url_for("admin.dashboard")
+    return url_for("vip.realtor_dashboard")
+
+
 @elena_bp.get("/template-studio")
 def template_studio():
     template_type = request.args.get("template_type")
@@ -965,20 +986,7 @@ def template_studio():
     is_contractor = role_type in ("contractor", "contractor_realtor")
     is_insurance = role_type in ("insurance", "insurance_realtor")
     is_loan_officer = role_type in ("loan_officer", "lender")
-
-    # Determine the right dashboard home for the Back button
-    is_internal_loan_officer = (
-        (getattr(current_user, "role", "") or "").strip().lower() == "loan_officer"
-        and not has_full_loan_officer_access(current_user)
-    )
-    if role_type in ("contractor", "contractor_realtor"):
-        _portal_home = url_for("vip.contractor_dashboard")
-    elif role_type in ("insurance", "insurance_realtor"):
-        _portal_home = url_for("vip.insurance_dashboard")
-    elif is_internal_loan_officer:
-        _portal_home = url_for("loan_officer.dashboard")
-    else:
-        _portal_home = url_for("vip.realtor_dashboard")
+    _portal_home = _template_studio_portal_home(role_type)
 
     return render_template(
         "elena/template_studio.html",
@@ -994,6 +1002,7 @@ def template_studio():
         is_contractor=is_contractor,
         is_insurance=is_insurance,
         is_loan_officer=is_loan_officer,
+        is_ravlo_admin=(role_type == "ravlo_admin"),
         role_type=role_type,
         canva_connected=bool(get_user_canva_connection()),
         canva_can_create=_canva_can_create(),
@@ -1029,12 +1038,7 @@ def template_studio_preview():
     is_contractor = role_type in ("contractor", "contractor_realtor")
     is_insurance = role_type in ("insurance", "insurance_realtor")
     is_loan_officer = role_type in ("loan_officer", "lender")
-    if role_type in ("contractor", "contractor_realtor"):
-        _portal_home = url_for("vip.contractor_dashboard")
-    elif role_type in ("insurance", "insurance_realtor"):
-        _portal_home = url_for("vip.insurance_dashboard")
-    else:
-        _portal_home = url_for("vip.realtor_dashboard")
+    _portal_home = _template_studio_portal_home(role_type)
 
     return render_template(
         "elena/template_studio.html",
@@ -1051,6 +1055,7 @@ def template_studio_preview():
         is_contractor=is_contractor,
         is_insurance=is_insurance,
         is_loan_officer=is_loan_officer,
+        is_ravlo_admin=(role_type == "ravlo_admin"),
         role_type=role_type,
         canva_connected=bool(get_user_canva_connection()),
         canva_can_create=_canva_can_create(),
@@ -1085,12 +1090,7 @@ def template_studio_generate():
     is_contractor = role_type in ("contractor", "contractor_realtor")
     is_insurance = role_type in ("insurance", "insurance_realtor")
     is_loan_officer = role_type in ("loan_officer", "lender")
-    if role_type in ("contractor", "contractor_realtor"):
-        _portal_home = url_for("vip.contractor_dashboard")
-    elif role_type in ("insurance", "insurance_realtor"):
-        _portal_home = url_for("vip.insurance_dashboard")
-    else:
-        _portal_home = url_for("vip.realtor_dashboard")
+    _portal_home = _template_studio_portal_home(role_type)
 
     return render_template(
         "elena/template_studio.html",
@@ -1107,6 +1107,7 @@ def template_studio_generate():
         is_contractor=is_contractor,
         is_insurance=is_insurance,
         is_loan_officer=is_loan_officer,
+        is_ravlo_admin=(role_type == "ravlo_admin"),
         role_type=role_type,
         canva_connected=bool(get_user_canva_connection()),
         canva_can_create=_canva_can_create(),
@@ -1170,12 +1171,7 @@ def template_studio_generate_and_save():
     is_contractor = role_type in ("contractor", "contractor_realtor")
     is_insurance = role_type in ("insurance", "insurance_realtor")
     is_loan_officer = role_type in ("loan_officer", "lender")
-    if role_type in ("contractor", "contractor_realtor"):
-        _portal_home = url_for("vip.contractor_dashboard")
-    elif role_type in ("insurance", "insurance_realtor"):
-        _portal_home = url_for("vip.insurance_dashboard")
-    else:
-        _portal_home = url_for("vip.realtor_dashboard")
+    _portal_home = _template_studio_portal_home(role_type)
 
     return render_template(
         "elena/template_studio.html",
@@ -1192,6 +1188,7 @@ def template_studio_generate_and_save():
         is_contractor=is_contractor,
         is_insurance=is_insurance,
         is_loan_officer=is_loan_officer,
+        is_ravlo_admin=(role_type == "ravlo_admin"),
         role_type=role_type,
         canva_connected=bool(get_user_canva_connection()),
         canva_can_create=_canva_can_create(),
