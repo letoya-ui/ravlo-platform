@@ -1,0 +1,74 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Deal Pipeline{% endblock %}
+
+{% block page_title %}Deal Pipeline{% endblock %}
+{% block page_subline %}Every Lending OS licensing deal in your pipeline.{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn primary sm" href="{{ url_for('account_executive.new_deal') }}">
+    <i class="lucide lucide-plus-circle"></i>
+    New Deal
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">FILTER</div>
+        <h3 style="margin:.35rem 0 .2rem;">Stage</h3>
+      </div>
+    </div>
+
+    <div class="mt-16" style="display:flex;flex-wrap:wrap;gap:8px;">
+      <a class="re-btn {{ 'primary' if not stage_filter else 'ghost' }} sm" href="{{ url_for('account_executive.deals') }}">All</a>
+      {% for stage in ae_stages %}
+        <a class="re-btn {{ 'primary' if stage_filter == stage else 'ghost' }} sm"
+           href="{{ url_for('account_executive.deals', stage=stage) }}">
+          {{ stage|replace('_', ' ')|title }}
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="re-card pad">
+    <div class="re-table-wrap">
+      <table class="re-table">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Contact</th>
+            <th>Stage</th>
+            <th>Assigned</th>
+            <th>Contract Value</th>
+            <th>Commission</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for deal in deals %}
+          <tr onclick="window.location='{{ url_for('account_executive.deal_detail', deal_id=deal.id) }}'" style="cursor:pointer;">
+            <td>{{ deal.company_name }}</td>
+            <td>{{ deal.contact_name }}<br><span class="re-card-subtitle">{{ deal.email }}</span></td>
+            <td>{{ (deal.ae_stage or 'prospect')|replace('_', ' ')|title }}</td>
+            <td>{{ deal.assigned_ae.email if deal.assigned_ae else "Unassigned" }}</td>
+            <td>{{ "$%.2f"|format(deal.contract_value) if deal.contract_value else "—" }}</td>
+            <td>
+              {% if deal.commission_amount %}
+                ${{ "%.2f"|format(deal.commission_amount) }} ({{ deal.commission_status }})
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="re-card-subtitle">No deals match this filter.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

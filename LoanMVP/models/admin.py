@@ -155,6 +155,34 @@ class BusinessInquiry(db.Model):
     status = db.Column(db.String(50), default="new", nullable=False)  # new, contacted, approved, declined
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    # -- Account Executive pipeline (sales-rep-facing; independent of the
+    # admin-facing `status` above, which drives the existing Company/invite
+    # creation workflow in admin.py and must keep its own new/contacted/
+    # approved/declined meaning unchanged). `ae_stage` is the AE's own view
+    # of the deal's progress toward a signed license.
+    assigned_ae_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    ae_stage = db.Column(db.String(30), default="prospect", nullable=True)
+    # prospect, contacted, demo_scheduled, demo_completed, contract_sent, signed, lost
+
+    contract_value = db.Column(db.Numeric(12, 2), nullable=True)
+    billing_cycle = db.Column(db.String(20), nullable=True)  # monthly, annual
+
+    commission_rate = db.Column(db.Numeric(5, 4), nullable=True)  # e.g. 0.1000 = 10%
+    commission_amount = db.Column(db.Numeric(12, 2), nullable=True)
+    commission_status = db.Column(db.String(20), default="pending", nullable=True)  # pending, approved, paid
+
+    signed_at = db.Column(db.DateTime, nullable=True)
+    lost_reason = db.Column(db.Text, nullable=True)
+
+    # Set manually once a Ravlo admin has completed the existing
+    # approve-and-onboard flow for this deal -- ties the AE's commission
+    # record to the resulting live Company for reporting.
+    linked_company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True)
+
+    assigned_ae = db.relationship("User", foreign_keys=[assigned_ae_id])
+    linked_company = db.relationship("Company", foreign_keys=[linked_company_id])
+
+
 class LicenseInviteEvent(db.Model):
     __tablename__ = "license_invite_events"
 

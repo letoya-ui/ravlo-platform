@@ -1,0 +1,105 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}New Deal{% endblock %}
+
+{% block page_title %}New Deal{% endblock %}
+{% block page_subline %}Add a prospective lending company to your pipeline.{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">PROSPECT</div>
+        <h3 style="margin:.35rem 0 .2rem;">Prospect Details</h3>
+        <div class="re-card-subtitle">This creates a licensing application record you'll work through your pipeline stages -- it does not create a live company account.</div>
+      </div>
+    </div>
+
+    <form method="POST" class="settings-form mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="company_name">Company Name</label>
+          <input id="company_name" name="company_name" type="text" required>
+        </div>
+        <div class="field">
+          <label for="contact_name">Contact Name</label>
+          <input id="contact_name" name="contact_name" type="text" required>
+        </div>
+      </div>
+
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="email">Contact Email</label>
+          <input id="email" name="email" type="email" required>
+        </div>
+        <div class="field">
+          <label for="phone">Contact Phone</label>
+          <input id="phone" name="phone" type="text">
+        </div>
+      </div>
+
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="website">Website</label>
+          <input id="website" name="website" type="text" placeholder="https://">
+        </div>
+        <div class="field">
+          <label for="business_type">Business Type</label>
+          <select id="business_type" name="business_type">
+            <option value="">— Select —</option>
+            <option value="broker">Broker</option>
+            <option value="lender">Lender</option>
+            <option value="fund">Fund</option>
+            <option value="brokerage">Brokerage</option>
+            <option value="enterprise">Enterprise</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="plan_interest">Plan Interest</label>
+          <select id="plan_interest" name="plan_interest">
+            <option value="">— Select —</option>
+            <option value="individual">Individual</option>
+            <option value="team">Team</option>
+            <option value="lender">Lender</option>
+            <option value="white_label">White Label</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="monthly_loan_volume">Monthly Loan Volume</label>
+          <input id="monthly_loan_volume" name="monthly_loan_volume" type="text" placeholder="e.g. $1M - $5M">
+        </div>
+      </div>
+
+      {% if ae_users %}
+      <div class="field">
+        <label for="assigned_ae_id">Assign To</label>
+        <select id="assigned_ae_id" name="assigned_ae_id">
+          <option value="">Unassigned</option>
+          {% for ae in ae_users %}
+            <option value="{{ ae.id }}">{{ ae.first_name or ae.email }} {{ ae.last_name or "" }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <div class="field">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" rows="4" placeholder="How you connected, initial conversation notes, etc."></textarea>
+      </div>
+
+      <div class="mt-16">
+        <button type="submit" class="re-btn primary">
+          <i class="lucide lucide-save"></i>
+          Add Deal
+        </button>
+        <a class="re-btn ghost" href="{{ url_for('account_executive.deals') }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
