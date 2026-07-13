@@ -7220,7 +7220,7 @@ def build_studio(deal_id=None):
             **{key: value for key, value in request_seed.items() if value not in (None, "")},
         }
 
-    blueprint_result = build_project.get("blueprint_first", {}) or build_project.get("blueprint", {}) or {}
+    blueprint_result = build_project.get("blueprint", {}) or build_project.get("blueprint_first", {}) or {}
     siteplan_result = build_project.get("siteplan", {}) or build_project.get("site_plan", {}) or {}
     exterior_result = _build_project_exterior_result(build_project)
 
@@ -7301,8 +7301,6 @@ def build_studio(deal_id=None):
         build_analysis=build_analysis,
         build_project=build_project,
         blueprint_result=blueprint_result,
-        blueprint_floor2_result=build_project.get("blueprint_second", {}) or build_project.get("blueprint_floor2", {}) or {},
-        blueprint_floor3_result=build_project.get("blueprint_third", {}) or build_project.get("blueprint_floor3", {}) or {},
         siteplan_result=siteplan_result,
         exterior_result=exterior_result,
         interior_result=interior_result,
@@ -8112,6 +8110,17 @@ _BLUEPRINT_NEGATIVE_PROMPT = (
       ", trees, aerial view, satellite image, grass, roads, driveway photo, landscape photo, terrain texture, photorealistic lot"
 )
 
+# Same as _BLUEPRINT_NEGATIVE_PROMPT but without the "split panels" /
+# "collage" exclusions, since a combined multi-floor blueprint sheet is
+# deliberately a set of side-by-side floor plan panels in one image.
+_BLUEPRINT_COMBINED_FLOORS_NEGATIVE_PROMPT = (
+    _VISUAL_NEGATIVE_PROMPT
+    + ", photorealistic photo, 3D render, exterior elevation, facade rendering, presentation board, "
+      "mood board, material swatches, title block, dimension strings, fake handwriting, colored blocks, "
+      "trees, aerial view, satellite image, grass, roads, driveway photo, landscape photo, terrain texture, photorealistic lot, "
+      "merged room layout, overlapping floor plans"
+)
+
 _EXTERIOR_NEGATIVE_PROMPT = (
     _VISUAL_NEGATIVE_PROMPT
     + ", blueprint, floor plan, CAD drawing, elevation drawing, section drawing, line art, presentation sheet, "
@@ -8369,10 +8378,10 @@ def _compose_design_studio_prompt(
     )
 
 
-def _build_studio_negative_prompt(mode=""):
+def _build_studio_negative_prompt(mode="", combine_floors=False):
     mode_key = safe_str(mode).lower()
     if "blueprint" in mode_key or "floor_plan" in mode_key:
-        return _BLUEPRINT_NEGATIVE_PROMPT
+        return _BLUEPRINT_COMBINED_FLOORS_NEGATIVE_PROMPT if combine_floors else _BLUEPRINT_NEGATIVE_PROMPT
     if "interior" in mode_key or "room" in mode_key:
         return _INTERIOR_NEGATIVE_PROMPT
     if "exterior" in mode_key or "facade" in mode_key or "front" in mode_key or "rear" in mode_key:
@@ -8380,7 +8389,7 @@ def _build_studio_negative_prompt(mode=""):
     return _VISUAL_NEGATIVE_PROMPT
 
 
-def _build_studio_quality_controls(mode=""):
+def _build_studio_quality_controls(mode="", combine_floors=False):
     mode_key = safe_str(mode).lower()
     base = {
         "allow_text": False,
@@ -8393,6 +8402,16 @@ def _build_studio_quality_controls(mode=""):
     }
 
     if "blueprint" in mode_key or "floor_plan" in mode_key:
+        if combine_floors:
+            return {
+                **base,
+                "avoid_collage": False,
+                "output_type": "top_down_architectural_floor_plan_multi_panel_sheet",
+                "render_type": "technical_floor_plan",
+                "camera_view": "orthographic_top_down",
+                "composition": "multiple_floor_plan_panels_side_by_side",
+                "avoid_output_types": "presentation_board,exterior_elevation,3d_render,title_block,mood_board",
+            }
         return {
             **base,
             "output_type": "top_down_architectural_floor_plan",
@@ -8461,6 +8480,7 @@ def _compose_build_studio_prompt(
     lot_count=None,
     preserve_reference=False,
     blueprint_constrained=False,
+    combine_floors=False,
 ):
     mode_key = safe_str(mode).lower()
     is_blueprint = "blueprint" in mode_key or "floor_plan" in mode_key
@@ -8469,7 +8489,23 @@ def _compose_build_studio_prompt(
     is_interior = "interior" in mode_key or "room" in mode_key
 
     mode_specific = []
-    if is_blueprint:
+    if is_blueprint and combine_floors:
+        floor_word = f"all {floors} floors" if floors else "every floor"
+        mode_specific = [
+            f"Output requirement: one single architectural sheet showing {floor_word} of this home, each floor drawn as its own top-down floor plan panel arranged side by side left to right in floor order",
+            "Give each floor's panel a clear visual gap from its neighbors so the panels read as separate floor plans, not one merged room layout",
+            "Every panel must share the same exterior footprint, scale, and orientation so the floors visually align with each other",
+            "Keep the stair position aligned vertically between adjacent floor panels",
+            "Make each floor's room layout visibly distinct and appropriate for that level (for example: garage/living/kitchen on the ground floor, bedrooms on upper floors)",
+            "Use clean black and dark gray linework on an off-white sheet; include walls, doors, windows, stairs, closets, kitchen and bath fixtures, and simple furniture blocks by shape",
+            "Do not use room labels, dimensions, notes, title blocks, decorative typography, handwriting, logos, colored blocks, or fake text because generated text becomes unreliable",
+            "Do not create an exterior elevation, photorealistic render, perspective view, or material board",
+            "Generate a clean architectural floor plan from the written project program, not from the satellite/site image",
+            "Use standard residential plan conventions: exterior walls, interior partitions, door swings, windows, stairs, kitchen fixtures, bathroom fixtures, closets, and simple furniture blocks in every panel",
+            "Use an orthographic top-down view on a clean white/off-white background for every panel",
+            "Do not include trees, aerial imagery, satellite texture, grass, roads, driveways, shadows, photorealistic terrain, or landscape photography",
+        ]
+    elif is_blueprint:
         mode_specific = [
             "Output requirement: one single top-down architectural floor plan only",
             f"Floor requirement: {floor} floor only" if floor else "",
@@ -8891,16 +8927,9 @@ def generate_build_exterior():
             br_results = deal.results_json or {}
             br_build_project = br_results.get("build_project", {}) or {}
             br_blueprint = br_build_project.get("blueprint", {}) or {}
-            br_floor2 = (
-                br_build_project.get("blueprint_floor2", {})
-                or br_build_project.get("blueprint_second", {})
-                or {}
-            )
             blueprint_reference_url = (
                 br_blueprint.get("image_url")
                 or br_blueprint.get("blueprint_url")
-                or br_floor2.get("image_url")
-                or br_floor2.get("blueprint_url")
                 or ""
             ).strip()
         use_blueprint_conditioning = bool(blueprint_reference_url)
@@ -10188,6 +10217,8 @@ def generate_build_blueprint():
         render_batch_id = uuid.uuid4().hex
         style_prompt = ""
 
+        combine_floors = bool(number_of_floors and int(number_of_floors) >= 2)
+
         blueprint_prompt_notes = _compose_build_studio_prompt(
             notes=notes,
             mode="blueprint",
@@ -10199,8 +10230,9 @@ def generate_build_blueprint():
             zoning=zoning,
             location=location,
             floors=number_of_floors,
-            floor="first",
+            floor="all" if combine_floors else "first",
             blueprint_constrained=False,
+            combine_floors=combine_floors,
         )
 
         payload = {
@@ -10213,8 +10245,8 @@ def generate_build_blueprint():
             "mode": "blueprint",
             "output_mode": "blueprint",
             "task": "build_blueprint",
-            "blueprint_floor": "first",
-            "floor": "first",
+            "blueprint_floor": "all" if combine_floors else "first",
+            "floor": "all" if combine_floors else "first",
 
             "project_name": project_name,
             "property_type": property_type,
@@ -10250,9 +10282,9 @@ def generate_build_blueprint():
             "guidance": 6.8,
             "width": 1024,
             "height": 1024,
-            "negative_prompt": _build_studio_negative_prompt("blueprint"),
+            "negative_prompt": _build_studio_negative_prompt("blueprint", combine_floors=combine_floors),
         }
-        payload.update(_build_studio_quality_controls("blueprint"))
+        payload.update(_build_studio_quality_controls("blueprint", combine_floors=combine_floors))
         _strip_build_init_images(payload)
         _log_build_source_state(payload, "blueprint")
 
@@ -10552,22 +10584,15 @@ def generate_full_build():
         bundle_job_id = uuid.uuid4().hex
 
         floor_count_for_outputs = int(number_of_floors or 1)
+        combine_floors = floor_count_for_outputs >= 2
         outputs = []
         # exterior_front first so master_exterior_url is set before blueprints run
         outputs.append(("exterior", "exterior_front"))
-        # "Floor 1" generation was unreliable for multi-story projects -- its
-        # single image would come back showing both the ground floor's and
-        # upper floor's rooms merged together instead of one floor. For a
-        # 2+ story project, blueprint_second becomes the primary/canonical
-        # floor plan instead (see primary_blueprint_output_mode below); Floor
-        # 1 is only generated when it's the *only* floor plan a project has.
-        primary_blueprint_output_mode = "blueprint_first" if floor_count_for_outputs < 2 else "blueprint_second"
-        if floor_count_for_outputs < 2:
-            outputs.append(("blueprint", "blueprint_first"))
-        if number_of_floors and int(number_of_floors) >= 2:
-            outputs.append(("blueprint", "blueprint_second"))
-        if number_of_floors and int(number_of_floors) >= 3:
-            outputs.append(("blueprint", "blueprint_third"))
+        # A single blueprint output covers the whole project: one floor plan
+        # for single-story projects, or one sheet with every floor's plan
+        # shown side by side for 2+ story projects (separate per-floor images
+        # came back visually inconsistent with each other).
+        outputs.append(("blueprint", "blueprint"))
         outputs.extend([
             ("siteplan", "siteplan"),
             ("exterior", "exterior_back"),
@@ -10636,10 +10661,11 @@ def generate_full_build():
                 zoning=zoning,
                 location=location,
                 floors=number_of_floors,
-                floor=output_mode.replace("blueprint_", "") if is_blueprint else "",
+                floor=("all" if combine_floors else "first") if is_blueprint else "",
                 lot_count=None,
                 preserve_reference=False,
                 blueprint_constrained=False,
+                combine_floors=is_blueprint and combine_floors,
             )
 
             consistency_notes = _prompt_join(
@@ -10688,7 +10714,7 @@ def generate_full_build():
                 "count": 1,
                 "width": 1024,
                 "height": 1024,
-                "negative_prompt": _build_studio_negative_prompt(output_mode),
+                "negative_prompt": _build_studio_negative_prompt(output_mode, combine_floors=is_blueprint and combine_floors),
             }
 
             if bedrooms_value is not None:
@@ -10699,7 +10725,7 @@ def generate_full_build():
                 payload["square_feet"] = square_feet_value
                 payload["square_feet_target"] = square_feet_value
 
-            payload.update(_build_studio_quality_controls(output_mode))
+            payload.update(_build_studio_quality_controls(output_mode, combine_floors=is_blueprint and combine_floors))
 
             for key in (
                 "image_url",
@@ -10813,7 +10839,7 @@ def generate_full_build():
                     )
 
             elif is_blueprint:
-                floor_label = output_mode.replace("blueprint_", "")
+                floor_label = "all" if combine_floors else "first"
 
                 payload.update({
                     # reference_role signals the engine that the exterior URL
@@ -10826,6 +10852,7 @@ def generate_full_build():
                     "generation_mode": "top_down_floorplan",
                     "blueprint_constrained": False,
                     "floor": floor_label,
+                    "combine_floors": combine_floors,
                     "steps": 30,
                     "guidance": 5.4,
                     "strength": 0.0,
@@ -10838,18 +10865,36 @@ def generate_full_build():
                 if master_exterior_url:
                     payload["master_exterior_reference_url"] = master_exterior_url
 
-                blueprint_prompt_parts = [
-                    f"{floor_label} floor",
-                    "top-down floor plan",
-                    "2D orthographic layout",
-                    "flat room layout",
-                    "walls doors windows stairs",
-                    "technical line drawing",
-                    "thin black lines",
-                    "minimal shading",
-                    "simple monochrome floorplan",
-                    "technical floor layout",
-                ]
+                if combine_floors:
+                    blueprint_prompt_parts = [
+                        f"all {number_of_floors} floor plans on one architectural sheet",
+                        "side by side floor plan panels in floor order, one panel per floor",
+                        "top-down floor plan in every panel",
+                        "2D orthographic layout",
+                        "flat room layout",
+                        "walls doors windows stairs",
+                        "technical line drawing",
+                        "thin black lines",
+                        "minimal shading",
+                        "simple monochrome floorplan",
+                        "technical floor layout",
+                        "consistent footprint and scale across panels",
+                        "aligned stair location between panels",
+                        "distinct room layout per floor",
+                    ]
+                else:
+                    blueprint_prompt_parts = [
+                        "first floor",
+                        "top-down floor plan",
+                        "2D orthographic layout",
+                        "flat room layout",
+                        "walls doors windows stairs",
+                        "technical line drawing",
+                        "thin black lines",
+                        "minimal shading",
+                        "simple monochrome floorplan",
+                        "technical floor layout",
+                    ]
 
                 # Anchor the floor plan to the specific house design generated above
                 house_descriptor = " ".join(filter(None, [
@@ -11018,20 +11063,16 @@ def generate_full_build():
                 build_project_payload["exterior_back"] = block
 
             elif is_blueprint:
-                floor_label = output_mode.replace("blueprint_", "")
                 block.update({
                     "blueprint_url": urls[0],
-                    "floor_label": floor_label,
+                    "floor_label": "all" if combine_floors else "first",
+                    "combined_floors": combine_floors,
                     "source_reference_image": "",
                     "rejected_reference_image": rejected_blueprint_reference,
                     "site_context_url": land_image_url,
                 })
-                all_results[output_mode] = block
-                build_project_payload[output_mode] = block
-
-                if output_mode == primary_blueprint_output_mode:
-                    all_results["blueprint"] = block
-                    build_project_payload["blueprint"] = block
+                all_results["blueprint"] = block
+                build_project_payload["blueprint"] = block
 
             elif is_siteplan:
                 block.update({
@@ -11043,13 +11084,19 @@ def generate_full_build():
                 build_project_payload["site_plan"] = block
 
         def _without_omitted_blueprints(existing):
+            # The old per-floor blueprint_first/second/third scheme is
+            # retired in favor of one combined "blueprint" key -- always
+            # strip the legacy keys so stale per-floor images from before
+            # this change don't linger in merged results.
             cleaned = dict(existing or {})
-            if floor_count_for_outputs < 2:
-                cleaned.pop("blueprint_second", None)
-                cleaned.pop("blueprint_floor2", None)
-            if floor_count_for_outputs < 3:
-                cleaned.pop("blueprint_third", None)
-                cleaned.pop("blueprint_floor3", None)
+            for legacy_key in (
+                "blueprint_first",
+                "blueprint_second",
+                "blueprint_third",
+                "blueprint_floor2",
+                "blueprint_floor3",
+            ):
+                cleaned.pop(legacy_key, None)
             return cleaned
 
         if project is not None:
@@ -11175,15 +11222,6 @@ def generate_build_room():
         concept_block = _safe_dict(results.get("concept"))
         latest_build = _safe_dict(results.get("latest_build"))
 
-        # Floor 1 is no longer generated for 2+ story projects (see
-        # generate_full_build's primary_blueprint_output_mode) -- its result
-        # already gets aliased into build_project["blueprint"] when that's
-        # the case, but fall back to Floor 2 directly too in case older data
-        # or another code path left the alias unset.
-        floor2_block = _safe_dict(
-            build_project.get("blueprint_floor2") or build_project.get("blueprint_second")
-        )
-
         blueprint_url = _first_nonempty(
             blueprint_block.get("image_url"),
             blueprint_block.get("blueprint_url"),
@@ -11216,9 +11254,6 @@ def generate_build_room():
             results.get("build_reference_image"),
             results.get("blueprint_url"),
             results.get("blueprint_image"),
-
-            floor2_block.get("image_url"),
-            floor2_block.get("blueprint_url"),
         )
 
         current_app.logger.warning(
