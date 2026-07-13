@@ -288,6 +288,23 @@ def _unwrap_proxy_url(url: str) -> str:
 
 def download_image_bytes(url: str) -> bytes | None:
     url = _unwrap_proxy_url(url)
+
+    # Site-relative path (e.g. "/static/uploads/studios/cloud/<file>.png"),
+    # what _persist_image_b64()'s local-disk fallback returns when
+    # DigitalOcean Spaces isn't configured -- _is_image_url() below rejects
+    # anything without an http(s) scheme, so an HTTP round-trip can never
+    # fetch this; read it straight off disk instead.
+    if url and url.startswith("/static/"):
+        try:
+            local_path = os.path.join(current_app.static_folder, url[len("/static/"):])
+            if os.path.isfile(local_path):
+                with open(local_path, "rb") as f:
+                    return f.read()
+            logger.info("Local static file not found: %s", local_path)
+        except Exception as exc:
+            logger.info("Local static file read failed for %s: %s", url[:200], exc)
+        return None
+
     if not _is_image_url(url):
         logger.info("Skipping non-image URL: %s", url[:200])
         return None
