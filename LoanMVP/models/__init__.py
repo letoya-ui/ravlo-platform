@@ -9,7 +9,14 @@ from LoanMVP.extensions import db
 from LoanMVP.models.user_model import User
 
 # 🏠 Property (used by LoanApplication)
-from LoanMVP.models.property import Property, SavedProperty 
+from LoanMVP.models.property import (
+    Property,
+    SavedProperty,
+    PropertyUnit,
+    Tenant,
+    RentPayment,
+    MaintenanceRequest,
+)
 
 # 🧧 Borrower / Loan Models (core financial logic)
 from LoanMVP.models.loan_models import (

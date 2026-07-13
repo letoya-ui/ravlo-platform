@@ -1,57 +1,31 @@
-{% extends "layouts/base.html" %}
-{% block title %}Property List{% endblock %}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}My Properties{% endblock %}
+
+{% block page_title %}My Properties{% endblock %}
+{% block page_subline %}Every property in your managed rental portfolio.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('property.new') }}" class="ravlo-btn primary sm">Add Property</a>
+{% endblock %}
+
 {% block content %}
-
 <style>
-  :root {
-    --bg:#0f0f11; --panel:#15161a; --line:#2a2e36;
-    --text:#e6e6e6; --muted:#a5a7ad; --accent:#7ab8ff;
-    --glow:0 0 14px rgba(122,184,255,.35);
-  }
-
-  body { background:var(--bg); color:var(--text); }
-  .grid {
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
-    gap:1.5rem;
-    padding:1.5rem;
-  }
-  .card {
-    background:var(--panel);
-    border:1px solid var(--line);
-    border-radius:14px;
-    padding:1rem 1.2rem;
-    box-shadow:var(--glow);
-    transition:all .2s ease;
-  }
-  .card:hover { transform:translateY(-4px); box-shadow:0 0 20px rgba(122,184,255,.4); }
-  h3 { color:var(--accent); margin-bottom:.3rem; }
-  .muted { color:var(--muted); font-size:.9rem; }
-  .btn {
-    background:linear-gradient(180deg,#1f2a36,#15161a);
-    color:var(--text); border:1px solid var(--line);
-    border-radius:10px; padding:.4rem .9rem;
-    font-size:.85rem; text-decoration:none;
-    display:inline-block; transition:all .2s;
-  }
-  .btn:hover { color:#cfe8ff; border-color:var(--accent); box-shadow:var(--glow); }
+  .pm-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(280px,1fr));gap:16px;}
+  .pm-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px;}
+  .pm-card h3{margin:0 0 4px;}
+  .muted{color:rgba(255,255,255,.6);font-size:.9rem;}
 </style>
 
-<div class="container py-4">
-  <h2 style="margin-bottom:1rem;"><i class="fa-solid fa-building"></i> Property Portfolio</h2>
-  <div class="grid">
-    {% for p in properties %}
-      <div class="card">
-        <h3>{{ p.address or 'Unknown Address' }}</h3>
-        <p class="muted">ARV: ${{ "{:,.2f}".format(p.after_repair_value or 0) }}</p>
-        <p class="muted">Equity: ${{ "{:,.2f}".format(p.equity or 0) }}</p>
-        <p class="muted">Last Updated: {{ p.updated_at.strftime('%Y-%m-%d') if p.updated_at else '—' }}</p>
-        <a href="{{ url_for('property.view', property_id=p.id) }}" class="btn">🔍 View</a>
-      </div>
-    {% else %}
-      <p>No properties found.</p>
-    {% endfor %}
-  </div>
+<div class="pm-grid">
+  {% for prop in properties %}
+    <div class="pm-card">
+      <h3>{{ prop.address }}</h3>
+      <div class="muted">{{ prop.city or "" }}{{ ", " if prop.city and prop.state }}{{ prop.state or "" }} {{ prop.zip or "" }}</div>
+      <div class="muted">{{ prop.units|length }} unit{{ "" if prop.units|length == 1 else "s" }}</div>
+      <a href="{{ url_for('property.view', property_id=prop.id) }}" class="ravlo-btn ghost sm" style="margin-top:10px;">Manage</a>
+    </div>
+  {% else %}
+    <p class="muted">No properties yet. <a href="{{ url_for('property.new') }}">Add your first property</a>.</p>
+  {% endfor %}
 </div>
-
 {% endblock %}

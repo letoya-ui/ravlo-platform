@@ -110,6 +110,14 @@
       <span>Build + Design</span>
     </a>
 
+    <div class="ravlo-nav-section">Manage</div>
+
+    <a href="{{ url_for('property.dashboard') }}"
+       class="ravlo-nav-link {% if bp == 'property' %}active{% endif %}">
+      <i class="lucide lucide-home"></i>
+      <span>Property Management</span>
+    </a>
+
     <div class="ravlo-nav-section">Capital</div>
 
     <a href="{{ url_for('investor.loans') }}"
