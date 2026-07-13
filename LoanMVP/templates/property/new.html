@@ -1,0 +1,72 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Add Property{% endblock %}
+
+{% block page_title %}Add Property{% endblock %}
+{% block page_subline %}Add a property to your managed rental portfolio.{% endblock %}
+
+{% block content %}
+<style>
+  .field{margin-bottom:14px;}
+  .field label{display:block;margin-bottom:4px;font-size:.85rem;color:rgba(255,255,255,.7);}
+  .field input,.field textarea{
+    width:100%;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);
+    border-radius:10px;padding:.6rem .8rem;color:#fff;
+  }
+  .pm-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .pm-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+</style>
+
+<div class="ravlo-card pad" style="max-width:640px;">
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="field">
+      <label for="address">Address</label>
+      <input id="address" name="address" type="text" required>
+    </div>
+
+    <div class="pm-grid-3">
+      <div class="field">
+        <label for="city">City</label>
+        <input id="city" name="city" type="text">
+      </div>
+      <div class="field">
+        <label for="state">State</label>
+        <input id="state" name="state" type="text">
+      </div>
+      <div class="field">
+        <label for="zip">ZIP</label>
+        <input id="zip" name="zip" type="text">
+      </div>
+    </div>
+
+    <div class="pm-grid-3">
+      <div class="field">
+        <label for="beds">Beds</label>
+        <input id="beds" name="beds" type="number">
+      </div>
+      <div class="field">
+        <label for="baths">Baths</label>
+        <input id="baths" name="baths" type="number" step="0.5">
+      </div>
+      <div class="field">
+        <label for="sqft">Sqft</label>
+        <input id="sqft" name="sqft" type="number">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="price">Purchase Price ($)</label>
+      <input id="price" name="price" type="number" step="0.01">
+    </div>
+
+    <div class="field">
+      <label for="description">Notes</label>
+      <textarea id="description" name="description" rows="3"></textarea>
+    </div>
+
+    <button type="submit" class="ravlo-btn primary">Add Property</button>
+    <a href="{{ url_for('property.dashboard') }}" class="ravlo-btn ghost">Cancel</a>
+  </form>
+</div>
+{% endblock %}
