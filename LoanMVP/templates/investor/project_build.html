@@ -314,6 +314,12 @@
     {% set floor3_url = (blueprint_floor3_result.get('image_url') or blueprint_floor3_result.get('blueprint_url')) if blueprint_floor3_result else '' %}
     {% set show_floor2_card = floor2_url or (blueprint_floor2_result and blueprint_floor2_result.get('skipped')) %}
     {% set show_floor3_card = floor3_url or (blueprint_floor3_result and blueprint_floor3_result.get('skipped')) %}
+    {# Floor 1 generation is unreliable for 2+ story projects (its single
+       image would come back showing both floors' rooms merged together) --
+       generate_full_build() skips it for those and promotes Floor 2 to the
+       canonical blueprint instead, so its card/summary row only makes sense
+       to show for a single-story project. #}
+    {% set is_multi_story = (floor_count or 1)|int >= 2 %}
 
     <section class="ravlo-card pad planning-summary-card">
       <div class="section-head">
@@ -324,7 +330,7 @@
       </div>
       <div class="result-meta compact">
         <div><span>Lots</span><strong id="summaryLots">{{ lot_count or '1' }}</strong></div>
-        <div><span>Floor 1</span><strong id="summaryBlueprint">{{ 'Ready' if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) else 'Waiting' }}</strong></div>
+        <div id="floor1SummaryRow" {% if is_multi_story %}class="hidden"{% endif %}><span>Floor 1</span><strong id="summaryBlueprint">{{ 'Ready' if blueprint_result and (blueprint_result.get('image_url') or blueprint_result.get('blueprint_url')) else 'Waiting' }}</strong></div>
         <div><span>Floor 2</span><strong id="summaryFloor2">{{ 'Ready' if floor2_url else ('Skipped' if blueprint_floor2_result and blueprint_floor2_result.get('skipped') else 'Waiting') }}</strong></div>
         <div><span>Floor 3</span><strong id="summaryFloor3">{{ 'Ready' if floor3_url else ('Skipped' if blueprint_floor3_result and blueprint_floor3_result.get('skipped') else 'Waiting') }}</strong></div>
         <div><span>Site Plan</span><strong id="summarySiteplan">{{ 'Ready' if siteplan_result and siteplan_result.get('image_url') else 'Waiting' }}</strong></div>
@@ -344,7 +350,7 @@
   {% set _sp_dalle = 'openai' in (siteplan_result.get('provider') or '') %}
 
   <section class="result-stack">
-    <article class="ravlo-card pad">
+    <article class="ravlo-card pad {% if is_multi_story %}hidden{% endif %}" id="floor1Card">
       <div class="section-head">
         <div>
           <div class="eyebrow">OUTPUT</div>
@@ -1212,6 +1218,12 @@ window._projectBuildPartnerCtx = {
       const floor2Skipped = Boolean(floor2Result.skipped);
       const floor3Ready = Boolean(firstImage(floor3Result));
       const floor3Skipped = Boolean(floor3Result.skipped);
+      // Floor 1 is only generated for single-story projects (see
+      // generate_full_build's primary_blueprint_output_mode) -- a real
+      // Floor 2 result means this was a 2+ story project and Floor 1 was
+      // intentionally never generated, so hide its now-permanently-empty card.
+      toggleCard('floor1Card', !floor2Ready);
+      toggleCard('floor1SummaryRow', !floor2Ready);
       toggleCard('floor2Card', floor2Ready || floor2Skipped);
       toggleCard('floor3Card', floor3Ready || floor3Skipped);
       summaryLots.textContent = build.lot_count || lotCountInput?.value || '1';

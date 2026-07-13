@@ -8765,6 +8765,21 @@ def generate_build_exterior():
         notes = (request.form.get("notes") or "").strip()
         style = (request.form.get("style") or "modern_farmhouse").strip()
         blueprint_style = _normalize_build_blueprint_style(request.form.get("blueprint_style"))
+
+        # Same structured facts generate_build_blueprint() reads -- without
+        # these, exterior generation had strictly less information about the
+        # house than the blueprint did, so the two could describe different
+        # buildings even before considering image conditioning.
+        bedrooms = (request.form.get("bedrooms") or "").strip()
+        bathrooms = (request.form.get("bathrooms") or "").strip()
+        square_feet = (request.form.get("square_feet") or "").strip()
+        bedrooms_value = _normalize_int(bedrooms)
+        square_feet_value = _normalize_int(square_feet)
+        try:
+            bathrooms_value = float(bathrooms) if bathrooms else None
+        except Exception:
+            bathrooms_value = None
+
         number_of_floors = _build_project_floor_count(
             request.form.get("number_of_floors")
             or request.form.get("floor_count"),
@@ -8864,6 +8879,32 @@ def generate_build_exterior():
         has_real_exterior_reference = bool(preserve_existing_exterior and (image_base64 or reference_image_url))
         conditioning_url = reference_image_url if has_real_exterior_reference else ""
 
+        # Ground this render in the deal's own already-generated blueprint --
+        # independent of preserve_existing_exterior (that flag is for
+        # preserving a real existing house's exterior from a land/site
+        # photo, a different scenario). Without this, exterior generation
+        # was a completely disconnected text-to-image call with no
+        # relationship to the blueprint's footprint/story count/massing,
+        # which is exactly why the two could show different-looking houses.
+        blueprint_reference_url = ""
+        if not has_real_exterior_reference and deal:
+            br_results = deal.results_json or {}
+            br_build_project = br_results.get("build_project", {}) or {}
+            br_blueprint = br_build_project.get("blueprint", {}) or {}
+            br_floor2 = (
+                br_build_project.get("blueprint_floor2", {})
+                or br_build_project.get("blueprint_second", {})
+                or {}
+            )
+            blueprint_reference_url = (
+                br_blueprint.get("image_url")
+                or br_blueprint.get("blueprint_url")
+                or br_floor2.get("image_url")
+                or br_floor2.get("blueprint_url")
+                or ""
+            ).strip()
+        use_blueprint_conditioning = bool(blueprint_reference_url)
+
         # ---------------- PROMPT ----------------
         exterior_prompt_notes = _compose_build_studio_prompt(
             notes=notes,
@@ -8877,7 +8918,7 @@ def generate_build_exterior():
             location=location,
             floors=number_of_floors,
             preserve_reference=has_real_exterior_reference,
-            blueprint_constrained=False,
+            blueprint_constrained=True,
         )
 
         # ---------------- PAYLOAD ----------------
@@ -8908,6 +8949,13 @@ def generate_build_exterior():
             "height": 1024,
             "negative_prompt": _build_studio_negative_prompt("exterior_front"),
         }
+        if bedrooms_value is not None:
+            payload["bedrooms"] = bedrooms_value
+        if bathrooms_value is not None:
+            payload["bathrooms"] = bathrooms_value
+        if square_feet_value is not None:
+            payload["square_feet"] = square_feet_value
+            payload["square_feet_target"] = square_feet_value
         payload.update(_build_studio_quality_controls("exterior_front"))
 
         # 🔥 ONLY CONDITION WHEN VALID
@@ -8918,6 +8966,13 @@ def generate_build_exterior():
                 payload["image_base64"] = image_base64
             else:
                 payload["reference_image_url"] = reference_image_url
+        elif use_blueprint_conditioning:
+            # Light conditioning only -- guides footprint/massing/story count,
+            # never tries to literally re-render the blueprint's 2D linework
+            # photorealistically (the prompt above already says as much).
+            payload["strength"] = 0.3
+            payload["reference_image_url"] = blueprint_reference_url
+            payload["blueprint_reference_url"] = blueprint_reference_url
         else:
             payload["strength"] = 0.25
             _strip_build_init_images(payload)
@@ -8956,6 +9011,9 @@ def generate_build_exterior():
                 "zoning": zoning,
                 "location": location,
                 "notes": notes,
+                "bedrooms": bedrooms_value,
+                "bathrooms": bathrooms_value,
+                "square_feet": square_feet_value,
                 "stories": number_of_floors,
                 "number_of_floors": number_of_floors,
                 "image_url": build_urls[0],
@@ -8964,8 +9022,12 @@ def generate_build_exterior():
                 "seed": result.get("seed"),
                 "job_id": result.get("job_id"),
 
-                "build_reference_image": reference_image_url,
-                "reference_source": "user_reference" if has_real_exterior_reference else "blueprint_fallback",
+                "build_reference_image": reference_image_url or blueprint_reference_url,
+                "reference_source": (
+                    "user_reference" if has_real_exterior_reference
+                    else "blueprint_fallback" if use_blueprint_conditioning
+                    else "text_only"
+                ),
                 "preserve_existing_exterior": has_real_exterior_reference,
             }
 
@@ -10493,7 +10555,15 @@ def generate_full_build():
         outputs = []
         # exterior_front first so master_exterior_url is set before blueprints run
         outputs.append(("exterior", "exterior_front"))
-        outputs.append(("blueprint", "blueprint_first"))
+        # "Floor 1" generation was unreliable for multi-story projects -- its
+        # single image would come back showing both the ground floor's and
+        # upper floor's rooms merged together instead of one floor. For a
+        # 2+ story project, blueprint_second becomes the primary/canonical
+        # floor plan instead (see primary_blueprint_output_mode below); Floor
+        # 1 is only generated when it's the *only* floor plan a project has.
+        primary_blueprint_output_mode = "blueprint_first" if floor_count_for_outputs < 2 else "blueprint_second"
+        if floor_count_for_outputs < 2:
+            outputs.append(("blueprint", "blueprint_first"))
         if number_of_floors and int(number_of_floors) >= 2:
             outputs.append(("blueprint", "blueprint_second"))
         if number_of_floors and int(number_of_floors) >= 3:
@@ -10959,7 +11029,7 @@ def generate_full_build():
                 all_results[output_mode] = block
                 build_project_payload[output_mode] = block
 
-                if output_mode == "blueprint_first":
+                if output_mode == primary_blueprint_output_mode:
                     all_results["blueprint"] = block
                     build_project_payload["blueprint"] = block
 
@@ -11105,6 +11175,15 @@ def generate_build_room():
         concept_block = _safe_dict(results.get("concept"))
         latest_build = _safe_dict(results.get("latest_build"))
 
+        # Floor 1 is no longer generated for 2+ story projects (see
+        # generate_full_build's primary_blueprint_output_mode) -- its result
+        # already gets aliased into build_project["blueprint"] when that's
+        # the case, but fall back to Floor 2 directly too in case older data
+        # or another code path left the alias unset.
+        floor2_block = _safe_dict(
+            build_project.get("blueprint_floor2") or build_project.get("blueprint_second")
+        )
+
         blueprint_url = _first_nonempty(
             blueprint_block.get("image_url"),
             blueprint_block.get("blueprint_url"),
@@ -11137,6 +11216,9 @@ def generate_build_room():
             results.get("build_reference_image"),
             results.get("blueprint_url"),
             results.get("blueprint_image"),
+
+            floor2_block.get("image_url"),
+            floor2_block.get("blueprint_url"),
         )
 
         current_app.logger.warning(
