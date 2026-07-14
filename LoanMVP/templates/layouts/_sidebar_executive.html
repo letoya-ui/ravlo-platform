@@ -79,6 +79,18 @@
       <span>License Applications</span>
     </a>
 
+    <a href="{{ url_for('account_executive.prospects') }}"
+       class="re-nav-link {% if ep == 'account_executive.prospects' %}active{% endif %}">
+      <i class="icon lucide lucide-target"></i>
+      <span>AE Prospect Pool</span>
+    </a>
+
+    <a href="{{ url_for('account_executive.dashboard') }}"
+       class="re-nav-link {% if ep == 'account_executive.dashboard' %}active{% endif %}">
+      <i class="icon lucide lucide-git-branch"></i>
+      <span>AE Deal Pipeline</span>
+    </a>
+
     <div class="re-nav-section-label">Operations</div>
 
     <a href="{{ url_for('executive.bid_support') }}"

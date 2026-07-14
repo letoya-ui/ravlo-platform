@@ -1,0 +1,59 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Prospect Pool{% endblock %}
+
+{% block page_title %}Prospect Pool{% endblock %}
+{% block page_subline %}Unclaimed target companies -- claim one to start working it.{% endblock %}
+
+{% block topbar_actions %}
+  {% if is_full_visibility %}
+  <a class="re-btn ghost sm" href="{{ url_for('account_executive.import_prospects') }}">
+    <i class="lucide lucide-upload"></i>
+    Import Prospects
+  </a>
+  {% endif %}
+  <a class="re-btn primary sm" href="{{ url_for('account_executive.new_deal') }}">
+    <i class="lucide lucide-plus-circle"></i>
+    New Deal
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-card pad">
+    <div class="re-table-wrap">
+      <table class="re-table">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Contact</th>
+            <th>Website</th>
+            <th>Business Type</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for prospect in prospects %}
+          <tr>
+            <td>{{ prospect.company_name }}</td>
+            <td>{{ prospect.contact_name }}<br><span class="re-card-subtitle">{{ prospect.email }}</span></td>
+            <td>{{ prospect.website or "—" }}</td>
+            <td>{{ (prospect.business_type or "—")|replace('_', ' ')|title }}</td>
+            <td>
+              <form method="POST" action="{{ url_for('account_executive.deal_detail', deal_id=prospect.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action_type" value="claim">
+                <button type="submit" class="re-btn primary sm">Claim</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="re-card-subtitle">No unclaimed prospects right now.{% if is_full_visibility %} Import a list to fill the pool.{% endif %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
