@@ -16446,15 +16446,11 @@ def partners():
         Partner.name.asc()
     ).all()
 
-    categories = [
-        row[0]
-        for row in db.session.query(Partner.category)
-        .filter(Partner.category.isnot(None))
-        .distinct()
-        .order_by(Partner.category.asc())
-        .all()
-        if row[0]
-    ]
+    # Collect all unique profession values from both category AND type columns
+    # so dual-profession partners (e.g. Contractor + Realtor) appear in both filters.
+    _cat_rows = db.session.query(Partner.category).filter(Partner.category.isnot(None)).distinct().all()
+    _type_rows = db.session.query(Partner.type).filter(Partner.type.isnot(None)).distinct().all()
+    categories = sorted({row[0] for row in _cat_rows + _type_rows if row[0]})
 
     external_partners = []
     fallback_used = False

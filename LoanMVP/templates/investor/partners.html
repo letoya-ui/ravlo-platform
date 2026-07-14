@@ -182,7 +182,11 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
             </div>
 
             <div class="ravlo-muted partner-card-sub">
-              {{ partner.category or "Partner" }}
+              {% if partner.type and partner.type|lower != (partner.category or "")|lower %}
+                {{ partner.category or "Partner" }} &amp; {{ partner.type }}
+              {% else %}
+                {{ partner.category or "Partner" }}
+              {% endif %}
               {% if partner.specialty %} • {{ partner.specialty }}{% endif %}
             </div>
           </div>
