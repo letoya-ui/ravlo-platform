@@ -1,0 +1,6 @@
+# Force LF line endings for shell scripts regardless of the checkout
+# platform's core.autocrlf setting. Without this, Git for Windows'
+# default autocrlf=true rewrites .githooks/pre-commit to CRLF on
+# checkout, which breaks it under bash ("$'\r': command not found").
+*.sh text eol=lf
+.githooks/* text eol=lf
