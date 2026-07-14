@@ -104,40 +104,47 @@ def _is_owner_account(user) -> bool:
     return bool(email) and email == _owner_admin_email()
 
 
+# A guided AE sales walkthrough, not a screen-by-screen tour: each card's
+# demo_guide gives every AE the same talk track (open the file at
+# origination, follow it through processing/underwriting, show the
+# borrower and company sides) instead of everyone improvising their own
+# pitch. See docs discussion: "the exact talking points into Demo Center
+# so every future Ravlo AE gives the same core demo."
+_DEMO_OPENING_GUIDE = {
+    "say": (
+        "Before I walk you through the platform, I want to explain what you're looking at. "
+        "Ravlo Lending OS is built around the people actually moving a file through a lending "
+        "operation. Instead of giving every employee the same oversized system, each role has a "
+        "workspace designed around their responsibilities. As we walk through the demo, I'm going "
+        "to show you how one opportunity can move from origination, through processing and "
+        "underwriting, while management maintains visibility across the company."
+    ),
+    "ask": "Can you tell me a little about how your team currently moves a file from the loan officer to processing and underwriting?",
+    "listen_for": [
+        "Email → emphasize connected handoffs",
+        "Spreadsheets → emphasize pipeline visibility",
+        "Multiple systems → emphasize one operating environment",
+        "Processors chase loan officers → emphasize role ownership",
+        "Management can't see bottlenecks → emphasize Company Admin",
+        "Training is inconsistent → emphasize Academy",
+    ],
+    "note": "Do not start clicking until they answer.",
+}
+
+_DEMO_CLOSING_GUIDE = {
+    "say": (
+        "Based on what you've shown me about your operation, I see the biggest opportunity in "
+        "[processing visibility / team handoffs / borrower communication / management oversight]. "
+        "Ravlo isn't designed to replace the expertise of your team. It's designed to give that "
+        "team a more connected operating environment."
+    ),
+    "ask": "If you were to bring Lending OS into your company, which part of the operation would you want us to solve first?",
+    "note": "Don't ask \"so what do you think?\" Let them answer, then: \"That helps me understand the right deployment conversation for your team.\"",
+}
+
+
 def _demo_dashboard_cards():
     return [
-        {
-            "role_key": "investor",
-            "role": "Investor",
-            "tagline": "Capital pipeline, deal room, and subscription-led access.",
-            "theme": "Investor OS",
-            "kpis": [
-                {"label": "Live Deals", "value": "12"},
-                {"label": "Funding Ready", "value": "$4.8M"},
-                {"label": "Active Plan", "value": "Pro"},
-            ],
-            "bullets": [
-                "Deal sourcing, rehab planning, and funding status in one command view.",
-                "Subscription-aware premium tooling, exports, and AI analysis states.",
-                "Investor-ready next steps, document progress, and saved-property watchlist.",
-            ],
-        },
-        {
-            "role_key": "partner",
-            "role": "Partners",
-            "tagline": "Marketplace visibility, request intake, and service ops.",
-            "theme": "Partner Network",
-            "kpis": [
-                {"label": "New Requests", "value": "18"},
-                {"label": "Acceptance Rate", "value": "86%"},
-                {"label": "Tier", "value": "Enterprise"},
-            ],
-            "bullets": [
-                "Shows partner request flow, proposal value, and unlocked tier features.",
-                "Highlights CRM, instant quote, AI assist, and portfolio showcase modules.",
-                "Works as a pitch surface for contractors, title, insurance, and vendors.",
-            ],
-        },
         {
             "role_key": "loan_officer",
             "role": "Loan Officers",
@@ -153,6 +160,14 @@ def _demo_dashboard_cards():
                 "Intake coverage, lead conversion, and borrower communication workload.",
                 "Designed as a live demo for lenders, broker partners, and recruiting.",
             ],
+            "demo_guide": {
+                "transition": "Let's start where the opportunity enters the lending workflow—the loan officer.",
+                "show": ["Assigned leads", "Pipeline", "Pending intakes", "Active loans", "Capital applications", "Ravlo AI"],
+                "say": "The loan officer stays focused on originating and moving opportunities forward instead of chasing the file across departments.",
+                "ask": "How are your loan officers currently tracking follow-up and active files?",
+                "listen_for": ["Spreadsheets", "Email", "Missed follow-ups", "Duplicate entry"],
+                "avoid": "\"The AI does the loan officer's job.\" Say instead: \"Ravlo AI supports the loan officer with context and workflow visibility. The professional remains responsible for the lending decision and borrower relationship.\"",
+            },
         },
         {
             "role_key": "processor",
@@ -169,6 +184,13 @@ def _demo_dashboard_cards():
                 "Demonstrates the handoff between origination and underwriting.",
                 "Good pairing with the Underwriting demo for a full-file walkthrough.",
             ],
+            "demo_guide": {
+                "transition": "Once the opportunity moves forward, we can follow the operational handoff into processing.",
+                "show": ["Total loans", "Capital requests", "Submitted / in review / cleared", "Pending conditions", "Pending documents", "AI workload summary"],
+                "say": "Processing sees the work that needs to move—not the entire company's noise.",
+                "ask": "How does your processing team know which files need attention first today?",
+                "listen_for": ["Hesitation here is the pain point itself"],
+            },
         },
         {
             "role_key": "underwriter",
@@ -185,6 +207,13 @@ def _demo_dashboard_cards():
                 "Frames conditions, risk flags, and decision support as one clean workspace.",
                 "Pairs naturally with the investor funding timeline for cross-role storytelling.",
             ],
+            "demo_guide": {
+                "transition": "Now let's continue the same operational story into underwriting.",
+                "show": ["Assigned files", "Review queue", "Conditions", "Loan details", "Document access", "AI assistance", "Status movement"],
+                "say": "We're not forcing underwriting into an origination workflow. The system changes with the responsibility of the person using it. That role-based architecture is one of the core differences in Lending OS.",
+                "ask": "When a file reaches underwriting today, how much information has to be reconstructed or requested again?",
+                "listen_for": ["Multiple systems → this question sells the handoff"],
+            },
         },
         {
             "role_key": "borrower",
@@ -201,6 +230,13 @@ def _demo_dashboard_cards():
                 "Shows the AI assistant panel that explains status and next steps.",
                 "Useful for showing lenders what their own borrowers will experience.",
             ],
+            "demo_guide": {
+                "transition": "We've looked at the internal team. Now let's look at the experience from the other side of the file.",
+                "show": ["Application status", "Document requests", "Uploads", "Conditions / action items", "Messages", "Loan progress"],
+                "say": "The borrower sees what they need to do. Your team sees what they need to move. The goal is to reduce the question every lending team receives over and over—\"What's happening with my file?\"",
+                "ask": "How much time does your team currently spend answering borrower status questions or chasing documents?",
+                "listen_for": [],
+            },
         },
         {
             "role_key": "admin",
@@ -217,6 +253,63 @@ def _demo_dashboard_cards():
                 "Team management, applicant assignment, billing, and analytics.",
                 "The right demo for a licensing / white-label sales conversation.",
             ],
+            "demo_guide": {
+                "transition": "So far I've shown you how individual roles work. Now I want to show you what this looks like from the company's perspective.",
+                "show": ["Company overview", "Users / team", "Invite employee", "Role assignment", "Company pipeline", "Analytics", "Company settings", "Dashboard preferences", "Integrations", "Billing"],
+                "say": "You're not buying individual dashboards. You're creating an operating environment for your lending company. Your loan officers enter as loan officers. Your processors enter as processors. Your underwriters enter as underwriters. Your administrators manage the company workspace — each person works from the environment built around their responsibility.",
+                "ask": "If you could see where files were slowing down across your operation, what would that change for your management team?",
+                "listen_for": [],
+                "note": "Do not rush through this one — this is the licensing dashboard, and it's who you're selling to the owner.",
+            },
+        },
+        {
+            "role_key": "partner",
+            "role": "Partners",
+            "tagline": "Marketplace visibility, request intake, and service ops.",
+            "theme": "Partner Network",
+            "kpis": [
+                {"label": "New Requests", "value": "18"},
+                {"label": "Acceptance Rate", "value": "86%"},
+                {"label": "Tier", "value": "Enterprise"},
+            ],
+            "bullets": [
+                "Shows partner request flow, proposal value, and unlocked tier features.",
+                "Highlights CRM, instant quote, AI assist, and portfolio showcase modules.",
+                "Works as a pitch surface for contractors, title, insurance, and vendors.",
+            ],
+            "demo_guide": {
+                "transition": "Lending doesn't happen in isolation, so Ravlo also includes a partner ecosystem.",
+                "show": [],
+                "say": "Partners aren't simply placed in a directory. The platform is designed to create a space where service providers can establish their presence and connect around real estate activity. Ravlo doesn't just connect departments — we're building the infrastructure to connect the broader real estate ecosystem around the transaction.",
+                "ask": "",
+                "listen_for": [],
+                "avoid": "\"We guarantee leads.\" Say instead: \"Ravlo creates opportunities for visibility, discovery, and connection inside the ecosystem.\"",
+                "note": "Only demo this when it fits the prospect.",
+            },
+        },
+        {
+            "role_key": "investor",
+            "role": "Investor",
+            "tagline": "Capital pipeline, deal room, and subscription-led access.",
+            "theme": "Investor OS",
+            "kpis": [
+                {"label": "Live Deals", "value": "12"},
+                {"label": "Funding Ready", "value": "$4.8M"},
+                {"label": "Active Plan", "value": "Pro"},
+            ],
+            "bullets": [
+                "Deal sourcing, rehab planning, and funding status in one command view.",
+                "Subscription-aware premium tooling, exports, and AI analysis states.",
+                "Investor-ready next steps, document progress, and saved-property watchlist.",
+            ],
+            "demo_guide": {
+                "transition": "For companies serving real estate investors, this is where the broader Ravlo ecosystem becomes important.",
+                "show": [],
+                "say": "The investor isn't simply treated as a generic borrower. Ravlo gives investors an environment designed around opportunities, capital, properties, and project activity. The lending team sees a file. The investor sees a deal. Ravlo is designed to understand both sides of that relationship.",
+                "ask": "",
+                "listen_for": [],
+                "note": "For a traditional mortgage brokerage, don't spend 15 minutes here. For private lenders, funds, DSCR, fix-and-flip, bridge, or commercial-focused companies, show it.",
+            },
         },
     ]
 
@@ -1086,6 +1179,8 @@ def demo_center():
         single_admin_mode=_single_admin_mode_enabled(),
         owner_admin_email=_owner_admin_email(),
         can_use_demo_login=_can_use_demo_login(current_user),
+        opening_guide=_DEMO_OPENING_GUIDE,
+        closing_guide=_DEMO_CLOSING_GUIDE,
     )
 
 

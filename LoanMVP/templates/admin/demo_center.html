@@ -66,6 +66,47 @@
       grid-template-columns:1fr;
     }
   }
+  .demo-guide-toggle {
+    margin-top:14px;
+    width:100%;
+    cursor:pointer;
+  }
+  .demo-guide-toggle summary {
+    list-style:none;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:.82rem;
+    font-weight:800;
+    color:#8ec5ff;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    padding:8px 0;
+  }
+  .demo-guide-toggle summary::-webkit-details-marker { display:none; }
+  .demo-guide-toggle summary::before { content:"▸"; transition:transform .15s; }
+  .demo-guide-toggle[open] summary::before { transform:rotate(90deg); }
+  .demo-guide-body {
+    margin-top:8px;
+    padding:14px;
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+    display:grid;
+    gap:10px;
+    font-size:.85rem;
+    line-height:1.5;
+    color:#cbd6e2;
+  }
+  .demo-guide-label {
+    font-size:.7rem;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    color:#8ec5ff;
+    margin-bottom:2px;
+  }
+  .demo-guide-say { font-style:italic; color:#f4f7fb; }
 </style>
 
 <section class="demo-hero">
@@ -86,6 +127,30 @@
     </div>
   </div>
 </section>
+
+{% if opening_guide %}
+<section class="re-card pad" style="margin-top:16px;">
+  <div class="eyebrow">DEMO GUIDE — BEFORE OPENING A DASHBOARD</div>
+  <p class="demo-guide-say" style="margin:.5rem 0 0;">"{{ opening_guide.say }}"</p>
+  <div style="margin-top:12px;">
+    <div class="demo-guide-label">Then ask</div>
+    <div>"{{ opening_guide.ask }}"</div>
+  </div>
+  {% if opening_guide.listen_for %}
+  <div style="margin-top:12px;">
+    <div class="demo-guide-label">Listen for</div>
+    <ul class="demo-list" style="margin-top:4px;">
+      {% for item in opening_guide.listen_for %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if opening_guide.note %}
+  <div style="margin-top:12px;color:#f0a86b;font-weight:700;font-size:.85rem;">{{ opening_guide.note }}</div>
+  {% endif %}
+</section>
+{% endif %}
 
 <section class="demo-grid">
   {% for demo in demo_dashboards %}
@@ -117,9 +182,83 @@
       </button>
     </form>
     {% endif %}
+
+    {% if demo.demo_guide %}
+    {% set guide = demo.demo_guide %}
+    <details class="demo-guide-toggle">
+      <summary><i class="lucide lucide-mic"></i> Demo Guide</summary>
+      <div class="demo-guide-body">
+        <div>
+          <div class="demo-guide-label">Transition</div>
+          <div>"{{ guide.transition }}"</div>
+        </div>
+
+        {% if guide.show %}
+        <div>
+          <div class="demo-guide-label">Show</div>
+          <ul class="demo-list" style="margin-top:2px;">
+            {% for item in guide.show %}
+            <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        {% if guide.say %}
+        <div>
+          <div class="demo-guide-label">Say</div>
+          <div class="demo-guide-say">"{{ guide.say }}"</div>
+        </div>
+        {% endif %}
+
+        {% if guide.ask %}
+        <div>
+          <div class="demo-guide-label">Ask</div>
+          <div>"{{ guide.ask }}"</div>
+        </div>
+        {% endif %}
+
+        {% if guide.listen_for %}
+        <div>
+          <div class="demo-guide-label">Listen for</div>
+          <ul class="demo-list" style="margin-top:2px;">
+            {% for item in guide.listen_for %}
+            <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        {% if guide.avoid %}
+        <div>
+          <div class="demo-guide-label">Don't say</div>
+          <div style="color:#f28b82;">{{ guide.avoid }}</div>
+        </div>
+        {% endif %}
+
+        {% if guide.note %}
+        <div style="color:#f0a86b;font-weight:700;">{{ guide.note }}</div>
+        {% endif %}
+      </div>
+    </details>
+    {% endif %}
   </article>
   {% endfor %}
 </section>
+
+{% if closing_guide %}
+<section class="re-card pad" style="margin-top:16px;">
+  <div class="eyebrow">THE CLOSE</div>
+  <p class="demo-guide-say" style="margin:.5rem 0 0;">"{{ closing_guide.say }}"</p>
+  <div style="margin-top:12px;">
+    <div class="demo-guide-label">Then ask</div>
+    <div>"{{ closing_guide.ask }}"</div>
+  </div>
+  {% if closing_guide.note %}
+  <div style="margin-top:12px;color:#f0a86b;font-weight:700;font-size:.85rem;">{{ closing_guide.note }}</div>
+  {% endif %}
+</section>
+{% endif %}
 
 {% if single_admin_mode %}
 <section class="re-card pad" style="margin-top:16px;">
