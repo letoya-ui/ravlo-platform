@@ -57,6 +57,15 @@ def _get_or_create_demo_company():
 def _get_or_create_user(email, role, company_id, first_name, last_name):
     user = User.query.filter_by(email=email).first()
     if user:
+        # Self-heal: a pre-existing row at this well-known demo email (from
+        # earlier ad-hoc testing, a manual role change, etc.) must still
+        # match its intended persona, or role_required() rejects it and
+        # bounces the demo-login attempt straight back to auth.login.
+        if user.role != role or user.company_id != company_id or not user.is_active:
+            user.role = role
+            user.company_id = company_id
+            user.is_active = True
+            db.session.flush()
         return user
     user = User(
         email=email,

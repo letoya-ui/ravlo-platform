@@ -261,3 +261,46 @@ def test_demo_dashboard_cards_are_ordered_by_workflow_narrative():
         "partner",
         "investor",
     ]
+
+
+# ---------------------------------------------------------------------------
+# Self-healing: a pre-existing row at a demo email (from earlier ad-hoc
+# testing, a manual role change via System Users, etc.) must not stay stuck
+# with the wrong role forever -- role_required() rejects a mismatched role
+# and bounces the demo-login attempt straight to auth.login, which is
+# exactly what made "Log in as Processor"/"Log in as Underwriter" silently
+# fail in production while other roles kept working.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("role", ["processor", "underwriter"])
+def test_demo_login_self_heals_a_stale_role_on_the_demo_account(db_session, client, role):
+    from LoanMVP.models.admin import Company
+    from LoanMVP.services.demo_environment_service import DEMO_ROLE_EMAILS
+
+    # Simulate a demo account that already exists with the wrong role,
+    # exactly like a pre-existing row would in production.
+    stray_company = Company(name="Some Other Co", is_active=True)
+    db_session.add(stray_company)
+    db_session.commit()
+    stray_user = User(
+        email=DEMO_ROLE_EMAILS[role],
+        role="borrower",
+        company_id=stray_company.id,
+        is_active=True,
+    )
+    db_session.add(stray_user)
+    db_session.commit()
+
+    staff = _make_staff(db_session, "letoya@ravlohq.com")
+    login_as(client, staff)
+
+    login_resp = client.post(f"/admin/demo-login/{role}", follow_redirects=False)
+    assert login_resp.status_code == 302
+    assert login_resp.headers["Location"] != "/auth/login"
+
+    dashboard_resp = client.get(login_resp.headers["Location"], follow_redirects=False)
+
+    assert dashboard_resp.status_code == 200
+    healed = User.query.filter_by(email=DEMO_ROLE_EMAILS[role]).first()
+    assert healed.role == role
+    assert healed.company_id != stray_company.id
