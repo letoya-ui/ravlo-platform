@@ -53,6 +53,7 @@ def test_non_allowlisted_user_cannot_demo_login(db_session, client):
     "letoya@ravlohq.com",
     "jamaine.caughman@ravlohq.com",
     "sandra@ravlohq.com",
+    "aishagelahun@gmail.com",
 ])
 def test_allowlisted_staff_can_demo_login(db_session, client, email):
     staff = _make_staff(db_session, email)

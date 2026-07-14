@@ -1098,6 +1098,7 @@ _DEMO_LOGIN_ALLOWED_EMAILS = {
     "letoya@ravlohq.com",
     "jamaine.caughman@ravlohq.com",
     "sandra@ravlohq.com",
+    "aishagelahun@gmail.com",
 }
 
 _DEMO_ROLE_DASHBOARD_ENDPOINTS = {
