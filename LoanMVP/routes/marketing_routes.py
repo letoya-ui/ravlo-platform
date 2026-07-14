@@ -52,7 +52,7 @@ PAGE_META = {
     },
     "about": {
         "title": "About Ravlo",
-        "description": "Learn about Ravlo’s mission to give investors a smarter, clearer way to evaluate and execute real estate deals.",
+        "description": "Learn about Ravlo’s mission to give investors, partners, and lending teams a smarter, clearer way to evaluate and execute real estate deals.",
         "template": "marketing/about.html",
         "hero_image": "images/marketing/city_skyline.jpg",
     },
@@ -70,13 +70,13 @@ PAGE_META = {
     },
     "enter": {
         "title": "Enter Ravlo",
-        "description": "Access your Ravlo workspace and step into your investor command center.",
+        "description": "Access your Ravlo workspace and step into your command center.",
         "template": "marketing/enter.html",
         "hero_image": "images/marketing/dashboard.jpg",
     },
     "tour": {
         "title": "Product Tour | Ravlo",
-        "description": "Take a tour of Ravlo’s investor platform, workflows, deal tools, and studio experiences.",
+        "description": "Take a tour of Ravlo’s platform, workflows, deal tools, and studio experiences.",
         "template": "marketing/tour.html",
         "hero_image": "images/marketing/command_center.jpeg",
     },
