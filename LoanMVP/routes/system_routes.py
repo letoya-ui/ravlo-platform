@@ -273,7 +273,7 @@ def toggle_user(user_id):
 _ASSIGNABLE_ROLES = [
     "investor", "borrower", "loan_officer", "partner", "realtor",
     "contractor", "admin", "executive", "student", "loan_officer_partner",
-    "account_executive",
+    "account_executive", "processor", "underwriter",
 ]
 
 @system_bp.route("/change_role/<int:user_id>", methods=["POST"])
