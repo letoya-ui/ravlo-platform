@@ -37,6 +37,22 @@
   </div>
 
   <div class="re-nav-group">
+    <div class="re-nav-label">Scheduling</div>
+
+    <a href="{{ url_for('scheduling.company_calendar') }}"
+       class="re-nav-link {% if active_tab == 'calendar' %}active{% endif %}">
+      <i class="icon lucide lucide-calendar"></i>
+      <span>Company Calendar</span>
+    </a>
+
+    <a href="{{ url_for('scheduling.availability') }}"
+       class="re-nav-link {% if active_tab == 'availability' %}active{% endif %}">
+      <i class="icon lucide lucide-clock"></i>
+      <span>My Availability</span>
+    </a>
+  </div>
+
+  <div class="re-nav-group">
     <div class="re-nav-label">Account</div>
 
     <a href="{{ url_for('account.settings') }}"

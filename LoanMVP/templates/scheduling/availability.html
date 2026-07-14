@@ -1,0 +1,105 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}My Availability{% endblock %}
+
+{% block page_title %}My Availability{% endblock %}
+{% block page_subline %}Your recurring open hours for demo bookings -- all times {{ tz_label }}.{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('scheduling.company_calendar') }}">
+    <i class="lucide lucide-calendar"></i>
+    Company Calendar
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ADD</div>
+        <h3 style="margin:.35rem 0 .2rem;">New Availability Window</h3>
+      </div>
+    </div>
+
+    <form method="POST" class="mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action_type" value="add">
+
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="day_of_week">Day</label>
+          <select id="day_of_week" name="day_of_week">
+            {% for day in weekdays %}
+              <option value="{{ loop.index0 }}">{{ day }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="slot_minutes">Slot Length (minutes)</label>
+          <select id="slot_minutes" name="slot_minutes">
+            <option value="15">15</option>
+            <option value="30" selected>30</option>
+            <option value="45">45</option>
+            <option value="60">60</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="start_time">Start Time</label>
+          <input id="start_time" name="start_time" type="time" required>
+        </div>
+        <div class="field">
+          <label for="end_time">End Time</label>
+          <input id="end_time" name="end_time" type="time" required>
+        </div>
+      </div>
+
+      <div class="mt-16">
+        <button type="submit" class="re-btn primary">Add Window</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">CURRENT</div>
+        <h3 style="margin:.35rem 0 .2rem;">Your Weekly Availability</h3>
+      </div>
+    </div>
+
+    <div class="re-table-wrap mt-16">
+      <table class="re-table">
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>Time</th>
+            <th>Slot Length</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for slot in slots %}
+          <tr>
+            <td>{{ weekdays[slot.day_of_week] }}</td>
+            <td>{{ slot.start_time.strftime('%I:%M %p') }} &ndash; {{ slot.end_time.strftime('%I:%M %p') }}</td>
+            <td>{{ slot.slot_minutes }} min</td>
+            <td>
+              <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action_type" value="delete">
+                <input type="hidden" name="slot_id" value="{{ slot.id }}">
+                <button type="submit" class="re-btn ghost sm">Remove</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="re-card-subtitle">No availability set yet -- add a window above so prospects can book you.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

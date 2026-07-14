@@ -91,6 +91,12 @@
       <span>AE Deal Pipeline</span>
     </a>
 
+    <a href="{{ url_for('scheduling.company_calendar') }}"
+       class="re-nav-link {% if ep == 'scheduling.company_calendar' %}active{% endif %}">
+      <i class="icon lucide lucide-calendar"></i>
+      <span>Company Calendar</span>
+    </a>
+
     <div class="re-nav-section-label">Operations</div>
 
     <a href="{{ url_for('executive.bid_support') }}"
