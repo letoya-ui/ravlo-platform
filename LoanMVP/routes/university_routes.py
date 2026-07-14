@@ -62,6 +62,7 @@ _ROLE_TIER = {
     "realtor":       "elite",
     "property_mgmt": "elite",
     "contractor":    "elite",
+    "account_executive": "elite",
 }
 
 # ── Role → track (null = unrestricted) ─────────────────────────────────────
@@ -76,6 +77,7 @@ _ROLE_TRACK = {
     "property_mgmt": "property_mgmt",
     "contractor":    "contractor",
     "admin":         "operations",
+    "account_executive": "account_executive",
     # master_admin/executive see all tracks — no restriction
 }
 
