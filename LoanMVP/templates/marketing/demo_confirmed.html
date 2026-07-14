@@ -1,0 +1,24 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:720px;">
+      <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(44,182,125,.1); border:1px solid rgba(44,182,125,.22); border-radius:999px; padding:5px 16px; margin-bottom:20px;">
+        <span style="font-size:.78rem; font-weight:800; letter-spacing:2.5px; color:#2cb67d; text-transform:uppercase;">Confirmed</span>
+      </div>
+
+      <h1 class="mk-title-xl">You're on the calendar, {{ booking.prospect_name }}.</h1>
+      <p class="mk-copy-lg">
+        {{ booking.starts_at.strftime('%A, %B %d at %I:%M %p') }} {{ tz_label }}
+        {% if booking.host %} with {{ booking.host.full_name or booking.host.email }}{% endif %}.
+      </p>
+      <p class="mk-copy-lg">A confirmation email is on its way to {{ booking.prospect_email }}.</p>
+
+      <div class="mk-hero-actions">
+        <a href="{{ url_for('marketing_home') }}" class="mk-btn mk-btn-primary">Back to Ravlo</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

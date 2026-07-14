@@ -1,0 +1,58 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Company Calendar{% endblock %}
+
+{% block page_title %}Company Calendar{% endblock %}
+{% block page_subline %}
+  {% if is_full_visibility %}Every demo scheduled across the team{% else %}Your scheduled demos{% endif %} -- all times {{ tz_label }}.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('scheduling.availability') }}">
+    <i class="lucide lucide-clock"></i>
+    My Availability
+  </a>
+  <a class="re-btn primary sm" href="{{ url_for('scheduling.schedule_demo') }}" target="_blank">
+    <i class="lucide lucide-external-link"></i>
+    View Public Booking Page
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-card pad">
+    <div class="re-table-wrap">
+      <table class="re-table">
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Prospect</th>
+            <th>Company</th>
+            {% if is_full_visibility %}<th>Host</th>{% endif %}
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for booking in bookings %}
+          <tr>
+            <td>{{ booking.starts_at.strftime('%a %b %d, %I:%M %p') }}</td>
+            <td>{{ booking.prospect_name }}<br><span class="re-card-subtitle">{{ booking.prospect_email }}</span></td>
+            <td>{{ booking.prospect_company or "—" }}</td>
+            {% if is_full_visibility %}<td>{{ booking.host.full_name if booking.host else "—" }}</td>{% endif %}
+            <td>
+              <form method="POST" action="{{ url_for('scheduling.cancel_booking', booking_id=booking.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="re-btn ghost sm">Cancel</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="{{ 5 if is_full_visibility else 4 }}" class="re-card-subtitle">No demos scheduled yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

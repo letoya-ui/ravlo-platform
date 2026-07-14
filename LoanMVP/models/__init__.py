@@ -142,6 +142,8 @@ from LoanMVP.models.admin import (
 
 from LoanMVP.models.referral_models import Referral
 
+from LoanMVP.models.calendar_models import DemoAvailability, DemoBooking
+
 # ======================================================
 # 🧩 Elena Models (NEW)
 # ======================================================
@@ -253,4 +255,8 @@ __all__ = [
 
     # Referral program
     "Referral",
+
+    # Demo scheduling
+    "DemoAvailability",
+    "DemoBooking",
 ]
