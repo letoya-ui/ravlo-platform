@@ -109,6 +109,35 @@ def test_staff_full_visibility_sees_all_properties(db_session, client):
     assert "Portfolio Beta" in body
 
 
+def test_staff_created_property_appears_on_own_dashboard_and_list(db_session, client):
+    """Staff (property/lending_admin/executive) have no InvestorProfile, so a
+    property they create via /property/new gets owner_investor_id=None.
+    _owned_properties_query() used to exclude NULL owner_investor_id even
+    for full-visibility roles, so the property they just created vanished
+    from their own dashboard/list right after creation."""
+    executive = _make_executive(db_session, email="staff-creator@ravlohq.com")
+    login_as(client, executive)
+
+    resp = client.post(
+        "/property/new",
+        data={"address": "789 Staff Created Way", "city": "Decatur"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+
+    prop = Property.query.filter_by(address="789 Staff Created Way").first()
+    assert prop is not None
+    assert prop.owner_investor_id is None
+
+    list_resp = client.get("/property/list")
+    assert list_resp.status_code == 200
+    assert "789 Staff Created Way" in list_resp.get_data(as_text=True)
+
+    dashboard_resp = client.get("/property/dashboard")
+    assert dashboard_resp.status_code == 200
+    assert "789 Staff Created Way" in dashboard_resp.get_data(as_text=True)
+
+
 def test_investor_cannot_view_another_investors_property(db_session, client):
     user1, profile1 = _make_investor(db_session, email="inv1c@example.com")
     user2, profile2 = _make_investor(db_session, email="inv2c@example.com")

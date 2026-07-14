@@ -36,6 +36,7 @@ from LoanMVP.models.vip_models import VIPIncome, VIPProfile
 from LoanMVP.models.company_finance_models import CMFinanceEntry, DIVISIONS, INCOME_CATEGORIES, EXPENSE_CATEGORIES
 from LoanMVP.models.contractor_models import ContractorBidOpportunity
 from LoanMVP.services.notify_service import notify
+from LoanMVP.services.notification_service import create_notification
 
 import io
 import csv
@@ -2330,7 +2331,82 @@ def messages():
         users=users,
         company=company,
     )
-    
+
+
+# =========================================================
+# 🔔 SEND NOTIFICATION (admin / Ravlo AI broadcast)
+# =========================================================
+@admin_bp.route("/notifications/send", methods=["GET", "POST"])
+@login_required
+@role_required("admin_group")
+def send_notification():
+    company = _company_scope()
+    if not company and not _is_full_admin(current_user):
+        # See messages()/reports(): a misconfigured company-admin with no
+        # company_id must not fall through to the platform-wide branches.
+        abort(403)
+
+    if company:
+        users = (
+            User.query
+            .filter_by(company_id=company.id)
+            .order_by(User.first_name.asc(), User.last_name.asc())
+            .all()
+        )
+    else:
+        users = User.query.order_by(User.first_name.asc(), User.last_name.asc()).all()
+
+    roles = sorted({user.role for user in users if user.role})
+
+    if request.method == "POST":
+        target_type = (request.form.get("target_type") or "").strip()
+        title = (request.form.get("title") or "").strip()
+        message = (request.form.get("message") or "").strip()
+        action_url = (request.form.get("action_url") or "").strip() or None
+
+        if not title or not message:
+            flash("Title and message are required.", "warning")
+            return redirect(url_for("admin.send_notification"))
+
+        allowed_user_ids = {user.id for user in users}
+        recipients = []
+
+        if target_type == "user":
+            recipient_id = request.form.get("recipient_id", type=int)
+            recipient = User.query.get(recipient_id) if recipient_id else None
+            if not recipient or recipient.id not in allowed_user_ids:
+                flash("Recipient not found in your workspace.", "danger")
+                return redirect(url_for("admin.send_notification"))
+            recipients = [recipient]
+
+        elif target_type == "role":
+            role = (request.form.get("role") or "").strip()
+            recipients = [user for user in users if user.role == role]
+            if not recipients:
+                flash("No users found with that role.", "warning")
+                return redirect(url_for("admin.send_notification"))
+
+        elif target_type == "everyone":
+            recipients = users
+
+        else:
+            flash("Choose who should receive this notification.", "warning")
+            return redirect(url_for("admin.send_notification"))
+
+        for recipient in recipients:
+            create_notification(recipient, title=title, message=message, action_url=action_url, channel="admin")
+
+        flash(f"Notification sent to {len(recipients)} user(s).", "success")
+        return redirect(url_for("admin.send_notification"))
+
+    return render_template(
+        "admin/send_notification.html",
+        users=users,
+        roles=roles,
+        company=company,
+    )
+
+
 # =========================================================
 # 📑 VERIFY DOCUMENTS
 # =========================================================

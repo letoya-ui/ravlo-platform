@@ -1,0 +1,97 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Admin • Send Notification{% endblock %}
+
+{% block content %}
+<main class="dashboard-main admin-messages-page">
+  <div class="wrap">
+
+    <section class="card admin-msg-hero">
+      <div class="admin-msg-hero__left">
+        <div class="eyebrow">ADMIN COMMUNICATIONS</div>
+        <h1>Send Notification</h1>
+        <div class="muted">
+          {% if company %}
+            Push a notification to the bell/notification center for a user, a role, or everyone in {{ company.name }}.
+          {% else %}
+            Push a notification to the bell/notification center for a user, a role, or everyone on the platform.
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <div class="admin-msg-layout">
+      <section class="card admin-msg-compose">
+        <div class="section-head">
+          <div>
+            <h3>Compose Notification</h3>
+            <div class="muted">This appears in the recipient's notification bell, same as a Ravlo AI summary alert.</div>
+          </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin.send_notification') }}" class="admin-msg-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="field">
+            <label class="label">Send to</label>
+            <select name="target_type" id="targetType" class="input" required onchange="ravloNotifTargetChange(this.value)">
+              <option value="">Choose a target</option>
+              <option value="user">A specific user</option>
+              <option value="role">Everyone with a role</option>
+              <option value="everyone">Everyone in {{ "your workspace" if company else "the platform" }}</option>
+            </select>
+          </div>
+
+          <div class="field" id="userTargetField" style="display:none;">
+            <label class="label">Recipient</label>
+            <select name="recipient_id" class="input">
+              <option value="">Select a user</option>
+              {% for user in users %}
+                <option value="{{ user.id }}">
+                  {{ user.full_name or user.username or user.email }}{% if user.role %} — {{ user.role|replace('_', ' ')|title }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field" id="roleTargetField" style="display:none;">
+            <label class="label">Role</label>
+            <select name="role" class="input">
+              <option value="">Select a role</option>
+              {% for role in roles %}
+                <option value="{{ role }}">{{ role|replace('_', ' ')|title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="label">Title</label>
+            <input type="text" name="title" class="input" maxlength="255" placeholder="e.g. Scheduled maintenance tonight" required>
+          </div>
+
+          <div class="field">
+            <label class="label">Message</label>
+            <textarea name="message" class="input textarea" rows="5" maxlength="800" placeholder="Type the notification body here..." required></textarea>
+          </div>
+
+          <div class="field">
+            <label class="label">Link (optional)</label>
+            <input type="text" name="action_url" class="input" placeholder="/some/relevant/page">
+          </div>
+
+          <div class="admin-msg-actions">
+            <button type="submit" class="btn btn-primary">Send Notification</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+  </div>
+</main>
+
+<script>
+function ravloNotifTargetChange(value) {
+  document.getElementById('userTargetField').style.display = (value === 'user') ? '' : 'none';
+  document.getElementById('roleTargetField').style.display = (value === 'role') ? '' : 'none';
+}
+</script>
+{% endblock %}

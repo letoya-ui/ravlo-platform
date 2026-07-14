@@ -50,6 +50,20 @@ def _make_user(db_session, email, role):
     return user
 
 
+def _make_user_in_company(db_session, email, role, company):
+    user = User(email=email, role=role, is_active=True, company_id=company.id)
+    db_session.add(user)
+    db_session.commit()
+    return user
+
+
+def _make_company(db_session, name):
+    company = Company(name=name, is_active=True, subscription_tier="team", max_users=10)
+    db_session.add(company)
+    db_session.commit()
+    return company
+
+
 def _ai_outcome(summary_text="A helpful AI summary."):
     return {"result": {"summary": summary_text}, "context": {}, "provider": "template"}
 
@@ -294,3 +308,114 @@ def test_borrower_ai_assistant_sends_notification(db_session, client):
     assert resp.status_code == 200
     notif = LoanNotification.query.filter_by(user_id=user.id, channel="ai").first()
     assert notif is not None
+
+
+# ---------------------------------------------------------------------------
+# Admin/Ravlo-AI can manually send a notification (new admin.send_notification
+# route), scoped so a company admin can only ever reach their own company.
+# ---------------------------------------------------------------------------
+
+def test_company_admin_can_send_notification_to_specific_user(db_session, client, app):
+    company = _make_company(db_session, "Scoped Co A")
+    admin = _make_user_in_company(db_session, "admin-a@example.com", "admin", company)
+    teammate = _make_user_in_company(db_session, "teammate-a@example.com", "loan_officer", company)
+
+    login_as(client, admin)
+    app.config["WTF_CSRF_ENABLED"] = False
+    resp = client.post(
+        "/admin/notifications/send",
+        data={
+            "target_type": "user",
+            "recipient_id": str(teammate.id),
+            "title": "Heads up",
+            "message": "New process starting Monday.",
+        },
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 302
+    notif = LoanNotification.query.filter_by(user_id=teammate.id, channel="admin").first()
+    assert notif is not None
+    assert notif.title == "Heads up"
+
+
+def test_company_admin_cannot_send_notification_to_user_in_another_company(db_session, client, app):
+    company_a = _make_company(db_session, "Scoped Co B")
+    company_b = _make_company(db_session, "Scoped Co C")
+    admin = _make_user_in_company(db_session, "admin-b@example.com", "admin", company_a)
+    outsider = _make_user_in_company(db_session, "outsider-b@example.com", "loan_officer", company_b)
+
+    login_as(client, admin)
+    app.config["WTF_CSRF_ENABLED"] = False
+    resp = client.post(
+        "/admin/notifications/send",
+        data={
+            "target_type": "user",
+            "recipient_id": str(outsider.id),
+            "title": "Leak attempt",
+            "message": "Should not be delivered.",
+        },
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 302
+    assert LoanNotification.query.filter_by(user_id=outsider.id, title="Leak attempt").first() is None
+
+
+def test_company_admin_send_to_role_only_notifies_own_company(db_session, client, app):
+    company_a = _make_company(db_session, "Scoped Co D")
+    company_b = _make_company(db_session, "Scoped Co E")
+    admin = _make_user_in_company(db_session, "admin-d@example.com", "admin", company_a)
+    own_officer = _make_user_in_company(db_session, "officer-d@example.com", "loan_officer", company_a)
+    other_officer = _make_user_in_company(db_session, "officer-e@example.com", "loan_officer", company_b)
+
+    login_as(client, admin)
+    app.config["WTF_CSRF_ENABLED"] = False
+    resp = client.post(
+        "/admin/notifications/send",
+        data={
+            "target_type": "role",
+            "role": "loan_officer",
+            "title": "Role broadcast",
+            "message": "For loan officers only.",
+        },
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 302
+    assert LoanNotification.query.filter_by(user_id=own_officer.id, title="Role broadcast").first() is not None
+    assert LoanNotification.query.filter_by(user_id=other_officer.id, title="Role broadcast").first() is None
+
+
+def test_company_admin_send_to_everyone_notifies_only_own_company(db_session, client, app):
+    company_a = _make_company(db_session, "Scoped Co F")
+    company_b = _make_company(db_session, "Scoped Co G")
+    admin = _make_user_in_company(db_session, "admin-f@example.com", "admin", company_a)
+    own_teammate = _make_user_in_company(db_session, "teammate-f@example.com", "processor", company_a)
+    other_company_user = _make_user_in_company(db_session, "teammate-g@example.com", "processor", company_b)
+
+    login_as(client, admin)
+    app.config["WTF_CSRF_ENABLED"] = False
+    resp = client.post(
+        "/admin/notifications/send",
+        data={
+            "target_type": "everyone",
+            "title": "Company-wide update",
+            "message": "For everyone in the workspace.",
+        },
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 302
+    assert LoanNotification.query.filter_by(user_id=admin.id, title="Company-wide update").first() is not None
+    assert LoanNotification.query.filter_by(user_id=own_teammate.id, title="Company-wide update").first() is not None
+    assert LoanNotification.query.filter_by(user_id=other_company_user.id, title="Company-wide update").first() is None
+
+
+def test_send_notification_page_rejects_non_admin_roles(db_session, client):
+    user = _make_user(db_session, "not-admin@example.com", "loan_officer")
+    login_as(client, user)
+
+    resp = client.get("/admin/notifications/send")
+
+    assert resp.status_code in (302, 403)
