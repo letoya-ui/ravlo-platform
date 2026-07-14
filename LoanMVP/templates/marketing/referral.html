@@ -20,6 +20,17 @@
         <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Create Your Free Account</a>
         <a href="{{ url_for('marketing.plans') }}" class="mk-btn mk-btn-ghost">See Plans</a>
       </div>
+      {% elif current_user.is_authenticated %}
+      <h1 class="mk-title-xl">Refer a friend. You both get a month free.</h1>
+      <p class="mk-copy-lg">
+        Grab your personal referral link from your profile and share it. When someone signs up
+        through it, you both get one free month — no limits on how many people you can refer.
+      </p>
+
+      <div class="mk-hero-actions">
+        <a href="{{ url_for('account.profile') }}" class="mk-btn mk-btn-primary">Get My Referral Link</a>
+        <a href="{{ url_for('marketing.plans') }}" class="mk-btn mk-btn-ghost">See Plans</a>
+      </div>
       {% else %}
       <h1 class="mk-title-xl">Refer a friend. You both get a month free.</h1>
       <p class="mk-copy-lg">
@@ -28,8 +39,8 @@
       </p>
 
       <div class="mk-hero-actions">
-        <a href="#refer-form" class="mk-btn mk-btn-primary">Refer a Friend</a>
-        <a href="{{ url_for('marketing.plans') }}" class="mk-btn mk-btn-ghost">See Plans</a>
+        <a href="{{ url_for('auth.login') }}" class="mk-btn mk-btn-primary">Log In to Get Your Link</a>
+        <a href="#refer-form" class="mk-btn mk-btn-ghost">Refer Without an Account</a>
       </div>
       {% endif %}
     </div>
@@ -56,7 +67,7 @@
       <div class="mk-card">
         <div class="mk-card-icon">1</div>
         <h3>Get Your Link</h3>
-        <p>Reach out and we'll give you a personal referral link to share with anyone in your network.</p>
+        <p>Log in and grab your personal referral link from your profile page — no need to ask anyone for it.</p>
       </div>
 
       <div class="mk-card">
