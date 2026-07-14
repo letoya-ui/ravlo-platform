@@ -114,6 +114,12 @@
         <span>Messages</span>
       </a>
 
+      <a href="{{ url_for('admin.send_notification') }}"
+         class="re-nav-link {% if ep == 'admin.send_notification' %}active{% endif %}">
+        <i class="icon lucide lucide-bell-plus"></i>
+        <span>Send Notification</span>
+      </a>
+
       <a href="{{ url_for('admin.reports') }}"
          class="re-nav-link {% if ep == 'admin.reports' %}active{% endif %}">
         <i class="icon lucide lucide-file-spreadsheet"></i>
@@ -124,6 +130,12 @@
          class="re-nav-link {% if ep == 'admin.messages' %}active{% endif %}">
         <i class="icon lucide lucide-messages-square"></i>
         <span>Messages</span>
+      </a>
+
+      <a href="{{ url_for('admin.send_notification') }}"
+         class="re-nav-link {% if ep == 'admin.send_notification' %}active{% endif %}">
+        <i class="icon lucide lucide-bell-plus"></i>
+        <span>Send Notification</span>
       </a>
 
       <a href="{{ url_for('admin.reports') }}"

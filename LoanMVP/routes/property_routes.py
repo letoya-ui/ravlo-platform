@@ -44,7 +44,13 @@ def _current_investor_profile():
 
 def _owned_properties_query():
     if _is_full_visibility(current_user):
-        return Property.query.filter(Property.owner_investor_id.isnot(None))
+        # Full-visibility staff (property/lending_admin/executive/admin) can
+        # create properties themselves -- those get owner_investor_id=None
+        # since staff have no InvestorProfile. Excluding NULL here made
+        # staff-created properties invisible on their own dashboard/list
+        # right after creation, even though _can_view_property() already
+        # grants them access to any single property.
+        return Property.query
     profile = _current_investor_profile()
     if not profile:
         return Property.query.filter(db.false())
