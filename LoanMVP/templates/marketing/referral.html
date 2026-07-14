@@ -10,6 +10,17 @@
         <span style="font-size:.78rem; font-weight:800; letter-spacing:2.5px; color:#2cb67d; text-transform:uppercase;">Ravlo Referral Program</span>
       </div>
 
+      {% if referrer_name %}
+      <h1 class="mk-title-xl">{{ referrer_name }} invited you to Ravlo.</h1>
+      <p class="mk-copy-lg">
+        Sign up through this link and you both get a free month on any paid plan — no limits, and it's automatic.
+      </p>
+
+      <div class="mk-hero-actions">
+        <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Create Your Free Account</a>
+        <a href="{{ url_for('marketing.plans') }}" class="mk-btn mk-btn-ghost">See Plans</a>
+      </div>
+      {% else %}
       <h1 class="mk-title-xl">Refer a friend. You both get a month free.</h1>
       <p class="mk-copy-lg">
         Know someone who should be on Ravlo? Send them your way. When they sign up for a paid plan,
@@ -20,6 +31,7 @@
         <a href="#refer-form" class="mk-btn mk-btn-primary">Refer a Friend</a>
         <a href="{{ url_for('marketing.plans') }}" class="mk-btn mk-btn-ghost">See Plans</a>
       </div>
+      {% endif %}
     </div>
   </div>
 </section>

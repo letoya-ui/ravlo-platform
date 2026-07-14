@@ -6,6 +6,8 @@ from LoanMVP.extensions import db
 from LoanMVP.models.user_model import User
 from LoanMVP.models.loan_models import BorrowerProfile
 from LoanMVP.models.investor_models import InvestorProfile
+from LoanMVP.models.referral_models import Referral
+from LoanMVP.services.referral_service import get_or_create_referral_code
 
 account_bp = Blueprint("account", __name__, url_prefix="/account")
 
@@ -26,12 +28,17 @@ def index():
 @account_bp.route("/profile")
 @login_required
 def profile():
+    referral_code = get_or_create_referral_code(current_user)
+    referral_count = Referral.query.filter_by(referrer_user_id=current_user.id).count()
+
     return render_template(
         "account/profile.html",
         user=current_user,
         active_tab="profile",
         title="My Profile",
         base_template=_base_template(),
+        referral_link=url_for("marketing.referral_landing", code=referral_code, _external=True),
+        referral_count=referral_count,
     )
 
 

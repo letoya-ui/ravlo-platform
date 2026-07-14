@@ -1,11 +1,12 @@
 from datetime import datetime
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, session
 from sqlalchemy import func
 
 from LoanMVP.extensions import db, csrf, limiter
 from LoanMVP.models.admin import BusinessInquiry
 from LoanMVP.models.user_model import User
+from LoanMVP.services.referral_service import find_referrer_by_code
 
 
 marketing_bp = Blueprint("marketing", __name__, url_prefix="/")
@@ -747,4 +748,24 @@ def referral():
         "marketing/referral.html",
         page_title="Refer & Earn | Ravlo",
         meta_description="Refer a friend to Ravlo and you both get a free month when they sign up. No limits — every referral earns another month.",
+    )
+
+
+@marketing_bp.route("/r/<code>")
+def referral_landing(code):
+    referrer = find_referrer_by_code(code)
+    if not referrer:
+        return redirect(url_for("marketing.referral"))
+
+    # Consumed by the next registration in this browser session
+    # (see auth.register / auth.register_borrower).
+    session["referral_code"] = referrer.referral_code
+
+    referrer_display_name = (referrer.full_name or "").strip() or "A Ravlo member"
+
+    return render_template(
+        "marketing/referral.html",
+        page_title=f"{referrer_display_name} invited you to Ravlo",
+        meta_description="Join Ravlo through a friend's referral link and you both get a free month.",
+        referrer_name=referrer_display_name,
     )
