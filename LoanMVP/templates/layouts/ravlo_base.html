@@ -86,6 +86,7 @@
           </div>
 
           <div class="ravlo-topbar-actions-slot">
+            {% include "layouts/_notification_bell.html" %}
             {% block topbar_actions %}{% endblock %}
 
             <form method="POST" action="{{ url_for('auth.logout') }}" style="margin:0;">

@@ -1,10 +1,34 @@
 from flask import Blueprint, render_template, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy import or_, and_
 
 from LoanMVP.extensions import db
 from LoanMVP.models.loan_models import LoanNotification
 
 notifications_bp = Blueprint("notifications", __name__, url_prefix="/notifications")
+
+
+def _base_template():
+    role = (getattr(current_user, "role", "") or "").strip().lower()
+    if role == "borrower":
+        return "layouts/ravlo_borrower_base.html"
+    if role == "investor":
+        return "layouts/ravlo_base.html"
+    return "layouts/ravlo_employee_base.html"
+
+
+def _visible_to_current_user():
+    """A notification is visible to the current user if it was sent
+    directly to them (user_id match), or if it's a role-wide broadcast
+    (user_id is null and role matches, or role == "all")."""
+    role = (getattr(current_user, "role", "") or "").lower()
+    return or_(
+        LoanNotification.user_id == current_user.id,
+        and_(
+            LoanNotification.user_id.is_(None),
+            or_(LoanNotification.role == role, LoanNotification.role == "all"),
+        ),
+    )
 
 
 # ============================
@@ -13,11 +37,9 @@ notifications_bp = Blueprint("notifications", __name__, url_prefix="/notificatio
 @notifications_bp.route("/")
 @login_required
 def dashboard():
-    role = getattr(current_user, "role", "all").lower()
-
     notifications = (
         LoanNotification.query
-        .filter((LoanNotification.role == role) | (LoanNotification.role == "all"))
+        .filter(_visible_to_current_user())
         .order_by(LoanNotification.created_at.desc())
         .limit(50)
         .all()
@@ -33,7 +55,8 @@ def dashboard():
         "condition_cleared": "✔️",
         "status_changed": "🔄",
         "payment_made": "💳",
-        "ai_summary": "🤖"
+        "ai_summary": "🤖",
+        "ai": "🤖",
     }
 
     COLOR_MAP = {
@@ -46,7 +69,8 @@ def dashboard():
         "condition_cleared": "#42d77d",
         "status_changed": "#7ab8ff",
         "payment_made": "#b29dff",
-        "ai_summary": "#ffdd65"
+        "ai_summary": "#ffdd65",
+        "ai": "#ffdd65",
     }
 
     return render_template(
@@ -54,6 +78,7 @@ def dashboard():
         notifications=notifications,
         ICON_MAP=ICON_MAP,
         COLOR_MAP=COLOR_MAP,
+        base_template=_base_template(),
         active_tab="notifications",
         title="Notifications"
     )
@@ -65,11 +90,9 @@ def dashboard():
 @notifications_bp.route("/api/latest")
 @login_required
 def api_latest():
-    role = getattr(current_user, "role", "all").lower()
-
     new_items = (
         LoanNotification.query
-        .filter((LoanNotification.role == role) | (LoanNotification.role == "all"))
+        .filter(_visible_to_current_user())
         .order_by(LoanNotification.created_at.desc())
         .limit(5)
         .all()
@@ -84,11 +107,11 @@ def api_latest():
 @notifications_bp.route("/mark_read/<int:notif_id>", methods=["POST"])
 @login_required
 def mark_read(notif_id):
-    role = getattr(current_user, "role", "all").lower()
+    notif = LoanNotification.query.filter(
+        LoanNotification.id == notif_id, _visible_to_current_user()
+    ).first()
 
-    notif = LoanNotification.query.get_or_404(notif_id)
-
-    if notif.role not in [role, "all"]:
+    if not notif:
         return jsonify({"success": False, "message": "Unauthorized"}), 403
 
     notif.is_read = True
@@ -102,12 +125,9 @@ def mark_read(notif_id):
 @notifications_bp.route("/mark_all_read", methods=["POST"])
 @login_required
 def mark_all_read():
-    role = getattr(current_user, "role", "all").lower()
-
-    LoanNotification.query.filter(
-        (LoanNotification.role == role) | (LoanNotification.role == "all")
-    ).update({"is_read": True})
-
+    LoanNotification.query.filter(_visible_to_current_user()).update(
+        {"is_read": True}, synchronize_session=False
+    )
     db.session.commit()
 
     return jsonify({"success": True, "message": "All notifications marked as read."})
@@ -122,29 +142,10 @@ def inject_notification_counts():
         return {}
 
     try:
-        role = getattr(current_user, "role", "all").lower()
-
         current_unread = LoanNotification.query.filter(
-            ((LoanNotification.role == role) | (LoanNotification.role == "all")) &
-            (LoanNotification.is_read == False)
+            _visible_to_current_user(), LoanNotification.is_read.is_(False)
         ).count()
-
-        crm_unread = LoanNotification.query.filter_by(role="crm", is_read=False).count()
-        loan_unread = LoanNotification.query.filter_by(role="loan_officer", is_read=False).count()
-        processor_unread = LoanNotification.query.filter_by(role="processor", is_read=False).count()
-        compliance_unread = LoanNotification.query.filter_by(role="compliance", is_read=False).count()
-        underwriter_unread = LoanNotification.query.filter_by(role="underwriter", is_read=False).count()
-        executive_unread = LoanNotification.query.filter_by(role="executive", is_read=False).count()
-
     except Exception:
-        current_unread = crm_unread = loan_unread = processor_unread = compliance_unread = underwriter_unread = executive_unread = 0
+        current_unread = 0
 
-    return dict(
-        current_unread=current_unread,
-        crm_unread=crm_unread,
-        loan_unread=loan_unread,
-        processor_unread=processor_unread,
-        compliance_unread=compliance_unread,
-        underwriter_unread=underwriter_unread,
-        executive_unread=executive_unread
-    )
+    return dict(current_unread=current_unread)
