@@ -272,6 +272,47 @@ const TRACKS = {
       ]},
     ],
   },
+  account_executive: {
+    label: 'Account Executive', color: '#8ec5ff', icon: '◈',
+    levels: [
+      { title: 'Selling Ravlo Lending OS', modules: [
+        { id: 'ae-l1-m1', title: 'Understanding the Platform', lessons: [
+          { title: 'How Lending OS is Structured', desc: 'Each role — loan officer, processor, underwriter, borrower, admin — gets its own workspace built around their responsibility. Sell the connected operation, not individual screens.' },
+          { title: 'The Company Licensing Model', desc: 'Licensing creates a company workspace, assigns a subscription tier and user limit, then activates the company admin through an invite process. Starter is $149/mo (1 seat), Growth is $799/mo (up to 10 seats).' },
+          { title: 'Where Your AE Tools Live', desc: 'The Prospect Pool for finding companies, the Deal Pipeline for tracking your opportunities, and the Sales Resources page for the one-pager and talking points.' },
+        ]},
+        { id: 'ae-l1-m2', title: 'The Guided Demo Walkthrough', lessons: [
+          { title: 'Opening the Demo the Right Way', desc: 'Never start clicking before the prospect answers how their team currently moves a file from origination to processing to underwriting. Their answer tells you what to emphasize.' },
+          { title: 'Walking the Workflow Story', desc: 'Loan Officer → Processing → Underwriting → Borrower → Company Admin, in that order, following one opportunity through the operation. Use the Demo Guide panel on each Demo Center card for the exact transition, talking points, and discovery question.' },
+          { title: 'Closing the Conversation', desc: 'Never ask "so what do you think?" Reflect back the pain point they gave you, then ask which part of the operation they would want solved first.' },
+        ]},
+      ]},
+      { title: 'Prospecting & Pipeline', modules: [
+        { id: 'ae-l2-m1', title: 'Finding Companies to Sell To', lessons: [
+          { title: 'Sourcing Target Companies', desc: 'NMLS Consumer Access, the MBA member directory, and LinkedIn Sales Navigator are the three best sources for real lending companies to prospect.' },
+          { title: 'Working the Prospect Pool', desc: 'The shared pool of unclaimed target companies — claim one, and it becomes yours to work until you close it or release it.' },
+          { title: 'Qualifying a Lending Company', desc: 'Team size, current tools (spreadsheets vs a real system), and whether management has visibility into bottlenecks today — the same signals you listen for in the opening demo question.' },
+        ]},
+        { id: 'ae-l2-m2', title: 'Managing Your Deal Pipeline', lessons: [
+          { title: 'Logging a New Deal', desc: 'Every prospect you are actively working belongs in your Deal Pipeline, not just in your head.' },
+          { title: 'Moving Deals Through Stages', desc: 'Keeping a deal’s stage current so leadership has visibility into where every opportunity actually stands.' },
+          { title: 'Tracking Your Commission', desc: 'How commission is calculated on a closed deal and where to check your running total.' },
+        ]},
+      ]},
+      { title: 'Objection Handling & Closing', modules: [
+        { id: 'ae-l3-m1', title: 'Common Objections', lessons: [
+          { title: '"We already have a system"', desc: 'Ask what that system does when a file moves from origination to processing to underwriting today — most "systems" are a CRM plus spreadsheets plus email, not a connected operating environment.' },
+          { title: '"It’s too expensive for our team size"', desc: 'Reframe from price to seats: Starter is one seat at $149/mo for a solo originator; Growth is $799/mo for up to ten people working connected, not ten separate license fees.' },
+          { title: '"We need to think about it"', desc: 'Ask which part of the operation they would want solved first — that turns a stall into a real next-step conversation.' },
+        ]},
+        { id: 'ae-l3-m2', title: 'Sales Fundamentals for Ravlo', lessons: [
+          { title: 'Selling the Operation, Not the Screens', desc: 'The core reframe: "You’re not buying individual dashboards. You’re creating an operating environment for your lending company."' },
+          { title: 'Talking About Pricing Confidently', desc: 'Know both self-serve tiers cold, and know when a company needs a custom conversation instead (large teams, white-label).' },
+          { title: 'When to Loop In Leadership', desc: 'Custom pricing, white-label requests, and anything outside the two standard tiers goes to Letoya or Jamaine before you commit to anything with the prospect.' },
+        ]},
+      ]},
+    ],
+  },
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -964,6 +1005,7 @@ You have deep expertise across: deal analysis, BRRRR strategy, multifamily, fix 
     property_mgmt: ['How do I set rent prices in a new market?', 'Walk me through a solid lease renewal process', 'What maintenance issues do landlords most often ignore until they become expensive?', 'How do I screen tenants effectively?'],
     contractor: ['How do I write a bid that protects my margin?', 'Walk me through how to read construction drawings for estimating', 'What are the most common budget busters on residential rehabs?', 'How do draw schedules typically work on a renovation project?'],
     operations: ['Walk me through what should be in a complete bid package for a municipal contract', 'How do I handle an access request where the person has given me minimal information?', 'What is the best way to write a follow-up email after submitting a bid with no response?', 'How do I structure handoff notes so Jamaine or Letoya can act on them without asking me questions?'],
+    account_executive: ['Walk me through the guided demo talk track for a first call', 'How do I handle "we already have a system" as an objection?', 'What is the difference between the Starter and Growth pricing tiers?', 'How do I qualify whether a lending company is worth pursuing?'],
   };
   const starters = startersByTrack[track] || startersByTrack.investor;
 
