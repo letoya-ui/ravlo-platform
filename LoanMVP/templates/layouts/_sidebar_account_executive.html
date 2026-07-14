@@ -34,6 +34,12 @@
       <i class="icon lucide lucide-plus-circle"></i>
       <span>New Deal</span>
     </a>
+
+    <a href="{{ url_for('resources.index') }}"
+       class="re-nav-link {% if active_tab == 'resources' %}active{% endif %}">
+      <i class="icon lucide lucide-book-open"></i>
+      <span>Sales Resources</span>
+    </a>
   </div>
 
   <div class="re-nav-group">

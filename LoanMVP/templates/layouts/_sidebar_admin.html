@@ -125,6 +125,12 @@
         <i class="icon lucide lucide-file-spreadsheet"></i>
         <span>Reports</span>
       </a>
+
+      <a href="{{ url_for('resources.index') }}"
+         class="re-nav-link {% if ep == 'resources.index' %}active{% endif %}">
+        <i class="icon lucide lucide-book-open"></i>
+        <span>Sales Resources</span>
+      </a>
     {% else %}
       <a href="{{ url_for('admin.messages') }}"
          class="re-nav-link {% if ep == 'admin.messages' %}active{% endif %}">
@@ -142,6 +148,12 @@
          class="re-nav-link {% if ep == 'admin.reports' %}active{% endif %}">
         <i class="icon lucide lucide-file-spreadsheet"></i>
         <span>Reports</span>
+      </a>
+
+      <a href="{{ url_for('resources.index') }}"
+         class="re-nav-link {% if ep == 'resources.index' %}active{% endif %}">
+        <i class="icon lucide lucide-book-open"></i>
+        <span>Sales Resources</span>
       </a>
     {% endif %}
 
