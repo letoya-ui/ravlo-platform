@@ -292,3 +292,14 @@ def test_marketing_footer_links_to_schedule_demo(client):
     resp = client.get("/lending-os")
     assert resp.status_code == 200
     assert "/demo" in resp.get_data(as_text=True)
+
+
+def test_lending_os_page_has_its_own_schedule_demo_cta(client):
+    """Beyond the sitewide footer link, the Lending OS page itself should
+    have a direct 'Schedule a Demo' call to action -- the page's own closing
+    CTA copy already promised one ("request a demo") without an actual
+    button pointing there."""
+    resp = client.get("/lending-os")
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Schedule a Demo" in body
