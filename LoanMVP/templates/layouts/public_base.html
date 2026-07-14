@@ -140,7 +140,7 @@
       <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
         <span class="pub-pill">📺 HGTV-Style Reveal</span>
         {% block topbar_actions %}
-          <a class="pub-btn ghost" href="{{ url_for('auth.login') }}">Investor Login</a>
+          <a class="pub-btn ghost" href="{{ url_for('auth.login') }}">Log In</a>
         {% endblock %}
       </div>
     </div>
@@ -151,7 +151,7 @@
   </main>
 
   <footer class="pub-footer">
-    © {{ current_year if current_year else "2026" }} Ravlo. Built for serious investors.
+    © {{ current_year if current_year else "2026" }} Ravlo. Built for real estate investors, partners, and lending teams.
   </footer>
 
   {% block scripts %}{% endblock %}
