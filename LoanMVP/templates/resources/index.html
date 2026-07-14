@@ -1,0 +1,137 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Sales Resources{% endblock %}
+{% block page_title %}Sales Resources{% endblock %}
+{% block page_subline %}The Ravlo Lending OS one-pager and dashboard-by-dashboard talking points for AE, admin, and executive conversations with prospective companies.{% endblock %}
+
+{% block content %}
+<main class="dashboard-main resources-page">
+  <div class="wrap">
+
+    <section class="card" style="padding:24px;">
+      <div class="eyebrow">ONE-PAGER</div>
+      <h1 style="margin:.35rem 0 .75rem;">Ravlo Lending OS</h1>
+      <p class="muted" style="font-size:1.05rem;line-height:1.6;max-width:760px;">
+        A single operating system for private and non-QM lending teams — borrower intake, pipeline
+        visibility, conditions and compliance, team coordination, and closing execution, with Ravlo AI
+        built into every role's dashboard instead of bolted on as a chatbot.
+      </p>
+
+      <div class="re-grid-3" style="margin-top:20px;gap:16px;">
+        <div class="re-card pad">
+          <h3 style="margin:0 0 8px;">The problem</h3>
+          <p class="muted" style="margin:0;font-size:.92rem;line-height:1.55;">
+            Lending teams run on a patchwork of spreadsheets, email threads, and a CRM never built for
+            loan execution. Nobody has one place to see the whole pipeline, and every handoff between
+            loan officer, processor, and underwriter is a manual re-explanation.
+          </p>
+        </div>
+        <div class="re-card pad">
+          <h3 style="margin:0 0 8px;">The pitch</h3>
+          <p class="muted" style="margin:0;font-size:.92rem;line-height:1.55;">
+            Every role — loan officer, processor, underwriter, investor, borrower, admin — gets its own
+            dashboard scoped to exactly their work, and Ravlo AI reads that role's live data to summarize
+            what needs attention, instead of the team writing status updates by hand.
+          </p>
+        </div>
+        <div class="re-card pad">
+          <h3 style="margin:0 0 8px;">Pricing</h3>
+          <p class="muted" style="margin:0;font-size:.92rem;line-height:1.55;">
+            <strong>$149/mo</strong> — single seat, for a solo originator or broker.<br>
+            <strong>$799/mo</strong> — full team (up to 10 users), for brokerages coordinating loan
+            officers, processors, and admins together.
+          </p>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;">
+        <h3 style="margin:0 0 8px;">30-second version</h3>
+        <p class="muted" style="font-size:.95rem;line-height:1.6;max-width:760px;">
+          "Ravlo Lending OS replaces your spreadsheets and email chains with one system where every
+          role — loan officer, processor, underwriter, investor, borrower — has their own dashboard and
+          their own AI summary of what's on their plate. It's built for private and non-QM lending
+          specifically, not a generic CRM, and it's $149 a month for a single seat or $799 for a full
+          team of up to 10."
+        </p>
+      </div>
+    </section>
+
+    <section class="card" style="padding:24px;margin-top:20px;">
+      <div class="eyebrow">TALKING POINTS</div>
+      <h2 style="margin:.35rem 0 1rem;">What to say about each Lending OS dashboard</h2>
+      <p class="muted" style="max-width:760px;margin-bottom:20px;">
+        Use these when a company wants to know what their team actually gets, role by role. Lead with
+        the "say this" line, then use the detail underneath if they want more.
+      </p>
+
+      <div class="re-grid-2" style="gap:16px;">
+
+        <div class="re-card pad">
+          <div class="eyebrow" style="color:#5FA8FF;">LOAN OFFICER</div>
+          <h3 style="margin:.3rem 0 8px;">Pipeline Dashboard</h3>
+          <p style="margin:0 0 10px;font-weight:600;">"This is where your originators live all day — every deal, sorted by stage, with commission math done for them."</p>
+          <p class="muted" style="margin:0;font-size:.88rem;line-height:1.55;">
+            Full pipeline view with borrower conversion tracking, a running commission ledger, and a
+            Ravlo AI pipeline summary that flags which deals are stalling before the loan officer has to
+            go looking for them.
+          </p>
+        </div>
+
+        <div class="re-card pad">
+          <div class="eyebrow" style="color:#5FA8FF;">PROCESSOR</div>
+          <h3 style="margin:.3rem 0 8px;">Processor Dashboard</h3>
+          <p style="margin:0 0 10px;font-weight:600;">"Processors get a single queue of every capital application that needs their eyes, with documents and status in one place."</p>
+          <p class="muted" style="margin:0;font-size:.88rem;line-height:1.55;">
+            Combined view of assigned loans plus the company-wide capital submission queue, pending
+            document counts, and a Ravlo AI summary of the day's processing workload.
+          </p>
+        </div>
+
+        <div class="re-card pad">
+          <div class="eyebrow" style="color:#5FA8FF;">UNDERWRITER</div>
+          <h3 style="margin:.3rem 0 8px;">Underwriter Dashboard</h3>
+          <p style="margin:0 0 10px;font-weight:600;">"Underwriters see risk and conditions in one queue, and Ravlo automatically generates compliant adverse action notices when a loan is declined."</p>
+          <p class="muted" style="margin:0;font-size:.88rem;line-height:1.55;">
+            Conditions management, risk reports, per-underwriter assignment so nothing gets double-worked,
+            and automatic ECOA adverse action notice generation baked into the decision flow — one less
+            compliance headache for the company.
+          </p>
+        </div>
+
+        <div class="re-card pad">
+          <div class="eyebrow" style="color:#5FA8FF;">INVESTOR</div>
+          <h3 style="margin:.3rem 0 8px;">Investor Command Center</h3>
+          <p style="margin:0 0 10px;font-weight:600;">"Investors get a portfolio snapshot with AI commentary, plus the Deal, Design, and Build Studios to actually plan renovations against a real budget."</p>
+          <p class="muted" style="margin:0;font-size:.88rem;line-height:1.55;">
+            Portfolio-wide AI summary, Deal Architect for underwriting new opportunities, and Design/Build
+            Studio tools that generate renovation concepts tied to the deal's real rehab budget — not a
+            generic AI image generator.
+          </p>
+        </div>
+
+        <div class="re-card pad">
+          <div class="eyebrow" style="color:#5FA8FF;">BORROWER</div>
+          <h3 style="margin:.3rem 0 8px;">Borrower Portal</h3>
+          <p style="margin:0 0 10px;font-weight:600;">"Borrowers get a portal with an AI assistant that can explain their own loan status in plain English, 24/7, without tying up a loan officer's time."</p>
+          <p class="muted" style="margin:0;font-size:.88rem;line-height:1.55;">
+            Live status tracking, document upload, and a Ravlo AI assistant scoped to that borrower's own
+            loan — it answers "where's my loan at" questions so the loan officer doesn't have to.
+          </p>
+        </div>
+
+        <div class="re-card pad">
+          <div class="eyebrow" style="color:#5FA8FF;">ADMIN / OWNER</div>
+          <h3 style="margin:.3rem 0 8px;">Company Dashboard</h3>
+          <p style="margin:0 0 10px;font-weight:600;">"The company admin sees everything — team, licensing status, billing, and leads — in one control panel, not five different tools."</p>
+          <p class="muted" style="margin:0;font-size:.88rem;line-height:1.55;">
+            Team management and invites, per-state loan officer license verification, billing and plan
+            management, and a built-in CRM/lead pipeline (including Facebook/Instagram lead capture) —
+            all scoped to that one company's data only.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+</main>
+{% endblock %}
