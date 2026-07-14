@@ -434,6 +434,24 @@ def _budget_line_full_price(item):
     return 0.0
 
 
+# ARV tier changes the risk posture of a generated budget, not just the
+# top-line valuation: Conservative carries a larger contingency buffer
+# (cost overruns matter more against a already-cautious value), Aggressive
+# assumes a tighter one (the valuation itself already banks on upside).
+_ARV_TIER_CONTINGENCY_MULTIPLIER = {"conservative": 1.15, "base": 1.0, "aggressive": 0.9}
+_ARV_TIER_MIN_CONTINGENCY_PCT = {"conservative": 0.12, "base": 0.08, "aggressive": 0.05}
+
+
+def _apply_arv_tier_contingency(contingency, arv_tier, estimated_total=0.0):
+    tier = (arv_tier or "base").strip().lower()
+    multiplier = _ARV_TIER_CONTINGENCY_MULTIPLIER.get(tier, 1.0)
+    min_pct = _ARV_TIER_MIN_CONTINGENCY_PCT.get(tier, 0.08)
+
+    scaled = float(contingency or 0) * multiplier
+    floor = float(estimated_total or 0) * min_pct
+    return round(max(scaled, floor), 2)
+
+
 def _budget_line_name(item, fallback="Budget Item"):
     if not isinstance(item, dict):
         return fallback
@@ -5654,6 +5672,35 @@ def deal_workspace():
         ravlo_arv_report=ravlo_arv_report,
     )
 
+@investor_bp.route("/deals/<int:deal_id>/arv-tier", methods=["POST"])
+@login_required
+@role_required("investor")
+def set_deal_arv_tier(deal_id):
+    """Persist which Ravlo ARV Engine band (conservative/base/aggressive) the
+    investor picked for this deal. Deal.arv is kept in sync with the chosen
+    band's dollar value so Deal Architect, Budget Tracker, and Build/Design
+    Studio all inherit the same selection without extra plumbing.
+    """
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+    if not deal:
+        return jsonify({"error": "Deal not found"}), 404
+
+    tier = (request.get_json(silent=True) or {}).get("tier", "").strip().lower()
+    if tier not in ("conservative", "base", "aggressive"):
+        return jsonify({"error": "tier must be conservative, base, or aggressive"}), 400
+
+    ravlo_arv = ((deal.results_json or {}).get("ravlo_arv_report") or {}).get("arv") or {}
+    tier_value = ravlo_arv.get(tier)
+    if not tier_value:
+        return jsonify({"error": "No Ravlo ARV report saved for this deal yet"}), 400
+
+    deal.arv_tier = tier
+    deal.arv = tier_value
+    db.session.commit()
+
+    return jsonify({"tier": tier, "arv": tier_value})
+
+
 @investor_bp.route("/deals", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -7265,7 +7312,7 @@ def design_studio(deal_id=None):
     )
 
     return render_template(
-        "investor/deal_rehab_studio.html",
+        "investor/design_studio.html",
         deal=deal,
         rehab_project=rehab_project,
         rehab_scope=rehab_scope,
@@ -7419,11 +7466,22 @@ def design_studio_generate_budget():
             except (TypeError, ValueError):
                 pass
 
-        engine_json = _post_renovation_engine_json(
-            "/v1/design_studio/generate_budget",
-            payload,
-            timeout=60,
-        )
+        used_provider = "renovation_engine"
+        try:
+            if not RENOVATION_ENGINE_URL:
+                raise RuntimeError("RENOVATION_ENGINE_URL is not configured.")
+            engine_json = _post_renovation_engine_json(
+                "/v1/design_studio/generate_budget",
+                payload,
+                timeout=60,
+            )
+        except Exception as _engine_exc:
+            current_app.logger.warning(
+                "Renovation engine design budget call failed, falling back to Claude: %s", _engine_exc
+            )
+            used_provider = "anthropic_claude"
+            from LoanMVP.services.llm_studio_service import claude_design_budget_estimate
+            engine_json = claude_design_budget_estimate(payload)
 
         budget = {
             "cost_low": engine_json.get("cost_low") or 0,
@@ -7432,6 +7490,22 @@ def design_studio_generate_budget():
             "line_items": engine_json.get("line_items") or [],
             "meta": engine_json.get("meta") or {},
         }
+
+        try:
+            from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+            log_ai_exchange(
+                module="investor_os",
+                feature="design_studio_generate_budget",
+                prompt=json.dumps(payload, default=str)[:4000],
+                response=json.dumps(budget, default=str)[:8000],
+                user_id=current_user.id,
+                role_view="investor",
+                provider=used_provider,
+                model="design_budget_engine" if used_provider == "renovation_engine" else "claude-sonnet-5",
+                metadata={"deal_id": deal_id, "project_id": project_id},
+            )
+        except Exception:
+            pass
 
         budget_tracker = None
         if save_to_deal and deal is not None:
@@ -12236,10 +12310,18 @@ def deal_architect_analyze():
         except Exception:
             cost_ctx = None
 
-        if RENOVATION_ENGINE_URL:
+        engine_data = {}
+        used_provider = "renovation_engine"
+        try:
+            if not RENOVATION_ENGINE_URL:
+                raise RuntimeError("RENOVATION_ENGINE_URL is not configured.")
             engine_data = _post_renovation_engine_json("/v1/deal_architect", payload, timeout=60) or {}
-        else:
+        except Exception as _engine_exc:
+            current_app.logger.warning(
+                "Renovation engine deal_architect call failed, falling back to Claude: %s", _engine_exc
+            )
             engine_data = {}
+            used_provider = "anthropic_claude"
             try:
                 from LoanMVP.services.llm_studio_service import claude_deal_analysis
                 _claude_result = claude_deal_analysis({
@@ -12280,6 +12362,22 @@ def deal_architect_analyze():
                 }
             except Exception as _exc:
                 current_app.logger.warning("claude_deal_analysis fallback failed: %s", _exc)
+
+        try:
+            from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+            log_ai_exchange(
+                module="investor_os",
+                feature="deal_architect_analyze",
+                prompt=json.dumps(payload, default=str)[:4000],
+                response=json.dumps(engine_data, default=str)[:8000] if engine_data else "",
+                user_id=current_user.id,
+                role_view="investor",
+                provider=used_provider,
+                model="deal_architect_engine" if used_provider == "renovation_engine" else "claude-sonnet-5",
+                metadata={"deal_id": deal_id, "engine_ok": bool(engine_data)},
+            )
+        except Exception:
+            pass
 
         if cost_ctx and isinstance(engine_data, dict):
             try:
@@ -14577,7 +14675,10 @@ def create_budget_from_studio(deal_id):
         investor_profile_id=ip.id
     ).order_by(ProjectBudget.id.desc()).first()
 
-    if existing_budget:
+    regenerate = bool(existing_budget) and existing_budget.arv_tier != deal.arv_tier
+    force_regenerate = request.form.get("regenerate") == "1"
+
+    if existing_budget and not regenerate and not force_regenerate:
         flash("A budget already exists for this deal.", "info")
         return redirect(url_for("investor.budget_detail", budget_id=existing_budget.id))
 
@@ -14589,53 +14690,68 @@ def create_budget_from_studio(deal_id):
         payload = {}
 
     items = payload.get("items") or []
-    strategy = (
-        payload.get("budget_type")
-        or payload.get("strategy")
-        or ((deal.results_json or {}).get("workspace_analysis") or {}).get("selected_strategy")
-        or ((deal.results_json or {}).get("strategy_analysis") or {}).get("strategy")
-        or "rehab"
-    )
-    source = str(payload.get("source") or "").strip()
-    contingency = _budget_line_full_price({"total": payload.get("contingency")})
+    explicit_budget_type = str(payload.get("budget_type") or "").strip().lower()
 
-    strategy_value = str(strategy or "").lower()
-    source_value = source.lower()
-    if strategy_value in {"design", "design_studio", "design_budget"} or "design" in source_value:
-        budget_type = "design"
-    elif (
-        strategy_value in {"build_studio", "project_build", "build", "new_build"}
-        or "build" in source_value
-        or "deal_architect" in source_value
-    ):
-        budget_type = "build"
+    if explicit_budget_type in {"design", "build", "rehab"}:
+        budget_type = explicit_budget_type
     else:
-        budget_type = "rehab"
+        strategy = (
+            payload.get("strategy")
+            or ((deal.results_json or {}).get("workspace_analysis") or {}).get("selected_strategy")
+            or ((deal.results_json or {}).get("strategy_analysis") or {}).get("strategy")
+            or "rehab"
+        )
+        source = str(payload.get("source") or "").strip()
+        strategy_value = str(strategy or "").lower()
+        source_value = source.lower()
+        if strategy_value in {"design", "design_studio", "design_budget"} or "design" in source_value:
+            budget_type = "design"
+        elif (
+            strategy_value in {"build_studio", "project_build", "build", "new_build"}
+            or "build" in source_value
+            or "deal_architect" in source_value
+        ):
+            budget_type = "build"
+        else:
+            budget_type = "rehab"
+
+    contingency = _budget_line_full_price({"total": payload.get("contingency")})
 
     budget_notes = {
         "design": "Created from Design Studio budget architecture.",
         "build": "Created from Budget Studio build cost architecture.",
     }.get(budget_type, "Created from Budget Studio.")
 
-    budget = ProjectBudget(
-        borrower_profile_id=None,
-        investor_profile_id=ip.id,
-        loan_app_id=None,
-        deal_id=deal.id,
-        build_project_id=None,
-        budget_type=budget_type,
-        name=f"Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
-        project_name=deal.title or deal.address,
-        total_amount=0.0,
-        total_budget=0.0,
-        total_cost=0.0,
-        materials_cost=0.0,
-        labor_cost=0.0,
-        contingency=contingency,
-        paid_amount=0.0,
-        notes=budget_notes,
-    )
-    db.session.add(budget)
+    if regenerate:
+        budget = existing_budget
+        ProjectExpense.query.filter_by(budget_id=budget.id).delete()
+        budget.budget_type = budget_type
+        budget.arv_tier = deal.arv_tier
+        budget.name = f"Budget - {deal.title or deal.address or f'Deal #{deal.id}'}"
+        budget.project_name = deal.title or deal.address
+        budget.contingency = contingency
+        budget.notes = f"{budget_notes} Regenerated for the {(deal.arv_tier or 'base').title()} ARV tier."
+    else:
+        budget = ProjectBudget(
+            borrower_profile_id=None,
+            investor_profile_id=ip.id,
+            loan_app_id=None,
+            deal_id=deal.id,
+            build_project_id=None,
+            budget_type=budget_type,
+            arv_tier=deal.arv_tier,
+            name=f"Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
+            project_name=deal.title or deal.address,
+            total_amount=0.0,
+            total_budget=0.0,
+            total_cost=0.0,
+            materials_cost=0.0,
+            labor_cost=0.0,
+            contingency=contingency,
+            paid_amount=0.0,
+            notes=budget_notes,
+        )
+        db.session.add(budget)
     db.session.flush()
 
     created_count = 0
@@ -14669,6 +14785,7 @@ def create_budget_from_studio(deal_id):
         created_count += 1
         estimated_total += estimated_amount
 
+    budget.contingency = _apply_arv_tier_contingency(budget.contingency, deal.arv_tier, estimated_total)
     budget.total_cost = estimated_total
     budget.total_amount = estimated_total
     budget.total_budget = estimated_total + float(budget.contingency or 0)
@@ -14678,7 +14795,9 @@ def create_budget_from_studio(deal_id):
 
     db.session.commit()
 
-    if created_count:
+    if regenerate:
+        flash(f"Budget regenerated for the {(deal.arv_tier or 'base').title()} ARV tier with {created_count} line item(s).", "success")
+    elif created_count:
         flash(f"Budget tracker created with {created_count} line item(s).", "success")
     else:
         flash("Budget tracker created, but no line items were added.", "warning")
@@ -14750,7 +14869,9 @@ def generate_budget_from_ai(deal_id):
         budget_type="rehab"
     ).first()
 
-    if existing_budget:
+    regenerate = bool(existing_budget) and existing_budget.arv_tier != deal.arv_tier
+
+    if existing_budget and not regenerate:
         flash("A rehab budget already exists for this deal.", "info")
         return redirect(url_for("investor.budget_detail", budget_id=existing_budget.id))
 
@@ -14783,25 +14904,36 @@ def generate_budget_from_ai(deal_id):
     else:
         budget_type = "rehab"
 
-    budget = ProjectBudget(
-        borrower_profile_id=None,
-        investor_profile_id=ip.id,
-        loan_app_id=None,
-        deal_id=deal.id,
-        build_project_id=None,
-        budget_type=budget_type,
-        name=f"AI Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
-        project_name=deal.title or deal.address,
-        total_amount=0,
-        total_budget=0,
-        total_cost=0.0,
-        materials_cost=0.0,
-        labor_cost=0.0,
-        contingency=0.0,
-        paid_amount=0.0,
-        notes="Auto-generated from Deal Architect / AI analysis.",
-    )
-    db.session.add(budget)
+    if regenerate:
+        budget = existing_budget
+        ProjectExpense.query.filter_by(budget_id=budget.id).delete()
+        budget.budget_type = budget_type
+        budget.arv_tier = deal.arv_tier
+        budget.name = f"AI Budget - {deal.title or deal.address or f'Deal #{deal.id}'}"
+        budget.project_name = deal.title or deal.address
+        budget.contingency = 0.0
+        budget.notes = f"Regenerated for the {(deal.arv_tier or 'base').title()} ARV tier."
+    else:
+        budget = ProjectBudget(
+            borrower_profile_id=None,
+            investor_profile_id=ip.id,
+            loan_app_id=None,
+            deal_id=deal.id,
+            build_project_id=None,
+            budget_type=budget_type,
+            arv_tier=deal.arv_tier,
+            name=f"AI Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
+            project_name=deal.title or deal.address,
+            total_amount=0,
+            total_budget=0,
+            total_cost=0.0,
+            materials_cost=0.0,
+            labor_cost=0.0,
+            contingency=0.0,
+            paid_amount=0.0,
+            notes="Auto-generated from Deal Architect / AI analysis.",
+        )
+        db.session.add(budget)
     db.session.flush()
 
     created_count = 0
@@ -14870,13 +15002,16 @@ def generate_budget_from_ai(deal_id):
             created_count = 1
             estimated_total = fallback_total
 
+    budget.contingency = _apply_arv_tier_contingency(budget.contingency, deal.arv_tier, estimated_total)
     budget.total_cost = estimated_total
     budget.total_amount = estimated_total
     budget.total_budget = estimated_total + float(budget.contingency or 0)
 
     db.session.commit()
 
-    if created_count:
+    if regenerate:
+        flash(f"AI budget regenerated for the {(deal.arv_tier or 'base').title()} ARV tier with {created_count} imported item(s).", "success")
+    elif created_count:
         flash(f"AI budget created with {created_count} imported item(s).", "success")
     else:
         flash("Budget created, but no AI line items were found to import.", "warning")

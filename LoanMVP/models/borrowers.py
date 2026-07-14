@@ -82,6 +82,11 @@ class ProjectBudget(db.Model):
 
     budget_type = db.Column(db.String(50), nullable=False, default="rehab")
 
+    # ARV band ("conservative"/"base"/"aggressive") the parent Deal was set
+    # to when this budget was generated, kept for traceability. Null for
+    # budgets not generated from a deal's ARV-driven estimate.
+    arv_tier = db.Column(db.String(20), nullable=True)
+
     name = db.Column(db.String(100), nullable=False)
     project_name = db.Column(db.String(120))
 
@@ -283,6 +288,11 @@ class Deal(db.Model):
     # core numbers
     purchase_price = db.Column(db.Float, default=0)
     arv = db.Column(db.Float, default=0)
+    # Which Ravlo ARV Engine band ("conservative" / "base" / "aggressive")
+    # the investor picked in Deal Workspace. `arv` above is kept in sync
+    # with the dollar value of whichever band this points to. Shared across
+    # Deal Architect, Budget Tracker, and Build/Design Studio.
+    arv_tier = db.Column(db.String(20), nullable=False, default="base")
     estimated_rent = db.Column(db.Float, default=0)
     rehab_cost = db.Column(db.Float, default=0)
     deal_score = db.Column(db.Integer, nullable=True)

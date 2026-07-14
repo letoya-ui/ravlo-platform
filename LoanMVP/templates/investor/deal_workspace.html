@@ -689,20 +689,21 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                 </div>
 
                 <!-- ARV Range Bar -->
-                <div class="ravlo-arv-range">
+                {% set active_tier = deal.arv_tier if deal and deal.arv_tier else "base" %}
+                <div class="ravlo-arv-range" id="ravlo-arv-range" data-deal-id="{{ deal.id if deal else '' }}">
                     <div class="ravlo-arv-range-labels">
-                        <div class="ravlo-arv-band ravlo-band-cons">
+                        <button type="button" class="ravlo-arv-band ravlo-band-cons ravlo-arv-tier-btn{% if active_tier == 'conservative' %} selected{% endif %}" data-tier="conservative">
                             <span class="ravlo-band-label">Conservative</span>
                             <strong>${{ "{:,.0f}".format(ravlo_cons) }}</strong>
-                        </div>
-                        <div class="ravlo-arv-band ravlo-band-base">
+                        </button>
+                        <button type="button" class="ravlo-arv-band ravlo-band-base ravlo-arv-tier-btn{% if active_tier == 'base' %} selected{% endif %}" data-tier="base">
                             <span class="ravlo-band-label">Base ARV</span>
                             <strong>${{ "{:,.0f}".format(ravlo_base) }}</strong>
-                        </div>
-                        <div class="ravlo-arv-band ravlo-band-agg">
+                        </button>
+                        <button type="button" class="ravlo-arv-band ravlo-band-agg ravlo-arv-tier-btn{% if active_tier == 'aggressive' %} selected{% endif %}" data-tier="aggressive">
                             <span class="ravlo-band-label">Aggressive</span>
                             <strong>${{ "{:,.0f}".format(ravlo_agg) }}</strong>
-                        </div>
+                        </button>
                     </div>
                     <div class="ravlo-arv-bar-track">
                         {% if ravlo_agg > 0 and ravlo_cons > 0 %}
@@ -717,6 +718,11 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                         <strong class="ravlo-conf-{{ ravlo_conf }}">{{ ravlo_conf|upper }}</strong>
                         <span class="ravlo-conf-score">({{ ravlo_arv.get("confidence_score", 0) }}/100)</span>
                     </div>
+                    {% if deal %}
+                    <div class="ravlo-arv-tier-note" id="ravlo-arv-tier-note">
+                        Selected tier carries into Deal Architect, Budget Tracker, and Build/Design Studio for this deal.
+                    </div>
+                    {% endif %}
                 </div>
 
                 {% if ravlo_land %}
@@ -1230,6 +1236,14 @@ Review a saved property, compare exit paths, and move the best opportunity into 
 .ravlo-band-base strong{font-size:24px;color:#7ab8ff}
 .ravlo-band-agg strong{color:#f0c674}
 
+.ravlo-arv-tier-btn{cursor:pointer;background:transparent;border:1px solid transparent;border-radius:12px;padding:8px;font-family:inherit;transition:border-color .15s,background .15s}
+.ravlo-arv-tier-btn:hover{background:rgba(255,255,255,.03)}
+.ravlo-arv-tier-btn.selected{border-color:rgba(122,184,255,.4);background:rgba(122,184,255,.08)}
+.ravlo-arv-tier-btn:disabled{cursor:wait;opacity:.6}
+.ravlo-arv-tier-note{font-size:12px;color:var(--muted);text-align:center}
+.ravlo-arv-tier-note.is-confirmed{color:#6fe2b4}
+.ravlo-arv-tier-note.is-error{color:#ff7b7b}
+
 .ravlo-arv-bar-track{position:relative;height:10px;border-radius:999px;background:rgba(255,255,255,.06);overflow:visible}
 .ravlo-arv-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#6fe2b4,#7ab8ff,#f0c674)}
 .ravlo-arv-bar-marker{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:#fff;transform:translateX(-50%)}
@@ -1306,4 +1320,63 @@ Review a saved property, compare exit paths, and move the best opportunity into 
   .ravlo-comp-table{font-size:12px}
 }
 </style>
+
+<script>
+(function () {
+  var rangeEl = document.getElementById("ravlo-arv-range");
+  if (!rangeEl) return;
+
+  var dealId = rangeEl.getAttribute("data-deal-id");
+  var noteEl = document.getElementById("ravlo-arv-tier-note");
+  var csrfToken = "{{ csrf_token() }}";
+
+  rangeEl.querySelectorAll(".ravlo-arv-tier-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (!dealId || btn.classList.contains("selected")) return;
+
+      var tier = btn.getAttribute("data-tier");
+      rangeEl.querySelectorAll(".ravlo-arv-tier-btn").forEach(function (b) {
+        b.disabled = true;
+      });
+
+      fetch("/deals/" + dealId + "/arv-tier", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken
+        },
+        body: JSON.stringify({ tier: tier })
+      })
+        .then(function (resp) {
+          return resp.json().then(function (data) {
+            if (!resp.ok) throw new Error(data.error || "Could not save tier");
+            return data;
+          });
+        })
+        .then(function () {
+          rangeEl.querySelectorAll(".ravlo-arv-tier-btn").forEach(function (b) {
+            b.classList.toggle("selected", b === btn);
+          });
+          if (noteEl) {
+            noteEl.textContent = "Tier saved — this now feeds Deal Architect, Budget Tracker, and Build/Design Studio.";
+            noteEl.classList.add("is-confirmed");
+            noteEl.classList.remove("is-error");
+          }
+        })
+        .catch(function (err) {
+          if (noteEl) {
+            noteEl.textContent = err.message || "Could not save tier — please try again.";
+            noteEl.classList.add("is-error");
+            noteEl.classList.remove("is-confirmed");
+          }
+        })
+        .finally(function () {
+          rangeEl.querySelectorAll(".ravlo-arv-tier-btn").forEach(function (b) {
+            b.disabled = false;
+          });
+        });
+    });
+  });
+})();
+</script>
 {% endblock %}

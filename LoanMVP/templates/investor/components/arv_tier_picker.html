@@ -1,0 +1,84 @@
+{#
+  Shared ARV tier picker (Conservative / Base / Aggressive).
+  Include with `{% include "investor/components/arv_tier_picker.html" %}`
+  from any page that has a `deal` in context — reads/writes the same
+  Deal.arv_tier used by Deal Workspace, Deal Architect, and Budget Tracker.
+#}
+{% if deal %}
+<div class="atp-wrap" id="atp-wrap-{{ deal.id }}" data-deal-id="{{ deal.id }}">
+  <div class="atp-label">ARV Tier</div>
+  <div class="atp-options">
+    {% for tier_key, tier_label in [("conservative", "Conservative"), ("base", "Base"), ("aggressive", "Aggressive")] %}
+    <button type="button" class="atp-btn{% if (deal.arv_tier or 'base') == tier_key %} selected{% endif %}" data-tier="{{ tier_key }}">
+      {{ tier_label }}
+    </button>
+    {% endfor %}
+  </div>
+  <div class="atp-note" id="atp-note-{{ deal.id }}"></div>
+</div>
+
+<style>
+.atp-wrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);margin-bottom:16px}
+.atp-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.atp-options{display:flex;gap:6px}
+.atp-btn{cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--text)}
+.atp-btn:hover{background:rgba(255,255,255,.05)}
+.atp-btn.selected{border-color:rgba(122,184,255,.5);background:rgba(122,184,255,.12);color:#7ab8ff}
+.atp-btn:disabled{cursor:wait;opacity:.6}
+.atp-note{font-size:12px;color:var(--muted)}
+.atp-note.is-confirmed{color:#6fe2b4}
+.atp-note.is-error{color:#ff7b7b}
+</style>
+
+<script>
+(function () {
+  var wrap = document.getElementById("atp-wrap-{{ deal.id }}");
+  if (!wrap || wrap.dataset.wired) return;
+  wrap.dataset.wired = "1";
+
+  var dealId = wrap.getAttribute("data-deal-id");
+  var noteEl = document.getElementById("atp-note-{{ deal.id }}");
+  var csrfToken = "{{ csrf_token() }}";
+
+  wrap.querySelectorAll(".atp-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (btn.classList.contains("selected")) return;
+      var tier = btn.getAttribute("data-tier");
+      wrap.querySelectorAll(".atp-btn").forEach(function (b) { b.disabled = true; });
+
+      fetch("/deals/" + dealId + "/arv-tier", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+        body: JSON.stringify({ tier: tier })
+      })
+        .then(function (resp) {
+          return resp.json().then(function (data) {
+            if (!resp.ok) throw new Error(data.error || "Could not save tier");
+            return data;
+          });
+        })
+        .then(function () {
+          wrap.querySelectorAll(".atp-btn").forEach(function (b) {
+            b.classList.toggle("selected", b === btn);
+          });
+          if (noteEl) {
+            noteEl.textContent = "Saved — used for the next generated budget.";
+            noteEl.classList.add("is-confirmed");
+            noteEl.classList.remove("is-error");
+          }
+        })
+        .catch(function (err) {
+          if (noteEl) {
+            noteEl.textContent = err.message || "Could not save tier — visit Deal Workspace first to generate the ARV report.";
+            noteEl.classList.add("is-error");
+            noteEl.classList.remove("is-confirmed");
+          }
+        })
+        .finally(function () {
+          wrap.querySelectorAll(".atp-btn").forEach(function (b) { b.disabled = false; });
+        });
+    });
+  });
+})();
+</script>
+{% endif %}

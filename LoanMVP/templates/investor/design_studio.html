@@ -48,6 +48,8 @@
     </div>
   </section>
 
+  {% include "investor/components/arv_tier_picker.html" %}
+
   <section class="build-package-strip">
     <div class="build-package-copy">
       <div class="eyebrow">BUILD PACKAGE</div>
@@ -129,37 +131,37 @@
   </section>
 
   <section class="ravlo-card pad design-chat-panel">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">DESIGN CONVERSATION</div>
-        <h2>Tell Ravlo What You Want</h2>
-      </div>
-      <strong id="designChatStatus">Ready</strong>
-    </div>
+    <details class="optional-panel" open>
+      <summary>
+        <span class="eyebrow" style="display:block;margin-bottom:2px;">DESIGN CONVERSATION</span>
+        Ask Ravlo — describe it, or attach a photo
+        <strong id="designChatStatus" style="margin-left:8px;">Ready</strong>
+      </summary>
 
-    <div class="design-chat-thread" id="designChatThread">
-      <div class="design-chat-message assistant">
-        <strong>Ravlo</strong>
-        <p>What room are we designing? Try: “Ravlo, modern luxury kitchen with dark brown cabinets, white stone counters, brass fixtures, and warm lighting.”</p>
+      <div class="design-chat-thread" id="designChatThread">
+        <div class="design-chat-message assistant">
+          <strong>Ravlo</strong>
+          <p>What room are we designing? Try: “Ravlo, modern luxury kitchen with dark brown cabinets, white stone counters, brass fixtures, and warm lighting.” Or just say “show me in white.”</p>
+        </div>
       </div>
-    </div>
 
-    <div class="design-chat-composer">
-      <textarea id="designChatInput" rows="3" placeholder="Example: 'Ravlo, luxury modern kitchen, white marble waterfall island, matte black fixtures, brass pendant lights, herringbone backsplash'"></textarea>
-      <div id="designChatPhotoPreview" class="chat-photo-preview">
-        <img id="designChatPhotoThumb" src="" alt="Attached photo">
-        <span id="designChatPhotoName">Photo attached</span>
-        <button type="button" class="chat-photo-clear" id="designChatPhotoClear" title="Remove photo">×</button>
+      <div class="design-chat-composer">
+        <textarea id="designChatInput" rows="3" placeholder="Example: 'Ravlo, luxury modern kitchen, white marble waterfall island, matte black fixtures, brass pendant lights, herringbone backsplash'"></textarea>
+        <div id="designChatPhotoPreview" class="chat-photo-preview">
+          <img id="designChatPhotoThumb" src="" alt="Attached photo">
+          <span id="designChatPhotoName">Photo attached</span>
+          <button type="button" class="chat-photo-clear" id="designChatPhotoClear" title="Remove photo">×</button>
+        </div>
+        <div class="cta-row">
+          <label for="designChatPhotoInput" class="chat-photo-btn" title="Attach a reference photo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </label>
+          <input type="file" id="designChatPhotoInput" accept="image/*" style="display:none">
+          <button type="button" class="ravlo-btn ghost" id="askDesignBtn">Ask Ravlo</button>
+          <button type="button" class="ravlo-btn primary" id="applyDesignBtn">Apply & Generate</button>
+        </div>
       </div>
-      <div class="cta-row">
-        <label for="designChatPhotoInput" class="chat-photo-btn" title="Attach a reference photo">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        </label>
-        <input type="file" id="designChatPhotoInput" accept="image/*" style="display:none">
-        <button type="button" class="ravlo-btn ghost" id="askDesignBtn">Ask Ravlo</button>
-        <button type="button" class="ravlo-btn primary" id="applyDesignBtn">Apply & Generate</button>
-      </div>
-    </div>
+    </details>
   </section>
 
   <section class="build-lite-grid">
@@ -206,114 +208,119 @@
           </label>
         </div>
 
-        <div class="form-grid two">
-          <div class="field">
-            <label for="project_name">Project Name</label>
-            <input id="project_name" name="project_name" value="{{ build_project.get('project_name') or (project.project_name if project else (deal.title if deal else '')) }}" placeholder="Maple Grove Residences">
-          </div>
+        {% set property_type_value = build_project.get('property_type') or (project.property_type if project and project.property_type else 'single_family') %}
+        {% set style_value = interior_result.get('style') or build_project.get('style') or 'modern_luxury' %}
 
-          <div class="field">
-            <label for="property_type">Property Type</label>
-            {% set property_type_value = build_project.get('property_type') or (project.property_type if project and project.property_type else 'single_family') %}
-            <select id="property_type" name="property_type">
-              <option value="single_family" {{ 'selected' if property_type_value == 'single_family' else '' }}>Single Family</option>
-              <option value="duplex" {{ 'selected' if property_type_value == 'duplex' else '' }}>Duplex</option>
-              <option value="townhome" {{ 'selected' if property_type_value == 'townhome' else '' }}>Townhome</option>
-              <option value="multifamily" {{ 'selected' if property_type_value == 'multifamily' else '' }}>Multifamily</option>
-              <option value="mixed_use" {{ 'selected' if property_type_value == 'mixed_use' else '' }}>Mixed Use</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="style">Interior Style</label>
-            {% set style_value = interior_result.get('style') or build_project.get('style') or 'modern_luxury' %}
-            <select id="style" name="style">
-              <option value="modern_luxury" {{ 'selected' if style_value == 'modern_luxury' else '' }}>Modern Luxury</option>
-              <option value="modern_farmhouse" {{ 'selected' if style_value == 'modern_farmhouse' else '' }}>Modern Farmhouse</option>
-              <option value="minimal_modern" {{ 'selected' if style_value == 'minimal_modern' else '' }}>Minimal Modern</option>
-              <option value="traditional" {{ 'selected' if style_value == 'traditional' else '' }}>Traditional</option>
-              <option value="industrial_loft" {{ 'selected' if style_value == 'industrial_loft' else '' }}>Industrial Loft</option>
-              <option value="coastal" {{ 'selected' if style_value == 'coastal' else '' }}>Coastal</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="room_type">Room Type</label>
-            <select id="room_type" name="room_type">
-              <option value="living room" {{ 'selected' if room_type_value in ('living room', 'living_room', '') else '' }}>Living Room</option>
-              <option value="kitchen" {{ 'selected' if room_type_value == 'kitchen' else '' }}>Kitchen</option>
-              <option value="primary bedroom" {{ 'selected' if room_type_value in ('primary bedroom', 'primary_bedroom', 'bedroom') else '' }}>Primary Bedroom</option>
-              <option value="bathroom" {{ 'selected' if room_type_value == 'bathroom' else '' }}>Bathroom</option>
-              <option value="dining room" {{ 'selected' if room_type_value in ('dining room', 'dining_room') else '' }}>Dining Room</option>
-              <option value="office" {{ 'selected' if room_type_value == 'office' else '' }}>Office</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="floor">Floor</label>
-            <select id="floor" name="floor">
-              <option value="main">Main</option>
-              <option value="upper">Upper</option>
-              <option value="lower">Lower</option>
-              <option value="basement">Basement</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="rehab_level">Scope Level</label>
-            <select id="rehab_level" name="rehab_level">
-              <option value="light">Light</option>
-              <option value="medium" selected>Medium</option>
-              <option value="heavy">Heavy</option>
-              <option value="luxury">Luxury</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="finish_level">Finish Level</label>
-            <select id="finish_level" name="finish_level">
-              <option value="standard" selected>Standard</option>
-              <option value="premium">Premium</option>
-              <option value="luxury">Luxury</option>
-              <option value="builder grade">Builder Grade</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="room_square_feet">Room Sq Ft</label>
-            <input id="room_square_feet" name="room_square_feet" type="number" min="20" step="5" placeholder="180">
-          </div>
-
-          <div class="field">
-            <label for="room_count">Room Count</label>
-            <input id="room_count" name="room_count" type="number" min="1" max="12" step="1" placeholder="1">
-          </div>
-
-          <div class="field">
-            <label for="blueprint_url">Reference Image URL</label>
-            <input id="blueprint_url" name="blueprint_url" value="{{ build_blueprint_src }}" placeholder="Paste a saved room photo or plan URL">
-          </div>
+        <div class="field">
+          <label for="style">Interior Style</label>
+          <select id="style" name="style">
+            <option value="modern_luxury" {{ 'selected' if style_value == 'modern_luxury' else '' }}>Modern Luxury</option>
+            <option value="modern_farmhouse" {{ 'selected' if style_value == 'modern_farmhouse' else '' }}>Modern Farmhouse</option>
+            <option value="minimal_modern" {{ 'selected' if style_value == 'minimal_modern' else '' }}>Minimal Modern</option>
+            <option value="traditional" {{ 'selected' if style_value == 'traditional' else '' }}>Traditional</option>
+            <option value="industrial_loft" {{ 'selected' if style_value == 'industrial_loft' else '' }}>Industrial Loft</option>
+            <option value="coastal" {{ 'selected' if style_value == 'coastal' else '' }}>Coastal</option>
+          </select>
         </div>
 
         <div class="field">
           <label for="description">Design Notes</label>
-          <textarea id="description" name="description" rows="4" placeholder="Describe finishes, mood, functionality, and target buyer.">{{ build_project.get('description') or (project.description if project else '') }}</textarea>
+          <textarea id="description" name="description" rows="3" placeholder="Colors, finishes, mood — e.g. 'show me in white with brass fixtures'.">{{ build_project.get('description') or (project.description if project else '') }}</textarea>
         </div>
 
         <div class="field">
-          <label for="notes">Interior Notes</label>
-          <textarea id="notes" name="notes" rows="3" placeholder="Cabinet style, materials, lighting, furnishing direction.">{{ interior_result.get('notes') or build_project.get('notes') or '' }}</textarea>
-        </div>
-
-        <div class="field">
-          <label for="target_materials">Target Materials</label>
-          <input id="target_materials" name="target_materials" placeholder="Quartz counters, oak floors, brass fixtures">
-        </div>
-
-        <div class="field">
-          <label for="blueprint_file">Upload Reference Image</label>
+          <label for="blueprint_file">Upload Your Own Photo</label>
           <input type="file" id="blueprint_file" name="blueprint_file" accept="image/*,.png,.jpg,.jpeg,.webp,.pdf">
         </div>
+
+        <details class="advanced-options">
+          <summary>Advanced options</summary>
+
+          <div class="form-grid two">
+            <div class="field">
+              <label for="project_name">Project Name</label>
+              <input id="project_name" name="project_name" value="{{ build_project.get('project_name') or (project.project_name if project else (deal.title if deal else '')) }}" placeholder="Maple Grove Residences">
+            </div>
+
+            <div class="field">
+              <label for="property_type">Property Type</label>
+              <select id="property_type" name="property_type">
+                <option value="single_family" {{ 'selected' if property_type_value == 'single_family' else '' }}>Single Family</option>
+                <option value="duplex" {{ 'selected' if property_type_value == 'duplex' else '' }}>Duplex</option>
+                <option value="townhome" {{ 'selected' if property_type_value == 'townhome' else '' }}>Townhome</option>
+                <option value="multifamily" {{ 'selected' if property_type_value == 'multifamily' else '' }}>Multifamily</option>
+                <option value="mixed_use" {{ 'selected' if property_type_value == 'mixed_use' else '' }}>Mixed Use</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="room_type">Room Type</label>
+              <select id="room_type" name="room_type">
+                <option value="living room" {{ 'selected' if room_type_value in ('living room', 'living_room', '') else '' }}>Living Room</option>
+                <option value="kitchen" {{ 'selected' if room_type_value == 'kitchen' else '' }}>Kitchen</option>
+                <option value="primary bedroom" {{ 'selected' if room_type_value in ('primary bedroom', 'primary_bedroom', 'bedroom') else '' }}>Primary Bedroom</option>
+                <option value="bathroom" {{ 'selected' if room_type_value == 'bathroom' else '' }}>Bathroom</option>
+                <option value="dining room" {{ 'selected' if room_type_value in ('dining room', 'dining_room') else '' }}>Dining Room</option>
+                <option value="office" {{ 'selected' if room_type_value == 'office' else '' }}>Office</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="floor">Floor</label>
+              <select id="floor" name="floor">
+                <option value="main">Main</option>
+                <option value="upper">Upper</option>
+                <option value="lower">Lower</option>
+                <option value="basement">Basement</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="rehab_level">Scope Level</label>
+              <select id="rehab_level" name="rehab_level">
+                <option value="light">Light</option>
+                <option value="medium" selected>Medium</option>
+                <option value="heavy">Heavy</option>
+                <option value="luxury">Luxury</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="finish_level">Finish Level</label>
+              <select id="finish_level" name="finish_level">
+                <option value="standard" selected>Standard</option>
+                <option value="premium">Premium</option>
+                <option value="luxury">Luxury</option>
+                <option value="builder grade">Builder Grade</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="room_square_feet">Room Sq Ft</label>
+              <input id="room_square_feet" name="room_square_feet" type="number" min="20" step="5" placeholder="180">
+            </div>
+
+            <div class="field">
+              <label for="room_count">Room Count</label>
+              <input id="room_count" name="room_count" type="number" min="1" max="12" step="1" placeholder="1">
+            </div>
+
+            <div class="field">
+              <label for="blueprint_url">Reference Image URL</label>
+              <input id="blueprint_url" name="blueprint_url" value="{{ build_blueprint_src }}" placeholder="Paste a saved room photo or plan URL">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="notes">Interior Notes</label>
+            <textarea id="notes" name="notes" rows="3" placeholder="Cabinet style, materials, lighting, furnishing direction.">{{ interior_result.get('notes') or build_project.get('notes') or '' }}</textarea>
+          </div>
+
+          <div class="field">
+            <label for="target_materials">Target Materials</label>
+            <input id="target_materials" name="target_materials" placeholder="Quartz counters, oak floors, brass fixtures">
+          </div>
+        </details>
 
         <div class="studio-action-row">
           <button type="submit" class="ravlo-btn primary" id="generateInteriorBtn">{{ submit_label or "Generate Design Concept" }}</button>
@@ -331,16 +338,30 @@
       <div class="section-head">
         <div>
           <div class="eyebrow">REFERENCE</div>
-          <h2>Reference Image</h2>
+          <h2>Property Photo</h2>
         </div>
       </div>
+
+      {% if property_photo_gallery %}
+      <p class="muted" style="margin:-6px 0 12px;font-size:.85rem;">Pick a photo from this property, or upload your own below.</p>
+      <div class="property-photo-grid" id="propertyPhotoGrid">
+        {% for photo_url in property_photo_gallery[:12] %}
+        <button type="button"
+          class="property-photo-thumb{% if photo_url == build_blueprint_src %} is-selected{% endif %}"
+          data-photo-url="{{ photo_url }}"
+          onclick="ravloSelectPropertyPhoto(this)">
+          <img src="{{ photo_url }}" alt="Property photo" loading="lazy">
+        </button>
+        {% endfor %}
+      </div>
+      {% endif %}
 
       <div class="reference-panel" id="blueprintPreview">
         {% set blueprint_src = build_blueprint_src %}
         {% if blueprint_src %}
         <img src="{{ blueprint_src }}" alt="Reference image">
         {% else %}
-        <div class="empty-state-inline">Upload a room photo, blueprint, or open a saved project with a reference attached.</div>
+        <div class="empty-state-inline">{% if property_photo_gallery %}Pick a photo above, or upload your own.{% else %}Upload a room photo, blueprint, or open a saved project with a reference attached.{% endif %}</div>
         {% endif %}
       </div>
 
@@ -479,6 +500,11 @@
 .form-grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .field{display:grid;gap:8px;margin-bottom:14px}
 .field input,.field select,.field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
+.property-photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(72px,28vw),1fr));gap:8px;margin-bottom:14px}
+.property-photo-thumb{padding:0;border-radius:12px;border:2px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);cursor:pointer;overflow:hidden;aspect-ratio:1/1;transition:border-color .15s}
+.property-photo-thumb:hover{border-color:rgba(255,255,255,.25)}
+.property-photo-thumb.is-selected{border-color:#4f8cff}
+.property-photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .reference-panel,.result-media{border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.03);min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px;aspect-ratio:16/10}
 .reference-panel img,.result-media img{width:100%;height:100%;object-fit:contain;display:block;border-radius:14px}
 .reference-panel{background:rgba(5,10,18,.55)}
@@ -500,9 +526,20 @@
 .room-card{display:grid;gap:10px;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);text-decoration:none;color:inherit}
 .room-card img{width:100%;height:140px;object-fit:cover;border-radius:12px}
 .form-note{margin-top:12px;color:#9fb0ca}
+.advanced-options{margin:6px 0 16px;padding:2px 0}
+.advanced-options summary{cursor:pointer;color:#8dbdff;font-size:.85rem;font-weight:600;padding:8px 0;list-style:none}
+.advanced-options summary::-webkit-details-marker{display:none}
+.advanced-options summary::before{content:"▸ ";display:inline-block;transition:transform .15s}
+.advanced-options[open] summary::before{transform:rotate(90deg)}
+.advanced-options[open] summary{margin-bottom:10px}
+.optional-panel summary{cursor:pointer;color:#c9d5e6;font-size:.9rem;font-weight:600;padding:2px 0;list-style:none}
+.optional-panel summary::-webkit-details-marker{display:none}
+.optional-panel summary::before{content:"▸ ";display:inline-block;transition:transform .15s}
+.optional-panel[open] summary::before{transform:rotate(90deg)}
+.optional-panel[open] summary{margin-bottom:14px}
 .hidden{display:none!important}
 .room-slot-section{margin-bottom:4px}
-.room-slot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.room-slot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,28vw),1fr));gap:12px}
 .room-slot{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;border-radius:16px;border:2px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);cursor:pointer;transition:all .2s;color:#eef3ff;font-size:13px}
 .room-slot:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.06)}
 .room-slot.is-active{border-color:#4f8cff;background:rgba(79,140,255,.08)}
@@ -560,6 +597,26 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
 @media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two,.build-package-strip,.mode-toggle{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}.budget-line-row,.budget-summary>div{flex-direction:column}.room-slot-grid{grid-template-columns:repeat(3,1fr)}.build-package-assets{grid-template-columns:repeat(2,minmax(0,1fr))}.design-chat-message.user,.design-chat-message.assistant{margin-left:0;margin-right:0}}
 </style>
 <script>
+function ravloSelectPropertyPhoto(btn) {
+  const url = btn.getAttribute('data-photo-url');
+  if (!url) return;
+
+  const urlField = document.getElementById('blueprint_url');
+  if (urlField) urlField.value = url;
+
+  const fileField = document.getElementById('blueprint_file');
+  if (fileField) fileField.value = '';
+
+  const preview = document.getElementById('blueprintPreview');
+  if (preview) {
+    preview.innerHTML = '<img src="' + url + '" alt="Reference image">';
+  }
+
+  document.querySelectorAll('.property-photo-thumb').forEach((thumb) => {
+    thumb.classList.toggle('is-selected', thumb === btn);
+  });
+}
+
 (() => {
   const form = document.getElementById('interiorBuildForm');
   const button = document.getElementById('generateInteriorBtn');
@@ -1196,8 +1253,21 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
 
   }
 
+  function triggerGeneration() {
+    syncDesignEngineIntent(currentDesignEngineIntent, gatherDesignConfig());
+    if (form) {
+      form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit'));
+    }
+  }
+
   askDesignBtn?.addEventListener('click', () => {
-    sendDesignChatMessage().catch(() => {});
+    sendDesignChatMessage()
+      .then((data) => {
+        // Ravlo signals it has everything it needs — act on it instead of
+        // waiting for a separate "Apply & Generate" click.
+        if (data && data.ready) triggerGeneration();
+      })
+      .catch(() => {});
   });
 
   applyDesignBtn?.addEventListener('click', async () => {
@@ -1209,11 +1279,7 @@ border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,25
       }
     }
 
-    syncDesignEngineIntent(currentDesignEngineIntent, gatherDesignConfig());
-
-    if (form) {
-      form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit'));
-    }
+    triggerGeneration();
   });
 
   designChatInput?.addEventListener('keydown', (e) => {

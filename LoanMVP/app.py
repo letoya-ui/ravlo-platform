@@ -113,6 +113,8 @@ _SCHEMA_COMPAT_COLUMNS = [
     ("vip_client_sessions",       "updated_at",         "TIMESTAMP"),
     ("project_budgets",           "status",             "VARCHAR(32) NOT NULL DEFAULT 'active'"),
     ("investor_profile",          "ssn",                "TEXT"),
+    ("deals",                     "arv_tier",           "VARCHAR(20) NOT NULL DEFAULT 'base'"),
+    ("project_budgets",           "arv_tier",           "VARCHAR(20)"),
 ]
 
 # Tables that must exist at boot. If missing, we ask SQLAlchemy's metadata
@@ -152,6 +154,7 @@ _SCHEMA_COMPAT_TABLES = [
     "project_invoices",
     "project_change_orders",
     "discovery_events",
+    "ravlo_ai_memory_logs",
 ]
 
 _SCHEMA_COMPAT_INDEXES = [

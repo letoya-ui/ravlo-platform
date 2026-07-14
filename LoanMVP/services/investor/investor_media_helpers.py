@@ -490,23 +490,26 @@ def _upload_before_image(image_bytes: bytes, prefix="before") -> str | None:
     if not image_bytes:
         return None
 
-    client = _get_spaces_client()
-    key = f"{prefix}/{uuid.uuid4().hex}.png"
+    try:
+        client = _get_spaces_client()
+        key = f"{prefix}/{uuid.uuid4().hex}.png"
 
-    client.put_object(
-        Bucket=SPACES_BUCKET,
-        Key=key,
-        Body=image_bytes,
-        ACL="public-read",
-        ContentType="image/png",
-    )
+        client.put_object(
+            Bucket=SPACES_BUCKET,
+            Key=key,
+            Body=image_bytes,
+            ACL="public-read",
+            ContentType="image/png",
+        )
 
-    return _public_spaces_url(key)
+        return _public_spaces_url(key)
+    except Exception as exc:
+        logger.warning("Spaces upload unavailable, falling back to inline data URI: %s", exc)
+        return "data:image/png;base64," + base64.b64encode(image_bytes).decode()
 
 
 def _upload_after_images_from_b64(images_b64, prefix="after") -> list[str]:
     urls = []
-    client = _get_spaces_client()
 
     # images_b64 may be a list ["b64..."] or a dict {"mode": "b64..."} depending
     # on whether the GPU engine or the OpenAI fallback produced it.
@@ -515,10 +518,20 @@ def _upload_after_images_from_b64(images_b64, prefix="after") -> list[str]:
     else:
         items = [b for b in (images_b64 or []) if b]
 
+    try:
+        client = _get_spaces_client()
+    except Exception as exc:
+        logger.warning("Spaces upload unavailable, falling back to inline data URIs: %s", exc)
+        client = None
+
     for b64 in items:
         try:
             image_bytes = BytesIO(base64.b64decode(b64)).getvalue()
             webp = to_webp_bytes(image_bytes)
+
+            if client is None:
+                urls.append("data:image/webp;base64," + base64.b64encode(webp).decode())
+                continue
 
             key = f"{prefix}/{uuid.uuid4().hex}.webp"
 
