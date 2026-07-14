@@ -664,6 +664,14 @@ def index():
     if profile.role_type in ("loan_officer", "lender"):
         return redirect(url_for("loan_officer.dashboard"))
 
+    # Auto-upgrade role_type when partner records reveal a compound profession
+    # (e.g., profile stored as "insurance" but partner is also a realtor).
+    _COMPOUND_ROLES = {"contractor_realtor", "insurance_realtor"}
+    better_role = _default_vip_role_for_partner(partner)
+    if better_role in _COMPOUND_ROLES and profile.role_type != better_role:
+        profile.role_type = better_role
+        db.session.commit()
+
     # Realtors require a paid VIP tier. Send non-upgraded realtors to the
     # upgrade page so there is a single funnel into the VIP experience.
     if profile.role_type == "realtor" and not partner_has_vip_access(current_user):
@@ -673,6 +681,14 @@ def index():
 
     if profile.role_type == "realtor" and _partner_role_mentions(partner, "insurance", "insurer"):
         return redirect(url_for("vip.insurance_dashboard"))
+
+    # Hybrid partners can pick which dashboard to enter via ?role=realtor/contractor
+    if profile.role_type in _COMPOUND_ROLES:
+        mode = (request.args.get("role") or "").strip().lower()
+        if mode == "realtor":
+            return redirect(url_for("vip.realtor_dashboard"))
+        if mode == "contractor":
+            return redirect(url_for("vip.contractor_dashboard"))
 
     role_map = {
         "realtor":           "vip.realtor_dashboard",

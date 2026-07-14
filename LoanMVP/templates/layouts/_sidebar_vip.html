@@ -64,7 +64,13 @@
     </a>
 
     {% if role == 'contractor_realtor' %}
-    <div class="ravlo-nav-section">Realtor</div>
+    <div class="ravlo-nav-section">Realtor Tools</div>
+
+    <a href="{{ url_for('vip.index', role='realtor') }}"
+       class="ravlo-nav-link {% if ep == 'vip.realtor_dashboard' %}active{% endif %}"
+       style="font-weight:700;">
+      <i class="lucide lucide-layout-dashboard"></i><span>Realtor Dashboard</span>
+    </a>
 
     <a href="{{ url_for('elena.client_new') }}"
        class="ravlo-nav-link {% if ep == 'elena.client_new' %}active{% endif %}">
@@ -141,7 +147,13 @@
     </a>
 
     {% if role == 'insurance_realtor' %}
-    <div class="ravlo-nav-section">Realtor</div>
+    <div class="ravlo-nav-section">Realtor Tools</div>
+
+    <a href="{{ url_for('vip.index', role='realtor') }}"
+       class="ravlo-nav-link {% if ep == 'vip.realtor_dashboard' %}active{% endif %}"
+       style="font-weight:700;">
+      <i class="lucide lucide-layout-dashboard"></i><span>Realtor Dashboard</span>
+    </a>
 
     <a href="{{ url_for('elena.client_new') }}"
        class="ravlo-nav-link {% if ep == 'elena.client_new' %}active{% endif %}">
@@ -189,6 +201,15 @@
        class="ravlo-nav-link {% if ep == 'vip.realtor_dashboard' %}active{% endif %}">
       <i class="lucide lucide-layout-dashboard"></i><span>Dashboard</span>
     </a>
+
+    {# For hybrid contractor+realtor users viewing the realtor side, offer a switch back #}
+    {% if stored_role == 'contractor_realtor' %}
+    <a href="{{ url_for('vip.index', role='contractor') }}"
+       class="ravlo-nav-link"
+       style="font-weight:700;color:rgba(249,115,22,.85);">
+      <i class="lucide lucide-hard-hat"></i><span>Contractor Dashboard</span>
+    </a>
+    {% endif %}
 
     <a href="{{ url_for('elena.client_new') }}"
        class="ravlo-nav-link {% if ep == 'elena.client_new' %}active{% endif %}">

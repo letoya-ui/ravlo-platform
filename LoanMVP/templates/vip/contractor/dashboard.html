@@ -68,6 +68,19 @@
 {% set focus = studio_snapshot.focus %}
 <div class="partner-dashboard-page contractor-vip-studio-page {% if is_hybrid_partner %}contractor-realtor-page{% endif %}">
 
+{% if is_hybrid_partner %}
+<div style="background:linear-gradient(135deg,rgba(44,182,125,.08),rgba(95,168,255,.06));border:1px solid rgba(44,182,125,.2);border-radius:14px;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <i class="lucide lucide-layers" style="color:#2cb67d;font-size:1rem;"></i>
+    <span style="font-size:.85rem;color:rgba(255,255,255,.75);">You're in <strong style="color:#f4f7fb;">Contractor Mode</strong> — your Realtor workspace is also active.</span>
+  </div>
+  <a href="{{ url_for('vip.index', role='realtor') }}"
+     style="font-size:.8rem;font-weight:700;color:#5FA8FF;text-decoration:none;border:1px solid rgba(95,168,255,.3);padding:6px 14px;border-radius:8px;white-space:nowrap;">
+    Switch to Realtor Dashboard →
+  </a>
+</div>
+{% endif %}
+
   <section class="ravlo-card partner-hero-card contractor-studio-hero">
     <div class="contractor-hero-content">
       <div class="contractor-hero-copy">

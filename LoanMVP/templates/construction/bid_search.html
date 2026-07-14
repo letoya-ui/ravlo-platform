@@ -43,8 +43,26 @@
     <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px;">
       <div>
         <div style="font-size:10px;letter-spacing:.14em;font-weight:800;color:#5FA8FF;text-transform:uppercase;">QUICK SEARCHES</div>
-        <h3 style="margin:.25rem 0 0;font-size:1rem;">Tampa opportunity lanes</h3>
+        <h3 style="margin:.25rem 0 0;font-size:1rem;">
+          Opportunity lanes
+          {% if bid_city and bid_city != 'your area' %}
+          <span style="color:#5FA8FF;font-weight:400;font-size:.85rem;"> — {{ bid_city }}</span>
+          {% endif %}
+        </h3>
       </div>
+
+      {# City picker #}
+      <form method="GET" action="{{ url_for('construction_bids.search_page') }}"
+            style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input name="bid_city"
+               value="{{ bid_city if bid_city != 'your area' else '' }}"
+               placeholder="City, county, or zip…"
+               style="padding:7px 12px;border-radius:8px;border:1px solid rgba(95,168,255,.25);
+                      background:rgba(255,255,255,.04);color:#f4f7fb;font-size:.82rem;width:180px;">
+        <button type="submit" class="re-btn ghost sm" style="padding:7px 12px;">
+          <i class="lucide lucide-map-pin" style="font-size:.8rem;"></i> Update
+        </button>
+      </form>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
