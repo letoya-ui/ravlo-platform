@@ -868,10 +868,20 @@ def create_app():
 
         from LoanMVP.models.vip_models import VIPProfile
         from sqlalchemy import func as sa_func
-        profile = VIPProfile.query.filter(
-            sa_func.lower(VIPProfile.custom_domain) == host,
-            VIPProfile.marketplace_enabled == "yes",
-        ).first()
+        try:
+            profile = VIPProfile.query.filter(
+                sa_func.lower(VIPProfile.custom_domain) == host,
+                VIPProfile.marketplace_enabled == "yes",
+            ).first()
+        except Exception:
+            # This hook runs on every request across the whole platform, not
+            # just custom-domain traffic -- a transient DB hiccup (a Postgres
+            # restart, a momentary connection refusal) must not take down
+            # every route for every user. Fail open and let normal routing
+            # continue instead of crashing the request.
+            from LoanMVP.extensions import db as _db
+            _db.session.rollback()
+            return None
         if not profile:
             return None
 
