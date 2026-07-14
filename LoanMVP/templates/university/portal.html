@@ -67,7 +67,7 @@
     {% set _dash_url = url_for("investor.command_center") %}
     {% set _dash_label = "Investor OS" %}
   {% elif current_user.role == "partner" %}
-    {% set _dash_url = url_for("vip.dashboard") %}
+    {% set _dash_url = url_for("vip.index") %}
     {% set _dash_label = "Partner Dashboard" %}
   {% else %}
     {% set _dash_url = "/" %}
