@@ -575,6 +575,7 @@ def queue():
 def queue_ai_summary():
     from LoanMVP.services.processor_queue_ai_service import explain_processor_queue
     from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+    from LoanMVP.services.notification_service import send_ai_notification
 
     data = request.get_json(silent=True) or {}
     question = (data.get("question") or "").strip()[:500]
@@ -596,6 +597,16 @@ def queue_ai_summary():
             )
         except Exception:
             pass
+
+        try:
+            send_ai_notification(
+                current_user,
+                title="Your Ravlo AI queue summary is ready",
+                message="Ravlo AI just reviewed your queue -- open it to see the highlights.",
+                action_url=url_for("processor.dashboard"),
+            )
+        except Exception:
+            current_app.logger.warning("AI notification failed for queue_ai_summary")
 
         return jsonify({"ok": True, **result})
     except Exception:

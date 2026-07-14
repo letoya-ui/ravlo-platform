@@ -1,7 +1,8 @@
-{% extends "layouts/base.html" %}
+{% extends base_template %}
 {% block title %}Notifications{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+{% block page_subline %}Everything Ravlo (and Ravlo AI) has sent you.{% endblock %}
 {% block content %}
-<main class="dashboard-main">
 
 <style>
   :root {
@@ -52,7 +53,7 @@
 <div class="notif-wrap">
   <div class="notif-header">
     <h1>🔔 Notifications</h1>
-    <a href="{{ url_for(current_user.role.lower() + '.dashboard') }}" class="btn btn-glow">← Back</a>
+    <button onclick="markAllRead()" class="btn-glow" style="font-size:.85rem;padding:.4rem .8rem;">Mark All Read</button>
   </div>
 
   {% if notifications %}
@@ -60,10 +61,14 @@
     {% for n in notifications %}
     <div class="notif-card {% if not n.is_read %}new{% endif %}" id="notif-{{ n.id }}">
       <div class="notif-left">
-        <div class="notif-icon">📢</div>
+        <div class="notif-icon">{{ ICON_MAP.get(n.channel, "📢") }}</div>
         <div>
+          {% if n.title %}<div style="font-weight:700;margin-bottom:2px;">{{ n.title }}</div>{% endif %}
           <div class="notif-message">{{ n.message }}</div>
-          <div class="notif-meta">{{ n.created_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+          <div class="notif-meta">
+            {{ n.created_at.strftime('%b %d, %Y %I:%M %p') }}
+            {% if n.action_url %} &middot; <a href="{{ n.action_url }}" style="color:var(--accent);">Open</a>{% endif %}
+          </div>
         </div>
       </div>
       {% if not n.is_read %}
@@ -81,23 +86,26 @@
 <script>
   const socket = io(location.origin, { transports:["websocket"] });
   socket.on("connect", () => console.log("📡 Connected to notifications"));
-  socket.on("new_notification", data => {
-    const role = document.body.getAttribute("data-role") || "all";
-    if (data.role === role || data.role === "all") addNotification(data);
-  });
+  socket.on("new_notification", data => addNotification(data));
 
   function addNotification(data){
     const list=document.getElementById("notifList");
+    if (!list) return;
+    const empty = document.querySelector(".empty");
+    if (empty) empty.remove();
     const card=document.createElement("div");
     card.className="notif-card new";
+    card.id = `notif-${data.id}`;
     card.innerHTML=`
       <div class="notif-left">
         <div class="notif-icon">📢</div>
         <div>
+          ${data.title ? `<div style="font-weight:700;margin-bottom:2px;">${data.title}</div>` : ""}
           <div class="notif-message">${data.message}</div>
-          <div class="notif-meta">Just now</div>
+          <div class="notif-meta">Just now${data.action_url ? ` &middot; <a href="${data.action_url}" style="color:var(--accent);">Open</a>` : ""}</div>
         </div>
-      </div>`;
+      </div>
+      <button onclick="markRead(${data.id})" class="btn-glow" style="font-size:.8rem;padding:.3rem .6rem;">Mark Read</button>`;
     list.prepend(card);
   }
 
@@ -108,7 +116,16 @@
       if(el){el.classList.remove("new"); el.querySelector("button")?.remove();}
     }
   }
+
+  async function markAllRead(){
+    const res=await fetch(`/notifications/mark_all_read`,{method:"POST"});
+    if(res.ok){
+      document.querySelectorAll(".notif-card.new").forEach(el => {
+        el.classList.remove("new");
+        el.querySelector("button")?.remove();
+      });
+    }
+  }
 </script>
 
-</main>
 {% endblock %}

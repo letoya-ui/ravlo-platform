@@ -228,26 +228,35 @@ class LoanNotification(db.Model):
     __tablename__ = "loan_notification"
 
     id = db.Column(db.Integer, primary_key=True)
-    loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=False)
+    # Nullable -- plenty of legitimate notifications (an AI portfolio
+    # summary, a demo booking, a referral signup) aren't tied to any loan.
+    loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=True)
+    # The actual recipient. Nullable so a notification can instead be a
+    # role-wide broadcast (see `role` below) rather than personal.
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
     borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
     investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"))
     role = db.Column(db.String(50))  # "borrower", "processor", "underwriter", "admin"
-    message = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_read = db.Column(db.Boolean, default=False)
     channel = db.Column(db.String(20))  # sms / email / inapp
     title = db.Column(db.String(255))
     message = db.Column(db.String(800))
+    action_url = db.Column(db.String(500), nullable=True)
 
     loan = db.relationship("LoanApplication", backref="notifications")
+    user = db.relationship("User", foreign_keys=[user_id])
     borrower = db.relationship("BorrowerProfile", backref="notifications")
     investor_profile = db.relationship("InvestorProfile", backref="notifications")
+
     def to_dict(self):
         return {
             "id": self.id,
             "loan_id": self.loan_id,
             "role": self.role,
+            "title": self.title,
             "message": self.message,
+            "action_url": self.action_url,
             "created_at": self.created_at.isoformat(),
             "is_read": self.is_read,
         }

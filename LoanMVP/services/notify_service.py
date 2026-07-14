@@ -107,7 +107,7 @@ def notify(
             notif = LoanNotification(
                 user_id=recipient["user_id"],
                 borrower_id=recipient["borrower_id"],
-                investor_id=recipient["investor_id"],
+                investor_profile_id=recipient["investor_id"],
                 loan_id=loan.id if loan else None,
                 channel="inapp",
                 role=recipient["role"],

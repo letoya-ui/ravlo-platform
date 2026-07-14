@@ -25,6 +25,7 @@ from LoanMVP.ai.base_ai import AIAssistant
 from LoanMVP.services.borrower_ai_service import explain_borrower_status
 from LoanMVP.services.ravlo_memory_service import log_ai_exchange
 from LoanMVP.services.compliance_service import ADVERSE_ACTION_STATUSES
+from LoanMVP.services.notification_service import send_ai_notification
 
 from LoanMVP.models.loan_models import BorrowerProfile, LoanApplication, BorrowerConsent, AdverseActionNotice
 from LoanMVP.models.document_models import LoanDocument
@@ -1051,6 +1052,16 @@ def ai_assistant():
             )
         except Exception:
             pass
+
+        try:
+            send_ai_notification(
+                current_user,
+                title="Your Ravlo AI update is ready",
+                message="Ravlo AI just reviewed your loan status -- open it to see the highlights.",
+                action_url=url_for("borrower.dashboard"),
+            )
+        except Exception:
+            current_app.logger.warning("AI notification failed for borrower_ai_assistant")
 
         return jsonify({"ok": True, **result})
     except Exception:

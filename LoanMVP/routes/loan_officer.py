@@ -1403,6 +1403,7 @@ def pipeline():
 def pipeline_ai_summary():
     from LoanMVP.services.loan_officer_pipeline_ai_service import explain_loan_officer_pipeline
     from LoanMVP.services.ravlo_memory_service import log_ai_exchange
+    from LoanMVP.services.notification_service import send_ai_notification
 
     data = request.get_json(silent=True) or {}
     question = (data.get("question") or "").strip()[:500]
@@ -1424,6 +1425,16 @@ def pipeline_ai_summary():
             )
         except Exception:
             pass
+
+        try:
+            send_ai_notification(
+                current_user,
+                title="Your Ravlo AI pipeline summary is ready",
+                message="Ravlo AI just reviewed your pipeline -- open it to see the highlights.",
+                action_url=url_for("loan_officer.dashboard"),
+            )
+        except Exception:
+            current_app.logger.warning("AI notification failed for pipeline_ai_summary")
 
         return jsonify({"ok": True, **result})
     except Exception:
