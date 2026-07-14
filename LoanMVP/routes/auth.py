@@ -21,6 +21,7 @@ from LoanMVP.app import login_manager, mail
 from LoanMVP.extensions import csrf, db, limiter
 from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm, LoginForm
 from LoanMVP.services.subscriptions import sync_features_with_subscription
+from LoanMVP.services.referral_service import record_referral_signup
 from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
 from LoanMVP.utils.decorators import PARTNER_ROLES
 from LoanMVP.models.user_model import User
@@ -703,6 +704,10 @@ def register():
         db.session.add(user)
         db.session.commit()
 
+        referral_code = session.pop("referral_code", None)
+        if referral_code:
+            record_referral_signup(user, referral_code)
+
         _ensure_partner_dashboard_profile(user)
         db.session.commit()
 
@@ -844,6 +849,10 @@ def register_borrower():
 
         db.session.add(user)
         db.session.commit()
+
+        referral_code = session.pop("referral_code", None)
+        if referral_code:
+            record_referral_signup(user, referral_code)
 
         login_user(user)
         _send_welcome_email(user)

@@ -584,10 +584,12 @@ def create_funding_request():
 # ---------------------------------------------------------------------------
 
 def _serialize_referral(referral) -> dict:
+    referred_user = getattr(referral, 'referred_user', None)
+    name = getattr(referred_user, 'full_name', '') or ''
     return {
         'id': getattr(referral, 'id', None),
-        'name': getattr(referral, 'name', '') or getattr(referral, 'referral_name', '') or '',
-        'email': getattr(referral, 'email', '') or '',
+        'name': name,
+        'email': getattr(referral, 'referred_email', '') or '',
         'status': getattr(referral, 'status', '') or '',
         'created_at': str(getattr(referral, 'created_at', '') or ''),
         'converted_at': str(getattr(referral, 'converted_at', '') or ''),
@@ -599,18 +601,12 @@ def _serialize_referral(referral) -> dict:
 def partner_referrals():
     user = request.current_user
 
-    try:
-        from LoanMVP.models import Referral
-    except ImportError:
-        return jsonify({'referrals': [], 'total': 0, 'pending': 0, 'converted': 0}), 200
+    from LoanMVP.models import Referral
 
     try:
-        partner_id_col = getattr(Referral, 'partner_id', None)
-        if partner_id_col is not None:
-            referrals = Referral.query.filter_by(partner_id=user.id).all()
-        else:
-            referrals = Referral.query.all()
-        pending = sum(1 for r in referrals if getattr(r, 'status', '') in ('pending', 'submitted', 'new'))
+        # Scoped to the current user's own referrals only -- never all rows.
+        referrals = Referral.query.filter_by(referrer_user_id=user.id).all()
+        pending = sum(1 for r in referrals if getattr(r, 'status', '') in ('pending', 'submitted', 'new', 'signed_up'))
         converted = sum(1 for r in referrals if getattr(r, 'status', '') in ('converted', 'closed', 'funded'))
     except Exception as exc:
         current_app.logger.error('partner_referrals error: %s', exc)

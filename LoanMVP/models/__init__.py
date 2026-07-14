@@ -140,6 +140,8 @@ from LoanMVP.models.admin import (
     LicenseInviteEvent,
 )
 
+from LoanMVP.models.referral_models import Referral
+
 # ======================================================
 # 🧩 Elena Models (NEW)
 # ======================================================
@@ -248,4 +250,7 @@ __all__ = [
 
     # Discovery / Crawler tracking
     "DiscoveryEvent",
+
+    # Referral program
+    "Referral",
 ]

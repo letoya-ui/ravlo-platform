@@ -36,6 +36,7 @@ class User(UserMixin, db.Model):
     subscription = db.Column(db.String(50), default="free")
     university_tier = db.Column(db.String(20), nullable=True)  # elite | lending | pro | starter (legacy)
     stripe_customer_id = db.Column(db.String(255), nullable=True)
+    referral_code = db.Column(db.String(16), unique=True, nullable=True, index=True)
     is_blocked = db.Column(db.Boolean, default=False, nullable=False)
     blocked_at = db.Column(db.DateTime, nullable=True)
     blocked_reason = db.Column(db.String(100), nullable=True)

@@ -51,5 +51,27 @@
       <a href="{{ url_for('account.security') }}" style="padding:10px 18px;border-radius:10px;border:1px solid rgba(255,255,255,.12);color:var(--muted,#888);font-size:.9rem;text-decoration:none;">Security</a>
     </div>
   </div>
+
+  {% if referral_link %}
+  <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px;margin-top:20px;">
+    <h3 style="margin:0 0 4px;font-size:1rem;font-weight:700;">Refer a friend, you both get a free month</h3>
+    <p style="margin:0 0 14px;color:var(--muted,#888);font-size:.86rem;">Share your personal link. When someone signs up through it, it's tracked automatically.</p>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="referralLinkInput" type="text" readonly value="{{ referral_link }}"
+             style="flex:1;min-width:220px;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text,#f4f8fc);font-size:.86rem;box-sizing:border-box;">
+      <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('referralLinkInput').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy Link', 1500);"
+              style="padding:10px 18px;border-radius:10px;border:none;background:#3b82f6;color:#fff;font-weight:600;font-size:.86rem;cursor:pointer;">Copy Link</button>
+    </div>
+
+    <p style="margin:14px 0 0;color:var(--muted,#888);font-size:.82rem;">
+      {% if referral_count %}
+        <strong style="color:var(--text,#f4f8fc);">{{ referral_count }}</strong> friend{{ 's' if referral_count != 1 else '' }} signed up through your link so far.
+      {% else %}
+        No signups yet — share your link to start earning free months.
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
