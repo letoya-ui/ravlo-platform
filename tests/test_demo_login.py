@@ -206,3 +206,58 @@ def test_ravlo_staff_role_can_view_demo_center(db_session, client, role):
     resp = client.get("/admin/demo-center", follow_redirects=False)
 
     assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Guided AE sales walkthrough: the opening talk track, a per-role "Demo
+# Guide" panel, and the closing script, so every AE runs the same demo
+# instead of improvising a pitch.
+# ---------------------------------------------------------------------------
+
+def test_demo_center_shows_opening_and_closing_talk_track(db_session, client):
+    staff = _make_staff(db_session, "opening-guide@ravlohq.com", role="executive")
+    login_as(client, staff)
+
+    resp = client.get("/admin/demo-center")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "BEFORE OPENING A DASHBOARD" in body
+    assert "Can you tell me a little about how your team currently moves a file" in body
+    assert "THE CLOSE" in body
+    assert "which part of the operation would you want us to solve first" in body
+
+
+def test_demo_center_shows_per_role_demo_guide(db_session, client):
+    staff = _make_staff(db_session, "role-guide@ravlohq.com", role="executive")
+    login_as(client, staff)
+
+    resp = client.get("/admin/demo-center")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Demo Guide" in body
+    # Loan officer talking point
+    assert "The loan officer stays focused on originating" in body
+    # Processor talking point
+    assert "Processing sees the work that needs to move" in body
+    # Underwriter talking point
+    assert "the responsibility of the person using it" in body
+    # Company admin talking point
+    assert "creating an operating environment for your lending company" in body
+
+
+def test_demo_dashboard_cards_are_ordered_by_workflow_narrative():
+    from LoanMVP.routes.admin import _demo_dashboard_cards
+
+    role_order = [card["role_key"] for card in _demo_dashboard_cards()]
+
+    assert role_order == [
+        "loan_officer",
+        "processor",
+        "underwriter",
+        "borrower",
+        "admin",
+        "partner",
+        "investor",
+    ]
