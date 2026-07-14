@@ -18,12 +18,16 @@ AE (or admin) later links the resulting Company back to this deal via
 the "link_company" action for commission/reporting purposes.
 """
 
+import csv
+import io
+import uuid
 from collections import Counter
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import current_user, login_required
+from sqlalchemy import func
 
 from LoanMVP.extensions import db
 from LoanMVP.utils.decorators import role_required
@@ -72,6 +76,18 @@ def _compute_commission(contract_value, commission_rate):
     if contract_value is None or commission_rate is None:
         return None
     return (Decimal(contract_value) * Decimal(commission_rate)).quantize(Decimal("0.01"))
+
+
+# company_name/contact_name/email are all NOT NULL on BusinessInquiry, but a
+# freshly-imported prospect frequently has no known contact yet -- these are
+# obvious, internal-only placeholders (never a real-looking name/address) so
+# the row satisfies the schema until an AE fills in the real contact via the
+# "update_contact" action below.
+_PLACEHOLDER_CONTACT_NAME = "Unknown Contact"
+
+
+def _placeholder_email() -> str:
+    return f"no-contact-{uuid.uuid4().hex[:10]}@prospects.internal"
 
 
 # ===============================================================
@@ -183,6 +199,102 @@ def new_deal():
 
 
 # ===============================================================
+#   PROSPECT POOL (unclaimed target companies any AE can pick up)
+# ===============================================================
+@account_executive_bp.route("/prospects")
+@login_required
+@role_required("account_executive")
+def prospects():
+    pool = (
+        BusinessInquiry.query
+        .filter_by(inquiry_type="license_application", ae_stage="prospect", assigned_ae_id=None)
+        .order_by(BusinessInquiry.created_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "account_executive/prospects.html",
+        prospects=pool,
+        is_full_visibility=_is_full_visibility(current_user),
+        title="Prospect Pool",
+        active_tab="prospects",
+    )
+
+
+# ===============================================================
+#   IMPORT PROSPECTS (CSV bulk-add to the pool -- Ravlo staff only)
+# ===============================================================
+@account_executive_bp.route("/prospects/import", methods=["GET", "POST"])
+@login_required
+@role_required("account_executive")
+def import_prospects():
+    if not _is_full_visibility(current_user):
+        flash("Only Ravlo staff can import prospect lists.", "danger")
+        return redirect(url_for("account_executive.prospects"))
+
+    if request.method == "POST":
+        upload = request.files.get("csv_file")
+        if not upload or not upload.filename:
+            flash("Choose a CSV file to import.", "danger")
+            return redirect(url_for("account_executive.import_prospects"))
+
+        try:
+            raw = upload.stream.read().decode("utf-8-sig")
+            reader = csv.DictReader(io.StringIO(raw))
+        except Exception:
+            flash("Could not read that file. Make sure it's a CSV.", "danger")
+            return redirect(url_for("account_executive.import_prospects"))
+
+        fieldnames = {(name or "").strip().lower() for name in (reader.fieldnames or [])}
+        if "company_name" not in fieldnames:
+            flash("CSV must include at least a 'company_name' column.", "danger")
+            return redirect(url_for("account_executive.import_prospects"))
+
+        created = 0
+        skipped = 0
+
+        for row in reader:
+            normalized = {(key or "").strip().lower(): (value or "").strip() for key, value in row.items()}
+            company_name = normalized.get("company_name")
+            if not company_name:
+                skipped += 1
+                continue
+
+            duplicate = BusinessInquiry.query.filter(
+                BusinessInquiry.inquiry_type == "license_application",
+                func.lower(BusinessInquiry.company_name) == company_name.lower(),
+            ).first()
+            if duplicate:
+                skipped += 1
+                continue
+
+            db.session.add(BusinessInquiry(
+                inquiry_type="license_application",
+                company_name=company_name,
+                contact_name=normalized.get("contact_name") or _PLACEHOLDER_CONTACT_NAME,
+                email=normalized.get("email") or _placeholder_email(),
+                phone=normalized.get("phone") or None,
+                website=normalized.get("website") or None,
+                business_type=normalized.get("business_type") or None,
+                notes=normalized.get("notes") or None,
+                status="new",
+                assigned_ae_id=None,
+                ae_stage="prospect",
+            ))
+            created += 1
+
+        db.session.commit()
+        flash(f"Imported {created} new prospect(s). Skipped {skipped} (duplicate company or missing name).", "success")
+        return redirect(url_for("account_executive.prospects"))
+
+    return render_template(
+        "account_executive/import_prospects.html",
+        title="Import Prospects",
+        active_tab="prospects",
+    )
+
+
+# ===============================================================
 #   DEAL DETAIL
 # ===============================================================
 @account_executive_bp.route("/deals/<int:deal_id>", methods=["GET", "POST"])
@@ -275,6 +387,19 @@ def deal_detail(deal_id):
                 deal.commission_status = "paid"
                 db.session.commit()
                 flash("Commission marked paid.", "success")
+
+        elif action_type == "update_contact":
+            contact_name = (request.form.get("contact_name") or "").strip()
+            email = (request.form.get("email") or "").strip()
+            if not contact_name or not email:
+                flash("Contact name and email are required.", "danger")
+            else:
+                deal.contact_name = contact_name
+                deal.email = email
+                deal.phone = (request.form.get("phone") or "").strip() or None
+                deal.website = (request.form.get("website") or "").strip() or None
+                db.session.commit()
+                flash("Contact info updated.", "success")
 
         elif action_type == "add_note":
             note = (request.form.get("note") or "").strip()

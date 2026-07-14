@@ -1,0 +1,43 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Import Prospects{% endblock %}
+
+{% block page_title %}Import Prospects{% endblock %}
+{% block page_subline %}Bulk-add target mortgage companies to the prospect pool.{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('account_executive.prospects') }}">
+    <i class="lucide lucide-arrow-left"></i>
+    Back to Prospect Pool
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">FORMAT</div>
+        <h3 style="margin:.35rem 0 .2rem;">CSV Columns</h3>
+        <div class="re-card-subtitle">
+          Required: <strong>company_name</strong>. Optional: contact_name, email, phone, website, business_type, notes.
+          Rows missing contact info are still imported with a placeholder contact -- fill in the real one once you've identified it, from the deal's page.
+          Companies already in your pipeline (matched by name) are skipped automatically.
+        </div>
+      </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="csv_file">CSV File</label>
+        <input id="csv_file" name="csv_file" type="file" accept=".csv,text/csv" required>
+      </div>
+      <div class="mt-16">
+        <button type="submit" class="re-btn primary">Import</button>
+      </div>
+    </form>
+  </section>
+
+</div>
+{% endblock %}
