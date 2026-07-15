@@ -8474,6 +8474,18 @@ def _normalize_build_blueprint_style(value=""):
     return style if style in allowed else "technical_blueprint"
 
 
+_REAR_OUTDOOR_LIVING_KEYWORDS = (
+    "back porch", "rear porch", "back patio", "rear patio",
+    "back deck", "rear deck", "lanai", "veranda", "sunroom",
+    "screened porch", "covered patio",
+)
+
+
+def _mentions_rear_outdoor_living(*texts) -> bool:
+    combined = " ".join(safe_str(t).lower() for t in texts if t)
+    return any(keyword in combined for keyword in _REAR_OUTDOOR_LIVING_KEYWORDS)
+
+
 def _compose_build_studio_prompt(
     *,
     notes="",
@@ -8513,6 +8525,7 @@ def _compose_build_studio_prompt(
             "Do not create an exterior elevation, photorealistic render, perspective view, or material board",
             "Generate a clean architectural floor plan from the written project program, not from the satellite/site image",
             "Use standard residential plan conventions: exterior walls, interior partitions, door swings, windows, stairs, kitchen fixtures, bathroom fixtures, closets, and simple furniture blocks in every panel",
+            "Place the main entry door on the front-facing exterior wall of the ground floor panel, opening onto the front porch/street-facing side of the home, not on a side or rear wall",
             "Use an orthographic top-down view on a clean white/off-white background for every panel",
             "Do not include trees, aerial imagery, satellite texture, grass, roads, driveways, shadows, photorealistic terrain, or landscape photography",
         ]
@@ -8526,6 +8539,7 @@ def _compose_build_studio_prompt(
             "For upper floors, keep the stair position aligned with the lower floor but make the room layout visibly distinct and appropriate for that level",
             "Generate a clean architectural floor plan from the written project program, not from the satellite/site image",
             "Use standard residential plan conventions: exterior walls, interior partitions, door swings, windows, stairs, kitchen fixtures, bathroom fixtures, closets, and simple furniture blocks",
+            "Place the main entry door on the front-facing exterior wall, opening onto the front porch/street-facing side of the home, not on a side or rear wall",
             "Use an orthographic top-down view on a clean white/off-white background",
             "Do not include trees, aerial imagery, satellite texture, grass, roads, driveways, shadows, photorealistic terrain, or landscape photography",
         ]
@@ -8536,8 +8550,20 @@ def _compose_build_studio_prompt(
             "Show the complete building from foundation to roofline in a grounded real-world setting with correct scale, realistic siding/brick/trim materials, windows, doors, roof pitch, grading, and landscaping",
             "Use the blueprint only as architectural context for footprint, floor count, massing, and circulation; do not render the blueprint image itself",
             "Do not create a blueprint, floor plan, elevation sheet, CAD drawing, split panel board, title block, annotations, labels, material swatches, or cutaway diagram",
-            "For rear views, show the back facade, rear windows/doors, patio or deck, yard relationship, and no street-front garage view",
         ]
+        if is_rear:
+            if _mentions_rear_outdoor_living(notes, description):
+                mode_specific.append(
+                    "For rear views, show the back facade, rear windows/doors, a covered porch/deck/patio connecting to the yard, and no street-front garage view"
+                )
+            else:
+                mode_specific.append(
+                    "For rear views, show a plain back facade matching the floor plan: rear windows and a simple rear entry door only, no covered porch, deck, patio, or recessed outdoor living area, and no street-front garage view"
+                )
+        else:
+            mode_specific.append(
+                "The main entry door is centered and forward-facing on the front elevation, opening onto the front porch, matching the entry location shown in the floor plan"
+            )
     elif is_interior:
         mode_specific = [
             "Output requirement: one single photorealistic interior room image only",
