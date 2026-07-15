@@ -53,6 +53,25 @@ def _anthropic_client():
 # Prompt builders — tuned for architectural realism
 # ---------------------------------------------------------------------------
 
+_REAR_OUTDOOR_LIVING_KEYWORDS = (
+    "back porch", "rear porch", "back patio", "rear patio",
+    "back deck", "rear deck", "lanai", "veranda", "sunroom",
+    "screened porch", "covered patio",
+)
+
+
+def _mentions_rear_outdoor_living(*texts) -> bool:
+    combined = " ".join(str(t or "").lower() for t in texts)
+    return any(keyword in combined for keyword in _REAR_OUTDOOR_LIVING_KEYWORDS)
+
+
+def _is_garage_requested(spec: dict) -> bool:
+    value = spec.get("garage")
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in ("1", "true", "yes", "on")
+
+
 def _blueprint_prompt(spec: dict) -> str:
     prop = (spec.get("property_type") or "single-family home").replace("_", " ")
     stories = spec.get("stories") or "2"
@@ -69,6 +88,8 @@ def _blueprint_prompt(spec: dict) -> str:
         details.append(f"{baths} bathrooms")
     if sq:
         details.append(f"{sq} sq ft")
+    if _is_garage_requested(spec):
+        details.append("attached garage")
     detail_str = ", ".join(details)
 
     return (
@@ -77,6 +98,7 @@ def _blueprint_prompt(spec: dict) -> str:
         + (f", {detail_str}" if detail_str else "")
         + (f", {desc}" if desc else "")
         + ". CAD technical drawing style, no people, white background, professional drafting quality."
+        + " Main entry door on the front-facing wall, opening onto the front porch, not on a side or rear wall."
     )
 
 
@@ -101,6 +123,15 @@ def _exterior_prompt(spec: dict, view: str = "front") -> str:
     features = spec.get("special_features") or spec.get("description") or ""
 
     view_label = "front" if view == "front" else "rear"
+    if view == "front":
+        entry_note = " Entry door centered and forward-facing on the front elevation, opening onto the front porch, matching the floor plan."
+        if _is_garage_requested(spec):
+            entry_note += " Include an attached garage with a visible garage door on the front elevation, matching the floor plan."
+    elif _mentions_rear_outdoor_living(spec.get("notes"), spec.get("special_features"), spec.get("description")):
+        entry_note = " Show a covered porch/deck/patio connecting to the yard on the rear facade."
+    else:
+        entry_note = " Plain rear facade matching the floor plan: rear windows and a simple rear door only, no covered porch, deck, or patio."
+
     return (
         f"Photorealistic {view_label} exterior architectural render, {stories}-story {style} {prop}"
         + (f", {siding} siding" if siding else "")
@@ -108,6 +139,7 @@ def _exterior_prompt(spec: dict, view: str = "front") -> str:
         + (f", {features}" if features else "")
         + ". Professional real estate photography, bright natural daylight, blue sky, "
         "manicured landscaping, no people, ultra-realistic 8K architectural visualization."
+        + entry_note
     )
 
 
