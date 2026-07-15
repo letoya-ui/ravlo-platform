@@ -561,7 +561,8 @@ def _upload_after_images_from_b64(images_b64, prefix="after") -> list[str]:
             )
 
             urls.append(_public_spaces_url(key))
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to upload build image to Spaces: %s", exc)
             continue
 
     return urls
