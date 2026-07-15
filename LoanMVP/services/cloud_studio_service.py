@@ -264,7 +264,12 @@ Return ONLY valid JSON — no markdown, no commentary:
         messages=[{"role": "user", "content": prompt}],
     )
 
-    text = message.content[0].text.strip()
+    # Claude's response can include non-text blocks (e.g. a ThinkingBlock)
+    # before the actual text -- content[0] isn't reliably the text block.
+    text_block = next((block for block in message.content if getattr(block, "type", None) == "text"), None)
+    if text_block is None:
+        raise RuntimeError("Claude deal analysis response contained no text block.")
+    text = text_block.text.strip()
     if text.startswith("```"):
         text = text.strip("`").replace("json", "", 1).strip()
     return json.loads(text)
