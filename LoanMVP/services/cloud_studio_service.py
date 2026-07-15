@@ -72,6 +72,13 @@ def _is_garage_requested(spec: dict) -> bool:
     return str(value or "").strip().lower() in ("1", "true", "yes", "on")
 
 
+def _stories_count(spec: dict) -> int:
+    try:
+        return int(str(spec.get("stories") or "1").strip())
+    except (TypeError, ValueError):
+        return 1
+
+
 def _blueprint_prompt(spec: dict) -> str:
     prop = (spec.get("property_type") or "single-family home").replace("_", " ")
     stories = spec.get("stories") or "2"
@@ -92,6 +99,17 @@ def _blueprint_prompt(spec: dict) -> str:
         details.append("attached garage")
     detail_str = ", ".join(details)
 
+    stories_count = _stories_count(spec)
+    multi_floor_note = ""
+    if stories_count > 1:
+        multi_floor_note = (
+            f" Output requirement: one single architectural sheet showing all {stories_count} floors of this home, "
+            "each floor drawn as its own top-down floor plan panel arranged side by side left to right in floor "
+            "order, with a clear visual gap between panels so they read as separate floor plans rather than one "
+            "merged room layout. Every panel must share the same exterior footprint, scale, and orientation, and "
+            "keep the stair position aligned between adjacent floor panels."
+        )
+
     return (
         f"Professional architectural floor plan blueprint, top-down view, clean black lines "
         f"on white background, room labels, dimensions, {stories}-story {style} {prop}"
@@ -99,6 +117,7 @@ def _blueprint_prompt(spec: dict) -> str:
         + (f", {desc}" if desc else "")
         + ". CAD technical drawing style, no people, white background, professional drafting quality."
         + " Main entry door on the front-facing wall, opening onto the front porch, not on a side or rear wall."
+        + multi_floor_note
     )
 
 
