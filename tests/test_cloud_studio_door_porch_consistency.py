@@ -70,3 +70,28 @@ def test_exterior_front_prompt_includes_garage_when_requested():
 def test_exterior_front_prompt_omits_garage_when_not_requested():
     prompt = _exterior_prompt({"property_type": "single_family", "garage": False}, view="front")
     assert "garage" not in prompt
+
+
+# ---------------------------------------------------------------------------
+# Multi-floor blueprint: a 2-story project's blueprint only ever showed the
+# first floor, because _blueprint_prompt just said "{stories}-story" in
+# passing text rather than explicitly instructing a multi-panel sheet --
+# meanwhile the exterior render correctly showed two stories, since massing
+# height is a much easier default for an image model to get right than an
+# instruction it was never given for the floor plan.
+# ---------------------------------------------------------------------------
+
+def test_single_story_blueprint_has_no_multi_panel_instruction():
+    prompt = _blueprint_prompt({"property_type": "single_family", "stories": "1"})
+    assert "each floor drawn as its own top-down floor plan panel" not in prompt
+
+
+def test_two_story_blueprint_requires_all_floor_panels():
+    prompt = _blueprint_prompt({"property_type": "single_family", "stories": "2"})
+    assert "one single architectural sheet showing all 2 floors" in prompt
+    assert "each floor drawn as its own top-down floor plan panel" in prompt
+
+
+def test_three_story_blueprint_requires_all_floor_panels():
+    prompt = _blueprint_prompt({"property_type": "single_family", "stories": 3})
+    assert "one single architectural sheet showing all 3 floors" in prompt
