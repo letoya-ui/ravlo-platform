@@ -21,7 +21,10 @@ import base64
 import logging
 import os
 import uuid
+from io import BytesIO
 from typing import Optional
+
+import requests
 
 log = logging.getLogger(__name__)
 
@@ -79,45 +82,71 @@ def _stories_count(spec: dict) -> int:
         return 1
 
 
-def _blueprint_prompt(spec: dict) -> str:
+def _blueprint_prompt(spec: dict, floor_number: int = 1, total_floors: int = 1) -> str:
+    """Prompt for one floor's plan. For multi-story projects, a single
+    generation asked to draw every floor in one sheet is unreliable (an
+    image model tends to draw just one floor's plan even when told the
+    home has N stories) -- run_cloud_generation() instead calls this once
+    per floor with floor_number/total_floors set, and composites the
+    results deterministically. floor_number/total_floors default to a
+    plain single-floor prompt when the caller doesn't need per-floor
+    generation (total_floors == 1)."""
     prop = (spec.get("property_type") or "single-family home").replace("_", " ")
-    stories = spec.get("stories") or "2"
     style = (spec.get("style") or "modern").replace("_", " ")
     beds = spec.get("bedrooms", "")
     baths = spec.get("bathrooms", "")
     sq = spec.get("square_feet_target") or spec.get("square_feet", "")
     desc = spec.get("description") or spec.get("special_features") or ""
+    is_ground_floor = floor_number <= 1
 
     details = []
-    if beds:
-        details.append(f"{beds} bedrooms")
-    if baths:
-        details.append(f"{baths} bathrooms")
-    if sq:
-        details.append(f"{sq} sq ft")
-    if _is_garage_requested(spec):
-        details.append("attached garage")
+    if total_floors > 1:
+        # Split rooms across floors instead of listing whole-home bed/bath
+        # counts identically on every floor's plan.
+        if is_ground_floor:
+            details.append("entry foyer, living room, kitchen, dining area")
+            if _is_garage_requested(spec):
+                details.append("attached garage")
+        else:
+            if beds:
+                details.append(f"{beds} bedrooms total in the home")
+            if baths:
+                details.append(f"{baths} bathrooms total in the home")
+    else:
+        if beds:
+            details.append(f"{beds} bedrooms")
+        if baths:
+            details.append(f"{baths} bathrooms")
+        if sq:
+            details.append(f"{sq} sq ft")
+        if _is_garage_requested(spec):
+            details.append("attached garage")
     detail_str = ", ".join(details)
 
-    stories_count = _stories_count(spec)
-    multi_floor_note = ""
-    if stories_count > 1:
-        multi_floor_note = (
-            f" Output requirement: one single architectural sheet showing all {stories_count} floors of this home, "
-            "each floor drawn as its own top-down floor plan panel arranged side by side left to right in floor "
-            "order, with a clear visual gap between panels so they read as separate floor plans rather than one "
-            "merged room layout. Every panel must share the same exterior footprint, scale, and orientation, and "
-            "keep the stair position aligned between adjacent floor panels."
+    if total_floors > 1:
+        floor_label = "ground floor" if is_ground_floor else f"floor {floor_number}"
+        floor_context = f"{floor_label} ({floor_number} of {total_floors}) of a {total_floors}-story {style} {prop}"
+        single_floor_note = (
+            " Show only this one floor's plan -- do not include any other floor's rooms or a multi-panel/split "
+            "sheet in this image."
         )
+    else:
+        floor_context = f"single-story {style} {prop}"
+        single_floor_note = ""
+
+    door_note = (
+        " Main entry door on the front-facing wall, opening onto the front porch, not on a side or rear wall."
+        if is_ground_floor else ""
+    )
 
     return (
         f"Professional architectural floor plan blueprint, top-down view, clean black lines "
-        f"on white background, room labels, dimensions, {stories}-story {style} {prop}"
+        f"on white background, room labels, dimensions, {floor_context}"
         + (f", {detail_str}" if detail_str else "")
         + (f", {desc}" if desc else "")
         + ". CAD technical drawing style, no people, white background, professional drafting quality."
-        + " Main entry door on the front-facing wall, opening onto the front porch, not on a side or rear wall."
-        + multi_floor_note
+        + door_note
+        + single_floor_note
     )
 
 
@@ -185,8 +214,8 @@ def _interior_prompt(spec: dict) -> str:
 # Image generation via OpenAI
 # ---------------------------------------------------------------------------
 
-def _generate_image_url(prompt: str, size: str = "1024x1024") -> str:
-    """Generate one image and return a persisted URL."""
+def _generate_image_bytes(prompt: str, size: str = "1024x1024") -> bytes:
+    """Generate one image and return its raw PNG bytes, without persisting."""
     client = _openai_client()
     resp = client.images.generate(
         model=_OPENAI_IMAGE_MODEL,
@@ -198,19 +227,74 @@ def _generate_image_url(prompt: str, size: str = "1024x1024") -> str:
     item = resp.data[0]
     b64_data = getattr(item, "b64_json", None)
     if b64_data:
-        return _persist_image_b64(b64_data)
+        return base64.b64decode(b64_data)
 
     url = getattr(item, "url", None)
     if url:
-        return url
+        resp2 = requests.get(url, timeout=60)
+        resp2.raise_for_status()
+        return resp2.content
 
     raise RuntimeError("OpenAI returned no image data")
 
 
-def _persist_image_b64(b64_data: str) -> str:
-    """Save base64 image to Spaces (preferred) or local static. Returns public URL."""
+def _generate_image_url(prompt: str, size: str = "1024x1024") -> str:
+    """Generate one image and return a persisted URL."""
+    return _persist_image_bytes(_generate_image_bytes(prompt, size))
+
+
+def _composite_floor_plans(floor_images: list[bytes]) -> bytes:
+    """Combine separately-generated per-floor plan images into one
+    side-by-side sheet. Asking an image model to draw every floor of a
+    multi-story home correctly in a single generation is unreliable (it
+    tends to draw just one floor's plan regardless of how the prompt is
+    worded) -- generating each floor on its own and compositing them here
+    guarantees the right floor count instead of hoping for it."""
+    from PIL import Image as PILImage
+
+    if len(floor_images) == 1:
+        return floor_images[0]
+
+    images = [PILImage.open(BytesIO(b)).convert("RGB") for b in floor_images]
+    target_height = min(img.height for img in images)
+    resized = []
+    for img in images:
+        if img.height != target_height:
+            ratio = target_height / img.height
+            img = img.resize((max(1, int(img.width * ratio)), target_height))
+        resized.append(img)
+
+    gap = 24
+    total_width = sum(img.width for img in resized) + gap * (len(resized) - 1)
+    canvas = PILImage.new("RGB", (total_width, target_height), "white")
+    x = 0
+    for img in resized:
+        canvas.paste(img, (x, 0))
+        x += img.width + gap
+
+    out = BytesIO()
+    canvas.save(out, format="PNG")
+    return out.getvalue()
+
+
+def _generate_blueprint_url(spec: dict) -> str:
+    """Generate the blueprint output: one floor for single-story projects,
+    or one floor at a time composited into a single side-by-side sheet for
+    multi-story projects (see _composite_floor_plans)."""
+    total_floors = _stories_count(spec)
+    if total_floors <= 1:
+        return _generate_image_url(_blueprint_prompt(spec), "1024x1024")
+
+    floor_images = [
+        _generate_image_bytes(_blueprint_prompt(spec, floor_number=n, total_floors=total_floors), "1024x1024")
+        for n in range(1, total_floors + 1)
+    ]
+    return _persist_image_bytes(_composite_floor_plans(floor_images))
+
+
+def _persist_image_bytes(img_bytes: bytes) -> str:
+    """Save raw PNG bytes to Spaces (preferred) or local static. Returns public URL."""
     filename = f"{uuid.uuid4().hex}.png"
-    img_bytes = base64.b64decode(b64_data)
 
     # Try DigitalOcean Spaces first
     try:
@@ -241,6 +325,11 @@ def _persist_image_b64(b64_data: str) -> str:
     with open(filepath, "wb") as f:
         f.write(img_bytes)
     return f"/static/{folder}/{filename}"
+
+
+def _persist_image_b64(b64_data: str) -> str:
+    """Save base64 image to Spaces (preferred) or local static. Returns public URL."""
+    return _persist_image_bytes(base64.b64decode(b64_data))
 
 
 # ---------------------------------------------------------------------------
@@ -369,7 +458,7 @@ def run_cloud_generation(spec: dict) -> dict:
     for mode in output_modes:
         try:
             if mode == "blueprint":
-                url = _generate_image_url(_blueprint_prompt(spec), "1024x1024")
+                url = _generate_blueprint_url(spec)
                 outputs["blueprint"] = {"image_url": url, "images": [url], "output_mode": "blueprint"}
 
             elif mode == "siteplan":
