@@ -1366,7 +1366,7 @@ Review a saved property, compare exit paths, and move the best opportunity into 
         b.disabled = true;
       });
 
-      fetch("/deals/" + dealId + "/arv-tier", {
+      fetch("/investor/deals/" + dealId + "/arv-tier", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

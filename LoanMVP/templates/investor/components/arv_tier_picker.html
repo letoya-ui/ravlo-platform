@@ -46,7 +46,7 @@
       var tier = btn.getAttribute("data-tier");
       wrap.querySelectorAll(".atp-btn").forEach(function (b) { b.disabled = true; });
 
-      fetch("/deals/" + dealId + "/arv-tier", {
+      fetch("/investor/deals/" + dealId + "/arv-tier", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
         body: JSON.stringify({ tier: tier })
