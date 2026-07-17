@@ -45,11 +45,40 @@ SLUG_TEMPLATES: dict[str, str] = {
 # User email for the real account that owns each static-context slug.
 # Leads submitted through their page are created in the CRM assigned to this user.
 SLUG_OWNER_EMAILS: dict[str, str] = {
+    "bonnie-sells-oc-homes":    "Bonniesellsochomes@gmail.com",
     "john-headley":             "Jsecond1212@gmail.com",
     "key-signature-enterprise": "keyonahall@icloud.com",
 }
 
 SLUG_STATIC_CONTEXT: dict[str, dict] = {
+    "bonnie-sells-oc-homes": {
+        "profile":          SimpleNamespace(public_slug="bonnie-sells-oc-homes", business_name="Bonnie Sells OC Homes"),
+        "display_name":     "Bonnie",
+        "headline":         "Your Orange County & Hudson Valley Real Estate Expert",
+        "bio":              (
+            "With deep roots in the Hudson Valley and a passion for connecting "
+            "people with the right home, Bonnie brings a personal, "
+            "results-driven approach to every transaction. Whether you're "
+            "buying your first home, selling, or investing across Orange "
+            "County and the greater Hudson Valley, she's with you every step "
+            "of the way."
+        ),
+        "service_area":     "Orange County & Hudson Valley, NY",
+        "specialties":      "Residential • Buyers & Sellers • Investment",
+        "brand_color":      "#C9A878",
+        "logo_url":         None,
+        "profile_image_url": None,
+        "cover_image_url":  None,
+        "email":            "Bonniesellsochomes@gmail.com",
+        "phone":            "",
+        "website":          "",
+        "listings":         [],
+        "testimonials":     [],
+        "user":             None,
+        "partner":          None,
+        "gsc_verification_code": "",
+        "ga_measurement_id": "",
+    },
     "john-headley": {
         "profile":          SimpleNamespace(public_slug="john-headley"),
         "display_name":     "John Headley",
