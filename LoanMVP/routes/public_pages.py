@@ -67,7 +67,7 @@ SLUG_STATIC_CONTEXT: dict[str, dict] = {
         "specialties":      "Residential • Buyers & Sellers • Investment",
         "brand_color":      "#C9A878",
         "logo_url":         None,
-        "profile_image_url": None,
+        "profile_image_url": "/static/images/vip/bonnie_headshot.jpg",
         "cover_image_url":  None,
         "email":            "Bonniesellsochomes@gmail.com",
         "phone":            "",

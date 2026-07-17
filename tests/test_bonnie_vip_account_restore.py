@@ -63,6 +63,14 @@ def test_landing_page_renders_without_a_live_vip_profile(client):
     assert "Hudson Valley" in body
 
 
+def test_landing_page_shows_her_headshot(client):
+    resp = client.get("/p/bonnie-sells-oc-homes")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert 'src="/static/images/vip/bonnie_headshot.jpg"' in body
+
+
 def test_landing_page_contact_form_creates_lead_for_bonnie(db_session, client):
     company = Company(name="Bonnie Lead Co", is_active=True)
     db_session.add(company)
