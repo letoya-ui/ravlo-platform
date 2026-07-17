@@ -82,7 +82,7 @@ SLUG_STATIC_CONTEXT: dict[str, dict] = {
         "service_area":     "Nashville and Surrounding Areas",
         "specialties":      "Real estate, property management, and insurance solutions",
         "brand_color":      "#B3122A",
-        "logo_url":         None,
+        "logo_url":         "/static/images/vip/key_signature_enterprise_logo.jpg",
         "profile_image_url": None,
         "cover_image_url":  None,
         "email":            "Keyona@keysignatureenterprise.com",
