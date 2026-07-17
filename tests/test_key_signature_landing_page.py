@@ -36,7 +36,7 @@ def test_landing_page_renders_flyer_content(client):
 
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
-    assert "KEY" in body and "SIGNATURE" in body
+    assert "Key Signature Enterprise" in body
     assert "One Company. Multiple Solutions." in body
     assert "Real Estate" in body
     assert "Property Management" in body
@@ -47,6 +47,16 @@ def test_landing_page_renders_flyer_content(client):
     assert "Tenants" in body
     assert "615-818-9438" in body
     assert "Keyona@keysignatureenterprise.com" in body
+
+
+def test_landing_page_shows_her_logo(client):
+    resp = client.get("/p/key-signature-enterprise")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert 'src="/static/images/vip/key_signature_enterprise_logo.jpg"' in body
+    assert "ks-nav-logo-img" in body
+    assert "ks-hero-logo" in body
 
 
 def test_landing_page_has_get_quote_button_linked_to_real_quote_form(client):

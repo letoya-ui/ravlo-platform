@@ -88,6 +88,7 @@
       color: var(--ks-black); text-decoration: none; letter-spacing: .02em;
     }
     .ks-nav-logo span { color: var(--ks-gold); }
+    .ks-nav-logo-img { height: 40px; width: auto; display: block; }
     .ks-nav-cta {
       background: var(--ks-red); color: var(--ks-white);
       font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
@@ -105,6 +106,7 @@
       text-align: center;
     }
     .ks-hero-inner { max-width: 760px; }
+    .ks-hero-logo { max-width: 380px; width: 100%; height: auto; margin: 0 auto 28px; display: block; }
     .ks-eyebrow {
       display: inline-flex; align-items: center; gap: 10px;
       font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
@@ -279,12 +281,19 @@
 <body>
 
 <nav class="ks-nav">
+  {% if logo_url %}
+  <a href="#" class="ks-nav-logo"><img src="{{ logo_url }}" alt="{{ _display }}" class="ks-nav-logo-img"></a>
+  {% else %}
   <a href="#" class="ks-nav-logo">KEY <span>SIGNATURE</span> ENTERPRISE</a>
+  {% endif %}
   <a href="{{ _booking_url }}" class="ks-nav-cta" target="_blank" rel="noopener">Book Now</a>
 </nav>
 
 <section class="ks-hero">
   <div class="ks-hero-inner">
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="{{ _display }}" class="ks-hero-logo">
+    {% endif %}
     <div class="ks-eyebrow">One Company. Multiple Solutions.</div>
     <h1>Real estate. Property management. <em>Insurance.</em> All under one roof.</h1>
     <p class="ks-hero-sub">{{ headline or "Whatever stage you're in, we're here to help you move forward." }} Your goals. Our priority. Serving {{ _area }}.</p>
