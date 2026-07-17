@@ -40,6 +40,7 @@ from LoanMVP.models.underwriter_model import (
 from LoanMVP.models.crm_models import Lead, Message, CRMNote, Task, FollowUpItem, FollowUpTask
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.user_model import User
+from sqlalchemy import func
 
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.ai.master_ai import master_ai   # Correct AI engine
@@ -299,6 +300,51 @@ def change_role(user_id):
     db.session.commit()
 
     flash(f"{user.email} changed from {old_role} → {new_role}.", "success")
+    return redirect(url_for("system.users"))
+
+
+# =========================================================
+# ✉️ Change User Email
+# =========================================================
+# Migrated/manually-created accounts (e.g. VIP partners imported from an
+# old system) can end up with the wrong email on file, which silently
+# breaks both login and "Forgot Password" (the account is real, but no
+# email the user actually checks matches it). This lets staff correct it
+# directly instead of needing database access.
+@system_bp.route("/change_email/<int:user_id>", methods=["POST"])
+@role_required("system", "admin")
+def change_email(user_id):
+    company_id, redirect_response = _company_admin_guard(current_user)
+    if redirect_response:
+        return redirect_response
+
+    user = User.query.get_or_404(user_id)
+
+    if _is_company_admin(current_user) and company_id is not None and user.company_id != company_id:
+        flash("You can only manage users from your own company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company_id))
+
+    if _single_admin_mode_enabled() and (user.email or "").strip().lower() == _owner_admin_email():
+        flash("The owner admin account is protected in single-admin mode.", "warning")
+        return redirect(url_for("system.users"))
+
+    new_email = (request.form.get("email") or "").strip().lower()
+    if not new_email or "@" not in new_email:
+        flash("Enter a valid email address.", "danger")
+        return redirect(url_for("system.users"))
+
+    existing = User.query.filter(
+        func.lower(User.email) == new_email, User.id != user.id
+    ).first()
+    if existing:
+        flash(f"{new_email} is already in use by another account.", "danger")
+        return redirect(url_for("system.users"))
+
+    old_email = user.email or "unknown"
+    user.email = new_email
+    db.session.commit()
+
+    flash(f"Email changed from {old_email} → {new_email}.", "success")
     return redirect(url_for("system.users"))
 
 

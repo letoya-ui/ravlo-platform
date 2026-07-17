@@ -94,6 +94,9 @@
     </div>
 
     {% if users %}
+      <input type="text" id="userSearchInput" placeholder="Search by name or email…"
+        style="width:100%;max-width:340px;margin-bottom:1rem;padding:8px 12px;border-radius:8px;
+        border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#f4f7fb;font-size:.85rem;">
       <div class="re-table-wrap mt-16">
         <table class="re-table" id="usersTable">
           <thead>
@@ -109,7 +112,7 @@
           <tbody>
             {% for user in users %}
             <tr data-user-type="{% if user.last_login %}current{% else %}pending{% endif %}">
-              <td>
+              <td data-search-field="name">
                 <div style="display:grid; gap:4px;">
                   <strong>
                     {{ ((user.first_name or "") ~ " " ~ (user.last_name or "")).strip() or user.username or "Unnamed User" }}
@@ -118,7 +121,18 @@
                 </div>
               </td>
 
-              <td>{{ user.email or "—" }}</td>
+              <td data-search-field="email">
+                <form method="POST" action="{{ url_for('system.change_email', user_id=user.id) }}"
+                      style="margin:0;display:flex;gap:6px;align-items:center;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="email" name="email" value="{{ user.email or '' }}" required
+                    style="padding:4px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.12);
+                    background:rgba(255,255,255,.05);color:#f4f7fb;font-size:.78rem;max-width:190px;">
+                  <button type="submit" class="re-btn ghost sm" title="Save email">
+                    <i class="lucide lucide-check"></i>
+                  </button>
+                </form>
+              </td>
 
               <td>
                 <form method="POST" action="{{ url_for('system.change_role', user_id=user.id) }}"
@@ -209,20 +223,39 @@
 document.addEventListener("DOMContentLoaded",function(){
   var tabs=document.querySelectorAll(".user-filter-tab");
   var rows=document.querySelectorAll("#usersTable tbody tr");
+  var searchInput=document.getElementById("userSearchInput");
+  var activeFilter="all";
+
+  function applyFilters(){
+    var query=(searchInput ? searchInput.value : "").trim().toLowerCase();
+    rows.forEach(function(row){
+      var matchesTab = activeFilter==="all" || row.getAttribute("data-user-type")===activeFilter;
+      var matchesSearch = true;
+      if(query){
+        var fields=row.querySelectorAll("[data-search-field]");
+        matchesSearch=false;
+        fields.forEach(function(field){
+          if(field.textContent.toLowerCase().indexOf(query)!==-1){ matchesSearch=true; }
+          var input=field.querySelector("input");
+          if(input && (input.value||"").toLowerCase().indexOf(query)!==-1){ matchesSearch=true; }
+        });
+      }
+      row.style.display = (matchesTab && matchesSearch) ? "" : "none";
+    });
+  }
+
   tabs.forEach(function(tab){
     tab.addEventListener("click",function(){
       tabs.forEach(function(t){t.classList.remove("active")});
       tab.classList.add("active");
-      var f=tab.getAttribute("data-filter");
-      rows.forEach(function(row){
-        if(f==="all"||row.getAttribute("data-user-type")===f){
-          row.style.display="";
-        }else{
-          row.style.display="none";
-        }
-      });
+      activeFilter=tab.getAttribute("data-filter");
+      applyFilters();
     });
   });
+
+  if(searchInput){
+    searchInput.addEventListener("input", applyFilters);
+  }
 });
 </script>
 
