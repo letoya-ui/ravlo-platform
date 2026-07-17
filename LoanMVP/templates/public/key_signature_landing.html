@@ -8,6 +8,7 @@
   {% set _area    = service_area or "Nashville and Surrounding Areas" %}
   {% set _desc    = "Real estate, property management, and insurance solutions under one roof, serving " ~ _area ~ "." %}
   {% set _booking_url = website or "#contact" %}
+  {% set _quote_url = insurance_quote_url or "#contact" %}
 
   <title>{{ _display }} — Real Estate, Property Management &amp; Insurance | {{ _area }}</title>
   <meta name="description" content="{{ _desc }}">
@@ -289,7 +290,7 @@
     <p class="ks-hero-sub">{{ headline or "Whatever stage you're in, we're here to help you move forward." }} Your goals. Our priority. Serving {{ _area }}.</p>
     <div class="ks-hero-actions">
       <a href="{{ _booking_url }}" class="ks-btn-primary" target="_blank" rel="noopener">Schedule a Consultation</a>
-      <a href="#contact" class="ks-btn-ghost" onclick="return ksScrollToQuote(event)">Get a Quote</a>
+      <a href="{{ _quote_url }}" class="ks-btn-ghost" {% if insurance_quote_url %}target="_blank" rel="noopener"{% else %}onclick="return ksScrollToQuote(event)"{% endif %}>Get a Quote</a>
       <a href="#contact" class="ks-btn-ghost">Get In Touch</a>
     </div>
   </div>
@@ -355,7 +356,7 @@
         <li>Commercial &amp; business</li>
         <li>Protect what matters most</li>
       </ul>
-      <a href="#contact" class="ks-quote-link" onclick="return ksScrollToQuote(event)">Get a Quote &rarr;</a>
+      <a href="{{ _quote_url }}" class="ks-quote-link" {% if insurance_quote_url %}target="_blank" rel="noopener"{% else %}onclick="return ksScrollToQuote(event)"{% endif %}>Get a Quote &rarr;</a>
     </div>
   </div>
 

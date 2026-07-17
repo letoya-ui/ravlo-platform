@@ -49,16 +49,15 @@ def test_landing_page_renders_flyer_content(client):
     assert "Keyona@keysignatureenterprise.com" in body
 
 
-def test_landing_page_has_get_quote_button_wired_to_insurance_interest(client):
+def test_landing_page_has_get_quote_button_linked_to_real_quote_form(client):
     resp = client.get("/p/key-signature-enterprise")
 
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
     assert "Get a Quote" in body
-    assert "ksScrollToQuote" in body
-    # Clicking it pre-selects the "insurance" option in the contact form.
-    assert "interestField.value = 'insurance'" in body
-    assert 'value="insurance"' in body
+    # Links to the real, purpose-built insurance quote intake form rather
+    # than just scrolling to the generic contact message form.
+    assert 'href="/vip/insurance/10/get-quote"' in body
 
 
 def test_landing_page_contact_form_creates_lead_for_keyona(db_session, client):
