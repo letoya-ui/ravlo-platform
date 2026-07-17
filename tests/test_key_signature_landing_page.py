@@ -49,6 +49,18 @@ def test_landing_page_renders_flyer_content(client):
     assert "Keyona@keysignatureenterprise.com" in body
 
 
+def test_landing_page_has_get_quote_button_wired_to_insurance_interest(client):
+    resp = client.get("/p/key-signature-enterprise")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Get a Quote" in body
+    assert "ksScrollToQuote" in body
+    # Clicking it pre-selects the "insurance" option in the contact form.
+    assert "interestField.value = 'insurance'" in body
+    assert 'value="insurance"' in body
+
+
 def test_landing_page_contact_form_creates_lead_for_keyona(db_session, client):
     company = Company(name="Key Signature Co", is_active=True)
     db_session.add(company)

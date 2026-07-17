@@ -179,6 +179,11 @@
       content: ''; position: absolute; left: 0; top: 10px;
       width: 6px; height: 6px; border-radius: 50%; background: var(--ks-red);
     }
+    .ks-quote-link {
+      display: inline-block; margin-top: 14px;
+      color: var(--ks-red); font-weight: 700; font-size: .88rem; text-decoration: none;
+    }
+    .ks-quote-link:hover { color: var(--ks-red2); text-decoration: underline; }
 
     /* ── WE HELP ── */
     .ks-help { background: var(--ks-off); padding: 90px 40px; }
@@ -284,6 +289,7 @@
     <p class="ks-hero-sub">{{ headline or "Whatever stage you're in, we're here to help you move forward." }} Your goals. Our priority. Serving {{ _area }}.</p>
     <div class="ks-hero-actions">
       <a href="{{ _booking_url }}" class="ks-btn-primary" target="_blank" rel="noopener">Schedule a Consultation</a>
+      <a href="#contact" class="ks-btn-ghost" onclick="return ksScrollToQuote(event)">Get a Quote</a>
       <a href="#contact" class="ks-btn-ghost">Get In Touch</a>
     </div>
   </div>
@@ -349,6 +355,7 @@
         <li>Commercial &amp; business</li>
         <li>Protect what matters most</li>
       </ul>
+      <a href="#contact" class="ks-quote-link" onclick="return ksScrollToQuote(event)">Get a Quote &rarr;</a>
     </div>
   </div>
 
@@ -479,6 +486,20 @@
   <div>Keys to your future &mdash; {{ _area }}</div>
   <div style="margin-top:10px;">Powered by <a href="#">Ravlo</a></div>
 </footer>
+
+<script>
+  function ksScrollToQuote(event) {
+    var interestField = document.getElementById('interest');
+    if (interestField) interestField.value = 'insurance';
+    var target = document.getElementById('contact');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' });
+      if (event) event.preventDefault();
+      return false;
+    }
+    return true;
+  }
+</script>
 
 </body>
 </html>
