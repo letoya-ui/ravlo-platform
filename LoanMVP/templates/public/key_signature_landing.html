@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  {% set _display = display_name or "Key Signature Enterprise" %}
+  {% set _area    = service_area or "Nashville and Surrounding Areas" %}
+  {% set _desc    = "Real estate, property management, and insurance solutions under one roof, serving " ~ _area ~ "." %}
+  {% set _booking_url = website or "#contact" %}
+
+  <title>{{ _display }} — Real Estate, Property Management &amp; Insurance | {{ _area }}</title>
+  <meta name="description" content="{{ _desc }}">
+  <meta name="robots"      content="index, follow">
+  <meta name="author"      content="{{ _display }}">
+  {% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}
+
+  <meta property="og:type"        content="website">
+  <meta property="og:title"       content="{{ _display }} — One Company. Multiple Solutions.">
+  <meta property="og:description" content="{{ _desc }}">
+  {% if canonical_url %}<meta property="og:url" content="{{ canonical_url }}">{% endif %}
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": ["RealEstateAgent", "InsuranceAgency", "LocalBusiness"],
+    "name": "{{ _display | e }}",
+    "description": "{{ _desc | e }}",
+    {% if canonical_url %}"url": "{{ canonical_url }}",{% endif %}
+    {% if phone %}"telephone": "{{ phone | e }}",{% endif %}
+    {% if email %}"email": "{{ email | e }}",{% endif %}
+    "areaServed": { "@type": "AdministrativeArea", "name": "{{ _area | e }}" }
+  }
+  </script>
+
+  {% if ga_measurement_id %}
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '{{ ga_measurement_id }}');
+  </script>
+  {% endif %}
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ks-black:  #111111;
+      --ks-red:    #B3122A;
+      --ks-red2:   #D6183A;
+      --ks-gold:   #C9A24A;
+      --ks-white:  #FFFFFF;
+      --ks-off:    #F7F5F1;
+      --ks-gray:   #6B7280;
+      --ks-text:   #374151;
+      --radius:    14px;
+      --shadow:    0 8px 30px rgba(0,0,0,.12);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: var(--ks-white);
+      color: var(--ks-text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    .ks-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 40px;
+      background: rgba(255,255,255,.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(0,0,0,.08);
+    }
+    .ks-nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem; font-weight: 700;
+      color: var(--ks-black); text-decoration: none; letter-spacing: .02em;
+    }
+    .ks-nav-logo span { color: var(--ks-gold); }
+    .ks-nav-cta {
+      background: var(--ks-red); color: var(--ks-white);
+      font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+      padding: 11px 24px; border-radius: 8px; text-decoration: none;
+      transition: background .2s;
+    }
+    .ks-nav-cta:hover { background: var(--ks-red2); }
+
+    /* ── HERO ── */
+    .ks-hero {
+      min-height: 92vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 130px 40px 80px;
+      background: linear-gradient(160deg, #ffffff 0%, var(--ks-off) 100%);
+      text-align: center;
+    }
+    .ks-hero-inner { max-width: 760px; }
+    .ks-eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--ks-red); margin-bottom: 18px;
+    }
+    .ks-hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.4rem, 5.5vw, 3.6rem); font-weight: 700; line-height: 1.15;
+      color: var(--ks-black); margin-bottom: 20px;
+    }
+    .ks-hero h1 em { color: var(--ks-red); font-style: normal; }
+    .ks-hero-sub {
+      font-size: 1.08rem; color: var(--ks-gray); max-width: 560px;
+      margin: 0 auto 36px; line-height: 1.75;
+    }
+    .ks-hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .ks-btn-primary {
+      background: var(--ks-red); color: var(--ks-white);
+      font-size: .9rem; font-weight: 700; letter-spacing: .03em;
+      padding: 15px 34px; border-radius: 9px; text-decoration: none;
+      transition: background .2s, transform .15s;
+      display: inline-block;
+    }
+    .ks-btn-primary:hover { background: var(--ks-red2); transform: translateY(-1px); }
+    .ks-btn-ghost {
+      border: 1.5px solid rgba(0,0,0,.18); color: var(--ks-black);
+      font-size: .9rem; font-weight: 600;
+      padding: 15px 34px; border-radius: 9px; text-decoration: none;
+      transition: border-color .2s;
+      display: inline-block;
+    }
+    .ks-btn-ghost:hover { border-color: var(--ks-red); color: var(--ks-red); }
+
+    /* ── TRUST STRIP ── */
+    .ks-trust {
+      background: var(--ks-black);
+      padding: 44px 40px;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+      max-width: 1200px; margin: 0 auto;
+    }
+    .ks-trust-item { display: flex; align-items: center; gap: 14px; }
+    .ks-trust-icon {
+      width: 46px; height: 46px; border-radius: 50%;
+      border: 2px solid var(--ks-red); color: var(--ks-red);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; flex-shrink: 0;
+    }
+    .ks-trust-text { color: var(--ks-white); font-size: .8rem; font-weight: 700; line-height: 1.4; }
+
+    /* ── ROADMAP ── */
+    .ks-roadmap { padding: 90px 40px; max-width: 1100px; margin: 0 auto; }
+    .ks-roadmap-head { text-align: center; margin-bottom: 60px; }
+    .ks-roadmap-head h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 4vw, 2.8rem); color: var(--ks-black); margin-bottom: 12px;
+    }
+    .ks-roadmap-head h2 em { color: var(--ks-red); font-style: normal; }
+    .ks-roadmap-head p { color: var(--ks-gray); font-size: 1.02rem; }
+
+    .ks-step { display: grid; grid-template-columns: 70px 1fr; gap: 24px; margin-bottom: 44px; }
+    .ks-step-badge {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--ks-red); color: var(--ks-white);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700;
+    }
+    .ks-step h3 { font-size: 1.25rem; color: var(--ks-black); margin-bottom: 10px; }
+    .ks-step ul { list-style: none; }
+    .ks-step li {
+      position: relative; padding-left: 20px; margin-bottom: 6px; color: var(--ks-text); font-size: .96rem;
+    }
+    .ks-step li::before {
+      content: ''; position: absolute; left: 0; top: 10px;
+      width: 6px; height: 6px; border-radius: 50%; background: var(--ks-red);
+    }
+
+    /* ── WE HELP ── */
+    .ks-help { background: var(--ks-off); padding: 90px 40px; }
+    .ks-help-inner { max-width: 1000px; margin: 0 auto; }
+    .ks-help-inner h2 {
+      font-family: 'Playfair Display', serif;
+      text-align: center; font-size: clamp(1.8rem, 3.6vw, 2.4rem);
+      color: var(--ks-black); margin-bottom: 50px;
+    }
+    .ks-help-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+    .ks-help-card {
+      background: var(--ks-white); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 28px 22px; text-align: center;
+    }
+    .ks-help-card-icon { font-size: 1.8rem; margin-bottom: 14px; }
+    .ks-help-card h3 { font-size: .95rem; color: var(--ks-black); margin-bottom: 8px; }
+    .ks-help-card p { font-size: .85rem; color: var(--ks-gray); }
+
+    /* ── CONTACT ── */
+    .ks-contact { padding: 90px 40px; max-width: 1000px; margin: 0 auto; }
+    .ks-contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; }
+    .ks-contact-info h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 3.6vw, 2.3rem); color: var(--ks-black); margin-bottom: 16px;
+    }
+    .ks-contact-info p { color: var(--ks-gray); margin-bottom: 28px; }
+    .ks-contact-item { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; font-size: .95rem; }
+    .ks-contact-item a { color: var(--ks-black); text-decoration: none; }
+    .ks-contact-item a:hover { color: var(--ks-red); }
+    .ks-contact-icon {
+      width: 34px; height: 34px; border-radius: 50%; background: var(--ks-black); color: var(--ks-white);
+      display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0;
+    }
+    .ks-book-link {
+      display: inline-block; margin-top: 12px;
+      background: var(--ks-red); color: var(--ks-white); font-weight: 700; font-size: .88rem;
+      padding: 13px 28px; border-radius: 9px; text-decoration: none;
+    }
+    .ks-book-link:hover { background: var(--ks-red2); }
+
+    .ks-form {
+      background: var(--ks-off); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 32px;
+    }
+    .ks-form h3 { font-size: 1.15rem; color: var(--ks-black); margin-bottom: 18px; }
+    .ks-field { margin-bottom: 16px; }
+    .ks-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .ks-field label { display: block; font-size: .78rem; font-weight: 600; color: var(--ks-gray); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .03em; }
+    .ks-field input, .ks-field select, .ks-field textarea {
+      width: 100%; padding: 11px 14px; border-radius: 8px; border: 1px solid rgba(0,0,0,.14);
+      font-family: inherit; font-size: .92rem; background: var(--ks-white); color: var(--ks-text);
+    }
+    .ks-field textarea { min-height: 90px; resize: vertical; }
+    .ks-form-btn {
+      width: 100%; background: var(--ks-red); color: var(--ks-white); border: none;
+      font-size: .92rem; font-weight: 700; letter-spacing: .03em;
+      padding: 14px; border-radius: 9px; cursor: pointer; transition: background .2s;
+    }
+    .ks-form-btn:hover { background: var(--ks-red2); }
+    .ks-form-error { background: rgba(179,18,42,.08); color: var(--ks-red); padding: 10px 14px; border-radius: 8px; font-size: .85rem; margin-bottom: 14px; }
+    .ks-form-success { text-align: center; padding: 20px 0; }
+    .ks-form-success-icon {
+      width: 54px; height: 54px; border-radius: 50%; background: var(--ks-red); color: var(--ks-white);
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 16px;
+    }
+    .ks-form-success h3 { margin-bottom: 8px; }
+    .ks-form-success p { color: var(--ks-gray); font-size: .92rem; }
+
+    /* ── FOOTER ── */
+    .ks-footer {
+      background: var(--ks-black); color: rgba(255,255,255,.6);
+      text-align: center; padding: 40px 20px; font-size: .85rem;
+    }
+    .ks-footer-name { color: var(--ks-white); font-weight: 700; margin-bottom: 6px; }
+    .ks-footer a { color: var(--ks-gold); text-decoration: none; }
+
+    @media (max-width: 860px) {
+      .ks-trust { grid-template-columns: repeat(2, 1fr); }
+      .ks-help-grid { grid-template-columns: repeat(2, 1fr); }
+      .ks-contact-grid { grid-template-columns: 1fr; }
+      .ks-step { grid-template-columns: 56px 1fr; }
+      .ks-nav { padding: 14px 20px; }
+      .ks-hero { padding: 110px 20px 60px; }
+      .ks-roadmap, .ks-help, .ks-contact { padding: 60px 20px; }
+    }
+    @media (max-width: 520px) {
+      .ks-trust, .ks-help-grid { grid-template-columns: 1fr; }
+      .ks-field-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="ks-nav">
+  <a href="#" class="ks-nav-logo">KEY <span>SIGNATURE</span> ENTERPRISE</a>
+  <a href="{{ _booking_url }}" class="ks-nav-cta" target="_blank" rel="noopener">Book Now</a>
+</nav>
+
+<section class="ks-hero">
+  <div class="ks-hero-inner">
+    <div class="ks-eyebrow">One Company. Multiple Solutions.</div>
+    <h1>Real estate. Property management. <em>Insurance.</em> All under one roof.</h1>
+    <p class="ks-hero-sub">{{ headline or "Whatever stage you're in, we're here to help you move forward." }} Your goals. Our priority. Serving {{ _area }}.</p>
+    <div class="ks-hero-actions">
+      <a href="{{ _booking_url }}" class="ks-btn-primary" target="_blank" rel="noopener">Schedule a Consultation</a>
+      <a href="#contact" class="ks-btn-ghost">Get In Touch</a>
+    </div>
+  </div>
+</section>
+
+<div class="ks-trust">
+  <div class="ks-trust-item">
+    <div class="ks-trust-icon">👥</div>
+    <div class="ks-trust-text">Experienced, Trusted,<br>Client Focused</div>
+  </div>
+  <div class="ks-trust-item">
+    <div class="ks-trust-icon">🛡</div>
+    <div class="ks-trust-text">Reliable, Professional,<br>Dependable</div>
+  </div>
+  <div class="ks-trust-item">
+    <div class="ks-trust-icon">🤝</div>
+    <div class="ks-trust-text">Built On Integrity,<br>Driven By Results</div>
+  </div>
+  <div class="ks-trust-item">
+    <div class="ks-trust-icon">🔑</div>
+    <div class="ks-trust-text">Keys To<br>Your Future</div>
+  </div>
+</div>
+
+<section class="ks-roadmap">
+  <div class="ks-roadmap-head">
+    <h2>Your <em>Roadmap</em></h2>
+    <p>Whatever stage you're in, we're here to help you move forward.</p>
+  </div>
+
+  <div class="ks-step">
+    <div class="ks-step-badge">01</div>
+    <div>
+      <h3>Real Estate</h3>
+      <ul>
+        <li>Buy, sell, invest</li>
+        <li>Market knowledge that works for you</li>
+        <li>Smooth transactions, better results</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ks-step">
+    <div class="ks-step-badge">02</div>
+    <div>
+      <h3>Property Management</h3>
+      <ul>
+        <li>Tenant placement</li>
+        <li>Rent collection</li>
+        <li>Maintenance coordination</li>
+        <li>Full-service management for peace of mind</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ks-step">
+    <div class="ks-step-badge">03</div>
+    <div>
+      <h3>Insurance Solutions</h3>
+      <ul>
+        <li>Auto, home, renters</li>
+        <li>Landlord &amp; dwelling</li>
+        <li>Commercial &amp; business</li>
+        <li>Protect what matters most</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ks-step">
+    <div class="ks-step-badge">04</div>
+    <div>
+      <h3>Your Future, Our Focus</h3>
+      <ul>
+        <li>Build wealth</li>
+        <li>Protect your assets</li>
+        <li>Create generational impact</li>
+        <li>We're with you for the journey</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="ks-help">
+  <div class="ks-help-inner">
+    <h2>We Help</h2>
+    <div class="ks-help-grid">
+      <div class="ks-help-card">
+        <div class="ks-help-card-icon">🏠</div>
+        <h3>Homebuyers</h3>
+        <p>Find the right home and the right coverage.</p>
+      </div>
+      <div class="ks-help-card">
+        <div class="ks-help-card-icon">🔑</div>
+        <h3>Landlords &amp; Investors</h3>
+        <p>Protect your properties and your income.</p>
+      </div>
+      <div class="ks-help-card">
+        <div class="ks-help-card-icon">💼</div>
+        <h3>Business Owners</h3>
+        <p>Get the coverage you need to grow with confidence.</p>
+      </div>
+      <div class="ks-help-card">
+        <div class="ks-help-card-icon">👥</div>
+        <h3>Tenants</h3>
+        <p>Affordable renters insurance for peace of mind.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="ks-contact" id="contact">
+  <div class="ks-contact-grid">
+    <div class="ks-contact-info">
+      <h2>Ready to Get Started?</h2>
+      <p>Schedule a consultation today, or reach out directly — we'll follow up within one business day.</p>
+
+      {% if phone %}
+      <div class="ks-contact-item">
+        <div class="ks-contact-icon">📞</div>
+        <div><a href="tel:{{ phone }}">{{ phone }}</a></div>
+      </div>
+      {% endif %}
+      {% if email %}
+      <div class="ks-contact-item">
+        <div class="ks-contact-icon">✉</div>
+        <div><a href="mailto:{{ email }}">{{ email }}</a></div>
+      </div>
+      {% endif %}
+      {% if service_area %}
+      <div class="ks-contact-item">
+        <div class="ks-contact-icon">📍</div>
+        <div>Serving {{ service_area }}</div>
+      </div>
+      {% endif %}
+
+      <a href="{{ _booking_url }}" class="ks-book-link" target="_blank" rel="noopener">Book Online &rarr;</a>
+    </div>
+
+    <div class="ks-form">
+      {% if submitted %}
+      <div class="ks-form-success">
+        <div class="ks-form-success-icon">✓</div>
+        <h3>Thanks, {{ submitted_name }}!</h3>
+        <p>We'll be in touch within one business day to help you get started.</p>
+      </div>
+      {% else %}
+      <h3>Send Us a Message</h3>
+      {% if form_error %}
+      <div class="ks-form-error">{{ form_error }}</div>
+      {% endif %}
+      <form method="POST" action="/p/{{ profile.public_slug }}/contact">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="ks-field-row">
+          <div class="ks-field">
+            <label for="client_name">Your Name *</label>
+            <input type="text" id="client_name" name="client_name" placeholder="First Last" required>
+          </div>
+          <div class="ks-field">
+            <label for="client_phone">Phone Number</label>
+            <input type="tel" id="client_phone" name="client_phone" placeholder="(615) 000-0000">
+          </div>
+        </div>
+        <div class="ks-field">
+          <label for="client_email">Email Address</label>
+          <input type="email" id="client_email" name="client_email" placeholder="you@example.com">
+        </div>
+        <div class="ks-field">
+          <label for="interest">I'm interested in...</label>
+          <select id="interest" name="interest">
+            <option value="real_estate">Real Estate — buying or selling</option>
+            <option value="property_management">Property Management</option>
+            <option value="insurance">Insurance — auto, home, renters, or business</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="ks-field">
+          <label for="preferred_areas">Property Address or Area</label>
+          <input type="text" id="preferred_areas" name="preferred_areas" placeholder="Street, City, or Neighborhood">
+        </div>
+        <div class="ks-field">
+          <label for="message">Anything else we should know?</label>
+          <textarea id="message" name="message" placeholder="Tell us a bit about what you need..."></textarea>
+        </div>
+        <button type="submit" class="ks-form-btn">Send Message &rarr;</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<footer class="ks-footer">
+  <div class="ks-footer-name">{{ _display }}</div>
+  <div>Keys to your future &mdash; {{ _area }}</div>
+  <div style="margin-top:10px;">Powered by <a href="#">Ravlo</a></div>
+</footer>
+
+</body>
+</html>

@@ -34,8 +34,9 @@ public_pages_bp = Blueprint("public_pages", __name__, url_prefix="/p")
 # Slug → dedicated white-label template. All other slugs fall back to the
 # generic realtor_landing.html.
 SLUG_TEMPLATES: dict[str, str] = {
-    "bonnie-sells-oc-homes": "public/bonnie_landing.html",
-    "john-headley":           "public/john_headen_landing.html",
+    "bonnie-sells-oc-homes":    "public/bonnie_landing.html",
+    "john-headley":             "public/john_headen_landing.html",
+    "key-signature-enterprise": "public/key_signature_landing.html",
 }
 
 # Fallback context for white-label pages that don't have a VIPProfile row yet.
@@ -44,7 +45,8 @@ SLUG_TEMPLATES: dict[str, str] = {
 # User email for the real account that owns each static-context slug.
 # Leads submitted through their page are created in the CRM assigned to this user.
 SLUG_OWNER_EMAILS: dict[str, str] = {
-    "john-headley": "Jsecond1212@gmail.com",
+    "john-headley":             "Jsecond1212@gmail.com",
+    "key-signature-enterprise": "keyonahall@icloud.com",
 }
 
 SLUG_STATIC_CONTEXT: dict[str, dict] = {
@@ -62,6 +64,30 @@ SLUG_STATIC_CONTEXT: dict[str, dict] = {
         "email":            "Jsecond1212@gmail.com",
         "phone":            "+13479127503",
         "website":          "",
+        "listings":         [],
+        "testimonials":     [],
+        "user":             None,
+        "partner":          None,
+        "gsc_verification_code": "",
+        "ga_measurement_id": "",
+    },
+    "key-signature-enterprise": {
+        "profile":          SimpleNamespace(public_slug="key-signature-enterprise"),
+        "display_name":     "Key Signature Enterprise",
+        "headline":         "One Company. Multiple Solutions.",
+        "bio":              (
+            "Real estate. Property management. Insurance. All under one roof. "
+            "Your goals. Our priority."
+        ),
+        "service_area":     "Nashville and Surrounding Areas",
+        "specialties":      "Real estate, property management, and insurance solutions",
+        "brand_color":      "#B3122A",
+        "logo_url":         None,
+        "profile_image_url": None,
+        "cover_image_url":  None,
+        "email":            "Keyona@keysignatureenterprise.com",
+        "phone":            "615-818-9438",
+        "website":          "https://keysignatureenterprise.setmore.com",
         "listings":         [],
         "testimonials":     [],
         "user":             None,
