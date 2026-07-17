@@ -88,6 +88,7 @@ SLUG_STATIC_CONTEXT: dict[str, dict] = {
         "email":            "Keyona@keysignatureenterprise.com",
         "phone":            "615-818-9438",
         "website":          "https://keysignatureenterprise.setmore.com",
+        "insurance_quote_url": "/vip/insurance/10/get-quote",
         "listings":         [],
         "testimonials":     [],
         "user":             None,
