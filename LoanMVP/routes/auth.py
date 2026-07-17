@@ -98,6 +98,38 @@ _PARTNER_DASHBOARD_PRESETS: dict[str, dict[str, str | bool]] = {
         "portfolio_showcase_enabled": True,
         "is_verified": True,
     },
+    "bonniesellsochomes@gmail.com": {
+        "_user_role": "partner",
+        "name": "Bonnie",
+        "company": "Bonnie Sells OC Homes",
+        "category": "realtor",
+        "type": "Realtor",
+        "specialty": "Residential Real Estate",
+        "service_area": "Orange County & Hudson Valley, NY",
+        "bio": (
+            "With deep roots in the Hudson Valley and a passion for connecting "
+            "people with the right home, Bonnie brings a personal, "
+            "results-driven approach to every transaction. Whether you're "
+            "buying your first home, selling, or investing across Orange "
+            "County and the greater Hudson Valley, she's with you every step "
+            "of the way."
+        ),
+        "listing_description": "Residential real estate services for buyers, sellers, and investors across Orange County and the Hudson Valley, NY.",
+        "active": True,
+        "approved": True,
+        "featured": True,
+        "status": "Active",
+        "subscription_tier": "Premium",
+        "crm_enabled": True,
+        "deal_visibility_enabled": True,
+        "proposal_builder_enabled": True,
+        "instant_quote_enabled": True,
+        "ai_assist_enabled": True,
+        "priority_placement_enabled": True,
+        "smart_notifications_enabled": True,
+        "portfolio_showcase_enabled": True,
+        "is_verified": True,
+    },
     "jamaine.caughman@caughmanmason.com": {
         "_user_role": "partner",
         "name": "Caughman Mason Construction",
