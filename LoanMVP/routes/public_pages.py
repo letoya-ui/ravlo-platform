@@ -20,10 +20,11 @@ import re
 from datetime import datetime
 from types import SimpleNamespace
 
-from flask import Blueprint, render_template, request, abort, flash, redirect, url_for, Response
+from flask import Blueprint, current_app, render_template, request, abort, flash, redirect, url_for, Response
+from flask_mail import Message as MailMessage
 from sqlalchemy import func
 
-from LoanMVP.extensions import db, csrf
+from LoanMVP.extensions import db, csrf, mail
 from LoanMVP.models.vip_models import VIPProfile, VIPNotification, VIPTestimonial, VIPBlogPost
 from LoanMVP.models.elena_models import ElenaClient, ElenaListing
 from LoanMVP.models.user_model import User
@@ -208,6 +209,42 @@ def _load_context(slug: str) -> dict | None:
     return None
 
 
+def _send_new_lead_email(recipient, slug: str, client_name: str, client_email: str,
+                          client_phone: str, interest: str, message: str) -> None:
+    """Email the partner who owns this page about a new lead. Best-effort:
+    a delivery failure here must never break lead capture itself."""
+    if not recipient or not recipient.email:
+        return
+    try:
+        sender = (
+            current_app.config.get("MAIL_DEFAULT_SENDER")
+            or current_app.config.get("MAIL_USERNAME")
+            or "letoya@ravlohq.com"
+        )
+        lines = [f"You have a new lead from your Ravlo landing page (/p/{slug}):", ""]
+        lines.append(f"Name: {client_name}")
+        if client_email:
+            lines.append(f"Email: {client_email}")
+        if client_phone:
+            lines.append(f"Phone: {client_phone}")
+        if interest:
+            lines.append(f"Interest: {interest}")
+        if message:
+            lines.append(f"Message: {message}")
+        lines.append("")
+        lines.append(f"View it in your CRM: {url_for('crm.leads', _external=True)}")
+
+        msg = MailMessage(
+            subject=f"New lead: {client_name}",
+            sender=sender,
+            recipients=[recipient.email],
+            body="\n".join(lines),
+        )
+        mail.send(msg)
+    except Exception as exc:
+        current_app.logger.warning("New lead email notification failed: %s", exc)
+
+
 def _handle_lead_capture(slug: str):
     """Process lead capture form and return a rendered response.
 
@@ -310,6 +347,9 @@ def _handle_lead_capture(slug: str):
         )
         db.session.add(notification)
     db.session.commit()
+
+    recipient = owner_user or ctx.get("user")
+    _send_new_lead_email(recipient, slug, client_name, client_email, client_phone, interest, message)
 
     return render_template(
         _template_for(slug),
