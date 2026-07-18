@@ -33,6 +33,7 @@ from LoanMVP.extensions import db
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.models.admin import BusinessInquiry, Company
 from LoanMVP.models.user_model import User
+from LoanMVP.services import ae_pricing
 
 account_executive_bp = Blueprint("account_executive", __name__, url_prefix="/account-executive")
 
@@ -294,6 +295,68 @@ def import_prospects():
     )
 
 
+def _build_quote(deal, form):
+    """Reads the AE's quote-calculator inputs, looks up the rate card,
+    and stamps the deal with the quoted numbers + required approval
+    level -- see LoanMVP/services/ae_pricing.py for the actual figures.
+    Returns an error message string, or None on success."""
+    pricing_plan = (form.get("pricing_plan") or "").strip().lower()
+    if pricing_plan == "enterprise":
+        list_price = ae_pricing.enterprise_tier_for_user_count(form.get("enterprise_user_count"))
+        if list_price is None:
+            return (
+                "300+ seat deals are an Executive Quote -- there's no rate-card "
+                "number to look up. Work this one directly with an executive."
+            )
+    else:
+        list_price = ae_pricing.STANDARD_PLANS.get(pricing_plan)
+        if list_price is None:
+            return "Choose a valid pricing plan."
+
+    discount_percent = _to_decimal(form.get("discount_percent")) or Decimal("0")
+    setup_fee_waived = _to_decimal(form.get("setup_fee_waived")) or Decimal("0")
+    is_white_label = form.get("is_white_label") == "on"
+    is_custom_development = form.get("is_custom_development") == "on"
+    is_multi_year = form.get("is_multi_year") == "on"
+    is_strategic_partnership = form.get("is_strategic_partnership") == "on"
+
+    approval_level = ae_pricing.required_approval_level(
+        is_enterprise=(pricing_plan == "enterprise"),
+        is_white_label=is_white_label,
+        is_custom_development=is_custom_development,
+        is_multi_year=is_multi_year,
+        is_strategic_partnership=is_strategic_partnership,
+        discount_percent=discount_percent,
+        setup_fee_waived=setup_fee_waived,
+    )
+    quoted_setup, quoted_monthly = ae_pricing.compute_quote(
+        list_price["setup"], list_price["monthly"], discount_percent, setup_fee_waived
+    )
+
+    deal.pricing_plan = pricing_plan
+    deal.enterprise_user_count = (
+        int(form.get("enterprise_user_count")) if pricing_plan == "enterprise" and (form.get("enterprise_user_count") or "").isdigit() else None
+    )
+    deal.list_setup_fee = list_price["setup"]
+    deal.list_monthly_fee = list_price["monthly"]
+    deal.discount_percent = discount_percent
+    deal.setup_fee_waived = setup_fee_waived
+    deal.is_white_label = is_white_label
+    deal.is_custom_development = is_custom_development
+    deal.is_multi_year = is_multi_year
+    deal.is_strategic_partnership = is_strategic_partnership
+    deal.approval_level_required = approval_level
+    deal.approval_status = "not_required" if approval_level == "ae" else "pending"
+    deal.approved_by_id = None
+    deal.approved_at = None
+
+    # The quote is the source of truth for the deal's contract value --
+    # an AE can still hand-adjust it later via "update_terms" if the
+    # final signed contract differs.
+    deal.contract_value = quoted_setup + (quoted_monthly * 12)
+    return None
+
+
 # ===============================================================
 #   DEAL DETAIL
 # ===============================================================
@@ -331,7 +394,13 @@ def deal_detail(deal_id):
             elif new_stage == "signed":
                 contract_value = _to_decimal(request.form.get("contract_value"))
                 commission_rate = _to_decimal(request.form.get("commission_rate")) or DEFAULT_COMMISSION_RATE
-                if contract_value is None:
+                if (deal.approval_level_required or "ae") != "ae" and deal.approval_status != "approved":
+                    flash(
+                        f"This quote requires {(deal.approval_level_required or '').replace('_', ' ').title()} "
+                        "approval before it can be marked signed.",
+                        "danger",
+                    )
+                elif contract_value is None:
                     flash("Enter the contract value to mark this deal signed.", "danger")
                 else:
                     deal.contract_value = contract_value
@@ -367,6 +436,33 @@ def deal_detail(deal_id):
                 deal.commission_amount = _compute_commission(deal.contract_value, deal.commission_rate)
             db.session.commit()
             flash("Contract terms updated.", "success")
+
+        elif action_type == "build_quote":
+            error = _build_quote(deal, request.form)
+            if error:
+                flash(error, "danger")
+            else:
+                db.session.commit()
+                if deal.approval_level_required == "ae":
+                    flash("Quote calculated -- within your authority, no approval needed.", "success")
+                else:
+                    flash(
+                        f"Quote calculated -- requires {deal.approval_level_required.replace('_', ' ').title()} "
+                        "approval before it can be signed.",
+                        "warning",
+                    )
+
+        elif action_type == "approve_quote":
+            if not _is_full_visibility(current_user):
+                flash("Only Ravlo staff can approve a quote.", "danger")
+            elif deal.approval_status != "pending":
+                flash("This quote isn't awaiting approval.", "info")
+            else:
+                deal.approval_status = "approved"
+                deal.approved_by_id = current_user.id
+                deal.approved_at = datetime.utcnow()
+                db.session.commit()
+                flash("Quote approved.", "success")
 
         elif action_type == "link_company":
             company_id = request.form.get("company_id")
@@ -413,6 +509,12 @@ def deal_detail(deal_id):
 
     companies = Company.query.order_by(Company.name).all() if _is_full_visibility(current_user) else []
 
+    quoted_setup_fee = quoted_monthly_fee = None
+    if deal.pricing_plan:
+        quoted_setup_fee, quoted_monthly_fee = ae_pricing.compute_quote(
+            deal.list_setup_fee, deal.list_monthly_fee, deal.discount_percent, deal.setup_fee_waived
+        )
+
     return render_template(
         "account_executive/deal_detail.html",
         deal=deal,
@@ -421,4 +523,10 @@ def deal_detail(deal_id):
         is_full_visibility=_is_full_visibility(current_user),
         title=deal.company_name,
         active_tab="deals",
+        partner_plans=ae_pricing.STANDARD_PARTNER_PLANS,
+        lending_plans=ae_pricing.STANDARD_LENDING_PLANS,
+        enterprise_tiers=ae_pricing.ENTERPRISE_TIERS,
+        add_ons=ae_pricing.ADD_ONS,
+        quoted_setup_fee=quoted_setup_fee,
+        quoted_monthly_fee=quoted_monthly_fee,
     )

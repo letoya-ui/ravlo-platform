@@ -179,8 +179,33 @@ class BusinessInquiry(db.Model):
     # record to the resulting live Company for reporting.
     linked_company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True)
 
+    # -- Ravlo Pricing Playbook quote (LoanMVP/services/ae_pricing.py) --
+    # populated by the AE's quote calculator, not typed free-hand, so
+    # every deal's numbers come from the same standard/enterprise rate
+    # card and the same discount-approval rules.
+    pricing_plan = db.Column(db.String(30), nullable=True)
+    # solo, professional, business, individual_lo, branch, regional, enterprise
+    enterprise_user_count = db.Column(db.Integer, nullable=True)
+    list_setup_fee = db.Column(db.Numeric(12, 2), nullable=True)
+    list_monthly_fee = db.Column(db.Numeric(12, 2), nullable=True)
+    discount_percent = db.Column(db.Numeric(5, 2), nullable=True)
+    setup_fee_waived = db.Column(db.Numeric(12, 2), nullable=True)
+    is_white_label = db.Column(db.Boolean, default=False, nullable=True)
+    is_custom_development = db.Column(db.Boolean, default=False, nullable=True)
+    is_multi_year = db.Column(db.Boolean, default=False, nullable=True)
+    is_strategic_partnership = db.Column(db.Boolean, default=False, nullable=True)
+
+    # ae, sales_manager, executive -- computed by required_approval_level()
+    # each time the quote is (re)built.
+    approval_level_required = db.Column(db.String(20), nullable=True)
+    # not_required, pending, approved -- gates marking the deal "signed".
+    approval_status = db.Column(db.String(20), default="not_required", nullable=True)
+    approved_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    approved_at = db.Column(db.DateTime, nullable=True)
+
     assigned_ae = db.relationship("User", foreign_keys=[assigned_ae_id])
     linked_company = db.relationship("Company", foreign_keys=[linked_company_id])
+    approved_by = db.relationship("User", foreign_keys=[approved_by_id])
 
 
 class LicenseInviteEvent(db.Model):
