@@ -79,6 +79,20 @@ def test_landing_page_shows_her_headshot(client):
     assert 'src="/static/images/vip/bonnie_headshot.jpg"' in body
 
 
+def test_headshot_crop_keeps_her_face_in_frame(client):
+    """Her headshot photo is a tall portrait (face in the top third), but
+    the nav/hero avatars are circular 1:1 crops. object-fit: cover with no
+    object-position defaults to vertical center, which crops out her face
+    and shows mostly her torso/arms instead. Both avatar spots need an
+    object-position biased toward the top of the photo."""
+    resp = client.get("/p/bonnie-sells-oc-homes")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "object-position: center 15%" in body
+    assert "object-position:center 15%" in body
+
+
 def test_landing_page_contact_form_creates_lead_for_bonnie(db_session, client):
     company = Company(name="Bonnie Lead Co", is_active=True)
     db_session.add(company)
