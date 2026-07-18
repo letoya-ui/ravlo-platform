@@ -89,6 +89,12 @@
         </div>
 
         <div id="signedFields" style="display:{{ 'block' if (deal.ae_stage or 'prospect') == 'signed' else 'none' }};">
+          {% if deal.approval_level_required and deal.approval_level_required != 'ae' and deal.approval_status != 'approved' %}
+          <div class="re-card-subtitle" style="color:#b45309;">
+            This deal's quote requires {{ deal.approval_level_required|replace('_', ' ')|title }} approval
+            (see Pricing &amp; Quote below) before it can be marked signed.
+          </div>
+          {% endif %}
           <div class="re-grid-2">
             <div class="field">
               <label for="contract_value">Contract Value ($)</label>
@@ -170,6 +176,98 @@
       {% endif %}
       {% endif %}
     </div>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">RAVLO PRICING PLAYBOOK</div>
+        <h3 style="margin:.35rem 0 .2rem;">Pricing &amp; Quote</h3>
+        <div class="re-card-subtitle">Pick a plan and the calculator applies the standard rate card and the discount-approval rules automatically -- no guessing.</div>
+      </div>
+    </div>
+
+    <form method="POST" class="mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action_type" value="build_quote">
+
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="pricing_plan">Plan</label>
+          <select id="pricing_plan" name="pricing_plan" onchange="document.getElementById('enterpriseUsersField').style.display = (this.value === 'enterprise') ? 'block' : 'none';">
+            <option value="">— Select —</option>
+            <optgroup label="Partners">
+              {% for key, plan in partner_plans.items() %}
+                <option value="{{ key }}" {% if deal.pricing_plan == key %}selected{% endif %}>{{ plan.label }} (${{ '%.0f'|format(plan.setup) }} setup / ${{ '%.0f'|format(plan.monthly) }} mo)</option>
+              {% endfor %}
+            </optgroup>
+            <optgroup label="Lending OS">
+              {% for key, plan in lending_plans.items() %}
+                <option value="{{ key }}" {% if deal.pricing_plan == key %}selected{% endif %}>{{ plan.label }} (${{ '%.0f'|format(plan.setup) }} setup / ${{ '%.0f'|format(plan.monthly) }} mo)</option>
+              {% endfor %}
+            </optgroup>
+            <option value="enterprise" {% if deal.pricing_plan == 'enterprise' %}selected{% endif %}>Enterprise (by company size)</option>
+          </select>
+        </div>
+        <div class="field" id="enterpriseUsersField" style="display:{{ 'block' if deal.pricing_plan == 'enterprise' else 'none' }};">
+          <label for="enterprise_user_count">Number of Users</label>
+          <input id="enterprise_user_count" name="enterprise_user_count" type="number" min="1" value="{{ deal.enterprise_user_count or '' }}">
+        </div>
+      </div>
+
+      <div class="re-grid-2 mt-16">
+        <div class="field">
+          <label for="discount_percent">Discount (%)</label>
+          <input id="discount_percent" name="discount_percent" type="number" step="0.1" min="0" max="100" value="{{ deal.discount_percent or '0' }}">
+        </div>
+        <div class="field">
+          <label for="setup_fee_waived">Setup Fee Waived ($)</label>
+          <input id="setup_fee_waived" name="setup_fee_waived" type="number" step="0.01" min="0" value="{{ deal.setup_fee_waived or '0' }}">
+        </div>
+      </div>
+
+      <div class="re-grid-2 mt-16">
+        <label><input type="checkbox" name="is_white_label" {% if deal.is_white_label %}checked{% endif %}> White Label</label>
+        <label><input type="checkbox" name="is_custom_development" {% if deal.is_custom_development %}checked{% endif %}> Custom Development</label>
+        <label><input type="checkbox" name="is_multi_year" {% if deal.is_multi_year %}checked{% endif %}> Multi-Year Agreement</label>
+        <label><input type="checkbox" name="is_strategic_partnership" {% if deal.is_strategic_partnership %}checked{% endif %}> Strategic Partnership</label>
+      </div>
+
+      <div class="re-card-subtitle mt-16">
+        Add-ons (quote manually alongside the base plan):
+        White Label +$5,000 setup / +$1,000 mo &middot;
+        Additional Workspace +$100/mo &middot;
+        Additional Training $500/session &middot;
+        Priority Support +$500/mo &middot;
+        Data Migration $1,500+ &middot;
+        API Integrations / Custom AI: custom quote
+      </div>
+
+      <div class="mt-16">
+        <button type="submit" class="re-btn primary">Calculate Quote</button>
+      </div>
+    </form>
+
+    {% if deal.pricing_plan %}
+    <div class="re-card-subtitle mt-16">
+      List price: ${{ '%.2f'|format(deal.list_setup_fee) }} setup / ${{ '%.2f'|format(deal.list_monthly_fee) }} mo
+      &rarr; Quoted: ${{ '%.2f'|format(quoted_setup_fee) }} setup / ${{ '%.2f'|format(quoted_monthly_fee) }} mo
+    </div>
+    <div class="re-card-subtitle mt-16">
+      Approval required: <strong>{{ (deal.approval_level_required or 'ae')|replace('_', ' ')|title }}</strong>
+      &mdash; Status: <strong>{{ (deal.approval_status or 'not_required')|replace('_', ' ')|title }}</strong>
+      {% if deal.approval_status == 'approved' and deal.approved_by %}
+        (by {{ deal.approved_by.email }})
+      {% endif %}
+    </div>
+    {% if deal.approval_status == 'pending' and is_full_visibility %}
+    <form method="POST" class="mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action_type" value="approve_quote">
+      <button type="submit" class="re-btn primary sm">Approve Quote</button>
+    </form>
+    {% endif %}
+    {% endif %}
   </section>
 
   <section class="re-card pad">
