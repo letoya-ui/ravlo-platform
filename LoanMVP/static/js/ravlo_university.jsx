@@ -274,41 +274,105 @@ const TRACKS = {
   },
   account_executive: {
     label: 'Account Executive', color: '#8ec5ff', icon: '◈',
+    // Ravlo Sales Certification -- 8 modules from the Ravlo Pricing
+    // Playbook proposal, each represented as one "level" below. Certified
+    // tiers (see `certifications`) are earned by completing levels, not a
+    // separate quiz system, so progress here IS the certification.
+    certifications: [
+      { tier: 'bronze', icon: '🥉', title: 'Certified Sales Associate', requiresLevels: 2, desc: 'Knows the platform. Can sell standard packages.' },
+      { tier: 'silver', icon: '🥈', title: 'Certified Solutions Consultant', requiresLevels: 5, desc: 'Can scope custom deployments. Can quote enterprise solutions within guidelines.' },
+      { tier: 'gold', icon: '🥇', title: 'Enterprise Solutions Architect', requiresLevels: 8, desc: 'Can design large, multi-workspace deployments. Works on white-label and strategic enterprise deals.' },
+    ],
     levels: [
-      { title: 'Selling Ravlo Lending OS', modules: [
-        { id: 'ae-l1-m1', title: 'Understanding the Platform', lessons: [
-          { title: 'How Lending OS is Structured', desc: 'Each role — loan officer, processor, underwriter, borrower, admin — gets its own workspace built around their responsibility. Sell the connected operation, not individual screens.' },
-          { title: 'The Company Licensing Model', desc: 'Licensing creates a company workspace, assigns a subscription tier and user limit, then activates the company admin through an invite process. Starter is $149/mo (1 seat), Growth is $799/mo (up to 10 seats).' },
-          { title: 'Where Your AE Tools Live', desc: 'The Prospect Pool for finding companies, the Deal Pipeline for tracking your opportunities, and the Sales Resources page for the one-pager and talking points.' },
+      // Module 1: Welcome to Ravlo
+      { title: 'Welcome to Ravlo', modules: [
+        { id: 'ae-l1-m1', title: 'Mission & Ecosystem', lessons: [
+          { title: 'Company Mission', desc: 'Ravlo gives every real estate and lending professional — investors, loan officers, realtors, contractors, insurance agents, property managers — their own AI-powered operating system, instead of forcing them into tools built for someone else\'s business.' },
+          { title: 'The Ravlo Ecosystem', desc: 'Seven connected products: Ravlo Partners, Lending OS, Investor, Academy, Marketplace, Property Management, and AI Copilot woven into every role\'s dashboard — not seven separate apps.' },
+          { title: 'Where Your AE Tools Live', desc: 'The Prospect Pool for finding companies, the Deal Pipeline for tracking opportunities and commission, the Quote Worksheet and Pricing Playbook under Sales Resources, and Ravlo Academy for your own certification.' },
         ]},
-        { id: 'ae-l1-m2', title: 'The Guided Demo Walkthrough', lessons: [
-          { title: 'Opening the Demo the Right Way', desc: 'Never start clicking before the prospect answers how their team currently moves a file from origination to processing to underwriting. Their answer tells you what to emphasize.' },
-          { title: 'Walking the Workflow Story', desc: 'Loan Officer → Processing → Underwriting → Borrower → Company Admin, in that order, following one opportunity through the operation. Use the Demo Guide panel on each Demo Center card for the exact transition, talking points, and discovery question.' },
-          { title: 'Closing the Conversation', desc: 'Never ask "so what do you think?" Reflect back the pain point they gave you, then ask which part of the operation they would want solved first.' },
-        ]},
-      ]},
-      { title: 'Prospecting & Pipeline', modules: [
-        { id: 'ae-l2-m1', title: 'Finding Companies to Sell To', lessons: [
-          { title: 'Sourcing Target Companies', desc: 'NMLS Consumer Access, the MBA member directory, and LinkedIn Sales Navigator are the three best sources for real lending companies to prospect.' },
-          { title: 'Working the Prospect Pool', desc: 'The shared pool of unclaimed target companies — claim one, and it becomes yours to work until you close it or release it.' },
-          { title: 'Qualifying a Lending Company', desc: 'Team size, current tools (spreadsheets vs a real system), and whether management has visibility into bottlenecks today — the same signals you listen for in the opening demo question.' },
-        ]},
-        { id: 'ae-l2-m2', title: 'Managing Your Deal Pipeline', lessons: [
-          { title: 'Logging a New Deal', desc: 'Every prospect you are actively working belongs in your Deal Pipeline, not just in your head.' },
-          { title: 'Moving Deals Through Stages', desc: 'Keeping a deal’s stage current so leadership has visibility into where every opportunity actually stands.' },
-          { title: 'Tracking Your Commission', desc: 'How commission is calculated on a closed deal and where to check your running total.' },
+        { id: 'ae-l1-m2', title: 'Market & Value Proposition', lessons: [
+          { title: 'Target Markets', desc: 'Independent real estate professionals who need a branded presence and lead pipeline (Ravlo Partners), and private/non-QM lending companies who need a connected operating system instead of spreadsheets and email (Lending OS).' },
+          { title: 'The Ravlo Value Proposition', desc: 'One connected system where every role gets their own dashboard, and Ravlo AI reads that role\'s live data to summarize what needs attention — instead of a generic CRM bolted together with spreadsheets.' },
         ]},
       ]},
-      { title: 'Objection Handling & Closing', modules: [
-        { id: 'ae-l3-m1', title: 'Common Objections', lessons: [
-          { title: '"We already have a system"', desc: 'Ask what that system does when a file moves from origination to processing to underwriting today — most "systems" are a CRM plus spreadsheets plus email, not a connected operating environment.' },
-          { title: '"It’s too expensive for our team size"', desc: 'Reframe from price to seats: Starter is one seat at $149/mo for a solo originator; Growth is $799/mo for up to ten people working connected, not ten separate license fees.' },
-          { title: '"We need to think about it"', desc: 'Ask which part of the operation they would want solved first — that turns a stall into a real next-step conversation.' },
+      // Module 2: Product Knowledge
+      { title: 'Product Knowledge', modules: [
+        { id: 'ae-l2-m1', title: 'Core Products', lessons: [
+          { title: 'Ravlo Partners', desc: 'A white-label dashboard and public landing page for realtors, contractors, insurance agents, and property managers — listings, flyers, leads, and quotes all scoped to that one partner\'s own business.' },
+          { title: 'Ravlo Lending OS', desc: 'The operating system for private and non-QM lending teams — loan officer, processor, underwriter, borrower, and admin each get a dashboard built around their responsibility, connected end to end.' },
+          { title: 'Ravlo Investor', desc: 'Deal Architect for underwriting new opportunities, plus Design and Build Studio tools that generate renovation concepts tied to the deal\'s actual rehab budget — not a generic AI image generator.' },
         ]},
-        { id: 'ae-l3-m2', title: 'Sales Fundamentals for Ravlo', lessons: [
-          { title: 'Selling the Operation, Not the Screens', desc: 'The core reframe: "You’re not buying individual dashboards. You’re creating an operating environment for your lending company."' },
-          { title: 'Talking About Pricing Confidently', desc: 'Know both self-serve tiers cold, and know when a company needs a custom conversation instead (large teams, white-label).' },
-          { title: 'When to Loop In Leadership', desc: 'Custom pricing, white-label requests, and anything outside the two standard tiers goes to Letoya or Jamaine before you commit to anything with the prospect.' },
+        { id: 'ae-l2-m2', title: 'Platform Products', lessons: [
+          { title: 'Ravlo Academy', desc: 'This training platform — role-specific career tracks with lessons and progress tracking, and for AEs, certification levels tied to what you\'ve actually completed.' },
+          { title: 'Ravlo Marketplace', desc: 'The public-facing side of Ravlo Partners — a branded landing page per partner with lead capture, so a partner\'s own prospects can request a quote or reach out directly.' },
+          { title: 'Ravlo Property Management', desc: 'Real property, unit, tenant, rent payment, and maintenance-request tracking for partners who manage properties on top of their primary business.' },
+          { title: 'Ravlo AI Copilot', desc: 'Not a chatbot bolted onto the side — an AI woven into each role\'s own dashboard that reads that role\'s live data (pipeline, portfolio, quotes) to summarize what needs attention.' },
+        ]},
+      ]},
+      // Module 3: Discovery Certification
+      { title: 'Discovery Certification', modules: [
+        { id: 'ae-l3-m1', title: 'Asking the Right Questions', lessons: [
+          { title: 'Users, Departments, and Multiple Businesses', desc: 'Instead of "what are you looking for," ask how many users, how many departments, and whether they run multiple businesses — the answers shape which plan and which products actually fit.' },
+          { title: 'What Software Are You Using Today?', desc: 'Find out what they\'re stitching together today — usually a CRM plus spreadsheets plus email — before you explain what Ravlo replaces.' },
+          { title: 'Biggest Challenge & 12-Month Success', desc: 'Ask what their biggest challenge is right now, and what success would look like in 12 months — this becomes the backbone of your proposal later.' },
+        ]},
+        { id: 'ae-l3-m2', title: 'Qualifying the Opportunity', lessons: [
+          { title: 'Sourcing Target Companies', desc: 'NMLS Consumer Access, the MBA member directory, and LinkedIn Sales Navigator for lending companies; local market research and referrals for Partners-side prospects.' },
+          { title: 'Qualifying a Lending Company or Partner', desc: 'Team size, current tools, and whether leadership has visibility into bottlenecks today — the same signals from your discovery questions, now used to prioritize your pipeline.' },
+        ]},
+      ]},
+      // Module 4: Demo Certification
+      { title: 'Demo Certification', modules: [
+        { id: 'ae-l4-m1', title: 'Opening & Structuring the Demo', lessons: [
+          { title: 'Opening the Demo the Right Way', desc: 'Never start clicking before the prospect answers your discovery questions — their answers tell you which dashboard to emphasize first.' },
+          { title: 'Company Dashboard & Workspace Overview', desc: 'Start at the top: what the admin or owner sees across their whole operation, then the workspace overview for the specific role that will use Ravlo day to day.' },
+          { title: 'CRM and AI Copilot', desc: 'Show the CRM/lead pipeline, then show Ravlo AI reading that same data to summarize what needs attention — the moment that usually lands the value proposition.' },
+        ]},
+        { id: 'ae-l4-m2', title: 'Showing the Full Platform', lessons: [
+          { title: 'Marketplace & Landing Pages', desc: 'For Partners-side prospects, show their own branded landing page and how a lead flows straight into their dashboard.' },
+          { title: 'Reports & Mobile Experience', desc: 'Reports for the operational visibility question every buyer asks, then the mobile experience so they know it isn\'t desktop-only.' },
+          { title: 'Presenting Pricing & Next Steps', desc: 'Present pricing directly from the Pricing Playbook — never improvise a number — then propose one concrete next step, not an open-ended "let us know."' },
+        ]},
+      ]},
+      // Module 5: Pricing Certification
+      { title: 'Pricing Certification', modules: [
+        { id: 'ae-l5-m1', title: 'The Rate Card', lessons: [
+          { title: 'Standard Packages', desc: 'Solo/Professional/Business for Partners, Individual LO/Branch/Regional for Lending OS — pre-approved, quote these immediately with no sign-off needed.' },
+          { title: 'Enterprise Pricing', desc: 'Company-size-based matrix for larger teams — every enterprise deal requires Executive approval regardless of discount, so loop in an executive early in the conversation.' },
+          { title: 'White-Label Pricing & Add-ons', desc: 'White label, additional workspaces, data migration, custom AI, training, and priority support are all separate line items on top of the base plan, not folded into it.' },
+        ]},
+        { id: 'ae-l5-m2', title: 'Discount Guardrails', lessons: [
+          { title: 'The Approval Process', desc: 'AE authority covers up to a 10% discount and a $500 setup waiver with no sign-off; Sales Manager covers up to 20%; enterprise, white-label, custom development, multi-year, and strategic-partnership deals always need Executive approval.' },
+          { title: 'Using the Quote Worksheet', desc: 'Complete the worksheet on every deal before quoting — industry, users, workspaces, branding, implementation complexity, training needs — then let the Quote Calculator turn those answers into real numbers.' },
+        ]},
+      ]},
+      // Module 6: Objection Handling
+      { title: 'Objection Handling', modules: [
+        { id: 'ae-l6-m1', title: 'Common Objections', lessons: [
+          { title: '"It\'s too expensive."', desc: 'Anchor on what it replaces — the tools, the manual re-entry, the time spent chasing status — instead of defending the number in isolation.' },
+          { title: '"We already use Salesforce." / "Can we keep our current CRM?"', desc: 'Ask what they\'ve had to build on top of it to make it fit their business, and find out what they actually need to keep versus what they\'re used to out of habit.' },
+          { title: '"Why is there a setup fee?" / "Can we add workspaces later?"', desc: 'The setup fee covers real onboarding work; workspaces are a standard add-on, so start them on the plan that fits today and let it grow.' },
+        ]},
+      ]},
+      // Module 7: Proposal Certification
+      { title: 'Proposal Certification', modules: [
+        { id: 'ae-l7-m1', title: 'Building the Proposal', lessons: [
+          { title: 'Business Goals & Recommended Solution', desc: 'Open the proposal with their own stated goals from discovery, then the specific Ravlo products that solve them — not a generic feature list.' },
+          { title: 'Pricing & Timeline', desc: 'Pull pricing straight from the Quote Calculator and worksheet, and lay out a realistic implementation timeline instead of a vague "we\'ll get you set up."' },
+          { title: 'Implementation Plan & ROI Summary', desc: 'Show what onboarding actually looks like week by week, and tie it back to the specific pain point they described in discovery.' },
+        ]},
+      ]},
+      // Module 8: Closing Certification
+      { title: 'Closing Certification', modules: [
+        { id: 'ae-l8-m1', title: 'From Proposal to Signed', lessons: [
+          { title: 'Contract Review', desc: 'Walk through the agreement together rather than emailing it and waiting — most last-minute objections surface here, not at signature.' },
+          { title: 'Implementation Scheduling & Onboarding Expectations', desc: 'Lock in a real onboarding date before the ink is dry, and set expectations for what the company needs to provide versus what Ravlo handles.' },
+          { title: 'Customer Handoff', desc: 'Hand the account off to onboarding/customer success with the full discovery and proposal context — the next team shouldn\'t have to re-ask questions you already have answers to.' },
+        ]},
+        { id: 'ae-l8-m2', title: 'Tracking What You Close', lessons: [
+          { title: 'Managing Your Deal Pipeline', desc: 'Every prospect you\'re actively working belongs in your Deal Pipeline, staged accurately, so leadership has visibility into where every opportunity actually stands.' },
+          { title: 'Tracking Your Commission', desc: 'Commission is calculated automatically once a deal is marked signed and approved — check your running total on the AE Dashboard.' },
         ]},
       ]},
     ],
@@ -574,6 +638,41 @@ function TrackHome({ track, setLevelIdx, setView, progress }) {
           </div>
         </div>
       </div>
+
+      {/* Certification tiers (Ravlo Sales Certification, or any future track that opts in) */}
+      {tr.certifications && (() => {
+        const completedLevels = tr.levels.filter(lv => levelProgress(lv, progress) === 100).length;
+        const earned = [...tr.certifications].reverse().find(c => completedLevels >= c.requiresLevels);
+        const next = tr.certifications.find(c => completedLevels < c.requiresLevels);
+        return (
+          <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: T.radius.lg, padding: '20px 24px', marginBottom: 24 }}>
+            <div style={{ fontSize: 11, letterSpacing: 2, color: tr.color, fontWeight: 800, marginBottom: 12 }}>CERTIFICATION</div>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              {tr.certifications.map((c, i) => {
+                const isEarned = completedLevels >= c.requiresLevels;
+                return (
+                  <div key={c.tier} style={{ flex: '1 1 200px', opacity: isEarned ? 1 : 0.5, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <div style={{ fontSize: 22 }}>{c.icon}</div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{c.title}</div>
+                      <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{c.desc}</div>
+                      <div style={{ fontSize: 11, color: isEarned ? T.success : T.mutedDark, marginTop: 4, fontWeight: 700 }}>
+                        {isEarned ? 'Earned' : `${completedLevels}/${c.requiresLevels} modules complete`}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {earned && (
+              <div style={{ marginTop: 14, fontSize: 12, color: T.muted }}>
+                Current certification: <strong style={{ color: tr.color }}>{earned.icon} {earned.title}</strong>
+                {next && ` — complete ${next.requiresLevels - completedLevels} more module${next.requiresLevels - completedLevels === 1 ? '' : 's'} for ${next.icon} ${next.title}.`}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Level cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 16 }}>
