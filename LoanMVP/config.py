@@ -156,7 +156,7 @@ class Config:
     INVESTOR_GRANDFATHERED_CUTOFF = os.environ.get("INVESTOR_GRANDFATHERED_CUTOFF", "2026-05-12T00:00:00")
     ALLOW_MANUAL_INVESTOR_SUBSCRIPTION_UPGRADES = _env_bool("ALLOW_MANUAL_INVESTOR_SUBSCRIPTION_UPGRADES", False)
 
-    MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.sendgrid.net")
+    MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.office365.com")
     MAIL_PORT = _env_int("MAIL_PORT", 587)
     MAIL_USE_TLS = _env_bool("MAIL_USE_TLS", True)
     MAIL_USE_SSL = _env_bool("MAIL_USE_SSL", False)
