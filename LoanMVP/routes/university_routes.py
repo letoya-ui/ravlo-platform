@@ -66,9 +66,13 @@ _ROLE_TIER = {
 }
 
 # ── Role → track (null = unrestricted) ─────────────────────────────────────
+# "partner" is excluded here on purpose -- it's a catch-all role covering
+# realtors, contractors, property managers, insurance agents, and more
+# (Partner.category/type is what actually distinguishes them), so it's
+# resolved dynamically by _track_for_partner_role() instead of being
+# hardcoded to one track.
 _ROLE_TRACK = {
     "investor":      "investor",
-    "partner":       "investor",
     "loan_officer":  "lending",
     "lending_admin": "lending",
     "processor":     "lending",
@@ -80,6 +84,26 @@ _ROLE_TRACK = {
     "account_executive": "account_executive",
     # master_admin/executive see all tracks — no restriction
 }
+
+
+def _track_for_partner_role(user):
+    """Resolve the Academy track for a generic "partner" role user from
+    their actual business (Partner.category/type), instead of assuming
+    every partner is an investor. Partners in a profession with no
+    dedicated track yet (e.g. insurance) get unrestricted access (None)
+    rather than being routed into the wrong track."""
+    partner = getattr(user, "partner_profile", None)
+    text = " ".join(
+        str(getattr(partner, field, "") or "").strip().lower()
+        for field in ("category", "type")
+    )
+    if any(term in text for term in ("realtor", "real estate", "real-estate", "realty")):
+        return "realtor"
+    if any(term in text for term in ("contractor", "construction", "builder", "general contractor")):
+        return "contractor"
+    if any(term in text for term in ("property management", "property manager")):
+        return "property_mgmt"
+    return None
 
 # ── Tier metadata (matches ACCESS_TIERS in the JSX) ───────────────────────
 _TIER_META = {
@@ -152,7 +176,10 @@ def _platform_access() -> tuple:
                 tier_key = paid
         if not tier_key:
             return None, None, None
-        allowed_track = _ROLE_TRACK.get(role)  # None = unrestricted
+        if role == "partner":
+            allowed_track = _track_for_partner_role(current_user)
+        else:
+            allowed_track = _ROLE_TRACK.get(role)  # None = unrestricted
         return tier_key, _user_display_name(current_user), allowed_track
     except Exception:
         current_app.logger.exception("_platform_access failed")
