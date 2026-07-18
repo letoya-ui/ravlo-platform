@@ -75,6 +75,7 @@
       <div class="combo-role-strip" aria-label="Workspace lanes">
         <span><i class="lucide lucide-shield-check"></i> Insurance</span>
         {% if is_combined %}<span><i class="lucide lucide-home"></i> Realtor</span>{% endif %}
+        {% if has_property_management %}<span><i class="lucide lucide-building-2"></i> Property Management</span>{% endif %}
         <span><i class="lucide lucide-users"></i> Client pipeline</span>
       </div>
       <div class="combo-hero-actions">
@@ -102,6 +103,12 @@
         <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn ghost">
           <i class="lucide lucide-user-plus"></i>
           <span>Add Realtor Client</span>
+        </a>
+        {% endif %}
+        {% if has_property_management %}
+        <a href="{{ url_for('property.dashboard') }}" class="ravlo-btn ghost">
+          <i class="lucide lucide-building-2"></i>
+          <span>Property Management</span>
         </a>
         {% endif %}
       </div>

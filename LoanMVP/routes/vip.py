@@ -80,7 +80,7 @@ from LoanMVP.models.admin import Company
 from LoanMVP.ai.base_ai import AIAssistant
 from LoanMVP.services.vip_ai_pilot import parse_vip_command
 from LoanMVP.services.elena_templates import TemplateType
-from LoanMVP.utils.decorators import role_required, has_full_loan_officer_access
+from LoanMVP.utils.decorators import role_required, has_full_loan_officer_access, partner_offers_property_management
 from LoanMVP.routes.loan_officer import build_loan_officer_dashboard_context
 from LoanMVP.utils.company_policy import (
     get_user_lending_policy,
@@ -2160,6 +2160,7 @@ def insurance_dashboard():
         social_lead_token      = _insurance_social_lead_token(profile),
         social_lead_prompt     = _insurance_social_lead_prompt(profile),
         is_combined            = is_combined,
+        has_property_management = partner_offers_property_management(current_user),
         portal              = "vip",
         portal_name         = "VIP Insurance",
         portal_home         = url_for("vip.insurance_dashboard"),
