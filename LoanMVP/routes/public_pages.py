@@ -118,6 +118,10 @@ SLUG_STATIC_CONTEXT: dict[str, dict] = {
         "email":            "Keyona@keysignatureenterprise.com",
         "phone":            "615-818-9438",
         "website":          "https://keysignatureenterprise.setmore.com",
+        # Fallback only -- _load_context() recomputes this from her actual
+        # live VIPProfile id when one exists, since a hardcoded profile id
+        # goes stale the moment her account is ever recreated (the
+        # VIPProfile gets a new auto-incremented id).
         "insurance_quote_url": "/vip/insurance/10/get-quote",
         "listings":         [],
         "testimonials":     [],
@@ -185,6 +189,10 @@ def _load_realtor_context(slug):
         "email": user.email if user else "",
         "phone": partner.phone if partner else "",
         "website": partner.website if partner else "",
+        "insurance_quote_url": (
+            url_for("vip.insurance_public_quote_form", profile_id=profile.id)
+            if profile.role_type == "insurance_realtor" else None
+        ),
         # SEO / Analytics
         "canonical_url": canonical_url,
         "gsc_verification_code": getattr(profile, "gsc_verification_code", None) or "",
@@ -197,6 +205,21 @@ def _template_for(slug: str) -> str:
     return SLUG_TEMPLATES.get(slug.lower(), "public/realtor_landing.html")
 
 
+def _owner_vip_profile_id(slug: str):
+    """The owning account's actual live VIPProfile id, if any -- used to
+    recompute links that embed a profile id (e.g. the insurance quote
+    form) instead of trusting a hardcoded value that goes stale whenever
+    the account/profile is recreated."""
+    owner_email = SLUG_OWNER_EMAILS.get(slug.lower())
+    if not owner_email:
+        return None
+    owner_user = User.query.filter(func.lower(User.email) == owner_email.lower()).first()
+    if not owner_user:
+        return None
+    profile = VIPProfile.query.filter_by(user_id=owner_user.id).first()
+    return profile.id if profile else None
+
+
 def _load_context(slug: str) -> dict | None:
     """Load realtor context from DB, falling back to SLUG_STATIC_CONTEXT."""
     ctx = _load_realtor_context(slug)
@@ -205,7 +228,14 @@ def _load_context(slug: str) -> dict | None:
     static = SLUG_STATIC_CONTEXT.get(slug.lower())
     if static is not None:
         canonical_url = request.url_root.rstrip("/") + f"/p/{slug}"
-        return {**static, "canonical_url": canonical_url}
+        merged = {**static, "canonical_url": canonical_url}
+        if "insurance_quote_url" in static:
+            profile_id = _owner_vip_profile_id(slug)
+            if profile_id:
+                merged["insurance_quote_url"] = url_for(
+                    "vip.insurance_public_quote_form", profile_id=profile_id
+                )
+        return merged
     return None
 
 
