@@ -12,6 +12,9 @@ public_slug) if hers is missing, so simply logging back in would NOT have
 restored her public page. This adds both the self-healing preset and the
 static-context fallback, mirroring the exact pattern already used for
 John Headley and Keyona.
+
+Also corrects her name/phone to the real "Bonnie Natt" / 914-213-3380 and
+adds her real professional headshot.
 """
 from LoanMVP.models.admin import Company
 from LoanMVP.models.crm_models import Lead, Partner
@@ -27,6 +30,8 @@ def test_bonnie_has_a_dashboard_preset():
     assert preset["subscription_tier"] == "Premium"
     assert preset["category"] == "realtor"
     assert "Hudson Valley" in preset["service_area"]
+    assert preset["name"] == "Bonnie Natt"
+    assert preset["phone"] == "914-213-3380"
 
 
 def test_ensure_partner_dashboard_profile_recreates_missing_bonnie_partner(db_session):
@@ -49,6 +54,8 @@ def test_ensure_partner_dashboard_profile_recreates_missing_bonnie_partner(db_se
     assert partner.approved is True
     assert partner.subscription_tier == "Premium"
     assert (partner.category or "").lower() == "realtor"
+    assert partner.name == "Bonnie Natt"
+    assert partner.phone == "914-213-3380"
 
 
 def test_landing_page_renders_without_a_live_vip_profile(client):
@@ -59,8 +66,9 @@ def test_landing_page_renders_without_a_live_vip_profile(client):
 
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
-    assert "Bonnie" in body
+    assert "Bonnie Natt" in body
     assert "Hudson Valley" in body
+    assert "914-213-3380" in body
 
 
 def test_landing_page_shows_her_headshot(client):

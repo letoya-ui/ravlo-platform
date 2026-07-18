@@ -100,15 +100,18 @@ _PARTNER_DASHBOARD_PRESETS: dict[str, dict[str, str | bool]] = {
     },
     "bonniesellsochomes@gmail.com": {
         "_user_role": "partner",
-        "name": "Bonnie",
+        "name": "Bonnie Natt",
         "company": "Bonnie Sells OC Homes",
+        "phone": "914-213-3380",
+        "city": "Middletown",
+        "state": "NY",
         "category": "realtor",
         "type": "Realtor",
         "specialty": "Residential Real Estate",
         "service_area": "Orange County & Hudson Valley, NY",
         "bio": (
             "With deep roots in the Hudson Valley and a passion for connecting "
-            "people with the right home, Bonnie brings a personal, "
+            "people with the right home, Bonnie Natt brings a personal, "
             "results-driven approach to every transaction. Whether you're "
             "buying your first home, selling, or investing across Orange "
             "County and the greater Hudson Valley, she's with you every step "
