@@ -7,7 +7,10 @@ today, so this both pins the expected content and (via Babel) guards
 against a syntax error silently shipping in a large hand-edited file.
 """
 import os
+import shutil
 import subprocess
+
+import pytest
 
 _JSX_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -24,6 +27,7 @@ def _read_jsx():
         return f.read()
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed in this environment")
 def test_jsx_still_parses_as_valid_react_via_babel():
     script = f"""
 const Babel = require({_BABEL_PATH!r});
