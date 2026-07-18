@@ -23,6 +23,92 @@
   <section class="re-card pad">
     <div class="section-head">
       <div>
+        <div class="eyebrow">LOOKUP</div>
+        <h3 style="margin:.35rem 0 .2rem;">Look Up a Specific Profile ID</h3>
+        <div class="re-card-subtitle">
+          A stale/hardcoded profile id doesn't always end up "orphaned" below --
+          if that id still belongs to a different live partner, quotes submitted
+          through it land on their dashboard instead, not in the orphaned list.
+          Look up the id directly to see who currently owns it.
+        </div>
+      </div>
+    </div>
+
+    <form method="GET" action="{{ url_for('system.orphaned_quotes') }}"
+          style="margin:14px 0 0;display:flex;gap:8px;align-items:center;">
+      <input type="number" name="lookup_id" placeholder="Profile ID, e.g. 10" value="{{ lookup_id or '' }}"
+        style="padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.12);
+        background:rgba(255,255,255,.05);color:#f4f7fb;font-size:.85rem;max-width:160px;">
+      <button type="submit" class="re-btn ghost sm">
+        <i class="lucide lucide-search"></i>
+        Look Up
+      </button>
+    </form>
+
+    {% if lookup_id %}
+      <div class="mt-16">
+        {% if lookup_profile %}
+          <p>
+            Profile <strong>#{{ lookup_id }}</strong> currently belongs to
+            <strong>{{ lookup_owner.email if lookup_owner else "an account with no matching user" }}</strong>
+            ({{ lookup_profile.display_name or lookup_profile.business_name or "unnamed" }}).
+          </p>
+        {% else %}
+          <p>Profile <strong>#{{ lookup_id }}</strong> doesn't exist -- it's genuinely deleted, not just reassigned to someone else.</p>
+        {% endif %}
+
+        {% if lookup_quotes %}
+        <div class="re-table-wrap mt-16">
+          <table class="re-table">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Contact</th>
+                <th>Line</th>
+                <th>Submitted</th>
+                <th class="text-right">Reassign to</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for q in lookup_quotes %}
+              <tr>
+                <td>{{ q.client_name }}</td>
+                <td>
+                  <div style="display:grid; gap:2px;">
+                    {% if q.client_email %}<span>{{ q.client_email }}</span>{% endif %}
+                    {% if q.client_phone %}<span class="text-muted" style="font-size:.82rem;">{{ q.client_phone }}</span>{% endif %}
+                  </div>
+                </td>
+                <td>{{ q.insurance_line|title }}</td>
+                <td>{{ q.created_at.strftime("%b %d, %Y") if q.created_at else "—" }}</td>
+                <td class="text-right">
+                  <form method="POST" action="{{ url_for('system.reassign_orphaned_quotes') }}"
+                        style="margin:0;display:flex;gap:6px;align-items:center;justify-content:flex-end;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="old_profile_id" value="{{ lookup_id }}">
+                    <input type="email" name="new_owner_email" placeholder="owner@email.com" required
+                      style="padding:4px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.12);
+                      background:rgba(255,255,255,.05);color:#f4f7fb;font-size:.78rem;max-width:190px;">
+                    <button type="submit" class="re-btn ghost sm" title="Reassign all quotes from this profile">
+                      <i class="lucide lucide-arrow-right-circle"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <div class="re-empty mt-16">No quote requests attached to profile #{{ lookup_id }}.</div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
         <div class="eyebrow">RECOVERY</div>
         <h3 style="margin:.35rem 0 .2rem;">Reassign to a Current Partner</h3>
         <div class="re-card-subtitle">
