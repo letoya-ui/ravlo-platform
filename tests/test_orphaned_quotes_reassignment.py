@@ -120,3 +120,32 @@ def test_reassign_rejects_unknown_owner_email(db_session, client, app):
     assert resp.status_code == 302
     refreshed = db.session.get(InsuranceQuoteRequest, quote.id)
     assert refreshed.vip_profile_id == stale_id
+
+
+def test_lookup_finds_quotes_attached_to_a_different_live_owner(db_session, client):
+    """A stale hardcoded id (like the old "10") doesn't always end up
+    orphaned -- it can still belong to a completely different live
+    partner, so quotes submitted through it land on THEIR dashboard
+    instead and never show up in the plain orphaned list."""
+    exec_user = _make_executive(db_session)
+    _make_partner_with_profile(db_session, "keyonahall@icloud.com", "key-signature-enterprise")
+    other_user, other_profile = _make_partner_with_profile(db_session, "someoneelse@example.com", "someone-else")
+    _make_orphaned_quote(db_session, other_profile.id, client_name="Misattributed Lead")
+    login_as(client, exec_user)
+
+    resp = client.get(f"/system/orphaned-quotes?lookup_id={other_profile.id}")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Misattributed Lead" in body
+    assert "someoneelse@example.com" in body
+
+
+def test_lookup_reports_a_genuinely_deleted_profile(db_session, client):
+    exec_user = _make_executive(db_session)
+    login_as(client, exec_user)
+
+    resp = client.get("/system/orphaned-quotes?lookup_id=999999")
+
+    assert resp.status_code == 200
+    assert "doesn't exist" in resp.get_data(as_text=True)

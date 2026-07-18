@@ -741,7 +741,37 @@ def orphaned_quotes():
         .order_by(InsuranceQuoteRequest.vip_profile_id, InsuranceQuoteRequest.created_at.desc())
         .all()
     )
-    return render_template("system/orphaned_quotes.html", orphaned=orphaned)
+
+    # A hardcoded/stale profile id (like the "10" that used to be baked
+    # into Keyona's landing page) doesn't always end up orphaned -- if
+    # that id still belongs to a DIFFERENT live profile, quotes submitted
+    # through the stale link land on that other partner's dashboard
+    # instead, and never show up in the orphaned list above. This lets
+    # staff look up any specific profile id directly to check who
+    # currently owns it and what's attached, regardless of orphan status.
+    lookup_id = request.args.get("lookup_id", type=int)
+    lookup_profile = None
+    lookup_owner = None
+    lookup_quotes = []
+    if lookup_id:
+        lookup_profile = VIPProfile.query.get(lookup_id)
+        if lookup_profile:
+            lookup_owner = User.query.get(lookup_profile.user_id)
+        lookup_quotes = (
+            InsuranceQuoteRequest.query
+            .filter_by(vip_profile_id=lookup_id)
+            .order_by(InsuranceQuoteRequest.created_at.desc())
+            .all()
+        )
+
+    return render_template(
+        "system/orphaned_quotes.html",
+        orphaned=orphaned,
+        lookup_id=lookup_id,
+        lookup_profile=lookup_profile,
+        lookup_owner=lookup_owner,
+        lookup_quotes=lookup_quotes,
+    )
 
 
 @system_bp.route("/orphaned-quotes/reassign", methods=["POST"])
