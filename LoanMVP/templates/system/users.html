@@ -6,6 +6,10 @@
 {% block page_subline %}{% if is_company_scope %}Manage users assigned to {{ company.name }}{% else %}Manage platform accounts, status, and employee access{% endif %}{% endblock %}
 
 {% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('system.orphaned_quotes') }}">
+    <i class="lucide lucide-search"></i>
+    Orphaned Quotes
+  </a>
   {% if not single_admin_mode %}
   <a class="re-btn primary sm"
      href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}{{ url_for('admin.companies') }}{% endif %}">

@@ -40,6 +40,7 @@ from LoanMVP.models.underwriter_model import (
 from LoanMVP.models.crm_models import Lead, Message, CRMNote, Task, FollowUpItem, FollowUpTask
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.user_model import User
+from LoanMVP.models.vip_models import InsuranceQuoteRequest, VIPProfile
 from sqlalchemy import func
 
 from LoanMVP.utils.decorators import role_required
@@ -720,6 +721,57 @@ def delete_user(user_id):
         flash(f"Could not delete user: {e}", "danger")
 
     return redirect(url_for("system.users"))
+
+
+# =========================================================
+# 🧾 Orphaned Insurance Quote Requests
+# =========================================================
+# When a VIP partner's account/profile gets deleted and recreated (e.g. to
+# fix a data issue), any InsuranceQuoteRequest rows still pointing at the
+# old vip_profile_id become orphaned -- the account is back, but its
+# history isn't attached to it anymore. Lets staff find those and move
+# them onto the partner's current profile.
+@system_bp.route("/orphaned-quotes")
+@role_required("system", "admin")
+def orphaned_quotes():
+    live_profile_ids = db.session.query(VIPProfile.id)
+    orphaned = (
+        InsuranceQuoteRequest.query
+        .filter(~InsuranceQuoteRequest.vip_profile_id.in_(live_profile_ids))
+        .order_by(InsuranceQuoteRequest.vip_profile_id, InsuranceQuoteRequest.created_at.desc())
+        .all()
+    )
+    return render_template("system/orphaned_quotes.html", orphaned=orphaned)
+
+
+@system_bp.route("/orphaned-quotes/reassign", methods=["POST"])
+@role_required("system", "admin")
+def reassign_orphaned_quotes():
+    old_profile_id = request.form.get("old_profile_id", type=int)
+    new_owner_email = (request.form.get("new_owner_email") or "").strip().lower()
+
+    if not old_profile_id or not new_owner_email:
+        flash("Both the old profile id and the new owner's email are required.", "danger")
+        return redirect(url_for("system.orphaned_quotes"))
+
+    new_user = User.query.filter(func.lower(User.email) == new_owner_email).first()
+    if not new_user:
+        flash(f"No account found for {new_owner_email}.", "danger")
+        return redirect(url_for("system.orphaned_quotes"))
+
+    new_profile = VIPProfile.query.filter_by(user_id=new_user.id).first()
+    if not new_profile:
+        flash(f"{new_owner_email} doesn't have a VIP profile to reassign into.", "danger")
+        return redirect(url_for("system.orphaned_quotes"))
+
+    moved = (
+        InsuranceQuoteRequest.query
+        .filter_by(vip_profile_id=old_profile_id)
+        .update({"vip_profile_id": new_profile.id}, synchronize_session=False)
+    )
+    db.session.commit()
+    flash(f"Reassigned {moved} quote request(s) to {new_owner_email}.", "success")
+    return redirect(url_for("system.orphaned_quotes"))
 
 
 # =========================================================
