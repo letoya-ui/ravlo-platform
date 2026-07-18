@@ -108,6 +108,17 @@ def _owned_clients_query():
     )
 
 
+def _owned_listings_query():
+    """Base ElenaListing query scoped to the current realtor's own listings.
+
+    Mirrors _owned_clients_query() -- without it, a realtor with no
+    configured market sees every listing (and its flyer) on the platform.
+    """
+    return ElenaListing.query.filter(
+        ElenaListing.vip_profile_id == _elena_profile().id
+    )
+
+
 def _elena_available_markets():
     from LoanMVP.routes.vip import get_user_markets
     return get_user_markets(_elena_profile())
@@ -446,7 +457,7 @@ def dashboard_legacy():
     total_clients = _owned_clients_query().count()
     new_leads = _owned_clients_query().filter(ElenaClient.created_at >= week_ago).count()
 
-    active_listings_query = ElenaListing.query.filter_by(status="active")
+    active_listings_query = _owned_listings_query().filter_by(status="active")
     if current_market != "All Markets":
         active_listings_query = active_listings_query.filter(
             ElenaListing.market == current_market
@@ -533,7 +544,7 @@ def dashboard_legacy():
     )
 
     status_filter = (request.args.get("listing_status") or "").strip().lower()
-    listings_query = ElenaListing.query
+    listings_query = _owned_listings_query()
 
     if current_market != "All Markets":
         listings_query = listings_query.filter(ElenaListing.market == current_market)
@@ -695,6 +706,7 @@ def listing_new():
             description=(request.form.get("description") or None),
             status=(request.form.get("status") or "active"),
             client_id=client_id,
+            vip_profile_id=_elena_profile().id,
         )
         db.session.add(listing)
         db.session.flush()
@@ -768,7 +780,7 @@ def template_auto_fill(client_id, template_type):
 
 @elena_bp.get("/templates/listing_auto_fill/<int:listing_id>/<template_type>")
 def template_listing_auto_fill(listing_id, template_type):
-    listing = ElenaListing.query.get(listing_id)
+    listing = _owned_listings_query().filter(ElenaListing.id == listing_id).first()
     if not listing:
         return jsonify({"error": "Listing not found"}), 404
 
@@ -965,7 +977,7 @@ def template_studio():
             )
 
     if listing_id and template_type:
-        listing = ElenaListing.query.get(listing_id)
+        listing = _owned_listings_query().filter(ElenaListing.id == listing_id).first()
         if listing:
             variables.update(
                 {
@@ -1153,7 +1165,7 @@ def template_studio_generate_and_save():
             saved_interaction_id = interaction.id
 
     if listing_id:
-        listing = ElenaListing.query.get(listing_id)
+        listing = _owned_listings_query().filter(ElenaListing.id == listing_id).first()
         if listing:
             flyer = ElenaFlyer(
                 flyer_type=template_type,
@@ -1205,7 +1217,7 @@ def create_canva_flyer(listing_id):
     if not access_token:
         return jsonify({"error": "Canva not connected"}), 400
 
-    listing = ElenaListing.query.get(listing_id)
+    listing = _owned_listings_query().filter(ElenaListing.id == listing_id).first()
     if not listing:
         return jsonify({"error": "Listing not found"}), 404
 
