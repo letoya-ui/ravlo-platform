@@ -64,6 +64,17 @@ class ElenaListing(BaseModel):
 
     market = Column(String(100), nullable=True)
 
+    # Owning realtor. NULL means an unowned MLS-feed import (market-wide
+    # inventory, not any one partner's own listing) -- those stay excluded
+    # from "my listings" views, which all filter on this column. Existing
+    # rows created before this column existed are also NULL, which is
+    # deliberate: without it, any realtor whose profile had no configured
+    # market saw every listing (and its auto-generated flyer) on the
+    # platform, including other partners' demo/test data.
+    vip_profile_id = Column(
+        Integer, ForeignKey("vip_profiles.id"), nullable=True, index=True
+    )
+
     client_id = Column(Integer, ForeignKey("elena_clients.id"), nullable=True)
     client = relationship("ElenaClient", back_populates="listings")
 

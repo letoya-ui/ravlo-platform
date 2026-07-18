@@ -479,7 +479,9 @@ def _sync_listing_from_payload(profile, payload):
     if not mls_number:
         return None, ["mls_number is required"]
 
-    listing = ElenaListing.query.filter_by(mls_number=mls_number).first()
+    listing = ElenaListing.query.filter_by(
+        mls_number=mls_number, vip_profile_id=profile.id
+    ).first()
     is_new = listing is None
     if is_new:
         listing = ElenaListing(
@@ -489,6 +491,7 @@ def _sync_listing_from_payload(profile, payload):
             state="",
             zip_code="",
             status="active",
+            vip_profile_id=profile.id,
         )
         db.session.add(listing)
 
@@ -770,6 +773,9 @@ def _realtor_context(profile, partner):
         effective_market = available_markets[0]
 
     def _scope_listings(q):
+        # Primary isolation: only this realtor's own listings. Market is
+        # a further narrowing within their own book, same as _scope_clients.
+        q = q.filter(ElenaListing.vip_profile_id == profile.id)
         if effective_market != ALL_MARKETS:
             q = q.filter(ElenaListing.market == effective_market)
         elif available_markets:
@@ -848,11 +854,13 @@ def _realtor_context(profile, partner):
         .limit(10).all()
     )
 
-    flyers_q = ElenaFlyer.query
+    flyers_q = (
+        ElenaFlyer.query
+        .join(ElenaListing, ElenaFlyer.listing_id == ElenaListing.id)
+        .filter(ElenaListing.vip_profile_id == profile.id)
+    )
     if effective_market != ALL_MARKETS:
-        flyers_q = (flyers_q
-                    .join(ElenaListing, ElenaFlyer.listing_id == ElenaListing.id)
-                    .filter(ElenaListing.market == effective_market))
+        flyers_q = flyers_q.filter(ElenaListing.market == effective_market)
     recent_flyers = flyers_q.order_by(ElenaFlyer.created_at.desc()).limit(5).all()
 
     copilot_suggestions = (
@@ -874,7 +882,7 @@ def _realtor_context(profile, partner):
             market_stats[market] = {
                 "active_listings": (
                     ElenaListing.query
-                    .filter_by(status="active", market=market)
+                    .filter_by(status="active", market=market, vip_profile_id=profile.id)
                     .count()
                 ),
                 "clients": total_clients,
@@ -882,7 +890,7 @@ def _realtor_context(profile, partner):
 
             listings_by_market[market] = (
                 ElenaListing.query
-                .filter_by(market=market, status="active")
+                .filter_by(market=market, status="active", vip_profile_id=profile.id)
                 .order_by(ElenaListing.updated_at.desc())
                 .limit(6).all()
             )
@@ -890,7 +898,7 @@ def _realtor_context(profile, partner):
             flyers_by_market[market] = (
                 ElenaFlyer.query
                 .join(ElenaListing, ElenaFlyer.listing_id == ElenaListing.id)
-                .filter(ElenaListing.market == market)
+                .filter(ElenaListing.market == market, ElenaListing.vip_profile_id == profile.id)
                 .order_by(ElenaFlyer.created_at.desc())
                 .limit(4).all()
             )
@@ -3308,26 +3316,13 @@ def _parse_money(raw):
 
 
 def _sync_projected_closing_income(profile):
-    """Auto-create pending commission rows for in-flight listings that belong
-    to one of this realtor's configured markets.
-
-    ElenaListing is not currently owned per-user, so we scope by market to
-    avoid cross-realtor pollution. Realtors with no configured markets opt
-    out of auto-sync — they can always add pending commissions manually.
-    """
-    user_markets = get_user_markets(profile)
-    if not user_markets:
-        return
-
-    normalized_markets = {m.strip().lower() for m in user_markets if m}
-    if not normalized_markets:
-        return
-
+    """Auto-create pending commission rows for this realtor's own in-flight
+    listings."""
     active_statuses = ("under_contract", "pending", "in_escrow")
     candidate_listings = (
         ElenaListing.query
+        .filter(ElenaListing.vip_profile_id == profile.id)
         .filter(ElenaListing.status.in_(active_statuses))
-        .filter(ElenaListing.market.isnot(None))
         .all()
     )
     if not candidate_listings:
@@ -3347,9 +3342,6 @@ def _sync_projected_closing_income(profile):
     created = 0
     for listing in candidate_listings:
         if not listing.price or listing.price <= 0:
-            continue
-        listing_market = (listing.market or "").strip().lower()
-        if listing_market not in normalized_markets:
             continue
         desc = "Projected commission - " + str(listing.address or ("listing #" + str(listing.id)))
         if desc in existing_descs:
@@ -3574,14 +3566,15 @@ def _dispatch_copilot_intent(profile, result, command):
         address = result.get("address") or "Untitled listing"
         price = result.get("price")
         listing = ElenaListing(
-            address     = address,
-            city        = "",
-            state       = "",
-            zip_code    = "",
-            price       = price,
-            status      = "active",
-            market      = default_market,
-            description = command,
+            address        = address,
+            city           = "",
+            state          = "",
+            zip_code       = "",
+            price          = price,
+            status         = "active",
+            market         = default_market,
+            description    = command,
+            vip_profile_id = profile.id,
         )
         db.session.add(listing)
         db.session.flush()
@@ -3640,6 +3633,7 @@ def _dispatch_copilot_intent(profile, result, command):
         listing = None
         if address:
             listing = (ElenaListing.query
+                       .filter(ElenaListing.vip_profile_id == profile.id)
                        .filter(ElenaListing.address.ilike("%" + address + "%"))
                        .first())
         pres = _create_presentation_from_listing(profile, listing, fallback_address=address)
@@ -3654,14 +3648,11 @@ def _dispatch_copilot_intent(profile, result, command):
     elif intent == "make_flyer":
         address = result.get("address")
         listing = None
+        own_listings = ElenaListing.query.filter(ElenaListing.vip_profile_id == profile.id)
         if address:
-            listing = (ElenaListing.query
-                       .filter(ElenaListing.address.ilike("%" + address + "%"))
-                       .first())
+            listing = own_listings.filter(ElenaListing.address.ilike("%" + address + "%")).first()
         if not listing:
-            listing = (ElenaListing.query
-                       .order_by(ElenaListing.updated_at.desc())
-                       .first())
+            listing = own_listings.order_by(ElenaListing.updated_at.desc()).first()
         if listing:
             flyer = ElenaFlyer(
                 flyer_type       = "listing",
@@ -4442,9 +4433,13 @@ def _new_share_slug():
     return _pysecrets.token_urlsafe(24)
 
 
-def _listing_or_404(listing_id):
-    listing = ElenaListing.query.get(listing_id)
-    return listing
+def _listing_or_404(profile, listing_id):
+    """Only this realtor's own listing -- without the ownership check,
+    any realtor could view, edit, or delete any other realtor's listing
+    by guessing/iterating listing_id."""
+    return ElenaListing.query.filter_by(
+        id=listing_id, vip_profile_id=profile.id
+    ).first()
 
 
 def _presentation_subject_snapshot(pres):
@@ -4867,7 +4862,7 @@ def realtor_listings():
     county_filter = (request.args.get("county") or "").strip()
     search_query  = (request.args.get("q") or "").strip()
 
-    q = ElenaListing.query
+    q = ElenaListing.query.filter(ElenaListing.vip_profile_id == profile.id)
     if market_filter and market_filter != ALL_MARKETS:
         q = q.filter(ElenaListing.market == market_filter)
     elif current_market and current_market != ALL_MARKETS and len(available_markets) == 1:
@@ -4894,7 +4889,12 @@ def realtor_listings():
 
     # Distinct counties for the filter dropdown.
     available_counties = sorted({
-        l.county for l in ElenaListing.query.with_entities(ElenaListing.county).distinct()
+        l.county for l in (
+            ElenaListing.query
+            .filter(ElenaListing.vip_profile_id == profile.id)
+            .with_entities(ElenaListing.county)
+            .distinct()
+        )
         if l.county
     })
 
@@ -4932,7 +4932,7 @@ def realtor_listings():
 @role_required("partner_group", "admin")
 def realtor_listing_detail(listing_id):
     profile = get_or_create_vip_profile()
-    listing = _listing_or_404(listing_id)
+    listing = _listing_or_404(profile, listing_id)
     if not listing:
         flash("Listing not found.", "warning")
         return redirect(url_for("vip.realtor_listings"))
@@ -4970,7 +4970,8 @@ def realtor_listing_detail(listing_id):
 @vip_bp.post("/realtor/listings/<int:listing_id>/delete")
 @role_required("partner_group", "admin")
 def realtor_listing_delete(listing_id):
-    listing = _listing_or_404(listing_id)
+    profile = get_or_create_vip_profile()
+    listing = _listing_or_404(profile, listing_id)
     if listing:
         db.session.delete(listing)
         db.session.commit()
@@ -4981,7 +4982,8 @@ def realtor_listing_delete(listing_id):
 @vip_bp.post("/realtor/listings/<int:listing_id>/status")
 @role_required("partner_group", "admin")
 def realtor_listing_status(listing_id):
-    listing = _listing_or_404(listing_id)
+    profile = get_or_create_vip_profile()
+    listing = _listing_or_404(profile, listing_id)
     if not listing:
         return redirect(url_for("vip.realtor_listings"))
     status = (request.form.get("status") or "").strip().lower()
@@ -5026,7 +5028,7 @@ def listing_presentation_new():
 
     if request.method == "POST":
         listing_id = _int(request.form.get("listing_id"))
-        listing = _listing_or_404(listing_id) if listing_id else None
+        listing = _listing_or_404(profile, listing_id) if listing_id else None
         fallback_address = (request.form.get("property_address") or "").strip()
         pres = _create_presentation_from_listing(
             profile, listing, fallback_address=fallback_address or None,
@@ -5039,6 +5041,7 @@ def listing_presentation_new():
         return redirect(url_for("vip.listing_presentation_edit", pres_id=pres.id))
 
     listings = (ElenaListing.query
+                .filter(ElenaListing.vip_profile_id == profile.id)
                 .order_by(ElenaListing.updated_at.desc())
                 .limit(50).all())
     return render_template(

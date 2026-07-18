@@ -154,7 +154,7 @@ def _load_realtor_context(slug):
     except (TypeError, ValueError):
         markets = []
 
-    listings_q = ElenaListing.query.filter_by(status="active")
+    listings_q = ElenaListing.query.filter_by(status="active", vip_profile_id=profile.id)
     if markets:
         listings_q = listings_q.filter(ElenaListing.market.in_(markets))
     active_listings = (
