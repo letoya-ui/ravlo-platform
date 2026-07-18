@@ -181,7 +181,73 @@
   <section class="re-card pad">
     <div class="section-head">
       <div>
-        <div class="eyebrow">RAVLO PRICING PLAYBOOK</div>
+        <div class="eyebrow">RAVLO PRICING PLAYBOOK -- STEP 1</div>
+        <h3 style="margin:.35rem 0 .2rem;">Quote Worksheet</h3>
+        <div class="re-card-subtitle">Complete this on every deal before quoting -- a repeatable discovery process instead of relying on instinct.</div>
+      </div>
+    </div>
+
+    <form method="POST" class="mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action_type" value="save_worksheet">
+
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="worksheet_industry">Industry</label>
+          <input id="worksheet_industry" name="worksheet_industry" type="text" value="{{ deal.worksheet_industry or '' }}">
+        </div>
+        <div class="field">
+          <label for="worksheet_user_count">Users</label>
+          <input id="worksheet_user_count" name="worksheet_user_count" type="number" min="1" value="{{ deal.worksheet_user_count or '' }}">
+        </div>
+      </div>
+
+      <div class="re-grid-2 mt-16">
+        <div class="field">
+          <label for="worksheet_workspace_count">Workspaces</label>
+          <input id="worksheet_workspace_count" name="worksheet_workspace_count" type="number" min="1" value="{{ deal.worksheet_workspace_count or '' }}">
+        </div>
+        <div class="field">
+          <label for="worksheet_branding">Branding</label>
+          <select id="worksheet_branding" name="worksheet_branding">
+            <option value="">— Select —</option>
+            <option value="ravlo" {% if deal.worksheet_branding == 'ravlo' %}selected{% endif %}>Ravlo</option>
+            <option value="co_branded" {% if deal.worksheet_branding == 'co_branded' %}selected{% endif %}>Co-Branded</option>
+            <option value="white_label" {% if deal.worksheet_branding == 'white_label' %}selected{% endif %}>White Label</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="re-grid-2 mt-16">
+        <div class="field">
+          <label for="worksheet_implementation_complexity">Implementation Complexity</label>
+          <select id="worksheet_implementation_complexity" name="worksheet_implementation_complexity">
+            <option value="">— Select —</option>
+            <option value="standard" {% if deal.worksheet_implementation_complexity == 'standard' %}selected{% endif %}>Standard</option>
+            <option value="advanced" {% if deal.worksheet_implementation_complexity == 'advanced' %}selected{% endif %}>Advanced</option>
+            <option value="enterprise" {% if deal.worksheet_implementation_complexity == 'enterprise' %}selected{% endif %}>Enterprise</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="worksheet_training_required">Training Required</label>
+          <select id="worksheet_training_required" name="worksheet_training_required">
+            <option value="">— Select —</option>
+            <option value="yes" {% if deal.worksheet_training_required == True %}selected{% endif %}>Yes</option>
+            <option value="no" {% if deal.worksheet_training_required == False %}selected{% endif %}>No</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-16">
+        <button type="submit" class="re-btn ghost">Save Worksheet</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">RAVLO PRICING PLAYBOOK -- STEP 2</div>
         <h3 style="margin:.35rem 0 .2rem;">Pricing &amp; Quote</h3>
         <div class="re-card-subtitle">Pick a plan and the calculator applies the standard rate card and the discount-approval rules automatically -- no guessing.</div>
       </div>
@@ -211,7 +277,7 @@
         </div>
         <div class="field" id="enterpriseUsersField" style="display:{{ 'block' if deal.pricing_plan == 'enterprise' else 'none' }};">
           <label for="enterprise_user_count">Number of Users</label>
-          <input id="enterprise_user_count" name="enterprise_user_count" type="number" min="1" value="{{ deal.enterprise_user_count or '' }}">
+          <input id="enterprise_user_count" name="enterprise_user_count" type="number" min="1" value="{{ deal.enterprise_user_count or deal.worksheet_user_count or '' }}">
         </div>
       </div>
 
@@ -227,7 +293,7 @@
       </div>
 
       <div class="re-grid-2 mt-16">
-        <label><input type="checkbox" name="is_white_label" {% if deal.is_white_label %}checked{% endif %}> White Label</label>
+        <label><input type="checkbox" name="is_white_label" {% if deal.is_white_label or deal.worksheet_branding == 'white_label' %}checked{% endif %}> White Label</label>
         <label><input type="checkbox" name="is_custom_development" {% if deal.is_custom_development %}checked{% endif %}> Custom Development</label>
         <label><input type="checkbox" name="is_multi_year" {% if deal.is_multi_year %}checked{% endif %}> Multi-Year Agreement</label>
         <label><input type="checkbox" name="is_strategic_partnership" {% if deal.is_strategic_partnership %}checked{% endif %}> Strategic Partnership</label>

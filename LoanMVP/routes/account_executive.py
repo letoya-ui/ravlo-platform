@@ -437,6 +437,22 @@ def deal_detail(deal_id):
             db.session.commit()
             flash("Contract terms updated.", "success")
 
+        elif action_type == "save_worksheet":
+            deal.worksheet_industry = (request.form.get("worksheet_industry") or "").strip() or None
+            user_count = request.form.get("worksheet_user_count")
+            deal.worksheet_user_count = int(user_count) if (user_count or "").isdigit() else None
+            workspace_count = request.form.get("worksheet_workspace_count")
+            deal.worksheet_workspace_count = int(workspace_count) if (workspace_count or "").isdigit() else None
+            branding = (request.form.get("worksheet_branding") or "").strip().lower()
+            deal.worksheet_branding = branding if branding in {"ravlo", "co_branded", "white_label"} else None
+            complexity = (request.form.get("worksheet_implementation_complexity") or "").strip().lower()
+            deal.worksheet_implementation_complexity = (
+                complexity if complexity in {"standard", "advanced", "enterprise"} else None
+            )
+            deal.worksheet_training_required = request.form.get("worksheet_training_required") == "yes"
+            db.session.commit()
+            flash("Quote Worksheet saved.", "success")
+
         elif action_type == "build_quote":
             error = _build_quote(deal, request.form)
             if error:
