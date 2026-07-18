@@ -1,0 +1,235 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Ravlo Pricing Playbook{% endblock %}
+{% block page_title %}Ravlo Pricing Playbook{% endblock %}
+{% block page_subline %}The standard rate card, the enterprise matrix, and the discount-approval rules -- pulled live from the same pricing engine the deal tool uses, so this page and a real quote can never disagree.{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('resources.index') }}">
+    <i class="lucide lucide-arrow-left"></i>
+    Back to Sales Resources
+  </a>
+{% endblock %}
+
+{% block content %}
+<main class="dashboard-main resources-page">
+  <div class="wrap">
+
+    <section class="card" style="padding:24px;">
+      <div class="eyebrow">STANDARD PRICING -- NO APPROVAL NEEDED</div>
+      <h2 style="margin:.35rem 0 1rem;">Quote these immediately</h2>
+      <p class="muted" style="max-width:760px;margin-bottom:16px;">
+        Every plan below is pre-approved. An AE can quote any of these at list price -- or with a
+        discount inside their own authority (see Approval Levels) -- without checking with anyone.
+      </p>
+
+      <div class="re-grid-2" style="gap:16px;">
+        <div class="re-card pad">
+          <h3 style="margin:0 0 12px;">Ravlo Partners</h3>
+          <table class="re-table">
+            <thead><tr><th>Plan</th><th>Setup</th><th>Monthly</th></tr></thead>
+            <tbody>
+              {% for key, plan in partner_plans.items() %}
+              <tr>
+                <td>{{ plan.label }}</td>
+                <td>${{ "{:,.0f}".format(plan.setup) }}</td>
+                <td>${{ "{:,.0f}".format(plan.monthly) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="re-card pad">
+          <h3 style="margin:0 0 12px;">Lending OS</h3>
+          <table class="re-table">
+            <thead><tr><th>Plan</th><th>Setup</th><th>Monthly</th></tr></thead>
+            <tbody>
+              {% for key, plan in lending_plans.items() %}
+              <tr>
+                <td>{{ plan.label }}</td>
+                <td>${{ "{:,.0f}".format(plan.setup) }}</td>
+                <td>${{ "{:,.0f}".format(plan.monthly) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="padding:24px;margin-top:20px;">
+      <div class="eyebrow">ENTERPRISE PRICING MATRIX</div>
+      <h2 style="margin:.35rem 0 1rem;">Calculate the quote by company size</h2>
+      <p class="muted" style="max-width:760px;margin-bottom:16px;">
+        Every enterprise deal requires Executive approval regardless of discount -- use this table to
+        find the starting point, then bring it to your executive with the account's real numbers.
+      </p>
+      <table class="re-table">
+        <thead><tr><th>Company Size</th><th>Setup</th><th>Monthly Starting</th></tr></thead>
+        <tbody>
+          {% for max_users, setup, monthly, label in enterprise_tiers %}
+          <tr>
+            <td>{{ label }}</td>
+            <td>{{ "${:,.0f}".format(setup) if setup is not none else "Executive Quote" }}</td>
+            <td>{{ "${:,.0f}".format(monthly) if monthly is not none else "Executive Quote" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" style="padding:24px;margin-top:20px;">
+      <div class="eyebrow">ADD-ONS</div>
+      <h2 style="margin:.35rem 0 1rem;">Layer these on top of the base plan</h2>
+      <table class="re-table">
+        <thead><tr><th>Add-on</th><th>Price</th></tr></thead>
+        <tbody>
+          <tr><td>{{ add_ons.white_label.label }}</td><td>+${{ "{:,.0f}".format(add_ons.white_label.setup) }} setup / +${{ "{:,.0f}".format(add_ons.white_label.monthly) }} mo</td></tr>
+          <tr><td>{{ add_ons.additional_workspace.label }}</td><td>+${{ "{:,.0f}".format(add_ons.additional_workspace.monthly) }}/mo</td></tr>
+          <tr><td>API Integrations</td><td>Custom</td></tr>
+          <tr><td>Data Migration</td><td>${{ "{:,.0f}".format(data_migration_minimum) }}+</td></tr>
+          <tr><td>Custom AI</td><td>Custom</td></tr>
+          <tr><td>{{ add_ons.additional_training.label }}</td><td>${{ "{:,.0f}".format(add_ons.additional_training.per_session) }}/session</td></tr>
+          <tr><td>{{ add_ons.priority_support.label }}</td><td>+${{ "{:,.0f}".format(add_ons.priority_support.monthly) }}/mo</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card" style="padding:24px;margin-top:20px;">
+      <div class="eyebrow">APPROVAL LEVELS</div>
+      <h2 style="margin:.35rem 0 1rem;">What you can approve yourself -- and what needs a sign-off</h2>
+      <div class="re-grid-3" style="gap:16px;">
+        <div class="re-card pad">
+          <h3 style="margin:0 0 8px;">AE Authority</h3>
+          <ul class="muted" style="margin:0;padding-left:18px;font-size:.9rem;line-height:1.6;">
+            <li>Discount up to {{ ae_max_discount|int }}%</li>
+            <li>Waive up to ${{ "{:,.0f}".format(ae_max_waiver) }} of setup</li>
+            <li>No executive approval required</li>
+          </ul>
+        </div>
+        <div class="re-card pad">
+          <h3 style="margin:0 0 8px;">Sales Manager</h3>
+          <ul class="muted" style="margin:0;padding-left:18px;font-size:.9rem;line-height:1.6;">
+            <li>Up to {{ sales_manager_max_discount|int }}% discount</li>
+            <li>Can reduce setup fees further</li>
+            <li>Can bundle promotions</li>
+          </ul>
+        </div>
+        <div class="re-card pad">
+          <h3 style="margin:0 0 8px;">Executive Approval</h3>
+          <p class="muted" style="margin:0 0 6px;font-size:.9rem;">Required for:</p>
+          <ul class="muted" style="margin:0;padding-left:18px;font-size:.9rem;line-height:1.6;">
+            <li>Enterprise deals</li>
+            <li>White-label licensing</li>
+            <li>Custom development</li>
+            <li>Discounts over {{ sales_manager_max_discount|int }}%</li>
+            <li>Multi-year agreements</li>
+            <li>Strategic partnerships</li>
+          </ul>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:14px;font-size:.88rem;">
+        The deal tool's Quote Calculator (on every deal's page) applies these rules automatically and
+        won't let a deal be marked signed until the required approval is recorded.
+      </p>
+    </section>
+
+    <section class="card" style="padding:24px;margin-top:20px;">
+      <div class="eyebrow">SAMPLE QUOTES</div>
+      <h2 style="margin:.35rem 0 1rem;">Worked examples</h2>
+      <div class="re-grid-2" style="gap:16px;">
+        {% for q in sample_quotes %}
+        <div class="re-card pad">
+          <h3 style="margin:0 0 8px;">{{ q.plan_label }} -- {{ q.discount_percent }}% discount{% if q.setup_fee_waived %}, ${{ "{:,.0f}".format(q.setup_fee_waived) }} setup waived{% endif %}</h3>
+          <p class="muted" style="margin:0 0 6px;font-size:.9rem;">
+            List: ${{ "{:,.0f}".format(q.list_setup) }} setup / ${{ "{:,.0f}".format(q.list_monthly) }} mo
+            &rarr; Quoted: ${{ "{:,.2f}".format(q.quoted_setup) }} setup / ${{ "{:,.2f}".format(q.quoted_monthly) }} mo
+          </p>
+          <p class="muted" style="margin:0;font-size:.85rem;">
+            Approval needed: <strong>{{ q.approval_level|replace('_', ' ')|title }}</strong>
+          </p>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card" style="padding:24px;margin-top:20px;">
+      <div class="eyebrow">COMPETITOR POSITIONING</div>
+      <h2 style="margin:.35rem 0 1rem;">How to frame Ravlo against what they use today</h2>
+      <div class="re-grid-2" style="gap:16px;">
+        <div class="re-card pad">
+          <h3 style="margin:0 0 8px;">vs. Spreadsheets &amp; email</h3>
+          <p class="muted" style="margin:0;font-size:.9rem;line-height:1.6;">
+            "You already have a system -- it's just made of spreadsheets and email threads instead of
+            software." Ravlo replaces the patchwork with one place every role sees, and Ravlo AI reads
+            that live data instead of someone writing a status update by hand.
+          </p>
+        </div>
+        <div class="re-card pad">
+          <h3 style="margin:0 0 8px;">vs. Salesforce / generic CRM</h3>
+          <p class="muted" style="margin:0;font-size:.9rem;line-height:1.6;">
+            Generic CRMs track contacts and deals -- they don't know what a loan condition is, don't
+            route to processors and underwriters, and don't generate compliance notices. Ravlo is built
+            for lending and real estate specifically, so the workflow already matches how the team works.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="padding:24px;margin-top:20px;">
+      <div class="eyebrow">OBJECTION HANDLING</div>
+      <h2 style="margin:.35rem 0 1rem;">Common pushback and how to answer it</h2>
+      <div class="re-grid-2" style="gap:16px;">
+        <div class="re-card pad">
+          <p style="margin:0 0 6px;font-weight:600;">"It's too expensive."</p>
+          <p class="muted" style="margin:0;font-size:.88rem;line-height:1.55;">
+            Anchor on what it replaces -- the tools, the manual re-entry, and the time spent chasing
+            status across teams -- rather than defending the number in isolation. If the value case is
+            solid but the number still doesn't work, that's what your discount authority is for.
+          </p>
+        </div>
+        <div class="re-card pad">
+          <p style="margin:0 0 6px;font-weight:600;">"We already use Salesforce."</p>
+          <p class="muted" style="margin:0;font-size:.88rem;line-height:1.55;">
+            Ask what they've had to build on top of it to make it fit lending -- custom fields, workflows,
+            integrations. Ravlo starts where that customization would have ended up, out of the box.
+          </p>
+        </div>
+        <div class="re-card pad">
+          <p style="margin:0 0 6px;font-weight:600;">"Can we keep our current CRM?"</p>
+          <p class="muted" style="margin:0;font-size:.88rem;line-height:1.55;">
+            Ravlo isn't a bolt-on CRM add-in -- it's the operating system for the loan itself. Find out
+            what they actually need to keep (contacts, marketing automation) versus what they're used to
+            using out of habit, and scope the conversation around that gap.
+          </p>
+        </div>
+        <div class="re-card pad">
+          <p style="margin:0 0 6px;font-weight:600;">"Why is there a setup fee?"</p>
+          <p class="muted" style="margin:0;font-size:.88rem;line-height:1.55;">
+            It covers real onboarding work -- account configuration, team setup, and getting their data
+            in. You can waive up to your own authority if it's the difference between closing and not.
+          </p>
+        </div>
+        <div class="re-card pad">
+          <p style="margin:0 0 6px;font-weight:600;">"Can we add workspaces later?"</p>
+          <p class="muted" style="margin:0;font-size:.88rem;line-height:1.55;">
+            Yes -- Additional Workspace is a standard add-on. Start them on the plan that fits today and
+            let it grow with them instead of overselling capacity they don't need yet.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="padding:24px;margin-top:20px;">
+      <div class="eyebrow">NEGOTIATION GUIDELINES</div>
+      <h2 style="margin:.35rem 0 1rem;">When to hold firm, and when to bring someone in</h2>
+      <ul class="muted" style="max-width:760px;font-size:.92rem;line-height:1.7;">
+        <li>Lead with the standard rate card -- don't open with a discount that wasn't asked for.</li>
+        <li>Stay inside your own authority whenever the deal supports it; every approval hop costs time and momentum.</li>
+        <li>Loop in a Sales Manager or Executive <em>before</em> promising a number outside your authority, not after -- a promise you can't back is worse than a short delay.</li>
+        <li>Enterprise, white-label, custom development, multi-year, and strategic-partnership deals go to an executive by default -- bring them in early in the conversation, not at the signature.</li>
+      </ul>
+    </section>
+
+  </div>
+</main>
+{% endblock %}
