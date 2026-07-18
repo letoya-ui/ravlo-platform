@@ -303,6 +303,7 @@
       height: 120px;
       border-radius: 50%;
       object-fit: cover;
+      object-position: center 15%;
       border: 3px solid var(--brand);
       box-shadow:
         0 0 0 7px var(--brand-glow),
@@ -1020,7 +1021,7 @@
     <a class="bn-brand" href="#">
       {% if profile_image_url %}
         <img src="{{ profile_image_url }}" alt="{{ display_name }}"
-             style="width:42px;height:42px;border-radius:12px;object-fit:cover;border:1px solid rgba(201,168,120,.30);">
+             style="width:42px;height:42px;border-radius:12px;object-fit:cover;object-position:center 15%;border:1px solid rgba(201,168,120,.30);">
       {% elif logo_url %}
         <img src="{{ logo_url }}" alt="{{ display_name }}"
              style="max-height:40px;border-radius:8px;">
