@@ -167,6 +167,19 @@
                 <div class="row" style="justify-content:flex-end; gap:8px; flex-wrap:wrap;">
 
                   <form method="POST"
+                        action="{{ url_for('system.reset_password', user_id=user.id) }}"
+                        class="reset-password-form"
+                        style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="password" class="reset-password-value">
+                    <button type="submit" class="re-btn ghost sm"
+                            {% if single_admin_mode and (user.email or '')|lower == owner_admin_email %}disabled{% endif %}>
+                      <i class="lucide lucide-key-round"></i>
+                      Reset Password
+                    </button>
+                  </form>
+
+                  <form method="POST"
                         action="{{ url_for('system.toggle_user', user_id=user.id) }}"
                         style="margin:0;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -256,6 +269,19 @@ document.addEventListener("DOMContentLoaded",function(){
   if(searchInput){
     searchInput.addEventListener("input", applyFilters);
   }
+
+  document.querySelectorAll(".reset-password-form").forEach(function(form){
+    form.addEventListener("submit", function(e){
+      var pw = window.prompt("Enter a temporary password for this account (min 8 characters):");
+      if(pw === null){ e.preventDefault(); return; }
+      if(pw.length < 8){
+        alert("Password must be at least 8 characters.");
+        e.preventDefault();
+        return;
+      }
+      form.querySelector(".reset-password-value").value = pw;
+    });
+  });
 });
 </script>
 

@@ -349,6 +349,41 @@ def change_email(user_id):
 
 
 # =========================================================
+# 🔑 Reset User Password
+# =========================================================
+# Lets staff set a known temporary password for an account directly,
+# without needing the user's inbox to be working (e.g. debugging a
+# migrated/VIP account, or when "Forgot Password" isn't reaching them).
+@system_bp.route("/reset_password/<int:user_id>", methods=["POST"])
+@role_required("system", "admin")
+def reset_password(user_id):
+    company_id, redirect_response = _company_admin_guard(current_user)
+    if redirect_response:
+        return redirect_response
+
+    user = User.query.get_or_404(user_id)
+
+    if _is_company_admin(current_user) and company_id is not None and user.company_id != company_id:
+        flash("You can only manage users from your own company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company_id))
+
+    if _single_admin_mode_enabled() and (user.email or "").strip().lower() == _owner_admin_email():
+        flash("The owner admin account is protected in single-admin mode.", "warning")
+        return redirect(url_for("system.users"))
+
+    new_password = request.form.get("password") or ""
+    if len(new_password) < 8:
+        flash("Password must be at least 8 characters.", "danger")
+        return redirect(url_for("system.users"))
+
+    user.set_password(new_password)
+    db.session.commit()
+
+    flash(f"Password reset for {user.email}.", "success")
+    return redirect(url_for("system.users"))
+
+
+# =========================================================
 # 🗑️ Delete User
 # =========================================================
 @system_bp.route("/delete_user/<int:user_id>", methods=["POST"])
