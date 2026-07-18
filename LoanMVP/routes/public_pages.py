@@ -53,11 +53,11 @@ SLUG_OWNER_EMAILS: dict[str, str] = {
 SLUG_STATIC_CONTEXT: dict[str, dict] = {
     "bonnie-sells-oc-homes": {
         "profile":          SimpleNamespace(public_slug="bonnie-sells-oc-homes", business_name="Bonnie Sells OC Homes"),
-        "display_name":     "Bonnie",
+        "display_name":     "Bonnie Natt",
         "headline":         "Your Orange County & Hudson Valley Real Estate Expert",
         "bio":              (
             "With deep roots in the Hudson Valley and a passion for connecting "
-            "people with the right home, Bonnie brings a personal, "
+            "people with the right home, Bonnie Natt brings a personal, "
             "results-driven approach to every transaction. Whether you're "
             "buying your first home, selling, or investing across Orange "
             "County and the greater Hudson Valley, she's with you every step "
@@ -70,7 +70,7 @@ SLUG_STATIC_CONTEXT: dict[str, dict] = {
         "profile_image_url": "/static/images/vip/bonnie_headshot.jpg",
         "cover_image_url":  None,
         "email":            "Bonniesellsochomes@gmail.com",
-        "phone":            "",
+        "phone":            "914-213-3380",
         "website":          "",
         "listings":         [],
         "testimonials":     [],
