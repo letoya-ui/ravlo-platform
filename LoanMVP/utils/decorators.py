@@ -51,6 +51,21 @@ def has_full_loan_officer_access(user) -> bool:
     return normalize_email(getattr(user, "email", None)) in FULL_LOAN_OFFICER_ACCESS_EMAILS
 
 
+def partner_offers_property_management(user) -> bool:
+    """True when a partner's business (per their Partner.category/type,
+    e.g. from _PARTNER_DASHBOARD_PRESETS) includes property management --
+    used to extend access to the existing /property tool to VIP partners
+    whose business isn't purely real estate/insurance."""
+    partner = getattr(user, "partner_profile", None)
+    if not partner:
+        return False
+    text = " ".join(
+        str(getattr(partner, field, "") or "").strip().lower()
+        for field in ("category", "type")
+    )
+    return "property management" in text or "property manager" in text
+
+
 def is_admin_role(role: str) -> bool:
     return normalize_role(role) in ADMIN_ROLES
 
@@ -120,6 +135,13 @@ def role_required(*roles):
                     "partner_group" in roles
                     or "loan_officer" in roles
                     or bool(expanded_roles & PARTNER_ROLES)
+                ):
+                    return fn(*args, **kwargs)
+
+                if (
+                    "property" in expanded_roles
+                    and user_role in PARTNER_ROLES
+                    and partner_offers_property_management(current_user)
                 ):
                     return fn(*args, **kwargs)
 

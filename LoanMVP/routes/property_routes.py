@@ -6,7 +6,7 @@ from flask_login import login_required, current_user
 from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
 
-from LoanMVP.utils.decorators import role_required
+from LoanMVP.utils.decorators import role_required, partner_offers_property_management
 from LoanMVP.extensions import db
 from LoanMVP.models.property import Property, PropertyUnit, Tenant, RentPayment, MaintenanceRequest
 from LoanMVP.models.investor_models import InvestorProfile
@@ -39,7 +39,27 @@ def _is_full_visibility(user) -> bool:
 
 
 def _current_investor_profile():
-    return InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if profile:
+        return profile
+
+    # VIP partners whose business includes property management (e.g. a
+    # realtor/insurance agent who also manages rentals) have no
+    # InvestorProfile of their own -- Property.owner_investor_id scoping is
+    # built entirely around that model, so lazily create a scoping-only
+    # profile the first time they visit rather than duplicating the whole
+    # ownership model with a second FK.
+    if partner_offers_property_management(current_user):
+        profile = InvestorProfile(
+            user_id=current_user.id,
+            full_name=getattr(current_user, "full_name", None) or getattr(current_user, "email", None),
+            email=getattr(current_user, "email", None),
+        )
+        db.session.add(profile)
+        db.session.commit()
+        return profile
+
+    return None
 
 
 def _owned_properties_query():

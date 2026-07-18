@@ -791,7 +791,12 @@ def restore_owner_admin():
 def post_login_redirect():
     role = (current_user.role or "").strip().lower()
 
-    if role == "partner":
+    # Accounts can be created with any partner subrole (e.g. "realtor"
+    # picked directly instead of the generic "partner"), and the preset
+    # lookup is keyed by email regardless of role, so gate on the whole
+    # partner group rather than just "partner" -- otherwise an account
+    # created as "realtor" never gets its business preset applied.
+    if role in PARTNER_ROLES:
         _ensure_partner_dashboard_profile(current_user)
         db.session.commit()
 
