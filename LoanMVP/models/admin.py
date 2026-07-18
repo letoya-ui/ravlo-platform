@@ -203,6 +203,19 @@ class BusinessInquiry(db.Model):
     approved_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     approved_at = db.Column(db.DateTime, nullable=True)
 
+    # -- Quote Worksheet (Ravlo Pricing Playbook, section 4) -- discovery
+    # answers captured before a plan is picked, so every AE follows the
+    # same repeatable process instead of relying on instinct. Company/
+    # contact info already lives on this row; "Recommended Package" and
+    # the setup/monthly numbers are the Quote Calculator's own output
+    # above, not duplicated here.
+    worksheet_industry = db.Column(db.String(120), nullable=True)
+    worksheet_user_count = db.Column(db.Integer, nullable=True)
+    worksheet_workspace_count = db.Column(db.Integer, nullable=True)
+    worksheet_branding = db.Column(db.String(20), nullable=True)  # ravlo, co_branded, white_label
+    worksheet_implementation_complexity = db.Column(db.String(20), nullable=True)  # standard, advanced, enterprise
+    worksheet_training_required = db.Column(db.Boolean, nullable=True)
+
     assigned_ae = db.relationship("User", foreign_keys=[assigned_ae_id])
     linked_company = db.relationship("Company", foreign_keys=[linked_company_id])
     approved_by = db.relationship("User", foreign_keys=[approved_by_id])
