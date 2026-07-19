@@ -1,10 +1,12 @@
 {% set ep = request.endpoint or "" %}
+{% set brand = effective_brand(current_user.company) %}
+{% set _is_white_label = brand.name != "Ravlo" %}
 
-<div class="re-brand">
-  <div class="re-mark"><span>RV</span></div>
+<div class="re-brand"{% if _is_white_label %} style="--brand-mark-bg: linear-gradient(180deg, {{ brand.primary }}, {{ brand.accent }}); --brand-mark-border: {{ brand.accent }};"{% endif %}>
+  <div class="re-mark"><span>{{ brand.mark }}</span></div>
   <div>
-    <div class="re-brand-name">RAVLO</div>
-    <div class="re-brand-sub">Lending OS</div>
+    <div class="re-brand-name">{{ brand.name|upper }}</div>
+    <div class="re-brand-sub"{% if _is_white_label %} style="color:{{ brand.accent }};"{% endif %}>{{ brand.tagline or "Lending OS" }}</div>
   </div>
 </div>
 

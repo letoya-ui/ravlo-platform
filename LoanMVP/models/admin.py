@@ -34,6 +34,18 @@ class Company(db.Model):
     grace_period_ends_at = db.Column(db.DateTime, nullable=True)
     stripe_customer_id = db.Column(db.String(255), nullable=True)
 
+    # -- White Label branding (the Enterprise/"white_label" tier add-on) --
+    # only ever displayed in place of Ravlo's own branding when
+    # subscription_tier == "white_label" AND brand_name is actually set
+    # (see LoanMVP/utils/branding.py's effective_brand()) -- every other
+    # company keeps seeing "Ravlo" regardless of what's stored here.
+    brand_name = db.Column(db.String(120), nullable=True)
+    brand_logo_initials = db.Column(db.String(4), nullable=True)
+    brand_primary_color = db.Column(db.String(9), nullable=True)
+    brand_secondary_color = db.Column(db.String(9), nullable=True)
+    brand_accent_color = db.Column(db.String(9), nullable=True)
+    brand_tagline = db.Column(db.String(160), nullable=True)
+
     users = db.relationship("User", back_populates="company", foreign_keys="User.company_id", lazy=True)
     invites = db.relationship("UserInvite", back_populates="company", lazy=True)
     access_requests = db.relationship("AccessRequest", backref="company", lazy=True)
