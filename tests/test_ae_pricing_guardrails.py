@@ -238,8 +238,10 @@ def test_executive_can_approve_and_then_ae_can_sign(db_session, client):
         data={
             "action_type": "update_stage",
             "ae_stage": "signed",
-            "contract_value": str(refreshed.contract_value),
-            "commission_rate": "0.10",
+            "signed_setup_fee": "2500",
+            "signed_monthly_fee": "489.30",
+            "setup_commission_rate": "0.15",
+            "monthly_commission_rate": "0.08",
         },
         follow_redirects=True,
     )
