@@ -30,13 +30,20 @@
       <button class="rb-mobile-menu-btn" type="button" aria-label="Toggle navigation" onclick="document.querySelector('.rb-nav').classList.toggle('rb-nav-open')">
         R
       </button>
-      <div class="rb-brand">
-        <div class="rb-mark">RV</div>
+      {% set brand = effective_brand(current_user.company if current_user.is_authenticated else None) %}
+      {% if brand.logo_url %}
+      <div class="rb-brand-logo-badge">
+        <img src="{{ url_for('static', filename=brand.logo_url) }}" class="rb-brand-logo-img" alt="{{ brand.name }}">
+      </div>
+      {% else %}
+      <div class="rb-brand"{% if brand.name != "Ravlo" %} style="--brand-mark-bg: linear-gradient(180deg, {{ brand.primary }}, {{ brand.accent }}); --brand-mark-border: {{ brand.accent }};"{% endif %}>
+        <div class="rb-mark">{{ brand.mark }}</div>
         <div>
-          <div class="rb-name">RAVLO</div>
-          <div class="rb-sub">Borrower OS</div>
+          <div class="rb-name">{{ brand.name|upper }}</div>
+          <div class="rb-sub">{{ brand.tagline or "Borrower OS" }}</div>
         </div>
       </div>
+      {% endif %}
 
       <div class="rb-page-copy">
         <div class="rb-page-title">{% block page_title %}Borrower Dashboard{% endblock %}</div>

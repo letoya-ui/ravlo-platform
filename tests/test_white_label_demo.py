@@ -291,6 +291,93 @@ def test_demo_login_missing_variant_defaults_to_ravlo_branding(db_session, clien
 
 
 # ---------------------------------------------------------------------------
+# Borrower dashboard uses a completely different base layout
+# (ravlo_borrower_base.html, rb-* CSS classes) than the staff sidebars --
+# its brand block was never wired to effective_brand() at all, so a
+# White Label prospect's own borrowers would still see "RAVLO" even
+# though every staff-facing dashboard showed the licensee's brand. This
+# is arguably the most important surface to get right, since borrowers
+# are the licensee's own end customers.
+# ---------------------------------------------------------------------------
+
+def test_demo_login_white_label_variant_renders_meridian_branding_on_borrower_dashboard(db_session, client):
+    staff = _make_staff(db_session, "aishagelahun@gmail.com")
+    login_as(client, staff)
+
+    login_resp = client.post(
+        "/admin/demo-login/borrower",
+        data={"variant": "white_label"},
+        follow_redirects=False,
+    )
+    dashboard_resp = client.get(login_resp.headers["Location"], follow_redirects=True)
+
+    assert dashboard_resp.status_code == 200
+    body = dashboard_resp.get_data(as_text=True)
+    assert "images/demo/meridian_capital_logo.png" in body
+    assert 'alt="Meridian Capital"' in body
+
+
+def test_demo_login_ravlo_variant_shows_ravlo_on_borrower_dashboard(db_session, client):
+    staff = _make_staff(db_session, "letoya@ravlohq.com")
+    login_as(client, staff)
+
+    login_resp = client.post(
+        "/admin/demo-login/borrower",
+        follow_redirects=False,
+    )
+    dashboard_resp = client.get(login_resp.headers["Location"], follow_redirects=True)
+
+    assert dashboard_resp.status_code == 200
+    body = dashboard_resp.get_data(as_text=True)
+    assert "RAVLO" in body
+    assert ">RV<" in body
+
+
+def test_white_label_borrower_without_logo_url_falls_back_to_text_mark(db_session, client):
+    from LoanMVP.models.loan_models import BorrowerProfile
+
+    company = Company(
+        name="Textmark Lending Borrowers",
+        is_active=True,
+        subscription_tier="white_label",
+        brand_name="Textmark Capital",
+        brand_logo_initials="TC",
+        max_users=10,
+    )
+    db_session.add(company)
+    db_session.commit()
+
+    user = User(
+        email="borrower@textmark-lending.com",
+        role="borrower",
+        is_active=True,
+        company_id=company.id,
+        nda_accepted=True,
+        ica_accepted=True,
+        onboarding_complete=True,
+        invite_accepted=True,
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.add(BorrowerProfile(
+        user_id=user.id,
+        full_name="Bella Borrower",
+        email=user.email,
+        company_id=company.id,
+        state="FL",
+    ))
+    db_session.commit()
+
+    login_as(client, user)
+    resp = client.get("/borrower/dashboard")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "TEXTMARK CAPITAL" in body
+    assert ">TC<" in body
+
+
+# ---------------------------------------------------------------------------
 # A real (non-demo) white-label company that hasn't uploaded a logo image
 # yet still gets the text name/mark treatment, not a broken <img> tag --
 # logo_url is optional, most self-serve companies won't have one.
