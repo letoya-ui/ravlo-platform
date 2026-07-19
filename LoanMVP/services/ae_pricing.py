@@ -49,6 +49,26 @@ SALES_MANAGER_MAX_DISCOUNT_PERCENT = Decimal("20")
 
 APPROVAL_LEVELS = ["ae", "sales_manager", "executive"]
 
+# -- AE commission structure -- paying a higher rate on the setup fee
+# than on recurring monthly revenue rewards closing new business without
+# committing Ravlo to that same rate indefinitely: setup pays out once,
+# monthly commission only runs for the first 12 months, and renewal
+# commission (optional, lower still) is the only piece that can continue
+# indefinitely as long as the customer keeps renewing.
+SETUP_COMMISSION_RATE_MIN = Decimal("0.10")
+SETUP_COMMISSION_RATE_MAX = Decimal("0.20")
+MONTHLY_COMMISSION_RATE_MIN = Decimal("0.05")
+MONTHLY_COMMISSION_RATE_MAX = Decimal("0.10")
+RENEWAL_COMMISSION_RATE_MIN = Decimal("0.01")
+RENEWAL_COMMISSION_RATE_MAX = Decimal("0.03")
+MONTHLY_COMMISSION_MONTHS = 12
+
+# Defaults matching the Pricing Playbook's own worked example (15% setup,
+# 8% monthly) -- a sensible starting point an AE can still adjust within
+# the min/max bounds above.
+DEFAULT_SETUP_COMMISSION_RATE = Decimal("0.15")
+DEFAULT_MONTHLY_COMMISSION_RATE = Decimal("0.08")
+
 
 def _dec(value, default="0"):
     if value is None or value == "":
@@ -93,6 +113,40 @@ def compute_quote(list_setup_fee, list_monthly_fee, discount_percent=None, setup
     quoted_monthly = (list_monthly_fee * (Decimal(1) - discount_percent / Decimal(100))).quantize(Decimal("0.01"))
     quoted_setup = max(list_setup_fee - setup_fee_waived, Decimal("0.00"))
     return quoted_setup, quoted_monthly
+
+
+def build_commission_schedule(setup_fee, monthly_fee, setup_commission_rate, monthly_commission_rate):
+    """Returns the payout schedule generated at signing: one 'setup'
+    entry plus MONTHLY_COMMISSION_MONTHS 'monthly' entries. Renewal
+    entries aren't part of this schedule -- they're added one at a time
+    on demand for as long as the customer keeps renewing, since (unlike
+    the first 12 months) there's no fixed end date for those.
+    Each entry is a dict: {entry_type, period_number, amount}.
+    """
+    setup_fee = _dec(setup_fee)
+    monthly_fee = _dec(monthly_fee)
+    setup_commission_rate = _dec(setup_commission_rate)
+    monthly_commission_rate = _dec(monthly_commission_rate)
+
+    entries = [{
+        "entry_type": "setup",
+        "period_number": None,
+        "amount": (setup_fee * setup_commission_rate).quantize(Decimal("0.01")),
+    }]
+    monthly_amount = (monthly_fee * monthly_commission_rate).quantize(Decimal("0.01"))
+    for month in range(1, MONTHLY_COMMISSION_MONTHS + 1):
+        entries.append({"entry_type": "monthly", "period_number": month, "amount": monthly_amount})
+    return entries
+
+
+def next_renewal_commission_entry(monthly_fee, renewal_commission_rate, existing_renewal_count):
+    """Builds the next renewal entry (period numbers continue on from
+    the 12 guaranteed monthly entries: 13, 14, 15, ...)."""
+    monthly_fee = _dec(monthly_fee)
+    renewal_commission_rate = _dec(renewal_commission_rate)
+    amount = (monthly_fee * renewal_commission_rate).quantize(Decimal("0.01"))
+    period_number = MONTHLY_COMMISSION_MONTHS + existing_renewal_count + 1
+    return {"entry_type": "renewal", "period_number": period_number, "amount": amount}
 
 
 def required_approval_level(

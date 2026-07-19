@@ -11,7 +11,7 @@ afterward for commission/reporting purposes.
 """
 from decimal import Decimal
 
-from LoanMVP.models.admin import BusinessInquiry, Company
+from LoanMVP.models.admin import AECommissionEntry, BusinessInquiry, Company
 from LoanMVP.models.user_model import User
 from LoanMVP.extensions import db
 
@@ -142,7 +142,7 @@ def test_claim_unassigned_deal(db_session, client):
     assert updated.assigned_ae_id == ae.id
 
 
-def test_mark_signed_computes_commission(db_session, client):
+def test_mark_signed_generates_setup_and_monthly_commission_schedule(db_session, client):
     ae = _make_ae(db_session, email="ae-sign@ravlohq.com")
     deal = _make_deal(db_session, assigned_ae_id=ae.id, company_name="Signing Co")
 
@@ -150,17 +150,51 @@ def test_mark_signed_computes_commission(db_session, client):
     client.post(f"/account-executive/deals/{deal.id}", data={
         "action_type": "update_stage",
         "ae_stage": "signed",
-        "contract_value": "10000",
-        "commission_rate": "0.10",
+        "signed_setup_fee": "10000",
+        "signed_monthly_fee": "2500",
+        "setup_commission_rate": "0.15",
+        "monthly_commission_rate": "0.08",
         "billing_cycle": "annual",
     })
 
     updated = BusinessInquiry.query.get(deal.id)
     assert updated.ae_stage == "signed"
-    assert updated.contract_value == Decimal("10000")
-    assert updated.commission_amount == Decimal("1000.00")
-    assert updated.commission_status == "pending"
+    assert updated.signed_setup_fee == Decimal("10000")
+    assert updated.signed_monthly_fee == Decimal("2500")
+    assert updated.contract_value == Decimal("10000") + Decimal("2500") * 12
     assert updated.signed_at is not None
+
+    entries = AECommissionEntry.query.filter_by(deal_id=deal.id).order_by(AECommissionEntry.id).all()
+    assert len(entries) == 13
+    setup_entry = entries[0]
+    assert setup_entry.entry_type == "setup"
+    assert setup_entry.amount == Decimal("1500.00")  # 15% of 10000
+    monthly_entries = entries[1:]
+    assert len(monthly_entries) == 12
+    assert all(e.entry_type == "monthly" for e in monthly_entries)
+    assert all(e.amount == Decimal("200.00") for e in monthly_entries)  # 8% of 2500
+    assert updated.commission_amount == Decimal("1500.00") + Decimal("200.00") * 12
+    assert updated.commission_status == "pending"
+
+
+def test_mark_signed_rejects_commission_rate_outside_bounds(db_session, client):
+    ae = _make_ae(db_session, email="ae-sign-bad@ravlohq.com")
+    deal = _make_deal(db_session, assigned_ae_id=ae.id, company_name="Bad Rate Co")
+
+    login_as(client, ae)
+    resp = client.post(f"/account-executive/deals/{deal.id}", data={
+        "action_type": "update_stage",
+        "ae_stage": "signed",
+        "signed_setup_fee": "10000",
+        "signed_monthly_fee": "2500",
+        "setup_commission_rate": "0.50",
+        "monthly_commission_rate": "0.08",
+    }, follow_redirects=True)
+
+    assert "Setup commission rate must be between" in resp.get_data(as_text=True)
+    updated = BusinessInquiry.query.get(deal.id)
+    assert updated.ae_stage != "signed"
+    assert AECommissionEntry.query.filter_by(deal_id=deal.id).count() == 0
 
 
 def test_link_company_requires_full_visibility(db_session, client):
@@ -189,31 +223,38 @@ def test_ae_cannot_mark_own_commission_paid(db_session, client):
     ae = _make_ae(db_session, email="ae-paid@ravlohq.com")
     deal = _make_deal(db_session, assigned_ae_id=ae.id, company_name="Paid Co")
     deal.ae_stage = "signed"
-    deal.commission_amount = Decimal("500.00")
-    deal.commission_status = "pending"
+    db_session.commit()
+    entry = AECommissionEntry(deal_id=deal.id, entry_type="setup", amount=Decimal("500.00"), status="pending")
+    db_session.add(entry)
     db_session.commit()
 
     login_as(client, ae)
-    client.post(f"/account-executive/deals/{deal.id}", data={"action_type": "mark_commission_paid"})
+    client.post(f"/account-executive/deals/{deal.id}", data={
+        "action_type": "mark_ledger_entry_paid", "entry_id": str(entry.id),
+    })
 
-    updated = BusinessInquiry.query.get(deal.id)
-    assert updated.commission_status == "pending"
+    refreshed = db.session.get(AECommissionEntry, entry.id)
+    assert refreshed.status == "pending"
 
 
 def test_executive_can_mark_commission_paid(db_session, client):
     ae = _make_ae(db_session, email="ae-paid2@ravlohq.com")
     deal = _make_deal(db_session, assigned_ae_id=ae.id, company_name="Paid Co 2")
     deal.ae_stage = "signed"
-    deal.commission_amount = Decimal("500.00")
-    deal.commission_status = "pending"
+    db_session.commit()
+    entry = AECommissionEntry(deal_id=deal.id, entry_type="setup", amount=Decimal("500.00"), status="pending")
+    db_session.add(entry)
     db_session.commit()
 
     executive = _make_executive(db_session, email="exec-paid@ravlohq.com")
     login_as(client, executive)
-    client.post(f"/account-executive/deals/{deal.id}", data={"action_type": "mark_commission_paid"})
+    client.post(f"/account-executive/deals/{deal.id}", data={
+        "action_type": "mark_ledger_entry_paid", "entry_id": str(entry.id),
+    })
 
-    updated = BusinessInquiry.query.get(deal.id)
-    assert updated.commission_status == "paid"
+    refreshed = db.session.get(AECommissionEntry, entry.id)
+    assert refreshed.status == "paid"
+    assert refreshed.paid_at is not None
 
 
 def test_new_ae_columns_default_safely_for_existing_admin_workflow(db_session, client):

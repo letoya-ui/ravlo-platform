@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from decimal import Decimal
 import secrets
 
 from LoanMVP.extensions import db
@@ -167,9 +168,17 @@ class BusinessInquiry(db.Model):
     contract_value = db.Column(db.Numeric(12, 2), nullable=True)
     billing_cycle = db.Column(db.String(20), nullable=True)  # monthly, annual
 
-    commission_rate = db.Column(db.Numeric(5, 4), nullable=True)  # e.g. 0.1000 = 10%
-    commission_amount = db.Column(db.Numeric(12, 2), nullable=True)
-    commission_status = db.Column(db.String(20), default="pending", nullable=True)  # pending, approved, paid
+    # -- Commission structure (Ravlo Pricing Playbook) -- setup fee and
+    # first-year monthly commission are paid separately, and at different
+    # rates, so the AE is rewarded for closing new business without
+    # committing Ravlo to that same rate indefinitely on recurring
+    # revenue. The actual payout schedule is AECommissionEntry rows
+    # (see below); these are just the rates/amounts locked in at signing.
+    signed_setup_fee = db.Column(db.Numeric(12, 2), nullable=True)
+    signed_monthly_fee = db.Column(db.Numeric(12, 2), nullable=True)
+    setup_commission_rate = db.Column(db.Numeric(5, 4), nullable=True)  # 0.10-0.20
+    monthly_commission_rate = db.Column(db.Numeric(5, 4), nullable=True)  # 0.05-0.10, first 12 months
+    renewal_commission_rate = db.Column(db.Numeric(5, 4), nullable=True)  # optional, 0.01-0.03, after month 12
 
     signed_at = db.Column(db.DateTime, nullable=True)
     lost_reason = db.Column(db.Text, nullable=True)
@@ -219,6 +228,56 @@ class BusinessInquiry(db.Model):
     assigned_ae = db.relationship("User", foreign_keys=[assigned_ae_id])
     linked_company = db.relationship("Company", foreign_keys=[linked_company_id])
     approved_by = db.relationship("User", foreign_keys=[approved_by_id])
+
+    @property
+    def commission_amount(self):
+        """Total commission across every ledger entry (setup + every
+        monthly/renewal entry generated so far) -- not just the first
+        year, so this grows as renewal entries get added over time."""
+        if not self.commission_entries:
+            return None
+        return sum((e.amount for e in self.commission_entries), Decimal("0.00"))
+
+    @property
+    def commission_status(self):
+        """pending: nothing paid yet. partial: some entries paid, some
+        not (the common case -- setup pays out immediately, the 12
+        monthly entries pay out over the year). paid: every entry paid."""
+        if not self.commission_entries:
+            return None
+        statuses = {e.status for e in self.commission_entries}
+        if statuses == {"paid"}:
+            return "paid"
+        if "paid" in statuses:
+            return "partial"
+        return "pending"
+
+
+class AECommissionEntry(db.Model):
+    """One line of an AE's commission payout schedule for a signed deal.
+    Generated automatically at signing: one 'setup' entry, then 12
+    'monthly' entries (the first-year recurring-revenue commission).
+    'renewal' entries are added one at a time, on demand, for as long as
+    the customer keeps renewing -- there's no fixed end date for those,
+    unlike the guaranteed first 12 months.
+    """
+    __tablename__ = "ae_commission_entries"
+
+    id = db.Column(db.Integer, primary_key=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey("business_inquiries.id"), nullable=False, index=True)
+
+    entry_type = db.Column(db.String(20), nullable=False)  # setup, monthly, renewal
+    period_number = db.Column(db.Integer, nullable=True)  # 1-12 for monthly; 13+ for renewal; null for setup
+    amount = db.Column(db.Numeric(12, 2), nullable=False)
+
+    status = db.Column(db.String(20), default="pending", nullable=False)  # pending, paid
+    paid_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    deal = db.relationship(
+        "BusinessInquiry",
+        backref=db.backref("commission_entries", lazy=True, order_by="AECommissionEntry.id"),
+    )
 
 
 class LicenseInviteEvent(db.Model):

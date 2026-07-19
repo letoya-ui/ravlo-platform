@@ -97,15 +97,34 @@
           {% endif %}
           <div class="re-grid-2">
             <div class="field">
-              <label for="contract_value">Contract Value ($)</label>
-              <input id="contract_value" name="contract_value" type="number" step="0.01" value="{{ deal.contract_value or '' }}">
+              <label for="signed_setup_fee">Setup Fee ($)</label>
+              <input id="signed_setup_fee" name="signed_setup_fee" type="number" step="0.01" value="{{ deal.signed_setup_fee or quoted_setup_fee or '' }}">
             </div>
             <div class="field">
-              <label for="commission_rate">Commission Rate (e.g. 0.10 = 10%)</label>
-              <input id="commission_rate" name="commission_rate" type="number" step="0.0001" value="{{ deal.commission_rate or '0.10' }}">
+              <label for="signed_monthly_fee">Monthly Fee ($)</label>
+              <input id="signed_monthly_fee" name="signed_monthly_fee" type="number" step="0.01" value="{{ deal.signed_monthly_fee or quoted_monthly_fee or '' }}">
             </div>
           </div>
-          <div class="field">
+          <div class="re-card-subtitle mt-16">
+            Commission is paid on setup and on the first 12 months of the monthly subscription -- setup pays out
+            once (rewards closing the deal), monthly commission runs for a year, and an optional renewal rate
+            can be added later for as long as the customer keeps renewing.
+          </div>
+          <div class="re-grid-2 mt-16">
+            <div class="field">
+              <label for="setup_commission_rate">Setup Commission ({{ "%.0f"|format(setup_commission_rate_min * 100) }}-{{ "%.0f"|format(setup_commission_rate_max * 100) }}%)</label>
+              <input id="setup_commission_rate" name="setup_commission_rate" type="number" step="0.01" min="{{ setup_commission_rate_min }}" max="{{ setup_commission_rate_max }}" value="{{ deal.setup_commission_rate or default_setup_commission_rate }}">
+            </div>
+            <div class="field">
+              <label for="monthly_commission_rate">Monthly Commission, First 12 Mo ({{ "%.0f"|format(monthly_commission_rate_min * 100) }}-{{ "%.0f"|format(monthly_commission_rate_max * 100) }}%)</label>
+              <input id="monthly_commission_rate" name="monthly_commission_rate" type="number" step="0.01" min="{{ monthly_commission_rate_min }}" max="{{ monthly_commission_rate_max }}" value="{{ deal.monthly_commission_rate or default_monthly_commission_rate }}">
+            </div>
+          </div>
+          <div class="field mt-16">
+            <label for="renewal_commission_rate">Renewal Commission -- Optional ({{ "%.0f"|format(renewal_commission_rate_min * 100) }}-{{ "%.0f"|format(renewal_commission_rate_max * 100) }}%)</label>
+            <input id="renewal_commission_rate" name="renewal_commission_rate" type="number" step="0.01" min="{{ renewal_commission_rate_min }}" max="{{ renewal_commission_rate_max }}" value="{{ deal.renewal_commission_rate or '' }}">
+          </div>
+          <div class="field mt-16">
             <label for="billing_cycle">Billing Cycle</label>
             <select id="billing_cycle" name="billing_cycle">
               <option value="annual" {% if deal.billing_cycle == 'annual' %}selected{% endif %}>Annual</option>
@@ -131,24 +150,13 @@
       <div class="section-head">
         <div>
           <div class="eyebrow">CONTRACT & COMMISSION</div>
-          <h3 style="margin:.35rem 0 .2rem;">Terms</h3>
+          <h3 style="margin:.35rem 0 .2rem;">Commission Ledger</h3>
         </div>
       </div>
 
       <form method="POST" class="mt-16">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="action_type" value="update_terms">
-
-        <div class="re-grid-2">
-          <div class="field">
-            <label for="terms_contract_value">Contract Value ($)</label>
-            <input id="terms_contract_value" name="contract_value" type="number" step="0.01" value="{{ deal.contract_value or '' }}">
-          </div>
-          <div class="field">
-            <label for="terms_commission_rate">Commission Rate</label>
-            <input id="terms_commission_rate" name="commission_rate" type="number" step="0.0001" value="{{ deal.commission_rate or '' }}">
-          </div>
-        </div>
         <div class="field">
           <label for="terms_billing_cycle">Billing Cycle</label>
           <select id="terms_billing_cycle" name="billing_cycle">
@@ -157,21 +165,49 @@
             <option value="monthly" {% if deal.billing_cycle == 'monthly' %}selected{% endif %}>Monthly</option>
           </select>
         </div>
-
         <div class="mt-16">
-          <button type="submit" class="re-btn ghost">Save Terms</button>
+          <button type="submit" class="re-btn ghost">Save Billing Cycle</button>
         </div>
       </form>
 
       {% if deal.commission_amount %}
       <div class="re-card-subtitle mt-16">
-        Commission: <strong>${{ "%.2f"|format(deal.commission_amount) }}</strong> ({{ deal.commission_status }})
+        Total commission (all entries): <strong>${{ "%.2f"|format(deal.commission_amount) }}</strong> ({{ deal.commission_status }})
       </div>
-      {% if is_full_visibility and deal.commission_status == "pending" %}
+
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead><tr><th>Type</th><th>Period</th><th>Amount</th><th>Status</th>{% if is_full_visibility %}<th></th>{% endif %}</tr></thead>
+          <tbody>
+            {% for entry in deal.commission_entries %}
+            <tr>
+              <td>{{ entry.entry_type|title }}</td>
+              <td>{% if entry.period_number %}Month {{ entry.period_number }}{% else %}—{% endif %}</td>
+              <td>${{ "%.2f"|format(entry.amount) }}</td>
+              <td>{{ entry.status|title }}</td>
+              {% if is_full_visibility %}
+              <td>
+                {% if entry.status == "pending" %}
+                <form method="POST">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action_type" value="mark_ledger_entry_paid">
+                  <input type="hidden" name="entry_id" value="{{ entry.id }}">
+                  <button type="submit" class="re-btn ghost sm">Mark Paid</button>
+                </form>
+                {% endif %}
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if deal.renewal_commission_rate and is_full_visibility %}
       <form method="POST" class="mt-16">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="action_type" value="mark_commission_paid">
-        <button type="submit" class="re-btn primary sm">Mark Commission Paid</button>
+        <input type="hidden" name="action_type" value="record_renewal_commission">
+        <button type="submit" class="re-btn primary sm">Record Renewal Commission</button>
       </form>
       {% endif %}
       {% endif %}

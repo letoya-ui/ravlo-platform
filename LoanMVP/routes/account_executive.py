@@ -31,14 +31,13 @@ from sqlalchemy import func
 
 from LoanMVP.extensions import db
 from LoanMVP.utils.decorators import role_required
-from LoanMVP.models.admin import BusinessInquiry, Company
+from LoanMVP.models.admin import AECommissionEntry, BusinessInquiry, Company
 from LoanMVP.models.user_model import User
 from LoanMVP.services import ae_pricing
 
 account_executive_bp = Blueprint("account_executive", __name__, url_prefix="/account-executive")
 
 AE_STAGES = ["prospect", "contacted", "demo_scheduled", "demo_completed", "contract_sent", "signed", "lost"]
-DEFAULT_COMMISSION_RATE = Decimal("0.10")
 
 # Mirrors admin.py's FULL_ADMIN_ROLES minus lending_admin -- role_required
 # already lets platform_admin/master_admin/executive through every check
@@ -73,12 +72,6 @@ def _to_decimal(value):
         return None
 
 
-def _compute_commission(contract_value, commission_rate):
-    if contract_value is None or commission_rate is None:
-        return None
-    return (Decimal(contract_value) * Decimal(commission_rate)).quantize(Decimal("0.01"))
-
-
 # company_name/contact_name/email are all NOT NULL on BusinessInquiry, but a
 # freshly-imported prospect frequently has no known contact yet -- these are
 # obvious, internal-only placeholders (never a real-looking name/address) so
@@ -101,8 +94,10 @@ def dashboard():
     deals = _deals_query().all()
     stage_counts = Counter((d.ae_stage or "prospect") for d in deals)
 
-    pending_commission = sum((d.commission_amount or 0) for d in deals if d.commission_status == "pending")
-    paid_commission = sum((d.commission_amount or 0) for d in deals if d.commission_status == "paid")
+    deal_ids = [d.id for d in deals]
+    entries = AECommissionEntry.query.filter(AECommissionEntry.deal_id.in_(deal_ids)).all() if deal_ids else []
+    pending_commission = sum((e.amount for e in entries if e.status == "pending"), Decimal("0.00"))
+    paid_commission = sum((e.amount for e in entries if e.status == "paid"), Decimal("0.00"))
     signed_count = sum(1 for d in deals if d.ae_stage == "signed")
 
     recent_deals = sorted(deals, key=lambda d: d.created_at, reverse=True)[:8]
@@ -392,28 +387,65 @@ def deal_detail(deal_id):
                 db.session.commit()
                 flash("Deal marked lost.", "info")
             elif new_stage == "signed":
-                contract_value = _to_decimal(request.form.get("contract_value"))
-                commission_rate = _to_decimal(request.form.get("commission_rate")) or DEFAULT_COMMISSION_RATE
+                setup_fee = _to_decimal(request.form.get("signed_setup_fee"))
+                monthly_fee = _to_decimal(request.form.get("signed_monthly_fee"))
+                setup_commission_rate = _to_decimal(request.form.get("setup_commission_rate"))
+                monthly_commission_rate = _to_decimal(request.form.get("monthly_commission_rate"))
+                renewal_commission_rate = _to_decimal(request.form.get("renewal_commission_rate"))
+
                 if (deal.approval_level_required or "ae") != "ae" and deal.approval_status != "approved":
                     flash(
                         f"This quote requires {(deal.approval_level_required or '').replace('_', ' ').title()} "
                         "approval before it can be marked signed.",
                         "danger",
                     )
-                elif contract_value is None:
-                    flash("Enter the contract value to mark this deal signed.", "danger")
+                elif setup_fee is None or monthly_fee is None:
+                    flash("Enter the setup fee and monthly fee to mark this deal signed.", "danger")
+                elif setup_commission_rate is None or not (
+                    ae_pricing.SETUP_COMMISSION_RATE_MIN <= setup_commission_rate <= ae_pricing.SETUP_COMMISSION_RATE_MAX
+                ):
+                    flash(
+                        f"Setup commission rate must be between {ae_pricing.SETUP_COMMISSION_RATE_MIN:.0%} "
+                        f"and {ae_pricing.SETUP_COMMISSION_RATE_MAX:.0%}.",
+                        "danger",
+                    )
+                elif monthly_commission_rate is None or not (
+                    ae_pricing.MONTHLY_COMMISSION_RATE_MIN <= monthly_commission_rate <= ae_pricing.MONTHLY_COMMISSION_RATE_MAX
+                ):
+                    flash(
+                        f"Monthly commission rate must be between {ae_pricing.MONTHLY_COMMISSION_RATE_MIN:.0%} "
+                        f"and {ae_pricing.MONTHLY_COMMISSION_RATE_MAX:.0%}.",
+                        "danger",
+                    )
+                elif renewal_commission_rate is not None and not (
+                    ae_pricing.RENEWAL_COMMISSION_RATE_MIN <= renewal_commission_rate <= ae_pricing.RENEWAL_COMMISSION_RATE_MAX
+                ):
+                    flash(
+                        f"Renewal commission rate must be between {ae_pricing.RENEWAL_COMMISSION_RATE_MIN:.0%} "
+                        f"and {ae_pricing.RENEWAL_COMMISSION_RATE_MAX:.0%} (or left blank).",
+                        "danger",
+                    )
                 else:
-                    deal.contract_value = contract_value
-                    deal.commission_rate = commission_rate
+                    deal.signed_setup_fee = setup_fee
+                    deal.signed_monthly_fee = monthly_fee
+                    deal.setup_commission_rate = setup_commission_rate
+                    deal.monthly_commission_rate = monthly_commission_rate
+                    deal.renewal_commission_rate = renewal_commission_rate
+                    deal.contract_value = setup_fee + monthly_fee * 12
                     deal.billing_cycle = (request.form.get("billing_cycle") or deal.billing_cycle or "annual")
-                    deal.commission_amount = _compute_commission(deal.contract_value, deal.commission_rate)
-                    deal.commission_status = "pending"
                     deal.ae_stage = "signed"
                     deal.signed_at = datetime.utcnow()
+
+                    schedule = ae_pricing.build_commission_schedule(
+                        setup_fee, monthly_fee, setup_commission_rate, monthly_commission_rate
+                    )
+                    for entry in schedule:
+                        db.session.add(AECommissionEntry(deal_id=deal.id, **entry))
+
                     db.session.commit()
                     flash(
-                        "Deal marked signed and commission calculated. "
-                        "A Ravlo admin still needs to approve the license application "
+                        "Deal marked signed and the commission payout schedule (setup + 12 monthly entries) "
+                        "was generated. A Ravlo admin still needs to approve the license application "
                         "to create the live company account.",
                         "success",
                     )
@@ -423,19 +455,13 @@ def deal_detail(deal_id):
                 flash("Stage updated.", "success")
 
         elif action_type == "update_terms":
-            contract_value = _to_decimal(request.form.get("contract_value"))
-            commission_rate = _to_decimal(request.form.get("commission_rate"))
-            if contract_value is not None:
-                deal.contract_value = contract_value
-            if commission_rate is not None:
-                deal.commission_rate = commission_rate
             billing_cycle = (request.form.get("billing_cycle") or "").strip()
             if billing_cycle:
                 deal.billing_cycle = billing_cycle
-            if deal.ae_stage == "signed":
-                deal.commission_amount = _compute_commission(deal.contract_value, deal.commission_rate)
-            db.session.commit()
-            flash("Contract terms updated.", "success")
+                db.session.commit()
+                flash("Billing cycle updated.", "success")
+            else:
+                flash("Choose a billing cycle.", "danger")
 
         elif action_type == "save_worksheet":
             deal.worksheet_industry = (request.form.get("worksheet_industry") or "").strip() or None
@@ -490,15 +516,35 @@ def deal_detail(deal_id):
                 db.session.commit()
                 flash(f"Linked to {company.name}.", "success")
 
-        elif action_type == "mark_commission_paid":
+        elif action_type == "mark_ledger_entry_paid":
             if not _is_full_visibility(current_user):
-                flash("Only Ravlo staff can mark commission as paid.", "danger")
-            elif deal.commission_status != "pending":
-                flash("Commission isn't pending.", "info")
+                flash("Only Ravlo staff can mark a commission entry as paid.", "danger")
             else:
-                deal.commission_status = "paid"
+                entry_id = request.form.get("entry_id")
+                entry = next((e for e in deal.commission_entries if str(e.id) == str(entry_id)), None)
+                if entry is None:
+                    flash("That commission entry wasn't found on this deal.", "danger")
+                elif entry.status == "paid":
+                    flash("That entry is already paid.", "info")
+                else:
+                    entry.status = "paid"
+                    entry.paid_at = datetime.utcnow()
+                    db.session.commit()
+                    flash("Commission entry marked paid.", "success")
+
+        elif action_type == "record_renewal_commission":
+            if not _is_full_visibility(current_user):
+                flash("Only Ravlo staff can record a renewal commission.", "danger")
+            elif not deal.renewal_commission_rate:
+                flash("This deal has no renewal commission rate set.", "danger")
+            else:
+                existing_renewal_count = sum(1 for e in deal.commission_entries if e.entry_type == "renewal")
+                entry = ae_pricing.next_renewal_commission_entry(
+                    deal.signed_monthly_fee, deal.renewal_commission_rate, existing_renewal_count
+                )
+                db.session.add(AECommissionEntry(deal_id=deal.id, **entry))
                 db.session.commit()
-                flash("Commission marked paid.", "success")
+                flash("Renewal commission entry added.", "success")
 
         elif action_type == "update_contact":
             contact_name = (request.form.get("contact_name") or "").strip()
@@ -545,4 +591,12 @@ def deal_detail(deal_id):
         add_ons=ae_pricing.ADD_ONS,
         quoted_setup_fee=quoted_setup_fee,
         quoted_monthly_fee=quoted_monthly_fee,
+        default_setup_commission_rate=ae_pricing.DEFAULT_SETUP_COMMISSION_RATE,
+        default_monthly_commission_rate=ae_pricing.DEFAULT_MONTHLY_COMMISSION_RATE,
+        setup_commission_rate_min=ae_pricing.SETUP_COMMISSION_RATE_MIN,
+        setup_commission_rate_max=ae_pricing.SETUP_COMMISSION_RATE_MAX,
+        monthly_commission_rate_min=ae_pricing.MONTHLY_COMMISSION_RATE_MIN,
+        monthly_commission_rate_max=ae_pricing.MONTHLY_COMMISSION_RATE_MAX,
+        renewal_commission_rate_min=ae_pricing.RENEWAL_COMMISSION_RATE_MIN,
+        renewal_commission_rate_max=ae_pricing.RENEWAL_COMMISSION_RATE_MAX,
     )
