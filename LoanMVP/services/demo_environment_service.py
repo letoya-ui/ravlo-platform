@@ -42,6 +42,7 @@ DEMO_VARIANTS = {
         "brand_secondary_color": None,
         "brand_accent_color": None,
         "brand_tagline": None,
+        "brand_logo_url": None,
     },
     "white_label": {
         "label": "Meridian Capital (White Label)",
@@ -54,6 +55,7 @@ DEMO_VARIANTS = {
         "brand_secondary_color": "#0E7C66",
         "brand_accent_color": "#C9A227",
         "brand_tagline": "Guiding Capital. Building Futures.",
+        "brand_logo_url": "images/demo/meridian_capital_logo.png",
     },
 }
 
@@ -69,6 +71,7 @@ _BRANDING_FIELDS = (
     "brand_secondary_color",
     "brand_accent_color",
     "brand_tagline",
+    "brand_logo_url",
 )
 
 # Kept for backward compatibility with anything importing the old names directly.
