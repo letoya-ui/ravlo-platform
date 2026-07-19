@@ -203,12 +203,34 @@ textarea{
   font-weight:800;
   letter-spacing:.08em;
   color:#f4f8fc;
-  background:
-    linear-gradient(180deg, rgba(122,184,255,.22), rgba(62,90,117,.14));
-  border:1px solid rgba(122,184,255,.22);
+  background: var(--brand-mark-bg, linear-gradient(180deg, rgba(122,184,255,.22), rgba(62,90,117,.14)));
+  border:1px solid var(--brand-mark-border, rgba(122,184,255,.22));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
 }
 
+.re-brand-mark{
+  width:46px;
+  height:46px;
+  border-radius:14px;
+  display:grid;
+  place-items:center;
+  font-weight:800;
+  letter-spacing:.08em;
+  color:#f4f8fc;
+  background: var(--brand-mark-bg, linear-gradient(180deg, rgba(122,184,255,.22), rgba(62,90,117,.14)));
+  border:1px solid var(--brand-mark-border, rgba(122,184,255,.22));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.re-brand-link{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  text-decoration:none;
+  color:inherit;
+}
+
+.re-brand-title,
 .re-brand-name,
 .rl-brand-name{
   font-weight:800;

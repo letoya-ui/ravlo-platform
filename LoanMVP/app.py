@@ -722,6 +722,9 @@ def create_app():
 
     app.jinja_env.globals["safe_url_for"] = safe_url_for
 
+    from LoanMVP.utils.branding import effective_brand
+    app.jinja_env.globals["effective_brand"] = effective_brand
+
     @app.before_request
     def make_session_permanent():
         session.permanent = True

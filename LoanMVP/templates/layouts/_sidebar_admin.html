@@ -3,14 +3,15 @@
 <div class="re-sidebar-inner">
   {% set is_company_admin = current_user.role == "admin" and current_user.company_id %}
   {% set is_executive_sidebar = current_user.role == "executive" and ep.startswith("executive.") %}
-  {% set sidebar_company_name = current_user.company.name if current_user.company else "Ravlo" %}
+  {% set brand = effective_brand(current_user.company) %}
+  {% set _is_white_label = (is_executive_sidebar or is_company_admin) and brand.name != "Ravlo" %}
 
-  <div class="re-brand">
+  <div class="re-brand"{% if _is_white_label %} style="--brand-mark-bg: linear-gradient(180deg, {{ brand.primary }}, {{ brand.accent }}); --brand-mark-border: {{ brand.accent }};"{% endif %}>
     <a href="{% if is_executive_sidebar %}{{ url_for('executive.dashboard') }}{% elif is_company_admin %}{{ url_for('admin.company_dashboard', company_id=current_user.company_id) }}{% else %}{{ url_for('admin.dashboard') }}{% endif %}" class="re-brand-link">
-      <div class="re-brand-mark">R</div>
+      <div class="re-brand-mark">{% if is_executive_sidebar or is_company_admin %}{{ brand.mark }}{% else %}R{% endif %}</div>
       <div>
-        <div class="re-brand-title">{% if is_executive_sidebar %}{{ sidebar_company_name }}{% else %}Ravlo{% endif %}</div>
-        <div class="re-brand-sub">{% if is_executive_sidebar %}Executive Dashboard{% else %}Admin OS{% endif %}</div>
+        <div class="re-brand-title">{% if is_executive_sidebar or is_company_admin %}{{ brand.name }}{% else %}Ravlo{% endif %}</div>
+        <div class="re-brand-sub"{% if _is_white_label %} style="color:{{ brand.accent }};"{% endif %}>{% if is_executive_sidebar %}Executive Dashboard{% elif is_company_admin and brand.tagline %}{{ brand.tagline }}{% else %}Admin OS{% endif %}</div>
       </div>
     </a>
   </div>

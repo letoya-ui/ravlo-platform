@@ -128,6 +128,24 @@
   </div>
 </section>
 
+{% if can_use_demo_login and demo_variants %}
+<section class="re-card pad" style="margin-top:16px;">
+  <div class="eyebrow">DEMO COMPANY</div>
+  <div style="margin-top:.5rem;color:#aab9c7;">
+    Pick which company's branding the dashboards below log you into -- same product, different name, logo mark, and color palette in the sidebar.
+    {% if variant == "white_label" %}Currently showing <strong>{{ demo_variants.white_label.brand_name }}</strong> ("{{ demo_variants.white_label.brand_tagline }}") -- use this when a prospect is asking about White Label.{% endif %}
+  </div>
+  <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+    {% for key, v in demo_variants.items() %}
+    <a href="{{ url_for('admin.demo_center', variant=key) }}"
+       class="re-btn {{ 'primary' if variant == key else 'ghost' }} sm">
+      {{ v.label }}
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 {% if opening_guide %}
 <section class="re-card pad" style="margin-top:16px;">
   <div class="eyebrow">DEMO GUIDE — BEFORE OPENING A DASHBOARD</div>
@@ -177,6 +195,7 @@
     {% if demo.role_key and can_use_demo_login %}
     <form method="POST" action="{{ url_for('admin.demo_login', role=demo.role_key) }}" style="margin-top:14px;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="variant" value="{{ variant }}">
       <button type="submit" class="re-btn primary sm" style="width:100%;">
         <i class="lucide lucide-log-in"></i> Log in as {{ demo.role }}
       </button>

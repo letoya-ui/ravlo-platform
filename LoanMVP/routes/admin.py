@@ -1165,12 +1165,18 @@ def dashboard():
 @login_required
 @role_required("master_admin", "platform_admin", "lending_admin", "executive")
 def demo_center():
+    from LoanMVP.services.demo_environment_service import DEMO_VARIANTS
+
     demo_dashboards = _demo_dashboard_cards()
     spotlight_metrics = {
         "dashboards_ready": len(demo_dashboards),
         "single_admin_mode": "Enabled" if _single_admin_mode_enabled() else "Disabled",
         "owner_admin_email": _owner_admin_email() or "Not set",
     }
+
+    variant = request.args.get("variant") or "ravlo"
+    if variant not in DEMO_VARIANTS:
+        variant = "ravlo"
 
     return render_template(
         "admin/demo_center.html",
@@ -1181,6 +1187,8 @@ def demo_center():
         can_use_demo_login=_can_use_demo_login(current_user),
         opening_guide=_DEMO_OPENING_GUIDE,
         closing_guide=_DEMO_CLOSING_GUIDE,
+        demo_variants=DEMO_VARIANTS,
+        variant=variant,
     )
 
 
@@ -1219,7 +1227,7 @@ def _can_use_demo_login(user) -> bool:
 def demo_login(role):
     from flask import session as flask_session
     from flask_login import login_user, logout_user
-    from LoanMVP.services.demo_environment_service import ensure_demo_environment
+    from LoanMVP.services.demo_environment_service import DEMO_VARIANTS, ensure_demo_environment
 
     # Already in demo mode -> just switching roles, re-validate the stashed
     # return account rather than the current (demo) user. Otherwise this is
@@ -1232,6 +1240,7 @@ def demo_login(role):
             flask_session.pop("demo_admin_user_id", None)
             flask_session.pop("is_demo_mode", None)
             flask_session.pop("demo_role", None)
+            flask_session.pop("demo_variant", None)
             flash("Demo session is no longer valid. Please log in again.", "warning")
             return redirect(url_for("auth.login"))
     elif not _can_use_demo_login(current_user):
@@ -1242,7 +1251,11 @@ def demo_login(role):
         flash("Unknown demo role.", "danger")
         return redirect(url_for("admin.demo_center"))
 
-    demo_users = ensure_demo_environment()
+    variant = request.form.get("variant") or "ravlo"
+    if variant not in DEMO_VARIANTS:
+        variant = "ravlo"
+
+    demo_users = ensure_demo_environment(variant)
     target_user = demo_users[role]
 
     if not already_in_demo:
@@ -1252,6 +1265,7 @@ def demo_login(role):
     login_user(target_user)
     flask_session["is_demo_mode"] = True
     flask_session["demo_role"] = role
+    flask_session["demo_variant"] = variant
 
     dashboard_endpoint = _DEMO_ROLE_DASHBOARD_ENDPOINTS[role]
     if role == "admin":
@@ -1268,6 +1282,7 @@ def demo_exit():
     return_user_id = flask_session.pop("demo_admin_user_id", None)
     flask_session.pop("is_demo_mode", None)
     flask_session.pop("demo_role", None)
+    flask_session.pop("demo_variant", None)
 
     if not return_user_id:
         flash("You're not in demo mode.", "info")
