@@ -92,6 +92,20 @@ button{
   flex:0 0 auto;
 }
 
+.rb-brand-logo-badge{
+  padding:8px 10px;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 6px 18px rgba(0,0,0,.24);
+}
+
+.rb-brand-logo-img{
+  display:block;
+  height:38px;
+  width:auto;
+  max-width:140px;
+}
+
 .rb-mark{
   width:38px;
   height:38px;
@@ -101,9 +115,8 @@ button{
   font-weight:800;
   letter-spacing:.08em;
   color:#F4F8FC;
-  background:
-    linear-gradient(180deg, rgba(95,168,255,.22), rgba(95,168,255,.10));
-  border:1px solid rgba(255,255,255,.10);
+  background: var(--brand-mark-bg, linear-gradient(180deg, rgba(95,168,255,.22), rgba(95,168,255,.10)));
+  border:1px solid var(--brand-mark-border, rgba(255,255,255,.10));
 }
 
 .rb-name{
