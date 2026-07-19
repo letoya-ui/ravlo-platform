@@ -334,4 +334,74 @@ def test_white_label_company_without_logo_url_falls_back_to_text_mark(db_session
     body = resp.get_data(as_text=True)
     assert "TEXTMARK CAPITAL" in body
     assert ">TC<" in body
+
+
+# ---------------------------------------------------------------------------
+# Executive sidebar's "Demo Center" link hits a SEPARATE route
+# (executive.demo_center in executive_new.py) that renders the same
+# admin/demo_center.html template. That route originally never passed
+# demo_variants/variant into the template context, so Jinja's
+# "{% if can_use_demo_login and demo_variants %}" gate silently evaluated
+# false and the whole toggle disappeared for executives -- even though the
+# exact same feature worked fine on admin.demo_center. The toggle's own
+# links were also hardcoded to admin.demo_center instead of following
+# whichever namespace rendered the page.
+# ---------------------------------------------------------------------------
+
+def _make_ravlo_executive(db_session, email="letoya@ravlohq.com", role="executive"):
+    company = Company.query.filter_by(name="Ravlo").first()
+    if not company:
+        company = Company(name="Ravlo", email_domain="ravlohq.com", is_active=True, subscription_tier="enterprise")
+        db_session.add(company)
+        db_session.commit()
+    user = User(email=email, role=role, company_id=company.id, is_active=True)
+    db_session.add(user)
+    db_session.commit()
+    return user
+
+
+def test_executive_demo_center_shows_demo_company_toggle(db_session, client):
+    exec_user = _make_ravlo_executive(db_session)
+    login_as(client, exec_user)
+
+    resp = client.get("/executive/demo-center")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "DEMO COMPANY" in body
+    assert "Meridian Capital (White Label)" in body
+
+
+def test_executive_demo_center_white_label_variant_shows_callout(db_session, client):
+    exec_user = _make_ravlo_executive(db_session)
+    login_as(client, exec_user)
+
+    resp = client.get("/executive/demo-center?variant=white_label")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "use this when a prospect is asking about White Label" in body
+
+
+def test_executive_demo_center_toggle_links_stay_in_executive_namespace(db_session, client):
+    exec_user = _make_ravlo_executive(db_session)
+    login_as(client, exec_user)
+
+    resp = client.get("/executive/demo-center")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "/executive/demo-center?variant=white_label" in body
+    assert "/admin/demo-center?variant=white_label" not in body
+
+
+def test_executive_demo_center_login_form_respects_white_label_variant(db_session, client):
+    exec_user = _make_ravlo_executive(db_session)
+    login_as(client, exec_user)
+
+    resp = client.get("/executive/demo-center?variant=white_label")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert 'name="variant" value="white_label"' in body
     assert "re-brand-logo-badge" not in body

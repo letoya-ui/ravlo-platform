@@ -1266,6 +1266,8 @@ def bid_support_update_status(bid_id):
 @executive_bp.route("/demo-center")
 @login_required
 def demo_center():
+    from LoanMVP.services.demo_environment_service import DEMO_VARIANTS
+
     access_redirect = _ensure_executive_access()
     if access_redirect:
         return access_redirect
@@ -1276,6 +1278,11 @@ def demo_center():
         "single_admin_mode": "Disabled",
         "owner_admin_email": (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower() or "Not set",
     }
+
+    variant = request.args.get("variant") or "ravlo"
+    if variant not in DEMO_VARIANTS:
+        variant = "ravlo"
+
     return render_template(
         "admin/demo_center.html",
         demo_dashboards=demo_dashboards,
@@ -1284,6 +1291,8 @@ def demo_center():
         owner_admin_email="",
         route_namespace="executive",
         can_use_demo_login=admin_routes._can_use_demo_login(current_user),
+        demo_variants=DEMO_VARIANTS,
+        variant=variant,
     )
 
 
