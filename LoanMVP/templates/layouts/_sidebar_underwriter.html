@@ -1,5 +1,10 @@
 {% set brand = effective_brand(current_user.company) %}
 {% set _is_white_label = brand.name != "Ravlo" %}
+{% if brand.logo_url %}
+<div class="re-brand-logo-badge">
+  <img src="{{ url_for('static', filename=brand.logo_url) }}" class="re-brand-logo-img" alt="{{ brand.name }}">
+</div>
+{% else %}
 <div class="re-brand"{% if _is_white_label %} style="--brand-mark-bg: linear-gradient(180deg, {{ brand.primary }}, {{ brand.accent }}); --brand-mark-border: {{ brand.accent }};"{% endif %}>
   <div class="re-mark"><span>{{ brand.mark }}</span></div>
   <div>
@@ -7,6 +12,7 @@
     <div class="re-brand-sub"{% if _is_white_label %} style="color:{{ brand.accent }};"{% endif %}>{{ brand.tagline or "Underwriter OS" }}</div>
   </div>
 </div>
+{% endif %}
 
 <nav class="re-nav">
 

@@ -193,6 +193,22 @@ textarea{
   border-bottom:1px solid rgba(255,255,255,.06);
 }
 
+.re-brand-logo-badge{
+  width:100%;
+  padding:14px 12px;
+  border-radius:16px;
+  background:#fff;
+  box-shadow:0 6px 18px rgba(0,0,0,.28);
+}
+
+.re-brand-logo-img{
+  display:block;
+  width:100%;
+  max-width:170px;
+  height:auto;
+  margin:0 auto;
+}
+
 .re-mark,
 .rl-mark{
   width:46px;

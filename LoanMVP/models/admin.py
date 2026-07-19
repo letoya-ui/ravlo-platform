@@ -45,6 +45,10 @@ class Company(db.Model):
     brand_secondary_color = db.Column(db.String(9), nullable=True)
     brand_accent_color = db.Column(db.String(9), nullable=True)
     brand_tagline = db.Column(db.String(160), nullable=True)
+    # Static-relative path (under LoanMVP/static/) to a full logo lockup
+    # image. When set, the sidebar renders this image instead of the
+    # text-based name/mark -- e.g. "images/demo/meridian_capital_logo.png".
+    brand_logo_url = db.Column(db.String(255), nullable=True)
 
     users = db.relationship("User", back_populates="company", foreign_keys="User.company_id", lazy=True)
     invites = db.relationship("UserInvite", back_populates="company", lazy=True)

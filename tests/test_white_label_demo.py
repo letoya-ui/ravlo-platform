@@ -152,6 +152,7 @@ def test_ensure_demo_environment_white_label_variant_creates_distinct_branded_co
     assert brand.primary == "#0F2D52"
     assert brand.accent == "#C9A227"
     assert brand.tagline == "Guiding Capital. Building Futures."
+    assert brand.logo_url == "images/demo/meridian_capital_logo.png"
 
 
 def test_ensure_demo_environment_variants_do_not_share_data(db_session):
@@ -177,6 +178,7 @@ def test_ensure_demo_environment_self_heals_drifted_branding(db_session):
     company.subscription_tier = "enterprise"
     company.brand_primary_color = "#000000"
     company.brand_tagline = "Wrong tagline"
+    company.brand_logo_url = "images/wrong.png"
     from LoanMVP.extensions import db
     db.session.commit()
 
@@ -187,6 +189,7 @@ def test_ensure_demo_environment_self_heals_drifted_branding(db_session):
     assert healed.brand_name == "Meridian Capital"
     assert healed.brand_primary_color == "#0F2D52"
     assert healed.brand_tagline == "Guiding Capital. Building Futures."
+    assert healed.brand_logo_url == "images/demo/meridian_capital_logo.png"
 
 
 # ---------------------------------------------------------------------------
@@ -265,11 +268,8 @@ def test_demo_login_white_label_variant_renders_meridian_branding_in_sidebar(db_
 
     assert dashboard_resp.status_code == 200
     body = dashboard_resp.get_data(as_text=True)
-    assert "MERIDIAN CAPITAL" in body
-    assert ">MC<" in body
-    assert "Guiding Capital. Building Futures." in body
-    assert "#0F2D52" in body
-    assert "#C9A227" in body
+    assert "images/demo/meridian_capital_logo.png" in body
+    assert 'alt="Meridian Capital"' in body
 
 
 def test_demo_login_missing_variant_defaults_to_ravlo_branding(db_session, client):
@@ -288,3 +288,50 @@ def test_demo_login_missing_variant_defaults_to_ravlo_branding(db_session, clien
     assert ">RV<" in body
     with client.session_transaction() as sess:
         assert sess.get("demo_variant") == "ravlo"
+
+
+# ---------------------------------------------------------------------------
+# A real (non-demo) white-label company that hasn't uploaded a logo image
+# yet still gets the text name/mark treatment, not a broken <img> tag --
+# logo_url is optional, most self-serve companies won't have one.
+# ---------------------------------------------------------------------------
+
+def test_white_label_company_without_logo_url_falls_back_to_text_mark(db_session, client):
+    from LoanMVP.models.loan_officer_model import LoanOfficerProfile
+
+    company = Company(
+        name="Textmark Lending",
+        is_active=True,
+        subscription_tier="white_label",
+        brand_name="Textmark Capital",
+        brand_logo_initials="TC",
+        brand_primary_color="#112233",
+        brand_accent_color="#445566",
+        max_users=10,
+    )
+    db_session.add(company)
+    db_session.commit()
+
+    user = User(
+        email="lo@textmark-lending.com",
+        role="loan_officer",
+        is_active=True,
+        company_id=company.id,
+        nda_accepted=True,
+        ica_accepted=True,
+        onboarding_complete=True,
+        invite_accepted=True,
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.add(LoanOfficerProfile(user_id=user.id, name="Lonnie Officer", email=user.email))
+    db_session.commit()
+
+    login_as(client, user)
+    resp = client.get("/loan_officer/dashboard")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "TEXTMARK CAPITAL" in body
+    assert ">TC<" in body
+    assert "re-brand-logo-badge" not in body

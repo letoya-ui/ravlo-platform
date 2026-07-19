@@ -6,6 +6,13 @@
   {% set brand = effective_brand(current_user.company) %}
   {% set _is_white_label = (is_executive_sidebar or is_company_admin) and brand.name != "Ravlo" %}
 
+  {% if (is_executive_sidebar or is_company_admin) and brand.logo_url %}
+  <a href="{% if is_executive_sidebar %}{{ url_for('executive.dashboard') }}{% else %}{{ url_for('admin.company_dashboard', company_id=current_user.company_id) }}{% endif %}" class="re-brand-link">
+    <div class="re-brand-logo-badge">
+      <img src="{{ url_for('static', filename=brand.logo_url) }}" class="re-brand-logo-img" alt="{{ brand.name }}">
+    </div>
+  </a>
+  {% else %}
   <div class="re-brand"{% if _is_white_label %} style="--brand-mark-bg: linear-gradient(180deg, {{ brand.primary }}, {{ brand.accent }}); --brand-mark-border: {{ brand.accent }};"{% endif %}>
     <a href="{% if is_executive_sidebar %}{{ url_for('executive.dashboard') }}{% elif is_company_admin %}{{ url_for('admin.company_dashboard', company_id=current_user.company_id) }}{% else %}{{ url_for('admin.dashboard') }}{% endif %}" class="re-brand-link">
       <div class="re-brand-mark">{% if is_executive_sidebar or is_company_admin %}{{ brand.mark }}{% else %}R{% endif %}</div>
@@ -15,6 +22,7 @@
       </div>
     </a>
   </div>
+  {% endif %}
 
   <nav class="re-nav">
 
