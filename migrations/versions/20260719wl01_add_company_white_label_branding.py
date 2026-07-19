@@ -5,10 +5,10 @@ Revises: 20260718ae04
 Create Date: 2026-07-19 00:30:00.000000
 
 Adds brand_name/brand_logo_initials/brand_primary_color/
-brand_secondary_color/brand_accent_color/brand_tagline/brand_logo_url to
-companies -- only rendered in place of Ravlo's own branding when a
-company is on the "white_label" subscription tier AND has actually set
-these (see LoanMVP/utils/branding.py's effective_brand()).
+brand_secondary_color/brand_accent_color/brand_tagline to companies --
+only rendered in place of Ravlo's own branding when a company is on the
+"white_label" subscription tier AND has actually set these (see
+LoanMVP/utils/branding.py's effective_brand()).
 """
 
 from alembic import op
@@ -39,7 +39,6 @@ _PLAIN_COLUMNS = [
     ("brand_secondary_color", sa.String(9)),
     ("brand_accent_color", sa.String(9)),
     ("brand_tagline", sa.String(160)),
-    ("brand_logo_url", sa.String(255)),
 ]
 
 
