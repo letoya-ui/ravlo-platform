@@ -41,12 +41,6 @@
     <i class="lucide lucide-receipt"></i>
     <span>Insurance Finance</span>
   </a>
-  {% if is_combined %}
-  <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn ghost sm">
-    <i class="lucide lucide-house-plus"></i>
-    <span>Add Listing</span>
-  </a>
-  {% endif %}
   {% if 'ai_pilot' in modules %}
   <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">
     <i class="lucide lucide-sparkles"></i>
@@ -75,42 +69,10 @@
       <div class="combo-role-strip" aria-label="Workspace lanes">
         <span><i class="lucide lucide-shield-check"></i> Insurance</span>
         {% if is_combined %}<span><i class="lucide lucide-home"></i> Realtor</span>{% endif %}
-        {% if has_property_management %}<span><i class="lucide lucide-building-2"></i> Property Management</span>{% endif %}
-        <span><i class="lucide lucide-users"></i> Client pipeline</span>
-      </div>
-      <div class="combo-hero-actions">
-        <a href="{{ url_for('vip.insurance_new_quote', line='homeowners') }}" class="ravlo-btn primary">
-          <i class="lucide lucide-file-plus"></i>
-          <span>New Quote Request</span>
-        </a>
-        <a href="{{ url_for('vip.insurance_quote_requests') }}" class="ravlo-btn ghost">
-          <i class="lucide lucide-inbox"></i>
-          <span>Quote Requests</span>
-        </a>
-        <a href="{{ url_for('vip.insurance_compose_email') }}" class="ravlo-btn ghost">
-          <i class="lucide lucide-mail"></i>
-          <span>Draft Email</span>
-        </a>
-        <a href="{{ url_for('vip.insurance_clients') }}" class="ravlo-btn ghost">
-          <i class="lucide lucide-users"></i>
-          <span>Insurance CRM</span>
-        </a>
-        <a href="{{ url_for('vip.insurance_finance') }}" class="ravlo-btn ghost">
-          <i class="lucide lucide-receipt"></i>
-          <span>Insurance Finance</span>
-        </a>
-        {% if is_combined %}
-        <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn ghost">
-          <i class="lucide lucide-user-plus"></i>
-          <span>Add Realtor Client</span>
-        </a>
-        {% endif %}
         {% if has_property_management %}
-        <a href="{{ url_for('property.dashboard') }}" class="ravlo-btn ghost">
-          <i class="lucide lucide-building-2"></i>
-          <span>Property Management</span>
-        </a>
+        <a href="{{ url_for('property.dashboard') }}"><i class="lucide lucide-building-2"></i> Property Management</a>
         {% endif %}
+        <span><i class="lucide lucide-users"></i> Client pipeline</span>
       </div>
     </div>
 
@@ -138,65 +100,67 @@
     </aside>
   </section>
 
-  <section class="combo-stat-grid" aria-label="Dashboard summary">
-    {% if is_combined %}
-    <article class="combo-stat-card accent-clients">
-      <span>Realtor CRM</span>
-      <strong>{{ summary.total_clients }}</strong>
-      <small>{{ summary.new_leads }} new this week</small>
-    </article>
-    {% endif %}
-    <article class="combo-stat-card accent-insurance">
-      <span>Insurance CRM</span>
-      <strong>{{ insurance_crm.total_contacts }}</strong>
-      <small>{{ insurance_stats.total_quotes }} quote requests</small>
-    </article>
-    <article class="combo-stat-card accent-requests">
-      <span>Quote Requests</span>
-      <strong>{{ insurance_stats.total_quotes }}</strong>
-      <small>{{ insurance_stats.pending }} pending</small>
-    </article>
-    <article class="combo-stat-card accent-bound">
-      <span>Policies Bound</span>
-      <strong>{{ insurance_stats.bound }}</strong>
-      <small>{{ insurance_stats.sent }} sent</small>
-    </article>
-    {% if is_combined %}
-    <article class="combo-stat-card accent-listings">
-      <span>Active Listings</span>
-      <strong>{{ summary.active_listings }}</strong>
-      <small>{% if current_market != "All Markets" %}{{ current_market }}{% else %}All markets{% endif %}</small>
-    </article>
-    <article class="combo-stat-card accent-followups">
-      <span>Follow-ups Due</span>
-      <strong>{{ summary.followups_due }}</strong>
-      <small>Next 7 days</small>
-    </article>
-    {% endif %}
-  </section>
-
-  <section class="combo-panel">
-    <div class="combo-section-head">
-      <div>
-        <span class="combo-section-kicker">{% if is_combined %}CRM separation{% else %}Client management{% endif %}</span>
-        <h3>{% if is_combined %}Separate Client Workspaces{% else %}Client Workspaces{% endif %}</h3>
+  <section class="combo-stat-lanes" aria-label="Dashboard summary">
+    <div class="combo-stat-lane">
+      <span class="combo-lane-label"><i class="lucide lucide-shield-check"></i> Insurance</span>
+      <div class="combo-stat-grid">
+        <a href="{{ url_for('vip.insurance_clients') }}" class="combo-stat-card accent-insurance">
+          <span>Insurance CRM</span>
+          <strong>{{ insurance_crm.total_contacts }}</strong>
+          <small>{{ insurance_stats.total_quotes }} quote requests</small>
+        </a>
+        <a href="{{ url_for('vip.insurance_quote_requests') }}" class="combo-stat-card accent-requests">
+          <span>Quote Requests</span>
+          <strong>{{ insurance_stats.total_quotes }}</strong>
+          <small>{{ insurance_stats.pending }} pending</small>
+        </a>
+        <div class="combo-stat-card accent-bound">
+          <span>Policies Bound</span>
+          <strong>{{ insurance_stats.bound }}</strong>
+          <small>{{ insurance_stats.sent }} sent</small>
+        </div>
       </div>
     </div>
 
-    <div class="combo-crm-grid">
-      {% if is_combined %}
-      <article class="combo-crm-card realtor-crm">
-        <div class="combo-crm-head">
+    {% if is_combined %}
+    <div class="combo-stat-lane">
+      <span class="combo-lane-label"><i class="lucide lucide-home"></i> Realtor</span>
+      <div class="combo-stat-grid">
+        <a href="#pipeline-snapshot" class="combo-stat-card accent-clients">
+          <span>Realtor CRM</span>
+          <strong>{{ summary.total_clients }}</strong>
+          <small>{{ summary.new_leads }} new this week</small>
+        </a>
+        <a href="#property-desk" class="combo-stat-card accent-listings">
+          <span>Active Listings</span>
+          <strong>{{ summary.active_listings }}</strong>
+          <small>{% if current_market != "All Markets" %}{{ current_market }}{% else %}All markets{% endif %}</small>
+        </a>
+        <a href="#pipeline-snapshot" class="combo-stat-card accent-followups">
+          <span>Follow-ups Due</span>
+          <strong>{{ summary.followups_due }}</strong>
+          <small>Next 7 days</small>
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </section>
+
+  {% if is_combined %}
+  <section class="combo-panel">
+    <div class="combo-section-head">
+      <div>
+        <span class="combo-section-kicker">Recent activity</span>
+        <h3>Recent Contacts</h3>
+      </div>
+    </div>
+
+    <div class="combo-contacts-grid">
+      <div class="combo-contacts-col">
+        <div class="combo-contacts-head">
           <i class="lucide lucide-home"></i>
-          <div>
-            <strong>Realtor CRM</strong>
-            <span>{{ client_scope_label }}</span>
-          </div>
-        </div>
-        <p>Buyers, sellers, listing prospects, showings, MLS intake, and real estate follow-ups.</p>
-        <div class="combo-crm-metrics">
-          <span>{{ summary.total_clients }} clients</span>
-          <span>{{ summary.active_listings }} listings</span>
+          <strong>Realtor CRM</strong>
+          <span>{{ client_scope_label }}</span>
         </div>
         {% if realtor_clients %}
         <div class="combo-crm-list">
@@ -210,21 +174,13 @@
         {% else %}
           <div class="combo-empty">No realtor clients in this CRM scope yet.</div>
         {% endif %}
-      </article>
-      {% endif %}
+      </div>
 
-      <article class="combo-crm-card insurance-crm">
-        <div class="combo-crm-head">
+      <div class="combo-contacts-col">
+        <div class="combo-contacts-head">
           <i class="lucide lucide-shield-check"></i>
-          <div>
-            <strong>Insurance CRM</strong>
-            <span>VIP contacts tagged for coverage</span>
-          </div>
-        </div>
-        <p>Policyholders, coverage prospects, quote contacts, renewal follow-ups, and bound-policy notes.</p>
-        <div class="combo-crm-metrics">
-          <span>{{ insurance_crm.total_contacts }} contacts</span>
-          <span>{{ insurance_stats.bound }} bound</span>
+          <strong>Insurance CRM</strong>
+          <span>VIP contacts tagged for coverage</span>
         </div>
         {% if insurance_crm.insurance_contacts %}
         <div class="combo-crm-list">
@@ -242,36 +198,10 @@
           <i class="lucide lucide-arrow-right"></i>
           <span>Open Insurance CRM</span>
         </a>
-      </article>
-
-      <article class="combo-crm-card request-crm">
-        <div class="combo-crm-head">
-          <i class="lucide lucide-inbox"></i>
-          <div>
-            <strong>Request Inbox</strong>
-            <span>Not a CRM record yet</span>
-          </div>
-        </div>
-        <p>Incoming lead and quote requests stay in intake until Keyona accepts, completes, or converts the relationship.</p>
-        <div class="combo-crm-metrics">
-          <span>{{ partner_request_stats.pending }} pending</span>
-          <span>{{ partner_request_stats.accepted }} accepted</span>
-        </div>
-        {% if visible_requests %}
-        <div class="combo-crm-list">
-          {% for req in visible_requests[:4] %}
-          <div>
-            <span>{{ req.requester_name() }}</span>
-            <small>{{ req.title or req.request_type or req.category or "Client request" }}</small>
-          </div>
-          {% endfor %}
-        </div>
-        {% else %}
-          <div class="combo-empty">No intake requests yet.</div>
-        {% endif %}
-      </article>
+      </div>
     </div>
   </section>
+  {% endif %}
 
   <section class="combo-lane-grid">
     <article class="combo-lane-panel">
@@ -310,16 +240,22 @@
     </article>
 
     {% if is_combined %}
-    <article class="combo-lane-panel">
+    <article class="combo-lane-panel" id="pipeline-snapshot">
       <div class="combo-section-head">
         <div>
           <span class="combo-section-kicker">Realtor CRM</span>
           <h3>Pipeline Snapshot</h3>
         </div>
-        <a href="{{ url_for('elena.import_contacts') }}" class="ravlo-btn ghost sm">
-          <i class="lucide lucide-upload"></i>
-          <span>Import Realtor Clients</span>
-        </a>
+        <div class="combo-section-actions">
+          <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn ghost sm">
+            <i class="lucide lucide-user-plus"></i>
+            <span>Add Client</span>
+          </a>
+          <a href="{{ url_for('elena.import_contacts') }}" class="ravlo-btn ghost sm">
+            <i class="lucide lucide-upload"></i>
+            <span>Import</span>
+          </a>
+        </div>
       </div>
 
       <div class="combo-pipeline-grid">
@@ -399,7 +335,7 @@
         <div class="combo-section-head">
           <div>
             <span class="combo-section-kicker">Requests</span>
-            <h3>Lead and Quote Requests</h3>
+            <h3>Requests</h3>
           </div>
           <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
             <i class="lucide lucide-inbox"></i>
@@ -413,64 +349,65 @@
           <div><span>Completed</span><strong>{{ partner_request_stats.completed }}</strong></div>
         </div>
 
-        {% if visible_requests %}
-        <div class="combo-request-list">
-          {% for req in visible_requests[:5] %}
-          <article class="combo-request-item">
-            <div>
-              <strong>{{ req.title or req.request_type or req.category or "Client Request" }}</strong>
-              <span>{{ req.requester_name() }}</span>
-              {% if req.related_address() %}<small>{{ req.related_address() }}</small>{% endif %}
-            </div>
-            <div class="combo-request-meta">
-              <span class="combo-status status-{{ (req.status or 'pending')|lower|replace('_', '-') }}">
-                {{ (req.status or "pending") | replace("_", " ") | title }}
-              </span>
-              {% if req.budget %}<small>${{ "{:,.0f}".format(req.budget) }}</small>{% endif %}
-            </div>
-          </article>
-          {% endfor %}
-        </div>
-        {% else %}
-          <div class="combo-empty">No requests yet. New insurance, realtor, and partner requests will appear here.</div>
-        {% endif %}
-      </section>
+        <div class="combo-tabs">
+          <input type="radio" name="requests-tab" id="tab-general" checked>
+          <input type="radio" name="requests-tab" id="tab-insurance">
 
-      <section class="combo-panel">
-        <div class="combo-section-head">
-          <div>
-            <span class="combo-section-kicker">Insurance</span>
-            <h3>Recent Quote Requests</h3>
+          <div class="combo-tab-bar">
+            <label for="tab-general">Client &amp; Listing Requests</label>
+            <label for="tab-insurance">Insurance Quotes</label>
           </div>
-          <a href="{{ url_for('vip.insurance_quote_requests') }}" class="ravlo-btn ghost sm">
-            <i class="lucide lucide-inbox"></i>
-            <span>View All</span>
-          </a>
-        </div>
 
-        {% if recent_quote_requests %}
-        <div class="combo-request-list">
-          {% for qr in recent_quote_requests[:5] %}
-          <article class="combo-request-item">
-            <div>
-              <strong>{{ qr.client_name }}</strong>
-              <span>{{ qr.insurance_line|replace('_', ' ')|title }}</span>
-              {% if qr.client_phone %}<small>{{ qr.client_phone }}</small>{% endif %}
+          <div class="combo-tab-panel" data-tab="general">
+            {% if visible_requests %}
+            <div class="combo-request-list">
+              {% for req in visible_requests[:5] %}
+              <article class="combo-request-item">
+                <div>
+                  <strong>{{ req.title or req.request_type or req.category or "Client Request" }}</strong>
+                  <span>{{ req.requester_name() }}</span>
+                  {% if req.related_address() %}<small>{{ req.related_address() }}</small>{% endif %}
+                </div>
+                <div class="combo-request-meta">
+                  <span class="combo-status status-{{ (req.status or 'pending')|lower|replace('_', '-') }}">
+                    {{ (req.status or "pending") | replace("_", " ") | title }}
+                  </span>
+                  {% if req.budget %}<small>${{ "{:,.0f}".format(req.budget) }}</small>{% endif %}
+                </div>
+              </article>
+              {% endfor %}
             </div>
-            <div class="combo-request-meta">
-              <span class="combo-status status-{{ qr.status }}">{{ qr.status|replace('_', ' ')|title }}</span>
-              <small>{{ qr.created_at.strftime('%b %d') if qr.created_at else '' }}</small>
+            {% else %}
+              <div class="combo-empty">No requests yet. New insurance, realtor, and partner requests will appear here.</div>
+            {% endif %}
+          </div>
+
+          <div class="combo-tab-panel" data-tab="insurance">
+            {% if recent_quote_requests %}
+            <div class="combo-request-list">
+              {% for qr in recent_quote_requests[:5] %}
+              <article class="combo-request-item">
+                <div>
+                  <strong>{{ qr.client_name }}</strong>
+                  <span>{{ qr.insurance_line|replace('_', ' ')|title }}</span>
+                  {% if qr.client_phone %}<small>{{ qr.client_phone }}</small>{% endif %}
+                </div>
+                <div class="combo-request-meta">
+                  <span class="combo-status status-{{ qr.status }}">{{ qr.status|replace('_', ' ')|title }}</span>
+                  <small>{{ qr.created_at.strftime('%b %d') if qr.created_at else '' }}</small>
+                </div>
+              </article>
+              {% endfor %}
             </div>
-          </article>
-          {% endfor %}
+            {% else %}
+              <div class="combo-empty">No quote requests yet. New submissions from the form or public link will appear here.</div>
+            {% endif %}
+          </div>
         </div>
-        {% else %}
-          <div class="combo-empty">No quote requests yet. New submissions from the form or public link will appear here.</div>
-        {% endif %}
       </section>
 
       {% if is_combined %}
-      <section class="combo-panel">
+      <section class="combo-panel" id="property-desk">
         <div class="combo-section-head">
           <div>
             <span class="combo-section-kicker">Listings</span>
@@ -545,9 +482,10 @@
       <section class="combo-panel compact">
         <div class="combo-section-head">
           <div>
-            <span class="combo-section-kicker">Listing intake</span>
-            <h3>MLS Entry</h3>
+            <span class="combo-section-kicker">Listings</span>
+            <h3>Listing Tools</h3>
           </div>
+          <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Setup</a>
         </div>
 
         <form method="GET" action="{{ url_for('elena.listing_new') }}" class="combo-stacked-form">
@@ -569,20 +507,12 @@
             <span>Start Listing</span>
           </button>
         </form>
-      </section>
 
-      <section class="combo-panel compact">
-        <div class="combo-section-head">
-          <div>
-            <span class="combo-section-kicker">Automation</span>
-            <h3>Listing Feed</h3>
-          </div>
-          <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Setup</a>
-        </div>
+        <div class="combo-tool-divider"></div>
 
         <div class="combo-copy-fields">
           <label>
-            Webhook URL
+            Automated Feed Webhook URL
             <input type="text" value="{{ listing_sync_url }}" readonly>
           </label>
           <label>
@@ -739,14 +669,14 @@
   }
 
   .combo-role-strip,
-  .combo-hero-actions,
   .combo-section-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
   }
 
-  .combo-role-strip span {
+  .combo-role-strip span,
+  .combo-role-strip a {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -756,6 +686,12 @@
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.09);
     font-size: 0.86rem;
+    text-decoration: none;
+  }
+
+  .combo-role-strip a:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(99, 210, 255, 0.35);
   }
 
   .combo-brand-card {
@@ -843,14 +779,38 @@
     outline: 0;
   }
 
+  .combo-stat-lanes {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .combo-stat-lane {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .combo-lane-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    width: fit-content;
+    color: #9fb1c5;
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
   .combo-stat-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
   }
 
   .combo-stat-card {
-    min-height: 118px;
+    min-height: 110px;
     padding: 16px;
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.10);
@@ -859,6 +819,14 @@
     flex-direction: column;
     justify-content: space-between;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 160ms ease, transform 160ms ease;
+  }
+
+  a.combo-stat-card:hover {
+    border-color: rgba(99, 210, 255, 0.35);
+    transform: translateY(-1px);
   }
 
   .combo-stat-card span,
@@ -888,36 +856,27 @@
   .accent-followups { border-top: 3px solid #b79cff; }
   .accent-requests { border-top: 3px solid #9fd3b8; }
 
-  .combo-crm-grid {
+  .combo-contacts-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
   }
 
-  .combo-crm-card {
-    min-height: 280px;
-    padding: 14px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    background: rgba(255, 255, 255, 0.035);
+  .combo-contacts-col {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 
-  .combo-crm-card.realtor-crm { border-top: 3px solid #f2c96d; }
-  .combo-crm-card.insurance-crm { border-top: 3px solid #63d2ff; }
-  .combo-crm-card.request-crm { border-top: 3px solid #9fd3b8; }
-
-  .combo-crm-head {
+  .combo-contacts-head {
     display: flex;
     align-items: center;
     gap: 10px;
   }
 
-  .combo-crm-head i {
-    width: 38px;
-    height: 38px;
+  .combo-contacts-head i {
+    width: 32px;
+    height: 32px;
     display: grid;
     place-items: center;
     flex: 0 0 auto;
@@ -926,40 +885,15 @@
     background: rgba(255, 255, 255, 0.07);
   }
 
-  .combo-crm-head strong,
-  .combo-crm-head span {
+  .combo-contacts-head strong {
+    color: #ffffff;
     display: block;
   }
 
-  .combo-crm-head strong {
-    color: #ffffff;
-    line-height: 1.25;
-  }
-
-  .combo-crm-head span,
-  .combo-crm-card p,
-  .combo-crm-list small {
+  .combo-contacts-head span {
+    display: block;
     color: #9fb1c5;
-  }
-
-  .combo-crm-card p {
-    margin: 0;
-    line-height: 1.5;
-    font-size: 0.9rem;
-  }
-
-  .combo-crm-metrics {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .combo-crm-metrics span {
-    padding: 9px 10px;
-    border-radius: 8px;
-    color: #dcecff;
-    background: rgba(255, 255, 255, 0.05);
-    font-size: 0.84rem;
+    font-size: 0.8rem;
   }
 
   .combo-crm-list {
@@ -1195,7 +1129,7 @@
   }
 
   .combo-request-summary {
-    margin-bottom: 12px;
+    margin-bottom: 16px;
   }
 
   .combo-request-summary span,
@@ -1214,6 +1148,47 @@
     margin-top: 4px;
     color: #ffffff;
     font-size: 1.25rem;
+  }
+
+  .combo-tabs input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .combo-tab-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .combo-tab-bar label {
+    cursor: pointer;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #9fb1c5;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+
+  .combo-tab-panel {
+    display: none;
+  }
+
+  #tab-general:checked ~ .combo-tab-bar label[for="tab-general"],
+  #tab-insurance:checked ~ .combo-tab-bar label[for="tab-insurance"] {
+    color: #ffffff;
+    background: rgba(99, 210, 255, 0.16);
+    border-color: rgba(99, 210, 255, 0.35);
+  }
+
+  #tab-general:checked ~ .combo-tab-panel[data-tab="general"],
+  #tab-insurance:checked ~ .combo-tab-panel[data-tab="insurance"] {
+    display: block;
   }
 
   .combo-request-list,
@@ -1349,6 +1324,12 @@
     justify-content: center;
   }
 
+  .combo-tool-divider {
+    height: 1px;
+    margin: 16px 0;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
   .combo-copy-fields input {
     font-size: 0.78rem;
   }
@@ -1377,10 +1358,6 @@
   }
 
   @media (max-width: 1180px) {
-    .combo-stat-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
     .combo-line-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -1391,7 +1368,8 @@
     .combo-lane-grid,
     .combo-work-grid,
     .combo-market-grid,
-    .combo-crm-grid {
+    .combo-contacts-grid,
+    .combo-stat-grid {
       grid-template-columns: 1fr;
     }
 
