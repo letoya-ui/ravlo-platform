@@ -182,6 +182,18 @@ from LoanMVP.models.training_models import (
 # 🔭 Discovery / Crawler tracking
 from LoanMVP.models.discovery_models import DiscoveryEvent
 
+# 💇 Salon / Stylist vertical
+from LoanMVP.models.salon_models import (
+    StylistProfile,
+    SalonClient,
+    Appointment,
+    ClientFormula,
+    ClientPhoto,
+    ProductSale,
+    SalonReview,
+    LoyaltyTransaction,
+)
+
 # ======================================================
 # 🧩 SQLAlchemy Export (for Migrate / Shell)
 # ======================================================
@@ -259,4 +271,14 @@ __all__ = [
     # Demo scheduling
     "DemoAvailability",
     "DemoBooking",
+
+    # Salon / Stylist vertical
+    "StylistProfile",
+    "SalonClient",
+    "Appointment",
+    "ClientFormula",
+    "ClientPhoto",
+    "ProductSale",
+    "SalonReview",
+    "LoyaltyTransaction",
 ]

@@ -1,0 +1,87 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Reviews{% endblock %}
+
+{% block page_title %}Reviews{% endblock %}
+{% block page_subline %}Keep client feedback on file, from any source.{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-grid-4">
+    <div class="ravlo-kpi">
+      <div class="label">Average Rating</div>
+      <div class="value">{{ avg_rating if avg_rating is not none else "—" }}{% if avg_rating is not none %}<small style="font-size:.5em;"> / 5</small>{% endif %}</div>
+      <div class="re-card-subtitle">{{ reviews|length }} review{{ "s" if reviews|length != 1 }}</div>
+    </div>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">NEW</div>
+        <h3 style="margin:.35rem 0 .2rem;">Add a Review</h3>
+      </div>
+    </div>
+
+    <form method="POST" class="settings-form mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="client_name">Client Name</label>
+          <input id="client_name" name="client_name" type="text" required>
+        </div>
+        <div class="field">
+          <label for="rating">Rating</label>
+          <select id="rating" name="rating" required>
+            <option value="">— Select —</option>
+            {% for n in range(5, 0, -1) %}
+              <option value="{{ n }}">{{ n }} / 5</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="source">Source</label>
+          <select id="source" name="source">
+            <option value="direct">Direct</option>
+            <option value="google">Google</option>
+            <option value="instagram">Instagram</option>
+            <option value="facebook">Facebook</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="comment">Comment</label>
+          <input id="comment" name="comment" type="text">
+        </div>
+      </div>
+      <button type="submit" class="re-btn primary">
+        <i class="lucide lucide-star"></i>
+        Add Review
+      </button>
+    </form>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ALL REVIEWS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Reviews</h3>
+      </div>
+    </div>
+
+    <div class="mt-16" style="display:grid;gap:10px;">
+      {% for review in reviews %}
+      <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+        <strong style="color:#f4f7fb;">{{ review.client_name }}</strong>
+        <span class="re-card-subtitle"> — {{ review.rating }}/5 · {{ review.source|title }}</span>
+        {% if review.comment %}<div class="re-card-subtitle" style="margin-top:4px;">{{ review.comment }}</div>{% endif %}
+      </div>
+      {% else %}
+      <div class="re-card-subtitle">No reviews yet.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+</div>
+{% endblock %}

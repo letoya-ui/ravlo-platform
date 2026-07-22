@@ -374,6 +374,7 @@ def _dashboard_for_role(role: str) -> str:
         "intelligence": "intelligence.dashboard",
         "borrower": "borrower.create_profile",
         "account_executive": "account_executive.dashboard",
+        "stylist": "stylist.dashboard",
         **{r: "partners.dashboard" for r in PARTNER_ROLES},
     }
 

@@ -85,6 +85,15 @@ class User(UserMixin, db.Model):
         foreign_keys="[InvestorProfile.user_id]"
     )
 
+    # Stylist (Salon vertical)
+    stylist_profile = db.relationship(
+        "StylistProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete",
+        foreign_keys="[StylistProfile.user_id]"
+    )
+
     # Messaging
     messages_sent = db.relationship(
         "Message",
