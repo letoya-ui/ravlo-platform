@@ -1,0 +1,81 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Before & After{% endblock %}
+
+{% block page_title %}Before &amp; After{% endblock %}
+{% block page_subline %}Build a portfolio of your transformations.{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">NEW</div>
+        <h3 style="margin:.35rem 0 .2rem;">Add a Photo</h3>
+      </div>
+    </div>
+
+    {% if clients %}
+    <form method="POST" class="settings-form mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="client_id">Client</label>
+          <select id="client_id" name="client_id" required>
+            <option value="">— Select —</option>
+            {% for client in clients %}
+              <option value="{{ client.id }}">{{ client.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="photo_type">Type</label>
+          <select id="photo_type" name="photo_type">
+            <option value="before">Before</option>
+            <option value="after" selected>After</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="image_url">Photo Link</label>
+        <input id="image_url" name="image_url" type="url" placeholder="https://" required>
+      </div>
+      <div class="field">
+        <label for="caption">Caption</label>
+        <input id="caption" name="caption" type="text">
+      </div>
+      <button type="submit" class="re-btn primary">
+        <i class="lucide lucide-image-plus"></i>
+        Add Photo
+      </button>
+    </form>
+    {% else %}
+    <p class="re-card-subtitle mt-16">Add a client first, then come back here to add photos.</p>
+    {% endif %}
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">GALLERY</div>
+        <h3 style="margin:.35rem 0 .2rem;">All Photos</h3>
+      </div>
+    </div>
+
+    <div class="mt-16" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(160px, 1fr));gap:12px;">
+      {% for photo in photos %}
+      <div style="border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.08);">
+        <img src="{{ photo.image_url }}" alt="{{ photo.photo_type }}" style="width:100%;height:140px;object-fit:cover;display:block;">
+        <div style="padding:6px 8px;">
+          <div style="font-size:.76rem;color:#9fb1c5;text-transform:uppercase;font-weight:700;">{{ photo.photo_type }}</div>
+          <div style="font-size:.84rem;color:#f4f7fb;">{{ photo.client.full_name if photo.client else "—" }}</div>
+        </div>
+      </div>
+      {% else %}
+      <div class="re-card-subtitle">No photos added yet.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+</div>
+{% endblock %}

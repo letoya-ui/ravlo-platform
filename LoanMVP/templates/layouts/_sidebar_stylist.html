@@ -1,0 +1,101 @@
+{% set brand = effective_brand(current_user.company) %}
+{% set _is_white_label = brand.name != "Ravlo" %}
+{% if brand.logo_url %}
+<div class="re-brand-logo-badge">
+  <img src="{{ url_for('static', filename=brand.logo_url) }}" class="re-brand-logo-img" alt="{{ brand.name }}">
+</div>
+{% else %}
+<div class="re-brand"{% if _is_white_label %} style="--brand-mark-bg: linear-gradient(180deg, {{ brand.primary }}, {{ brand.accent }}); --brand-mark-border: {{ brand.accent }};"{% endif %}>
+  <div class="re-mark"><span>{{ brand.mark }}</span></div>
+  <div>
+    <div class="re-brand-name">{{ brand.name|upper }}</div>
+    <div class="re-brand-sub"{% if _is_white_label %} style="color:{{ brand.accent }};"{% endif %}>{{ brand.tagline or "Stylist OS" }}</div>
+  </div>
+</div>
+{% endif %}
+
+<nav class="re-nav">
+
+  <div class="re-nav-group">
+    <div class="re-nav-label">Command</div>
+
+    <a href="{{ url_for('stylist.dashboard') }}"
+       class="re-nav-link {% if active_tab == 'dashboard' %}active{% endif %}">
+      <i class="icon lucide lucide-layout-dashboard"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('stylist.appointments') }}"
+       class="re-nav-link {% if active_tab == 'appointments' %}active{% endif %}">
+      <i class="icon lucide lucide-calendar"></i>
+      <span>Appointments</span>
+    </a>
+
+    <a href="{{ url_for('stylist.clients') }}"
+       class="re-nav-link {% if active_tab == 'clients' %}active{% endif %}">
+      <i class="icon lucide lucide-users"></i>
+      <span>Clients</span>
+    </a>
+  </div>
+
+  <div class="re-nav-group">
+    <div class="re-nav-label">Craft</div>
+
+    <a href="{{ url_for('stylist.formulas') }}"
+       class="re-nav-link {% if active_tab == 'formulas' %}active{% endif %}">
+      <i class="icon lucide lucide-flask-conical"></i>
+      <span>Formulas &amp; Color Notes</span>
+    </a>
+
+    <a href="{{ url_for('stylist.photos') }}"
+       class="re-nav-link {% if active_tab == 'photos' %}active{% endif %}">
+      <i class="icon lucide lucide-image"></i>
+      <span>Before &amp; After</span>
+    </a>
+  </div>
+
+  <div class="re-nav-group">
+    <div class="re-nav-label">Business</div>
+
+    <a href="{{ url_for('stylist.product_sales') }}"
+       class="re-nav-link {% if active_tab == 'product_sales' %}active{% endif %}">
+      <i class="icon lucide lucide-shopping-bag"></i>
+      <span>Product Sales</span>
+    </a>
+
+    <a href="{{ url_for('stylist.reviews') }}"
+       class="re-nav-link {% if active_tab == 'reviews' %}active{% endif %}">
+      <i class="icon lucide lucide-star"></i>
+      <span>Reviews</span>
+    </a>
+
+    <a href="{{ url_for('stylist.loyalty') }}"
+       class="re-nav-link {% if active_tab == 'loyalty' %}active{% endif %}">
+      <i class="icon lucide lucide-gift"></i>
+      <span>Loyalty Program</span>
+    </a>
+  </div>
+
+  <div class="re-nav-group">
+    <div class="re-nav-label">Account</div>
+
+    <a href="{{ url_for('account.settings') }}"
+       class="re-nav-link {% if active_tab == 'settings' %}active{% endif %}">
+      <i class="icon lucide lucide-settings"></i>
+      <span>Settings</span>
+    </a>
+  </div>
+
+</nav>
+
+<div class="re-sidebar-foot">
+  <div class="re-user-chip">
+    <div class="re-user-avatar">
+      {{ (current_user.first_name[0] if current_user.first_name else "U")|upper }}
+    </div>
+    <div class="re-user-meta">
+      <div class="re-user-name">{{ current_user.first_name or "" }} {{ current_user.last_name or "" }}</div>
+      <div class="re-user-role">Stylist</div>
+    </div>
+  </div>
+</div>

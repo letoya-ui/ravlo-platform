@@ -76,6 +76,7 @@ COMPANY_INVITABLE_ROLES = [
     ("property", "Property"),
     ("ai", "AI"),
     ("intelligence", "Intelligence"),
+    ("stylist", "Stylist"),
 ]
 COMPANY_INVITABLE_ROLE_SET = {role for role, _label in COMPANY_INVITABLE_ROLES}
 

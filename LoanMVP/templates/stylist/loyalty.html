@@ -1,0 +1,81 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Loyalty Program{% endblock %}
+
+{% block page_title %}Loyalty Program{% endblock %}
+{% block page_subline %}Reward repeat clients and track redemptions.{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ADJUST</div>
+        <h3 style="margin:.35rem 0 .2rem;">Add or Redeem Points</h3>
+      </div>
+    </div>
+
+    {% if clients %}
+    <form method="POST" class="settings-form mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="client_id">Client</label>
+          <select id="client_id" name="client_id" required>
+            <option value="">— Select —</option>
+            {% for client in clients %}
+              <option value="{{ client.id }}">{{ client.full_name }} ({{ client.loyalty_points }} pts)</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="points">Points (negative to redeem)</label>
+          <input id="points" name="points" type="number" required placeholder="e.g. 50 or -50">
+        </div>
+      </div>
+      <div class="field">
+        <label for="reason">Reason</label>
+        <input id="reason" name="reason" type="text" placeholder="e.g. Visit - Silk Press, Redeemed for $10 off">
+      </div>
+      <button type="submit" class="re-btn primary">
+        <i class="lucide lucide-gift"></i>
+        Apply
+      </button>
+    </form>
+    {% else %}
+    <p class="re-card-subtitle mt-16">Add a client first, then come back here to manage loyalty points.</p>
+    {% endif %}
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">BALANCES</div>
+        <h3 style="margin:.35rem 0 .2rem;">Client Loyalty Balances</h3>
+      </div>
+    </div>
+
+    <div class="re-table-wrap mt-16">
+      <table class="re-table">
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>Points</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for client in clients %}
+          <tr onclick="window.location='{{ url_for('stylist.client_detail', client_id=client.id) }}'" style="cursor:pointer;">
+            <td>{{ client.full_name }}</td>
+            <td>{{ client.loyalty_points }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="2" class="re-card-subtitle">No clients yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

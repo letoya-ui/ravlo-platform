@@ -1,0 +1,72 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Formulas & Color Notes{% endblock %}
+
+{% block page_title %}Formulas & Color Notes{% endblock %}
+{% block page_subline %}Keep every client's exact formula on file.{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">NEW</div>
+        <h3 style="margin:.35rem 0 .2rem;">Save a Formula</h3>
+      </div>
+    </div>
+
+    {% if clients %}
+    <form method="POST" class="settings-form mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="client_id">Client</label>
+          <select id="client_id" name="client_id" required>
+            <option value="">— Select —</option>
+            {% for client in clients %}
+              <option value="{{ client.id }}">{{ client.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="title">Title</label>
+          <input id="title" name="title" type="text" placeholder="e.g. Balayage - Level 8" required>
+        </div>
+      </div>
+      <div class="field">
+        <label for="notes">Formula / Color Notes</label>
+        <textarea id="notes" name="notes" rows="4" required placeholder="Developer volume, formula ratios, processing time, etc."></textarea>
+      </div>
+      <button type="submit" class="re-btn primary">
+        <i class="lucide lucide-flask-conical"></i>
+        Save Formula
+      </button>
+    </form>
+    {% else %}
+    <p class="re-card-subtitle mt-16">Add a client first, then come back here to save a formula.</p>
+    {% endif %}
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ALL FORMULAS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Saved Formulas</h3>
+      </div>
+    </div>
+
+    <div class="mt-16" style="display:grid;gap:10px;">
+      {% for formula in formulas %}
+      <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+        <strong style="color:#f4f7fb;">{{ formula.title }}</strong>
+        <span class="re-card-subtitle"> — {{ formula.client.full_name if formula.client else "Unknown client" }}</span>
+        <div class="re-card-subtitle" style="margin-top:4px;">{{ formula.notes }}</div>
+      </div>
+      {% else %}
+      <div class="re-card-subtitle">No formulas saved yet.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+</div>
+{% endblock %}
