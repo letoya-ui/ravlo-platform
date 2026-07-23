@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% set _display = stylist.full_name or "GotStyles Beauty" %}
+  <title>Book an Appointment — {{ _display }}</title>
+  <meta name="robots" content="noindex, follow">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gs-black: #111111;
+      --gs-ivory: #F8F5F2;
+      --gs-rose:  #B76E79;
+      --gs-gold:  #D4AF37;
+      --gs-taupe: #C8B6A6;
+      --radius: 14px;
+    }
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: var(--gs-black); color: var(--gs-ivory);
+      line-height: 1.6; -webkit-font-smoothing: antialiased;
+      padding: 60px 20px 100px;
+    }
+    .gs-book-wrap { max-width: 760px; margin: 0 auto; }
+    .gs-book-back { color: var(--gs-taupe); text-decoration: none; font-size: .85rem; display: inline-block; margin-bottom: 24px; }
+    .gs-book-back:hover { color: var(--gs-gold); }
+    .gs-book-head { text-align: center; margin-bottom: 40px; }
+    .gs-book-head .gs-eyebrow {
+      font-size: .75rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--gs-gold); margin-bottom: 14px; display: block;
+    }
+    .gs-book-head h1 {
+      font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.4rem);
+      margin-bottom: 10px;
+    }
+    .gs-book-head p { color: var(--gs-taupe); }
+
+    .gs-card {
+      background: rgba(255,255,255,.03); border: 1px solid rgba(212,175,55,.16);
+      border-radius: var(--radius); padding: 28px; margin-bottom: 24px;
+    }
+    .gs-kicker { font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gs-gold); }
+    .gs-card h3 { font-family: 'Playfair Display', serif; margin-top: 8px; margin-bottom: 18px; font-size: 1.2rem; }
+
+    .gs-day-block { margin-bottom: 20px; }
+    .gs-day-label { font-weight: 700; margin-bottom: 10px; }
+    .gs-slots { display: flex; flex-wrap: wrap; gap: 8px; }
+    .gs-slot-btn {
+      background: transparent; border: 1.5px solid rgba(248,245,242,.24); color: var(--gs-ivory);
+      padding: 10px 18px; border-radius: 8px; font-size: .88rem; font-family: inherit; cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+    .gs-slot-btn:hover { border-color: var(--gs-gold); }
+    .gs-slot-btn.selected { background: var(--gs-rose); border-color: var(--gs-rose); color: var(--gs-ivory); }
+
+    .gs-field { margin-bottom: 16px; }
+    .gs-field label { display: block; font-size: .78rem; font-weight: 600; color: var(--gs-taupe); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .03em; }
+    .gs-field input, .gs-field select, .gs-field textarea {
+      width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(248,245,242,.18);
+      font-family: inherit; font-size: .92rem; background: rgba(255,255,255,.04); color: var(--gs-ivory);
+    }
+    .gs-field textarea { min-height: 80px; resize: vertical; }
+    .gs-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    .gs-submit-btn {
+      width: 100%; background: var(--gs-rose); color: var(--gs-ivory); border: none;
+      font-size: .92rem; font-weight: 700; letter-spacing: .03em;
+      padding: 15px; border-radius: 9px; cursor: pointer; transition: background .2s;
+    }
+    .gs-submit-btn:hover { background: #a15b66; }
+
+    .gs-alert {
+      padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: .88rem;
+      background: rgba(183,110,121,.15); border: 1px solid rgba(183,110,121,.4); color: var(--gs-ivory);
+    }
+    .gs-empty { color: var(--gs-taupe); font-size: .92rem; }
+
+    @media (max-width: 560px) {
+      .gs-field-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="gs-book-wrap">
+    <a href="{{ url_for('salon_public.landing', slug=stylist.public_slug) }}" class="gs-book-back">&larr; Back to {{ _display }}</a>
+
+    <div class="gs-book-head">
+      <span class="gs-eyebrow">Book an Appointment</span>
+      <h1>{{ _display }}</h1>
+      <p>Pick a time below.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="gs-alert">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% if not grouped_slots %}
+      <div class="gs-card">
+        <p class="gs-empty">No open times right now &mdash; check back soon, or reach out directly from the main page.</p>
+      </div>
+    {% else %}
+      <form method="POST" action="{{ url_for('salon_public.submit_booking', slug=stylist.public_slug) }}" id="bookingForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="starts_at" id="startsAt">
+
+        <div class="gs-card">
+          <span class="gs-kicker">Step 1</span>
+          <h3>Choose a Time</h3>
+          {% for day_label, slots in grouped_slots.items() %}
+          <div class="gs-day-block">
+            <div class="gs-day-label">{{ day_label }}</div>
+            <div class="gs-slots">
+              {% for slot in slots %}
+              <button type="button" class="gs-slot-btn" data-start="{{ slot.start.isoformat() }}" onclick="selectSlot(this)">
+                {{ slot.start.strftime('%I:%M %p') }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="gs-card" id="detailsCard" style="display:none;">
+          <span class="gs-kicker">Step 2</span>
+          <h3>Your Info</h3>
+          <p id="selectedSlotLabel" style="color:var(--gs-taupe);margin-top:-10px;margin-bottom:18px;"></p>
+
+          <div class="gs-field">
+            <label for="service_type">What are you looking for?</label>
+            <select id="service_type" name="service_type">
+              {% for service in service_categories %}
+                <option value="{{ service.name }}">{{ service.name }}</option>
+              {% endfor %}
+              <option value="Other / Not Sure">Other / Not sure yet</option>
+            </select>
+          </div>
+          <div class="gs-field">
+            <label for="client_name">Name</label>
+            <input id="client_name" name="client_name" type="text" required>
+          </div>
+          <div class="gs-field-row">
+            <div class="gs-field">
+              <label for="client_email">Email</label>
+              <input id="client_email" name="client_email" type="email">
+            </div>
+            <div class="gs-field">
+              <label for="client_phone">Phone</label>
+              <input id="client_phone" name="client_phone" type="text">
+            </div>
+          </div>
+          <div class="gs-field">
+            <label for="notes">Anything we should know?</label>
+            <textarea id="notes" name="notes"></textarea>
+          </div>
+
+          <button type="submit" class="gs-submit-btn">Confirm Appointment</button>
+        </div>
+      </form>
+
+      <script>
+        function selectSlot(btn) {
+          document.querySelectorAll('.gs-slot-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          document.getElementById('startsAt').value = btn.dataset.start;
+          document.getElementById('detailsCard').style.display = 'block';
+          document.getElementById('selectedSlotLabel').textContent = btn.textContent.trim();
+          document.getElementById('detailsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      </script>
+    {% endif %}
+  </div>
+</body>
+</html>

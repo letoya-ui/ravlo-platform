@@ -6,7 +6,10 @@ Switch Aisha's account over to the new GotStyles Beauty stylist dashboard.
 What this script does:
   - Company   finds-or-creates "GotStyles Beauty" (is_active=True)
   - User      aishagelahun@gmail.com -> role=stylist, company_id=GotStyles Beauty
-  - StylistProfile  finds-or-creates for that user
+  - StylistProfile  finds-or-creates for that user, with her public booking
+                     page slug/branding set, and a default weekly
+                     availability (Tue-Sat, 10am-6pm) so the booking
+                     calendar isn't empty on first launch.
 
 Aisha's account already exists (she's on the Ravlo staff demo-login
 allowlist), so this does NOT touch her password -- it only reassigns her
@@ -19,15 +22,25 @@ GOTSTYLES_AISHA_PASSWORD) to create it fresh.
 
 import argparse
 import os
+from datetime import time as dtime
 
 from LoanMVP.app import app
 from LoanMVP.extensions import db
 from LoanMVP.models.admin import Company
 from LoanMVP.models.user_model import User
-from LoanMVP.models.salon_models import StylistProfile
+from LoanMVP.models.salon_models import StylistProfile, SalonAvailability
 
 EMAIL = "aishagelahun@gmail.com"
 COMPANY_NAME = "GotStyles Beauty"
+PUBLIC_SLUG = "gotstyles-beauty"
+BRAND_COLOR = "#B76E79"
+LOGO_URL = "/static/images/salon/gotstyles_logo.png"
+HEADLINE = "Beauty. Brand. Business."
+
+# Tuesday-Saturday, 10am-6pm, 60-minute slots -- a reasonable default so
+# the public booking calendar has open times from day one; Aisha can
+# adjust or replace these anytime from /stylist/availability.
+DEFAULT_AVAILABILITY = [(dow, dtime(10, 0), dtime(18, 0)) for dow in (1, 2, 3, 4, 5)]
 
 
 def create_gotstyles_aisha(password: str = ""):
@@ -85,7 +98,25 @@ def create_gotstyles_aisha(password: str = ""):
         else:
             profile.company_id = company.id
 
+        profile.public_slug = PUBLIC_SLUG
+        profile.brand_color = BRAND_COLOR
+        profile.logo_url = LOGO_URL
+        profile.headline = HEADLINE
         db.session.commit()
+
+        # -- 4. Default availability ---------------------------------------
+        created_availability = 0
+        if not SalonAvailability.query.filter_by(stylist_id=profile.id).count():
+            for day_of_week, start_time, end_time in DEFAULT_AVAILABILITY:
+                db.session.add(SalonAvailability(
+                    stylist_id=profile.id,
+                    day_of_week=day_of_week,
+                    start_time=start_time,
+                    end_time=end_time,
+                    slot_minutes=60,
+                ))
+                created_availability += 1
+            db.session.commit()
 
         # -- Summary -------------------------------------------------------
         print()
@@ -97,9 +128,12 @@ def create_gotstyles_aisha(password: str = ""):
         print(f"  Company  : {COMPANY_NAME} (id={company.id}, {'created' if created_company else 'existing'})")
         print(f"  User     : {'created' if created_user else 'updated'} (id={user.id})")
         print(f"  Profile  : {'created' if created_profile else 'updated'} (id={profile.id})")
+        print(f"  Availability windows added: {created_availability}")
         print("=" * 55)
         print("  Dashboard unlocked:")
         print("    /stylist/dashboard  — GotStyles Beauty stylist workspace")
+        print(f"    /salon/{PUBLIC_SLUG}  — public landing page")
+        print(f"    /salon/{PUBLIC_SLUG}/book  — public booking calendar")
         print("=" * 55)
         print()
 

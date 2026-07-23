@@ -192,6 +192,7 @@ from LoanMVP.models.salon_models import (
     ProductSale,
     SalonReview,
     LoyaltyTransaction,
+    SalonAvailability,
 )
 
 # ======================================================
@@ -281,4 +282,5 @@ __all__ = [
     "ProductSale",
     "SalonReview",
     "LoyaltyTransaction",
+    "SalonAvailability",
 ]

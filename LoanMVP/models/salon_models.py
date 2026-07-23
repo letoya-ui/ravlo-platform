@@ -8,9 +8,14 @@ LoanApplication/BorrowerProfile carry company_id rather than relying on
 joins through the profile -- every dashboard/list query filters on it
 directly.
 """
+import uuid
 from datetime import datetime
 
 from LoanMVP.extensions import db
+
+
+def _new_confirmation_token() -> str:
+    return uuid.uuid4().hex
 
 
 class StylistProfile(db.Model):
@@ -29,9 +34,20 @@ class StylistProfile(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Public booking page / white-label branding (mirrors VIPProfile's
+    # public_slug/brand_color/logo_url pattern used for realtor pages).
+    public_slug = db.Column(db.String(255), unique=True, nullable=True, index=True)
+    brand_color = db.Column(db.String(20), nullable=True)
+    logo_url = db.Column(db.String(255), nullable=True)
+    headline = db.Column(db.String(255), nullable=True)
+    service_area = db.Column(db.String(255), nullable=True)
+
     user = db.relationship("User", back_populates="stylist_profile", foreign_keys=[user_id])
     clients = db.relationship("SalonClient", back_populates="stylist", cascade="all, delete-orphan", lazy=True)
     appointments = db.relationship("Appointment", back_populates="stylist", cascade="all, delete-orphan", lazy=True)
+    availability_slots = db.relationship(
+        "SalonAvailability", back_populates="stylist", cascade="all, delete-orphan", lazy=True
+    )
 
 
 class SalonClient(db.Model):
@@ -73,6 +89,13 @@ class Appointment(db.Model):
     status = db.Column(db.String(20), default="scheduled", nullable=False)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Random, unguessable -- looked up on the public booking confirmation
+    # page instead of the sequential id, same reasoning as DemoBooking's
+    # confirmation_token in calendar_models.py. Only set for appointments
+    # booked through the public booking page; staff-created appointments
+    # leave it null.
+    confirmation_token = db.Column(db.String(32), nullable=True, unique=True, index=True)
 
     stylist = db.relationship("StylistProfile", back_populates="appointments")
     client = db.relationship("SalonClient", back_populates="appointments")
@@ -157,3 +180,29 @@ class LoyaltyTransaction(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     client = db.relationship("SalonClient", back_populates="loyalty_transactions")
+
+
+class SalonAvailability(db.Model):
+    """A recurring weekly block of time a stylist is open for public
+    booking. Mirrors DemoAvailability in calendar_models.py exactly --
+    actual open slots for the public booking page are computed on the fly
+    from these templates minus already-booked Appointment rows; there is
+    no pre-generated per-slot row to keep in sync.
+    """
+
+    __tablename__ = "salon_availability"
+
+    id = db.Column(db.Integer, primary_key=True)
+    stylist_id = db.Column(
+        db.Integer, db.ForeignKey("stylist_profile.id", name="fk_availability_stylist_id"), nullable=False, index=True
+    )
+
+    day_of_week = db.Column(db.Integer, nullable=False)  # 0 = Monday ... 6 = Sunday
+    start_time = db.Column(db.Time, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
+    slot_minutes = db.Column(db.Integer, nullable=False, default=60)
+
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    stylist = db.relationship("StylistProfile", back_populates="availability_slots")
