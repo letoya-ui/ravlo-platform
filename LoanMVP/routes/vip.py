@@ -9,13 +9,14 @@ from flask import (
     url_for, flash, jsonify, session, current_app,
 )
 from flask_login import current_user
+from flask_mail import Message as MailMessage
 
 # VIP tiers that unlock the Realtor VIP Workspace.
 # Keep tier comparisons case-insensitive.
 VIP_ACCESS_TIERS = {"featured", "premium", "enterprise"}
 from sqlalchemy import or_, func
 
-from LoanMVP.extensions import db, csrf
+from LoanMVP.extensions import db, csrf, mail
 
 # ── VIP models ────────────────────────────────────────────────────────────────
 from LoanMVP.models.vip_models import (
@@ -2690,6 +2691,60 @@ def insurance_update_quote_request(request_id):
     return redirect(url_for("vip.insurance_quote_request_detail", request_id=qr.id))
 
 
+def _send_quote_request_emails(agent_user, agency_name: str, client_name: str,
+                                client_email: str, client_phone: str, line: str) -> None:
+    """Email the VIP partner about a new public quote request, and send the
+    client a short confirmation if they gave an email. Best-effort: neither
+    side sending must ever block the form submission itself -- mirrors
+    public_pages.py's _send_new_lead_email and salon_public.py's
+    _send_booking_confirmation_emails."""
+    sender = (
+        current_app.config.get("MAIL_DEFAULT_SENDER")
+        or current_app.config.get("MAIL_USERNAME")
+        or "letoya@ravlohq.com"
+    )
+    line_label = line.replace("_", " ").title()
+
+    if agent_user and agent_user.email:
+        try:
+            lines = [f"You have a new {line_label} insurance quote request:", ""]
+            lines.append(f"Name: {client_name}")
+            if client_email:
+                lines.append(f"Email: {client_email}")
+            if client_phone:
+                lines.append(f"Phone: {client_phone}")
+            lines.append("")
+            lines.append(f"View it in your dashboard: {url_for('vip.insurance_quote_requests', _external=True)}")
+
+            msg = MailMessage(
+                subject=f"New quote request from {client_name}",
+                sender=sender,
+                recipients=[agent_user.email],
+                body="\n".join(lines),
+            )
+            mail.send(msg)
+        except Exception as exc:
+            current_app.logger.warning("Quote request agent email failed: %s", exc)
+
+    if client_email:
+        try:
+            msg = MailMessage(
+                subject=f"We received your quote request — {agency_name}",
+                sender=sender,
+                recipients=[client_email],
+                body=(
+                    f"Hi {client_name},\n\n"
+                    f"Thanks for requesting a {line_label} insurance quote from {agency_name}. "
+                    "We've received your information and will personally review it and reach out "
+                    "with your best coverage options soon.\n\n"
+                    f"— {agency_name}"
+                ),
+            )
+            mail.send(msg)
+        except Exception as exc:
+            current_app.logger.warning("Quote request client confirmation email failed: %s", exc)
+
+
 # ── Public quote form (no auth) ─────────────────────────────────────────────
 @vip_bp.route("/insurance/<int:profile_id>/get-quote", methods=["GET", "POST"])
 def insurance_public_quote_form(profile_id):
@@ -2706,6 +2761,12 @@ def insurance_public_quote_form(profile_id):
     agent_name = ""
     agency_name = profile.business_name or profile.display_name or "Our Agency"
     brand_logo = profile.logo_url
+    # Key Signature Enterprise's red/gold is the default look for this form
+    # since it's currently the only live "insurance" VIP -- any partner who
+    # sets their own brand_color in VIP settings gets themed with that
+    # instead, same fallback pattern public_pages.py uses for the bespoke
+    # landing pages (profile.brand_color or <default>).
+    brand_color = profile.brand_color or "#B3122A"
     if partner:
         agent_name = partner.display_name() if hasattr(partner, "display_name") else ""
         agency_name = partner.company or agency_name
@@ -2774,6 +2835,8 @@ def insurance_public_quote_form(profile_id):
             db.session.commit()
             submitted = True
 
+            _send_quote_request_emails(user, agency_name, client_name, client_email, client_phone, line)
+
     return render_template(
         "vip/insurance/public_quote_form.html",
         insurance_lines = INSURANCE_LINES,
@@ -2781,6 +2844,7 @@ def insurance_public_quote_form(profile_id):
         agent_name      = agent_name,
         agency_name     = agency_name,
         brand_logo      = brand_logo,
+        brand_color     = brand_color,
         submitted       = submitted,
         client_name     = client_name,
     )
