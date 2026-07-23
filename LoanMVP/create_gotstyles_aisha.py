@@ -32,10 +32,11 @@ from LoanMVP.models.salon_models import StylistProfile, SalonAvailability
 
 EMAIL = "aishagelahun@gmail.com"
 COMPANY_NAME = "GotStyles Beauty"
+DISPLAY_NAME = "GotStyles by Aisha"
 PUBLIC_SLUG = "gotstyles-beauty"
 BRAND_COLOR = "#B76E79"
 LOGO_URL = "/static/images/salon/gotstyles_logo.png"
-HEADLINE = "Beauty. Brand. Business."
+HEADLINE = "All Things Beauty"
 PHONE = "(615) 546-2397"
 ADDRESS = "1925 Madison Square, Suite 400, LaVergne, TN 37086"
 SERVICE_AREA = "LaVergne, TN"
@@ -93,7 +94,7 @@ def create_gotstyles_aisha(password: str = ""):
             profile = StylistProfile(
                 user_id=user.id,
                 company_id=company.id,
-                full_name=f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email,
+                full_name=DISPLAY_NAME,
                 email=user.email,
             )
             db.session.add(profile)
@@ -101,6 +102,7 @@ def create_gotstyles_aisha(password: str = ""):
         else:
             profile.company_id = company.id
 
+        profile.full_name = DISPLAY_NAME
         profile.public_slug = PUBLIC_SLUG
         profile.brand_color = BRAND_COLOR
         profile.logo_url = LOGO_URL
