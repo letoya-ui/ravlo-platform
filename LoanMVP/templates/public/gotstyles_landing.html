@@ -26,6 +26,7 @@
     "description": "{{ _desc | e }}"
     {% if stylist.phone %}, "telephone": "{{ stylist.phone | e }}"{% endif %}
     {% if stylist.email %}, "email": "{{ stylist.email | e }}"{% endif %}
+    {% if stylist.address %}, "address": "{{ stylist.address | e }}"{% endif %}
     {% if _area %}, "areaServed": { "@type": "AdministrativeArea", "name": "{{ _area | e }}" }{% endif %}
   }
   </script>
@@ -265,7 +266,12 @@
         <a href="mailto:{{ stylist.email }}">{{ stylist.email }}</a>
       </div>
       {% endif %}
-      {% if _area %}
+      {% if stylist.address %}
+      <div class="gs-contact-item">
+        <div class="gs-contact-icon">&#9679;</div>
+        <a href="https://maps.google.com/?q={{ stylist.address | urlencode }}" target="_blank" rel="noopener">{{ stylist.address }}</a>
+      </div>
+      {% elif _area %}
       <div class="gs-contact-item">
         <div class="gs-contact-icon">&#9679;</div>
         <span>{{ _area }}</span>

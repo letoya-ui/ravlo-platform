@@ -41,6 +41,7 @@ class StylistProfile(db.Model):
     logo_url = db.Column(db.String(255), nullable=True)
     headline = db.Column(db.String(255), nullable=True)
     service_area = db.Column(db.String(255), nullable=True)
+    address = db.Column(db.String(255), nullable=True)
 
     user = db.relationship("User", back_populates="stylist_profile", foreign_keys=[user_id])
     clients = db.relationship("SalonClient", back_populates="stylist", cascade="all, delete-orphan", lazy=True)

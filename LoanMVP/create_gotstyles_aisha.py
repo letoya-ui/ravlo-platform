@@ -36,6 +36,9 @@ PUBLIC_SLUG = "gotstyles-beauty"
 BRAND_COLOR = "#B76E79"
 LOGO_URL = "/static/images/salon/gotstyles_logo.png"
 HEADLINE = "Beauty. Brand. Business."
+PHONE = "(615) 546-2397"
+ADDRESS = "1925 Madison Square, Suite 400, LaVergne, TN 37086"
+SERVICE_AREA = "LaVergne, TN"
 
 # Tuesday-Saturday, 10am-6pm, 60-minute slots -- a reasonable default so
 # the public booking calendar has open times from day one; Aisha can
@@ -102,6 +105,9 @@ def create_gotstyles_aisha(password: str = ""):
         profile.brand_color = BRAND_COLOR
         profile.logo_url = LOGO_URL
         profile.headline = HEADLINE
+        profile.phone = PHONE
+        profile.address = ADDRESS
+        profile.service_area = SERVICE_AREA
         db.session.commit()
 
         # -- 4. Default availability ---------------------------------------
