@@ -89,8 +89,56 @@ def test_landing_page_renders_for_valid_slug(db_session, client):
     assert "Beauty. Brand. Business." in body
     assert "/salon/gotstyles-test/book" in body
     assert "30-Minute Consultation" in body
-    assert "Dreads &amp; Locs" in body or "Dreads & Locs" in body
-    assert "Wigs &amp; Units" in body or "Wigs & Units" in body
+    assert "Custom Wigs" in body
+    assert "Braids" in body
+
+
+def test_landing_page_shows_service_icons(db_session, client):
+    _make_stylist_with_slug(db_session, "gotstyles-icons", "stylist-icons@example.com", "GotStyles Icons")
+
+    resp = client.get("/salon/gotstyles-icons")
+    body = resp.get_data(as_text=True)
+    assert body.count('class="gs-service-icon"') == 11
+    assert "<svg" in body
+
+
+def test_landing_page_shows_why_you_love_section(db_session, client):
+    _make_stylist_with_slug(db_session, "gotstyles-love", "stylist-love@example.com", "GotStyles Love")
+
+    resp = client.get("/salon/gotstyles-love")
+    body = resp.get_data(as_text=True)
+    assert "Why You&#39;ll Love GotStyles" in body or "Why You'll Love GotStyles" in body
+    assert "Personalized consultations" in body
+
+
+def test_landing_page_shows_promise_section_when_bio_set(db_session, client):
+    _, profile = _make_stylist_with_slug(db_session, "gotstyles-promise", "stylist-promise@example.com", "GotStyles Promise")
+    profile.bio = "My goal is simple, I want you to feel confident."
+    db_session.commit()
+
+    resp = client.get("/salon/gotstyles-promise")
+    body = resp.get_data(as_text=True)
+    assert "Aisha&#39;s Promise" in body or "Aisha's Promise" in body
+    assert "My goal is simple, I want you to feel confident." in body
+
+
+def test_landing_page_hides_promise_section_when_no_bio(db_session, client):
+    _make_stylist_with_slug(db_session, "gotstyles-nobio", "stylist-nobio@example.com", "GotStyles No Bio")
+
+    resp = client.get("/salon/gotstyles-nobio")
+    body = resp.get_data(as_text=True)
+    assert "Aisha&#39;s Promise" not in body and "Aisha's Promise" not in body
+
+
+def test_landing_page_shows_qr_code_and_booking_url_in_contact_section(db_session, client):
+    _make_stylist_with_slug(db_session, "gotstyles-qr", "stylist-qr@example.com", "GotStyles QR")
+
+    resp = client.get("/salon/gotstyles-qr")
+    body = resp.get_data(as_text=True)
+    assert "/salon/gotstyles-qr/book" in body
+    assert 'data:image/png;base64,' in body
+    assert "Scan to book" in body
+    assert "Come as you are. Leave as your best self." in body
 
 
 def test_landing_page_shows_address_with_directions_link(db_session, client):

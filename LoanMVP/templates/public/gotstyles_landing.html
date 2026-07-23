@@ -114,11 +114,21 @@
       color: var(--gs-ivory); margin-bottom: 20px;
     }
     .gs-hero h1 em { color: var(--gs-rose); font-style: normal; }
+    .gs-hero-banner {
+      display: inline-block; background: linear-gradient(120deg, rgba(183,110,121,.22), rgba(212,175,55,.12));
+      border-left: 3px solid var(--gs-rose); padding: 14px 26px; margin: 0 auto 26px; border-radius: 4px;
+      font-family: 'Playfair Display', serif; font-style: italic; color: var(--gs-ivory); font-size: 1.05rem;
+    }
     .gs-hero-sub {
       font-size: 1.05rem; color: var(--gs-taupe); max-width: 540px;
       margin: 0 auto 36px; line-height: 1.75;
     }
-    .gs-hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .gs-hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin-bottom: 24px; }
+    .gs-hero-badge {
+      display: inline-flex; align-items: center; gap: 8px; margin: 0 auto;
+      border: 1.5px solid var(--gs-rose); border-radius: 999px; padding: 10px 22px;
+      font-family: 'Playfair Display', serif; font-style: italic; font-size: .92rem; color: var(--gs-rose);
+    }
     .gs-btn-primary {
       background: var(--gs-rose); color: var(--gs-ivory);
       font-size: .88rem; font-weight: 700; letter-spacing: .03em;
@@ -150,8 +160,37 @@
       background: rgba(255,255,255,.03); border: 1px solid rgba(212,175,55,.16);
       border-radius: var(--radius); padding: 28px 24px;
     }
+    .gs-service-icon {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: rgba(183,110,121,.14); color: var(--gs-rose);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+    }
+    .gs-service-icon svg { width: 22px; height: 22px; }
     .gs-service-card h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--gs-gold); margin-bottom: 10px; }
     .gs-service-card p { font-size: .9rem; color: var(--gs-taupe); }
+
+    /* ── WHY YOU'LL LOVE ── */
+    .gs-love { background: rgba(255,255,255,.02); padding: 90px 40px; }
+    .gs-love-inner { max-width: 820px; margin: 0 auto; text-align: center; }
+    .gs-love-inner h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 3.4vw, 2.3rem); color: var(--gs-ivory); margin-bottom: 44px;
+    }
+    .gs-love-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 18px 32px; text-align: left;
+    }
+    .gs-love-item { display: flex; align-items: center; gap: 12px; font-size: .96rem; color: var(--gs-ivory); }
+    .gs-love-item::before { content: "♥"; color: var(--gs-rose); font-size: 1.1rem; flex-shrink: 0; }
+
+    /* ── PROMISE ── */
+    .gs-promise { padding: 90px 40px; max-width: 760px; margin: 0 auto; text-align: center; }
+    .gs-promise .gs-eyebrow { justify-content: center; display: flex; }
+    .gs-promise blockquote {
+      font-family: 'Playfair Display', serif; font-style: italic;
+      font-size: clamp(1.3rem, 2.6vw, 1.7rem); color: var(--gs-ivory); line-height: 1.55; margin: 18px 0;
+    }
+    .gs-promise cite { color: var(--gs-rose); font-style: normal; font-weight: 700; font-size: .9rem; }
 
     /* ── REVIEWS ── */
     .gs-reviews { background: rgba(255,255,255,.02); padding: 90px 40px; }
@@ -186,13 +225,24 @@
     }
 
     /* ── CONTACT ── */
-    .gs-contact { padding: 90px 40px; max-width: 720px; margin: 0 auto; text-align: center; }
+    .gs-contact { padding: 90px 40px; max-width: 940px; margin: 0 auto; text-align: center; }
     .gs-contact h2 {
       font-family: 'Playfair Display', serif;
       font-size: clamp(1.8rem, 3.4vw, 2.3rem); color: var(--gs-ivory); margin-bottom: 16px;
     }
-    .gs-contact p { color: var(--gs-taupe); margin-bottom: 30px; }
-    .gs-contact-items { display: flex; flex-wrap: wrap; gap: 26px; justify-content: center; margin-bottom: 34px; }
+    .gs-contact > p { color: var(--gs-taupe); margin-bottom: 44px; }
+    .gs-contact-cards {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 22px; margin-bottom: 40px; text-align: left;
+    }
+    .gs-contact-card {
+      background: rgba(255,255,255,.03); border: 1px solid rgba(212,175,55,.16);
+      border-radius: var(--radius); padding: 30px 26px;
+    }
+    .gs-contact-card h3 {
+      font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--gs-gold); margin-bottom: 16px;
+    }
+    .gs-contact-items { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
     .gs-contact-item { display: flex; align-items: center; gap: 10px; font-size: .92rem; }
     .gs-contact-item a { color: var(--gs-ivory); text-decoration: none; }
     .gs-contact-item a:hover { color: var(--gs-rose); }
@@ -200,6 +250,19 @@
       width: 32px; height: 32px; border-radius: 50%; background: rgba(212,175,55,.14); color: var(--gs-gold);
       display: flex; align-items: center; justify-content: center; font-size: .85rem; flex-shrink: 0;
     }
+    .gs-contact-card .gs-btn-ghost, .gs-contact-card .gs-btn-primary { width: 100%; text-align: center; }
+    .gs-book-badge {
+      display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--gs-gold); background: rgba(212,175,55,.12); border-radius: 999px; padding: 6px 14px; margin-bottom: 16px;
+    }
+    .gs-book-url {
+      font-size: .86rem; color: var(--gs-taupe); word-break: break-all; margin-bottom: 18px;
+    }
+    .gs-qr-wrap { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .gs-qr-wrap img {
+      width: 84px; height: 84px; border-radius: 8px; background: var(--gs-ivory); padding: 6px; flex-shrink: 0;
+    }
+    .gs-qr-wrap span { font-size: .84rem; color: var(--gs-taupe); }
 
     /* ── FOOTER ── */
     .gs-footer {
@@ -240,6 +303,7 @@
       {% endif %}
       <div class="gs-eyebrow">Now Booking</div>
       <h1>{{ _tagline }}</h1>
+      <div class="gs-hero-banner">Healthy Hair &middot; Luxury Experience &mdash; Confidence Starts Here</div>
       <p class="gs-hero-sub">
         {% if _area %}Book your next appointment with {{ _display }}, serving {{ _area }}.{% else %}Book your next appointment with {{ _display }}.{% endif %}
       </p>
@@ -247,8 +311,23 @@
         <a href="{{ url_for('salon_public.book', slug=stylist.public_slug) }}" class="gs-btn-primary">Book Now</a>
         <a href="#contact" class="gs-btn-ghost">Get In Touch</a>
       </div>
+      <div class="gs-hero-badge">It's more than hair, it's your confidence.</div>
     </div>
   </section>
+
+  {% set gs_icons = {
+    "consult": '<path d="M4 5h16v11H8l-4 4V5z"/>',
+    "silk_press": '<path d="M3 8h18M3 12h18M3 16h12"/>',
+    "sew_ins": '<path d="M4 20 20 4M14 4h6v6"/><circle cx="7" cy="17" r="1.4" fill="currentColor" stroke="none"/>',
+    "quick_weaves": '<path d="M3 7c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 19c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>',
+    "custom_wigs": '<path d="M3 18h18M4 18l-1-9 5 4 4-6 4 6 5-4-1 9"/>',
+    "color": '<path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z"/>',
+    "highlights": '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>',
+    "natural_hair": '<path d="M4 20C4 10 10 4 20 4c0 10-6 16-16 16z"/><path d="M4 20 14 10"/>',
+    "treatments": '<path d="M12 3c3.5 4 5 7 5 9.5a5 5 0 0 1-10 0C7 10 8.5 7 12 3z"/><path d="M12 11v4M10 13h4"/>',
+    "braids": '<path d="M8 3c2 2-2 4 0 6s-2 4 0 6-2 4 0 6M12 3c2 2-2 4 0 6s-2 4 0 6-2 4 0 6M16 3c2 2-2 4 0 6s-2 4 0 6-2 4 0 6"/>',
+    "occasion": '<path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>',
+  } %}
 
   <section class="gs-services" id="services">
     <div class="gs-services-head">
@@ -259,12 +338,38 @@
     <div class="gs-services-grid">
       {% for service in service_categories %}
       <div class="gs-service-card">
+        <div class="gs-service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            {{ gs_icons.get(service.icon, '') | safe }}
+          </svg>
+        </div>
         <h3>{{ service.name }}</h3>
         <p>{{ service.description }}</p>
       </div>
       {% endfor %}
     </div>
   </section>
+
+  {% if why_you_love %}
+  <section class="gs-love">
+    <div class="gs-love-inner">
+      <h2>Why You'll Love GotStyles</h2>
+      <div class="gs-love-grid">
+        {% for reason in why_you_love %}
+        <div class="gs-love-item">{{ reason }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if stylist.bio %}
+  <section class="gs-promise">
+    <div class="gs-eyebrow">Aisha's Promise</div>
+    <blockquote>&ldquo;{{ stylist.bio }}&rdquo;</blockquote>
+    <cite>&mdash; {{ _display }}</cite>
+  </section>
+  {% endif %}
 
   <section class="gs-reviews" id="reviews">
     <div class="gs-reviews-inner">
@@ -309,26 +414,52 @@
 
   <section class="gs-contact" id="contact">
     <h2>Get In Touch</h2>
-    <p>Have a question before you book? Reach out directly.</p>
-    <div class="gs-contact-items">
-      {% if stylist.phone %}
-      <div class="gs-contact-item">
-        <div class="gs-contact-icon">&#9742;</div>
-        <a href="tel:{{ stylist.phone }}">{{ stylist.phone }}</a>
+    <p>Have a question before you book? Reach out directly, or scan to book online.</p>
+    <div class="gs-contact-cards">
+      <div class="gs-contact-card">
+        <h3>Visit Us</h3>
+        <div class="gs-contact-items">
+          {% if stylist.address %}
+          <div class="gs-contact-item">
+            <div class="gs-contact-icon">&#128205;</div>
+            <span>{{ stylist.address }}</span>
+          </div>
+          {% endif %}
+          {% if stylist.phone %}
+          <div class="gs-contact-item">
+            <div class="gs-contact-icon">&#9742;</div>
+            <a href="tel:{{ stylist.phone }}">{{ stylist.phone }}</a>
+          </div>
+          {% endif %}
+          {% if stylist.email %}
+          <div class="gs-contact-item">
+            <div class="gs-contact-icon">&#9993;</div>
+            <a href="mailto:{{ stylist.email }}">{{ stylist.email }}</a>
+          </div>
+          {% endif %}
+        </div>
+        {% if stylist.address %}
+        <a href="https://maps.google.com/?q={{ stylist.address | urlencode }}" target="_blank" rel="noopener" class="gs-btn-ghost">Get Directions</a>
+        {% endif %}
       </div>
-      {% endif %}
-      {% if stylist.email %}
-      <div class="gs-contact-item">
-        <div class="gs-contact-icon">&#9993;</div>
-        <a href="mailto:{{ stylist.email }}">{{ stylist.email }}</a>
+      <div class="gs-contact-card">
+        <h3>Book Online</h3>
+        <div class="gs-book-badge">Available 24/7</div>
+        <p class="gs-book-url">{{ booking_url }}</p>
+        {% if booking_qr_data_uri %}
+        <div class="gs-qr-wrap">
+          <img src="{{ booking_qr_data_uri }}" alt="Scan to book with {{ _display }}">
+          <span>Scan to book from your phone</span>
+        </div>
+        {% endif %}
+        <a href="{{ url_for('salon_public.book', slug=stylist.public_slug) }}" class="gs-btn-primary">Book Your Appointment</a>
       </div>
-      {% endif %}
     </div>
-    <a href="{{ url_for('salon_public.book', slug=stylist.public_slug) }}" class="gs-btn-primary">Book Your Appointment</a>
   </section>
 
   <footer class="gs-footer">
     <strong>{{ _display }}</strong> &mdash; {{ _tagline }}<br>
+    Come as you are. Leave as your best self.<br>
     Powered by Ravlo
   </footer>
 
