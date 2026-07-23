@@ -48,34 +48,47 @@ def _make_stylist_with_slug(db_session, slug="gotstyles-cta-test", email="stylis
 def test_cta_renders_on_bonnie_landing_page(client):
     resp = client.get("/p/bonnie-sells-oc-homes")
     body = resp.get_data(as_text=True)
-    assert "Want a page like this for your business?" in body
-    assert 'action="/request-my-own-page"' in body
+    assert "Powered by Ravlo" in body
+    assert 'href="/request-my-own-page' in body
+    assert "Contact Us" in body
 
 
 def test_cta_renders_on_john_headley_landing_page(client):
     resp = client.get("/p/john-headley")
     body = resp.get_data(as_text=True)
-    assert "Want a page like this for your business?" in body
+    assert "Powered by Ravlo" in body
+    assert 'href="/request-my-own-page' in body
 
 
 def test_cta_renders_on_key_signature_landing_page(client):
     resp = client.get("/p/key-signature-enterprise")
     body = resp.get_data(as_text=True)
-    assert "Want a page like this for your business?" in body
+    assert "Powered by Ravlo" in body
+    assert 'href="/request-my-own-page' in body
 
 
 def test_cta_renders_on_generic_realtor_landing_page(db_session, client):
     _make_live_realtor(db_session)
     resp = client.get("/p/generic-realtor-test")
     body = resp.get_data(as_text=True)
-    assert "Want a page like this for your business?" in body
+    assert "Powered by Ravlo" in body
+    assert 'href="/request-my-own-page' in body
 
 
 def test_cta_renders_on_gotstyles_landing_page(db_session, client):
     _make_stylist_with_slug(db_session)
     resp = client.get("/salon/gotstyles-cta-test")
     body = resp.get_data(as_text=True)
-    assert "Want a page like this for your business?" in body
+    assert "Powered by Ravlo" in body
+    assert 'href="/request-my-own-page' in body
+
+
+def test_request_own_page_get_renders_standalone_form(client):
+    resp = client.get("/request-my-own-page?source=GotStyles+by+Aisha")
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert 'action="/request-my-own-page"' in body
+    assert 'value="GotStyles by Aisha"' in body
 
 
 def test_submit_creates_business_inquiry_in_ae_pipeline(db_session, client):
