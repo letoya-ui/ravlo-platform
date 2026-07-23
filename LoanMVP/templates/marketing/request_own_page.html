@@ -1,0 +1,70 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block title %}Request Your Own Page — Ravlo{% endblock %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:900px;">
+      <div class="mk-eyebrow">Powered by Ravlo</div>
+      <h1 class="mk-title-xl">Want a page like this for your business?</h1>
+      <p class="mk-copy-lg">
+        Ravlo builds real booking pages, dashboards, and business tools for salons,
+        realtors, insurance pros, and more &mdash; not a template, the real thing.
+        Tell us about your business and we'll reach out.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <form method="post" action="{{ url_for('marketing.request_own_page') }}" style="margin-top:8px; display:grid; gap:14px; max-width:520px;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="source_page" value="{{ source_page or 'a Ravlo partner page' }}">
+
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, msg in messages %}
+              <div style="padding:12px 16px;border-radius:10px;font-size:.9rem;font-weight:600;
+                          background:{% if category == 'success' %}rgba(34,197,94,.12){% else %}rgba(239,68,68,.12){% endif %};
+                          border:1px solid {% if category == 'success' %}rgba(34,197,94,.3){% else %}rgba(239,68,68,.3){% endif %};
+                          color:{% if category == 'success' %}#86efac{% else %}#fca5a5{% endif %};">
+                {{ msg }}
+              </div>
+            {% endfor %}
+          {% endwith %}
+
+          <div>
+            <label for="name" style="display:block; margin-bottom:8px; color:var(--soft); font-weight:600;">Your name</label>
+            <input id="name" name="name" type="text" placeholder="Your name" required
+                   style="width:100%; min-height:52px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#fff; padding:0 16px;">
+          </div>
+          <div class="mk-grid-2">
+            <div>
+              <label for="email" style="display:block; margin-bottom:8px; color:var(--soft); font-weight:600;">Email</label>
+              <input id="email" name="email" type="email" placeholder="you@example.com" required
+                     style="width:100%; min-height:52px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#fff; padding:0 16px;">
+            </div>
+            <div>
+              <label for="phone" style="display:block; margin-bottom:8px; color:var(--soft); font-weight:600;">Phone (optional)</label>
+              <input id="phone" name="phone" type="text" placeholder="Phone (optional)"
+                     style="width:100%; min-height:52px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#fff; padding:0 16px;">
+            </div>
+          </div>
+          <div>
+            <label for="business_type" style="display:block; margin-bottom:8px; color:var(--soft); font-weight:600;">What kind of business?</label>
+            <input id="business_type" name="business_type" type="text" placeholder="e.g. Salon, Real Estate, Insurance"
+                   style="width:100%; min-height:52px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#fff; padding:0 16px;">
+          </div>
+
+          <button type="submit" class="mk-btn mk-btn-primary" style="margin-top:4px;">Request My Own Page</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

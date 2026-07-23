@@ -632,9 +632,12 @@ def _notify_admin_lending_os_lead(first_name, last_name, company, email, phone) 
 # landing page -- Bonnie's, John Headley's, Key Signature's, GotStyles',
 # and the generic realtor_landing.html fallback)
 # ---------------------------------------------------------
-@marketing_bp.route("/request-my-own-page", methods=["POST"])
+@marketing_bp.route("/request-my-own-page", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def request_own_page():
+    if request.method == "GET":
+        return render_template("marketing/request_own_page.html", source_page=request.args.get("source", ""))
+
     name = (request.form.get("name") or "").strip()
     email = (request.form.get("email") or "").strip().lower()
     phone = (request.form.get("phone") or "").strip()
