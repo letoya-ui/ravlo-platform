@@ -48,6 +48,17 @@
     .gs-kicker { font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gs-gold); }
     .gs-card h3 { font-family: 'Playfair Display', serif; margin-top: 8px; margin-bottom: 18px; font-size: 1.2rem; }
 
+    .gs-track-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .gs-track-card {
+      background: transparent; border: 1.5px solid rgba(248,245,242,.2); border-radius: 10px;
+      padding: 20px; text-align: left; cursor: pointer; color: var(--gs-ivory); font-family: inherit;
+      transition: border-color .2s, background .2s;
+    }
+    .gs-track-card:hover { border-color: var(--gs-gold); }
+    .gs-track-card.selected { border-color: var(--gs-rose); background: rgba(183,110,121,.12); }
+    .gs-track-card .gs-track-title { font-weight: 700; margin-bottom: 6px; }
+    .gs-track-card .gs-track-sub { font-size: .82rem; color: var(--gs-taupe); }
+
     .gs-day-block { margin-bottom: 20px; }
     .gs-day-label { font-weight: 700; margin-bottom: 10px; }
     .gs-slots { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -67,6 +78,10 @@
     }
     .gs-field textarea { min-height: 80px; resize: vertical; }
     .gs-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .gs-fixed-service {
+      padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(212,175,55,.3);
+      background: rgba(212,175,55,.08); font-size: .92rem; color: var(--gs-gold); font-weight: 600;
+    }
 
     .gs-submit-btn {
       width: 100%; background: var(--gs-rose); color: var(--gs-ivory); border: none;
@@ -82,7 +97,7 @@
     .gs-empty { color: var(--gs-taupe); font-size: .92rem; }
 
     @media (max-width: 560px) {
-      .gs-field-row { grid-template-columns: 1fr; }
+      .gs-field-row, .gs-track-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -93,7 +108,7 @@
     <div class="gs-book-head">
       <span class="gs-eyebrow">Book an Appointment</span>
       <h1>{{ _display }}</h1>
-      <p>Pick a time below.</p>
+      <p>Choose what you need, then pick a time.</p>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -104,7 +119,7 @@
       {% endif %}
     {% endwith %}
 
-    {% if not grouped_slots %}
+    {% if not standard_slots and not consultation_slots %}
       <div class="gs-card">
         <p class="gs-empty">No open times right now &mdash; check back soon, or reach out directly from the main page.</p>
       </div>
@@ -115,35 +130,83 @@
 
         <div class="gs-card">
           <span class="gs-kicker">Step 1</span>
-          <h3>Choose a Time</h3>
-          {% for day_label, slots in grouped_slots.items() %}
-          <div class="gs-day-block">
-            <div class="gs-day-label">{{ day_label }}</div>
-            <div class="gs-slots">
-              {% for slot in slots %}
-              <button type="button" class="gs-slot-btn" data-start="{{ slot.start.isoformat() }}" onclick="selectSlot(this)">
-                {{ slot.start.strftime('%I:%M %p') }}
-              </button>
-              {% endfor %}
-            </div>
+          <h3>What do you need?</h3>
+          <div class="gs-track-grid">
+            <button type="button" class="gs-track-card" id="trackConsultationBtn" onclick="selectTrack('consultation')">
+              <div class="gs-track-title">30-Minute Consultation</div>
+              <div class="gs-track-sub">Not sure what you need yet? Let's talk it through.</div>
+            </button>
+            <button type="button" class="gs-track-card" id="trackStandardBtn" onclick="selectTrack('standard')">
+              <div class="gs-track-title">Full Appointment</div>
+              <div class="gs-track-sub">Cuts, color, silk press, extensions, dreads & locs, wigs, and more.</div>
+            </button>
           </div>
-          {% endfor %}
+        </div>
+
+        <div class="gs-card" id="slotsCard" style="display:none;">
+          <span class="gs-kicker">Step 2</span>
+          <h3>Choose a Time</h3>
+
+          <div id="consultationSlotsWrap" style="display:none;">
+            {% if consultation_slots %}
+              {% for day_label, slots in consultation_slots.items() %}
+              <div class="gs-day-block">
+                <div class="gs-day-label">{{ day_label }}</div>
+                <div class="gs-slots">
+                  {% for slot in slots %}
+                  <button type="button" class="gs-slot-btn" data-start="{{ slot.start.isoformat() }}" onclick="selectSlot(this)">
+                    {{ slot.start.strftime('%I:%M %p') }}
+                  </button>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <p class="gs-empty">No consultation times open right now &mdash; try a full appointment instead, or check back soon.</p>
+            {% endif %}
+          </div>
+
+          <div id="standardSlotsWrap" style="display:none;">
+            {% if standard_slots %}
+              {% for day_label, slots in standard_slots.items() %}
+              <div class="gs-day-block">
+                <div class="gs-day-label">{{ day_label }}</div>
+                <div class="gs-slots">
+                  {% for slot in slots %}
+                  <button type="button" class="gs-slot-btn" data-start="{{ slot.start.isoformat() }}" onclick="selectSlot(this)">
+                    {{ slot.start.strftime('%I:%M %p') }}
+                  </button>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <p class="gs-empty">No open times right now &mdash; check back soon.</p>
+            {% endif %}
+          </div>
         </div>
 
         <div class="gs-card" id="detailsCard" style="display:none;">
-          <span class="gs-kicker">Step 2</span>
+          <span class="gs-kicker">Step 3</span>
           <h3>Your Info</h3>
           <p id="selectedSlotLabel" style="color:var(--gs-taupe);margin-top:-10px;margin-bottom:18px;"></p>
 
-          <div class="gs-field">
-            <label for="service_type">What are you looking for?</label>
-            <select id="service_type" name="service_type">
-              {% for service in service_categories %}
+          <div class="gs-field" id="consultationServiceField" style="display:none;">
+            <label>Service</label>
+            <div class="gs-fixed-service">{{ consultation_service_name }}</div>
+            <input type="hidden" name="service_type" id="consultationServiceInput" value="{{ consultation_service_name }}" disabled>
+          </div>
+
+          <div class="gs-field" id="standardServiceField" style="display:none;">
+            <label for="standardServiceSelect">What are you looking for?</label>
+            <select name="service_type" id="standardServiceSelect" disabled>
+              {% for service in full_appointment_services %}
                 <option value="{{ service.name }}">{{ service.name }}</option>
               {% endfor %}
               <option value="Other / Not Sure">Other / Not sure yet</option>
             </select>
           </div>
+
           <div class="gs-field">
             <label for="client_name">Name</label>
             <input id="client_name" name="client_name" type="text" required>
@@ -168,6 +231,26 @@
       </form>
 
       <script>
+        function selectTrack(track) {
+          document.getElementById('trackConsultationBtn').classList.toggle('selected', track === 'consultation');
+          document.getElementById('trackStandardBtn').classList.toggle('selected', track === 'standard');
+
+          document.getElementById('consultationSlotsWrap').style.display = track === 'consultation' ? 'block' : 'none';
+          document.getElementById('standardSlotsWrap').style.display = track === 'standard' ? 'block' : 'none';
+          document.getElementById('slotsCard').style.display = 'block';
+
+          document.getElementById('consultationServiceField').style.display = track === 'consultation' ? 'block' : 'none';
+          document.getElementById('standardServiceField').style.display = track === 'standard' ? 'block' : 'none';
+          document.getElementById('consultationServiceInput').disabled = track !== 'consultation';
+          document.getElementById('standardServiceSelect').disabled = track !== 'standard';
+
+          document.querySelectorAll('.gs-slot-btn').forEach(b => b.classList.remove('selected'));
+          document.getElementById('startsAt').value = '';
+          document.getElementById('detailsCard').style.display = 'none';
+
+          document.getElementById('slotsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         function selectSlot(btn) {
           document.querySelectorAll('.gs-slot-btn').forEach(b => b.classList.remove('selected'));
           btn.classList.add('selected');

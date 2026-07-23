@@ -16,6 +16,15 @@ ones:
     models instead of a parallel one-off table, and everything is scoped
     per-stylist instead of per-Ravlo-staff-host.
 
+Unlike the single-duration demo page, this vertical offers a short
+consultation (fixed 30 minutes) alongside full-length appointments (whose
+duration follows the stylist's own per-day availability window length).
+Two different durations sharing one calendar means slot availability has
+to be checked with real interval overlap (does [start, start+duration)
+intersect any existing appointment's [start, start+duration)), not just
+"is this exact start time already taken" -- the exact-match check that
+sufficed when every appointment was the same length.
+
 Like scheduling.py, times are stored/displayed as naive, stylist-local
 datetimes with no per-visitor timezone conversion -- appropriate (more so
 than for the Ravlo demo page) since a salon client physically visits the
@@ -43,20 +52,32 @@ salon_public_bp = Blueprint("salon_public", __name__, url_prefix="/salon")
 BOOKING_WINDOW_DAYS = 21
 DEFAULT_SLOT_MINUTES = 60
 
+CONSULTATION_SERVICE_NAME = "30-Minute Consultation"
+CONSULTATION_MINUTES = 30
+
 # General service categories shown on the landing page and offered in the
-# booking form. Deliberately no invented prices here -- unlike Key
-# Signature's landing page (an existing, already-priced business), we
-# don't have GotStyles' actual service menu/pricing yet, so the public
-# form collects free-text "what are you looking for" instead of a priced
-# menu. Aisha can attach real pricing when she manages the appointment
-# from her own dashboard.
+# booking form. Deliberately no invented prices/durations here beyond the
+# consultation (a real, explicit 30 minutes) -- unlike Key Signature's
+# landing page (an existing, already-priced business), we don't have
+# GotStyles' actual per-service pricing or exact durations yet, so full
+# appointments use whichever slot length the stylist has configured for
+# that day in /stylist/availability, and Aisha can attach real pricing
+# when she manages the appointment from her own dashboard.
 SERVICE_CATEGORIES = [
+    {"name": CONSULTATION_SERVICE_NAME,
+     "description": "Not sure where to start? A quick chat about your hair goals -- no commitment."},
     {"name": "Cuts & Styling", "description": "Precision cuts, shape-ups, and finished styles."},
     {"name": "Color & Balayage", "description": "Custom color, highlights, and balayage."},
     {"name": "Silk Press & Blowouts", "description": "Sleek, smooth, salon-fresh results."},
     {"name": "Extensions & Install", "description": "Sew-ins, quick weaves, and extension maintenance."},
+    {"name": "Dreads & Locs", "description": "Starter locs, retwists, and loc maintenance."},
+    {"name": "Wigs & Units", "description": "Custom wig install, styling, and unit maintenance."},
     {"name": "Treatments", "description": "Deep conditioning and scalp treatments."},
 ]
+
+# Services offered in the "Full Appointment" track of the booking form
+# (everything except the consultation, which gets its own track/duration).
+FULL_APPOINTMENT_SERVICES = [s for s in SERVICE_CATEGORIES if s["name"] != CONSULTATION_SERVICE_NAME]
 
 
 def _stylist_or_404(slug):
@@ -65,7 +86,31 @@ def _stylist_or_404(slug):
     ).first_or_404()
 
 
-def _generate_available_slots(stylist, days_ahead: int = BOOKING_WINDOW_DAYS):
+def _existing_scheduled_intervals(stylist, window_start, window_end):
+    """[(start, end), ...] for every scheduled appointment in range, used
+    for real interval-overlap checks rather than exact-start-time matches
+    -- necessary now that appointments can have different durations
+    (a 30-minute consultation vs. a full-length service)."""
+    existing = Appointment.query.filter(
+        Appointment.stylist_id == stylist.id,
+        Appointment.status == "scheduled",
+        Appointment.scheduled_at >= window_start,
+        Appointment.scheduled_at < window_end,
+    ).all()
+    return [
+        (a.scheduled_at, a.scheduled_at + timedelta(minutes=a.duration_minutes or DEFAULT_SLOT_MINUTES))
+        for a in existing
+    ]
+
+
+def _overlaps(candidate_start, candidate_end, intervals):
+    return any(candidate_start < end and start < candidate_end for start, end in intervals)
+
+
+def _generate_available_slots(stylist, fixed_duration_minutes=None, days_ahead: int = BOOKING_WINDOW_DAYS):
+    """Slots for the "Full Appointment" track (fixed_duration_minutes=None,
+    each day's own configured slot_minutes) or the fixed-length
+    consultation track (fixed_duration_minutes=CONSULTATION_MINUTES)."""
     templates = SalonAvailability.query.filter_by(stylist_id=stylist.id, is_active=True).all()
     if not templates:
         return []
@@ -73,14 +118,9 @@ def _generate_available_slots(stylist, days_ahead: int = BOOKING_WINDOW_DAYS):
     now_naive = datetime.utcnow()
     today = now_naive.date()
     end_date = today + timedelta(days=days_ahead)
-
-    existing = Appointment.query.filter(
-        Appointment.stylist_id == stylist.id,
-        Appointment.status == "scheduled",
-        Appointment.scheduled_at >= datetime.combine(today, dtime.min),
-        Appointment.scheduled_at < datetime.combine(end_date + timedelta(days=1), dtime.min),
-    ).all()
-    taken = {a.scheduled_at for a in existing}
+    window_start = datetime.combine(today, dtime.min)
+    window_end = datetime.combine(end_date + timedelta(days=1), dtime.min)
+    taken_intervals = _existing_scheduled_intervals(stylist, window_start, window_end)
 
     slots = []
     cursor = today
@@ -89,17 +129,43 @@ def _generate_available_slots(stylist, days_ahead: int = BOOKING_WINDOW_DAYS):
         for template in templates:
             if template.day_of_week != weekday:
                 continue
-            step = timedelta(minutes=template.slot_minutes or DEFAULT_SLOT_MINUTES)
+            duration = fixed_duration_minutes or template.slot_minutes or DEFAULT_SLOT_MINUTES
+            step = timedelta(minutes=min(duration, template.slot_minutes or DEFAULT_SLOT_MINUTES))
             slot_start = datetime.combine(cursor, template.start_time)
-            window_end = datetime.combine(cursor, template.end_time)
-            while slot_start + step <= window_end:
-                if slot_start > now_naive and slot_start not in taken:
-                    slots.append({"start": slot_start, "end": slot_start + step, "slot_minutes": template.slot_minutes})
+            window_end_dt = datetime.combine(cursor, template.end_time)
+            while slot_start + timedelta(minutes=duration) <= window_end_dt:
+                slot_end = slot_start + timedelta(minutes=duration)
+                if slot_start > now_naive and not _overlaps(slot_start, slot_end, taken_intervals):
+                    slots.append({"start": slot_start, "end": slot_end, "duration_minutes": duration})
                 slot_start += step
         cursor += timedelta(days=1)
 
     slots.sort(key=lambda s: s["start"])
     return slots
+
+
+def _slot_is_valid(stylist, starts_at, duration_minutes) -> bool:
+    """Re-validates a submitted booking server-side: does some active
+    availability window on that weekday actually cover [starts_at,
+    starts_at+duration), and does it avoid overlapping any other
+    scheduled appointment."""
+    templates = SalonAvailability.query.filter_by(
+        stylist_id=stylist.id, day_of_week=starts_at.weekday(), is_active=True
+    ).all()
+    ends_at = starts_at + timedelta(minutes=duration_minutes)
+
+    fits_a_window = any(
+        datetime.combine(starts_at.date(), t.start_time) <= starts_at
+        and ends_at <= datetime.combine(starts_at.date(), t.end_time)
+        for t in templates
+    )
+    if not fits_a_window:
+        return False
+
+    taken_intervals = _existing_scheduled_intervals(
+        stylist, starts_at - timedelta(days=1), starts_at + timedelta(days=1)
+    )
+    return not _overlaps(starts_at, ends_at, taken_intervals)
 
 
 def _send_booking_confirmation_emails(stylist, appointment) -> None:
@@ -172,18 +238,23 @@ def landing(slug):
 @salon_public_bp.route("/<slug>/book", methods=["GET"])
 def book(slug):
     stylist = _stylist_or_404(slug)
-    slots = _generate_available_slots(stylist)
 
-    grouped_slots = OrderedDict()
-    for slot in slots:
-        day_key = slot["start"].strftime("%A, %B %d")
-        grouped_slots.setdefault(day_key, []).append(slot)
+    def _group(slots):
+        grouped = OrderedDict()
+        for slot in slots:
+            grouped.setdefault(slot["start"].strftime("%A, %B %d"), []).append(slot)
+        return grouped
+
+    standard_slots = _group(_generate_available_slots(stylist))
+    consultation_slots = _group(_generate_available_slots(stylist, fixed_duration_minutes=CONSULTATION_MINUTES))
 
     return render_template(
         "public/salon_booking.html",
         stylist=stylist,
-        grouped_slots=grouped_slots,
-        service_categories=SERVICE_CATEGORIES,
+        standard_slots=standard_slots,
+        consultation_slots=consultation_slots,
+        full_appointment_services=FULL_APPOINTMENT_SERVICES,
+        consultation_service_name=CONSULTATION_SERVICE_NAME,
     )
 
 
@@ -213,17 +284,18 @@ def submit_booking(slug):
         flash("That time has already passed -- please pick another.", "warning")
         return redirect(url_for("salon_public.book", slug=slug))
 
-    already_booked = Appointment.query.filter_by(
-        stylist_id=stylist.id, scheduled_at=starts_at, status="scheduled"
-    ).first()
-    if already_booked:
-        flash("That time was just booked -- please pick another.", "warning")
-        return redirect(url_for("salon_public.book", slug=slug))
+    is_consultation = service_type == CONSULTATION_SERVICE_NAME
+    if is_consultation:
+        duration_minutes = CONSULTATION_MINUTES
+    else:
+        template = SalonAvailability.query.filter_by(
+            stylist_id=stylist.id, day_of_week=starts_at.weekday(), is_active=True
+        ).first()
+        duration_minutes = template.slot_minutes if template else DEFAULT_SLOT_MINUTES
 
-    template = SalonAvailability.query.filter_by(
-        stylist_id=stylist.id, day_of_week=starts_at.weekday(), is_active=True
-    ).first()
-    slot_minutes = template.slot_minutes if template else DEFAULT_SLOT_MINUTES
+    if not _slot_is_valid(stylist, starts_at, duration_minutes):
+        flash("That time was just booked or is no longer available -- please pick another.", "warning")
+        return redirect(url_for("salon_public.book", slug=slug))
 
     client = None
     if email:
@@ -249,7 +321,7 @@ def submit_booking(slug):
         client_id=client.id,
         service_type=service_type,
         scheduled_at=starts_at,
-        duration_minutes=slot_minutes,
+        duration_minutes=duration_minutes,
         status="scheduled",
         notes=notes,
         confirmation_token=_new_confirmation_token(),

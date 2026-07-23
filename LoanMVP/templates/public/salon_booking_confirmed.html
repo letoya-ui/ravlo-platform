@@ -61,7 +61,8 @@
     <div class="gs-confirm-detail">
       <div><span>Service</span> <strong>{{ appointment.service_type }}</strong></div>
       <div><span>Date &amp; Time</span> <strong>{{ appointment.scheduled_at.strftime('%A, %B %d at %I:%M %p') }}</strong></div>
-      {% if stylist.service_area %}<div><span>Location</span> <strong>{{ stylist.service_area }}</strong></div>{% endif %}
+      {% if stylist.address %}<div><span>Location</span> <strong>{{ stylist.address }}</strong></div>
+      {% elif stylist.service_area %}<div><span>Location</span> <strong>{{ stylist.service_area }}</strong></div>{% endif %}
     </div>
 
     <a href="{{ url_for('salon_public.landing', slug=stylist.public_slug) }}" class="gs-back-link">&larr; Back to {{ _display }}</a>
