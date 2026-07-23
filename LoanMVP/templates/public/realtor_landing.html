@@ -523,5 +523,9 @@
   <p>&copy; {{ display_name }}{% if profile.business_name %} &middot; {{ profile.business_name }}{% endif %}</p>
 </footer>
 
+{% with source_page = display_name %}
+  {% include "public/_white_label_cta.html" %}
+{% endwith %}
+
 </body>
 </html>

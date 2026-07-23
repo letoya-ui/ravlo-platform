@@ -1381,6 +1381,10 @@
   </div>
 </footer>
 
+{% with source_page = display_name %}
+  {% include "public/_white_label_cta.html" %}
+{% endwith %}
+
 </div><!-- .page-wrap -->
 </body>
 </html>
