@@ -1107,6 +1107,10 @@
   <div class="jh-footer-powered">Powered by <a href="#">Ravlo</a></div>
 </footer>
 
+{% with source_page = _display %}
+  {% include "public/_white_label_cta.html" %}
+{% endwith %}
+
 <!-- Calendly popup embed -->
 <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
 <script src="https://assets.calendly.com/assets/external/widget.js" async></script>

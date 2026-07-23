@@ -1,0 +1,66 @@
+{# Shared "want your own page" CTA, included at the bottom of every
+   bespoke partner landing page (Bonnie's, John Headley's, Key
+   Signature's, GotStyles', and the generic realtor_landing.html
+   fallback). Deliberately self-contained (its own `rwl-` prefixed
+   styles, Ravlo's own blue brand color) rather than reusing each page's
+   own CSS variables -- this section is promoting Ravlo, not the
+   individual business, so it should read as a distinct "powered by"
+   banner rather than blend into the business's own branding.
+
+   Expects an optional `source_page` variable (a human-readable label
+   for which page this was shown on) to be set by the including
+   template; falls back to a generic label if not provided. #}
+<section class="rwl-cta">
+  <style>
+    .rwl-cta {
+      background: #0b0f1a;
+      padding: 70px 40px;
+      font-family: 'Inter', 'Montserrat', sans-serif;
+    }
+    .rwl-cta-inner { max-width: 640px; margin: 0 auto; text-align: center; }
+    .rwl-cta-eyebrow {
+      display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .16em;
+      text-transform: uppercase; color: #7ab8ff; margin-bottom: 14px;
+    }
+    .rwl-cta h2 {
+      font-size: clamp(1.5rem, 3.2vw, 2rem); font-weight: 800; color: #ffffff; margin-bottom: 12px;
+    }
+    .rwl-cta p {
+      font-size: .96rem; color: #9aa7bd; line-height: 1.65; max-width: 480px; margin: 0 auto 30px;
+    }
+    .rwl-form { display: grid; gap: 12px; text-align: left; }
+    .rwl-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .rwl-form input {
+      width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04); color: #ffffff; font-family: inherit; font-size: .9rem;
+      box-sizing: border-box;
+    }
+    .rwl-form input::placeholder { color: #6b7688; }
+    .rwl-submit {
+      margin-top: 4px; padding: 13px 20px; border-radius: 9px; border: none; cursor: pointer;
+      font-weight: 700; font-size: .88rem; letter-spacing: .02em;
+      color: #081220;
+      background: linear-gradient(135deg, #a8d2ff 0%, #7ab8ff 45%, #4ea1ff 100%);
+    }
+    .rwl-submit:hover { opacity: .92; }
+    @media (max-width: 520px) {
+      .rwl-form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+  <div class="rwl-cta-inner">
+    <span class="rwl-cta-eyebrow">Powered by Ravlo</span>
+    <h2>Want a page like this for your business?</h2>
+    <p>Ravlo builds real booking pages, dashboards, and business tools for salons, realtors, insurance pros, and more &mdash; not a template, the real thing. Tell us about your business and we'll reach out.</p>
+    <form method="POST" action="{{ url_for('marketing.request_own_page') }}" class="rwl-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="source_page" value="{{ source_page or 'a Ravlo partner page' }}">
+      <input type="text" name="name" placeholder="Your name" required>
+      <div class="rwl-form-row">
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="text" name="phone" placeholder="Phone (optional)">
+      </div>
+      <input type="text" name="business_type" placeholder="What kind of business? (e.g. Salon, Real Estate, Insurance)">
+      <button type="submit" class="rwl-submit">Request My Own Page</button>
+    </form>
+  </div>
+</section>

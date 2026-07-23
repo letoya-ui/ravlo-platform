@@ -628,6 +628,114 @@ def _notify_admin_lending_os_lead(first_name, last_name, company, email, phone) 
 
 
 # ---------------------------------------------------------
+# WHITE LABEL PAGE REQUEST (shared CTA at the bottom of every partner
+# landing page -- Bonnie's, John Headley's, Key Signature's, GotStyles',
+# and the generic realtor_landing.html fallback)
+# ---------------------------------------------------------
+@marketing_bp.route("/request-my-own-page", methods=["POST"])
+@limiter.limit("5 per minute")
+def request_own_page():
+    name = (request.form.get("name") or "").strip()
+    email = (request.form.get("email") or "").strip().lower()
+    phone = (request.form.get("phone") or "").strip()
+    business_type = (request.form.get("business_type") or "").strip()
+    source_page = (request.form.get("source_page") or "").strip()
+
+    if not name or not email:
+        flash("Name and email are required.", "warning")
+        return redirect(request.referrer or url_for("marketing.homepage"))
+
+    if _is_spam(email, business_type, ""):
+        current_app.logger.warning("White-label page request spam blocked: %s <%s>", name, email)
+        return redirect(url_for("marketing.request_own_page_thanks"))
+
+    existing = BusinessInquiry.query.filter(
+        func.lower(BusinessInquiry.email) == email,
+        BusinessInquiry.plan_interest == "white_label",
+    ).first()
+    if not existing:
+        row = BusinessInquiry(
+            inquiry_type="license_application",
+            company_name=business_type or "—",
+            contact_name=name,
+            email=email,
+            phone=phone or None,
+            business_type=business_type or None,
+            plan_interest="white_label",
+            notes=f"Requested their own white-label page after viewing: {source_page or 'a Ravlo partner page'}",
+            status="new",
+            ae_stage="prospect",
+        )
+        db.session.add(row)
+        db.session.commit()
+
+    _notify_admin_white_label_request(name, email, phone, business_type, source_page)
+    _send_white_label_request_confirmation(name, email)
+    return redirect(url_for("marketing.request_own_page_thanks"))
+
+
+@marketing_bp.route("/request-my-own-page/thanks")
+def request_own_page_thanks():
+    return render_template("marketing/white_label_request_thanks.html")
+
+
+def _send_white_label_request_confirmation(name: str, email: str) -> None:
+    try:
+        from LoanMVP.app import mail
+        from flask_mail import Message as MailMessage
+
+        first_name = (name or "there").split(" ")[0]
+        msg = MailMessage(
+            subject="We got your request for your own Ravlo page",
+            recipients=[email],
+        )
+        msg.html = f"""
+        <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#0f1117;">
+          <img src="https://ravlohq.com/static/images/ravlo-logo-dark.png" alt="Ravlo" style="height:32px;margin-bottom:28px;">
+          <h2 style="font-size:22px;font-weight:700;margin:0 0 12px;">Hey {first_name}, we got your request!</h2>
+          <p style="font-size:15px;line-height:1.6;color:#374151;">
+            Thanks for your interest in a white-label page and booking calendar of your own. A member of our
+            team will reach out within <strong>2 business hours</strong> to learn more about your business and
+            walk you through what Ravlo can build for you.
+          </p>
+          <p style="font-size:15px;line-height:1.6;color:#374151;margin-top:16px;">In the meantime, feel free to reply to this email with any questions.</p>
+          <p style="margin-top:28px;font-size:13px;color:#9ca3af;">— The Ravlo Team</p>
+        </div>
+        """
+        mail.send(msg)
+    except Exception as e:
+        print(f"[white_label_request] confirmation email failed: {e}")
+
+
+def _notify_admin_white_label_request(name, email, phone, business_type, source_page) -> None:
+    try:
+        from LoanMVP.app import mail
+        from flask_mail import Message as MailMessage
+
+        admin_email = _owner_admin_email()
+        if not admin_email:
+            return
+
+        msg = MailMessage(
+            subject=f"[Ravlo] White-label page request — {email}",
+            recipients=[admin_email],
+        )
+        msg.body = (
+            f"New white-label page request:\n\n"
+            f"Name: {name}\n"
+            f"Business type: {business_type or '—'}\n"
+            f"Email: {email}\n"
+            f"Phone: {phone or '—'}\n"
+            f"Came from: {source_page or '—'}\n\n"
+            f"Follow up and assign an AE via the deal pipeline.\n"
+            f"https://ravlohq.com/account-executive/deals"
+        )
+        mail.send(msg)
+    except Exception as e:
+        print(f"[white_label_request] admin notification failed: {e}")
+
+
+# ---------------------------------------------------------
 # APPLICATIONS / ACADEMY
 # ---------------------------------------------------------
 @marketing_bp.route("/apply", methods=["GET", "POST"])
