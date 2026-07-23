@@ -77,6 +77,24 @@
   </div>
 
   <div class="re-nav-group">
+    <div class="re-nav-label">Booking Page</div>
+
+    <a href="{{ url_for('stylist.availability') }}"
+       class="re-nav-link {% if active_tab == 'availability' %}active{% endif %}">
+      <i class="icon lucide lucide-calendar-clock"></i>
+      <span>Availability</span>
+    </a>
+
+    {% if current_user.stylist_profile and current_user.stylist_profile.public_slug %}
+    <a href="{{ url_for('salon_public.landing', slug=current_user.stylist_profile.public_slug) }}"
+       class="re-nav-link" target="_blank" rel="noopener">
+      <i class="icon lucide lucide-external-link"></i>
+      <span>View My Booking Page</span>
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="re-nav-group">
     <div class="re-nav-label">Account</div>
 
     <a href="{{ url_for('account.settings') }}"

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% set _display = stylist.full_name or "GotStyles Beauty" %}
+  <title>Appointment Confirmed — {{ _display }}</title>
+  <meta name="robots" content="noindex, nofollow">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gs-black: #111111;
+      --gs-ivory: #F8F5F2;
+      --gs-rose:  #B76E79;
+      --gs-gold:  #D4AF37;
+      --gs-taupe: #C8B6A6;
+      --radius: 14px;
+    }
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: var(--gs-black); color: var(--gs-ivory);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 40px 20px;
+    }
+    .gs-confirm-card {
+      max-width: 480px; width: 100%; text-align: center;
+      background: rgba(255,255,255,.03); border: 1px solid rgba(212,175,55,.2);
+      border-radius: var(--radius); padding: 48px 36px;
+    }
+    .gs-confirm-icon {
+      width: 62px; height: 62px; border-radius: 50%; background: var(--gs-rose); color: var(--gs-ivory);
+      display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 22px;
+    }
+    .gs-confirm-card h1 {
+      font-family: 'Playfair Display', serif; font-size: 1.6rem; margin-bottom: 10px;
+    }
+    .gs-confirm-card p { color: var(--gs-taupe); margin-bottom: 6px; }
+    .gs-confirm-detail {
+      margin-top: 24px; padding-top: 24px; border-top: 1px solid rgba(212,175,55,.16);
+      text-align: left; font-size: .92rem;
+    }
+    .gs-confirm-detail div { display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--gs-taupe); }
+    .gs-confirm-detail div strong { color: var(--gs-ivory); font-weight: 600; }
+    .gs-back-link {
+      display: inline-block; margin-top: 28px; color: var(--gs-gold); text-decoration: none; font-size: .88rem; font-weight: 600;
+    }
+    .gs-back-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="gs-confirm-card">
+    <div class="gs-confirm-icon">&#10003;</div>
+    <h1>You're Booked!</h1>
+    <p>{{ appointment.client.full_name if appointment.client else "" }}, your appointment with {{ _display }} is confirmed.</p>
+
+    <div class="gs-confirm-detail">
+      <div><span>Service</span> <strong>{{ appointment.service_type }}</strong></div>
+      <div><span>Date &amp; Time</span> <strong>{{ appointment.scheduled_at.strftime('%A, %B %d at %I:%M %p') }}</strong></div>
+      {% if stylist.service_area %}<div><span>Location</span> <strong>{{ stylist.service_area }}</strong></div>{% endif %}
+    </div>
+
+    <a href="{{ url_for('salon_public.landing', slug=stylist.public_slug) }}" class="gs-back-link">&larr; Back to {{ _display }}</a>
+  </div>
+</body>
+</html>

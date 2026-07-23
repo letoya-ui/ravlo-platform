@@ -33,11 +33,13 @@ from LoanMVP.models.salon_models import (
     ProductSale,
     SalonReview,
     LoyaltyTransaction,
+    SalonAvailability,
 )
 
 stylist_bp = Blueprint("stylist", __name__, url_prefix="/stylist")
 
 APPOINTMENT_STATUSES = ["scheduled", "completed", "cancelled", "no_show"]
+WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
 def _get_or_create_stylist_profile():
@@ -532,3 +534,72 @@ def loyalty():
         .all()
     )
     return render_template("stylist/loyalty.html", profile=profile, clients=client_list, active_tab="loyalty")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BOOKING PAGE: AVAILABILITY
+# ─────────────────────────────────────────────────────────────────────────────
+
+@stylist_bp.route("/availability", methods=["GET", "POST"])
+@login_required
+@role_required("stylist")
+def availability():
+    """Manage the recurring weekly windows salon_public.py's public
+    booking calendar draws open slots from. Mirrors scheduling.py's
+    availability() route exactly, scoped to stylist_id instead of
+    host_user_id since a stylist only ever manages her own hours (no
+    company-wide "full visibility" concept needed here)."""
+    profile = _get_or_create_stylist_profile()
+
+    if request.method == "POST":
+        action_type = request.form.get("action_type")
+
+        if action_type == "add":
+            day_of_week = request.form.get("day_of_week", type=int)
+            slot_minutes = request.form.get("slot_minutes", type=int) or 60
+
+            try:
+                start_time = datetime.strptime((request.form.get("start_time") or "").strip(), "%H:%M").time()
+                end_time = datetime.strptime((request.form.get("end_time") or "").strip(), "%H:%M").time()
+            except ValueError:
+                flash("Enter valid start and end times.", "warning")
+                return redirect(url_for("stylist.availability"))
+
+            if day_of_week is None or day_of_week not in range(7) or end_time <= start_time:
+                flash("Enter a valid day and time range.", "warning")
+                return redirect(url_for("stylist.availability"))
+
+            db.session.add(SalonAvailability(
+                stylist_id=profile.id,
+                day_of_week=day_of_week,
+                start_time=start_time,
+                end_time=end_time,
+                slot_minutes=slot_minutes,
+            ))
+            db.session.commit()
+            flash("Availability added.", "success")
+
+        elif action_type == "delete":
+            slot_id = request.form.get("slot_id", type=int)
+            slot = SalonAvailability.query.filter_by(id=slot_id, stylist_id=profile.id).first()
+            if slot:
+                db.session.delete(slot)
+                db.session.commit()
+                flash("Availability removed.", "success")
+
+        return redirect(url_for("stylist.availability"))
+
+    my_slots = (
+        SalonAvailability.query
+        .filter_by(stylist_id=profile.id)
+        .order_by(SalonAvailability.day_of_week, SalonAvailability.start_time)
+        .all()
+    )
+
+    return render_template(
+        "stylist/availability.html",
+        profile=profile,
+        slots=my_slots,
+        weekdays=WEEKDAYS,
+        active_tab="availability",
+    )

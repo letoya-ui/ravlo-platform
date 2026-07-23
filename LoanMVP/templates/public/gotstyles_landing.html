@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  {% set _display = stylist.full_name or "GotStyles Beauty" %}
+  {% set _area = stylist.service_area or "" %}
+  {% set _desc = (stylist.headline or "Beauty. Brand. Business.") ~ (" Serving " ~ _area ~ "." if _area else "") %}
+
+  <title>{{ _display }} — Book Your Appointment</title>
+  <meta name="description" content="{{ _desc }}">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="{{ _display }}">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ _display }} — Beauty. Brand. Business.">
+  <meta property="og:description" content="{{ _desc }}">
+  {% if stylist.logo_url %}<meta property="og:image" content="{{ stylist.logo_url }}">{% endif %}
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": ["HairSalon", "LocalBusiness"],
+    "name": "{{ _display | e }}",
+    "description": "{{ _desc | e }}"
+    {% if stylist.phone %}, "telephone": "{{ stylist.phone | e }}"{% endif %}
+    {% if stylist.email %}, "email": "{{ stylist.email | e }}"{% endif %}
+    {% if _area %}, "areaServed": { "@type": "AdministrativeArea", "name": "{{ _area | e }}" }{% endif %}
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gs-black: #111111;
+      --gs-ivory: #F8F5F2;
+      --gs-rose:  #B76E79;
+      --gs-gold:  #D4AF37;
+      --gs-taupe: #C8B6A6;
+      --radius: 14px;
+      --shadow: 0 8px 30px rgba(0,0,0,.35);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: var(--gs-black);
+      color: var(--gs-ivory);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    .gs-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 40px;
+      background: rgba(17,17,17,.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(212,175,55,.18);
+    }
+    .gs-nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .gs-nav-logo-img { height: 42px; width: auto; display: block; }
+    .gs-nav-logo-text {
+      font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700;
+      color: var(--gs-ivory); letter-spacing: .03em;
+    }
+    .gs-nav-logo-text span { color: var(--gs-rose); }
+    .gs-nav-cta {
+      background: var(--gs-rose); color: var(--gs-ivory);
+      font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+      padding: 11px 24px; border-radius: 8px; text-decoration: none;
+      transition: background .2s;
+    }
+    .gs-nav-cta:hover { background: #a15b66; }
+
+    /* ── HERO ── */
+    .gs-hero {
+      min-height: 92vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 140px 40px 80px;
+      background: radial-gradient(circle at 50% 0%, #1c1a19 0%, var(--gs-black) 70%);
+      text-align: center;
+    }
+    .gs-hero-inner { max-width: 720px; }
+    .gs-hero-logo { max-width: 260px; width: 100%; height: auto; margin: 0 auto 32px; display: block; }
+    .gs-eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: .75rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--gs-gold); margin-bottom: 18px;
+    }
+    .gs-hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.2rem, 5vw, 3.2rem); font-weight: 700; line-height: 1.2;
+      color: var(--gs-ivory); margin-bottom: 20px;
+    }
+    .gs-hero h1 em { color: var(--gs-rose); font-style: normal; }
+    .gs-hero-sub {
+      font-size: 1.05rem; color: var(--gs-taupe); max-width: 540px;
+      margin: 0 auto 36px; line-height: 1.75;
+    }
+    .gs-hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .gs-btn-primary {
+      background: var(--gs-rose); color: var(--gs-ivory);
+      font-size: .88rem; font-weight: 700; letter-spacing: .03em;
+      padding: 15px 34px; border-radius: 9px; text-decoration: none;
+      transition: background .2s, transform .15s;
+      display: inline-block;
+    }
+    .gs-btn-primary:hover { background: #a15b66; transform: translateY(-1px); }
+    .gs-btn-ghost {
+      border: 1.5px solid rgba(248,245,242,.24); color: var(--gs-ivory);
+      font-size: .88rem; font-weight: 600;
+      padding: 15px 34px; border-radius: 9px; text-decoration: none;
+      transition: border-color .2s;
+      display: inline-block;
+    }
+    .gs-btn-ghost:hover { border-color: var(--gs-gold); color: var(--gs-gold); }
+
+    /* ── SERVICES ── */
+    .gs-services { padding: 90px 40px; max-width: 1100px; margin: 0 auto; }
+    .gs-services-head { text-align: center; margin-bottom: 56px; }
+    .gs-services-head .gs-eyebrow { justify-content: center; display: flex; }
+    .gs-services-head h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.9rem, 3.6vw, 2.5rem); color: var(--gs-ivory); margin-bottom: 12px;
+    }
+    .gs-services-head p { color: var(--gs-taupe); font-size: 1rem; }
+    .gs-services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px; }
+    .gs-service-card {
+      background: rgba(255,255,255,.03); border: 1px solid rgba(212,175,55,.16);
+      border-radius: var(--radius); padding: 28px 24px;
+    }
+    .gs-service-card h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--gs-gold); margin-bottom: 10px; }
+    .gs-service-card p { font-size: .9rem; color: var(--gs-taupe); }
+
+    /* ── REVIEWS ── */
+    .gs-reviews { background: rgba(255,255,255,.02); padding: 90px 40px; }
+    .gs-reviews-inner { max-width: 900px; margin: 0 auto; text-align: center; }
+    .gs-reviews-inner h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 3.4vw, 2.3rem); color: var(--gs-ivory); margin-bottom: 44px;
+    }
+    .gs-reviews-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; text-align: left; }
+    .gs-review-card {
+      background: var(--gs-black); border: 1px solid rgba(212,175,55,.16);
+      border-radius: var(--radius); padding: 24px;
+    }
+    .gs-review-stars { color: var(--gs-gold); font-size: .95rem; margin-bottom: 10px; letter-spacing: 2px; }
+    .gs-review-card p { font-size: .92rem; color: var(--gs-taupe); margin-bottom: 12px; }
+    .gs-review-card .gs-review-name { font-size: .84rem; font-weight: 700; color: var(--gs-ivory); }
+
+    /* ── CONTACT ── */
+    .gs-contact { padding: 90px 40px; max-width: 720px; margin: 0 auto; text-align: center; }
+    .gs-contact h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 3.4vw, 2.3rem); color: var(--gs-ivory); margin-bottom: 16px;
+    }
+    .gs-contact p { color: var(--gs-taupe); margin-bottom: 30px; }
+    .gs-contact-items { display: flex; flex-wrap: wrap; gap: 26px; justify-content: center; margin-bottom: 34px; }
+    .gs-contact-item { display: flex; align-items: center; gap: 10px; font-size: .92rem; }
+    .gs-contact-item a { color: var(--gs-ivory); text-decoration: none; }
+    .gs-contact-item a:hover { color: var(--gs-rose); }
+    .gs-contact-icon {
+      width: 32px; height: 32px; border-radius: 50%; background: rgba(212,175,55,.14); color: var(--gs-gold);
+      display: flex; align-items: center; justify-content: center; font-size: .85rem; flex-shrink: 0;
+    }
+
+    /* ── FOOTER ── */
+    .gs-footer {
+      background: var(--gs-black); color: var(--gs-taupe);
+      text-align: center; padding: 40px; font-size: .82rem;
+      border-top: 1px solid rgba(212,175,55,.14);
+    }
+    .gs-footer strong { color: var(--gs-ivory); }
+
+    @media (max-width: 640px) {
+      .gs-nav { padding: 12px 20px; }
+      .gs-hero, .gs-services, .gs-reviews, .gs-contact { padding-left: 20px; padding-right: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="gs-nav">
+    <a href="#" class="gs-nav-logo">
+      {% if stylist.logo_url %}
+        <img src="{{ stylist.logo_url }}" alt="{{ _display }}" class="gs-nav-logo-img">
+      {% else %}
+        <span class="gs-nav-logo-text">GOT<span>STYLES</span></span>
+      {% endif %}
+    </a>
+    <a href="{{ url_for('salon_public.book', slug=stylist.public_slug) }}" class="gs-nav-cta">Book Now</a>
+  </nav>
+
+  <section class="gs-hero">
+    <div class="gs-hero-inner">
+      {% if stylist.logo_url %}
+        <img src="{{ stylist.logo_url }}" alt="{{ _display }}" class="gs-hero-logo">
+      {% endif %}
+      <div class="gs-eyebrow">Beauty &middot; Brand &middot; Business</div>
+      <h1>{{ stylist.headline or ("Your look, " ~ "elevated." ) }}</h1>
+      <p class="gs-hero-sub">
+        {% if _area %}Book your next appointment with {{ _display }}, serving {{ _area }}.{% else %}Book your next appointment with {{ _display }}.{% endif %}
+      </p>
+      <div class="gs-hero-actions">
+        <a href="{{ url_for('salon_public.book', slug=stylist.public_slug) }}" class="gs-btn-primary">Book Now</a>
+        <a href="#contact" class="gs-btn-ghost">Get In Touch</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="gs-services">
+    <div class="gs-services-head">
+      <div class="gs-eyebrow">What We Do</div>
+      <h2>Services</h2>
+      <p>Book any of these, or tell us what you're looking for.</p>
+    </div>
+    <div class="gs-services-grid">
+      {% for service in service_categories %}
+      <div class="gs-service-card">
+        <h3>{{ service.name }}</h3>
+        <p>{{ service.description }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if reviews %}
+  <section class="gs-reviews">
+    <div class="gs-reviews-inner">
+      <h2>What Clients Say</h2>
+      <div class="gs-reviews-grid">
+        {% for review in reviews %}
+        <div class="gs-review-card">
+          <div class="gs-review-stars">{{ "★" * review.rating }}{{ "☆" * (5 - review.rating) }}</div>
+          {% if review.comment %}<p>&ldquo;{{ review.comment }}&rdquo;</p>{% endif %}
+          <div class="gs-review-name">{{ review.client_name }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="gs-contact" id="contact">
+    <h2>Get In Touch</h2>
+    <p>Have a question before you book? Reach out directly.</p>
+    <div class="gs-contact-items">
+      {% if stylist.phone %}
+      <div class="gs-contact-item">
+        <div class="gs-contact-icon">&#9742;</div>
+        <a href="tel:{{ stylist.phone }}">{{ stylist.phone }}</a>
+      </div>
+      {% endif %}
+      {% if stylist.email %}
+      <div class="gs-contact-item">
+        <div class="gs-contact-icon">&#9993;</div>
+        <a href="mailto:{{ stylist.email }}">{{ stylist.email }}</a>
+      </div>
+      {% endif %}
+      {% if _area %}
+      <div class="gs-contact-item">
+        <div class="gs-contact-icon">&#9679;</div>
+        <span>{{ _area }}</span>
+      </div>
+      {% endif %}
+    </div>
+    <a href="{{ url_for('salon_public.book', slug=stylist.public_slug) }}" class="gs-btn-primary">Book Your Appointment</a>
+  </section>
+
+  <footer class="gs-footer">
+    <strong>{{ _display }}</strong> &mdash; Beauty. Brand. Business.<br>
+    Powered by Ravlo
+  </footer>
+
+</body>
+</html>
