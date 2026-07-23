@@ -101,6 +101,27 @@ def test_landing_page_shows_address_with_directions_link(db_session, client):
     body = resp.get_data(as_text=True)
     assert "1925 Madison Square" in body
     assert "maps.google.com" in body
+    assert 'id="location"' in body
+    assert "Get Directions" in body
+
+
+def test_landing_page_has_nav_links_to_services_reviews_location(db_session, client):
+    _make_stylist_with_slug(db_session, "gotstyles-nav", "stylist-nav@example.com", "GotStyles Nav")
+
+    resp = client.get("/salon/gotstyles-nav")
+    body = resp.get_data(as_text=True)
+    assert 'href="#services"' in body
+    assert 'href="#reviews"' in body
+    assert 'href="#location"' in body
+
+
+def test_landing_page_shows_empty_reviews_state_when_none_exist(db_session, client):
+    _make_stylist_with_slug(db_session, "gotstyles-noreviews", "stylist-noreviews@example.com", "GotStyles No Reviews")
+
+    resp = client.get("/salon/gotstyles-noreviews")
+    body = resp.get_data(as_text=True)
+    assert 'id="reviews"' in body
+    assert "No reviews yet" in body
 
 
 def test_landing_page_unknown_slug_is_404(db_session, client):

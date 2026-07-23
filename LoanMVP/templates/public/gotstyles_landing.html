@@ -6,7 +6,8 @@
 
   {% set _display = stylist.full_name or "GotStyles Beauty" %}
   {% set _area = stylist.service_area or "" %}
-  {% set _desc = (stylist.headline or "Beauty. Brand. Business.") ~ (" Serving " ~ _area ~ "." if _area else "") %}
+  {% set _tagline = stylist.headline or "All Things Beauty" %}
+  {% set _desc = _tagline ~ (" Serving " ~ _area ~ "." if _area else "") %}
 
   <title>{{ _display }} — Book Your Appointment</title>
   <meta name="description" content="{{ _desc }}">
@@ -14,7 +15,7 @@
   <meta name="author" content="{{ _display }}">
 
   <meta property="og:type" content="website">
-  <meta property="og:title" content="{{ _display }} — Beauty. Brand. Business.">
+  <meta property="og:title" content="{{ _display }} — {{ _tagline }}">
   <meta property="og:description" content="{{ _desc }}">
   {% if stylist.logo_url %}<meta property="og:image" content="{{ stylist.logo_url }}">{% endif %}
 
@@ -73,6 +74,12 @@
       color: var(--gs-ivory); letter-spacing: .03em;
     }
     .gs-nav-logo-text span { color: var(--gs-rose); }
+    .gs-nav-links { display: flex; align-items: center; gap: 28px; }
+    .gs-nav-link {
+      color: var(--gs-taupe); text-decoration: none; font-size: .82rem; font-weight: 600;
+      letter-spacing: .02em; transition: color .2s;
+    }
+    .gs-nav-link:hover { color: var(--gs-gold); }
     .gs-nav-cta {
       background: var(--gs-rose); color: var(--gs-ivory);
       font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
@@ -80,6 +87,11 @@
       transition: background .2s;
     }
     .gs-nav-cta:hover { background: #a15b66; }
+
+    @media (max-width: 700px) {
+      .gs-nav-links { gap: 14px; }
+      .gs-nav-link { display: none; }
+    }
 
     /* ── HERO ── */
     .gs-hero {
@@ -156,6 +168,22 @@
     .gs-review-stars { color: var(--gs-gold); font-size: .95rem; margin-bottom: 10px; letter-spacing: 2px; }
     .gs-review-card p { font-size: .92rem; color: var(--gs-taupe); margin-bottom: 12px; }
     .gs-review-card .gs-review-name { font-size: .84rem; font-weight: 700; color: var(--gs-ivory); }
+    .gs-reviews-empty { color: var(--gs-taupe); font-size: .95rem; }
+
+    /* ── LOCATION ── */
+    .gs-location { padding: 90px 40px; max-width: 1000px; margin: 0 auto; }
+    .gs-location-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: center; }
+    .gs-location-info h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 3.4vw, 2.3rem); color: var(--gs-ivory); margin-bottom: 16px;
+    }
+    .gs-location-address { color: var(--gs-taupe); font-size: 1rem; margin-bottom: 20px; line-height: 1.6; }
+    .gs-location-map { border-radius: var(--radius); overflow: hidden; border: 1px solid rgba(212,175,55,.16); }
+    .gs-location-map iframe { display: block; }
+
+    @media (max-width: 700px) {
+      .gs-location-inner { grid-template-columns: 1fr; }
+    }
 
     /* ── CONTACT ── */
     .gs-contact { padding: 90px 40px; max-width: 720px; margin: 0 auto; text-align: center; }
@@ -197,7 +225,12 @@
         <span class="gs-nav-logo-text">GOT<span>STYLES</span></span>
       {% endif %}
     </a>
-    <a href="{{ url_for('salon_public.book', slug=stylist.public_slug) }}" class="gs-nav-cta">Book Now</a>
+    <div class="gs-nav-links">
+      <a href="#services" class="gs-nav-link">Services</a>
+      <a href="#reviews" class="gs-nav-link">Reviews</a>
+      <a href="#location" class="gs-nav-link">Location</a>
+      <a href="{{ url_for('salon_public.book', slug=stylist.public_slug) }}" class="gs-nav-cta">Book Now</a>
+    </div>
   </nav>
 
   <section class="gs-hero">
@@ -205,8 +238,8 @@
       {% if stylist.logo_url %}
         <img src="{{ stylist.logo_url }}" alt="{{ _display }}" class="gs-hero-logo">
       {% endif %}
-      <div class="gs-eyebrow">Beauty &middot; Brand &middot; Business</div>
-      <h1>{{ stylist.headline or ("Your look, " ~ "elevated." ) }}</h1>
+      <div class="gs-eyebrow">Now Booking</div>
+      <h1>{{ _tagline }}</h1>
       <p class="gs-hero-sub">
         {% if _area %}Book your next appointment with {{ _display }}, serving {{ _area }}.{% else %}Book your next appointment with {{ _display }}.{% endif %}
       </p>
@@ -217,7 +250,7 @@
     </div>
   </section>
 
-  <section class="gs-services">
+  <section class="gs-services" id="services">
     <div class="gs-services-head">
       <div class="gs-eyebrow">What We Do</div>
       <h2>Services</h2>
@@ -233,10 +266,10 @@
     </div>
   </section>
 
-  {% if reviews %}
-  <section class="gs-reviews">
+  <section class="gs-reviews" id="reviews">
     <div class="gs-reviews-inner">
       <h2>What Clients Say</h2>
+      {% if reviews %}
       <div class="gs-reviews-grid">
         {% for review in reviews %}
         <div class="gs-review-card">
@@ -246,9 +279,33 @@
         </div>
         {% endfor %}
       </div>
+      {% else %}
+      <p class="gs-reviews-empty">No reviews yet &mdash; book an appointment and be the first to share your experience!</p>
+      {% endif %}
     </div>
   </section>
-  {% endif %}
+
+  <section class="gs-location" id="location">
+    <div class="gs-location-inner">
+      <div class="gs-location-info">
+        <h2>Location</h2>
+        {% if stylist.address %}
+        <p class="gs-location-address">{{ stylist.address }}</p>
+        <a href="https://maps.google.com/?q={{ stylist.address | urlencode }}" target="_blank" rel="noopener" class="gs-btn-ghost">Get Directions</a>
+        {% elif _area %}
+        <p class="gs-location-address">{{ _area }}</p>
+        {% endif %}
+      </div>
+      {% if stylist.address %}
+      <div class="gs-location-map">
+        <iframe
+          src="https://maps.google.com/maps?q={{ stylist.address | urlencode }}&output=embed"
+          width="100%" height="320" style="border:0;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+          title="{{ _display }} location"></iframe>
+      </div>
+      {% endif %}
+    </div>
+  </section>
 
   <section class="gs-contact" id="contact">
     <h2>Get In Touch</h2>
@@ -266,23 +323,12 @@
         <a href="mailto:{{ stylist.email }}">{{ stylist.email }}</a>
       </div>
       {% endif %}
-      {% if stylist.address %}
-      <div class="gs-contact-item">
-        <div class="gs-contact-icon">&#9679;</div>
-        <a href="https://maps.google.com/?q={{ stylist.address | urlencode }}" target="_blank" rel="noopener">{{ stylist.address }}</a>
-      </div>
-      {% elif _area %}
-      <div class="gs-contact-item">
-        <div class="gs-contact-icon">&#9679;</div>
-        <span>{{ _area }}</span>
-      </div>
-      {% endif %}
     </div>
     <a href="{{ url_for('salon_public.book', slug=stylist.public_slug) }}" class="gs-btn-primary">Book Your Appointment</a>
   </section>
 
   <footer class="gs-footer">
-    <strong>{{ _display }}</strong> &mdash; Beauty. Brand. Business.<br>
+    <strong>{{ _display }}</strong> &mdash; {{ _tagline }}<br>
     Powered by Ravlo
   </footer>
 
