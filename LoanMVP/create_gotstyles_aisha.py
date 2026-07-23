@@ -40,6 +40,12 @@ HEADLINE = "All Things Beauty"
 PHONE = "(615) 546-2397"
 ADDRESS = "1925 Madison Square, Suite 400, LaVergne, TN 37086"
 SERVICE_AREA = "LaVergne, TN"
+PUBLIC_EMAIL = "aisha@gotstyles.beauty"  # her public contact address, distinct
+                                          # from her private Ravlo login email
+PROMISE_QUOTE = (
+    "My goal is simple—when you leave my chair, I want you to feel "
+    "more confident than when you walked in."
+)
 
 # Tuesday-Saturday, 10am-6pm, 60-minute slots -- a reasonable default so
 # the public booking calendar has open times from day one; Aisha can
@@ -110,6 +116,8 @@ def create_gotstyles_aisha(password: str = ""):
         profile.phone = PHONE
         profile.address = ADDRESS
         profile.service_area = SERVICE_AREA
+        profile.email = PUBLIC_EMAIL
+        profile.bio = PROMISE_QUOTE
         db.session.commit()
 
         # -- 4. Default availability ---------------------------------------

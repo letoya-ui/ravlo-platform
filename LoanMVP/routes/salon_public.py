@@ -30,9 +30,12 @@ datetimes with no per-visitor timezone conversion -- appropriate (more so
 than for the Ravlo demo page) since a salon client physically visits the
 shop in the stylist's own timezone.
 """
+import base64
+import io
 from collections import OrderedDict
 from datetime import datetime, timedelta, time as dtime
 
+import qrcode
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_mail import Message as MailMessage
 
@@ -55,29 +58,49 @@ DEFAULT_SLOT_MINUTES = 60
 CONSULTATION_SERVICE_NAME = "30-Minute Consultation"
 CONSULTATION_MINUTES = 30
 
-# General service categories shown on the landing page and offered in the
-# booking form. Deliberately no invented prices/durations here beyond the
-# consultation (a real, explicit 30 minutes) -- unlike Key Signature's
-# landing page (an existing, already-priced business), we don't have
-# GotStyles' actual per-service pricing or exact durations yet, so full
-# appointments use whichever slot length the stylist has configured for
-# that day in /stylist/availability, and Aisha can attach real pricing
-# when she manages the appointment from her own dashboard.
+# GotStyles Beauty's real service menu (from Aisha's own promotional
+# flyer), shown on the landing page and offered in the booking form.
+# Deliberately no invented prices/durations here beyond the consultation
+# (a real, explicit 30 minutes) -- full appointments use whichever slot
+# length the stylist has configured for that day in /stylist/availability,
+# and Aisha can attach real pricing when she manages the appointment from
+# her own dashboard. `icon` keys match the inline SVGs defined in
+# gotstyles_landing.html's SERVICE_ICONS.
 SERVICE_CATEGORIES = [
-    {"name": CONSULTATION_SERVICE_NAME,
+    {"name": CONSULTATION_SERVICE_NAME, "icon": "consult",
      "description": "Not sure where to start? A quick chat about your hair goals -- no commitment."},
-    {"name": "Cuts & Styling", "description": "Precision cuts, shape-ups, and finished styles."},
-    {"name": "Color & Balayage", "description": "Custom color, highlights, and balayage."},
-    {"name": "Silk Press & Blowouts", "description": "Sleek, smooth, salon-fresh results."},
-    {"name": "Extensions & Install", "description": "Sew-ins, quick weaves, and extension maintenance."},
-    {"name": "Dreads & Locs", "description": "Starter locs, retwists, and loc maintenance."},
-    {"name": "Wigs & Units", "description": "Custom wig install, styling, and unit maintenance."},
-    {"name": "Treatments", "description": "Deep conditioning and scalp treatments."},
+    {"name": "Silk Press", "icon": "silk_press", "description": "Sleek, smooth, salon-fresh results."},
+    {"name": "Sew-Ins", "icon": "sew_ins", "description": "Flawless, natural-looking sew-in installs."},
+    {"name": "Quick Weaves", "icon": "quick_weaves", "description": "Fast, seamless quick weave styling."},
+    {"name": "Custom Wigs", "icon": "custom_wigs", "description": "Custom wig install, styling, and unit maintenance."},
+    {"name": "Color Services", "icon": "color", "description": "Custom color, from subtle to bold."},
+    {"name": "Highlights", "icon": "highlights", "description": "Dimension and brightness, done right."},
+    {"name": "Natural Hair Care", "icon": "natural_hair", "description": "Healthy, thriving natural hair."},
+    {"name": "Treatments", "icon": "treatments", "description": "Deep conditioning and scalp treatments."},
+    {"name": "Braids", "icon": "braids", "description": "Clean, long-lasting braid styles."},
+    {"name": "Special Occasion Styling", "icon": "occasion", "description": "Red-carpet-ready styling for your big moment."},
 ]
 
 # Services offered in the "Full Appointment" track of the booking form
 # (everything except the consultation, which gets its own track/duration).
 FULL_APPOINTMENT_SERVICES = [s for s in SERVICE_CATEGORIES if s["name"] != CONSULTATION_SERVICE_NAME]
+
+# "Why You'll Love GotStyles" -- from Aisha's own flyer.
+WHY_YOU_LOVE = [
+    "Personalized consultations",
+    "Luxury salon experience",
+    "Healthy hair is always the priority",
+    "Professional products",
+    "Relaxing atmosphere",
+    "Every client leaves feeling beautiful",
+]
+
+
+def _booking_qr_data_uri(booking_url: str) -> str:
+    img = qrcode.make(booking_url)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
 
 
 def _stylist_or_404(slug):
@@ -224,11 +247,15 @@ def landing(slug):
         .limit(6)
         .all()
     )
+    booking_url = url_for("salon_public.book", slug=stylist.public_slug, _external=True)
     return render_template(
         "public/gotstyles_landing.html",
         stylist=stylist,
         reviews=reviews,
         service_categories=SERVICE_CATEGORIES,
+        why_you_love=WHY_YOU_LOVE,
+        booking_url=booking_url,
+        booking_qr_data_uri=_booking_qr_data_uri(booking_url),
     )
 
 
