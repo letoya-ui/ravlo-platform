@@ -888,6 +888,14 @@ def create_app():
         if not profile:
             return None
 
+        if not profile.public_slug:
+            # A VIPProfile can have custom_domain set without public_slug
+            # (e.g. an account whose onboarding-set fields were lost when
+            # it got recreated) -- every helper below looks up content by
+            # slug, so there's nothing correct to serve. Fail open rather
+            # than crash on `None.lower()` inside _load_realtor_context().
+            return None
+
         from LoanMVP.routes.public_pages import (
             _load_realtor_context, _template_for, _handle_lead_capture,
         )
