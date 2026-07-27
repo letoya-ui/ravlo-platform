@@ -42,3 +42,31 @@ def test_custom_domain_lookup_still_works_when_db_is_healthy(db_session, client)
     # No VIPProfile registered for this host -> falls through to the normal
     # marketing homepage rather than a VIP landing page, and must not error.
     assert resp.status_code != 500
+
+
+def test_custom_domain_with_missing_public_slug_falls_through_instead_of_500ing(db_session, client):
+    """A VIPProfile can have custom_domain set without public_slug (e.g. an
+    account whose onboarding-set fields were lost when it got recreated,
+    the exact bug found on Keyona's account) -- every helper
+    handle_custom_domain calls looks content up by slug, and
+    _load_realtor_context(None) would raise (`None.lower()`) rather than
+    just finding nothing. Must fail open like every other unservable case."""
+    from LoanMVP.models.admin import Company
+    from LoanMVP.models.user_model import User
+    from LoanMVP.models.vip_models import VIPProfile
+
+    company = Company(name="No Slug Co", is_active=True)
+    db_session.add(company)
+    db_session.commit()
+    user = User(email="noslug@example.com", role="partner", is_active=True, company_id=company.id)
+    db_session.add(user)
+    db_session.commit()
+    db_session.add(VIPProfile(
+        user_id=user.id, display_name="No Slug Realtor", role_type="realtor",
+        public_slug=None, custom_domain="noslug-domain.com", marketplace_enabled="yes",
+    ))
+    db_session.commit()
+
+    resp = client.get("/", headers={"Host": "noslug-domain.com"})
+
+    assert resp.status_code != 500
