@@ -2745,9 +2745,27 @@ def _send_quote_request_emails(agent_user, agency_name: str, client_name: str,
             current_app.logger.warning("Quote request client confirmation email failed: %s", exc)
 
 
+# TEMPORARY: Keyona's real live profile is id=18, but her personal website
+# (which she can't update until Saturday) has "/vip/insurance/10/get-quote"
+# hardcoded into it -- id=10 belongs to an unrelated demo loan officer
+# account, so real prospective clients' quote requests were landing on the
+# demo inbox instead of hers. Redirecting the one stale id keeps her real
+# leads flowing correctly in the meantime without touching any database
+# IDs or foreign keys. Safe to delete this dict (and the check below) once
+# her website's link is updated.
+_STALE_QUOTE_LINK_REDIRECTS = {10: 18}
+
+
 # ── Public quote form (no auth) ─────────────────────────────────────────────
 @vip_bp.route("/insurance/<int:profile_id>/get-quote", methods=["GET", "POST"])
 def insurance_public_quote_form(profile_id):
+    if profile_id in _STALE_QUOTE_LINK_REDIRECTS:
+        target_id = _STALE_QUOTE_LINK_REDIRECTS[profile_id]
+        return redirect(
+            url_for("vip.insurance_public_quote_form", profile_id=target_id, **request.args),
+            code=307,
+        )
+
     profile = VIPProfile.query.get_or_404(profile_id)
     partner = None
     user = None
