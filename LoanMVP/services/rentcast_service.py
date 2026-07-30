@@ -120,6 +120,18 @@ def get_rentcast_sale_listings(
     return _extract_listing_items(_safe_get(url, params))
 
 
+def _looks_like_photo_url(value: str) -> bool:
+    """Guard against collect_photos() picking up plain text (e.g. a listing
+    remark/description) that happens to be nested under one of the keys it
+    walks -- "description" and "location" are among the nested keys it
+    recurses into below, and a raw string found there is not necessarily a
+    photo. Only strings that actually look like a URL should be treated as
+    one; everything else (a paragraph of listing remarks, for instance)
+    would otherwise get passed downstream as an "image" and 400 when the
+    image proxy tries to fetch it."""
+    return value.lower().startswith(("http://", "https://", "//"))
+
+
 def normalize_rentcast_sale_listing(item: Dict[str, Any]) -> Dict[str, Any]:
     item = item or {}
 
@@ -133,7 +145,7 @@ def normalize_rentcast_sale_listing(item: Dict[str, Any]) -> Dict[str, Any]:
             return
         if isinstance(value, str):
             stripped = value.strip()
-            if stripped:
+            if stripped and _looks_like_photo_url(stripped):
                 photo_list.append(stripped)
             return
         if isinstance(value, list):
@@ -165,7 +177,7 @@ def normalize_rentcast_sale_listing(item: Dict[str, Any]) -> Dict[str, Any]:
             "image",
         ):
             direct = value.get(direct_key)
-            if isinstance(direct, str) and direct.strip():
+            if isinstance(direct, str) and direct.strip() and _looks_like_photo_url(direct.strip()):
                 photo_list.append(direct.strip())
             elif isinstance(direct, (list, dict)):
                 collect_photos(direct, depth + 1)
