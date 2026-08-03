@@ -54,108 +54,140 @@
     <div class="mk-grid-3">
 
       <div class="mk-plan">
-        <div class="mk-plan-badge">Starter</div>
-        <h3>Free</h3>
-        <div class="mk-plan-price">$0<span style="font-size:1rem;font-weight:600;">/mo</span></div>
-        <div class="mk-plan-note">A simple entry point for partners who want a live profile and basic lead access.</div>
+        <div class="mk-plan-badge">Individual</div>
+        <h3>Professional Plan</h3>
+        <div class="mk-plan-price">$99<span style="font-size:1rem;font-weight:600;">/mo</span></div>
+        <div class="mk-plan-note">$299 setup. Perfect for an individual realtor, insurance agent, contractor, loan officer, or property manager.</div>
 
         <div class="mk-list">
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">CRM access</div>
+            <div class="mk-copy">1 Professional Workspace</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Basic profile listing</div>
+            <div class="mk-copy">CRM</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Lead inbox access</div>
+            <div class="mk-copy">Lead Management</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Standard marketplace visibility</div>
+            <div class="mk-copy">AI Copilot</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Booking</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Landing Page</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Email Campaigns</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Content Studio</div>
           </div>
         </div>
 
         <div style="margin-top:18px;">
-          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Get Started Free</a>
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Get Started</a>
         </div>
       </div>
 
       <div class="mk-plan featured">
-        <div class="mk-plan-badge">Most Popular</div>
-        <h3>Featured</h3>
-        <div class="mk-plan-price">$79<span style="font-size:1rem;font-weight:600;">/mo</span></div>
-        <div class="mk-plan-note">Best for partners who want stronger visibility and better conversion tools.</div>
+        <div class="mk-plan-badge">Single Department</div>
+        <h3>Enterprise</h3>
+        <div class="mk-plan-price">$499<span style="font-size:1rem;font-weight:600;">/mo</span></div>
+        <div class="mk-plan-note">$2,500 setup. Perfect for a real estate brokerage, insurance agency, or property management company.</div>
 
         <div class="mk-list">
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Everything in Free</div>
+            <div class="mk-copy">Unlimited users</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Deal visibility</div>
+            <div class="mk-copy">One business type</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Portfolio showcase</div>
+            <div class="mk-copy">Team CRM</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Smart notifications</div>
+            <div class="mk-copy">Analytics</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Priority placement</div>
+            <div class="mk-copy">AI</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Company branding</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Admin dashboard</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Team management</div>
           </div>
         </div>
 
+        <div class="mk-copy" style="font-size:.85rem; margin-top:12px;">
+          Example: a brokerage with 100 agents that only sells real estate.
+        </div>
+
         <div style="margin-top:18px;">
-          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary" style="width:100%;">Choose Featured</a>
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary" style="width:100%;">Talk to Sales</a>
         </div>
       </div>
 
       <div class="mk-plan">
-        <div class="mk-plan-badge">VIP Workspace</div>
-        <h3>Premium</h3>
-        <div class="mk-plan-price">$99<span style="font-size:1rem;font-weight:600;">/mo</span></div>
-        <div class="mk-plan-note">Full access for partners who want premium workflow, brand presence, and execution tools.</div>
+        <div class="mk-plan-badge">Multi-Workspace</div>
+        <h3>Enterprise+</h3>
+        <div class="mk-plan-price">$999<span style="font-size:1rem;font-weight:600;">/mo+</span></div>
+        <div class="mk-plan-note">Starts at $5,000 setup. Perfect for companies who offer multiple services under one brand.</div>
 
         <div class="mk-list">
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Everything in Featured</div>
+            <div class="mk-copy">Realtor, Insurance, Property Management, and Investor CRMs</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Proposal builder</div>
+            <div class="mk-copy">One unified dashboard</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Instant quote generator</div>
+            <div class="mk-copy">Multiple landing pages</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">AI assist</div>
+            <div class="mk-copy">Shared contacts</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Full VIP Workspace for realtors (pipeline, listings, Canva, AI Pilot, finances)</div>
+            <div class="mk-copy">AI across all workspaces</div>
           </div>
         </div>
 
+        <div class="mk-copy" style="font-size:.85rem; margin-top:12px;">
+          This isn't just "more users." It's essentially several businesses operating under one platform.
+        </div>
+
         <div style="margin-top:18px;">
-          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Choose Premium</a>
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Talk to Sales</a>
         </div>
       </div>
 
     </div>
-
-    <p class="mk-copy" style="text-align:center; margin-top:24px;">
-      Running a larger team or brokerage? <a href="{{ url_for('marketing.contact') }}">Contact us about Enterprise pricing</a>.
-    </p>
   </div>
 </section>
 
