@@ -55,91 +55,107 @@
 
       <div class="mk-plan">
         <div class="mk-plan-badge">Starter</div>
-        <h3>Basic Listing</h3>
-        <div class="mk-plan-price">$79<span style="font-size:1rem;font-weight:600;">/mo</span></div>
-        <div class="mk-plan-note">A clean entry point for service providers who want visibility in the Ravlo ecosystem.</div>
+        <h3>Free</h3>
+        <div class="mk-plan-price">$0<span style="font-size:1rem;font-weight:600;">/mo</span></div>
+        <div class="mk-plan-note">A simple entry point for partners who want a live profile and basic lead access.</div>
 
         <div class="mk-list">
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Business profile</div>
+            <div class="mk-copy">CRM access</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Service category listing</div>
+            <div class="mk-copy">Basic profile listing</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Partner directory visibility</div>
+            <div class="mk-copy">Lead inbox access</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Standard marketplace visibility</div>
           </div>
         </div>
 
         <div style="margin-top:18px;">
-          <a href="{{ url_for('checkout.subscribe', plan='basic_listing') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Choose Starter</a>
+          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Get Started Free</a>
         </div>
       </div>
 
       <div class="mk-plan featured">
         <div class="mk-plan-badge">Most Popular</div>
-        <h3>Preferred Partner</h3>
-        <div class="mk-plan-price">$99<span style="font-size:1rem;font-weight:600;">/mo</span></div>
-        <div class="mk-plan-note">Best for businesses that want stronger visibility and more direct investor exposure.</div>
+        <h3>Featured</h3>
+        <div class="mk-plan-price">$79<span style="font-size:1rem;font-weight:600;">/mo</span></div>
+        <div class="mk-plan-note">Best for partners who want stronger visibility and better conversion tools.</div>
 
         <div class="mk-list">
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Everything in Starter</div>
+            <div class="mk-copy">Everything in Free</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Deal visibility</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Portfolio showcase</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Smart notifications</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
             <div class="mk-copy">Priority placement</div>
           </div>
-          <div class="mk-list-item">
-            <div class="mk-check">✓</div>
-            <div class="mk-copy">Enhanced profile branding</div>
-          </div>
-          <div class="mk-list-item">
-            <div class="mk-check">✓</div>
-            <div class="mk-copy">Preferred partner badge</div>
-          </div>
         </div>
 
         <div style="margin-top:18px;">
-          <a href="{{ url_for('checkout.subscribe', plan='preferred_partner') }}" class="mk-btn mk-btn-primary" style="width:100%;">Choose Preferred</a>
+          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary" style="width:100%;">Choose Featured</a>
         </div>
       </div>
 
       <div class="mk-plan">
-        <div class="mk-plan-badge">Premium</div>
-        <h3>Featured Partner</h3>
-        <div class="mk-plan-price">$199<span style="font-size:1rem;font-weight:600;">/mo</span></div>
-        <div class="mk-plan-note">For businesses ready to stand out as a top-tier provider inside the Ravlo network.</div>
+        <div class="mk-plan-badge">VIP Workspace</div>
+        <h3>Premium</h3>
+        <div class="mk-plan-price">$99<span style="font-size:1rem;font-weight:600;">/mo</span></div>
+        <div class="mk-plan-note">Full access for partners who want premium workflow, brand presence, and execution tools.</div>
 
         <div class="mk-list">
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Everything in Preferred</div>
+            <div class="mk-copy">Everything in Featured</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Featured placement</div>
+            <div class="mk-copy">Proposal builder</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Premium exposure across partner sections</div>
+            <div class="mk-copy">Instant quote generator</div>
           </div>
           <div class="mk-list-item">
             <div class="mk-check">✓</div>
-            <div class="mk-copy">Higher visibility to active investors</div>
+            <div class="mk-copy">AI assist</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Full VIP Workspace for realtors (pipeline, listings, Canva, AI Pilot, finances)</div>
           </div>
         </div>
 
         <div style="margin-top:18px;">
-          <a href="{{ url_for('checkout.subscribe', plan='featured_partner') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Choose Featured</a>
+          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Choose Premium</a>
         </div>
       </div>
 
     </div>
+
+    <p class="mk-copy" style="text-align:center; margin-top:24px;">
+      Running a larger team or brokerage? <a href="{{ url_for('marketing.contact') }}">Contact us about Enterprise pricing</a>.
+    </p>
   </div>
 </section>
 
