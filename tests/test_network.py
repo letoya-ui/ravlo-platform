@@ -1,15 +1,15 @@
-"""Regression tests for Ravlo Community v1: one seeded "real-estate"
+"""Regression tests for Ravlo Network v1: one seeded "real-estate"
 group, text posts, text comments. Deliberately exercises the
 professional-label resolver across VIPProfile (several role_types) and
 StylistProfile, the same two-model-tree split Payments had to handle, to
 make sure post/comment bylines correctly label who's actually posting.
 """
 from LoanMVP.models.admin import Company
-from LoanMVP.models.community_models import CommunityComment, CommunityGroup, CommunityPost
+from LoanMVP.models.network_models import NetworkComment, NetworkGroup, NetworkPost
 from LoanMVP.models.salon_models import StylistProfile
 from LoanMVP.models.user_model import User
 from LoanMVP.models.vip_models import VIPProfile
-from LoanMVP.services.community_service import get_or_create_group, resolve_professional_label
+from LoanMVP.services.network_service import get_or_create_group, resolve_professional_label
 
 from tests.conftest import login_as
 
@@ -51,18 +51,18 @@ def test_get_or_create_group_reuses_existing_row(db_session):
     group2 = get_or_create_group("real-estate", name="Real Estate")
 
     assert group1.id == group2.id
-    assert CommunityGroup.query.filter_by(slug="real-estate").count() == 1
+    assert NetworkGroup.query.filter_by(slug="real-estate").count() == 1
 
 
 def test_feed_seeds_the_real_estate_group_on_first_visit(client):
-    resp = client.get("/community/real-estate")
+    resp = client.get("/network/real-estate")
 
     assert resp.status_code == 200
-    assert CommunityGroup.query.filter_by(slug="real-estate").first() is not None
+    assert NetworkGroup.query.filter_by(slug="real-estate").first() is not None
 
 
 def test_unknown_group_slug_404s(client):
-    resp = client.get("/community/not-a-real-group")
+    resp = client.get("/network/not-a-real-group")
     assert resp.status_code == 404
 
 
@@ -106,9 +106,9 @@ def test_resolve_professional_label_does_not_create_a_vip_profile(db_session):
 # ─── Posting ────────────────────────────────────────────────────────────────
 
 def test_create_post_requires_login(client):
-    resp = client.post("/community/real-estate/posts", data={"body": "hello"}, follow_redirects=False)
+    resp = client.post("/network/real-estate/posts", data={"body": "hello"}, follow_redirects=False)
     assert resp.status_code in (302, 401)
-    assert CommunityPost.query.count() == 0
+    assert NetworkPost.query.count() == 0
 
 
 def test_create_post_succeeds_when_logged_in(db_session, client):
@@ -117,13 +117,13 @@ def test_create_post_succeeds_when_logged_in(db_session, client):
     login_as(client, user)
 
     resp = client.post(
-        "/community/real-estate/posts",
+        "/network/real-estate/posts",
         data={"body": "Before & after kitchen remodel -- Tampa duplex."},
         follow_redirects=True,
     )
 
     assert resp.status_code == 200
-    post = CommunityPost.query.filter_by(author_user_id=user.id).first()
+    post = NetworkPost.query.filter_by(author_user_id=user.id).first()
     assert post is not None
     assert "kitchen remodel" in post.body
 
@@ -136,25 +136,25 @@ def test_create_post_rejects_empty_body(db_session, client):
     user = _make_user(db_session, "emptyposter@example.com")
     login_as(client, user)
 
-    resp = client.post("/community/real-estate/posts", data={"body": "   "}, follow_redirects=True)
+    resp = client.post("/network/real-estate/posts", data={"body": "   "}, follow_redirects=True)
 
     assert resp.status_code == 200
-    assert CommunityPost.query.count() == 0
+    assert NetworkPost.query.count() == 0
 
 
 def test_feed_shows_comment_count(db_session, client):
     author = _make_user(db_session, "author2@example.com")
     group = get_or_create_group("real-estate", name="Real Estate")
-    post = CommunityPost(group_id=group.id, author_user_id=author.id, body="Looking for a contractor in Tampa.")
+    post = NetworkPost(group_id=group.id, author_user_id=author.id, body="Looking for a contractor in Tampa.")
     db_session.add(post)
     db_session.commit()
 
     commenter = _make_user(db_session, "commenter@example.com")
-    comment = CommunityComment(post_id=post.id, author_user_id=commenter.id, body="I can help.")
+    comment = NetworkComment(post_id=post.id, author_user_id=commenter.id, body="I can help.")
     db_session.add(comment)
     db_session.commit()
 
-    resp = client.get("/community/real-estate")
+    resp = client.get("/network/real-estate")
 
     assert resp.status_code == 200
     assert "1 comment" in resp.get_data(as_text=True)
@@ -165,23 +165,23 @@ def test_feed_shows_comment_count(db_session, client):
 def test_create_comment_requires_login(db_session, client):
     author = _make_user(db_session, "author3@example.com")
     group = get_or_create_group("real-estate", name="Real Estate")
-    post = CommunityPost(group_id=group.id, author_user_id=author.id, body="Need a lender recommendation.")
+    post = NetworkPost(group_id=group.id, author_user_id=author.id, body="Need a lender recommendation.")
     db_session.add(post)
     db_session.commit()
 
     resp = client.post(
-        f"/community/real-estate/posts/{post.id}/comments", data={"body": "Try Jane at ABC Lending."},
+        f"/network/real-estate/posts/{post.id}/comments", data={"body": "Try Jane at ABC Lending."},
         follow_redirects=False,
     )
 
     assert resp.status_code in (302, 401)
-    assert CommunityComment.query.count() == 0
+    assert NetworkComment.query.count() == 0
 
 
 def test_create_comment_succeeds_when_logged_in(db_session, client):
     author = _make_user(db_session, "author4@example.com")
     group = get_or_create_group("real-estate", name="Real Estate")
-    post = CommunityPost(group_id=group.id, author_user_id=author.id, body="Duplex needs a property manager.")
+    post = NetworkPost(group_id=group.id, author_user_id=author.id, body="Duplex needs a property manager.")
     db_session.add(post)
     db_session.commit()
 
@@ -190,13 +190,13 @@ def test_create_comment_succeeds_when_logged_in(db_session, client):
     login_as(client, commenter)
 
     resp = client.post(
-        f"/community/real-estate/posts/{post.id}/comments",
+        f"/network/real-estate/posts/{post.id}/comments",
         data={"body": "I'd love to manage that property."},
         follow_redirects=True,
     )
 
     assert resp.status_code == 200
-    comment = CommunityComment.query.filter_by(post_id=post.id).first()
+    comment = NetworkComment.query.filter_by(post_id=post.id).first()
     assert comment is not None
     assert comment.author_user_id == commenter.id
 
@@ -208,9 +208,9 @@ def test_create_comment_succeeds_when_logged_in(db_session, client):
 def test_post_detail_404s_for_post_in_a_different_group(db_session, client):
     other_group = get_or_create_group("beauty", name="Beauty")
     author = _make_user(db_session, "author5@example.com")
-    post = CommunityPost(group_id=other_group.id, author_user_id=author.id, body="Wrong group post.")
+    post = NetworkPost(group_id=other_group.id, author_user_id=author.id, body="Wrong group post.")
     db_session.add(post)
     db_session.commit()
 
-    resp = client.get(f"/community/real-estate/posts/{post.id}")
+    resp = client.get(f"/network/real-estate/posts/{post.id}")
     assert resp.status_code == 404

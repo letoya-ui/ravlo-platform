@@ -1,20 +1,20 @@
-"""Ravlo Community's feed/post-detail routes were already publicly
+"""Ravlo Network's feed/post-detail routes were already publicly
 viewable (no @login_required on the GET routes) -- the actual gap was
 discoverability: the only link to it lived inside the logged-in VIP
 sidebar, invisible to the site's real (mostly logged-out) traffic. These
 tests cover the fix: a public nav link on the shared marketing layout,
 and that the feed genuinely renders without a session.
 """
-from LoanMVP.models.community_models import CommunityPost
-from LoanMVP.services.community_service import get_or_create_group
+from LoanMVP.models.network_models import NetworkPost
+from LoanMVP.services.network_service import get_or_create_group
 
 
-def test_marketing_homepage_links_to_community(client):
+def test_marketing_homepage_links_to_network(client):
     resp = client.get("/")
     resp = client.get(resp.headers["Location"]) if resp.status_code in (301, 302) else resp
 
     assert resp.status_code == 200
-    assert '/community/real-estate' in resp.get_data(as_text=True)
+    assert '/network/real-estate' in resp.get_data(as_text=True)
 
 
 def test_anonymous_visitor_can_read_the_feed_without_a_session(db_session, client):
@@ -29,11 +29,11 @@ def test_anonymous_visitor_can_read_the_feed_without_a_session(db_session, clien
     db_session.commit()
 
     group = get_or_create_group("real-estate", name="Real Estate")
-    post = CommunityPost(group_id=group.id, author_user_id=author.id, body="Anyone need a Tampa inspector?")
+    post = NetworkPost(group_id=group.id, author_user_id=author.id, body="Anyone need a Tampa inspector?")
     db_session.add(post)
     db_session.commit()
 
-    resp = client.get("/community/real-estate")
+    resp = client.get("/network/real-estate")
 
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)

@@ -1,5 +1,5 @@
-# LoanMVP/services/community_service.py
-"""Ravlo Community helpers.
+# LoanMVP/services/network_service.py
+"""Ravlo Network helpers.
 
 resolve_professional_label() mirrors the owner-resolution pattern in
 payments_service.py: VIPProfile (realtor/insurance/contractor/loan
@@ -8,7 +8,7 @@ trees, so this is the one place that knows how to turn "some User" into
 "what kind of professional they are" for a post/comment byline.
 """
 from LoanMVP.extensions import db
-from LoanMVP.models.community_models import CommunityGroup
+from LoanMVP.models.network_models import NetworkGroup
 
 _VIP_ROLE_LABELS = {
     "realtor": "Realtor",
@@ -38,12 +38,12 @@ def resolve_professional_label(user) -> str:
     return "Member"
 
 
-def get_or_create_group(slug: str, name: str = "", description: str = "") -> CommunityGroup:
-    group = CommunityGroup.query.filter_by(slug=slug).first()
+def get_or_create_group(slug: str, name: str = "", description: str = "") -> NetworkGroup:
+    group = NetworkGroup.query.filter_by(slug=slug).first()
     if group:
         return group
 
-    group = CommunityGroup(slug=slug, name=name or slug.replace("-", " ").title(), description=description or None)
+    group = NetworkGroup(slug=slug, name=name or slug.replace("-", " ").title(), description=description or None)
     db.session.add(group)
     db.session.commit()
     return group
