@@ -195,6 +195,13 @@ from LoanMVP.models.salon_models import (
     SalonAvailability,
 )
 
+# 🤝 Ravlo Community (professional networking across the ecosystem)
+from LoanMVP.models.community_models import (
+    CommunityGroup,
+    CommunityPost,
+    CommunityComment,
+)
+
 # ======================================================
 # 🧩 SQLAlchemy Export (for Migrate / Shell)
 # ======================================================

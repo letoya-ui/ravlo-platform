@@ -1,0 +1,94 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • {{ group.name }} Community{% endblock %}
+{% block page_title %}{{ group.name }} Community{% endblock %}
+{% block page_subline %}{{ post.author.full_name or post.author.email }} — {{ author_label }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('community.feed', slug=group.slug) }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-arrow-left"></i>
+    <span>Back to {{ group.name }}</span>
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="cm-page">
+
+  <article class="cm-post cm-post-main">
+    <div class="cm-post-head">
+      <span class="cm-author">{{ post.author.full_name or post.author.email }}</span>
+      <span class="cm-badge">{{ author_label }}</span>
+      <span class="cm-time">{{ post.created_at.strftime('%b %-d, %Y') if post.created_at else "" }}</span>
+    </div>
+    <p class="cm-body">{{ post.body }}</p>
+  </article>
+
+  <section class="cm-comments">
+    {% for item in comments_with_meta %}
+    <div class="cm-comment">
+      <div class="cm-post-head">
+        <span class="cm-author">{{ item.comment.author.full_name or item.comment.author.email }}</span>
+        <span class="cm-badge">{{ item.author_label }}</span>
+        <span class="cm-time">{{ item.comment.created_at.strftime('%b %-d, %Y') if item.comment.created_at else "" }}</span>
+      </div>
+      <p class="cm-body">{{ item.comment.body }}</p>
+    </div>
+    {% else %}
+    <p class="cm-empty">No comments yet.</p>
+    {% endfor %}
+  </section>
+
+  {% if current_user.is_authenticated %}
+  <section class="cm-card">
+    <form method="POST" action="{{ url_for('community.create_comment', slug=group.slug, post_id=post.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <textarea name="body" rows="2" placeholder="Reply to this post..." required></textarea>
+      <div class="cm-form-actions">
+        <button type="submit" class="ravlo-btn primary">
+          <i class="lucide lucide-send"></i><span>Comment</span>
+        </button>
+      </div>
+    </form>
+  </section>
+  {% else %}
+  <section class="cm-card cm-login-cta">
+    <p><a href="{{ url_for('auth.login') }}">Log in</a> to comment.</p>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .cm-page { display: flex; flex-direction: column; gap: 18px; max-width: 720px; }
+
+  .cm-post, .cm-comment, .cm-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .cm-post-main { border-color: rgba(255,255,255,0.15); }
+
+  .cm-post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .cm-author { font-weight: 600; font-size: 0.92rem; }
+  .cm-badge {
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+    color: #93c5fd; background: rgba(59,130,246,0.15); border-radius: 6px; padding: 2px 8px;
+  }
+  .cm-time { font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-left: auto; }
+  .cm-body { font-size: 0.92rem; line-height: 1.55; white-space: pre-wrap; }
+
+  .cm-comments { display: flex; flex-direction: column; gap: 10px; }
+  .cm-empty { color: rgba(255,255,255,0.5); font-size: 0.9rem; }
+
+  .cm-card textarea {
+    width: 100%; background: rgba(255,255,255,0.05); color: inherit;
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 12px 14px;
+    font-size: 0.92rem; font-family: inherit; resize: vertical;
+  }
+  .cm-form-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+  .cm-login-cta { text-align: center; color: rgba(255,255,255,0.6); font-size: 0.9rem; }
+</style>
+{% endblock %}
