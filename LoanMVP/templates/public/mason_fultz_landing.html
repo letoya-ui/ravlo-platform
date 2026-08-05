@@ -262,7 +262,7 @@
   {% else %}
   <a href="#" style="font-weight:800;color:var(--mf-navy);text-decoration:none;">{{ _display }}</a>
   {% endif %}
-  <a href="#contact" class="mf-nav-cta">Free Quote</a>
+  <a href="/p/{{ profile.public_slug }}/book" class="mf-nav-cta">Schedule a Quote</a>
 </nav>
 
 <section class="mf-hero">
@@ -274,7 +274,7 @@
     <h1>A Cleaner Space. <em>A Better Impression.</em></h1>
     <p class="mf-hero-sub">{{ headline or "Professional cleaning services you can count on — so you can focus on your business." }}</p>
     <div class="mf-hero-actions">
-      <a href="#contact" class="mf-btn-primary">Schedule Your Free Quote</a>
+      <a href="/p/{{ profile.public_slug }}/book" class="mf-btn-primary">Schedule Your Free Quote</a>
       <a href="#services" class="mf-btn-ghost">See Our Services</a>
     </div>
   </div>
@@ -323,7 +323,7 @@
     <div>
       <div class="mf-col-head">
         <div class="mf-col-icon">👥</div>
-        <h2>Why Choose <em>{{ _display }}</em>?</h2>
+        <h2>Why Choose <em>Mason Fultz Cleaning</em>?</h2>
       </div>
 
       <div class="mf-why-item">
@@ -377,7 +377,9 @@
   <div class="mf-contact-grid">
     <div class="mf-contact-info">
       <h2>Schedule Your Free Quote Today</h2>
-      <p>Tell us a bit about your space and we'll follow up within one business day.</p>
+      <p>Pick a time on our calendar, or send us a message below and we'll follow up within one business day.</p>
+
+      <a href="/p/{{ profile.public_slug }}/book" class="mf-btn-primary" style="margin-bottom:24px;">📅 Schedule a Visit</a>
 
       {% if phone %}
       <div class="mf-contact-item">
@@ -405,7 +407,7 @@
         <p>We'll be in touch within one business day to schedule your free quote.</p>
       </div>
       {% else %}
-      <h3>Request Your Free Quote</h3>
+      <h3>Or Send Us a Message</h3>
       {% if form_error %}
       <div class="mf-form-error">{{ form_error }}</div>
       {% endif %}

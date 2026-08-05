@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ display_name }} • Visit Confirmed</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bk-accent: {{ brand_color or '#1A4EA1' }};
+      --bk-black: #111111;
+      --bk-white: #FFFFFF;
+      --bk-off:   #F7F5F1;
+      --bk-gray:  #6B7280;
+      --bk-text:  #374151;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bk-off);
+      color: var(--bk-text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+    .bkc-card {
+      max-width: 480px; width: 100%;
+      background: var(--bk-white);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      padding: 40px 32px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,.05);
+    }
+    .bkc-check { font-size: 3rem; color: var(--bk-accent); margin-bottom: 16px; }
+    .bkc-card h2 { font-size: 1.4rem; color: var(--bk-black); margin-bottom: 10px; }
+    .bkc-card p { color: var(--bk-gray); line-height: 1.6; margin-bottom: 6px; }
+    .bkc-when { font-weight: 700; color: var(--bk-black); }
+  </style>
+</head>
+<body>
+
+<div class="bkc-card">
+  <div class="bkc-check">✓</div>
+  <h2>You're Confirmed!</h2>
+  <p>Thanks{% if booking.client_name %}, {{ booking.client_name }}{% endif %}! Your visit with {{ display_name }} is scheduled for:</p>
+  <p class="bkc-when">{{ booking.starts_at.strftime('%A, %B %d at %I:%M %p') }}</p>
+  <p style="margin-top:16px;">We'll be in touch if anything changes.</p>
+</div>
+
+</body>
+</html>

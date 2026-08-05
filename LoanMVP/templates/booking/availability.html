@@ -1,0 +1,124 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Availability{% endblock %}
+{% block page_title %}Availability{% endblock %}
+{% block page_subline %}Your recurring open hours for the public booking calendar.{% endblock %}
+
+{% block topbar_actions %}
+  {% if public_slug %}
+  <a href="{{ url_for('public_pages.realtor_landing', slug=public_slug) }}" class="ravlo-btn ghost sm" target="_blank" rel="noopener">
+    <i class="lucide lucide-external-link"></i>
+    <span>View My Booking Page</span>
+  </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="bk-page">
+
+  <section class="bk-card">
+    <h3>New Availability Window</h3>
+    <form method="POST" class="bk-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action_type" value="add">
+
+      <div class="bk-form-row">
+        <div class="bk-form-group">
+          <label>Day</label>
+          <select name="day_of_week">
+            {% for day in weekdays %}
+              <option value="{{ loop.index0 }}">{{ day }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="bk-form-group">
+          <label>Slot Length</label>
+          <select name="slot_minutes">
+            <option value="30">30 min</option>
+            <option value="45">45 min</option>
+            <option value="60" selected>60 min</option>
+            <option value="90">90 min</option>
+            <option value="120">120 min</option>
+          </select>
+        </div>
+        <div class="bk-form-group">
+          <label>Start Time</label>
+          <input name="start_time" type="time" required>
+        </div>
+        <div class="bk-form-group">
+          <label>End Time</label>
+          <input name="end_time" type="time" required>
+        </div>
+      </div>
+      <button type="submit" class="ravlo-btn primary">
+        <i class="lucide lucide-plus"></i><span>Add Window</span>
+      </button>
+    </form>
+  </section>
+
+  <section class="bk-card">
+    <h3>Your Weekly Availability</h3>
+    {% if windows %}
+    <div class="bk-table">
+      <div class="bk-table-head">
+        <span>Day</span>
+        <span>Time</span>
+        <span>Slot Length</span>
+        <span></span>
+      </div>
+      {% for window in windows %}
+      <div class="bk-table-row">
+        <span>{{ weekdays[window.day_of_week] }}</span>
+        <span>{{ window.start_time.strftime('%I:%M %p') }} &ndash; {{ window.end_time.strftime('%I:%M %p') }}</span>
+        <span>{{ window.slot_minutes }} min</span>
+        <span>
+          <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action_type" value="delete">
+            <input type="hidden" name="window_id" value="{{ window.id }}">
+            <button type="submit" class="ravlo-btn ghost sm">Remove</button>
+          </form>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="bk-empty">No availability set yet — add a window above so clients can book you.</p>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .bk-page { display: flex; flex-direction: column; gap: 20px; max-width: 900px; }
+
+  .bk-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 22px;
+  }
+  .bk-card h3 { margin-bottom: 16px; font-size: 1.05rem; }
+
+  .bk-form { display: flex; flex-direction: column; gap: 14px; }
+  .bk-form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+  .bk-form-group label {
+    display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em; color: rgba(255,255,255,0.5); margin-bottom: 5px;
+  }
+  .bk-form-group input, .bk-form-group select {
+    width: 100%; background: rgba(255,255,255,0.05); color: inherit;
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 14px; font-size: 0.92rem;
+  }
+
+  .bk-table { display: flex; flex-direction: column; gap: 2px; }
+  .bk-table-head, .bk-table-row {
+    display: grid; grid-template-columns: 1.2fr 1.6fr 1fr 1fr; gap: 10px; padding: 10px 6px; align-items: center;
+  }
+  .bk-table-head { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: rgba(255,255,255,0.45); }
+  .bk-table-row { border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.88rem; }
+  .bk-empty { color: rgba(255,255,255,0.5); font-size: 0.9rem; }
+</style>
+{% endblock %}
