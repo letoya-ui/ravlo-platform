@@ -136,6 +136,15 @@ class Config:
     STRIPE_BILLING_ENABLED = _env_bool("STRIPE_BILLING_ENABLED", False)
     STRIPE_PRICE_CORE = os.environ.get("STRIPE_PRICE_CORE", "")
 
+    # Stripe Connect (Payments capability -- partner/workspace deposits &
+    # invoices). Uses the platform STRIPE_SECRET_KEY above for all Connect
+    # API calls; this is a separate signing secret because Connect webhook
+    # events (account.updated, and checkout.session.completed for a
+    # destination-charge Checkout Session) are configured as their own
+    # endpoint in the Stripe Dashboard, distinct from the main STRIPE_WEBHOOK_SECRET
+    # endpoint used for Ravlo's own subscription billing above.
+    STRIPE_CONNECT_WEBHOOK_SECRET = os.environ.get("STRIPE_CONNECT_WEBHOOK_SECRET", "")
+
     # FACEBOOK / INSTAGRAM LEAD ADS (one shared Ravlo Meta App; each
     # company connects its own Page via FacebookPageConnection)
     FACEBOOK_APP_SECRET = os.environ.get("FACEBOOK_APP_SECRET", "")
