@@ -1,5 +1,5 @@
-# LoanMVP/models/community_models.py
-"""Ravlo Community: professional networking across the ecosystem (not a
+# LoanMVP/models/network_models.py
+"""Ravlo Network: professional networking across the ecosystem (not a
 consumer social feed). v1 scope is deliberately narrow -- one group ("Real
 Estate"), text posts, text comments, no reactions/likes, no AI-matching.
 The point of this slice is to find out whether people actually talk to
@@ -10,8 +10,8 @@ from datetime import datetime
 from LoanMVP.extensions import db
 
 
-class CommunityGroup(db.Model):
-    __tablename__ = "community_groups"
+class NetworkGroup(db.Model):
+    __tablename__ = "network_groups"
 
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(100), nullable=False, unique=True, index=True)
@@ -20,46 +20,46 @@ class CommunityGroup(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     posts = db.relationship(
-        "CommunityPost", back_populates="group", lazy=True, order_by="CommunityPost.created_at.desc()"
+        "NetworkPost", back_populates="group", lazy=True, order_by="NetworkPost.created_at.desc()"
     )
 
     def __repr__(self):
-        return f"<CommunityGroup {self.slug}>"
+        return f"<NetworkGroup {self.slug}>"
 
 
-class CommunityPost(db.Model):
-    __tablename__ = "community_posts"
+class NetworkPost(db.Model):
+    __tablename__ = "network_posts"
 
     id = db.Column(db.Integer, primary_key=True)
-    group_id = db.Column(db.Integer, db.ForeignKey("community_groups.id", name="fk_post_group_id"), nullable=False, index=True)
+    group_id = db.Column(db.Integer, db.ForeignKey("network_groups.id", name="fk_post_group_id"), nullable=False, index=True)
     author_user_id = db.Column(db.Integer, db.ForeignKey("user.id", name="fk_post_author_id"), nullable=False, index=True)
 
     body = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    group = db.relationship("CommunityGroup", back_populates="posts")
-    author = db.relationship("User", backref=db.backref("community_posts", lazy=True))
+    group = db.relationship("NetworkGroup", back_populates="posts")
+    author = db.relationship("User", backref=db.backref("network_posts", lazy=True))
     comments = db.relationship(
-        "CommunityComment", back_populates="post", lazy=True, order_by="CommunityComment.created_at.asc()",
+        "NetworkComment", back_populates="post", lazy=True, order_by="NetworkComment.created_at.asc()",
         cascade="all, delete-orphan",
     )
 
     def __repr__(self):
-        return f"<CommunityPost {self.id} - group={self.group_id}>"
+        return f"<NetworkPost {self.id} - group={self.group_id}>"
 
 
-class CommunityComment(db.Model):
-    __tablename__ = "community_comments"
+class NetworkComment(db.Model):
+    __tablename__ = "network_comments"
 
     id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey("community_posts.id", name="fk_comment_post_id"), nullable=False, index=True)
+    post_id = db.Column(db.Integer, db.ForeignKey("network_posts.id", name="fk_comment_post_id"), nullable=False, index=True)
     author_user_id = db.Column(db.Integer, db.ForeignKey("user.id", name="fk_comment_author_id"), nullable=False, index=True)
 
     body = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    post = db.relationship("CommunityPost", back_populates="comments")
-    author = db.relationship("User", backref=db.backref("community_comments", lazy=True))
+    post = db.relationship("NetworkPost", back_populates="comments")
+    author = db.relationship("User", backref=db.backref("network_comments", lazy=True))
 
     def __repr__(self):
-        return f"<CommunityComment {self.id} - post={self.post_id}>"
+        return f"<NetworkComment {self.id} - post={self.post_id}>"

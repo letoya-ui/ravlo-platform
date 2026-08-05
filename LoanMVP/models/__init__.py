@@ -195,11 +195,11 @@ from LoanMVP.models.salon_models import (
     SalonAvailability,
 )
 
-# 🤝 Ravlo Community (professional networking across the ecosystem)
-from LoanMVP.models.community_models import (
-    CommunityGroup,
-    CommunityPost,
-    CommunityComment,
+# 🤝 Ravlo Network (professional networking across the ecosystem)
+from LoanMVP.models.network_models import (
+    NetworkGroup,
+    NetworkPost,
+    NetworkComment,
 )
 
 # ======================================================
