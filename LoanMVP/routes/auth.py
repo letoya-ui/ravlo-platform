@@ -2,6 +2,7 @@ from datetime import datetime
 import html as _html
 import secrets
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from flask import (
     Blueprint,
     current_app,
@@ -405,6 +406,26 @@ def _parse_name_parts(full_name: str, first_name: str, last_name: str):
     return first_name, last_name, full_name
 
 
+def _unique_username(base: str, fallback: str = "") -> str:
+    """User.username has a unique DB constraint, but every registration
+    path was populating it straight from the person's full name -- two
+    different people (or even the same person double-submitting) named
+    "Sandra Fultz" collide and the unhandled IntegrityError 500s the
+    request. username is never used for login/lookup (that's always by
+    email), it's only ever displayed, so the fix is to guarantee
+    uniqueness here rather than trusting the raw name."""
+    base = (base or fallback or "").strip()
+    if not base:
+        return base
+
+    candidate = base
+    suffix = 1
+    while User.query.filter_by(username=candidate).first():
+        suffix += 1
+        candidate = f"{base} {suffix}"
+    return candidate
+
+
 # ============================================================
 # WELCOME EMAIL
 # ============================================================
@@ -639,7 +660,7 @@ def register_from_invite(token):
         user = User(
             first_name=first_name or None,
             last_name=last_name or None,
-            username=full_name or None,
+            username=_unique_username(full_name),
             email=invite.email,
             role=invite.role,
             company_id=_resolve_registration_company_id(invite.role, invite.company_id),
@@ -654,7 +675,12 @@ def register_from_invite(token):
         invite.status = "accepted"
         invite.accepted_at = datetime.utcnow()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Something went wrong creating your account. Please try again.", "danger")
+            return render_template("auth/register_from_invite.html", invite=invite)
 
         login_user(user)
         _send_welcome_email(user)
@@ -728,7 +754,7 @@ def register():
         user = User(
             first_name=first_name or None,
             last_name=last_name or None,
-            username=full_name or None,
+            username=_unique_username(full_name),
             email=email,
             role=role,
             company_id=_resolve_registration_company_id(role),
@@ -738,7 +764,17 @@ def register():
         user.set_password(form.password.data)
 
         db.session.add(user)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Something went wrong creating your account. Please try again.", "danger")
+            return render_template(
+                "auth/register.html",
+                form=form,
+                recovery_mode=recovery_mode,
+                owner_admin_email=_owner_admin_email(),
+            )
 
         referral_code = session.pop("referral_code", None)
         if referral_code:
@@ -878,7 +914,7 @@ def register_borrower():
         last = parts[1] if len(parts) > 1 else ""
 
         user = User(
-            username=full_name or email,
+            username=_unique_username(full_name, fallback=email),
             email=email,
             first_name=first or None,
             last_name=last or None,
@@ -889,7 +925,12 @@ def register_borrower():
         user.set_password(password)
 
         db.session.add(user)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Something went wrong creating your account. Please try again.", "error")
+            return redirect(url_for("auth.register_borrower"))
 
         referral_code = session.pop("referral_code", None)
         if referral_code:
@@ -1063,7 +1104,7 @@ def request_access():
                 beta_user = User(
                     first_name=first_name or None,
                     last_name=last_name or None,
-                    username=contact_name or email,
+                    username=_unique_username(contact_name, fallback=email),
                     email=email,
                     role=requested_role,
                     is_active=True,
@@ -1186,7 +1227,7 @@ def accept_invite(token):
             user.first_name = first_name or user.first_name
             user.last_name = last_name or user.last_name
             if not user.username:
-                user.username = f"{first_name} {last_name}".strip() or user.email
+                user.username = _unique_username(f"{first_name} {last_name}".strip(), fallback=user.email)
             user.company_id = _resolve_registration_company_id(invite.role, invite.company_id)
             user.role = invite.role
             user.invite_accepted = True
@@ -1196,7 +1237,7 @@ def accept_invite(token):
             user = User(
                 first_name=first_name,
                 last_name=last_name,
-                username=f"{first_name} {last_name}".strip() or invite.email,
+                username=_unique_username(f"{first_name} {last_name}".strip(), fallback=invite.email),
                 email=invite.email,
                 password_hash=generate_password_hash(password),
                 role=invite.role,
@@ -1217,7 +1258,12 @@ def accept_invite(token):
         if app_row:
             app_row.status = "onboarded"
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Something went wrong accepting this invite. Please try again.", "danger")
+            return render_template("auth/accept_invite.html", invite=invite)
 
         login_user(user)
         _send_welcome_email(user)
@@ -1244,10 +1290,15 @@ def complete_profile():
         current_user.first_name = first_name
         current_user.last_name = last_name
         if not current_user.username:
-            current_user.username = f"{first_name} {last_name}".strip() or current_user.email
+            current_user.username = _unique_username(f"{first_name} {last_name}".strip(), fallback=current_user.email)
         current_user.onboarding_complete = True
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Something went wrong saving your profile. Please try again.", "warning")
+            return render_template("auth/complete_profile.html", user=current_user)
 
         flash("Profile completed successfully.", "success")
 
