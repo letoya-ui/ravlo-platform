@@ -38,6 +38,7 @@ SLUG_TEMPLATES: dict[str, str] = {
     "bonnie-sells-oc-homes":    "public/bonnie_landing.html",
     "john-headley":             "public/john_headen_landing.html",
     "key-signature-enterprise": "public/key_signature_landing.html",
+    "mason-fultz-cleaning":     "public/mason_fultz_landing.html",
 }
 
 # Fallback context for white-label pages that don't have a VIPProfile row yet.
@@ -49,6 +50,7 @@ SLUG_OWNER_EMAILS: dict[str, str] = {
     "bonnie-sells-oc-homes":    "Bonniesellsochomes@gmail.com",
     "john-headley":             "Jsecond1212@gmail.com",
     "key-signature-enterprise": "keyonahall@icloud.com",
+    "mason-fultz-cleaning":     "MasonFultz45cleaningservice@gmail.com",
 }
 
 SLUG_STATIC_CONTEXT: dict[str, dict] = {
@@ -134,10 +136,17 @@ SLUG_STATIC_CONTEXT: dict[str, dict] = {
 
 
 def _load_realtor_context(slug):
-    """Look up a VIP realtor profile by public_slug and build page context."""
+    """Look up a VIP profile by public_slug and build page context.
+
+    Despite the name (this module started as realtor-only), it now also
+    covers plain "contractor" profiles -- e.g. a commercial cleaning
+    business -- so any VIP workspace with a public_slug gets a real,
+    DB-driven public page instead of only the hardcoded
+    SLUG_STATIC_CONTEXT fallback used for pre-launch accounts.
+    """
     profile = VIPProfile.query.filter(
         func.lower(VIPProfile.public_slug) == slug.lower(),
-        VIPProfile.role_type.in_(["realtor", "contractor_realtor", "insurance_realtor"]),
+        VIPProfile.role_type.in_(["realtor", "contractor", "contractor_realtor", "insurance_realtor"]),
     ).first()
     if not profile:
         return None
@@ -485,7 +494,7 @@ def realtor_lead_capture(slug):
 def realtor_sitemap(slug):
     profile = VIPProfile.query.filter(
         func.lower(VIPProfile.public_slug) == slug.lower(),
-        VIPProfile.role_type.in_(["realtor", "contractor_realtor", "insurance_realtor"]),
+        VIPProfile.role_type.in_(["realtor", "contractor", "contractor_realtor", "insurance_realtor"]),
         VIPProfile.marketplace_enabled == "yes",
     ).first()
     if not profile:
