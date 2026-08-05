@@ -299,6 +299,11 @@
       <i class="lucide lucide-credit-card"></i><span>Billing</span>
     </a>
 
+    <a href="{{ url_for('payments.dashboard') }}"
+       class="ravlo-nav-link {% if ep and ep.startswith('payments.') %}active{% endif %}">
+      <i class="lucide lucide-hand-coins"></i><span>Payments</span>
+    </a>
+
     {# ── Settings ── #}
     <div class="ravlo-nav-section">Settings</div>
 

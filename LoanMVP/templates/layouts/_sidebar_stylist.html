@@ -57,6 +57,12 @@
   <div class="re-nav-group">
     <div class="re-nav-label">Business</div>
 
+    <a href="{{ url_for('payments.dashboard') }}"
+       class="re-nav-link {% if active_tab == 'payments' %}active{% endif %}">
+      <i class="icon lucide lucide-credit-card"></i>
+      <span>Payments</span>
+    </a>
+
     <a href="{{ url_for('stylist.product_sales') }}"
        class="re-nav-link {% if active_tab == 'product_sales' %}active{% endif %}">
       <i class="icon lucide lucide-shopping-bag"></i>

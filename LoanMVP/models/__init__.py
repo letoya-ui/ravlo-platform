@@ -106,7 +106,7 @@ from LoanMVP.models.company_finance_models import CMFinanceEntry, UserEmailConne
 
 from LoanMVP.models.activity_models import BorrowerActivity
 
-from LoanMVP.models.payment_models import PaymentRecord
+from LoanMVP.models.payment_models import PaymentRecord, PaymentAccount, PaymentRequest
 
 from LoanMVP.models.credit_models import SoftCreditReport
 

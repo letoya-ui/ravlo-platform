@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ display_name or "Ravlo" }} • Payment Request</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/lucide-static@latest/font/lucide.min.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --pp-accent: {{ brand_color or '#111111' }};
+      --pp-black: #111111;
+      --pp-white: #FFFFFF;
+      --pp-off:   #F7F5F1;
+      --pp-gray:  #6B7280;
+      --pp-text:  #374151;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--pp-off);
+      color: var(--pp-text);
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+    }
+
+    .pp-shell { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+    .pp-hero { text-align: center; padding: 24px 16px 8px; }
+    .pp-hero img { max-height: 50px; margin-bottom: 14px; border-radius: 6px; }
+    .pp-hero .logo-placeholder {
+      width: 50px; height: 50px; border-radius: 12px; background: rgba(0,0,0,0.06);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; font-weight: 700; color: var(--pp-accent); margin-bottom: 14px;
+    }
+    .pp-hero h1 { font-size: 1.3rem; font-weight: 700; color: var(--pp-black); }
+    .pp-hero p { color: var(--pp-gray); font-size: 0.9rem; margin-top: 4px; }
+
+    .pp-card {
+      background: var(--pp-white);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      padding: 28px 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.05);
+    }
+
+    .pp-amount { text-align: center; margin-bottom: 20px; }
+    .pp-amount .value { font-size: 2.2rem; font-weight: 700; color: var(--pp-black); }
+    .pp-amount .title { font-size: 0.95rem; color: var(--pp-gray); margin-top: 4px; }
+    .pp-desc { font-size: 0.88rem; color: var(--pp-text); line-height: 1.6; text-align: center; margin-bottom: 20px; }
+
+    .pp-pay-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 14px 28px; background: var(--pp-accent); color: var(--pp-white);
+      border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer;
+    }
+    .pp-pay-btn:hover { opacity: 0.9; }
+
+    .pp-secure { text-align: center; font-size: 0.75rem; color: var(--pp-gray); margin-top: 14px; }
+
+    .pp-success { text-align: center; padding: 40px 24px; }
+    .pp-success .check { font-size: 3rem; color: var(--pp-accent); margin-bottom: 16px; }
+    .pp-success h2 { font-size: 1.3rem; color: var(--pp-black); margin-bottom: 10px; }
+    .pp-success p { color: var(--pp-gray); line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+<div class="pp-shell">
+  <div class="pp-hero">
+    {% if logo_url %}
+      <img src="{{ logo_url }}" alt="{{ display_name }}">
+    {% else %}
+      <div class="logo-placeholder">{{ (display_name or "R")[:1] }}</div>
+    {% endif %}
+    <h1>{{ display_name or "Payment Request" }}</h1>
+  </div>
+
+  {% if paid %}
+  <div class="pp-card pp-success">
+    <div class="check"><i class="lucide lucide-check-circle"></i></div>
+    <h2>Payment Received!</h2>
+    <p>Thank you{% if payment_request.client_name %}, {{ payment_request.client_name }}{% endif %}! Your payment for "{{ payment_request.title }}" has been received.</p>
+  </div>
+
+  {% else %}
+  <div class="pp-card">
+    <div class="pp-amount">
+      <div class="value">${{ "%.2f"|format(payment_request.amount_cents / 100) }}</div>
+      <div class="title">{{ payment_request.title }}</div>
+    </div>
+
+    {% if payment_request.description %}
+    <p class="pp-desc">{{ payment_request.description }}</p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('payments.public_pay_checkout', token=payment_request.confirmation_token) }}">
+      <button type="submit" class="pp-pay-btn">
+        <i class="lucide lucide-lock"></i>
+        <span>Pay ${{ "%.2f"|format(payment_request.amount_cents / 100) }}</span>
+      </button>
+    </form>
+
+    <p class="pp-secure"><i class="lucide lucide-shield-check"></i> Secured by Stripe</p>
+  </div>
+  {% endif %}
+</div>
+
+</body>
+</html>
