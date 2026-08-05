@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  {% set _display = display_name or "Mason-Fultz Commercial Cleaning" %}
+  {% set _area    = service_area or "Our Community and Surrounding Areas" %}
+  {% set _desc    = "Professional commercial cleaning services for offices, medical facilities, retail spaces, churches, and more, serving " ~ _area ~ "." %}
+
+  <title>{{ _display }} — Commercial Cleaning | {{ _area }}</title>
+  <meta name="description" content="{{ _desc }}">
+  <meta name="robots"      content="index, follow">
+  <meta name="author"      content="{{ _display }}">
+  {% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}
+
+  <meta property="og:type"        content="website">
+  <meta property="og:title"       content="{{ _display }} — A Cleaner Space. A Better Impression.">
+  <meta property="og:description" content="{{ _desc }}">
+  {% if canonical_url %}<meta property="og:url" content="{{ canonical_url }}">{% endif %}
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": ["HousekeepingCompany", "LocalBusiness"],
+    "name": "{{ _display | e }}",
+    "description": "{{ _desc | e }}",
+    {% if canonical_url %}"url": "{{ canonical_url }}",{% endif %}
+    {% if phone %}"telephone": "{{ phone | e }}",{% endif %}
+    {% if email %}"email": "{{ email | e }}",{% endif %}
+    "areaServed": { "@type": "AdministrativeArea", "name": "{{ _area | e }}" }
+  }
+  </script>
+
+  {% if ga_measurement_id %}
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '{{ ga_measurement_id }}');
+  </script>
+  {% endif %}
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --mf-navy:   #0B1F3A;
+      --mf-navy2:  #071528;
+      --mf-blue:   {{ brand_color or '#1A4EA1' }};
+      --mf-blue2:  #143C7D;
+      --mf-white:  #FFFFFF;
+      --mf-off:    #F5F7FB;
+      --mf-gray:   #6B7280;
+      --mf-text:   #374151;
+      --radius:    14px;
+      --shadow:    0 8px 30px rgba(0,0,0,.10);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: var(--mf-white);
+      color: var(--mf-text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    .mf-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 40px;
+      background: rgba(255,255,255,.96);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(0,0,0,.08);
+    }
+    .mf-nav-logo-img { height: 48px; width: auto; display: block; }
+    .mf-nav-cta {
+      background: var(--mf-blue); color: var(--mf-white);
+      font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+      padding: 11px 24px; border-radius: 8px; text-decoration: none;
+      transition: background .2s;
+    }
+    .mf-nav-cta:hover { background: var(--mf-blue2); }
+
+    /* ── HERO ── */
+    .mf-hero {
+      min-height: 80vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 130px 40px 70px;
+      background: linear-gradient(160deg, #ffffff 0%, var(--mf-off) 100%);
+      text-align: center;
+    }
+    .mf-hero-inner { max-width: 760px; }
+    .mf-hero-logo { max-width: 340px; width: 100%; height: auto; margin: 0 auto 20px; display: block; }
+    .mf-eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--mf-blue); margin-bottom: 18px;
+    }
+    .mf-hero h1 {
+      font-size: clamp(1.9rem, 4.4vw, 2.7rem); font-weight: 800; line-height: 1.2;
+      color: var(--mf-navy); margin-bottom: 18px;
+    }
+    .mf-hero h1 em { color: var(--mf-blue); font-style: normal; }
+    .mf-hero-sub {
+      font-size: 1.05rem; color: var(--mf-gray); max-width: 560px;
+      margin: 0 auto 32px; line-height: 1.75;
+    }
+    .mf-hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .mf-btn-primary {
+      background: var(--mf-blue); color: var(--mf-white);
+      font-size: .9rem; font-weight: 700; letter-spacing: .03em;
+      padding: 15px 34px; border-radius: 9px; text-decoration: none;
+      transition: background .2s, transform .15s;
+      display: inline-block;
+    }
+    .mf-btn-primary:hover { background: var(--mf-blue2); transform: translateY(-1px); }
+    .mf-btn-ghost {
+      border: 1.5px solid rgba(0,0,0,.18); color: var(--mf-navy);
+      font-size: .9rem; font-weight: 600;
+      padding: 15px 34px; border-radius: 9px; text-decoration: none;
+      transition: border-color .2s;
+      display: inline-block;
+    }
+    .mf-btn-ghost:hover { border-color: var(--mf-blue); color: var(--mf-blue); }
+
+    /* ── TRUST STRIP ── */
+    .mf-trust {
+      background: var(--mf-navy);
+      padding: 40px 40px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+      max-width: 1100px; margin: 0 auto;
+    }
+    .mf-trust-item { display: flex; align-items: center; justify-content: center; gap: 14px; text-align: center; flex-direction: column; }
+    .mf-trust-icon {
+      width: 46px; height: 46px; border-radius: 50%;
+      border: 2px solid var(--mf-blue); color: var(--mf-blue);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; flex-shrink: 0;
+    }
+    .mf-trust-text { color: var(--mf-white); font-size: .82rem; font-weight: 700; line-height: 1.4; text-transform: uppercase; letter-spacing: .03em; }
+
+    /* ── SERVICES + WHY CHOOSE ── */
+    .mf-split { padding: 90px 40px; max-width: 1150px; margin: 0 auto; }
+    .mf-split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; }
+    .mf-col-head { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+    .mf-col-icon {
+      width: 46px; height: 46px; border-radius: 50%; background: var(--mf-blue); color: var(--mf-white);
+      display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;
+    }
+    .mf-col-head h2 { font-size: clamp(1.3rem, 2.6vw, 1.6rem); color: var(--mf-navy); }
+    .mf-col-head h2 em { color: var(--mf-blue); font-style: normal; }
+
+    .mf-service-list { list-style: none; margin-bottom: 20px; }
+    .mf-service-list li {
+      position: relative; padding-left: 30px; margin-bottom: 12px; color: var(--mf-text); font-size: .96rem;
+    }
+    .mf-service-list li::before {
+      content: '✓'; position: absolute; left: 0; top: 0;
+      width: 20px; height: 20px; border-radius: 50%; background: var(--mf-blue); color: var(--mf-white);
+      font-size: .68rem; font-weight: 800; display: flex; align-items: center; justify-content: center;
+    }
+    .mf-service-note {
+      display: flex; align-items: center; gap: 12px;
+      border: 1.5px solid rgba(0,0,0,.12); border-radius: 10px; padding: 14px 16px;
+      font-size: .88rem; color: var(--mf-navy); font-weight: 600;
+    }
+
+    .mf-why-item { display: flex; gap: 16px; margin-bottom: 24px; }
+    .mf-why-icon {
+      width: 44px; height: 44px; border-radius: 50%; background: var(--mf-blue); color: var(--mf-white);
+      display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;
+    }
+    .mf-why-item h3 { font-size: 1rem; color: var(--mf-navy); margin-bottom: 4px; }
+    .mf-why-item p { font-size: .9rem; color: var(--mf-gray); }
+
+    /* ── WE CLEAN BANNER ── */
+    .mf-banner {
+      background: var(--mf-off); padding: 40px; text-align: center;
+    }
+    .mf-banner-inner { max-width: 900px; margin: 0 auto; }
+    .mf-banner h3 { font-size: 1.05rem; color: var(--mf-navy); margin-bottom: 8px; letter-spacing: .02em; }
+    .mf-banner p { font-size: .88rem; color: var(--mf-gray); text-transform: uppercase; letter-spacing: .06em; }
+
+    /* ── CONTACT ── */
+    .mf-contact { padding: 90px 40px; max-width: 1000px; margin: 0 auto; }
+    .mf-contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; }
+    .mf-contact-info h2 {
+      font-size: clamp(1.7rem, 3.4vw, 2.2rem); color: var(--mf-navy); margin-bottom: 16px;
+    }
+    .mf-contact-info p { color: var(--mf-gray); margin-bottom: 28px; }
+    .mf-contact-item { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; font-size: .95rem; }
+    .mf-contact-item a { color: var(--mf-navy); text-decoration: none; }
+    .mf-contact-item a:hover { color: var(--mf-blue); }
+    .mf-contact-icon {
+      width: 34px; height: 34px; border-radius: 50%; background: var(--mf-navy); color: var(--mf-white);
+      display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0;
+    }
+
+    .mf-form {
+      background: var(--mf-off); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 32px;
+    }
+    .mf-form h3 { font-size: 1.15rem; color: var(--mf-navy); margin-bottom: 18px; }
+    .mf-field { margin-bottom: 16px; }
+    .mf-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .mf-field label { display: block; font-size: .78rem; font-weight: 600; color: var(--mf-gray); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .03em; }
+    .mf-field input, .mf-field select, .mf-field textarea {
+      width: 100%; padding: 11px 14px; border-radius: 8px; border: 1px solid rgba(0,0,0,.14);
+      font-family: inherit; font-size: .92rem; background: var(--mf-white); color: var(--mf-text);
+    }
+    .mf-field textarea { min-height: 90px; resize: vertical; }
+    .mf-form-btn {
+      width: 100%; background: var(--mf-blue); color: var(--mf-white); border: none;
+      font-size: .92rem; font-weight: 700; letter-spacing: .03em;
+      padding: 14px; border-radius: 9px; cursor: pointer; transition: background .2s;
+    }
+    .mf-form-btn:hover { background: var(--mf-blue2); }
+    .mf-form-error { background: rgba(26,78,161,.08); color: var(--mf-blue); padding: 10px 14px; border-radius: 8px; font-size: .85rem; margin-bottom: 14px; }
+    .mf-form-success { text-align: center; padding: 20px 0; }
+    .mf-form-success-icon {
+      width: 54px; height: 54px; border-radius: 50%; background: var(--mf-blue); color: var(--mf-white);
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 16px;
+    }
+    .mf-form-success h3 { margin-bottom: 8px; }
+    .mf-form-success p { color: var(--mf-gray); font-size: .92rem; }
+
+    /* ── FOOTER ── */
+    .mf-footer {
+      background: var(--mf-navy2); color: rgba(255,255,255,.6);
+      text-align: center; padding: 40px 20px; font-size: .85rem;
+    }
+    .mf-footer-name { color: var(--mf-white); font-weight: 700; margin-bottom: 6px; }
+    .mf-footer-tagline { margin-top: 10px; color: rgba(255,255,255,.5); font-size: .78rem; letter-spacing: .04em; text-transform: uppercase; }
+    .mf-footer a { color: #7FA6E8; text-decoration: none; }
+
+    @media (max-width: 860px) {
+      .mf-trust { grid-template-columns: 1fr; }
+      .mf-split-grid { grid-template-columns: 1fr; gap: 40px; }
+      .mf-contact-grid { grid-template-columns: 1fr; }
+      .mf-nav { padding: 12px 20px; }
+      .mf-hero { padding: 110px 20px 50px; }
+      .mf-split, .mf-contact { padding: 60px 20px; }
+    }
+    @media (max-width: 520px) {
+      .mf-field-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="mf-nav">
+  {% if logo_url %}
+  <a href="#"><img src="{{ logo_url }}" alt="{{ _display }}" class="mf-nav-logo-img"></a>
+  {% else %}
+  <a href="#" style="font-weight:800;color:var(--mf-navy);text-decoration:none;">{{ _display }}</a>
+  {% endif %}
+  <a href="#contact" class="mf-nav-cta">Free Quote</a>
+</nav>
+
+<section class="mf-hero">
+  <div class="mf-hero-inner">
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="{{ _display }}" class="mf-hero-logo">
+    {% endif %}
+    <div class="mf-eyebrow">Reliable. Professional. Trusted.</div>
+    <h1>A Cleaner Space. <em>A Better Impression.</em></h1>
+    <p class="mf-hero-sub">{{ headline or "Professional cleaning services you can count on — so you can focus on your business." }}</p>
+    <div class="mf-hero-actions">
+      <a href="#contact" class="mf-btn-primary">Schedule Your Free Quote</a>
+      <a href="#services" class="mf-btn-ghost">See Our Services</a>
+    </div>
+  </div>
+</section>
+
+<div class="mf-trust">
+  <div class="mf-trust-item">
+    <div class="mf-trust-icon">✓</div>
+    <div class="mf-trust-text">Reliable</div>
+  </div>
+  <div class="mf-trust-item">
+    <div class="mf-trust-icon">★</div>
+    <div class="mf-trust-text">Professional</div>
+  </div>
+  <div class="mf-trust-item">
+    <div class="mf-trust-icon">🤝</div>
+    <div class="mf-trust-text">Trusted</div>
+  </div>
+</div>
+
+<section class="mf-split" id="services">
+  <div class="mf-split-grid">
+
+    <div>
+      <div class="mf-col-head">
+        <div class="mf-col-icon">🏢</div>
+        <h2>Our <em>Services</em></h2>
+      </div>
+      <ul class="mf-service-list">
+        <li>Daily, Weekly &amp; Custom Cleaning</li>
+        <li>Office &amp; Building Cleaning</li>
+        <li>Restroom Sanitation</li>
+        <li>Break Room &amp; Kitchen Cleaning</li>
+        <li>Floor Care: Sweeping, Mopping, Vacuuming &amp; More</li>
+        <li>Trash Removal</li>
+        <li>Disinfecting High-Touch Surfaces</li>
+        <li>Window &amp; Glass Cleaning</li>
+        <li>Move-In / Move-Out Cleaning</li>
+        <li>Specialized Cleaning Services Available</li>
+      </ul>
+      <div class="mf-service-note">
+        📅 Tailored cleaning plans to meet your needs and budget.
+      </div>
+    </div>
+
+    <div>
+      <div class="mf-col-head">
+        <div class="mf-col-icon">👥</div>
+        <h2>Why Choose <em>{{ _display }}</em>?</h2>
+      </div>
+
+      <div class="mf-why-item">
+        <div class="mf-why-icon">🛡</div>
+        <div>
+          <h3>Reliable &amp; Consistent</h3>
+          <p>We show up on time and get the job done right.</p>
+        </div>
+      </div>
+      <div class="mf-why-item">
+        <div class="mf-why-icon">✨</div>
+        <div>
+          <h3>High Standards</h3>
+          <p>We use proven techniques and quality products for a cleaner, healthier space.</p>
+        </div>
+      </div>
+      <div class="mf-why-item">
+        <div class="mf-why-icon">👤</div>
+        <div>
+          <h3>Trained &amp; Professional Staff</h3>
+          <p>Our team is trained, insured, and committed to excellence.</p>
+        </div>
+      </div>
+      <div class="mf-why-item">
+        <div class="mf-why-icon">🤝</div>
+        <div>
+          <h3>Customized Solutions</h3>
+          <p>Flexible cleaning plans designed around your business.</p>
+        </div>
+      </div>
+      <div class="mf-why-item">
+        <div class="mf-why-icon">$</div>
+        <div>
+          <h3>Competitive Pricing</h3>
+          <p>Top-quality service at a fair price.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="mf-banner">
+  <div class="mf-banner-inner">
+    <h3>We clean so you can focus on what matters most.</h3>
+    <p>Offices &bull; Medical Facilities &bull; Retail Spaces &bull; Churches &bull; And More</p>
+  </div>
+</div>
+
+<section class="mf-contact" id="contact">
+  <div class="mf-contact-grid">
+    <div class="mf-contact-info">
+      <h2>Schedule Your Free Quote Today</h2>
+      <p>Tell us a bit about your space and we'll follow up within one business day.</p>
+
+      {% if phone %}
+      <div class="mf-contact-item">
+        <div class="mf-contact-icon">📞</div>
+        <div><a href="tel:{{ phone }}">{{ phone }}</a></div>
+      </div>
+      {% endif %}
+      {% if email %}
+      <div class="mf-contact-item">
+        <div class="mf-contact-icon">✉</div>
+        <div><a href="mailto:{{ email }}">{{ email }}</a></div>
+      </div>
+      {% endif %}
+      <div class="mf-contact-item">
+        <div class="mf-contact-icon">📍</div>
+        <div>Proudly Serving {{ _area }}</div>
+      </div>
+    </div>
+
+    <div class="mf-form">
+      {% if submitted %}
+      <div class="mf-form-success">
+        <div class="mf-form-success-icon">✓</div>
+        <h3>Thanks, {{ submitted_name }}!</h3>
+        <p>We'll be in touch within one business day to schedule your free quote.</p>
+      </div>
+      {% else %}
+      <h3>Request Your Free Quote</h3>
+      {% if form_error %}
+      <div class="mf-form-error">{{ form_error }}</div>
+      {% endif %}
+      <form method="POST" action="/p/{{ profile.public_slug }}/contact">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mf-field-row">
+          <div class="mf-field">
+            <label for="client_name">Your Name *</label>
+            <input type="text" id="client_name" name="client_name" placeholder="First Last" required>
+          </div>
+          <div class="mf-field">
+            <label for="client_phone">Phone Number</label>
+            <input type="tel" id="client_phone" name="client_phone" placeholder="(615) 000-0000">
+          </div>
+        </div>
+        <div class="mf-field">
+          <label for="client_email">Email Address</label>
+          <input type="email" id="client_email" name="client_email" placeholder="you@example.com">
+        </div>
+        <div class="mf-field">
+          <label for="interest">Type of Space</label>
+          <select id="interest" name="interest">
+            <option value="office">Office / Building</option>
+            <option value="medical">Medical Facility</option>
+            <option value="retail">Retail Space</option>
+            <option value="church">Church</option>
+            <option value="move_in_out">Move-In / Move-Out</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="mf-field">
+          <label for="message">Anything else we should know?</label>
+          <textarea id="message" name="message" placeholder="Tell us a bit about your space and cleaning needs..."></textarea>
+        </div>
+        <button type="submit" class="mf-form-btn">Request Free Quote &rarr;</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<footer class="mf-footer">
+  <div class="mf-footer-name">{{ _display }}</div>
+  <div>A Cleaner Space. A Better Impression. &mdash; {{ _area }}</div>
+  <div class="mf-footer-tagline">Clean Spaces. Strong Impressions. Better Business.</div>
+  <div style="margin-top:10px;">Powered by <a href="#">Ravlo</a></div>
+</footer>
+
+{% with source_page = _display %}
+  {% include "public/_white_label_cta.html" %}
+{% endwith %}
+
+</body>
+</html>
