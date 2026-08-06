@@ -54,9 +54,15 @@
 </head>
 <body>
   <div class="gs-confirm-card">
+    {% if appointment.status == "pending_deposit" %}
+    <div class="gs-confirm-icon">&#8635;</div>
+    <h1>Almost There!</h1>
+    <p>{{ appointment.client.full_name if appointment.client else "" }}, we're confirming your deposit payment now -- this usually takes just a moment. You'll get a confirmation email as soon as it clears.</p>
+    {% else %}
     <div class="gs-confirm-icon">&#10003;</div>
     <h1>You're Booked!</h1>
     <p>{{ appointment.client.full_name if appointment.client else "" }}, your appointment with {{ _display }} is confirmed.</p>
+    {% endif %}
 
     <div class="gs-confirm-detail">
       <div><span>Service</span> <strong>{{ appointment.service_type }}</strong></div>
