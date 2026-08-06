@@ -202,6 +202,12 @@ from LoanMVP.models.network_models import (
     NetworkComment,
 )
 
+# 📅 Booking capability (public scheduling for VIP workspaces)
+from LoanMVP.models.booking_models import (
+    BookingAvailability,
+    Booking,
+)
+
 # ======================================================
 # 🧩 SQLAlchemy Export (for Migrate / Shell)
 # ======================================================
