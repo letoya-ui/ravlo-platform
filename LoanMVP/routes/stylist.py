@@ -35,10 +35,13 @@ from LoanMVP.models.salon_models import (
     LoyaltyTransaction,
     SalonAvailability,
 )
+from LoanMVP.services.payments_service import get_or_create_payment_account
 
 stylist_bp = Blueprint("stylist", __name__, url_prefix="/stylist")
 
-APPOINTMENT_STATUSES = ["scheduled", "completed", "cancelled", "no_show"]
+# pending_deposit included so a booking held for an unpaid deposit shows up
+# (and, if needed, can be manually resolved) instead of being invisible.
+APPOINTMENT_STATUSES = ["pending_deposit", "scheduled", "completed", "cancelled", "no_show"]
 WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
@@ -587,6 +590,27 @@ def availability():
                 db.session.commit()
                 flash("Availability removed.", "success")
 
+        elif action_type == "deposit_settings":
+            deposit_required = request.form.get("deposit_required") == "on"
+
+            if deposit_required:
+                try:
+                    deposit_amount_cents = int(round(float(request.form.get("deposit_amount") or "0") * 100))
+                except ValueError:
+                    deposit_amount_cents = 0
+
+                if deposit_amount_cents <= 0:
+                    flash("Enter a valid deposit amount to require a deposit.", "warning")
+                    return redirect(url_for("stylist.availability"))
+
+                profile.deposit_amount_cents = deposit_amount_cents
+            else:
+                profile.deposit_amount_cents = None
+
+            profile.deposit_required = deposit_required
+            db.session.commit()
+            flash("Deposit settings updated.", "success")
+
         return redirect(url_for("stylist.availability"))
 
     my_slots = (
@@ -595,11 +619,13 @@ def availability():
         .order_by(SalonAvailability.day_of_week, SalonAvailability.start_time)
         .all()
     )
+    payment_account = get_or_create_payment_account("stylist_profile", profile.id)
 
     return render_template(
         "stylist/availability.html",
         profile=profile,
         slots=my_slots,
         weekdays=WEEKDAYS,
+        payment_account=payment_account,
         active_tab="availability",
     )

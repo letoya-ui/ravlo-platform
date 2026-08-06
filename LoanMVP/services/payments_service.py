@@ -175,13 +175,18 @@ def create_payment_request(
 
 
 def create_checkout_session_for_request(
-    payment_request: PaymentRequest, success_url: str, cancel_url: str
+    payment_request: PaymentRequest, success_url: str, cancel_url: str, expires_at: int = None
 ) -> str:
     """Builds a destination-charge Checkout Session: Ravlo stays merchant
     of record, but the funds land directly in the workspace's connected
     Stripe account (payment_intent_data.transfer_data.destination).
     application_fee_amount is intentionally left unset -- no platform fee
-    percentage has been decided yet."""
+    percentage has been decided yet.
+
+    expires_at (Unix timestamp) is used by callers that hold a resource --
+    e.g. a booking slot -- for only as long as the session stays open
+    (Stripe requires it be 30 min-24h out); omitted for a plain payment
+    request, which keeps Stripe's default 24h expiry."""
     account = payment_request.payment_account
     if not account.is_ready_for_payments:
         raise PaymentsServiceError("This workspace has not finished connecting Stripe yet.")
@@ -210,6 +215,7 @@ def create_checkout_session_for_request(
         success_url=success_url,
         cancel_url=cancel_url,
         metadata={"payment_request_id": str(payment_request.id)},
+        **({"expires_at": expires_at} if expires_at else {}),
     )
 
     payment_request.stripe_checkout_session_id = session.id

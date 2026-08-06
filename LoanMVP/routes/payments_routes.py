@@ -239,6 +239,26 @@ def _handle_checkout_completed(session):
         return
 
     mark_payment_request_paid(payment_request, payment_intent_id=session.get("payment_intent") or "")
+    _confirm_salon_deposit_appointment(payment_request)
+
+
+def _confirm_salon_deposit_appointment(payment_request):
+    """If this PaymentRequest was gating a salon booking deposit (see
+    salon_public.py's _start_deposit_checkout), flip the held appointment
+    from pending_deposit to scheduled and send the same confirmation
+    emails a no-deposit booking gets immediately. Lazily imported to avoid
+    a module-load cycle between payments_routes.py and salon_public.py."""
+    from LoanMVP.extensions import db
+    from LoanMVP.models.salon_models import Appointment
+    from LoanMVP.routes.salon_public import _send_booking_confirmation_emails
+
+    appointment = Appointment.query.filter_by(payment_request_id=payment_request.id).first()
+    if not appointment or appointment.status != "pending_deposit":
+        return
+
+    appointment.status = "scheduled"
+    db.session.commit()
+    _send_booking_confirmation_emails(appointment.stylist, appointment)
 
 
 def _handle_account_updated(stripe_account):

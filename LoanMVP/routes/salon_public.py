@@ -32,6 +32,7 @@ shop in the stylist's own timezone.
 """
 import base64
 import io
+import time as time_module
 from collections import OrderedDict
 from datetime import datetime, timedelta, time as dtime
 
@@ -49,11 +50,23 @@ from LoanMVP.models.salon_models import (
     SalonReview,
     _new_confirmation_token,
 )
+from LoanMVP.services.payments_service import (
+    PaymentsServiceError,
+    create_checkout_session_for_request,
+    create_payment_request,
+    get_or_create_payment_account,
+)
 
 salon_public_bp = Blueprint("salon_public", __name__, url_prefix="/salon")
 
 BOOKING_WINDOW_DAYS = 21
 DEFAULT_SLOT_MINUTES = 60
+
+# How long a "pending_deposit" appointment holds its slot while the client
+# is on Stripe Checkout. Matched to the Checkout Session's own expires_at
+# below so an abandoned checkout can't block the slot forever without
+# needing a separate cleanup job.
+DEPOSIT_HOLD_MINUTES = 30
 
 CONSULTATION_SERVICE_NAME = "30-Minute Consultation"
 CONSULTATION_MINUTES = 30
@@ -110,13 +123,22 @@ def _stylist_or_404(slug):
 
 
 def _existing_scheduled_intervals(stylist, window_start, window_end):
-    """[(start, end), ...] for every scheduled appointment in range, used
-    for real interval-overlap checks rather than exact-start-time matches
-    -- necessary now that appointments can have different durations
-    (a 30-minute consultation vs. a full-length service)."""
+    """[(start, end), ...] for every appointment in range that currently
+    holds its slot, used for real interval-overlap checks rather than
+    exact-start-time matches -- necessary now that appointments can have
+    different durations (a 30-minute consultation vs. a full-length
+    service). Includes not just confirmed "scheduled" appointments but
+    also recent "pending_deposit" ones -- a client mid-Stripe-Checkout for
+    a required deposit still holds their slot -- excluding any that are
+    older than DEPOSIT_HOLD_MINUTES, since an abandoned checkout should
+    release the slot rather than block it forever."""
+    deposit_cutoff = datetime.utcnow() - timedelta(minutes=DEPOSIT_HOLD_MINUTES)
     existing = Appointment.query.filter(
         Appointment.stylist_id == stylist.id,
-        Appointment.status == "scheduled",
+        db.or_(
+            Appointment.status == "scheduled",
+            db.and_(Appointment.status == "pending_deposit", Appointment.created_at >= deposit_cutoff),
+        ),
         Appointment.scheduled_at >= window_start,
         Appointment.scheduled_at < window_end,
     ).all()
@@ -324,6 +346,17 @@ def submit_booking(slug):
         flash("That time was just booked or is no longer available -- please pick another.", "warning")
         return redirect(url_for("salon_public.book", slug=slug))
 
+    deposit_account = None
+    if stylist.deposit_required:
+        deposit_account = get_or_create_payment_account("stylist_profile", stylist.id)
+        if not deposit_account.is_ready_for_payments:
+            flash(
+                "Online booking is temporarily unavailable -- this stylist's deposit payment "
+                "isn't set up yet. Please contact them directly to schedule.",
+                "danger",
+            )
+            return redirect(url_for("salon_public.book", slug=slug))
+
     client = None
     if email:
         client = SalonClient.query.filter(
@@ -349,16 +382,57 @@ def submit_booking(slug):
         service_type=service_type,
         scheduled_at=starts_at,
         duration_minutes=duration_minutes,
-        status="scheduled",
+        status="pending_deposit" if deposit_account else "scheduled",
         notes=notes,
         confirmation_token=_new_confirmation_token(),
     )
     db.session.add(appointment)
     db.session.commit()
 
+    if deposit_account:
+        try:
+            checkout_url = _start_deposit_checkout(stylist, deposit_account, appointment, client)
+        except PaymentsServiceError as exc:
+            flash(str(exc), "danger")
+            return redirect(url_for("salon_public.book", slug=slug))
+        return redirect(checkout_url, code=303)
+
     _send_booking_confirmation_emails(stylist, appointment)
 
     return redirect(url_for("salon_public.booking_confirmed", slug=slug, token=appointment.confirmation_token))
+
+
+def _start_deposit_checkout(stylist, deposit_account, appointment, client):
+    """Creates the PaymentRequest for this appointment's required deposit
+    and returns the Stripe Checkout URL. success_url lands the client back
+    on the normal booking-confirmed page (which shows a "confirming your
+    deposit" message until the webhook flips the appointment to
+    scheduled); cancel_url reuses the Payments capability's own public pay
+    page so an abandoned checkout can still be retried without losing the
+    held slot."""
+    when = appointment.scheduled_at.strftime("%A, %B %d at %I:%M %p")
+    payment_request = create_payment_request(
+        deposit_account,
+        title=f"Deposit -- {appointment.service_type}",
+        amount_cents=stylist.deposit_amount_cents,
+        description=f"Deposit to confirm your {when} appointment with {stylist.full_name}.",
+        client_name=client.full_name,
+        client_email=client.email or "",
+        client_phone=client.phone or "",
+    )
+    appointment.payment_request_id = payment_request.id
+    db.session.commit()
+
+    success_url = url_for(
+        "salon_public.booking_confirmed", slug=stylist.public_slug, token=appointment.confirmation_token,
+        _external=True,
+    )
+    cancel_url = url_for(
+        "payments.public_pay_page", token=payment_request.confirmation_token, _external=True
+    )
+    expires_at = int(time_module.time()) + DEPOSIT_HOLD_MINUTES * 60
+
+    return create_checkout_session_for_request(payment_request, success_url, cancel_url, expires_at=expires_at)
 
 
 @salon_public_bp.route("/<slug>/confirmed/<token>")

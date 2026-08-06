@@ -66,6 +66,43 @@
   <section class="re-card pad">
     <div class="section-head">
       <div>
+        <div class="eyebrow">DEPOSITS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Booking Deposit</h3>
+      </div>
+    </div>
+
+    {% if not payment_account.is_ready_for_payments %}
+    <p class="re-card-subtitle mt-16">
+      Connect your Stripe account before you can require a deposit --
+      <a href="{{ url_for('payments.dashboard') }}">set that up here</a>.
+    </p>
+    {% endif %}
+
+    <form method="POST" class="mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action_type" value="deposit_settings">
+
+      <div class="re-grid-2">
+        <div class="field" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="deposit_required" name="deposit_required" {% if profile.deposit_required %}checked{% endif %} style="width:auto;">
+          <label for="deposit_required" style="margin:0;">Require a deposit to book online</label>
+        </div>
+        <div class="field">
+          <label for="deposit_amount">Deposit Amount ($)</label>
+          <input id="deposit_amount" name="deposit_amount" type="number" min="1" step="0.01"
+                 value="{{ '%.2f'|format(profile.deposit_amount_cents / 100) if profile.deposit_amount_cents else '' }}">
+        </div>
+      </div>
+
+      <div class="mt-16">
+        <button type="submit" class="re-btn primary">Save Deposit Settings</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
         <div class="eyebrow">CURRENT</div>
         <h3 style="margin:.35rem 0 .2rem;">Your Weekly Availability</h3>
       </div>

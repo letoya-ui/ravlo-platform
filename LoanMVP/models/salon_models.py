@@ -43,6 +43,14 @@ class StylistProfile(db.Model):
     service_area = db.Column(db.String(255), nullable=True)
     address = db.Column(db.String(255), nullable=True)
 
+    # Mandatory booking deposit (Stripe Connect, via payment_models.py's
+    # owner-agnostic PaymentAccount/PaymentRequest -- see payments_service.py).
+    # When set, salon_public.py's public booking flow requires the client to
+    # pay this amount through the stylist's own connected Stripe account
+    # before an appointment is confirmed.
+    deposit_required = db.Column(db.Boolean, nullable=False, default=False)
+    deposit_amount_cents = db.Column(db.Integer, nullable=True)
+
     user = db.relationship("User", back_populates="stylist_profile", foreign_keys=[user_id])
     clients = db.relationship("SalonClient", back_populates="stylist", cascade="all, delete-orphan", lazy=True)
     appointments = db.relationship("Appointment", back_populates="stylist", cascade="all, delete-orphan", lazy=True)
@@ -87,6 +95,10 @@ class Appointment(db.Model):
     scheduled_at = db.Column(db.DateTime, nullable=False, index=True)
     duration_minutes = db.Column(db.Integer, default=60)
     price = db.Column(db.Numeric(10, 2), nullable=True)
+    # scheduled | pending_deposit | completed | cancelled | no_show.
+    # pending_deposit holds the slot while the client is on Stripe Checkout
+    # paying a stylist-required deposit -- see salon_public.py -- and flips
+    # to scheduled once payments_routes.py's webhook confirms the charge.
     status = db.Column(db.String(20), default="scheduled", nullable=False)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -98,8 +110,15 @@ class Appointment(db.Model):
     # leave it null.
     confirmation_token = db.Column(db.String(32), nullable=True, unique=True, index=True)
 
+    # Set only when a mandatory deposit gated this booking -- links to the
+    # PaymentRequest (payment_models.py) tracking the Stripe Checkout.
+    payment_request_id = db.Column(
+        db.Integer, db.ForeignKey("payment_requests.id", name="fk_appt_payment_request_id"), nullable=True, index=True
+    )
+
     stylist = db.relationship("StylistProfile", back_populates="appointments")
     client = db.relationship("SalonClient", back_populates="appointments")
+    payment_request = db.relationship("PaymentRequest")
 
 
 class ClientFormula(db.Model):

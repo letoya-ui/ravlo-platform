@@ -226,7 +226,19 @@
             <textarea id="notes" name="notes"></textarea>
           </div>
 
-          <button type="submit" class="gs-submit-btn">Confirm Appointment</button>
+          {% if stylist.deposit_required and stylist.deposit_amount_cents %}
+          <p class="gs-empty" style="margin-bottom:14px;">
+            A ${{ "%.2f"|format(stylist.deposit_amount_cents / 100) }} deposit is required to confirm this booking.
+            You'll be taken to a secure Stripe checkout after this step.
+          </p>
+          {% endif %}
+          <button type="submit" class="gs-submit-btn">
+            {% if stylist.deposit_required and stylist.deposit_amount_cents %}
+              Continue to Deposit (${{ "%.2f"|format(stylist.deposit_amount_cents / 100) }})
+            {% else %}
+              Confirm Appointment
+            {% endif %}
+          </button>
         </div>
       </form>
 
