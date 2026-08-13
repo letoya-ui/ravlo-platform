@@ -10,20 +10,28 @@
     <p>Showcase your products. Connect with investors. Power real estate deals inside Ravlo OS.</p>
   </section>
 
+  <!-- Search -->
+  <form method="GET" action="{{ url_for('network.feed', slug=group.slug) }}" class="nw-search">
+    {% if active_category %}<input type="hidden" name="category" value="{{ active_category }}">{% endif %}
+    <input type="text" name="q" value="{{ search_query }}" placeholder="Search {{ group.name.lower() }} listings and posts..." class="nw-search-input">
+    <button type="submit" class="nw-btn nw-btn-primary">
+      <i class="lucide lucide-search"></i><span>Search</span>
+    </button>
+    {% if search_query or active_category %}
+    <a href="{{ url_for('network.feed', slug=group.slug) }}" class="nw-search-clear">Clear</a>
+    {% endif %}
+  </form>
+
   <!-- Category Grid -->
   <section class="nw-categories">
-    <div class="nw-cat">Interior Designers</div>
-    <div class="nw-cat">Contractors</div>
-    <div class="nw-cat">Stagers</div>
-    <div class="nw-cat">Inspectors</div>
-    <div class="nw-cat">Lenders</div>
-    <div class="nw-cat">Agents</div>
-    <div class="nw-cat">Vendors</div>
-    <div class="nw-cat">Architects</div>
+    <a href="{{ url_for('network.feed', slug=group.slug, q=search_query or None) }}" class="nw-cat {{ 'active' if not active_category else '' }}">All</a>
+    {% for cat_key, cat_label in categories %}
+    <a href="{{ url_for('network.feed', slug=group.slug, category=cat_key, q=search_query or None) }}" class="nw-cat {{ 'active' if active_category == cat_key else '' }}">{{ cat_label }}</a>
+    {% endfor %}
   </section>
 
-  <!-- Demo Placeholder Cards (only show when no posts exist) -->
-  {% if not posts_with_meta %}
+  <!-- Demo Placeholder Cards (only show on a truly empty group, never mid-search) -->
+  {% if not group_has_any_posts %}
   <section class="nw-demo-grid">
     <div class="nw-demo-card">
       <div class="nw-demo-img"></div>
@@ -49,9 +57,30 @@
   <!-- Post Composer -->
   {% if current_user.is_authenticated %}
   <section class="nw-card">
-    <form method="POST" action="{{ url_for('network.create_post', slug=group.slug) }}">
+    <form method="POST" action="{{ url_for('network.create_post', slug=group.slug) }}" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <textarea name="body" rows="3" placeholder="Share a project, ask for a referral, post what you need..." required></textarea>
+
+      <details class="nw-listing-details">
+        <summary>Add a title, category, price, or photo (post a product or service)</summary>
+        <div class="nw-listing-fields">
+          <div class="nw-listing-type">
+            <label><input type="radio" name="listing_type" value="update" checked> Just an update</label>
+            <label><input type="radio" name="listing_type" value="product"> Product</label>
+            <label><input type="radio" name="listing_type" value="service"> Service</label>
+          </div>
+          <input type="text" name="title" placeholder="Title (e.g. Duplex needs a property manager)">
+          <select name="category">
+            <option value="">Category (optional)</option>
+            {% for cat_key, cat_label in categories %}
+            <option value="{{ cat_key }}">{{ cat_label }}</option>
+            {% endfor %}
+          </select>
+          <input type="text" name="price_label" placeholder="Price (optional, e.g. $150 or Negotiable)">
+          <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp">
+        </div>
+      </details>
+
       <div class="nw-form-actions">
         <button type="submit" class="nw-btn nw-btn-primary">
           <i class="lucide lucide-send"></i><span>Post</span>
@@ -69,20 +98,46 @@
   {% if posts_with_meta %}
   <section class="nw-feed">
     {% for item in posts_with_meta %}
-    <article class="nw-post">
+    {% set post = item.post %}
+    <article class="nw-post {{ 'nw-listing-card' if post.listing_type in ('product', 'service') else '' }}">
       <div class="nw-post-head">
-        <span class="nw-author">{{ item.post.author.full_name or item.post.author.email }}</span>
+        {% if item.author_profile_url %}
+        <a href="{{ item.author_profile_url }}" class="nw-author" target="_blank" rel="noopener">{{ post.author.full_name or post.author.email }}</a>
+        {% else %}
+        <a href="{{ url_for('network.professional_profile', slug=group.slug, user_id=post.author.id) }}" class="nw-author">{{ post.author.full_name or post.author.email }}</a>
+        {% endif %}
         <span class="nw-badge">{{ item.author_label }}</span>
-        <span class="nw-time">{{ item.post.created_at.strftime('%b %-d, %Y') if item.post.created_at else "" }}</span>
+        {% if post.listing_type in ('product', 'service') %}
+        <span class="nw-badge nw-badge-listing">{{ 'Product' if post.listing_type == 'product' else 'Service' }}</span>
+        {% endif %}
+        <span class="nw-time">{{ post.created_at.strftime('%b %-d, %Y') if post.created_at else "" }}</span>
       </div>
-      <p class="nw-body">{{ item.post.body }}</p>
-      <a href="{{ url_for('network.post_detail', slug=group.slug, post_id=item.post.id) }}" class="nw-comment-link">
+
+      {% if post.image_url %}
+      <img src="{{ post.image_url }}" alt="{{ post.title or 'Listing photo' }}" class="nw-post-image">
+      {% endif %}
+
+      {% if post.title %}
+      <h3 class="nw-post-title">{{ post.title }}</h3>
+      {% endif %}
+
+      {% if post.category or post.price_label %}
+      <div class="nw-listing-meta">
+        {% if post.category %}<span class="nw-chip">{{ dict(categories).get(post.category, post.category) }}</span>{% endif %}
+        {% if post.price_label %}<span class="nw-chip nw-chip-price">{{ post.price_label }}</span>{% endif %}
+      </div>
+      {% endif %}
+
+      <p class="nw-body">{{ post.body }}</p>
+      <a href="{{ url_for('network.post_detail', slug=group.slug, post_id=post.id) }}" class="nw-comment-link">
         <i class="lucide lucide-message-square"></i>
         {{ item.comment_count }} comment{{ 's' if item.comment_count != 1 else '' }}
       </a>
     </article>
     {% endfor %}
   </section>
+  {% elif group_has_any_posts %}
+  <p class="nw-empty">No listings match that search.</p>
   {% else %}
   <p class="nw-empty">No posts yet — be the first to share something.</p>
   {% endif %}
@@ -101,6 +156,15 @@
   .nw-hero h1 { font-size: 2.2rem; font-weight: 800; color: #f4f7fb; }
   .nw-hero p { color: rgba(244,247,251,0.7); font-size: 1rem; margin-top: 6px; }
 
+  /* Search */
+  .nw-search { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .nw-search-input {
+    flex: 1; min-width: 220px; background: rgba(255,255,255,0.05); color: #f4f7fb;
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 12px 14px;
+    font-size: 0.92rem; font-family: inherit;
+  }
+  .nw-search-clear { color: rgba(244,247,251,0.55); font-size: 0.82rem; text-decoration: underline; }
+
   /* Categories */
   .nw-categories {
     display: grid;
@@ -116,7 +180,11 @@
     color: #f4f7fb;
     font-size: 0.85rem;
     font-weight: 600;
+    text-decoration: none;
+    transition: border-color 0.2s ease, background 0.2s ease;
   }
+  .nw-cat:hover { border-color: rgba(79,107,237,0.5); }
+  .nw-cat.active { background: #4f6bed; border-color: #4f6bed; }
 
   /* Demo Cards */
   .nw-demo-grid {
@@ -146,13 +214,20 @@
     padding: 18px;
     color: #f4f7fb;
   }
-  .nw-card textarea {
+  .nw-listing-card { border-color: rgba(79,107,237,0.35); }
+  .nw-card textarea, .nw-listing-fields input[type="text"], .nw-listing-fields select {
     width: 100%; background: rgba(255,255,255,0.05); color: inherit;
     border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 12px 14px;
     font-size: 0.92rem; font-family: inherit; resize: vertical;
   }
   .nw-form-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
   .nw-login-cta { text-align: center; color: rgba(255,255,255,0.6); font-size: 0.9rem; }
+
+  .nw-listing-details { margin-top: 12px; color: rgba(244,247,251,0.75); font-size: 0.85rem; }
+  .nw-listing-details summary { cursor: pointer; font-weight: 600; }
+  .nw-listing-fields { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+  .nw-listing-type { display: flex; gap: 16px; font-weight: 400; font-size: 0.85rem; }
+  .nw-listing-fields input[type="file"] { color: rgba(244,247,251,0.7); font-size: 0.85rem; }
 
   .nw-alert {
     background: rgba(220,38,38,0.12); border: 1px solid rgba(220,38,38,0.35); color: #fecaca;
@@ -169,13 +244,23 @@
 
   .nw-feed { display: flex; flex-direction: column; gap: 12px; }
   .nw-post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-  .nw-author { font-weight: 600; font-size: 0.92rem; }
+  .nw-author { font-weight: 600; font-size: 0.92rem; color: inherit; text-decoration: none; }
+  .nw-author:hover { text-decoration: underline; }
   .nw-badge {
     font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
     color: #93c5fd; background: rgba(59,130,246,0.15); border-radius: 6px; padding: 2px 8px;
   }
+  .nw-badge-listing { color: #86efac; background: rgba(34,197,94,0.15); }
   .nw-time { font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-left: auto; }
   .nw-body { font-size: 0.92rem; line-height: 1.55; white-space: pre-wrap; margin-bottom: 10px; }
+  .nw-post-title { font-size: 1.02rem; font-weight: 700; margin-bottom: 6px; }
+  .nw-post-image { width: 100%; max-height: 320px; object-fit: cover; border-radius: 10px; margin-bottom: 12px; }
+  .nw-listing-meta { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .nw-chip {
+    font-size: 0.75rem; font-weight: 600; color: rgba(244,247,251,0.75);
+    background: rgba(255,255,255,0.06); border-radius: 999px; padding: 3px 10px;
+  }
+  .nw-chip-price { color: #86efac; background: rgba(34,197,94,0.12); }
   .nw-comment-link {
     font-size: 0.82rem; color: rgba(255,255,255,0.55); display: inline-flex; align-items: center; gap: 6px;
   }

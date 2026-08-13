@@ -1,0 +1,113 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block content %}
+<div class="mk-container nw-wrap">
+<div class="nw-page">
+
+  <a href="{{ url_for('network.feed', slug=group.slug) }}" class="nw-back-link">
+    <i class="lucide lucide-arrow-left"></i>
+    <span>Back to {{ group.name }}</span>
+  </a>
+
+  <section class="nw-profile-head">
+    <div class="nw-profile-avatar">{{ (member.full_name or member.email)[0]|upper }}</div>
+    <div>
+      <h1>{{ member.full_name or member.email }}</h1>
+      <span class="nw-badge">{{ author_label }}</span>
+      {% if full_profile_url %}
+      <a href="{{ full_profile_url }}" target="_blank" rel="noopener" class="nw-profile-link">
+        View Full Profile <i class="lucide lucide-external-link"></i>
+      </a>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if bio %}
+  <section class="nw-card">
+    <p class="nw-body">{{ bio }}</p>
+  </section>
+  {% endif %}
+
+  <h2 class="nw-section-title">Posts in {{ group.name }} Network</h2>
+
+  <section class="nw-feed">
+    {% for item in posts_with_meta %}
+    {% set post = item.post %}
+    <article class="nw-post {{ 'nw-listing-card' if post.listing_type in ('product', 'service') else '' }}">
+      <div class="nw-post-head">
+        <span class="nw-time">{{ post.created_at.strftime('%b %-d, %Y') if post.created_at else "" }}</span>
+        {% if post.listing_type in ('product', 'service') %}
+        <span class="nw-badge nw-badge-listing">{{ 'Product' if post.listing_type == 'product' else 'Service' }}</span>
+        {% endif %}
+      </div>
+
+      {% if post.image_url %}
+      <img src="{{ post.image_url }}" alt="{{ post.title or 'Listing photo' }}" class="nw-post-image">
+      {% endif %}
+
+      {% if post.title %}
+      <h3 class="nw-post-title">{{ post.title }}</h3>
+      {% endif %}
+
+      <p class="nw-body">{{ post.body }}</p>
+      <a href="{{ url_for('network.post_detail', slug=group.slug, post_id=post.id) }}" class="nw-comment-link">
+        <i class="lucide lucide-message-square"></i>
+        {{ item.comment_count }} comment{{ 's' if item.comment_count != 1 else '' }}
+      </a>
+    </article>
+    {% endfor %}
+  </section>
+
+</div>
+</div>
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+<style>
+  .nw-wrap { padding: 120px 24px 80px; position: relative; z-index: 2; }
+  .nw-page { display: flex; flex-direction: column; gap: 18px; max-width: 720px; margin: 0 auto; }
+
+  .nw-back-link {
+    display: inline-flex; align-items: center; gap: 8px; color: rgba(244,247,251,0.65);
+    font-size: 0.85rem; text-decoration: none; width: fit-content;
+  }
+  .nw-back-link:hover { color: #f4f7fb; }
+
+  .nw-profile-head { display: flex; align-items: center; gap: 16px; }
+  .nw-profile-avatar {
+    width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(79,107,237,0.2); color: #93c5fd; font-weight: 700; font-size: 1.3rem; flex-shrink: 0;
+  }
+  .nw-profile-head h1 { font-size: 1.4rem; font-weight: 800; color: #f4f7fb; margin-bottom: 4px; }
+  .nw-profile-link { display: block; margin-top: 6px; font-size: 0.82rem; color: #93c5fd; text-decoration: none; }
+  .nw-profile-link:hover { text-decoration: underline; }
+
+  .nw-section-title { font-size: 1rem; font-weight: 700; color: #f4f7fb; margin-top: 8px; }
+
+  .nw-card, .nw-post {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 16px 18px;
+    color: #f4f7fb;
+  }
+  .nw-listing-card { border-color: rgba(79,107,237,0.35); }
+
+  .nw-feed { display: flex; flex-direction: column; gap: 12px; }
+  .nw-post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .nw-badge {
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+    color: #93c5fd; background: rgba(59,130,246,0.15); border-radius: 6px; padding: 2px 8px;
+  }
+  .nw-badge-listing { color: #86efac; background: rgba(34,197,94,0.15); }
+  .nw-time { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+  .nw-post-title { font-size: 1.02rem; font-weight: 700; margin-bottom: 6px; }
+  .nw-post-image { width: 100%; max-height: 320px; object-fit: cover; border-radius: 10px; margin-bottom: 12px; }
+  .nw-body { font-size: 0.92rem; line-height: 1.55; white-space: pre-wrap; margin-bottom: 10px; }
+  .nw-comment-link {
+    font-size: 0.82rem; color: rgba(255,255,255,0.55); display: inline-flex; align-items: center; gap: 6px;
+  }
+  .nw-comment-link:hover { color: rgba(255,255,255,0.85); }
+</style>
+{% endblock %}

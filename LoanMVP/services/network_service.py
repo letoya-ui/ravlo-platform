@@ -38,6 +38,45 @@ def resolve_professional_label(user) -> str:
     return "Member"
 
 
+def _find_stylist_and_vip_profile(user):
+    from LoanMVP.models.salon_models import StylistProfile
+    from LoanMVP.models.vip_models import VIPProfile
+
+    stylist = StylistProfile.query.filter_by(user_id=user.id).first()
+    profile = VIPProfile.query.filter_by(user_id=user.id).first()
+    return stylist, profile
+
+
+def resolve_profile_url(user):
+    """Link to a member's existing public profile page, if they have one.
+
+    Reuses the real public-facing pages (public_pages.realtor_landing,
+    salon_public.landing) instead of building a second profile system --
+    only members without a public_slug fall back to the plain in-network
+    profile page (network.professional_profile)."""
+    from flask import url_for
+
+    stylist, profile = _find_stylist_and_vip_profile(user)
+
+    if stylist and stylist.public_slug:
+        return url_for("salon_public.landing", slug=stylist.public_slug)
+    if profile and profile.public_slug:
+        return url_for("public_pages.realtor_landing", slug=profile.public_slug)
+    return None
+
+
+def resolve_profile_bio(user):
+    """Bio text for the in-network profile page, from whichever profile
+    tree the member actually has (if any)."""
+    stylist, profile = _find_stylist_and_vip_profile(user)
+
+    if stylist and stylist.bio:
+        return stylist.bio
+    if profile and profile.bio:
+        return profile.bio
+    return None
+
+
 def get_or_create_group(slug: str, name: str = "", description: str = "") -> NetworkGroup:
     group = NetworkGroup.query.filter_by(slug=slug).first()
     if group:
