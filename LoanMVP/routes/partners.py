@@ -13,7 +13,6 @@ from LoanMVP.services.partner_search_service import search_external_partners
 
 from LoanMVP.models.crm_models import Partner, Task, CRMNote, Lead
 from LoanMVP.models.vip_models import VIPProfile
-from LoanMVP.models.admin import SubscriptionRequest
 from LoanMVP.models.partner_models import (
     PartnerConnectionRequest,
     PartnerJob,
@@ -906,80 +905,36 @@ def resources():
     )
 
 
-@partners_bp.route("/subscribe/<tier>")
-@role_required("partner_group")
-def subscribe(tier):
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-    if not partner:
-        flash("Partner profile not found.", "warning")
-        return redirect(url_for("partners.register"))
-
-    allowed_tiers = {"Free", "Featured", "Premium", "Enterprise"}
-    normalized = tier.strip().title()
-
-    if normalized not in allowed_tiers:
-        flash("Invalid subscription tier.", "danger")
-        return redirect(url_for("partners.billing"))
-
-    return render_template(
-        "partners/subscribe.html",
-        partner=partner,
-        selected_tier=normalized,
-        portal="partner",
-        page_title="Choose Plan",
-        page_subline="Confirm your Ravlo Partner subscription tier."
-    )
-
-
 @partners_bp.route("/subscribe/<tier>/confirm", methods=["POST"])
 @role_required("partner_group")
 def confirm_subscription(tier):
+    """Only the Free tier applies immediately here -- paid tiers used to
+    queue a pending admin-approval SubscriptionRequest (no real payment
+    step existed yet), but now that partner_subscription_checkout() below
+    is a real, live Stripe Checkout, that placeholder is retired: a paid
+    tier is only ever activated by an actual completed payment (via that
+    checkout route, confirmed by billing_webhook.py). Keeping this route
+    at the same URL/name (rather than a new one) so the Free selection
+    already wired up from partners/billing.html keeps working unchanged.
+    """
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     if not partner:
         flash("Partner profile not found.", "warning")
         return redirect(url_for("partners.register"))
 
-    allowed_tiers = {"Free", "Featured", "Premium", "Enterprise"}
     normalized = tier.strip().title()
 
-    if normalized not in allowed_tiers:
-        flash("Invalid subscription tier.", "danger")
+    if normalized != "Free":
+        flash("Paid plans are activated through checkout -- choose a plan below.", "warning")
         return redirect(url_for("partners.billing"))
 
+    partner.subscription_tier = "Free"
+    partner.featured = False
     partner.approved = True
     partner.active = True
     partner.status = "Active"
-
-    if normalized == "Free":
-        partner.subscription_tier = "Free"
-        partner.featured = False
-        db.session.commit()
-        flash("Your subscription has been updated to Free.", "success")
-        return redirect(url_for("partners.billing"))
-
-    # Paid tiers have no payment step wired up yet, so applying them
-    # immediately would let anyone grant themselves a paid tier for free.
-    # Queue a pending request instead -- a Ravlo admin confirms it.
-    existing = SubscriptionRequest.query.filter_by(
-        user_id=current_user.id, context="partner_tier", status="pending"
-    ).first()
-    if existing:
-        existing.plan_requested = normalized
-        existing.created_at = datetime.utcnow()
-    else:
-        db.session.add(SubscriptionRequest(
-            user_id=current_user.id,
-            plan_requested=normalized,
-            context="partner_tier",
-            status="pending",
-        ))
     db.session.commit()
-
-    flash(
-        f"Your request to upgrade to {normalized} has been submitted for review. "
-        "A Ravlo admin will confirm your subscription shortly.",
-        "success",
-    )
+    flash("Your subscription has been updated to Free.", "success")
     return redirect(url_for("partners.billing"))
 
 
@@ -991,37 +946,84 @@ def billing():
         flash("Partner profile not found.", "warning")
         return redirect(url_for("partners.register"))
 
-    plans = [
-        {
-            "name": "Free",
-            "price": "$0",
-            "features": ["Basic profile", "Limited visibility", "Starter access"]
-        },
-        {
-            "name": "Featured",
-            "price": "$49/mo",
-            "features": ["Featured listing", "More visibility", "Pro request access", "VIP Dashboard access"]
-        },
-        {
-            "name": "Premium",
-            "price": "$99/mo",
-            "features": ["Workspace access", "Priority visibility", "Advanced tools"]
-        },
-        {
-            "name": "Enterprise",
-            "price": "Custom",
-            "features": ["Full suite", "Priority support", "Custom partner setup"]
-        },
-    ]
-
     return render_template(
         "partners/billing.html",
         partner=partner,
-        plans=plans,
+        plans=PARTNER_PLANS,
+        paid_plan_keys=PARTNER_PAID_PLAN_KEYS,
+        free_leads_tiers=PARTNER_FREE_LEADS_TIERS,
+        is_realtor=partner_is_realtor(partner),
         portal="partner",
         page_title="Billing",
         page_subline="Manage your Ravlo Partner plan."
     )
+
+
+@partners_bp.route("/request-landing-page", methods=["POST"])
+@login_required
+@role_required("partner_group")
+def request_landing_page():
+    """Realtors get their landing pages auto-generated per listing (see
+    vip.py's realtor_listing_detail() / public_pages.py's listing_landing())
+    -- no request needed. Everything else (contractors, insurance agents,
+    other business types) has no structured listing data to generate a
+    page from, so this queues a request a Ravlo admin follows up on to
+    build one, the same way Mason-Fultz's and GotStyles' pages were built.
+    """
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("partners.register"))
+
+    notes = (request.form.get("notes") or "").strip()
+
+    from LoanMVP.models.admin import BusinessInquiry
+
+    row = BusinessInquiry(
+        inquiry_type="partner_landing_page_request",
+        company_name=partner.name or "—",
+        contact_name=f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or current_user.email,
+        email=current_user.email,
+        phone=getattr(partner, "phone", None),
+        business_type=getattr(partner, "category", None) or getattr(partner, "type", None),
+        plan_interest=(partner.subscription_tier or "Free"),
+        notes=notes or None,
+        status="new",
+        ae_stage="prospect",
+    )
+    db.session.add(row)
+    db.session.commit()
+
+    _notify_admin_landing_page_request(partner, current_user, notes)
+
+    flash("Request sent! A Ravlo admin will reach out shortly to build your landing page.", "success")
+    return redirect(url_for("partners.billing"))
+
+
+def _notify_admin_landing_page_request(partner, user, notes: str) -> None:
+    try:
+        from LoanMVP.app import mail
+        from flask_mail import Message as MailMessage
+        from LoanMVP.routes.auth import _owner_admin_email
+
+        admin_email = _owner_admin_email()
+        if not admin_email:
+            return
+
+        msg = MailMessage(
+            subject=f"[Ravlo] Landing page request -- {partner.name or user.email}",
+            recipients=[admin_email],
+        )
+        msg.body = (
+            f"New landing page request from an existing Ravlo Partner:\n\n"
+            f"Business: {partner.name or '—'}\n"
+            f"Contact: {user.email}\n"
+            f"Plan: {partner.subscription_tier or 'Free'}\n"
+            f"Notes: {notes or '—'}\n"
+        )
+        mail.send(msg)
+    except Exception as exc:
+        current_app.logger.warning("Landing page request admin notification failed: %s", exc)
 
 
 @partners_bp.route("/billing/setup-intent", methods=["POST"])
@@ -1051,11 +1053,80 @@ def partner_billing_setup_intent():
         return jsonify({"error": "Unable to initialize payment. Please try again."}), 500
 
 
-_PARTNER_STRIPE_PRICE_MAP = {
-    "featured": "STRIPE_PRICE_FEATURED_PARTNER",
-    "premium":  "STRIPE_PRICE_PREFERRED_PARTNER",
-    "enterprise": "STRIPE_PRICE_ENTERPRISE",
+# ─────────────────────────────────────────────────────────────────────────────
+# Canonical partner subscription pricing -- the single source of truth for
+# every partner-facing pricing display (Growth Plans, Billing, the public
+# marketing pricing page) AND the actual Stripe Checkout amounts charged.
+# Previously Growth Plans, Billing, and marketing/partner_plans.html each
+# hardcoded their own numbers independently, and the only "upgrade" path
+# that was actually wired to a button (confirm_subscription) never charged
+# anything -- it just queued an admin-approval request. What a partner saw
+# and what they'd actually be billed could silently disagree, and paid
+# upgrades didn't really charge at all.
+#
+# tier_key is Partner.subscription_tier's stored value ("Free"/"Featured"/
+# "Premium"/"Enterprise") and the lowercase form is what
+# billing_webhook.py's _activate_partner_tier() already expects in
+# checkout.session.completed metadata -- unchanged from before. Only the
+# customer-facing display_name changed (Featured -> Solo, Premium ->
+# Professional, Enterprise -> Business), so this doesn't need a data
+# migration across existing partner rows or the several other places in
+# this file that compare subscription_tier against "Featured"/"Premium"/
+# "Enterprise" directly.
+#
+# Amounts use Stripe Checkout's inline price_data (both the recurring
+# monthly line item and the one-time setup fee) rather than pre-created
+# Stripe Price objects -- Stripe fully supports mixing a recurring
+# price_data line item with a one-time one in a single mode="subscription"
+# Checkout Session (the one-time item bills once, on the first invoice).
+PARTNER_PLANS = {
+    "free": {
+        "tier_key": "Free",
+        "display_name": "Free",
+        "setup_cents": 0,
+        "monthly_cents": 0,
+        "features": ["CRM access", "Basic profile listing", "Lead inbox access", "Standard marketplace visibility"],
+    },
+    "featured": {
+        "tier_key": "Featured",
+        "display_name": "Solo",
+        "setup_cents": 49900,
+        "monthly_cents": 14900,
+        "features": [
+            "Everything in Free", "Deal visibility", "Portfolio showcase",
+            "Smart notifications", "Priority placement",
+            "Full back office", "Unlimited landing pages",
+            "Ravlo Investor Leads included free",
+        ],
+    },
+    "premium": {
+        "tier_key": "Premium",
+        "display_name": "Professional",
+        "setup_cents": 149900,
+        "monthly_cents": 39900,
+        "features": [
+            "Everything in Solo", "Proposal builder", "Instant quote generator",
+            "AI assist", "Advanced premium visibility",
+        ],
+    },
+    "enterprise": {
+        "tier_key": "Enterprise",
+        "display_name": "Business",
+        "setup_cents": 250000,
+        "monthly_cents": 69900,
+        "features": [
+            "Everything in Professional", "Full VIP realtor workspace",
+            "Dedicated onboarding", "Priority support",
+        ],
+    },
 }
+
+# Partners on any paid plan get Ravlo Investor Leads included in their
+# subscription -- no per-lead charge. Free-tier partners are unaffected
+# (pay-per-lead, if they opt in, is unchanged for them).
+PARTNER_FREE_LEADS_TIERS = {"featured", "premium", "enterprise"}
+
+PARTNER_PAID_PLAN_KEYS = ("featured", "premium", "enterprise")
 
 
 @partners_bp.route("/billing/subscribe-checkout/<tier>", methods=["POST"])
@@ -1067,18 +1138,36 @@ def partner_subscription_checkout(tier):
         return redirect(url_for("partners.billing"))
 
     normalized = tier.strip().lower()
-    price_key = _PARTNER_STRIPE_PRICE_MAP.get(normalized)
-    price_id = current_app.config.get(price_key, "") if price_key else ""
+    plan = PARTNER_PLANS.get(normalized)
 
-    if not price_id:
-        flash("That plan is not yet configured for checkout.", "warning")
+    if not plan or normalized not in PARTNER_PAID_PLAN_KEYS:
+        flash("That plan is not available for checkout.", "warning")
         return redirect(url_for("partners.billing"))
+
+    line_items = [{
+        "price_data": {
+            "currency": "usd",
+            "product_data": {"name": f"Ravlo Partner -- {plan['display_name']} (Monthly)"},
+            "unit_amount": plan["monthly_cents"],
+            "recurring": {"interval": "month"},
+        },
+        "quantity": 1,
+    }]
+    if plan["setup_cents"]:
+        line_items.append({
+            "price_data": {
+                "currency": "usd",
+                "product_data": {"name": f"Ravlo Partner -- {plan['display_name']} Setup Fee"},
+                "unit_amount": plan["setup_cents"],
+            },
+            "quantity": 1,
+        })
 
     try:
         session_obj = stripe.checkout.Session.create(
             mode="subscription",
             payment_method_types=["card"],
-            line_items=[{"price": price_id, "quantity": 1}],
+            line_items=line_items,
             success_url=url_for("partners.partner_subscription_success", _external=True)
                         + "?session_id={CHECKOUT_SESSION_ID}&tier=" + normalized,
             cancel_url=url_for("partners.billing", _external=True),
@@ -1140,9 +1229,27 @@ def partner_subscription_success():
 def _charge_partner_for_lead(partner, connection_request=None):
     """
     Attempt a Stripe off-session charge for one lead delivery.
-    Returns the PartnerLeadCharge record (status may be 'paid' or 'failed').
+    Returns the PartnerLeadCharge record (status may be 'paid', 'failed',
+    or 'waived' -- Ravlo Investor Leads are included free for a partner on
+    a paid Ravlo Partner plan, Solo/Professional/Business, regardless of
+    their own pay-per-lead settings).
     """
     from datetime import datetime as _dt
+
+    tier = (partner.subscription_tier or "").strip().lower()
+    if tier in PARTNER_FREE_LEADS_TIERS:
+        charge = PartnerLeadCharge(
+            partner_id=partner.id,
+            connection_request_id=getattr(connection_request, "id", None),
+            amount=0,
+            stripe_customer_id=partner.stripe_customer_id,
+            status="waived",
+            paid_at=_dt.utcnow(),
+        )
+        db.session.add(charge)
+        db.session.commit()
+        return charge
+
     amount = float(partner.lead_price or 35.00)
     charge = PartnerLeadCharge(
         partner_id=partner.id,
@@ -1334,6 +1441,8 @@ def upgrade():
         testing_unlocks_enabled=_partner_testing_enabled(),
         is_realtor=is_realtor,
         vip_unlocked=vip_unlocked,
+        plans=PARTNER_PLANS,
+        paid_plan_keys=PARTNER_PAID_PLAN_KEYS,
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),

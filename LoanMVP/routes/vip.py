@@ -5019,6 +5019,11 @@ def realtor_listing_detail(listing_id):
         flash("Listing not found.", "warning")
         return redirect(url_for("vip.realtor_listings"))
 
+    if not listing.public_token:
+        from LoanMVP.models.elena_models import _new_listing_public_token
+        listing.public_token = _new_listing_public_token()
+        db.session.commit()
+
     presentations = (RealtorListingPresentation.query
                      .filter_by(listing_id=listing.id)
                      .order_by(RealtorListingPresentation.updated_at.desc())

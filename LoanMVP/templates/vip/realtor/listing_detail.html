@@ -13,6 +13,13 @@
     <i class="lucide lucide-arrow-left"></i>
     <span>All Properties</span>
   </a>
+  {% if listing.public_token %}
+  <a href="{{ url_for('public_pages.listing_landing', token=listing.public_token, _external=True) }}"
+     class="ravlo-btn ghost sm" target="_blank" rel="noopener">
+    <i class="lucide lucide-external-link"></i>
+    <span>View Landing Page</span>
+  </a>
+  {% endif %}
   <form method="POST" action="{{ url_for('vip.listing_presentation_new') }}" class="inline-flex">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="listing_id" value="{{ listing.id }}">

@@ -634,3 +634,115 @@ def public_booking_confirmed(slug, token):
     ).first_or_404()
 
     return render_template("public/booking_confirmed.html", **ctx, booking=booking)
+
+
+# ===============================================================
+#   LISTING LANDING PAGES (unlimited, self-serve -- one per realtor
+#   listing; see vip.py's realtor_listing_detail() for where the
+#   public_token gets generated)
+# ===============================================================
+
+def _listing_branding_context(profile: VIPProfile) -> dict:
+    """Mirrors the subset of _load_realtor_context()'s branding fields a
+    listing landing page actually needs -- no listings/testimonials/SEO
+    fields, since this page is about one specific property, not the
+    realtor's whole public profile."""
+    user = User.query.get(profile.user_id)
+    partner = Partner.query.filter_by(user_id=profile.user_id).first() if user else None
+    return {
+        "profile": profile,
+        "user": user,
+        "display_name": profile.display_name or (user.full_name if user else "Realtor"),
+        "brand_color": profile.brand_color or "#C9A878",
+        "logo_url": profile.logo_url or (partner.logo_url if partner else None),
+        "phone": partner.phone if partner else "",
+        "email": user.email if user else "",
+    }
+
+
+def _parse_listing_photos(listing) -> list:
+    if not listing.photos_json:
+        return []
+    try:
+        parsed = json.loads(listing.photos_json)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(parsed, list):
+        return []
+    return [p for p in parsed if isinstance(p, str) and p]
+
+
+@public_pages_bp.route("/listing/<token>", methods=["GET"])
+def listing_landing(token):
+    listing = ElenaListing.query.filter_by(public_token=token).first_or_404()
+    profile = VIPProfile.query.get(listing.vip_profile_id) if listing.vip_profile_id else None
+    if not profile:
+        abort(404)
+
+    return render_template(
+        "public/listing_landing.html",
+        listing=listing,
+        photos=_parse_listing_photos(listing),
+        **_listing_branding_context(profile),
+    )
+
+
+@public_pages_bp.route("/listing/<token>/inquire", methods=["POST"])
+def listing_landing_inquire(token):
+    listing = ElenaListing.query.filter_by(public_token=token).first_or_404()
+    profile = VIPProfile.query.get(listing.vip_profile_id) if listing.vip_profile_id else None
+    if not profile:
+        abort(404)
+
+    ctx = _listing_branding_context(profile)
+    photos = _parse_listing_photos(listing)
+
+    client_name = (request.form.get("client_name") or "").strip()
+    client_email = (request.form.get("client_email") or "").strip()
+    client_phone = (request.form.get("client_phone") or "").strip()
+    message = (request.form.get("message") or "").strip()
+
+    if not client_name:
+        return render_template(
+            "public/listing_landing.html", listing=listing, photos=photos,
+            form_error="Name is required.", **ctx,
+        )
+
+    notes_parts = [f"Interested in: {listing.address}, {listing.city}, {listing.state}"]
+    if message:
+        notes_parts.append(f"Message: {message}")
+    notes_parts.append(f"Source: Listing landing page (/p/listing/{token})")
+
+    inquiry = ElenaClient(
+        name=client_name,
+        email=client_email or None,
+        phone=client_phone or None,
+        role="buyer",
+        pipeline_stage="new",
+        notes="\n".join(notes_parts),
+        market=listing.market,
+        vip_profile_id=profile.id,
+        assigned_member_id=None,
+    )
+    db.session.add(inquiry)
+
+    notification = VIPNotification(
+        vip_profile_id=profile.id,
+        notification_type="new_lead",
+        title=f"New inquiry: {listing.address}",
+        body=f"{client_name} is interested in this listing. {client_phone or client_email or ''}".strip(),
+        action_url="/elena/clients",
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    owner_user = User.query.get(profile.user_id)
+    _send_new_lead_email(
+        owner_user, profile.public_slug or "", client_name, client_email, client_phone,
+        f"Listing inquiry: {listing.address}", message,
+    )
+
+    return render_template(
+        "public/listing_landing.html", listing=listing, photos=photos,
+        submitted=True, submitted_name=client_name, **ctx,
+    )
