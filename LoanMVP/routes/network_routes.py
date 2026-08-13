@@ -47,7 +47,10 @@ def feed(slug):
         for post in posts
     ]
 
-    return render_template("network/feed.html", group=group, posts_with_meta=posts_with_meta)
+    return render_template(
+        "network/feed.html", group=group, posts_with_meta=posts_with_meta,
+        page_title=f"{group.name} Network | Ravlo", page_key="network",
+    )
 
 
 @network_bp.post("/<slug>/posts")
@@ -83,6 +86,7 @@ def post_detail(slug, post_id):
         post=post,
         author_label=resolve_professional_label(post.author),
         comments_with_meta=comments_with_meta,
+        page_title=f"{group.name} Network | Ravlo", page_key="network",
     )
 
 

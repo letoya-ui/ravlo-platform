@@ -1,18 +1,21 @@
-{% extends "layouts/ravlo_base.html" %}
+{% extends "layouts/marketing_base.html" %}
 
-{% block title %}Ravlo • {{ group.name }} Network{% endblock %}
-{% block page_title %}{{ group.name }} Network{% endblock %}
-{% block page_subline %}{{ post.author.full_name or post.author.email }} — {{ author_label }}{% endblock %}
+{% block content %}
+<div class="mk-container nw-wrap">
+<div class="nw-page">
 
-{% block topbar_actions %}
-  <a href="{{ url_for('network.feed', slug=group.slug) }}" class="ravlo-btn ghost sm">
+  <a href="{{ url_for('network.feed', slug=group.slug) }}" class="nw-back-link">
     <i class="lucide lucide-arrow-left"></i>
     <span>Back to {{ group.name }}</span>
   </a>
-{% endblock %}
 
-{% block content %}
-<div class="nw-page">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="nw-alert">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
 
   <article class="nw-post nw-post-main">
     <div class="nw-post-head">
@@ -44,7 +47,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <textarea name="body" rows="2" placeholder="Reply to this post..." required></textarea>
       <div class="nw-form-actions">
-        <button type="submit" class="ravlo-btn primary">
+        <button type="submit" class="nw-btn nw-btn-primary">
           <i class="lucide lucide-send"></i><span>Comment</span>
         </button>
       </div>
@@ -57,17 +60,27 @@
   {% endif %}
 
 </div>
+</div>
 {% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 <style>
-  .nw-page { display: flex; flex-direction: column; gap: 18px; max-width: 720px; }
+  .nw-wrap { padding: 120px 24px 80px; position: relative; z-index: 2; }
+  .nw-page { display: flex; flex-direction: column; gap: 18px; max-width: 720px; margin: 0 auto; }
+
+  .nw-back-link {
+    display: inline-flex; align-items: center; gap: 8px; color: rgba(244,247,251,0.65);
+    font-size: 0.85rem; text-decoration: none; width: fit-content;
+  }
+  .nw-back-link:hover { color: #f4f7fb; }
 
   .nw-post, .nw-comment, .nw-card {
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 14px;
     padding: 16px 18px;
+    color: #f4f7fb;
   }
   .nw-post-main { border-color: rgba(255,255,255,0.15); }
 
@@ -90,5 +103,17 @@
   }
   .nw-form-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
   .nw-login-cta { text-align: center; color: rgba(255,255,255,0.6); font-size: 0.9rem; }
+
+  .nw-alert {
+    background: rgba(220,38,38,0.12); border: 1px solid rgba(220,38,38,0.35); color: #fecaca;
+    padding: 10px 14px; border-radius: 8px; font-size: 0.88rem;
+  }
+  .nw-btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 9px;
+    font-size: 0.88rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.16);
+    background: transparent; color: #f4f7fb; cursor: pointer;
+  }
+  .nw-btn-primary { background: #4f6bed; border-color: #4f6bed; }
+  .nw-btn-primary:hover { opacity: 0.9; }
 </style>
 {% endblock %}

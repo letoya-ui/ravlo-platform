@@ -33,6 +33,19 @@ from LoanMVP.services.payments_service import (
 payments_bp = Blueprint("payments", __name__, url_prefix="/payments")
 
 
+def _dashboard_chrome():
+    """resolve_current_owner() only ever resolves a stylist_profile or a
+    vip_profile owner here -- nothing else reaches this dashboard. Neither
+    this route nor booking_routes.py's availability() used to pass a
+    portal/base_template, so both silently fell through ravlo_base.html's
+    blueprint-based default (whose only special cases are 'vip'/'elena'/
+    'partners' blueprints) and rendered every visitor -- stylist or
+    partner alike -- with the wrong Investor sidebar."""
+    if (getattr(current_user, "role", "") or "").strip().lower() == "stylist":
+        return "layouts/ravlo_employee_base.html", {}
+    return "layouts/ravlo_base.html", {"portal": "vip"}
+
+
 # ─── Dashboard ──────────────────────────────────────────────────────────────
 
 @payments_bp.get("/")
@@ -49,11 +62,14 @@ def dashboard():
         .all()
     )
 
+    base_template, chrome_kwargs = _dashboard_chrome()
     return render_template(
         "payments/dashboard.html",
         account=account,
         payment_requests=payment_requests,
         display_name=display_name,
+        base_template=base_template,
+        **chrome_kwargs,
     )
 
 
