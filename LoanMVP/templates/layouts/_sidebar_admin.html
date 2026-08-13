@@ -68,14 +68,6 @@
       <span>{% if is_company_admin %}Team{% else %}Access Requests{% endif %}</span>
     </a>
 
-    {% if is_company_admin %}
-      <a href="{{ url_for('admin.access_requests') }}"
-         class="re-nav-link {% if ep in ['admin.access_requests', 'admin.requests_dashboard', 'admin.request_detail'] %}active{% endif %}">
-        <i class="icon lucide lucide-clipboard-list"></i>
-        <span>Requests</span>
-      </a>
-    {% endif %}
-
     {% if not is_company_admin %}
       <a href="{{ url_for('admin.companies') }}"
          class="re-nav-link {% if ep == 'admin.companies' %}active{% endif %}">
@@ -158,19 +150,15 @@
         <i class="icon lucide lucide-file-spreadsheet"></i>
         <span>Reports</span>
       </a>
-
-      <a href="{{ url_for('resources.index') }}"
-         class="re-nav-link {% if ep == 'resources.index' %}active{% endif %}">
-        <i class="icon lucide lucide-book-open"></i>
-        <span>Sales Resources</span>
-      </a>
     {% endif %}
 
-    <a href="{{ url_for('executive.bid_support') }}"
-       class="re-nav-link {% if ep == 'executive.bid_support' %}active{% endif %}">
-      <i class="icon lucide lucide-clipboard-list"></i>
-      <span>Bid Support Queue</span>
-    </a>
+    {% if not is_company_admin %}
+      <a href="{{ url_for('executive.bid_support') }}"
+         class="re-nav-link {% if ep == 'executive.bid_support' %}active{% endif %}">
+        <i class="icon lucide lucide-clipboard-list"></i>
+        <span>Bid Support Queue</span>
+      </a>
+    {% endif %}
 
     <div class="re-nav-section-label">Growth</div>
 
