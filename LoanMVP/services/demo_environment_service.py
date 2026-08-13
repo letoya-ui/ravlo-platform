@@ -1,7 +1,7 @@
 """Idempotent demo-environment provisioning for the executive Demo Center.
 
 Ensures one dedicated demo User (+ role profile + a little realistic
-sample data) exists per role, so Letoya/Jamaine/Sandra can instantly view
+sample data) exists per role, so Letoya/Sandra can instantly view
 any dashboard without ever creating or remembering a password -- the
 demo-login route logs staff in as these accounts directly via
 flask_login.login_user(), bypassing the password check entirely. These

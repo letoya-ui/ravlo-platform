@@ -51,7 +51,6 @@ def test_non_allowlisted_user_cannot_demo_login(db_session, client):
 
 @pytest.mark.parametrize("email", [
     "letoya@ravlohq.com",
-    "jamaine.caughman@ravlohq.com",
     "sandra@ravlohq.com",
     "aishagelahun@gmail.com",
 ])
@@ -156,7 +155,7 @@ def test_demo_login_rejects_unknown_role(db_session, client):
 # ---------------------------------------------------------------------------
 
 def test_demo_exit_restores_original_staff_account(db_session, client):
-    staff = _make_staff(db_session, "jamaine.caughman@ravlohq.com")
+    staff = _make_staff(db_session, "sandra@ravlohq.com")
     login_as(client, staff)
 
     client.post("/admin/demo-login/underwriter", follow_redirects=False)

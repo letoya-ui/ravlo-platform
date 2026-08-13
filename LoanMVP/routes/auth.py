@@ -71,7 +71,6 @@ def _can_bypass_single_admin_lock(user) -> bool:
 # of their stored role.  Keep addresses lower-cased.
 _EXECUTIVE_DASHBOARD_EMAILS: set[str] = {
     "letoya@ravlohq.com",
-    "jamaine.caughman@ravlohq.com",
 }
 
 _PARTNER_DASHBOARD_PRESETS: dict[str, dict[str, str | bool]] = {

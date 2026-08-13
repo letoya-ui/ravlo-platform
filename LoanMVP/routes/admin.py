@@ -1202,7 +1202,6 @@ def demo_center():
 # identity, so it's scoped to the specific people who actually give demos.
 _DEMO_LOGIN_ALLOWED_EMAILS = {
     "letoya@ravlohq.com",
-    "jamaine.caughman@ravlohq.com",
     "sandra@ravlohq.com",
     "aishagelahun@gmail.com",
 }

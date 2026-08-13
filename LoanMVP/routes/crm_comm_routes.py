@@ -300,8 +300,8 @@ def dialer():
                 "noanswer": len([c for c in calls if c.outcome == "No Answer"]),
                 "failed": len([c for c in calls if c.outcome not in ["Success", "Voicemail", "No Answer"]]),
             },
-            agent_labels=["Letoya", "Jamaine", "Jonathan"],
-            agent_data=[4, 3, 2],
+            agent_labels=["Letoya", "Jonathan"],
+            agent_data=[4, 2],
             title="Dialer Results"
         )
 
