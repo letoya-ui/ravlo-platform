@@ -12,7 +12,7 @@ def redirect_legacy_bid_support():
     statuses and does not include the newer approval workflow states. The
     current construction office queue supports `approval_needed`,
     `approved_to_submit`, client review, and follow-up. Redirect GET traffic so
-    Letoya, Sandra, and Jamaine all see the same active construction workflow.
+    Letoya and Sandra both see the same active construction workflow.
     """
     if request.method != "GET":
         return None

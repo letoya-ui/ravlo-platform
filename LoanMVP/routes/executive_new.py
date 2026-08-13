@@ -49,7 +49,6 @@ def _ravlo_company() -> Company:
 # of their stored role.  Keep addresses lower-cased.
 _EXECUTIVE_DASHBOARD_EMAILS: set[str] = {
     "letoya@ravlohq.com",
-    "jamaine.caughman@ravlohq.com",
 }
 
 
@@ -1154,7 +1153,6 @@ BID_SUPPORT_STATUSES = [
 
 _BID_SUPPORT_EMAILS: set[str] = {
     "letoya@ravlohq.com",
-    "jamaine.caughman@ravlohq.com",
     "sandra@ravlohq.com",
 }
 

@@ -273,7 +273,7 @@ def test_demo_login_white_label_variant_renders_meridian_branding_in_sidebar(db_
 
 
 def test_demo_login_missing_variant_defaults_to_ravlo_branding(db_session, client):
-    staff = _make_staff(db_session, "jamaine.caughman@ravlohq.com")
+    staff = _make_staff(db_session, "sandra@ravlohq.com")
     login_as(client, staff)
 
     login_resp = client.post(

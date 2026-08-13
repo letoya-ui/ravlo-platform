@@ -64,7 +64,6 @@ def _current_partner():
     role = (getattr(current_user, "role", "") or "").strip().lower()
     can_seed_construction_profile = (
         email in {
-            "jamaine.caughman@ravlohq.com",
             "jamaine.caughman@caughmanmason.com",
             "letoya@ravlohq.com",
         }
@@ -131,7 +130,6 @@ def _can_use_bid_handoff() -> bool:
 
     return (
         email in {
-            "jamaine.caughman@ravlohq.com",
             "jamaine.caughman@caughmanmason.com",
             "sandra@ravlohq.com",
             "letoya@ravlohq.com",

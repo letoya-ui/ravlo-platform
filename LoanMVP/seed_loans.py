@@ -30,7 +30,7 @@ print(f"🏦 Loan Officer Profile (ID={loan_officer_profile.id})")
 # Processor Profile
 processor_profile = ProcessorProfile(
     user_id=processor.id,
-    full_name="Jamaine Caughman",
+    full_name="Alex Rivera",
     email="processor@loanmvp.com",
     department="Processing",
     phone="555-222-3456",

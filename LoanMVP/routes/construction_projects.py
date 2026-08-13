@@ -49,7 +49,6 @@ def _can_access(user=None) -> bool:
     email = (getattr(u, "email", "") or "").strip().lower()
     role  = (getattr(u, "role",  "") or "").strip().lower()
     return email in {
-        "jamaine.caughman@ravlohq.com",
         "sandra@ravlohq.com",
         "letoya@ravlohq.com",
     } or role in {"executive", "platform_admin", "master_admin", "lending_admin", "partner", "contractor"}

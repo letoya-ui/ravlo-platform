@@ -4,7 +4,6 @@
 combined Ravlo + Caughman Mason Construction overview instead, moves the
 old Ravlo-only view to /executive/ravlo, and pulls in real P&L numbers
 from CMFinanceEntry (the same ledger the Financial Hub already uses).
-Jamaine still lands on his construction-only command center.
 """
 from datetime import date
 
@@ -16,13 +15,6 @@ from tests.conftest import login_as
 
 def _make_executive(db_session, email="letoya@ravlohq.com"):
     user = User(email=email, role="executive", is_active=True)
-    db_session.add(user)
-    db_session.commit()
-    return user
-
-
-def _make_jamaine(db_session):
-    user = User(email="jamaine.caughman@ravlohq.com", role="executive", is_active=True)
     db_session.add(user)
     db_session.commit()
     return user
@@ -40,14 +32,20 @@ def test_dashboard_renders_combined_overview_for_executive(db_session, client):
     assert b"Caughman Mason Construction" in resp.data
 
 
-def test_jamaine_still_redirected_to_construction_center(db_session, client):
-    jamaine = _make_jamaine(db_session)
-    login_as(client, jamaine)
+def test_role_executive_alone_without_ravlo_company_id_is_blocked(db_session, client):
+    # A plain role="executive" account with no Ravlo company_id and no
+    # email on the allowlist (e.g. jamaine.caughman@ravlohq.com, whose
+    # Ravlo staff access was revoked -- he's no longer with the company)
+    # must not get executive dashboard access just from the role string.
+    user = User(email="not-ravlo-staff@example.com", role="executive", is_active=True)
+    db_session.add(user)
+    db_session.commit()
+    login_as(client, user)
 
     resp = client.get("/executive/dashboard", follow_redirects=False)
 
     assert resp.status_code == 302
-    assert "/executive/construction" in resp.headers["Location"]
+    assert "/executive/" not in resp.headers["Location"]
 
 
 def test_ravlo_overview_route_serves_old_ravlo_only_view(db_session, client):

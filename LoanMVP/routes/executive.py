@@ -33,7 +33,6 @@ def _owner_admin_email() -> str:
 # of their stored role.  Keep addresses lower-cased.
 _EXECUTIVE_DASHBOARD_EMAILS: set[str] = {
     "letoya@ravlohq.com",
-    "jamaine.caughman@ravlohq.com",
 }
 
 
