@@ -4,10 +4,39 @@
 <div class="mk-container nw-wrap">
 <div class="nw-page">
 
-  <div class="nw-page-head">
+  <!-- Cinematic Hero -->
+  <section class="nw-hero">
     <h1>{{ group.name }} Network</h1>
-    <p>{{ group.description }}</p>
-  </div>
+    <p>Showcase your products. Connect with investors. Power real estate deals inside Ravlo OS.</p>
+  </section>
+
+  <!-- Category Grid -->
+  <section class="nw-categories">
+    <div class="nw-cat">Interior Designers</div>
+    <div class="nw-cat">Contractors</div>
+    <div class="nw-cat">Stagers</div>
+    <div class="nw-cat">Inspectors</div>
+    <div class="nw-cat">Lenders</div>
+    <div class="nw-cat">Agents</div>
+    <div class="nw-cat">Vendors</div>
+    <div class="nw-cat">Architects</div>
+  </section>
+
+  <!-- Demo Placeholder Cards (only show when no posts exist) -->
+  {% if not posts_with_meta %}
+  <section class="nw-demo-grid">
+    <div class="nw-demo-card">
+      <div class="nw-demo-img"></div>
+      <h4>Interior Design Mood Board</h4>
+      <p>Example of how designers can showcase their work.</p>
+    </div>
+    <div class="nw-demo-card">
+      <div class="nw-demo-img"></div>
+      <h4>Contractor Renovation Package</h4>
+      <p>Professionals can highlight services and pricing.</p>
+    </div>
+  </section>
+  {% endif %}
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -17,6 +46,7 @@
     {% endif %}
   {% endwith %}
 
+  <!-- Post Composer -->
   {% if current_user.is_authenticated %}
   <section class="nw-card">
     <form method="POST" action="{{ url_for('network.create_post', slug=group.slug) }}">
@@ -35,6 +65,7 @@
   </section>
   {% endif %}
 
+  <!-- Feed -->
   {% if posts_with_meta %}
   <section class="nw-feed">
     {% for item in posts_with_meta %}
@@ -64,12 +95,50 @@
 <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 <style>
   .nw-wrap { padding: 120px 24px 80px; position: relative; z-index: 2; }
-  .nw-page { display: flex; flex-direction: column; gap: 18px; max-width: 720px; margin: 0 auto; }
+  .nw-page { display: flex; flex-direction: column; gap: 28px; max-width: 820px; margin: 0 auto; }
 
-  .nw-page-head { color: #f4f7fb; margin-bottom: 6px; }
-  .nw-page-head h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
-  .nw-page-head p { color: rgba(244,247,251,0.6); font-size: 0.95rem; }
+  /* Hero */
+  .nw-hero h1 { font-size: 2.2rem; font-weight: 800; color: #f4f7fb; }
+  .nw-hero p { color: rgba(244,247,251,0.7); font-size: 1rem; margin-top: 6px; }
 
+  /* Categories */
+  .nw-categories {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .nw-cat {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+    color: #f4f7fb;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  /* Demo Cards */
+  .nw-demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+  }
+  .nw-demo-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px;
+    color: #f4f7fb;
+  }
+  .nw-demo-img {
+    height: 140px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+
+  /* Existing Styles */
   .nw-card, .nw-post {
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.08);

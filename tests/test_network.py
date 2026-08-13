@@ -66,6 +66,30 @@ def test_unknown_group_slug_404s(client):
     assert resp.status_code == 404
 
 
+# ─── First-visit ideas (empty-state demo cards) ────────────────────────────
+
+def test_empty_feed_shows_demo_placeholder_cards(client):
+    resp = client.get("/network/real-estate")
+
+    body = resp.get_data(as_text=True)
+    assert "Interior Design Mood Board" in body
+    assert "Contractor Renovation Package" in body
+
+
+def test_feed_with_real_posts_hides_demo_placeholder_cards(db_session, client):
+    author = _make_user(db_session, "hasposts@example.com")
+    group = get_or_create_group("real-estate", name="Real Estate")
+    post = NetworkPost(group_id=group.id, author_user_id=author.id, body="Need a stager for a Tampa listing.")
+    db_session.add(post)
+    db_session.commit()
+
+    resp = client.get("/network/real-estate")
+
+    body = resp.get_data(as_text=True)
+    assert "Interior Design Mood Board" not in body
+    assert "Need a stager for a Tampa listing." in body
+
+
 # ─── Professional label resolution ─────────────────────────────────────────
 
 def test_resolve_professional_label_for_realtor(db_session):
