@@ -28,12 +28,21 @@
 
   {# ── Subscription Plans ────────────────────────────────── #}
   <section class="ravlo-grid ravlo-grid-3" style="align-items:stretch; margin-top:16px;">
-    {% for plan in plans %}
+    {% for key, plan in plans.items() %}
       <article class="ravlo-card" style="display:flex; flex-direction:column; justify-content:space-between; gap:18px;">
         <div>
-          <div class="eyebrow">{{ plan.name|upper }}</div>
-          <h3 style="margin:8px 0 6px;">{{ plan.name }}</h3>
-          <div style="font-size:1.4rem; font-weight:800; margin-bottom:12px;">{{ plan.price }}</div>
+          <div class="eyebrow">{{ plan.display_name|upper }}</div>
+          <h3 style="margin:8px 0 6px;">{{ plan.display_name }}</h3>
+          <div style="font-size:1.4rem; font-weight:800; margin-bottom:2px;">
+            {% if plan.monthly_cents %}${{ "%.0f"|format(plan.monthly_cents / 100) }}/mo{% else %}$0/mo{% endif %}
+          </div>
+          {% if plan.setup_cents %}
+            <div style="font-size:.85rem; color:var(--muted, #94a3b8); margin-bottom:10px;">
+              + ${{ "{:,.0f}".format(plan.setup_cents / 100) }} one-time setup
+            </div>
+          {% else %}
+            <div style="margin-bottom:10px;"></div>
+          {% endif %}
           <ul style="margin:0; padding-left:18px; color:var(--muted, #94a3b8);">
             {% for feature in plan.features %}
               <li style="margin-bottom:8px;">{{ feature }}</li>
@@ -41,12 +50,18 @@
           </ul>
         </div>
         <div>
-          {% if (partner.subscription_tier or 'Free') == plan.name %}
+          {% if (partner.subscription_tier or 'Free') == plan.tier_key %}
             <button class="ravlo-btn ghost" disabled>Current Plan</button>
-          {% elif plan.name == 'Enterprise' %}
-            <a href="mailto:hello@ravlohq.com?subject=Enterprise Partner Inquiry" class="ravlo-btn ghost">Contact Us</a>
+          {% elif key == 'free' %}
+            <form method="POST" action="{{ url_for('partners.confirm_subscription', tier='Free') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="ravlo-btn ghost full">Switch to Free</button>
+            </form>
           {% else %}
-            <a href="{{ url_for('partners.subscribe', tier=plan.name) }}" class="ravlo-btn">Select {{ plan.name }}</a>
+            <form method="POST" action="{{ url_for('partners.partner_subscription_checkout', tier=key) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="ravlo-btn full">Select {{ plan.display_name }}</button>
+            </form>
           {% endif %}
         </div>
       </article>
@@ -55,11 +70,19 @@
 
   {# ── Pay-Per-Lead Settings ─────────────────────────────── #}
   <section class="ravlo-card" style="margin-top:20px;">
-    <div class="eyebrow">PAY-PER-LEAD</div>
+    <div class="eyebrow">RAVLO INVESTOR LEADS</div>
+    {% if (partner.subscription_tier or 'Free')|lower in free_leads_tiers %}
+    <p class="muted" style="margin:8px 0 16px; line-height:1.55;">
+      Ravlo Investor Leads are included free with your {{ plans[(partner.subscription_tier or 'Free')|lower].display_name }} plan --
+      no per-lead charge. Pay-per-lead settings below only apply if you're on the Free plan.
+    </p>
+    {% else %}
     <p class="muted" style="margin:8px 0 16px; line-height:1.55;">
       When enabled, you are charged your set lead price each time a new lead is delivered to your inbox.
-      Leads are charged automatically to your saved payment method.
+      Leads are charged automatically to your saved payment method. Upgrade to a paid plan to get
+      Ravlo Investor Leads included free instead.
     </p>
+    {% endif %}
 
     <form method="POST" action="{{ url_for('partners.update_lead_price') }}" style="display:grid; gap:14px; max-width:480px;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -95,6 +118,27 @@
       </div>
     {% endif %}
   </section>
+
+  {% if not is_realtor and (partner.subscription_tier or 'Free')|lower in paid_plan_keys %}
+  {# ── Landing Page Request (realtors get theirs auto-generated per ─────
+     listing; every other business type requests one here instead) ───── #}
+  <section class="ravlo-card" style="margin-top:20px;">
+    <div class="eyebrow">YOUR LANDING PAGE</div>
+    <p class="muted" style="margin:8px 0 16px; line-height:1.55;">
+      Your {{ plans[(partner.subscription_tier or 'Free')|lower].display_name }} plan includes a custom Ravlo
+      landing page for your business. Tell us a bit about what you'd like on it and a Ravlo admin will reach
+      out to build it with you.
+    </p>
+
+    <form method="POST" action="{{ url_for('partners.request_landing_page') }}" style="display:grid; gap:14px; max-width:480px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <textarea name="notes" rows="3" placeholder="Anything specific you'd like on your page (services, photos, branding)..."
+                style="width:100%; background:rgba(255,255,255,.05); color:inherit; border:1px solid rgba(255,255,255,.12);
+                       border-radius:8px; padding:10px 14px; font-size:.92rem; font-family:inherit; resize:vertical;"></textarea>
+      <button type="submit" class="ravlo-btn primary sm" style="width:fit-content;">Request My Landing Page</button>
+    </form>
+  </section>
+  {% endif %}
 
   {# ── Payment Method (card on file for lead charges) ────── #}
   <section class="ravlo-card" style="margin-top:20px;">

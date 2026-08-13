@@ -1,7 +1,13 @@
+import uuid
+
 from LoanMVP.extensions import db
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
+
+
+def _new_listing_public_token() -> str:
+    return uuid.uuid4().hex
 
 
 class BaseModel(db.Model):
@@ -63,6 +69,14 @@ class ElenaListing(BaseModel):
     status = Column(String(20), nullable=False, default="active")
 
     market = Column(String(100), nullable=True)
+
+    # Unlimited self-serve public landing pages (one per listing) --
+    # unguessable token in the public URL instead of the sequential id,
+    # same reasoning as every other public-facing token in this codebase
+    # (Appointment.confirmation_token, PaymentRequest.confirmation_token,
+    # etc.). Generated lazily the first time a realtor asks for their
+    # listing's public page -- see vip.py's realtor_listing_detail().
+    public_token = Column(String(32), nullable=True, unique=True, index=True)
 
     # Owning realtor. NULL means an unowned MLS-feed import (market-wide
     # inventory, not any one partner's own listing) -- those stay excluded

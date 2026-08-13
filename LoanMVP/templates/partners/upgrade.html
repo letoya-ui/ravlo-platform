@@ -188,6 +188,12 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
       margin-bottom:2px;
     }
 
+    .partner-plan-setup-note{
+      font-size:.82rem;
+      color:var(--ravlo-muted);
+      margin-top:2px;
+    }
+
     .partner-plan-desc{
       margin:0;
       color:var(--ravlo-muted);
@@ -378,7 +384,7 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
 
         <p class="partner-upgrade-copy">
           {% if is_realtor and not vip_unlocked %}
-            Premium and Enterprise realtors get the full VIP Workspace: pipeline,
+            Professional and Business realtors get the full VIP Workspace: pipeline,
             listings, Canva flyers, AI Pilot, finances, and dual-market tools — all
             tied to your Ravlo partner account.
           {% else %}
@@ -396,11 +402,11 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
               Open VIP Workspace
             </a>
           {% elif is_realtor %}
-            <a href="{{ url_for('partners.subscribe', tier='Premium') }}" class="ravlo-btn primary">
-              Upgrade to Premium
+            <a href="#plans" class="ravlo-btn primary">
+              Upgrade to Professional
             </a>
           {% else %}
-            <a href="{{ url_for('partners.subscribe', tier='Featured') }}" class="ravlo-btn primary">
+            <a href="#plans" class="ravlo-btn primary">
               Choose a Plan
             </a>
           {% endif %}
@@ -431,107 +437,55 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
     </div>
   </section>
 
-  <section class="partner-plan-grid">
-    <div class="ravlo-card partner-plan-card">
+  <section class="partner-plan-grid" id="plans">
+    {% for key, plan in plans.items() %}
+    <div class="ravlo-card partner-plan-card
+                {% if key == 'premium' and is_realtor %}recommended{% elif key == 'featured' and not is_realtor %}recommended{% endif %}">
+      {% if key == 'premium' and is_realtor %}<div class="partner-plan-badge">VIP Workspace</div>
+      {% elif key == 'featured' and not is_realtor %}<div class="partner-plan-badge">Most Popular</div>{% endif %}
+
       <div>
-        <h3 class="partner-plan-name">Free</h3>
+        <h3 class="partner-plan-name">{{ plan.display_name }}</h3>
         <div class="partner-plan-price">
-          <strong>$0</strong>
-          <span>/ month</span>
+          {% if plan.monthly_cents %}
+            <strong>${{ "%.0f"|format(plan.monthly_cents / 100) }}</strong>
+            <span>/ month</span>
+          {% else %}
+            <strong>$0</strong>
+            <span>/ month</span>
+          {% endif %}
         </div>
-      </div>
-
-      <p class="partner-plan-desc">
-        A simple entry point for partners who want a live profile and basic lead access.
-      </p>
-
-      <ul class="partner-plan-list">
-        <li>CRM access</li>
-        <li>Basic profile listing</li>
-        <li>Lead inbox access</li>
-        <li>Standard marketplace visibility</li>
-      </ul>
-
-      <div class="partner-plan-actions">
-        {% if (partner.subscription_tier or "Free")|lower == "free" %}
-          <span class="partner-current-pill">Current Plan</span>
-        {% else %}
-          <a href="{{ url_for('partners.subscribe', tier='Free') }}" class="ravlo-btn ghost full">
-            Switch to Free
-          </a>
+        {% if plan.setup_cents %}
+          <div class="partner-plan-setup-note">+ ${{ "{:,.0f}".format(plan.setup_cents / 100) }} one-time setup</div>
         {% endif %}
       </div>
-    </div>
-
-    <div class="ravlo-card partner-plan-card {% if not is_realtor %}recommended{% endif %}">
-      {% if not is_realtor %}<div class="partner-plan-badge">Most Popular</div>{% endif %}
-
-      <div>
-        <h3 class="partner-plan-name">Featured</h3>
-        <div class="partner-plan-price">
-          <strong>$79</strong>
-          <span>/ month</span>
-        </div>
-      </div>
-
-      <p class="partner-plan-desc">
-        Best for partners who want stronger visibility and better conversion tools.
-      </p>
 
       <ul class="partner-plan-list">
-        <li>Everything in Free</li>
-        <li>Deal visibility</li>
-        <li>Portfolio showcase</li>
-        <li>Smart notifications</li>
-        <li>Priority placement</li>
-      </ul>
-
-      <div class="partner-plan-actions">
-        {% if (partner.subscription_tier or "")|lower == "featured" %}
-          <span class="partner-current-pill">Current Plan</span>
-        {% else %}
-          <a href="{{ url_for('partners.subscribe', tier='Featured') }}" class="ravlo-btn primary full">
-            Choose Featured
-          </a>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="ravlo-card partner-plan-card {% if is_realtor %}recommended{% endif %}">
-      {% if is_realtor %}<div class="partner-plan-badge">VIP Workspace</div>{% endif %}
-      <div>
-        <h3 class="partner-plan-name">Premium</h3>
-        <div class="partner-plan-price">
-          <strong>$99</strong>
-          <span>/ month</span>
-        </div>
-      </div>
-
-      <p class="partner-plan-desc">
-        Full access for partners who want premium workflow, brand presence, and execution tools.
-      </p>
-
-      <ul class="partner-plan-list">
-        <li>Everything in Featured</li>
-        <li>Proposal builder</li>
-        <li>Instant quote generator</li>
-        <li>AI assist</li>
-        <li>Advanced premium visibility</li>
-        {% if is_realtor %}
+        {% for feature in plan.features %}
+          <li>{{ feature }}</li>
+        {% endfor %}
+        {% if key == 'premium' and is_realtor %}
           <li><strong>VIP Realtor Workspace</strong> (pipeline, listings, Canva, AI Pilot, finances, dual-market)</li>
         {% endif %}
       </ul>
 
       <div class="partner-plan-actions">
-        {% if (partner.subscription_tier or "")|lower == "premium" %}
+        {% if (partner.subscription_tier or "Free") == plan.tier_key %}
           <span class="partner-current-pill">Current Plan</span>
+        {% elif key == 'free' %}
+          <form method="POST" action="{{ url_for('partners.confirm_subscription', tier='Free') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="ravlo-btn ghost full">Switch to Free</button>
+          </form>
         {% else %}
-          <a href="{{ url_for('partners.subscribe', tier='Premium') }}" class="ravlo-btn primary full">
-            Choose Premium
-          </a>
+          <form method="POST" action="{{ url_for('partners.partner_subscription_checkout', tier=key) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="ravlo-btn primary full">Choose {{ plan.display_name }}</button>
+          </form>
         {% endif %}
       </div>
     </div>
+    {% endfor %}
   </section>
 
   {% if is_realtor %}
@@ -544,7 +498,7 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             You're on {{ partner.subscription_tier }} — your VIP Workspace is live.
             Open it any time from Partner OS.
           {% else %}
-            Upgrade to Premium or Enterprise to unlock the full realtor workspace.
+            Upgrade to Professional or Business to unlock the full realtor workspace.
           {% endif %}
         </p>
       </div>
@@ -554,8 +508,8 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             Open VIP Workspace
           </a>
         {% else %}
-          <a href="{{ url_for('partners.subscribe', tier='Premium') }}" class="ravlo-btn primary">
-            Upgrade to Premium
+          <a href="#plans" class="ravlo-btn primary">
+            Upgrade to Professional
           </a>
         {% endif %}
       </div>
@@ -569,7 +523,7 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <span>Stage-based kanban across all your deals</span>
           </div>
           <span class="feature-status {% if vip_unlocked %}enabled{% else %}locked{% endif %}">
-            {% if vip_unlocked %}Active{% else %}Premium+{% endif %}
+            {% if vip_unlocked %}Active{% else %}Professional+{% endif %}
           </span>
         </div>
         <div class="partner-feature-row">
@@ -578,7 +532,7 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <span>Canva-powered marketing for every listing</span>
           </div>
           <span class="feature-status {% if vip_unlocked %}enabled{% else %}locked{% endif %}">
-            {% if vip_unlocked %}Active{% else %}Premium+{% endif %}
+            {% if vip_unlocked %}Active{% else %}Professional+{% endif %}
           </span>
         </div>
         <div class="partner-feature-row">
@@ -587,7 +541,7 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <span>Drafts follow-ups, emails, and market summaries</span>
           </div>
           <span class="feature-status {% if vip_unlocked %}enabled{% else %}locked{% endif %}">
-            {% if vip_unlocked %}Active{% else %}Premium+{% endif %}
+            {% if vip_unlocked %}Active{% else %}Professional+{% endif %}
           </span>
         </div>
       </div>
@@ -599,7 +553,7 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <span>Income, expenses, and net per market</span>
           </div>
           <span class="feature-status {% if vip_unlocked %}enabled{% else %}locked{% endif %}">
-            {% if vip_unlocked %}Active{% else %}Premium+{% endif %}
+            {% if vip_unlocked %}Active{% else %}Professional+{% endif %}
           </span>
         </div>
         <div class="partner-feature-row">
@@ -608,7 +562,7 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <span>Run multiple markets from one dashboard</span>
           </div>
           <span class="feature-status {% if vip_unlocked %}enabled{% else %}locked{% endif %}">
-            {% if vip_unlocked %}Active{% else %}Premium+{% endif %}
+            {% if vip_unlocked %}Active{% else %}Professional+{% endif %}
           </span>
         </div>
         <div class="partner-feature-row">
@@ -617,7 +571,7 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <span>Match your listings to investor intent</span>
           </div>
           <span class="feature-status {% if vip_unlocked %}enabled{% else %}locked{% endif %}">
-            {% if vip_unlocked %}Active{% else %}Premium+{% endif %}
+            {% if vip_unlocked %}Active{% else %}Professional+{% endif %}
           </span>
         </div>
       </div>

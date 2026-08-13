@@ -43,23 +43,26 @@ def _make_full_admin(db_session, email="admin@ravlohq.com"):
     return admin
 
 
-def test_confirm_subscription_paid_tier_creates_pending_request_not_instant_upgrade(db_session, client):
+def test_confirm_subscription_paid_tier_no_longer_queues_a_pending_request(db_session, client):
+    # This admin-approval placeholder is retired now that
+    # partner_subscription_checkout() is a real, live Stripe Checkout
+    # (see tests/test_partner_pricing.py) -- a paid tier is only ever
+    # activated by an actual completed payment, confirmed by
+    # billing_webhook.py's _activate_partner_tier(). Posting here anymore
+    # should neither upgrade the partner nor queue a review request.
     user, partner = _make_partner_user(db_session)
     login_as(client, user)
 
     resp = client.post("/partners/subscribe/Premium/confirm", follow_redirects=True)
 
     assert resp.status_code == 200
-    assert b"submitted for review" in resp.data
+    assert b"submitted for review" not in resp.data
 
     db_session.refresh(partner)
     assert partner.subscription_tier == "Free"
     assert partner.featured is False
 
-    req = SubscriptionRequest.query.filter_by(user_id=user.id, context="partner_tier").first()
-    assert req is not None
-    assert req.status == "pending"
-    assert req.plan_requested == "Premium"
+    assert SubscriptionRequest.query.filter_by(user_id=user.id, context="partner_tier").first() is None
 
 
 def test_confirm_subscription_free_tier_applies_immediately(db_session, client):
