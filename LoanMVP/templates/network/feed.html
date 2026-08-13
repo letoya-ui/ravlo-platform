@@ -1,11 +1,21 @@
-{% extends "layouts/ravlo_base.html" %}
-
-{% block title %}Ravlo • {{ group.name }} Network{% endblock %}
-{% block page_title %}{{ group.name }} Network{% endblock %}
-{% block page_subline %}{{ group.description }}{% endblock %}
+{% extends "layouts/marketing_base.html" %}
 
 {% block content %}
+<div class="mk-container nw-wrap">
 <div class="nw-page">
+
+  <div class="nw-page-head">
+    <h1>{{ group.name }} Network</h1>
+    <p>{{ group.description }}</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="nw-alert">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
 
   {% if current_user.is_authenticated %}
   <section class="nw-card">
@@ -13,7 +23,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <textarea name="body" rows="3" placeholder="Share a project, ask for a referral, post what you need..." required></textarea>
       <div class="nw-form-actions">
-        <button type="submit" class="ravlo-btn primary">
+        <button type="submit" class="nw-btn nw-btn-primary">
           <i class="lucide lucide-send"></i><span>Post</span>
         </button>
       </div>
@@ -47,17 +57,25 @@
   {% endif %}
 
 </div>
+</div>
 {% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 <style>
-  .nw-page { display: flex; flex-direction: column; gap: 18px; max-width: 720px; }
+  .nw-wrap { padding: 120px 24px 80px; position: relative; z-index: 2; }
+  .nw-page { display: flex; flex-direction: column; gap: 18px; max-width: 720px; margin: 0 auto; }
 
-  .nw-card {
+  .nw-page-head { color: #f4f7fb; margin-bottom: 6px; }
+  .nw-page-head h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
+  .nw-page-head p { color: rgba(244,247,251,0.6); font-size: 0.95rem; }
+
+  .nw-card, .nw-post {
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 14px;
     padding: 18px;
+    color: #f4f7fb;
   }
   .nw-card textarea {
     width: 100%; background: rgba(255,255,255,0.05); color: inherit;
@@ -67,13 +85,20 @@
   .nw-form-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
   .nw-login-cta { text-align: center; color: rgba(255,255,255,0.6); font-size: 0.9rem; }
 
-  .nw-feed { display: flex; flex-direction: column; gap: 12px; }
-  .nw-post {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 14px;
-    padding: 16px 18px;
+  .nw-alert {
+    background: rgba(220,38,38,0.12); border: 1px solid rgba(220,38,38,0.35); color: #fecaca;
+    padding: 10px 14px; border-radius: 8px; font-size: 0.88rem;
   }
+
+  .nw-btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 9px;
+    font-size: 0.88rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.16);
+    background: transparent; color: #f4f7fb; cursor: pointer;
+  }
+  .nw-btn-primary { background: #4f6bed; border-color: #4f6bed; }
+  .nw-btn-primary:hover { opacity: 0.9; }
+
+  .nw-feed { display: flex; flex-direction: column; gap: 12px; }
   .nw-post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
   .nw-author { font-weight: 600; font-size: 0.92rem; }
   .nw-badge {

@@ -953,6 +953,24 @@ def _template_studio_portal_home(role_type: str) -> str:
     return url_for("vip.realtor_dashboard")
 
 
+def _template_studio_chrome():
+    """Which sidebar chrome wraps Content Studio. Every render_template()
+    call here used to hardcode portal="vip", so an internal Loan Officer
+    clicking "Create Content" from their own sidebar got silently swapped
+    into looking like a different account -- the Partner Workspace
+    sidebar -- even though _template_studio_portal_home() above already
+    knew to send their own Back button to loan_officer.dashboard. Mirrors
+    that same is_internal_loan_officer check so the sidebar and the Back
+    button finally agree on who's actually looking at the page."""
+    is_internal_loan_officer = (
+        (getattr(current_user, "role", "") or "").strip().lower() == "loan_officer"
+        and not has_full_loan_officer_access(current_user)
+    )
+    if is_internal_loan_officer:
+        return "layouts/ravlo_employee_base.html", {}
+    return "layouts/ravlo_base.html", {"portal": "vip", "portal_name": "VIP Workspace"}
+
+
 @elena_bp.get("/template-studio")
 def template_studio():
     template_type = request.args.get("template_type")
@@ -999,6 +1017,7 @@ def template_studio():
     is_insurance = role_type in ("insurance", "insurance_realtor")
     is_loan_officer = role_type in ("loan_officer", "lender")
     _portal_home = _template_studio_portal_home(role_type)
+    _base_template, _chrome_kwargs = _template_studio_chrome()
 
     return render_template(
         "elena/template_studio.html",
@@ -1018,9 +1037,9 @@ def template_studio():
         role_type=role_type,
         canva_connected=bool(get_user_canva_connection()),
         canva_can_create=_canva_can_create(),
-        portal="vip",
-        portal_name="VIP Workspace",
+        base_template=_base_template,
         portal_home=_portal_home,
+        **_chrome_kwargs,
     )
 
 
@@ -1051,6 +1070,7 @@ def template_studio_preview():
     is_insurance = role_type in ("insurance", "insurance_realtor")
     is_loan_officer = role_type in ("loan_officer", "lender")
     _portal_home = _template_studio_portal_home(role_type)
+    _base_template, _chrome_kwargs = _template_studio_chrome()
 
     return render_template(
         "elena/template_studio.html",
@@ -1071,9 +1091,9 @@ def template_studio_preview():
         role_type=role_type,
         canva_connected=bool(get_user_canva_connection()),
         canva_can_create=_canva_can_create(),
-        portal="vip",
-        portal_name="VIP Workspace",
+        base_template=_base_template,
         portal_home=_portal_home,
+        **_chrome_kwargs,
     )
 
 @elena_bp.post("/template-studio/generate")
@@ -1103,6 +1123,7 @@ def template_studio_generate():
     is_insurance = role_type in ("insurance", "insurance_realtor")
     is_loan_officer = role_type in ("loan_officer", "lender")
     _portal_home = _template_studio_portal_home(role_type)
+    _base_template, _chrome_kwargs = _template_studio_chrome()
 
     return render_template(
         "elena/template_studio.html",
@@ -1123,9 +1144,9 @@ def template_studio_generate():
         role_type=role_type,
         canva_connected=bool(get_user_canva_connection()),
         canva_can_create=_canva_can_create(),
-        portal="vip",
-        portal_name="VIP Workspace",
+        base_template=_base_template,
         portal_home=_portal_home,
+        **_chrome_kwargs,
     )
 
 @elena_bp.post("/template-studio/generate_and_save")
@@ -1184,6 +1205,7 @@ def template_studio_generate_and_save():
     is_insurance = role_type in ("insurance", "insurance_realtor")
     is_loan_officer = role_type in ("loan_officer", "lender")
     _portal_home = _template_studio_portal_home(role_type)
+    _base_template, _chrome_kwargs = _template_studio_chrome()
 
     return render_template(
         "elena/template_studio.html",
@@ -1204,9 +1226,9 @@ def template_studio_generate_and_save():
         role_type=role_type,
         canva_connected=bool(get_user_canva_connection()),
         canva_can_create=_canva_can_create(),
-        portal="vip",
-        portal_name="VIP Workspace",
+        base_template=_base_template,
         portal_home=_portal_home,
+        **_chrome_kwargs,
     )
 
 

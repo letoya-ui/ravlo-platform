@@ -23,6 +23,16 @@ booking_bp = Blueprint("booking", __name__, url_prefix="/booking")
 WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
+def _dashboard_chrome():
+    """Same fix as payments_routes.py's _dashboard_chrome() -- this page is
+    only ever visited by a stylist or a VIP/partner owner (see
+    resolve_current_owner()), but with no portal/base_template passed it
+    used to fall through to the wrong Investor sidebar for both."""
+    if (getattr(current_user, "role", "") or "").strip().lower() == "stylist":
+        return "layouts/ravlo_employee_base.html", {}
+    return "layouts/ravlo_base.html", {"portal": "vip"}
+
+
 def _public_slug_for(owner_type: str, owner_id: int):
     if owner_type == "vip_profile":
         from LoanMVP.models.vip_models import VIPProfile
@@ -73,10 +83,13 @@ def availability():
     my_windows = get_availability(owner_type, owner_id)
     public_slug = _public_slug_for(owner_type, owner_id)
 
+    base_template, chrome_kwargs = _dashboard_chrome()
     return render_template(
         "booking/availability.html",
         windows=my_windows,
         weekdays=WEEKDAYS,
         display_name=display_name,
         public_slug=public_slug,
+        base_template=base_template,
+        **chrome_kwargs,
     )
