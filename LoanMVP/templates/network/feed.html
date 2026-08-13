@@ -1,116 +1,1208 @@
 {% extends "layouts/marketing_base.html" %}
 
 {% block content %}
-<div class="mk-container nw-wrap">
-<div class="nw-page">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>Ravlo Network — Logged-In Page</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#071A2F',
+            surface: '#0B2340',
+            surfaceAlt: '#071A2F',
+            border: '#243A55',
+            primary: '#5B9BE6',
+            primaryDark: '#4a88d0',
+            secondary: '#8DBAF0',
+            gold: '#8DBAF0',
+            textPrimary: '#FFFFFF',
+            textMuted: '#9FB0C3',
+            heroStart: '#071A2F',
+            heroMid: '#0B2340',
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <script src="https://unpkg.com/lucide@latest" defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ravlo-navy: #071A2F;
+      --ravlo-navy-2: #0B2340;
+      --ravlo-blue: #5B9BE6;
+      --ravlo-blue-light: #8DBAF0;
+      --ravlo-blue-muted: #6F8FAF;
+      --ravlo-slate: #A8B7C8;
+      --ravlo-white: #FFFFFF;
+      --ravlo-off-white: #F5F7FA;
+      --ravlo-border: #243A55;
+      --ravlo-text-muted: #9FB0C3;
+      --ravlo-gradient: linear-gradient(135deg, #5B9BE6 0%, #6F8FAF 100%);
+      /* Aliases for legacy var() refs */
+      --bg: var(--ravlo-navy);
+      --surface: var(--ravlo-navy-2);
+      --surface-alt: var(--ravlo-navy);
+      --border: var(--ravlo-border);
+      --primary: var(--ravlo-blue);
+      --primary-dark: #4a88d0;
+      --secondary: var(--ravlo-blue-light);
+      --gold: var(--ravlo-blue-light);
+      --text: var(--ravlo-white);
+      --text-muted: var(--ravlo-text-muted);
+    }
 
-  <div class="nw-page-head">
-    <h1>{{ group.name }} Network</h1>
-    <p>{{ group.description }}</p>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 300;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Navbar glass */
+    .nav-glass {
+      background: rgba(7,26,47,0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(36,58,85,0.7);
+    }
+
+    /* Hero dot grid */
+    .dot-grid {
+      background-image: radial-gradient(rgba(91,155,230,0.07) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    /* Ambient glows */
+    .glow-violet {
+      position: absolute;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(91,155,230,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      top: -80px; left: -120px;
+      pointer-events: none;
+      animation: pulseGlow 8s ease-in-out infinite alternate;
+    }
+    .glow-coral {
+      position: absolute;
+      width: 420px; height: 420px;
+      background: radial-gradient(circle, rgba(111,143,175,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+      bottom: -60px; right: -80px;
+      pointer-events: none;
+      animation: pulseGlow 10s ease-in-out infinite alternate-reverse;
+    }
+    @keyframes pulseGlow {
+      0% { opacity: 0.7; transform: scale(1); }
+      100% { opacity: 1; transform: scale(1.12); }
+    }
+
+    /* Shimmer border badge */
+    .shimmer-badge {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(91,155,230,0.45);
+    }
+    .shimmer-badge::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(91,155,230,0.22), transparent);
+      animation: shimmer 3s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 200%; }
+    }
+
+    /* Card hover */
+    .listing-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+      border: 1px solid var(--border);
+    }
+    .listing-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 32px rgba(91,155,230,0.14);
+      border-color: rgba(91,155,230,0.45);
+    }
+
+    /* 3D tilt card */
+    .tilt-card {
+      transform: perspective(800px) rotateY(-6deg) rotateX(4deg);
+      transition: transform 0.4s ease;
+    }
+    .tilt-card:hover {
+      transform: perspective(800px) rotateY(-2deg) rotateX(1deg);
+    }
+
+    /* Category pill */
+    .cat-pill {
+      transition: all 0.25s ease;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .cat-pill.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .cat-pill:not(.active):hover {
+      border-color: rgba(91,155,230,0.5);
+      color: var(--text);
+    }
+
+    /* Perk card gold border */
+    .perk-card {
+      border-left: 3px solid var(--ravlo-blue);
+    }
+
+    /* Step connector on desktop */
+    @media (min-width: 768px) {
+      .step-connector {
+        position: relative;
+      }
+      .step-connector:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 40px;
+        right: -16px;
+        width: 32px;
+        height: 2px;
+        border-top: 2px dashed rgba(91,155,230,0.3);
+      }
+    }
+
+    /* Modal transitions */
+    .modal-overlay {
+      transition: opacity 0.3s ease;
+    }
+    .modal-panel {
+      transition: transform 0.35s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease;
+    }
+    .modal-overlay.hidden-modal {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .modal-overlay.hidden-modal .modal-panel {
+      transform: translateY(40px);
+      opacity: 0;
+    }
+
+    /* Detail slide panel */
+    .detail-panel {
+      transition: transform 0.35s cubic-bezier(0.22,1,0.36,1);
+    }
+    .detail-panel.closed {
+      transform: translateX(100%);
+    }
+
+    /* Notification dropdown */
+    .notif-dropdown {
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      transform-origin: top right;
+    }
+    .notif-dropdown.notif-hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.95) translateY(-4px);
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      transition: width 0.4s ease;
+    }
+
+    /* Checkmark animation */
+    @keyframes checkPop {
+      0% { transform: scale(0); opacity: 0; }
+      60% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .check-animate {
+      animation: checkPop 0.5s ease forwards;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--ravlo-blue-muted); }
+
+    /* CTA banner gradient border */
+    .cta-banner {
+      background: var(--surface);
+      border: 1px solid transparent;
+      background-clip: padding-box;
+      position: relative;
+    }
+    .cta-banner::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: inherit;
+      background: var(--ravlo-gradient);
+      z-index: -1;
+      border-radius: 18px;
+    }
+
+    /* Tabs scroll hide scrollbar */
+    .tabs-scroll::-webkit-scrollbar { display: none; }
+    .tabs-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body data-id="0" class="font-inter">
+  <app-icon data-id="1" hidden data-icon="store" data-palette="Dark"></app-icon>
+
+  <!-- ===== 1. TOP NAVIGATION BAR ===== -->
+  <nav data-id="2" id="navbar-a1b2" class="nav-glass fixed top-0 left-0 right-0 z-50">
+    <div data-id="3" class="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between h-16">
+      <!-- Left: Logo -->
+      <div data-id="4" id="logo-c3d4" class="flex flex-col leading-none shrink-0">
+        <span data-id="5" class="text-lg font-extrabold tracking-tight text-textPrimary">Ravlo</span>
+        <span data-id="6" class="text-[10px] font-semibold tracking-[0.2em] uppercase text-primary -mt-0.5">Network</span>
+      </div>
+
+      <!-- Center: Search (desktop) -->
+      <div data-id="7" id="search-wrap-e5f6" class="hidden md:flex flex-1 max-w-lg mx-8">
+        <div data-id="8" class="relative w-full">
+          <i data-id="9" data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-textMuted"></i>
+          <input data-id="10" id="search-input-g7h8" type="text" placeholder="Search products, services, professionals..." class="w-full bg-surfaceAlt border border-border rounded-full py-2.5 pl-10 pr-4 text-sm text-textPrimary placeholder:text-textMuted focus:outline-none focus:border-primary/60 transition-colors" />
+        </div>
+      </div>
+
+      <!-- Right: Actions (desktop) -->
+      <div data-id="11" id="nav-actions-i9j0" class="hidden md:flex items-center gap-3">
+        <!-- Notifications -->
+        <div data-id="12" class="relative">
+          <button data-id="13" id="notif-btn-k1l2" class="relative p-2.5 rounded-xl hover:bg-surfaceAlt transition-colors cursor-pointer" aria-label="Notifications">
+            <i data-id="14" data-lucide="bell" class="w-5 h-5 text-textMuted"></i>
+            <span data-id="15" class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center text-white" style="background:#5B9BE6;">3</span>
+          </button>
+          <!-- Notification dropdown -->
+          <div data-id="16" id="notif-dropdown-m3n4" class="notif-dropdown notif-hidden absolute right-0 top-full mt-2 w-80 bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden z-50">
+            <div data-id="17" class="px-4 py-3 border-b border-border flex items-center justify-between">
+              <span data-id="18" class="font-semibold text-sm">Notifications</span>
+              <span data-id="19" class="text-xs text-primary cursor-pointer hover:underline">Mark all read</span>
+            </div>
+            <div data-id="20" class="divide-y divide-border">
+              <div data-id="21" class="px-4 py-3 hover:bg-surfaceAlt transition-colors cursor-pointer">
+                <div data-id="22" class="flex items-start gap-3">
+                  <div data-id="23" class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5"><i data-id="24" data-lucide="sparkles" class="w-4 h-4 text-primary"></i></div>
+                  <div data-id="25"><p data-id="26" class="text-sm font-medium">Welcome to Ravlo Network!</p><p data-id="27" class="text-xs text-textMuted mt-0.5">Your account is ready. Start by completing your profile.</p><p data-id="28" class="text-[11px] text-primary mt-1">2 minutes ago</p></div>
+                </div>
+              </div>
+              <div data-id="29" class="px-4 py-3 hover:bg-surfaceAlt transition-colors cursor-pointer">
+                <div data-id="30" class="flex items-start gap-3">
+                  <div data-id="31" class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5" style="background:rgba(141,186,240,0.15);"><i data-id="32" data-lucide="user" class="w-4 h-4" style="color:#8DBAF0;"></i></div>
+                  <div data-id="33"><p data-id="34" class="text-sm font-medium">Your profile is 60% complete</p><p data-id="35" class="text-xs text-textMuted mt-0.5">Add a bio and portfolio links to attract clients.</p><p data-id="36" class="text-[11px] text-primary mt-1">1 hour ago</p></div>
+                </div>
+              </div>
+              <div data-id="37" class="px-4 py-3 hover:bg-surfaceAlt transition-colors cursor-pointer">
+                <div data-id="38" class="flex items-start gap-3">
+                  <div data-id="39" class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5" style="background:rgba(91,155,230,0.12);"><i data-id="40" data-lucide="rocket" class="w-4 h-4" style="color:#5B9BE6;"></i></div>
+                  <div data-id="41"><p data-id="42" class="text-sm font-medium">Early Access is now open</p><p data-id="43" class="text-xs text-textMuted mt-0.5">Post your first listing for free — no credit card needed.</p><p data-id="44" class="text-[11px] text-primary mt-1">Today</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Messages -->
+        <button data-id="45" id="messages-btn-o5p6" class="p-2.5 rounded-xl hover:bg-surfaceAlt transition-colors cursor-pointer" aria-label="Messages">
+          <i data-id="46" data-lucide="message-square" class="w-5 h-5 text-textMuted"></i>
+        </button>
+
+        <!-- Post Offering -->
+        <button data-id="47" id="post-offering-nav-q7r8" class="text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors cursor-pointer flex items-center gap-2" style="background:var(--ravlo-gradient);">
+          <i data-id="48" data-lucide="plus" class="w-4 h-4"></i>
+          <span data-id="49">Post Offering</span>
+        </button>
+
+        <!-- Avatar -->
+        <div data-id="50" id="avatar-nav-s9t0" class="w-9 h-9 rounded-full bg-primary/20 border-2 border-primary/40 flex items-center justify-center text-sm font-bold text-primary cursor-pointer hover:border-primary transition-colors" title="Letoya">
+          LM
+        </div>
+      </div>
+
+      <!-- Mobile hamburger -->
+      <button data-id="51" id="mobile-menu-btn-u1v2" class="md:hidden p-2 cursor-pointer" aria-label="Open menu">
+        <i data-id="52" data-lucide="menu" class="w-6 h-6 text-textPrimary"></i>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Mobile Nav Overlay -->
+  <nav data-id="53" id="mobile-menu-w3x4" class="hidden fixed inset-0 bg-bg/98 z-[60] flex flex-col p-6 pt-4 overflow-y-auto">
+    <div data-id="54" class="flex items-center justify-between mb-8">
+      <div data-id="55" class="flex flex-col leading-none">
+        <span data-id="56" class="text-lg font-extrabold tracking-tight text-textPrimary">Ravlo</span>
+        <span data-id="57" class="text-[10px] font-semibold tracking-[0.2em] uppercase text-primary -mt-0.5">Network</span>
+      </div>
+      <button data-id="58" id="mobile-menu-close-y5z6" class="p-2 cursor-pointer" aria-label="Close menu">
+        <i data-id="59" data-lucide="x" class="w-6 h-6 text-textPrimary"></i>
+      </button>
+    </div>
+    <!-- Mobile search -->
+    <div data-id="60" class="relative mb-6">
+      <i data-id="61" data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-textMuted"></i>
+      <input data-id="62" type="text" placeholder="Search products, services..." class="w-full bg-surfaceAlt border border-border rounded-full py-3 pl-10 pr-4 text-sm text-textPrimary placeholder:text-textMuted focus:outline-none focus:border-primary/60" />
+    </div>
+    <div data-id="63" class="flex flex-col gap-2">
+      <a data-id="64" href="#hero" class="mobile-nav-link flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-surfaceAlt transition-colors text-textPrimary font-medium">
+        <i data-id="65" data-lucide="home" class="w-5 h-5 text-textMuted"></i> Home
+      </a>
+      <a data-id="66" href="#browse" class="mobile-nav-link flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-surfaceAlt transition-colors text-textPrimary font-medium">
+        <i data-id="67" data-lucide="compass" class="w-5 h-5 text-textMuted"></i> Explore Network
+      </a>
+      <a data-id="68" href="#" class="mobile-nav-link flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-surfaceAlt transition-colors text-textPrimary font-medium relative">
+        <i data-id="69" data-lucide="bell" class="w-5 h-5 text-textMuted"></i> Notifications
+        <span data-id="70" class="ml-auto w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center text-white" style="background:#5B9BE6;">3</span>
+      </a>
+      <a data-id="71" href="#" class="mobile-nav-link flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-surfaceAlt transition-colors text-textPrimary font-medium">
+        <i data-id="72" data-lucide="message-square" class="w-5 h-5 text-textMuted"></i> Messages
+      </a>
+    </div>
+    <div data-id="73" class="mt-6 pt-6 border-t border-border">
+      <button data-id="74" id="mobile-post-btn-a2b3" class="w-full text-white font-semibold py-3.5 rounded-full transition-colors cursor-pointer flex items-center justify-center gap-2" style="background:var(--ravlo-gradient);">
+        <i data-id="75" data-lucide="plus" class="w-5 h-5"></i> Post Offering
+      </button>
+    </div>
+    <div data-id="76" class="mt-auto pt-8 flex items-center gap-3 px-4">
+      <div data-id="77" class="w-10 h-10 rounded-full bg-primary/20 border-2 border-primary/40 flex items-center justify-center text-sm font-bold text-primary">LM</div>
+      <div data-id="78">
+        <p data-id="79" class="text-sm font-semibold text-textPrimary">Letoya</p>
+        <p data-id="80" class="text-xs text-textMuted">Early Access Member</p>
+      </div>
+    </div>
+  </nav>
+
+  <main data-id="81">
+    <!-- ===== 2. CINEMATIC HERO SECTION ===== -->
+    <section data-id="82" id="hero" class="relative min-h-[560px] flex items-center overflow-hidden pt-16" style="background: linear-gradient(135deg, #071A2F 0%, #0B2340 55%, #071A2F 100%);">
+      <div data-id="83" class="dot-grid absolute inset-0 z-0"></div>
+      <div data-id="84" class="glow-violet"></div>
+      <div data-id="85" class="glow-coral"></div>
+      <div data-id="86" class="relative z-10 max-w-7xl mx-auto px-4 md:px-6 w-full py-16 md:py-20 flex flex-col md:flex-row items-center gap-10 md:gap-16">
+        <!-- Left content -->
+        <div data-id="87" id="hero-left-c4d5" class="flex-1 md:max-w-[60%]">
+          <div data-id="88" class="shimmer-badge inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold text-primary mb-6">
+            <span data-id="89" class="" style="color:#8DBAF0;">✦</span> RAVLO NETWORK BETA
+          </div>
+          <h1 data-id="90" id="hero-h1-e6f7" class="text-3xl md:text-4xl lg:text-[3.5rem] font-extrabold leading-tight text-textPrimary mb-5 tracking-tight">
+            Where Professionals Build&nbsp;Their&nbsp;Market
+          </h1>
+          <p data-id="91" id="hero-sub-g8h9" class="text-base md:text-lg text-textMuted max-w-xl mb-8 font-light leading-relaxed">
+            List your products, offer your services, and connect with clients who need exactly what you do. The professional marketplace built for real&nbsp;work.
+          </p>
+          <div data-id="92" class="flex flex-col sm:flex-row gap-3 mb-8">
+            <button data-id="93" id="hero-cta1-i0j1" class="post-modal-trigger text-white font-semibold px-8 py-3.5 rounded-full transition-all cursor-pointer text-sm" style="background:var(--ravlo-gradient);box-shadow:0 4px 24px rgba(91,155,230,0.22);">
+              Post Your First Offering
+            </button>
+            <a data-id="94" href="#browse" id="hero-cta2-k2l3" class="text-textPrimary font-semibold px-8 py-3.5 rounded-full transition-all cursor-pointer text-sm text-center" style="border:1px solid rgba(168,183,200,0.35);">
+              Explore the Network
+            </a>
+          </div>
+          <div data-id="95" id="hero-stats-m4n5" class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-textMuted">
+            <span data-id="96" class="flex items-center gap-1.5"><span data-id="97" class="w-2 h-2 rounded-full bg-primary inline-block"></span> 0 Listings Live</span>
+            <span data-id="98" class="text-border hidden sm:inline">·</span>
+            <span data-id="99" class="flex items-center gap-1.5"><span data-id="100" class="w-2 h-2 rounded-full inline-block" style="background:#8DBAF0;"></span> Early Access Open</span>
+            <span data-id="101" class="text-border hidden sm:inline">·</span>
+            <span data-id="102" class="flex items-center gap-1.5"><span data-id="103" class="w-2 h-2 rounded-full inline-block" style="background:#6F8FAF;"></span> Be First to Market</span>
+          </div>
+        </div>
+
+        <!-- Right: Floating demo card -->
+        <div data-id="104" id="hero-right-o6p7" class="flex-1 flex justify-center md:justify-end">
+          <div data-id="105" class="tilt-card bg-surface/90 border border-border rounded-2xl p-6 w-72 shadow-2xl shadow-ravlo-blue/10" style="backdrop-filter: blur(10px); box-shadow: 0 8px 40px rgba(91,155,230,0.12);">
+            <div data-id="106" class="flex items-center gap-3 mb-4">
+              <div data-id="107" class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background: var(--ravlo-gradient);">JS</div>
+              <div data-id="108">
+                <p data-id="109" class="font-semibold text-textPrimary text-sm">Jordan Shaw</p>
+                <p data-id="110" class="text-xs text-textMuted">Brand Strategist</p>
+              </div>
+            </div>
+            <h3 data-id="111" class="font-bold text-textPrimary mb-1.5">Brand Strategy Consultant</h3>
+            <span data-id="112" class="inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-primary/15 text-primary mb-3">Marketing</span>
+            <p data-id="113" class="text-xs text-textMuted mb-4 leading-relaxed">Comprehensive brand positioning, messaging frameworks, and go-to-market strategy for growth-stage companies.</p>
+            <div data-id="114" class="flex items-center justify-between">
+              <span data-id="115" class="text-sm font-bold text-textPrimary">$250 / session</span>
+              <button data-id="116" class="text-xs font-semibold text-primary border border-primary/30 px-4 py-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer">View Profile</button>
+            </div>
+            <div data-id="117" class="flex items-center gap-1 mt-3 text-xs text-gold">
+              <span data-id="118">★</span><span data-id="119">★</span><span data-id="120">★</span><span data-id="121">★</span><span data-id="122">★</span>
+              <span data-id="123" class="text-textMuted ml-1">5.0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 3. BROWSE SECTION HEADER + CATEGORY TABS ===== -->
+    <section data-id="124" id="browse" class="bg-bg py-16 md:py-20">
+      <div data-id="125" class="max-w-7xl mx-auto px-4 md:px-6">
+        <!-- Header row -->
+        <div data-id="126" id="browse-header-q8r9" class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+          <div data-id="127">
+            <p data-id="128" class="text-xs font-semibold tracking-[0.15em] uppercase text-primary mb-2">Browse the Network</p>
+            <h2 data-id="129" class="text-2xl md:text-3xl font-bold text-textPrimary">Discover Products & Services</h2>
+          </div>
+          <div data-id="130" class="flex items-center gap-3">
+            <div data-id="131" class="relative">
+              <select data-id="132" id="sort-select-s0t1" class="appearance-none bg-surfaceAlt border border-border rounded-xl pl-3.5 pr-9 py-2 text-sm text-textMuted focus:outline-none focus:border-primary/50 cursor-pointer">
+                <option data-id="133">Newest First</option>
+                <option data-id="134">Price: Low to High</option>
+                <option data-id="135">Price: High to Low</option>
+                <option data-id="136">Top Rated</option>
+              </select>
+              <i data-id="137" data-lucide="chevron-down" class="w-4 h-4 text-textMuted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+            </div>
+            <div data-id="138" class="flex border border-border rounded-xl overflow-hidden">
+              <button data-id="139" id="view-grid-btn-u2v3" class="p-2 bg-surfaceAlt text-primary cursor-pointer" aria-label="Grid view">
+                <i data-id="140" data-lucide="layout-grid" class="w-4 h-4"></i>
+              </button>
+              <button data-id="141" id="view-list-btn-w4x5" class="p-2 hover:bg-surfaceAlt text-textMuted cursor-pointer transition-colors" aria-label="List view">
+                <i data-id="142" data-lucide="list" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category tabs -->
+        <div data-id="143" id="tabs-row-y6z7" class="tabs-scroll flex gap-2 overflow-x-auto pb-4 mb-8">
+          <button data-id="144" class="cat-pill active px-5 py-2 rounded-full border border-border text-sm font-medium" data-filter="all">All</button>
+          <button data-id="145" class="cat-pill px-5 py-2 rounded-full border border-border text-sm font-medium text-textMuted" data-filter="products">Products</button>
+          <button data-id="146" class="cat-pill px-5 py-2 rounded-full border border-border text-sm font-medium text-textMuted" data-filter="services">Services</button>
+          <button data-id="147" class="cat-pill px-5 py-2 rounded-full border border-border text-sm font-medium text-textMuted" data-filter="consulting">Consulting</button>
+          <button data-id="148" class="cat-pill px-5 py-2 rounded-full border border-border text-sm font-medium text-textMuted" data-filter="digital">Digital</button>
+          <button data-id="149" class="cat-pill px-5 py-2 rounded-full border border-border text-sm font-medium text-textMuted" data-filter="design">Design</button>
+          <button data-id="150" class="cat-pill px-5 py-2 rounded-full border border-border text-sm font-medium text-textMuted" data-filter="development">Development</button>
+          <button data-id="151" class="cat-pill px-5 py-2 rounded-full border border-border text-sm font-medium text-textMuted" data-filter="marketing">Marketing</button>
+          <button data-id="152" class="cat-pill px-5 py-2 rounded-full border border-border text-sm font-medium text-textMuted" data-filter="finance">Finance</button>
+          <button data-id="153" class="cat-pill px-5 py-2 rounded-full border border-border text-sm font-medium text-textMuted" data-filter="legal">Legal</button>
+        </div>
+
+        <!-- Empty state banner -->
+        <div data-id="154" id="empty-state-a8b9" class="bg-surfaceAlt border border-border rounded-2xl p-6 md:p-8 text-center mb-8">
+          <div data-id="155" class="flex justify-center mb-3">
+            <div data-id="156" class="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center">
+              <i data-id="157" data-lucide="package-open" class="w-7 h-7 text-textMuted"></i>
+            </div>
+          </div>
+          <p data-id="158" class="text-textMuted text-sm mb-2">No listings yet — be the first to post in this category.</p>
+          <button data-id="159" id="empty-post-btn-c0d1" class="post-modal-trigger text-primary text-sm font-semibold hover:underline cursor-pointer inline-flex items-center gap-1">
+            Post Now <i data-id="160" data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- ===== 4. CARD GRID ===== -->
+        <div data-id="161" id="card-grid-e2f3" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+          <!-- Card 1 -->
+          <div data-id="162" class="listing-card bg-surface rounded-2xl overflow-hidden cursor-pointer" data-category="design" data-card-id="1">
+            <div data-id="163" class="p-5 md:p-6">
+              <div data-id="164" class="flex items-center justify-between mb-4">
+                <div data-id="165" class="flex items-center gap-3">
+                  <div data-id="166" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style="background:rgba(91,155,230,0.2);color:#5B9BE6;">AD</div>
+                  <div data-id="167">
+                    <p data-id="168" class="text-sm font-semibold text-textPrimary">A. Davis</p>
+                    <span data-id="169" class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/15 text-primary">Design</span>
+                  </div>
+                </div>
+                <span data-id="170" class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:rgba(91,155,230,0.12);color:#8DBAF0;border:1px solid rgba(91,155,230,0.25);">DEMO</span>
+              </div>
+              <h3 data-id="171" class="font-bold text-textPrimary mb-2 text-[15px]">Logo & Brand Identity Design</h3>
+              <p data-id="172" class="text-xs text-textMuted mb-4 leading-relaxed line-clamp-2">Full brand identity packages including logo, color palette, and style guide.</p>
+              <div data-id="173" class="flex items-center justify-between pt-3 border-t border-border">
+                <span data-id="174" class="text-sm font-bold text-textPrimary">From $350</span>
+                <div data-id="175" class="flex items-center gap-3">
+                  <span data-id="176" class="text-xs flex items-center gap-1" style="color:#8DBAF0;"">★ <span data-id="177" class="text-textMuted">4.9</span></span>
+                  <button data-id="178" class="view-detail-btn text-xs font-semibold text-primary border border-primary/30 px-3.5 py-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer">View</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div data-id="179" class="listing-card bg-surface rounded-2xl overflow-hidden cursor-pointer" data-category="marketing" data-card-id="2">
+            <div data-id="180" class="p-5 md:p-6">
+              <div data-id="181" class="flex items-center justify-between mb-4">
+                <div data-id="182" class="flex items-center gap-3">
+                  <div data-id="183" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style="background:rgba(111,143,175,0.2);color:#8DBAF0;">MK</div>
+                  <div data-id="184">
+                    <p data-id="185" class="text-sm font-semibold text-textPrimary">M. Kim</p>
+                    <span data-id="186" class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background:rgba(141,186,240,0.15);color:#8DBAF0;">Marketing</span>
+                  </div>
+                </div>
+                <span data-id="187" class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:rgba(91,155,230,0.12);color:#8DBAF0;border:1px solid rgba(91,155,230,0.25);">DEMO</span>
+              </div>
+              <h3 data-id="188" class="font-bold text-textPrimary mb-2 text-[15px]">SEO Audit Report Template</h3>
+              <p data-id="189" class="text-xs text-textMuted mb-4 leading-relaxed line-clamp-2">Comprehensive SEO audit template used by 200+ agencies. Instant download.</p>
+              <div data-id="190" class="flex items-center justify-between pt-3 border-t border-border">
+                <span data-id="191" class="text-sm font-bold text-textPrimary">$79</span>
+                <div data-id="192" class="flex items-center gap-3">
+                  <span data-id="193" class="text-xs flex items-center gap-1" style="color:#8DBAF0;"">★ <span data-id="194" class="text-textMuted">4.8</span></span>
+                  <button data-id="195" class="view-detail-btn text-xs font-semibold text-primary border border-primary/30 px-3.5 py-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer">View</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div data-id="196" class="listing-card bg-surface rounded-2xl overflow-hidden cursor-pointer" data-category="consulting" data-card-id="3">
+            <div data-id="197" class="p-5 md:p-6">
+              <div data-id="198" class="flex items-center justify-between mb-4">
+                <div data-id="199" class="flex items-center gap-3">
+                  <div data-id="200" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style="background:rgba(91,155,230,0.15);color:#8DBAF0;">JR</div>
+                  <div data-id="201">
+                    <p data-id="202" class="text-sm font-semibold text-textPrimary">J. Rivera</p>
+                    <span data-id="203" class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background:rgba(141,186,240,0.15);color:#8DBAF0;">Consulting</span>
+                  </div>
+                </div>
+                <span data-id="204" class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:rgba(91,155,230,0.12);color:#8DBAF0;border:1px solid rgba(91,155,230,0.25);">DEMO</span>
+              </div>
+              <h3 data-id="205" class="font-bold text-textPrimary mb-2 text-[15px]">1-on-1 Business Coaching</h3>
+              <p data-id="206" class="text-xs text-textMuted mb-4 leading-relaxed line-clamp-2">60-minute strategy sessions for founders and freelancers ready to scale.</p>
+              <div data-id="207" class="flex items-center justify-between pt-3 border-t border-border">
+                <span data-id="208" class="text-sm font-bold text-textPrimary">$120 / session</span>
+                <div data-id="209" class="flex items-center gap-3">
+                  <span data-id="210" class="text-xs flex items-center gap-1" style="color:#8DBAF0;"">★ <span data-id="211" class="text-textMuted">5.0</span></span>
+                  <button data-id="212" class="view-detail-btn text-xs font-semibold text-primary border border-primary/30 px-3.5 py-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer">View</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4 -->
+          <div data-id="213" class="listing-card bg-surface rounded-2xl overflow-hidden cursor-pointer" data-category="development" data-card-id="4">
+            <div data-id="214" class="p-5 md:p-6">
+              <div data-id="215" class="flex items-center justify-between mb-4">
+                <div data-id="216" class="flex items-center gap-3">
+                  <div data-id="217" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style="background:rgba(91,155,230,0.2);color:#5B9BE6;">TP</div>
+                  <div data-id="218">
+                    <p data-id="219" class="text-sm font-semibold text-textPrimary">T. Patel</p>
+                    <span data-id="220" class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background:rgba(91,155,230,0.15);color:#5B9BE6;">Development</span>
+                  </div>
+                </div>
+                <span data-id="221" class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:rgba(91,155,230,0.12);color:#8DBAF0;border:1px solid rgba(91,155,230,0.25);">DEMO</span>
+              </div>
+              <h3 data-id="222" class="font-bold text-textPrimary mb-2 text-[15px]">React Dashboard UI Kit</h3>
+              <p data-id="223" class="text-xs text-textMuted mb-4 leading-relaxed line-clamp-2">50+ ready-to-use React components for building professional dashboards fast.</p>
+              <div data-id="224" class="flex items-center justify-between pt-3 border-t border-border">
+                <span data-id="225" class="text-sm font-bold text-textPrimary">$149</span>
+                <div data-id="226" class="flex items-center gap-3">
+                  <span data-id="227" class="text-xs flex items-center gap-1" style="color:#8DBAF0;"">★ <span data-id="228" class="text-textMuted">4.7</span></span>
+                  <button data-id="229" class="view-detail-btn text-xs font-semibold text-primary border border-primary/30 px-3.5 py-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer">View</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 5 -->
+          <div data-id="230" class="listing-card bg-surface rounded-2xl overflow-hidden cursor-pointer" data-category="finance" data-card-id="5">
+            <div data-id="231" class="p-5 md:p-6">
+              <div data-id="232" class="flex items-center justify-between mb-4">
+                <div data-id="233" class="flex items-center gap-3">
+                  <div data-id="234" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style="background:rgba(111,143,175,0.2);color:#A8B7C8;">SL</div>
+                  <div data-id="235">
+                    <p data-id="236" class="text-sm font-semibold text-textPrimary">S. Lewis</p>
+                    <span data-id="237" class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background:rgba(168,183,200,0.15);color:#A8B7C8;">Finance</span>
+                  </div>
+                </div>
+                <span data-id="238" class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:rgba(91,155,230,0.12);color:#8DBAF0;border:1px solid rgba(91,155,230,0.25);">DEMO</span>
+              </div>
+              <h3 data-id="239" class="font-bold text-textPrimary mb-2 text-[15px]">Financial Projections Model</h3>
+              <p data-id="240" class="text-xs text-textMuted mb-4 leading-relaxed line-clamp-2">Custom 3-year financial model for startups seeking investment.</p>
+              <div data-id="241" class="flex items-center justify-between pt-3 border-t border-border">
+                <span data-id="242" class="text-sm font-bold text-textPrimary">$200</span>
+                <div data-id="243" class="flex items-center gap-3">
+                  <span data-id="244" class="text-xs flex items-center gap-1" style="color:#8DBAF0;"">★ <span data-id="245" class="text-textMuted">4.9</span></span>
+                  <button data-id="246" class="view-detail-btn text-xs font-semibold text-primary border border-primary/30 px-3.5 py-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer">View</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 6 -->
+          <div data-id="247" class="listing-card bg-surface rounded-2xl overflow-hidden cursor-pointer" data-category="legal" data-card-id="6">
+            <div data-id="248" class="p-5 md:p-6">
+              <div data-id="249" class="flex items-center justify-between mb-4">
+                <div data-id="250" class="flex items-center gap-3">
+                  <div data-id="251" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style="background:rgba(141,186,240,0.2);color:#8DBAF0;">EW</div>
+                  <div data-id="252">
+                    <p data-id="253" class="text-sm font-semibold text-textPrimary">E. Washington</p>
+                    <span data-id="254" class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background:rgba(141,186,240,0.15);color:#8DBAF0;">Legal</span>
+                  </div>
+                </div>
+                <span data-id="255" class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:rgba(91,155,230,0.12);color:#8DBAF0;border:1px solid rgba(91,155,230,0.25);">DEMO</span>
+              </div>
+              <h3 data-id="256" class="font-bold text-textPrimary mb-2 text-[15px]">Contract Review & Legal Memo</h3>
+              <p data-id="257" class="text-xs text-textMuted mb-4 leading-relaxed line-clamp-2">Attorney-reviewed contract analysis with plain-English summary delivered in 48hrs.</p>
+              <div data-id="258" class="flex items-center justify-between pt-3 border-t border-border">
+                <span data-id="259" class="text-sm font-bold text-textPrimary">$175</span>
+                <div data-id="260" class="flex items-center gap-3">
+                  <span data-id="261" class="text-xs flex items-center gap-1" style="color:#8DBAF0;"">★ <span data-id="262" class="text-textMuted">4.8</span></span>
+                  <button data-id="263" class="view-detail-btn text-xs font-semibold text-primary border border-primary/30 px-3.5 py-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer">View</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 5. CTA BANNER ===== -->
+    <section data-id="264" id="cta-banner-g4h5" class="bg-bg py-16 md:py-20">
+      <div data-id="265" class="max-w-4xl mx-auto px-4 md:px-6">
+        <div data-id="266" class="cta-banner rounded-2xl p-8 md:p-14 text-center">
+          <div data-id="267" class="text-5xl mb-5">🚀</div>
+          <h2 data-id="268" id="cta-h2-i6j7" class="text-2xl md:text-3xl font-bold text-textPrimary mb-4">Ready to Put Your Work on the Market?</h2>
+          <p data-id="269" id="cta-sub-k8l9" class="text-textMuted max-w-xl mx-auto mb-8 leading-relaxed">
+            Whether it's a product, a service, or your expertise — Ravlo Network gives you the space to be found and hired. Listings are free during Early Access.
+          </p>
+          <button data-id="270" id="cta-big-btn-m0n1" class="post-modal-trigger text-white font-semibold px-10 py-4 rounded-full transition-all cursor-pointer text-base" style="background:var(--ravlo-gradient);box-shadow:0 6px 28px rgba(91,155,230,0.25);">
+            Create Your First Listing
+          </button>
+          <p data-id="271" class="text-xs text-textMuted mt-4">Takes less than 3 minutes · No credit card required</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 6. HOW IT WORKS ===== -->
+    <section data-id="272" id="how-it-works-o2p3" class="bg-surface py-16 md:py-20">
+      <div data-id="273" class="max-w-7xl mx-auto px-4 md:px-6">
+        <div data-id="274" class="text-center mb-14">
+          <p data-id="275" class="text-xs font-semibold tracking-[0.15em] uppercase text-primary mb-2">The Process</p>
+          <h2 data-id="276" id="hiw-h2-q4r5" class="text-2xl md:text-3xl font-bold text-textPrimary">From Zero to Listed in Minutes</h2>
+        </div>
+        <div data-id="277" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-4">
+          <!-- Step 1 -->
+          <div data-id="278" class="step-connector relative bg-surfaceAlt rounded-2xl p-6 text-center border border-border">
+            <div data-id="279" class="text-5xl font-extrabold text-primary/15 mb-2">01</div>
+            <div data-id="280" class="text-3xl mb-3">📋</div>
+            <h3 data-id="281" class="font-bold text-textPrimary mb-2">Create Your Profile</h3>
+            <p data-id="282" class="text-xs text-textMuted leading-relaxed">Set up your professional profile with your skills, bio, and portfolio links.</p>
+          </div>
+          <!-- Step 2 -->
+          <div data-id="283" class="step-connector relative bg-surfaceAlt rounded-2xl p-6 text-center border border-border">
+            <div data-id="284" class="text-5xl font-extrabold text-primary/15 mb-2">02</div>
+            <div data-id="285" class="text-3xl mb-3">🧩</div>
+            <h3 data-id="286" class="font-bold text-textPrimary mb-2">Build Your Listing</h3>
+            <p data-id="287" class="text-xs text-textMuted leading-relaxed">Add a product or service with pricing, photos, and a compelling description.</p>
+          </div>
+          <!-- Step 3 -->
+          <div data-id="288" class="step-connector relative bg-surfaceAlt rounded-2xl p-6 text-center border border-border">
+            <div data-id="289" class="text-5xl font-extrabold text-primary/15 mb-2">03</div>
+            <div data-id="290" class="text-3xl mb-3">🔍</div>
+            <h3 data-id="291" class="font-bold text-textPrimary mb-2">Get Discovered</h3>
+            <p data-id="292" class="text-xs text-textMuted leading-relaxed">Clients browse by category, price, and expertise to find exactly what they need.</p>
+          </div>
+          <!-- Step 4 -->
+          <div data-id="293" class="step-connector relative bg-surfaceAlt rounded-2xl p-6 text-center border border-border">
+            <div data-id="294" class="text-5xl font-extrabold text-primary/15 mb-2">04</div>
+            <div data-id="295" class="text-3xl mb-3">💼</div>
+            <h3 data-id="296" class="font-bold text-textPrimary mb-2">Close the Deal</h3>
+            <p data-id="297" class="text-xs text-textMuted leading-relaxed">Connect, negotiate, and complete work — all within the Ravlo ecosystem.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 7. WHY JOIN EARLY ===== -->
+    <section data-id="298" id="early-access-s6t7" class="bg-bg py-16 md:py-20">
+      <div data-id="299" class="max-w-7xl mx-auto px-4 md:px-6 flex flex-col lg:flex-row gap-12 lg:gap-16 items-start">
+        <!-- Left -->
+        <div data-id="300" id="early-left-u8v9" class="lg:max-w-md flex-shrink-0">
+          <p data-id="301" class="text-xs font-semibold tracking-[0.15em] uppercase mb-2" style="color:#5B9BE6;">Early Access Advantage</p>
+          <h2 data-id="302" class="text-2xl md:text-3xl font-bold text-textPrimary mb-5 leading-tight">The First Movers Set the Standard</h2>
+          <p data-id="303" class="text-textMuted mb-8 leading-relaxed">
+            Ravlo Network is new — which means your listing appears at the top, your profile gets maximum visibility, and you help shape the platform from the ground up. Early adopters receive founding member status.
+          </p>
+          <button data-id="304" id="early-cta-w0x1" class="font-bold px-8 py-3.5 rounded-full transition-all cursor-pointer text-sm shadow-lg" style="background:var(--ravlo-gradient);color:#FFFFFF;box-shadow:0 4px 20px rgba(91,155,230,0.25);">
+            Get Early Access
+          </button>
+          <div data-id="305" class="flex items-center gap-3 mt-6">
+            <div data-id="306" class="flex -space-x-2">
+              <div data-id="307" class="w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold" style="background:rgba(91,155,230,0.2);border-color:#071A2F;color:#5B9BE6;">AK</div>
+              <div data-id="308" class="w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold" style="background:rgba(141,186,240,0.2);border-color:#071A2F;color:#8DBAF0;">RN</div>
+              <div data-id="309" class="w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold" style="background:rgba(111,143,175,0.2);border-color:#071A2F;color:#A8B7C8;">DP</div>
+            </div>
+            <p data-id="310" class="text-xs text-textMuted">12 professionals have already joined</p>
+          </div>
+        </div>
+
+        <!-- Right: 2x2 perk cards -->
+        <div data-id="311" id="early-right-y2z3" class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+          <div data-id="312" class="perk-card bg-surface rounded-xl p-5 border border-border">
+            <div data-id="313" class="text-2xl mb-2">🏆</div>
+            <h3 data-id="314" class="font-bold text-textPrimary text-sm mb-1.5">Founding Member Badge</h3>
+            <p data-id="315" class="text-xs text-textMuted leading-relaxed">Permanent badge on your profile marking you as an original Ravlo member.</p>
+          </div>
+          <div data-id="316" class="perk-card bg-surface rounded-xl p-5 border border-border">
+            <div data-id="317" class="text-2xl mb-2">📈</div>
+            <h3 data-id="318" class="font-bold text-textPrimary text-sm mb-1.5">Top of Search Results</h3>
+            <p data-id="319" class="text-xs text-textMuted leading-relaxed">Early listings get boosted visibility until the network reaches critical mass.</p>
+          </div>
+          <div data-id="320" class="perk-card bg-surface rounded-xl p-5 border border-border">
+            <div data-id="321" class="text-2xl mb-2">🎯</div>
+            <h3 data-id="322" class="font-bold text-textPrimary text-sm mb-1.5">Zero Competition (Yet)</h3>
+            <p data-id="323" class="text-xs text-textMuted leading-relaxed">Post now before your category fills up with competitors.</p>
+          </div>
+          <div data-id="324" class="perk-card bg-surface rounded-xl p-5 border border-border">
+            <div data-id="325" class="text-2xl mb-2">💬</div>
+            <h3 data-id="326" class="font-bold text-textPrimary text-sm mb-1.5">Direct Platform Input</h3>
+            <p data-id="327" class="text-xs text-textMuted leading-relaxed">Shape Ravlo's features with direct access to the founding team.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== 8. FOOTER ===== -->
+  <footer data-id="328" id="footer-a4b5" class="bg-surface border-t border-border">
+    <div data-id="329" class="max-w-7xl mx-auto px-4 md:px-6 py-14">
+      <div data-id="330" class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+        <!-- Col 1 -->
+        <div data-id="331" class="col-span-2 md:col-span-1">
+          <div data-id="332" class="flex flex-col leading-none mb-3">
+            <span data-id="333" class="text-lg font-extrabold tracking-tight text-textPrimary">Ravlo</span>
+            <span data-id="334" class="text-[10px] font-semibold tracking-[0.2em] uppercase text-primary -mt-0.5">Network</span>
+          </div>
+          <p data-id="335" class="text-xs text-textMuted leading-relaxed mb-4">The professional marketplace for real work.</p>
+          <div data-id="336" class="flex items-center gap-3">
+            <a data-id="337" href="#" class="w-8 h-8 rounded-lg bg-surfaceAlt flex items-center justify-center hover:bg-primary/20 transition-colors" aria-label="Twitter/X">
+              <i data-id="338" data-lucide="twitter" class="w-4 h-4 text-textMuted"></i>
+            </a>
+            <a data-id="339" href="#" class="w-8 h-8 rounded-lg bg-surfaceAlt flex items-center justify-center hover:bg-primary/20 transition-colors" aria-label="LinkedIn">
+              <i data-id="340" data-lucide="linkedin" class="w-4 h-4 text-textMuted"></i>
+            </a>
+            <a data-id="341" href="#" class="w-8 h-8 rounded-lg bg-surfaceAlt flex items-center justify-center hover:bg-primary/20 transition-colors" aria-label="Instagram">
+              <i data-id="342" data-lucide="instagram" class="w-4 h-4 text-textMuted"></i>
+            </a>
+          </div>
+        </div>
+        <!-- Col 2 -->
+        <div data-id="343">
+          <h4 data-id="344" class="text-xs font-bold uppercase tracking-wider text-textPrimary mb-4">Network</h4>
+          <ul data-id="345" class="space-y-2.5">
+            <li data-id="346"><a data-id="347" href="#browse" class="text-xs text-textMuted hover:text-primary transition-colors">Browse Listings</a></li>
+            <li data-id="348"><a data-id="349" href="#" class="text-xs text-textMuted hover:text-primary transition-colors">Post a Service</a></li>
+            <li data-id="350"><a data-id="351" href="#" class="text-xs text-textMuted hover:text-primary transition-colors">Post a Product</a></li>
+            <li data-id="352"><a data-id="353" href="#" class="text-xs text-textMuted hover:text-primary transition-colors">Early Access</a></li>
+          </ul>
+        </div>
+        <!-- Col 3 -->
+        <div data-id="354">
+          <h4 data-id="355" class="text-xs font-bold uppercase tracking-wider text-textPrimary mb-4">Company</h4>
+          <ul data-id="356" class="space-y-2.5">
+            <li data-id="357"><a data-id="358" href="#" class="text-xs text-textMuted hover:text-primary transition-colors">About</a></li>
+            <li data-id="359"><a data-id="360" href="#" class="text-xs text-textMuted hover:text-primary transition-colors">Blog</a></li>
+            <li data-id="361"><a data-id="362" href="#" class="text-xs text-textMuted hover:text-primary transition-colors">Careers</a></li>
+            <li data-id="363"><a data-id="364" href="#" class="text-xs text-textMuted hover:text-primary transition-colors">Press</a></li>
+          </ul>
+        </div>
+        <!-- Col 4 -->
+        <div data-id="365">
+          <h4 data-id="366" class="text-xs font-bold uppercase tracking-wider text-textPrimary mb-4">Legal</h4>
+          <ul data-id="367" class="space-y-2.5">
+            <li data-id="368"><a data-id="369" href="#" class="text-xs text-textMuted hover:text-primary transition-colors">Privacy Policy</a></li>
+            <li data-id="370"><a data-id="371" href="#" class="text-xs text-textMuted hover:text-primary transition-colors">Terms of Service</a></li>
+            <li data-id="372"><a data-id="373" href="#" class="text-xs text-textMuted hover:text-primary transition-colors">Cookie Policy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div data-id="374" class="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-textMuted">
+        <p data-id="375">© 2026 Ravlo Network. All rights reserved.</p>
+        <p data-id="376">Built for professionals. · Made by Copilot</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== POST OFFERING MODAL ===== -->
+  <div data-id="377" id="post-modal-c6d7" class="modal-overlay hidden-modal fixed inset-0 bg-black/60 z-[70] flex items-end md:items-center justify-center" style="backdrop-filter: blur(6px);">
+    <div data-id="378" class="modal-panel bg-surface rounded-t-3xl md:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-border">
+      <!-- Progress bar -->
+      <div data-id="379" class="h-1 bg-surfaceAlt rounded-t-3xl overflow-hidden">
+        <div data-id="380" id="modal-progress-e8f9" class="progress-bar h-full bg-primary rounded-full" style="width: 33.3%"></div>
+      </div>
+      <div data-id="381" class="p-6 md:p-8">
+        <div data-id="382" class="flex items-center justify-between mb-6">
+          <h2 data-id="383" id="modal-title-g0h1" class="text-lg font-bold text-textPrimary">What are you listing?</h2>
+          <button data-id="384" id="modal-close-i2j3" class="p-2 rounded-xl hover:bg-surfaceAlt transition-colors cursor-pointer">
+            <i data-id="385" data-lucide="x" class="w-5 h-5 text-textMuted"></i>
+          </button>
+        </div>
+
+        <!-- Step 1 -->
+        <div data-id="386" id="modal-step1-k4l5" class="modal-step">
+          <div data-id="387" class="grid grid-cols-2 gap-4">
+            <button data-id="388" id="type-product-m6n7" class="type-choice-btn border-2 border-border hover:border-primary rounded-2xl p-6 text-center cursor-pointer transition-all group">
+              <div data-id="389" class="w-14 h-14 rounded-2xl bg-surfaceAlt mx-auto mb-3 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                <i data-id="390" data-lucide="package" class="w-7 h-7 text-textMuted group-hover:text-primary transition-colors"></i>
+              </div>
+              <p data-id="391" class="font-semibold text-textPrimary text-sm">Product</p>
+              <p data-id="392" class="text-[11px] text-textMuted mt-1">Digital or physical goods</p>
+            </button>
+            <button data-id="393" id="type-service-o8p9" class="type-choice-btn border-2 border-border hover:border-primary rounded-2xl p-6 text-center cursor-pointer transition-all group">
+              <div data-id="394" class="w-14 h-14 rounded-2xl bg-surfaceAlt mx-auto mb-3 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                <i data-id="395" data-lucide="briefcase" class="w-7 h-7 text-textMuted group-hover:text-primary transition-colors"></i>
+              </div>
+              <p data-id="396" class="font-semibold text-textPrimary text-sm">Service</p>
+              <p data-id="397" class="text-[11px] text-textMuted mt-1">Offer your expertise</p>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div data-id="398" id="modal-step2-q0r1" class="modal-step hidden">
+          <div data-id="399" class="space-y-4">
+            <div data-id="400">
+              <label data-id="401" class="text-xs font-semibold text-textMuted mb-1.5 block">Title</label>
+              <input data-id="402" id="listing-title-s2t3" type="text" placeholder="e.g., Brand Strategy Consultation" class="w-full bg-surfaceAlt border border-border rounded-xl px-4 py-3 text-sm text-textPrimary placeholder:text-textMuted/50 focus:outline-none focus:border-primary/60 transition-colors" />
+            </div>
+            <div data-id="403">
+              <label data-id="404" class="text-xs font-semibold text-textMuted mb-1.5 block">Category</label>
+              <div data-id="405" class="relative">
+                <select data-id="406" id="listing-cat-u4v5" class="w-full appearance-none bg-surfaceAlt border border-border rounded-xl px-4 py-3 text-sm text-textMuted focus:outline-none focus:border-primary/60 cursor-pointer">
+                  <option data-id="407" value="">Select a category</option>
+                  <option data-id="408">Design</option>
+                  <option data-id="409">Development</option>
+                  <option data-id="410">Marketing</option>
+                  <option data-id="411">Consulting</option>
+                  <option data-id="412">Finance</option>
+                  <option data-id="413">Legal</option>
+                  <option data-id="414">Digital</option>
+                </select>
+                <i data-id="415" data-lucide="chevron-down" class="w-4 h-4 text-textMuted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+              </div>
+            </div>
+            <div data-id="416">
+              <label data-id="417" class="text-xs font-semibold text-textMuted mb-1.5 block">Price</label>
+              <input data-id="418" id="listing-price-w6x7" type="text" placeholder="e.g., $150 or $80/hr" class="w-full bg-surfaceAlt border border-border rounded-xl px-4 py-3 text-sm text-textPrimary placeholder:text-textMuted/50 focus:outline-none focus:border-primary/60 transition-colors" />
+            </div>
+            <div data-id="419">
+              <label data-id="420" class="text-xs font-semibold text-textMuted mb-1.5 block">Short Description</label>
+              <textarea data-id="421" id="listing-desc-y8z9" rows="3" placeholder="Describe what you're offering in 1–2 sentences..." class="w-full bg-surfaceAlt border border-border rounded-xl px-4 py-3 text-sm text-textPrimary placeholder:text-textMuted/50 focus:outline-none focus:border-primary/60 transition-colors resize-none"></textarea>
+            </div>
+          </div>
+          <button data-id="422" id="modal-next-a0b1" class="w-full text-white font-semibold py-3.5 rounded-full transition-colors cursor-pointer mt-6 text-sm" style="background:var(--ravlo-gradient);">
+            Continue to Review
+          </button>
+        </div>
+
+        <!-- Step 3 -->
+        <div data-id="423" id="modal-step3-c2d3" class="modal-step hidden">
+          <div data-id="424" class="text-center py-6">
+            <div data-id="425" class="w-20 h-20 rounded-full mx-auto mb-5 flex items-center justify-center" style="background:rgba(91,155,230,0.15);">
+              <svg data-id="426" id="check-svg-e4f5" class="w-10 h-10 text-primary check-animate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline data-id="427" points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+            <h3 data-id="428" class="text-xl font-bold text-textPrimary mb-2">Ready to Publish!</h3>
+            <p data-id="429" class="text-sm text-textMuted mb-6 max-w-xs mx-auto">Your listing preview looks great. Hit publish to go live on the Ravlo Network.</p>
+            <div data-id="430" id="review-preview-g6h7" class="bg-surfaceAlt rounded-xl p-4 text-left mb-6 border border-border">
+              <p data-id="431" class="text-xs text-textMuted">Preview</p>
+              <p data-id="432" id="preview-title-i8j9" class="font-semibold text-textPrimary text-sm mt-1">—</p>
+              <p data-id="433" id="preview-meta-k0l1" class="text-xs text-textMuted mt-0.5">—</p>
+            </div>
+            <button data-id="434" id="modal-publish-m2n3" class="w-full text-white font-semibold py-3.5 rounded-full transition-colors cursor-pointer text-sm" style="background:var(--ravlo-gradient);">
+              Publish Listing
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, message in messages %}
-        <div class="nw-alert">{{ message }}</div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-
-  {% if current_user.is_authenticated %}
-  <section class="nw-card">
-    <form method="POST" action="{{ url_for('network.create_post', slug=group.slug) }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <textarea name="body" rows="3" placeholder="Share a project, ask for a referral, post what you need..." required></textarea>
-      <div class="nw-form-actions">
-        <button type="submit" class="nw-btn nw-btn-primary">
-          <i class="lucide lucide-send"></i><span>Post</span>
+  <!-- ===== DETAIL SLIDE PANEL ===== -->
+  <div data-id="435" id="detail-overlay-o4p5" class="fixed inset-0 bg-black/50 z-[65] hidden" style="backdrop-filter: blur(2px);"></div>
+  <div data-id="436" id="detail-panel-q6r7" class="detail-panel closed fixed top-0 right-0 bottom-0 w-full max-w-md bg-surface border-l border-border z-[66] overflow-y-auto">
+    <div data-id="437" class="p-6 md:p-8">
+      <div data-id="438" class="flex items-center justify-between mb-6">
+        <h2 data-id="439" class="text-lg font-bold text-textPrimary">Listing Details</h2>
+        <button data-id="440" id="detail-close-s8t9" class="p-2 rounded-xl hover:bg-surfaceAlt transition-colors cursor-pointer">
+          <i data-id="441" data-lucide="x" class="w-5 h-5 text-textMuted"></i>
         </button>
       </div>
-    </form>
-  </section>
-  {% else %}
-  <section class="nw-card nw-login-cta">
-    <p><a href="{{ url_for('auth.login') }}">Log in</a> to post or comment.</p>
-  </section>
-  {% endif %}
-
-  {% if posts_with_meta %}
-  <section class="nw-feed">
-    {% for item in posts_with_meta %}
-    <article class="nw-post">
-      <div class="nw-post-head">
-        <span class="nw-author">{{ item.post.author.full_name or item.post.author.email }}</span>
-        <span class="nw-badge">{{ item.author_label }}</span>
-        <span class="nw-time">{{ item.post.created_at.strftime('%b %-d, %Y') if item.post.created_at else "" }}</span>
+      <div data-id="442" id="detail-content-u0v1">
+        <!-- Filled dynamically -->
       </div>
-      <p class="nw-body">{{ item.post.body }}</p>
-      <a href="{{ url_for('network.post_detail', slug=group.slug, post_id=item.post.id) }}" class="nw-comment-link">
-        <i class="lucide lucide-message-square"></i>
-        {{ item.comment_count }} comment{{ 's' if item.comment_count != 1 else '' }}
-      </a>
-    </article>
-    {% endfor %}
-  </section>
-  {% else %}
-  <p class="nw-empty">No posts yet — be the first to share something.</p>
-  {% endif %}
+    </div>
+  </div>
 
-</div>
-</div>
-{% endblock %}
+  <script>
+    // ==================== DATA ====================
+    const cardData = {
+      '1': { name: 'A. Davis', initials: 'AD', color: 'purple', title: 'Logo & Brand Identity Design', tag: 'Design', category: 'design', price: 'From $350', rating: '4.9', desc: 'Full brand identity packages including logo, color palette, and style guide. Includes 3 initial concepts, 2 revision rounds, and final deliverables in all standard formats (SVG, PNG, PDF). Perfect for startups and rebrand projects.', type: 'Service' },
+      '2': { name: 'M. Kim', initials: 'MK', color: 'teal', title: 'SEO Audit Report Template', tag: 'Marketing', category: 'marketing', price: '$79', rating: '4.8', desc: 'Comprehensive SEO audit template used by 200+ agencies. Instant download. Covers technical SEO, on-page optimization, backlink analysis, and competitor benchmarking with automated scoring.', type: 'Product' },
+      '3': { name: 'J. Rivera', initials: 'JR', color: 'red', title: '1-on-1 Business Coaching', tag: 'Consulting', category: 'consulting', price: '$120 / session', rating: '5.0', desc: '60-minute strategy sessions for founders and freelancers ready to scale. Covers growth strategy, pricing, positioning, and operational efficiency. Includes follow-up action plan.', type: 'Service' },
+      '4': { name: 'T. Patel', initials: 'TP', color: 'blue', title: 'React Dashboard UI Kit', tag: 'Development', category: 'development', price: '$149', rating: '4.7', desc: '50+ ready-to-use React components for building professional dashboards fast. Built with TypeScript, Tailwind CSS, and fully accessible. Includes charts, tables, forms, and navigation patterns.', type: 'Product' },
+      '5': { name: 'S. Lewis', initials: 'SL', color: 'emerald', title: 'Financial Projections Model', tag: 'Finance', category: 'finance', price: '$200', rating: '4.9', desc: 'Custom 3-year financial model for startups seeking investment. Includes revenue projections, burn rate analysis, unit economics, and investor-ready presentation slides.', type: 'Service' },
+      '6': { name: 'E. Washington', initials: 'EW', color: 'amber', title: 'Contract Review & Legal Memo', tag: 'Legal', category: 'legal', price: '$175', rating: '4.8', desc: 'Attorney-reviewed contract analysis with plain-English summary delivered in 48hrs. Covers risk identification, clause-by-clause review, and recommended modifications.', type: 'Service' },
+    };
 
-{% block head %}
-<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
-<style>
-  .nw-wrap { padding: 120px 24px 80px; position: relative; z-index: 2; }
-  .nw-page { display: flex; flex-direction: column; gap: 18px; max-width: 720px; margin: 0 auto; }
+    const colorMap = { purple: '#5B9BE6', teal: '#8DBAF0', red: '#8DBAF0', blue: '#5B9BE6', emerald: '#A8B7C8', amber: '#8DBAF0' };
 
-  .nw-page-head { color: #f4f7fb; margin-bottom: 6px; }
-  .nw-page-head h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
-  .nw-page-head p { color: rgba(244,247,251,0.6); font-size: 0.95rem; }
+    // ==================== ICONS ====================
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+      lucide.createIcons();
+    }
 
-  .nw-card, .nw-post {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 14px;
-    padding: 18px;
-    color: #f4f7fb;
-  }
-  .nw-card textarea {
-    width: 100%; background: rgba(255,255,255,0.05); color: inherit;
-    border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 12px 14px;
-    font-size: 0.92rem; font-family: inherit; resize: vertical;
-  }
-  .nw-form-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
-  .nw-login-cta { text-align: center; color: rgba(255,255,255,0.6); font-size: 0.9rem; }
+    // ==================== MOBILE NAV ====================
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn-u1v2');
+    const mobileMenu = document.getElementById('mobile-menu-w3x4');
+    const mobileMenuClose = document.getElementById('mobile-menu-close-y5z6');
 
-  .nw-alert {
-    background: rgba(220,38,38,0.12); border: 1px solid rgba(220,38,38,0.35); color: #fecaca;
-    padding: 10px 14px; border-radius: 8px; font-size: 0.88rem;
-  }
+    function openMobileMenu() { mobileMenu.classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+    function closeMobileMenu() { mobileMenu.classList.add('hidden'); document.body.style.overflow = ''; }
 
-  .nw-btn {
-    display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 9px;
-    font-size: 0.88rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.16);
-    background: transparent; color: #f4f7fb; cursor: pointer;
-  }
-  .nw-btn-primary { background: #4f6bed; border-color: #4f6bed; }
-  .nw-btn-primary:hover { opacity: 0.9; }
+    mobileMenuBtn.addEventListener('click', openMobileMenu);
+    mobileMenuClose.addEventListener('click', closeMobileMenu);
 
-  .nw-feed { display: flex; flex-direction: column; gap: 12px; }
-  .nw-post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-  .nw-author { font-weight: 600; font-size: 0.92rem; }
-  .nw-badge {
-    font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
-    color: #93c5fd; background: rgba(59,130,246,0.15); border-radius: 6px; padding: 2px 8px;
-  }
-  .nw-time { font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-left: auto; }
-  .nw-body { font-size: 0.92rem; line-height: 1.55; white-space: pre-wrap; margin-bottom: 10px; }
-  .nw-comment-link {
-    font-size: 0.82rem; color: rgba(255,255,255,0.55); display: inline-flex; align-items: center; gap: 6px;
-  }
-  .nw-comment-link:hover { color: rgba(255,255,255,0.85); }
-  .nw-empty { color: rgba(255,255,255,0.5); font-size: 0.9rem; }
-</style>
+    document.querySelectorAll('.mobile-nav-link').forEach(link => {
+      link.addEventListener('click', closeMobileMenu);
+    });
+
+    // ==================== NOTIFICATIONS ====================
+    const notifBtn = document.getElementById('notif-btn-k1l2');
+    const notifDropdown = document.getElementById('notif-dropdown-m3n4');
+
+    notifBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      notifDropdown.classList.toggle('notif-hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
+        notifDropdown.classList.add('notif-hidden');
+      }
+    });
+
+    // ==================== CATEGORY TABS ====================
+    const tabBtns = document.querySelectorAll('.cat-pill');
+    const cards = document.querySelectorAll('.listing-card');
+    const emptyState = document.getElementById('empty-state-a8b9');
+
+    // Category mapping: which filter values map to which card categories
+    const filterCategoryMap = {
+      'all': null,
+      'products': ['marketing', 'development'], // cards 2, 4 are products
+      'services': ['design', 'consulting', 'finance', 'legal'], // cards 1, 3, 5, 6
+      'consulting': ['consulting'],
+      'digital': ['marketing', 'development'], // digital products
+      'design': ['design'],
+      'development': ['development'],
+      'marketing': ['marketing'],
+      'finance': ['finance'],
+      'legal': ['legal'],
+    };
+
+    const productCardIds = ['2', '4'];
+    const serviceCardIds = ['1', '3', '5', '6'];
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const filter = btn.dataset.filter;
+
+        if (filter === 'all') {
+          cards.forEach(c => { c.style.display = ''; });
+          emptyState.style.display = '';
+        } else if (filter === 'products') {
+          emptyState.style.display = 'none';
+          cards.forEach(c => {
+            c.style.display = productCardIds.includes(c.dataset.cardId) ? '' : 'none';
+          });
+        } else if (filter === 'services') {
+          emptyState.style.display = 'none';
+          cards.forEach(c => {
+            c.style.display = serviceCardIds.includes(c.dataset.cardId) ? '' : 'none';
+          });
+        } else if (filter === 'digital') {
+          emptyState.style.display = 'none';
+          cards.forEach(c => {
+            c.style.display = productCardIds.includes(c.dataset.cardId) ? '' : 'none';
+          });
+        } else {
+          emptyState.style.display = 'none';
+          let anyVisible = false;
+          cards.forEach(c => {
+            const match = c.dataset.category === filter;
+            c.style.display = match ? '' : 'none';
+            if (match) anyVisible = true;
+          });
+          if (!anyVisible) {
+            emptyState.style.display = '';
+          }
+        }
+      });
+    });
+
+    // ==================== POST MODAL ====================
+    const postModal = document.getElementById('post-modal-c6d7');
+    const modalClose = document.getElementById('modal-close-i2j3');
+    const modalProgress = document.getElementById('modal-progress-e8f9');
+    const modalTitle = document.getElementById('modal-title-g0h1');
+    const steps = document.querySelectorAll('.modal-step');
+    let modalStep = 1;
+    let listingType = '';
+
+    function openPostModal() {
+      postModal.classList.remove('hidden-modal');
+      document.body.style.overflow = 'hidden';
+      goToModalStep(1);
+    }
+    function closePostModal() {
+      postModal.classList.add('hidden-modal');
+      document.body.style.overflow = '';
+      setTimeout(() => goToModalStep(1), 350);
+    }
+
+    function goToModalStep(step) {
+      modalStep = step;
+      steps.forEach(s => s.classList.add('hidden'));
+      const titles = { 1: 'What are you listing?', 2: 'Listing Details', 3: 'Review & Publish' };
+      modalTitle.textContent = titles[step];
+      modalProgress.style.width = (step * 33.3) + '%';
+
+      if (step === 1) document.getElementById('modal-step1-k4l5').classList.remove('hidden');
+      if (step === 2) document.getElementById('modal-step2-q0r1').classList.remove('hidden');
+      if (step === 3) {
+        document.getElementById('modal-step3-c2d3').classList.remove('hidden');
+        const title = document.getElementById('listing-title-s2t3').value || 'Untitled Listing';
+        const cat = document.getElementById('listing-cat-u4v5').value || 'Uncategorized';
+        const price = document.getElementById('listing-price-w6x7').value || 'Price not set';
+        document.getElementById('preview-title-i8j9').textContent = title;
+        document.getElementById('preview-meta-k0l1').textContent = listingType + ' · ' + cat + ' · ' + price;
+      }
+    }
+
+    document.querySelectorAll('.post-modal-trigger').forEach(btn => {
+      btn.addEventListener('click', openPostModal);
+    });
+    document.getElementById('mobile-post-btn-a2b3').addEventListener('click', () => {
+      closeMobileMenu();
+      openPostModal();
+    });
+    modalClose.addEventListener('click', closePostModal);
+    postModal.addEventListener('click', (e) => { if (e.target === postModal) closePostModal(); });
+
+    // Type choice buttons
+    document.querySelectorAll('.type-choice-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        listingType = btn.id.includes('product') ? 'Product' : 'Service';
+        goToModalStep(2);
+      });
+    });
+
+    // Next button
+    document.getElementById('modal-next-a0b1').addEventListener('click', () => {
+      goToModalStep(3);
+    });
+
+    // Publish button
+    document.getElementById('modal-publish-m2n3').addEventListener('click', () => {
+      closePostModal();
+    });
+
+    // ==================== DETAIL PANEL ====================
+    const detailOverlay = document.getElementById('detail-overlay-o4p5');
+    const detailPanel = document.getElementById('detail-panel-q6r7');
+    const detailContent = document.getElementById('detail-content-u0v1');
+    const detailCloseBtn = document.getElementById('detail-close-s8t9');
+
+    function openDetail(cardId) {
+      const data = cardData[cardId];
+      if (!data) return;
+
+      detailContent.innerHTML = `
+        <div class="flex items-center gap-4 mb-6">
+          <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold text-white" style="background:rgba(91,155,230,0.15); color:${colorMap[data.color]}">${data.initials}</div>
+          <div>
+            <p class="font-bold text-textPrimary">${data.name}</p>
+            <span class="inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full mt-1" style="background:${colorMap[data.color]}20; color:${colorMap[data.color]}">${data.tag}</span>
+          </div>
+        </div>
+        <h3 class="text-xl font-bold text-textPrimary mb-3">${data.title}</h3>
+        <div class="flex items-center gap-4 mb-4">
+          <span class="text-lg font-bold text-textPrimary">${data.price}</span>
+          <span class="text-sm flex items-center gap-1" style="color:#8DBAF0;">★ ${data.rating}</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background:rgba(91,155,230,0.12);color:#8DBAF0;border:1px solid rgba(91,155,230,0.25);">DEMO</span>
+        </div>
+        <div class="bg-surfaceAlt rounded-xl p-4 mb-6 border border-border">
+          <p class="text-xs font-semibold text-textMuted uppercase tracking-wider mb-2">${data.type}</p>
+          <p class="text-sm text-textMuted leading-relaxed">${data.desc}</p>
+        </div>
+        <div class="space-y-3">
+          <button class="w-full text-white font-semibold py-3 rounded-full transition-colors cursor-pointer text-sm" style="background:var(--ravlo-gradient);">Contact ${data.name.split('.')[0]}.</button>
+          <button class="w-full border border-border text-textMuted hover:text-textPrimary hover:border-textMuted/40 font-semibold py-3 rounded-full transition-colors cursor-pointer text-sm">Save to Favorites</button>
+        </div>
+        <p class="text-[11px] text-textMuted mt-6 text-center">This is a demo listing for preview purposes.</p>
+      `;
+
+      detailOverlay.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        detailPanel.classList.remove('closed');
+      });
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDetail() {
+      detailPanel.classList.add('closed');
+      setTimeout(() => {
+        detailOverlay.classList.add('hidden');
+        document.body.style.overflow = '';
+      }, 350);
+    }
+
+    document.querySelectorAll('.view-detail-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const card = btn.closest('.listing-card');
+        openDetail(card.dataset.cardId);
+      });
+    });
+
+    // Also open on card click
+    document.querySelectorAll('.listing-card').forEach(card => {
+      card.addEventListener('click', () => {
+        openDetail(card.dataset.cardId);
+      });
+    });
+
+    detailCloseBtn.addEventListener('click', closeDetail);
+    detailOverlay.addEventListener('click', closeDetail);
+
+    // ==================== NAVBAR SCROLL ====================
+    const navbar = document.getElementById('navbar-a1b2');
+    let lastScroll = 0;
+    window.addEventListener('scroll', () => {
+      const st = window.pageYOffset;
+      if (st > 50) {
+        navbar.style.borderBottomColor = 'rgba(36,58,85,0.9)';
+      } else {
+        navbar.style.borderBottomColor = 'rgba(36,58,85,0.5)';
+      }
+      lastScroll = st;
+    });
+  </script>
+</body>
 {% endblock %}
