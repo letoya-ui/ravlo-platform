@@ -516,7 +516,11 @@ def story():
 
 @marketing_bp.route("/partners/plans")
 def partner_plans():
-    return render_marketing_page("partner_plans")
+    from LoanMVP.routes.partners import PARTNER_PLANS
+
+    paid_plan_keys = ("featured", "premium", "enterprise")
+    plans = [PARTNER_PLANS[key] for key in paid_plan_keys]
+    return render_marketing_page("partner_plans", plans=plans)
 
 
 # ---------------------------------------------------------
