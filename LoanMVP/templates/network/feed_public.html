@@ -1,0 +1,103 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block content %}
+<div class="mk-container nw-wrap">
+<div class="nw-page">
+
+  <div class="nw-page-head">
+    <h1>{{ group.name }} Network</h1>
+    <p>{{ group.description }}</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="nw-alert">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <section class="nw-card nw-login-cta">
+    <p><a href="{{ url_for('auth.login') }}">Log in</a> to post or comment.</p>
+  </section>
+
+  {% if posts_with_meta %}
+  <section class="nw-feed">
+    {% for item in posts_with_meta %}
+    {% set post = item.post %}
+    <article class="nw-post">
+      <div class="nw-post-head">
+        {% if item.author_profile_url %}
+        <a href="{{ item.author_profile_url }}" class="nw-author" target="_blank" rel="noopener">{{ post.author.full_name or post.author.email }}</a>
+        {% else %}
+        <a href="{{ url_for('network.professional_profile', slug=group.slug, user_id=post.author.id) }}" class="nw-author">{{ post.author.full_name or post.author.email }}</a>
+        {% endif %}
+        <span class="nw-badge">{{ item.author_label }}</span>
+        <span class="nw-time">{{ post.created_at.strftime('%b %-d, %Y') if post.created_at else "" }}</span>
+      </div>
+
+      {% if post.title %}
+      <h3 class="nw-post-title">{{ post.title }}</h3>
+      {% endif %}
+
+      <p class="nw-body">{{ post.body }}</p>
+      <a href="{{ url_for('network.post_detail', slug=group.slug, post_id=post.id) }}" class="nw-comment-link">
+        <i class="lucide lucide-message-square"></i>
+        {{ item.comment_count }} comment{{ 's' if item.comment_count != 1 else '' }}
+      </a>
+    </article>
+    {% endfor %}
+  </section>
+  {% elif group_has_any_posts %}
+  <p class="nw-empty">No listings match that search.</p>
+  {% else %}
+  <p class="nw-empty">No posts yet — be the first to share something.</p>
+  {% endif %}
+
+</div>
+</div>
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+<style>
+  .nw-wrap { padding: 120px 24px 80px; position: relative; z-index: 2; }
+  .nw-page { display: flex; flex-direction: column; gap: 18px; max-width: 720px; margin: 0 auto; }
+
+  .nw-page-head { color: #f4f7fb; margin-bottom: 6px; }
+  .nw-page-head h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
+  .nw-page-head p { color: rgba(244,247,251,0.6); font-size: 0.95rem; }
+
+  .nw-card, .nw-post {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px;
+    color: #f4f7fb;
+  }
+  .nw-login-cta { text-align: center; color: rgba(255,255,255,0.6); font-size: 0.9rem; }
+  .nw-login-cta a { color: #93c5fd; }
+
+  .nw-alert {
+    background: rgba(220,38,38,0.12); border: 1px solid rgba(220,38,38,0.35); color: #fecaca;
+    padding: 10px 14px; border-radius: 8px; font-size: 0.88rem;
+  }
+
+  .nw-feed { display: flex; flex-direction: column; gap: 12px; }
+  .nw-post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .nw-author { font-weight: 600; font-size: 0.92rem; color: inherit; text-decoration: none; }
+  .nw-author:hover { text-decoration: underline; }
+  .nw-badge {
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+    color: #93c5fd; background: rgba(59,130,246,0.15); border-radius: 6px; padding: 2px 8px;
+  }
+  .nw-time { font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-left: auto; }
+  .nw-post-title { font-size: 1.02rem; font-weight: 700; margin-bottom: 6px; }
+  .nw-body { font-size: 0.92rem; line-height: 1.55; white-space: pre-wrap; margin-bottom: 10px; }
+  .nw-comment-link {
+    font-size: 0.82rem; color: rgba(255,255,255,0.55); display: inline-flex; align-items: center; gap: 6px;
+  }
+  .nw-comment-link:hover { color: rgba(255,255,255,0.85); }
+  .nw-empty { color: rgba(255,255,255,0.5); font-size: 0.9rem; }
+</style>
+{% endblock %}
