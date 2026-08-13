@@ -107,8 +107,13 @@ def feed(slug):
     posts = query.order_by(NetworkPost.created_at.desc()).all()
     posts_with_meta = [_post_meta(post) for post in posts]
 
+    # Logged-out visitors get a plain live feed -- no marketplace chrome
+    # (hero, category browsing, the post composer/modal). The full
+    # clickable experience is a member benefit.
+    template = "network/feed_member.html" if current_user.is_authenticated else "network/feed_public.html"
+
     return render_template(
-        "network/feed.html", group=group, posts_with_meta=posts_with_meta,
+        template, group=group, posts_with_meta=posts_with_meta,
         categories=LISTING_CATEGORIES, search_query=search_query, active_category=category,
         group_has_any_posts=group_has_any_posts,
         page_title=f"{group.name} Network | Ravlo", page_key="network",

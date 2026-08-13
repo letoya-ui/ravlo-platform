@@ -74,7 +74,12 @@ def test_unknown_group_slug_404s(client):
 
 # ─── First-visit ideas (empty-state demo cards) ────────────────────────────
 
-def test_empty_feed_shows_demo_placeholder_cards(client):
+def test_empty_feed_shows_demo_placeholder_cards_to_members(db_session, client):
+    # Placeholder "ideas" only render in the member marketplace view --
+    # the public live feed skips all marketplace chrome (see below).
+    user = _make_user(db_session, "emptyfeedmember@example.com")
+    login_as(client, user)
+
     resp = client.get("/network/real-estate")
 
     body = resp.get_data(as_text=True)
@@ -84,6 +89,7 @@ def test_empty_feed_shows_demo_placeholder_cards(client):
 
 def test_feed_with_real_posts_hides_demo_placeholder_cards(db_session, client):
     author = _make_user(db_session, "hasposts@example.com")
+    login_as(client, author)
     group = get_or_create_group("real-estate", name="Real Estate")
     post = NetworkPost(group_id=group.id, author_user_id=author.id, body="Need a stager for a Tampa listing.")
     db_session.add(post)
@@ -94,6 +100,23 @@ def test_feed_with_real_posts_hides_demo_placeholder_cards(db_session, client):
     body = resp.get_data(as_text=True)
     assert "Interior Design Mood Board" not in body
     assert "Need a stager for a Tampa listing." in body
+
+
+def test_public_live_feed_shows_no_marketplace_chrome(db_session, client):
+    # Anonymous visitors get a plain live feed -- no hero, no demo
+    # placeholder cards, no post composer -- only the real posts.
+    author = _make_user(db_session, "publicfeedauthor@example.com")
+    group = get_or_create_group("real-estate", name="Real Estate")
+    post = NetworkPost(group_id=group.id, author_user_id=author.id, body="Anyone need a Tampa inspector?")
+    db_session.add(post)
+    db_session.commit()
+
+    resp = client.get("/network/real-estate")
+
+    body = resp.get_data(as_text=True)
+    assert "Anyone need a Tampa inspector?" in body
+    assert "Interior Design Mood Board" not in body
+    assert "Post an Offering" not in body
 
 
 # ─── Professional label resolution ─────────────────────────────────────────
