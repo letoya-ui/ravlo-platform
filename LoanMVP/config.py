@@ -230,7 +230,7 @@ class Config:
  
      
     COMPANY_NAME = os.environ.get("COMPANY_NAME", "Ravlo")
-    COMPANY_EMAIL = os.environ.get("COMPANY_EMAIL", "info@ravlohq.com")
+    COMPANY_EMAIL = os.environ.get("COMPANY_EMAIL", "contact@ravlohq.com")
     COMPANY_PHONE = os.environ.get("COMPANY_PHONE", "")
     COMPANY_ADDRESS = os.environ.get("COMPANY_ADDRESS", "")
     OWNER_ADMIN_EMAIL = os.environ.get("OWNER_ADMIN_EMAIL", "letoya@ravlohq.com").strip().lower()
