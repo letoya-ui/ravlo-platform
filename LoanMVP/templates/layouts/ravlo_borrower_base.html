@@ -105,6 +105,9 @@
     <a href="{{ url_for('borrower.subscription') }}" class="rb-nav-link {% if active_tab == 'subscription' %}active{% endif %}">
       Subscription
     </a>
+    <a href="{{ url_for('network.feed', slug='real-estate') }}" class="rb-nav-link {% if ep.startswith('network.') %}active{% endif %}">
+      Network
+    </a>
   </nav>
 
   {% with messages = get_flashed_messages(with_categories=true) %}

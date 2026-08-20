@@ -193,6 +193,19 @@ def test_dashboard_shows_only_this_tenants_rent_history(db_session, client):
     assert "1,500.00" in body or "1500.00" in body
 
 
+def test_dashboard_links_to_the_ravlo_network(db_session, client):
+    _, profile = _make_investor(db_session)
+    _, unit, tenant = _make_unit_with_tenant(db_session, profile)
+    renter = _make_renter_user(db_session, tenant, "nadia@example.com")
+
+    login_as(client, renter)
+    resp = client.get("/renter/dashboard")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert '/network/real-estate' in body
+
+
 def test_dashboard_does_not_leak_a_prior_tenants_rent_history(db_session, client):
     """The unit had a previous tenant before this one moved in -- their
     old rent payments live on the same unit_id and must not show up for

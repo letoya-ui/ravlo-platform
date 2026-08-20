@@ -1,4 +1,5 @@
 {# templates/layouts/ravlo_renter_base.html #}
+{% set ep = request.endpoint or "" %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -76,6 +77,9 @@
     </a>
     <a href="{{ url_for('renter.maintenance_new') }}" class="rb-nav-link {% if active_tab == 'maintenance' %}active{% endif %}">
       Request Maintenance
+    </a>
+    <a href="{{ url_for('network.feed', slug='real-estate') }}" class="rb-nav-link {% if ep and ep.startswith('network.') %}active{% endif %}">
+      Network
     </a>
   </nav>
 

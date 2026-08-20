@@ -80,6 +80,12 @@
       <i class="icon lucide lucide-gift"></i>
       <span>Loyalty Program</span>
     </a>
+
+    <a href="{{ url_for('network.feed', slug='real-estate') }}"
+       class="re-nav-link {% if active_tab == 'network' %}active{% endif %}">
+      <i class="icon lucide lucide-users-round"></i>
+      <span>Network</span>
+    </a>
   </div>
 
   <div class="re-nav-group">
