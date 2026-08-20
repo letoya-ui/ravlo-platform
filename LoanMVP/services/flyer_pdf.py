@@ -182,6 +182,25 @@ def build_listing_flyer_pdf(profile, listing, photos, contact_email=None, contac
     return buffer
 
 
+def _business_body_text(profile):
+    """profile.bio is an optional onboarding field -- most partners never
+    fill it in, which used to leave the flyer body blank. Fall back to
+    whatever profile fields *are* set before giving up to a generic CTA."""
+    if profile.bio:
+        return profile.bio
+    parts = []
+    specialties = getattr(profile, "specialties", None)
+    service_area = getattr(profile, "service_area", None)
+    if specialties:
+        parts.append(f"Specializing in {specialties}.")
+    if service_area:
+        parts.append(f"Proudly serving {service_area}.")
+    if parts:
+        return " ".join(parts)
+    name = profile.business_name or profile.display_name or "us"
+    return f"Contact {name} today to learn more about our services."
+
+
 def build_business_flyer_pdf(profile, contact_email=None, contact_phone=None) -> io.BytesIO:
     """A single-page 'About Us' style flyer for a partner with no specific
     listing to advertise (contractors, insurance agents, loan officers)."""
@@ -205,7 +224,7 @@ def build_business_flyer_pdf(profile, contact_email=None, contact_phone=None) ->
     y = PAGE_H - header_h - 0.5 * 72
     c.setFillColorRGB(0.1, 0.1, 0.1)
     y = _draw_wrapped_text(
-        c, profile.bio or "", MARGIN, y, PAGE_W - 2 * MARGIN,
+        c, _business_body_text(profile), MARGIN, y, PAGE_W - 2 * MARGIN,
         font="Helvetica", size=12, leading=17, max_lines=16,
     )
 

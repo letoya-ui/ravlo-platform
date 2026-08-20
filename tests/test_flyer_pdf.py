@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from LoanMVP.services.flyer_pdf import (
+    _business_body_text,
     _hex_to_rgb01,
     build_business_flyer_pdf,
     build_listing_flyer_pdf,
@@ -76,6 +77,20 @@ def test_business_flyer_produces_a_real_pdf():
 def test_business_flyer_handles_no_bio_or_headline():
     buffer = build_business_flyer_pdf(_profile(bio=None, headline=None))
     assert buffer.getvalue().startswith(b"%PDF")
+
+
+def test_business_body_text_uses_bio_when_present():
+    assert _business_body_text(_profile()) == "Fifteen years helping families find their next home."
+
+
+def test_business_body_text_falls_back_to_specialties_and_service_area():
+    profile = _profile(bio=None, specialties="Kitchen remodels", service_area="Orange County")
+    assert _business_body_text(profile) == "Specializing in Kitchen remodels. Proudly serving Orange County."
+
+
+def test_business_body_text_falls_back_to_generic_cta_when_profile_is_bare():
+    profile = _profile(bio=None, business_name="Bonnie Sells OC Homes")
+    assert _business_body_text(profile) == "Contact Bonnie Sells OC Homes today to learn more about our services."
 
 
 def test_logo_download_failure_falls_back_to_business_name_text():
