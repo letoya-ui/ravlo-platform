@@ -62,6 +62,12 @@
       </tbody>
     </table>
   </div>
+  {% elif not tenant.monthly_rent %}
+  <p class="muted">Your monthly rent hasn't been set on file yet — contact your landlord or property manager.</p>
+  {% elif tenant.lease_start and tenant.lease_start > today %}
+  <p class="muted">Your lease starts {{ tenant.lease_start.strftime("%B %d, %Y") }} — rent charges will appear here once it begins.</p>
+  {% elif tenant.lease_end and tenant.lease_end < today %}
+  <p class="muted">Your lease ended {{ tenant.lease_end.strftime("%B %d, %Y") }}.</p>
   {% else %}
   <p class="muted">No rent periods have been logged yet.</p>
   {% endif %}

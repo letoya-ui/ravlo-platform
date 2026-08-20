@@ -11,6 +11,7 @@ money, same destination-charge pattern as every other workspace type.
 
 Auto-registered by LoanMVP/app.py blueprint scanner.
 """
+from datetime import date
 from decimal import Decimal
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
@@ -131,12 +132,46 @@ def accept_invite(token):
 
 # ─── Dashboard ──────────────────────────────────────────────────────────────
 
+def _ensure_current_rent_charge_posted(tenant, unit):
+    """A PM who never manually logs a rent charge would otherwise leave the
+    tenant with nothing to pay -- no rows, no Pay button, no way forward.
+    Auto-post the current period's charge from the lease's monthly_rent so
+    there's always something payable once the lease is active, instead of
+    the tenant's first payment depending on a manual step on the PM side."""
+    if not tenant.is_active or not tenant.monthly_rent:
+        return
+    today = date.today()
+    if tenant.lease_start and today < tenant.lease_start:
+        return
+    if tenant.lease_end and today > tenant.lease_end:
+        return
+
+    period_month = today.replace(day=1)
+    already_posted = RentPayment.query.filter_by(
+        tenant_id=tenant.id, period_month=period_month,
+    ).first()
+    if already_posted:
+        return
+
+    db.session.add(RentPayment(
+        unit_id=unit.id,
+        tenant_id=tenant.id,
+        period_month=period_month,
+        amount_due=tenant.monthly_rent,
+        amount_paid=Decimal("0"),
+        status="unpaid",
+    ))
+    db.session.commit()
+
+
 @renter_bp.get("/dashboard")
 @login_required
 @role_required("renter")
 def dashboard():
     tenant = _get_owned_tenant_or_404()
     unit = tenant.unit
+
+    _ensure_current_rent_charge_posted(tenant, unit)
 
     rent_payments = (
         RentPayment.query.filter_by(tenant_id=tenant.id)
@@ -161,6 +196,7 @@ def dashboard():
         unit=unit,
         rent_payments=rent_payments,
         maintenance_requests=maintenance_requests,
+        today=date.today(),
         active_tab="dashboard",
     )
 

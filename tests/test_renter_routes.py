@@ -206,6 +206,80 @@ def test_dashboard_links_to_the_ravlo_network(db_session, client):
     assert '/network/real-estate' in body
 
 
+def test_dashboard_auto_posts_current_months_rent_when_none_logged(db_session, client):
+    """A PM who never manually logs a charge would otherwise leave the
+    tenant with nothing to pay -- the first dashboard visit should post
+    the current month from the lease's monthly_rent."""
+    _, profile = _make_investor(db_session)
+    _, unit, tenant = _make_unit_with_tenant(db_session, profile, monthly_rent="1800")
+    renter = _make_renter_user(db_session, tenant, "priya@example.com")
+
+    login_as(client, renter)
+    resp = client.get("/renter/dashboard")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "1,800.00" in body or "1800.00" in body
+    assert "Pay Now" in body
+
+    payments = RentPayment.query.filter_by(tenant_id=tenant.id).all()
+    assert len(payments) == 1
+    assert payments[0].period_month == date.today().replace(day=1)
+    assert payments[0].amount_due == Decimal("1800")
+
+
+def test_dashboard_does_not_duplicate_an_already_posted_current_month(db_session, client):
+    _, profile = _make_investor(db_session)
+    _, unit, tenant = _make_unit_with_tenant(db_session, profile)
+    renter = _make_renter_user(db_session, tenant, "quinn@example.com")
+
+    existing = RentPayment(
+        unit_id=unit.id, tenant_id=tenant.id, period_month=date.today().replace(day=1),
+        amount_due=Decimal("1500"), amount_paid=Decimal("500"), status="partial",
+    )
+    db_session.add(existing)
+    db_session.commit()
+
+    login_as(client, renter)
+    client.get("/renter/dashboard")
+    client.get("/renter/dashboard")
+
+    payments = RentPayment.query.filter_by(tenant_id=tenant.id).all()
+    assert len(payments) == 1
+    assert payments[0].id == existing.id
+    assert payments[0].status == "partial"
+
+
+def test_dashboard_does_not_auto_post_before_lease_start(db_session, client):
+    _, profile = _make_investor(db_session)
+    _, unit, tenant = _make_unit_with_tenant(db_session, profile)
+    tenant.lease_start = date.today().replace(year=date.today().year + 1)
+    db_session.commit()
+    renter = _make_renter_user(db_session, tenant, "sam@example.com")
+
+    login_as(client, renter)
+    resp = client.get("/renter/dashboard")
+
+    assert resp.status_code == 200
+    assert RentPayment.query.filter_by(tenant_id=tenant.id).count() == 0
+    assert "lease starts" in resp.get_data(as_text=True)
+
+
+def test_dashboard_does_not_auto_post_after_lease_end(db_session, client):
+    _, profile = _make_investor(db_session)
+    _, unit, tenant = _make_unit_with_tenant(db_session, profile)
+    tenant.lease_end = date.today().replace(year=date.today().year - 1)
+    tenant.is_active = False
+    db_session.commit()
+    renter = _make_renter_user(db_session, tenant, "tara@example.com")
+
+    login_as(client, renter)
+    resp = client.get("/renter/dashboard")
+
+    assert resp.status_code == 200
+    assert RentPayment.query.filter_by(tenant_id=tenant.id).count() == 0
+
+
 def test_dashboard_does_not_leak_a_prior_tenants_rent_history(db_session, client):
     """The unit had a previous tenant before this one moved in -- their
     old rent payments live on the same unit_id and must not show up for
