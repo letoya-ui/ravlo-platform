@@ -152,6 +152,10 @@
             </button>
           </form>
 
+          <a href="{{ url_for('flyers.create', listing_id=listing_id or none) }}" class="ravlo-btn primary">
+            Create Flyer (Instant) →
+          </a>
+
           {% if canva_can_create %}
             <a href="{{ url_for('canva.create_flyer', title=selected_template|replace('_',' ')|title) }}"
                class="ravlo-btn canva-btn" target="_blank" rel="noopener">
@@ -180,6 +184,10 @@
             <p>Review the final content below. Copy what you need, then open Canva to design it.</p>
           </div>
           <div class="elena-output-actions">
+            <a href="{{ url_for('flyers.create', listing_id=listing_id or none) }}" class="ravlo-btn primary">
+              Create Flyer (Instant) →
+            </a>
+
             {% if canva_can_create %}
               <a href="{{ url_for('canva.create_flyer', title=selected_template|replace('_',' ')|title) }}"
                  class="ravlo-btn canva-btn" target="_blank" rel="noopener">

@@ -2980,6 +2980,50 @@ def insurance_ai_draft_email():
     return jsonify(result)
 
 
+_LOGO_CONTENT_TYPES = {
+    ".png":  "image/png",
+    ".jpg":  "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".svg":  "image/svg+xml",
+    ".webp": "image/webp",
+}
+
+
+def upload_vip_logo(file_storage):
+    """Upload a brand logo to Spaces and return its public URL, or None
+    if the file type is unsupported or the upload fails. Shared by
+    insurance_upload_logo() and onboarding_save() so any VIP role can
+    set a logo, not just insurance."""
+    from werkzeug.utils import secure_filename as _secure_filename
+    import os as _os
+    import uuid as _uuid
+
+    filename = _secure_filename(file_storage.filename or "")
+    ext = _os.path.splitext(filename)[1].lower()
+    if not filename or ext not in _LOGO_CONTENT_TYPES:
+        return None
+
+    try:
+        from LoanMVP.services.investor.investor_media_helpers import (
+            _get_spaces_client,
+            _public_spaces_url,
+            SPACES_BUCKET,
+        )
+        key = f"logos/{_uuid.uuid4().hex}{ext}"
+        client = _get_spaces_client()
+        client.put_object(
+            Bucket=SPACES_BUCKET,
+            Key=key,
+            Body=file_storage.read(),
+            ACL="public-read",
+            ContentType=_LOGO_CONTENT_TYPES.get(ext, "image/png"),
+        )
+        return _public_spaces_url(key)
+    except Exception as e:
+        current_app.logger.error("Logo upload to Spaces failed: %s", e)
+        return None
+
+
 @vip_bp.post("/insurance/upload-logo")
 @role_required("partner_group", "admin")
 def insurance_upload_logo():
@@ -2995,43 +3039,9 @@ def insurance_upload_logo():
         flash("No file selected.", "warning")
         return redirect(url_for("vip.insurance_dashboard"))
 
-    from werkzeug.utils import secure_filename as _secure_filename
-    import os as _os
-    import uuid as _uuid
-
-    filename = _secure_filename(file.filename)
-    ext = _os.path.splitext(filename)[1].lower()
-    if ext not in (".png", ".jpg", ".jpeg", ".svg", ".webp"):
-        flash("Please upload an image file (PNG, JPG, SVG, or WebP).", "warning")
-        return redirect(url_for("vip.insurance_dashboard"))
-
-    _CONTENT_TYPES = {
-        ".png":  "image/png",
-        ".jpg":  "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".svg":  "image/svg+xml",
-        ".webp": "image/webp",
-    }
-
-    try:
-        from LoanMVP.services.investor.investor_media_helpers import (
-            _get_spaces_client,
-            _public_spaces_url,
-            SPACES_BUCKET,
-        )
-        key = f"logos/{_uuid.uuid4().hex}{ext}"
-        client = _get_spaces_client()
-        client.put_object(
-            Bucket=SPACES_BUCKET,
-            Key=key,
-            Body=file.read(),
-            ACL="public-read",
-            ContentType=_CONTENT_TYPES.get(ext, "image/png"),
-        )
-        logo_url = _public_spaces_url(key)
-    except Exception as e:
-        current_app.logger.error("Logo upload to Spaces failed: %s", e)
-        flash("Logo upload failed. Please try again.", "danger")
+    logo_url = upload_vip_logo(file)
+    if not logo_url:
+        flash("Please upload an image file (PNG, JPG, SVG, or WebP), or the upload failed. Please try again.", "warning")
         return redirect(url_for("vip.insurance_dashboard"))
 
     if partner:
@@ -4067,6 +4077,45 @@ def onboarding_save():
     profile.service_area   = (request.form.get("service_area")   or "").strip() or None
     profile.headline       = (request.form.get("headline")       or "").strip() or None
     profile.bio            = (request.form.get("bio")            or "").strip() or None
+
+    # Brand: logo, color, and the public landing-page slug. All three are
+    # optional, but a slug is what actually makes the public landing page
+    # (public_pages.realtor_landing) reachable -- there's otherwise no
+    # self-serve way to publish it.
+    logo_file = request.files.get("logo")
+    if logo_file and logo_file.filename:
+        logo_url = upload_vip_logo(logo_file)
+        if logo_url:
+            profile.logo_url = logo_url
+            partner_for_logo = getattr(current_user, "partner_profile", None)
+            if partner_for_logo:
+                partner_for_logo.logo_url = logo_url
+        else:
+            flash("Logo upload failed -- please use a PNG, JPG, SVG, or WebP file.", "warning")
+            return redirect(url_for("vip.onboarding"))
+
+    brand_color = (request.form.get("brand_color") or "").strip()
+    if brand_color:
+        if not re.fullmatch(r"#[0-9a-fA-F]{6}", brand_color):
+            flash("Brand color must be a hex code like #4f6bed.", "warning")
+            return redirect(url_for("vip.onboarding"))
+        profile.brand_color = brand_color
+
+    raw_slug = (request.form.get("public_slug") or "").strip().lower()
+    if raw_slug:
+        new_slug = re.sub(r"[^a-z0-9-]+", "-", raw_slug).strip("-")
+        if not new_slug:
+            flash("Please enter a valid page URL (letters, numbers, and dashes only).", "warning")
+            return redirect(url_for("vip.onboarding"))
+        if new_slug != (profile.public_slug or "").lower():
+            taken = VIPProfile.query.filter(
+                func.lower(VIPProfile.public_slug) == new_slug,
+                VIPProfile.id != profile.id,
+            ).first()
+            if taken:
+                flash(f'The page URL "{new_slug}" is already taken. Please choose another.', "warning")
+                return redirect(url_for("vip.onboarding"))
+        profile.public_slug = new_slug
 
     # Keep partner.category in sync when the user explicitly changes role.
     # Only update on actual changes to avoid overwriting specific subcategories
