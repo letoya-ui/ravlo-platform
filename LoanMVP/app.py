@@ -584,13 +584,23 @@ def create_app():
 
     @app.errorhandler(CSRFError)
     def handle_csrf_error(error):
+        from flask import flash
+
         if request.blueprint == "auth":
-            flash_message = "Your session expired. Please try signing in again."
-            from flask import flash
-            flash(flash_message, "warning")
+            flash("Your session expired. Please try signing in again.", "warning")
             next_page = request.args.get("next") or request.form.get("next")
             return redirect(url_for("auth.login", next=next_page) if next_page else url_for("auth.login"))
-        return render_template("errors/500.html"), 400
+
+        # Any other CSRF failure almost always just means the page sat open
+        # long enough for the session to time out -- not a real error. Send
+        # the user back where they were (re-triggering login if the session
+        # is truly gone) instead of the alarming, 500-styled error page this
+        # used to show with a 400 status for every non-auth form in the app.
+        flash("Your session timed out -- please try that again.", "warning")
+        referrer = request.referrer
+        if referrer and referrer.startswith(request.host_url):
+            return redirect(referrer)
+        return redirect(url_for("auth.login"))
 
     @app.after_request
     def add_auth_cache_headers(response):
