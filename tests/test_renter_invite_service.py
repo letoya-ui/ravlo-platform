@@ -14,7 +14,15 @@ def test_round_trip_returns_the_tenant_id(app):
 def test_tampered_token_returns_none(app):
     with app.test_request_context():
         token = build_invite_token(42)
-        tampered = token[:-1] + ("a" if token[-1] != "a" else "b")
+        # Flip a character in the payload segment (before the first "."),
+        # not the tail of the signature -- unpadded base64url's last
+        # character can have unused low-order bits, so two adjacent values
+        # there sometimes decode to the same signature bytes and the
+        # "tampered" token verifies anyway. Corrupting the signed payload
+        # itself always invalidates the HMAC.
+        payload, _, rest = token.partition(".")
+        tampered_char = "a" if payload[-1] != "a" else "b"
+        tampered = payload[:-1] + tampered_char + "." + rest
         assert decode_invite_token(tampered) is None
 
 
