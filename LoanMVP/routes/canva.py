@@ -4,7 +4,7 @@ from flask import Blueprint, flash, redirect, request, url_for, jsonify, render_
 from flask_login import current_user, login_required, login_user
 
 from LoanMVP.extensions import db, csrf
-from LoanMVP.utils.decorators import role_required
+from LoanMVP.utils.decorators import PARTNER_ROLES, role_required
 from LoanMVP.services.canva_service import (
     build_canva_auth_url,
     decode_oauth_state,
@@ -28,7 +28,15 @@ def _utcnow():
 
 
 def _canva_fallback():
-    """Return a role-appropriate dashboard URL so Canva never drops users on the VIP partner page."""
+    """Return a role-appropriate dashboard URL so Canva never drops users on the login page.
+
+    "partner_group" (used everywhere else via @role_required) is a
+    decorator-level alias for PARTNER_ROLES -- it's never an actual
+    User.role value, so comparing role == "partner_group" here never
+    matched anything. Every partner-family account (role "partner",
+    "realtor", "contractor", etc.) fell through to auth.login on any
+    Canva error, which read as getting logged out.
+    """
     role = (getattr(current_user, "role", "") or "").strip().lower()
     _role_map = {
         "loan_officer":  "loan_officer.dashboard",
@@ -43,10 +51,12 @@ def _canva_fallback():
             return url_for(endpoint)
         except Exception:
             pass
-    # Realtors and VIP partners stay on VIP
-    if role in ("realtor", "partner_group"):
+    # Partners of any kind: partners.dashboard already knows how to route
+    # each one to their specific sub-dashboard (VIP realtor/contractor/
+    # insurance/generic) -- don't hardcode a single one here.
+    if role in PARTNER_ROLES:
         try:
-            return url_for("vip.realtor_dashboard")
+            return url_for("partners.dashboard")
         except Exception:
             pass
     return url_for("auth.login")

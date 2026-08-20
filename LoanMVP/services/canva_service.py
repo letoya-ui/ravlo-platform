@@ -168,14 +168,35 @@ def canva_headers(access_token: str):
     }
 
 
+# Canva's Connect API "Create a design" endpoint only recognizes
+# "doc", "whiteboard", and "presentation" as design_type.preset names --
+# there's no "flyer" preset. Anything else (including our own
+# "flyer_a4"/"flyer_letter" shorthands) must go through design_type.custom
+# with explicit pixel dimensions instead. Sizes below are 300dpi portrait.
+_CANVA_PRESET_NAMES = {"doc", "whiteboard", "presentation"}
+_CUSTOM_DESIGN_SIZES = {
+    "flyer_a4": (2480, 3508),      # A4 portrait
+    "flyer_letter": (2550, 3300),  # US Letter portrait
+}
+_DEFAULT_CUSTOM_SIZE = "flyer_letter"
+
+
+def _design_type_payload(design_preset: str):
+    if design_preset in _CANVA_PRESET_NAMES:
+        return {"type": "preset", "name": design_preset}
+
+    width, height = _CUSTOM_DESIGN_SIZES.get(design_preset, _CUSTOM_DESIGN_SIZES[_DEFAULT_CUSTOM_SIZE])
+    return {"type": "custom", "width": width, "height": height}
+
+
 def create_design(access_token: str, title: str = "Ravlo Design",
-                  design_preset: str = "flyer_a4"):
+                  design_preset: str = "flyer_letter"):
     """Create a new Canva design and return the full response including edit URL.
 
-    design_preset options for real estate flyers:
-      "flyer_a4"        — standard portrait flyer (8.27 × 11.69 in)
-      "real_estate_flyer" — if Canva exposes it; falls back gracefully
-      "presentation"    — 16:9 slide (fallback)
+    design_preset options:
+      "flyer_letter"          — US Letter portrait flyer (custom size, default)
+      "flyer_a4"              — A4 portrait flyer (custom size)
+      "doc"/"whiteboard"/"presentation" — real Canva presets, passed through as-is
 
     The response includes ``design.urls.edit_url`` — redirect the user there
     so they open their own Canva editor immediately.
@@ -183,10 +204,7 @@ def create_design(access_token: str, title: str = "Ravlo Design",
     url = f"{CANVA_API_BASE}/designs"
 
     payload = {
-        "design_type": {
-            "type": "preset",
-            "name": design_preset,
-        },
+        "design_type": _design_type_payload(design_preset),
         "title": title,
     }
 
@@ -198,13 +216,21 @@ def create_design(access_token: str, title: str = "Ravlo Design",
         timeout=30,
     )
 
-    # If the preset name isn't supported, fall back to a generic flyer
-    if response.status_code == 400 and design_preset != "flyer_a4":
-        payload["design_type"]["name"] = "flyer_a4"
+    # If that shape was rejected for some other reason, fall back to the
+    # plain default custom size rather than repeating the same request.
+    if response.status_code == 400 and design_preset != _DEFAULT_CUSTOM_SIZE:
+        payload["design_type"] = _design_type_payload(_DEFAULT_CUSTOM_SIZE)
         response = safe_call(
             requests.post,
             url, json=payload, headers=canva_headers(access_token), timeout=30,
         )
+
+    if response.status_code >= 400:
+        # requests' default HTTPError message ("400 Client Error: Bad
+        # Request for url: ...") drops Canva's actual reason -- surface it
+        # so a real API rejection is diagnosable instead of opaque.
+        detail = (response.text or "")[:500]
+        response.reason = f"{response.reason} — {detail}" if detail else response.reason
 
     response.raise_for_status()
     return response.json()
