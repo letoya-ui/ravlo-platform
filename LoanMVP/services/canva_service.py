@@ -6,7 +6,8 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode, quote
 
 import requests
-from flask import session
+from flask import current_app
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from LoanMVP.utils.safe_http import safe_call
 
@@ -15,9 +16,17 @@ CANVA_AUTH_BASE = "https://www.canva.com/api/oauth/authorize"
 CANVA_TOKEN_URL = "https://api.canva.com/rest/v1/oauth/token"
 CANVA_API_BASE = "https://api.canva.com/rest/v1"
 
+# How long a user has to complete the Canva consent screen and be
+# redirected back before their OAuth state expires.
+OAUTH_STATE_MAX_AGE_SECONDS = 900
+
 
 def _utcnow():
     return datetime.now(timezone.utc)
+
+
+def _state_serializer():
+    return URLSafeTimedSerializer(current_app.secret_key, salt="canva-oauth-state")
 
 
 def generate_pkce_pair():
@@ -28,7 +37,18 @@ def generate_pkce_pair():
     return verifier, challenge
 
 
-def build_canva_auth_url():
+def build_canva_auth_url(user_id, next_url=None):
+    """Build the Canva authorize URL, encoding everything the callback
+    needs (who started this, the PKCE verifier, where to return them)
+    into a signed `state` param instead of the Flask session.
+
+    The round trip to canva.com and back is a cross-site top-level
+    navigation -- browsers/proxies/mobile webviews vary in how reliably
+    they carry a session cookie through that, and when they don't, a
+    session-dependent callback bounces the user to the login page,
+    which reads as "connecting Canva logged me out." Signing the state
+    instead means the callback never needs the session to have survived.
+    """
     client_id = os.environ.get("CANVA_CLIENT_ID")
     redirect_uri = os.environ.get("CANVA_REDIRECT_URI")
     scopes = os.environ.get(
@@ -36,11 +56,8 @@ def build_canva_auth_url():
         "app:read asset:read asset:write design:content:read design:content:write design:meta:read",
     )
 
-    state = secrets.token_urlsafe(24)
     verifier, challenge = generate_pkce_pair()
-
-    session["canva_oauth_state"] = state
-    session["canva_code_verifier"] = verifier
+    state = _state_serializer().dumps({"uid": user_id, "next": next_url, "verifier": verifier})
 
     # Build query string manually to match Canva's expected encoding:
     # - scope: colons must be literal (not %3A), spaces must be %20 (not +)
@@ -60,11 +77,23 @@ def build_canva_auth_url():
     return f"{CANVA_AUTH_BASE}?{params}"
 
 
-def exchange_code_for_tokens(code: str):
+def decode_oauth_state(state):
+    """Verify and decode a state param built by build_canva_auth_url().
+    Returns None if it's missing, tampered with, or older than
+    OAUTH_STATE_MAX_AGE_SECONDS -- callers should treat that as "start
+    the Canva connection over," not silently continue."""
+    if not state:
+        return None
+    try:
+        return _state_serializer().loads(state, max_age=OAUTH_STATE_MAX_AGE_SECONDS)
+    except (BadSignature, SignatureExpired):
+        return None
+
+
+def exchange_code_for_tokens(code: str, code_verifier: str):
     client_id = os.environ.get("CANVA_CLIENT_ID")
     client_secret = os.environ.get("CANVA_CLIENT_SECRET")
     redirect_uri = os.environ.get("CANVA_REDIRECT_URI")
-    code_verifier = session.get("canva_code_verifier")
 
     payload = {
         "grant_type": "authorization_code",

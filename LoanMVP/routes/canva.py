@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 
-from flask import Blueprint, flash, redirect, request, session, url_for, jsonify, render_template
-from flask_login import current_user, login_required
+from flask import Blueprint, flash, redirect, request, url_for, jsonify, render_template
+from flask_login import current_user, login_required, login_user
 
 from LoanMVP.extensions import db, csrf
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.services.canva_service import (
     build_canva_auth_url,
+    decode_oauth_state,
     exchange_code_for_tokens,
     refresh_access_token,
     create_design,
@@ -16,6 +17,7 @@ from LoanMVP.services.canva_service import (
     get_export_job,
 )
 from LoanMVP.models.canva_models import CanvaConnection
+from LoanMVP.models.user_model import User
 
 
 canva_bp = Blueprint("canva", __name__, url_prefix="/canva")
@@ -89,59 +91,58 @@ def connect():
         return redirect(_canva_fallback())
     logging.warning(f"[Canva OAuth] client_id={client_id[:8]}… redirect_uri={redirect_uri}")
 
-    # Make session permanent so the cookie survives the cross-site
-    # redirect to canva.com and back (SameSite=Lax top-level GET nav).
-    session.permanent = True
-    session.modified  = True
-
-    # Remember where to return the user after OAuth completes
     next_url = request.args.get("next")
-    if next_url:
-        session["canva_next"] = next_url
-
-    auth_url = build_canva_auth_url()
+    auth_url = build_canva_auth_url(current_user.id, next_url=next_url)
     return redirect(auth_url)
 
 
 @canva_bp.get("/callback")
-@login_required
 def callback():
-    error = request.args.get("error")
-    if error:
-        flash(f"Canva connection failed: {error}", "danger")
-        return redirect(_canva_fallback())
+    """No @login_required here on purpose: the round trip to canva.com and
+    back is a cross-site top-level navigation, and whether the session
+    cookie survives it varies by browser/proxy/webview. Gating this route
+    on the session meant a dropped cookie bounced the user to the login
+    page mid-connection -- exactly the "connecting Canva logs me out" bug.
 
+    Instead, who started this flow is recovered from the signed `state`
+    param (built by build_canva_auth_url), which round-trips through
+    Canva untouched and doesn't depend on the session at all. If the
+    session did drop, we just quietly re-establish it via login_user()
+    using that verified identity instead of sending them to /auth/login.
+    """
+    error = request.args.get("error")
     state = request.args.get("state")
     code = request.args.get("code")
 
-    expected_state = session.get("canva_oauth_state")
-    if not state or (expected_state and state != expected_state):
-        # Log the mismatch but don't hard-block — session may have been
-        # reset by a load-balancer or SameSite cookie issue.
-        import logging
-        logging.warning(
-            f"[Canva OAuth] state mismatch: got={state!r} expected={expected_state!r} — continuing"
-        )
-        # Only abort if state is completely missing (Canva didn't return one)
-        if not state:
-            flash("Canva connection failed — missing state parameter.", "danger")
-            return redirect(_canva_fallback())
+    decoded_state = decode_oauth_state(state)
+    user = User.query.get(decoded_state["uid"]) if decoded_state else None
+
+    if not user or not user.is_active or user.is_blocked:
+        flash("Your Canva connection attempt expired or is no longer valid. Please log in and try again.", "danger")
+        return redirect(url_for("auth.login"))
+
+    if not current_user.is_authenticated or current_user.id != user.id:
+        login_user(user)
+
+    if error:
+        flash(f"Canva connection failed: {error}", "danger")
+        return redirect(_canva_fallback())
 
     if not code:
         flash("Missing Canva authorization code.", "danger")
         return redirect(_canva_fallback())
 
     try:
-        token_data = exchange_code_for_tokens(code)
+        token_data = exchange_code_for_tokens(code, decoded_state["verifier"])
     except Exception as exc:
         import logging
         logging.error(f"[Canva OAuth] token exchange failed: {exc}")
         flash(f"Canva token exchange failed: {exc}", "danger")
         return redirect(_canva_fallback())
 
-    connection = CanvaConnection.query.filter_by(user_id=current_user.id).first()
+    connection = CanvaConnection.query.filter_by(user_id=user.id).first()
     if not connection:
-        connection = CanvaConnection(user_id=current_user.id)
+        connection = CanvaConnection(user_id=user.id)
         db.session.add(connection)
 
     connection.access_token = token_data["access_token"]
@@ -150,9 +151,6 @@ def callback():
     connection.expires_at = token_data["expires_at"]
 
     db.session.commit()
-
-    session.pop("canva_oauth_state", None)
-    session.pop("canva_code_verifier", None)
 
     # Check whether Canva granted design creation permission.
     # If design:content:write is missing the app isn't approved for it in the
@@ -175,7 +173,7 @@ def callback():
         flash("Canva connected! You can now create flyers directly from Ravlo.", "success")
 
     # Return the user to wherever they came from, or onboarding as fallback
-    next_url = session.pop("canva_next", None)
+    next_url = decoded_state.get("next")
     return redirect(next_url or _canva_fallback())
 
 
@@ -282,13 +280,13 @@ def create_flyer():
                 from LoanMVP.extensions import db as _db
                 _db.session.delete(connection)
                 _db.session.commit()
-            session["canva_next"] = request.args.get("next") or url_for("elena.template_studio")
+            fallback_next = request.args.get("next") or url_for("elena.template_studio")
             flash(
                 "Canva needs permission to create designs. "
                 "Please reconnect your Canva account.",
                 "warning",
             )
-            return redirect(url_for("canva.connect"))
+            return redirect(url_for("canva.connect", next=fallback_next))
         flash(f"Could not create Canva design: {exc}", "danger")
         return redirect(request.args.get("next") or _canva_fallback())
 
