@@ -156,6 +156,12 @@
       <span>Partner Network</span>
     </a>
 
+    <a href="{{ url_for('network.feed', slug='real-estate') }}"
+       class="ravlo-nav-link {% if ep and ep.startswith('network.') %}active{% endif %}">
+      <i class="lucide lucide-users-round"></i>
+      <span>Ravlo Network</span>
+    </a>
+
     <a href="{{ url_for('investor.resource_center') }}"
        class="ravlo-nav-link {% if ep == 'investor.resource_center' %}active{% endif %}">
       <i class="lucide lucide-scroll-text"></i>
