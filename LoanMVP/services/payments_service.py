@@ -44,6 +44,22 @@ def resolve_current_owner(user) -> Tuple[Optional[str], Optional[int], Optional[
             stylist.logo_url,
         )
 
+    # Checked before the VIP fallback below: get_or_create_vip_profile()
+    # auto-creates a VIPProfile for *any* authenticated user regardless of
+    # role, so an investor/landlord would never reach this branch if it
+    # came after that call.
+    from LoanMVP.models.investor_models import InvestorProfile
+
+    investor_profile = InvestorProfile.query.filter_by(user_id=user.id).first()
+    if investor_profile:
+        return (
+            "investor_profile",
+            investor_profile.id,
+            investor_profile.full_name or "Landlord",
+            None,
+            None,
+        )
+
     from LoanMVP.routes.vip import get_or_create_vip_profile
 
     vip_profile = get_or_create_vip_profile()
@@ -78,6 +94,14 @@ def owner_branding(owner_type: str, owner_id: int) -> Tuple[Optional[str], Optio
         if not profile:
             return None, None, None
         return (profile.business_name or profile.display_name), profile.brand_color, profile.logo_url
+
+    if owner_type == "investor_profile":
+        from LoanMVP.models.investor_models import InvestorProfile
+
+        profile = InvestorProfile.query.get(owner_id)
+        if not profile:
+            return None, None, None
+        return (profile.full_name or "Landlord"), None, None
 
     return None, None, None
 

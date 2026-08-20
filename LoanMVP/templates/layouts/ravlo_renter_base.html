@@ -1,0 +1,133 @@
+{# templates/layouts/ravlo_renter_base.html #}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}Renter Portal{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_borrower.css') }}">
+
+  {% block head %}{% endblock %}
+</head>
+
+<body class="rb-body">
+{% include "layouts/_demo_mode_banner.html" %}
+
+<div class="rb-shell">
+
+  <header class="rb-topbar">
+    <div class="rb-topbar-left">
+      <button class="rb-mobile-menu-btn" type="button" aria-label="Toggle navigation" onclick="document.querySelector('.rb-nav').classList.toggle('rb-nav-open')">
+        R
+      </button>
+      <div class="rb-brand">
+        <div class="rb-mark">R</div>
+        <div>
+          <div class="rb-name">RAVLO</div>
+          <div class="rb-sub">Renter Portal</div>
+        </div>
+      </div>
+
+      <div class="rb-page-copy">
+        <div class="rb-page-title">{% block page_title %}Renter Dashboard{% endblock %}</div>
+        <div class="rb-page-subline">{% block page_subline %}Rent, payment history, and maintenance{% endblock %}</div>
+      </div>
+    </div>
+
+    <div class="rb-topbar-right">
+      {% include "layouts/_notification_bell.html" %}
+
+      <div class="rb-topbar-actions">
+        {% block topbar_actions %}{% endblock %}
+      </div>
+
+      {% if current_user.is_authenticated %}
+      <div class="rb-user-menu">
+        <div class="rb-user-chip">
+          <div class="rb-avatar">
+            {{ (current_user.first_name[0] if current_user.first_name else "U")|upper }}
+          </div>
+          <span>{{ current_user.first_name or "Renter" }}</span>
+        </div>
+
+        <div class="rb-user-dropdown">
+          <form method="POST" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="danger" style="background:none;border:none;padding:0;cursor:pointer;font:inherit;text-align:left;width:100%;">
+              Logout
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <nav class="rb-nav">
+    <a href="{{ url_for('renter.dashboard') }}" class="rb-nav-link {% if active_tab == 'dashboard' %}active{% endif %}">
+      Dashboard
+    </a>
+    <a href="{{ url_for('renter.maintenance_new') }}" class="rb-nav-link {% if active_tab == 'maintenance' %}active{% endif %}">
+      Request Maintenance
+    </a>
+  </nav>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="rb-flashes">
+        {% for category, message in messages %}
+          <div class="rb-alert {{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <main class="rb-content">
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+
+<style>
+  .rb-mobile-menu-btn{
+    display:none;
+    width:42px;
+    height:42px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.10);
+    background:linear-gradient(180deg, rgba(95,168,255,.22), rgba(95,168,255,.10));
+    color:#F4F8FC;
+    font-weight:800;
+    font-size:1.1rem;
+    letter-spacing:.05em;
+    cursor:pointer;
+    place-items:center;
+    flex:0 0 42px;
+  }
+  .rb-mobile-menu-btn:hover{
+    background:linear-gradient(180deg, rgba(95,168,255,.32), rgba(95,168,255,.18));
+    border-color:rgba(141,167,194,.28);
+  }
+  @media (max-width: 640px){
+    .rb-mobile-menu-btn{
+      display:inline-grid;
+    }
+    .rb-nav{
+      display:none;
+    }
+    .rb-nav.rb-nav-open{
+      display:flex;
+    }
+  }
+</style>
+{% include "layouts/_csrf_fetch.html" %}
+{% block scripts %}{% endblock %}
+</body>
+</html>
