@@ -45,12 +45,30 @@
       to {{ t.lease_end.strftime("%b %d, %Y") if t.lease_end else "—" }}
       · Rent ${{ "%.2f"|format(t.monthly_rent) if t.monthly_rent else "—" }}/mo
     </p>
-    <form method="POST" onsubmit="return confirm('End this tenancy?');">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="action_type" value="end_tenancy">
-      <input type="hidden" name="tenant_id" value="{{ t.id }}">
-      <button type="submit" class="ravlo-btn ghost sm">End Tenancy</button>
-    </form>
+    <p class="muted">
+      Renter Portal:
+      {% if t.user_id %}
+        <span class="badge paid">Active</span>
+      {% else %}
+        <span class="badge unpaid">Not invited</span>
+      {% endif %}
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      {% if not t.user_id %}
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action_type" value="invite_tenant">
+        <input type="hidden" name="tenant_id" value="{{ t.id }}">
+        <button type="submit" class="ravlo-btn ghost sm">Send Portal Invite</button>
+      </form>
+      {% endif %}
+      <form method="POST" onsubmit="return confirm('End this tenancy?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action_type" value="end_tenancy">
+        <input type="hidden" name="tenant_id" value="{{ t.id }}">
+        <button type="submit" class="ravlo-btn ghost sm">End Tenancy</button>
+      </form>
+    </div>
   {% else %}
     <p class="muted">This unit is vacant.</p>
     <form method="POST">

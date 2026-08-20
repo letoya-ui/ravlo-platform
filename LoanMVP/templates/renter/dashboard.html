@@ -1,0 +1,94 @@
+{% extends "layouts/ravlo_renter_base.html" %}
+{% block title %}Renter Dashboard{% endblock %}
+
+{% block page_title %}{{ unit.property_ref.address }} — {{ unit.unit_label }}{% endblock %}
+{% block page_subline %}Your rent, payment history, and maintenance requests.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('renter.maintenance_new') }}" class="rb-btn rb-btn-primary rb-btn-sm">Request Maintenance</a>
+{% endblock %}
+
+{% block content %}
+<style>
+  .rp-table-wrap{overflow-x:auto;}
+  table.rp-table{width:100%;border-collapse:collapse;margin-top:10px;}
+  table.rp-table th,table.rp-table td{padding:.6rem;text-align:left;border-bottom:1px solid rgba(255,255,255,.08);font-size:.9rem;}
+  table.rp-table th{color:rgba(255,255,255,.55);font-weight:600;text-transform:uppercase;font-size:.7rem;letter-spacing:.06em;}
+  .badge{display:inline-block;padding:.2rem .6rem;border-radius:999px;font-size:.75rem;font-weight:700;}
+  .badge.paid{background:rgba(67,209,158,.15);color:#43d19e;}
+  .badge.unpaid{background:rgba(255,107,107,.15);color:#ff8080;}
+  .badge.partial,.badge.late{background:rgba(255,193,79,.15);color:#ffc14f;}
+  .badge.open{background:rgba(255,107,107,.15);color:#ff8080;}
+  .badge.in_progress{background:rgba(255,193,79,.15);color:#ffc14f;}
+  .badge.resolved{background:rgba(67,209,158,.15);color:#43d19e;}
+  .muted{color:rgba(255,255,255,.6);font-size:.9rem;}
+  .rb-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:20px;margin-bottom:16px;}
+</style>
+
+<div class="rb-card">
+  <h3 style="margin-top:0;">Lease</h3>
+  <p class="muted">
+    {{ tenant.lease_start.strftime("%b %d, %Y") if tenant.lease_start else "—" }}
+    to {{ tenant.lease_end.strftime("%b %d, %Y") if tenant.lease_end else "—" }}
+    · Rent ${{ "%.2f"|format(tenant.monthly_rent) if tenant.monthly_rent else "—" }}/mo
+  </p>
+</div>
+
+<div class="rb-card">
+  <h3 style="margin-top:0;">Rent Payments</h3>
+  {% if rent_payments %}
+  <div class="rp-table-wrap">
+    <table class="rp-table">
+      <thead>
+        <tr><th>Period</th><th>Due</th><th>Paid</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for p in rent_payments %}
+        <tr>
+          <td>{{ p.period_month.strftime("%B %Y") }}</td>
+          <td>${{ "%.2f"|format(p.amount_due) }}</td>
+          <td>${{ "%.2f"|format(p.amount_paid or 0) }}</td>
+          <td><span class="badge {{ p.status }}">{{ p.status|title }}</span></td>
+          <td>
+            {% if p.status != "paid" %}
+            <form method="POST" action="{{ url_for('renter.pay_rent', rent_payment_id=p.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="rb-btn rb-btn-primary rb-btn-sm">Pay Now</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">No rent periods have been logged yet.</p>
+  {% endif %}
+</div>
+
+<div class="rb-card">
+  <h3 style="margin-top:0;">Maintenance Requests</h3>
+  {% if maintenance_requests %}
+  <div class="rp-table-wrap">
+    <table class="rp-table">
+      <thead>
+        <tr><th>Title</th><th>Priority</th><th>Status</th><th>Filed</th></tr>
+      </thead>
+      <tbody>
+        {% for r in maintenance_requests %}
+        <tr>
+          <td>{{ r.title }}</td>
+          <td>{{ r.priority|title }}</td>
+          <td><span class="badge {{ r.status }}">{{ r.status|replace("_", " ")|title }}</span></td>
+          <td>{{ r.created_at.strftime("%b %d, %Y") }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">No maintenance requests yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

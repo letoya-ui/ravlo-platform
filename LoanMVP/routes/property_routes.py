@@ -13,6 +13,7 @@ from LoanMVP.models.investor_models import InvestorProfile
 from LoanMVP.services.unified_property_resolver import resolve_property_unified
 from LoanMVP.services.property_dto import to_property_card_dto
 from LoanMVP.services.resolver_metrics import get_metrics_snapshot
+from LoanMVP.services.renter_invite_service import build_invite_token
 import requests
 from LoanMVP.utils.safe_http import safe_call
 
@@ -397,6 +398,21 @@ def unit_detail(unit_id):
                 db.session.add(req)
                 db.session.commit()
                 flash("Maintenance request logged.", "success")
+
+        elif action_type == "invite_tenant":
+            tenant_id = request.form.get("tenant_id")
+            tenant = Tenant.query.get(int(tenant_id)) if (tenant_id or "").isdigit() else None
+            if not tenant or tenant.unit_id != unit.id:
+                flash("Tenant not found.", "danger")
+            elif tenant.user_id:
+                flash(f"{tenant.full_name} already has a portal login.", "info")
+            else:
+                token = build_invite_token(tenant.id)
+                invite_url = url_for("renter.accept_invite", token=token, _external=True)
+                flash(
+                    f"Invite link for {tenant.full_name} (expires in 7 days) -- copy and send it to them: {invite_url}",
+                    "success",
+                )
 
         elif action_type == "update_maintenance_status":
             request_id = request.form.get("request_id")
