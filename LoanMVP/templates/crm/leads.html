@@ -19,6 +19,22 @@
     </div>
     <p class="muted">Manage, track, and analyze all inbound and outbound loan leads.</p>
 
+    {% if not fb_connected %}
+    <div class="card" style="background:rgba(24,119,242,0.08);border:1px solid rgba(24,119,242,0.25);display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 16px;padding:14px 16px;">
+      <div>
+        <strong><i class="lucide lucide-facebook"></i> No Facebook or Instagram Lead Ads connected yet.</strong>
+        <div class="muted" style="margin-top:2px;">Connect a Page so Lead Ad submissions flow straight into this list.</div>
+      </div>
+      {% if can_manage_fb %}
+      <a href="{{ url_for('admin.company_settings', company_id=company_id) }}" class="btn-glow" style="white-space:nowrap;">
+        <i class="lucide lucide-link"></i> Connect Facebook
+      </a>
+      {% else %}
+      <span class="muted" style="white-space:nowrap;">Ask your admin to connect it</span>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <table class="table">
       <thead>
         <tr>
