@@ -659,6 +659,9 @@ def create_app():
         try:
             if not current_user.is_authenticated:
                 return dict(trial_popup_day=None, trial_days_remaining=None, trial_activity={})
+            from LoanMVP.utils.decorators import is_investor_comped
+            if is_investor_comped(current_user):
+                return dict(trial_popup_day=None, trial_days_remaining=None, trial_activity={})
             if not getattr(current_user, 'trial_ends_at', None):
                 return dict(trial_popup_day=None, trial_days_remaining=None, trial_activity={})
             paid_plans = {'pro', 'growth', 'premium', 'enterprise', 'paid', 'active'}
