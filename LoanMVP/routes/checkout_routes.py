@@ -60,6 +60,9 @@ def subscribe(plan):
         return jsonify({"error": "This plan is not currently available. Please contact us."}), 503
 
     if not current_app.config.get("STRIPE_BILLING_ENABLED"):
+        current_app.logger.error(
+            "checkout.subscribe: STRIPE_BILLING_ENABLED is off, refusing checkout for plan=%s", plan
+        )
         return jsonify({"error": "Billing is not enabled on this server."}), 503
 
     stripe.api_key = current_app.config["STRIPE_SECRET_KEY"]
