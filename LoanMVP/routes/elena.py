@@ -31,7 +31,7 @@ from LoanMVP.services.elena_templates import (
     TemplateType,
     templates_for_role,
 )
-from LoanMVP.utils.decorators import role_required, has_full_loan_officer_access
+from LoanMVP.utils.decorators import role_required
 
 from LoanMVP.routes.canva import get_valid_access_token, get_user_canva_connection
 
@@ -938,15 +938,12 @@ def _template_studio_portal_home(role_type: str) -> str:
     Shared by template_studio() and its preview/generate/generate_and_save
     siblings so this only needs fixing in one place.
     """
-    is_internal_loan_officer = (
-        (getattr(current_user, "role", "") or "").strip().lower() == "loan_officer"
-        and not has_full_loan_officer_access(current_user)
-    )
+    is_loan_officer = (getattr(current_user, "role", "") or "").strip().lower() == "loan_officer"
     if role_type in ("contractor", "contractor_realtor"):
         return url_for("vip.contractor_dashboard")
     if role_type in ("insurance", "insurance_realtor"):
         return url_for("vip.insurance_dashboard")
-    if is_internal_loan_officer:
+    if is_loan_officer:
         return url_for("loan_officer.dashboard")
     if role_type == "ravlo_admin":
         return url_for("admin.dashboard")
@@ -955,18 +952,20 @@ def _template_studio_portal_home(role_type: str) -> str:
 
 def _template_studio_chrome():
     """Which sidebar chrome wraps Content Studio. Every render_template()
-    call here used to hardcode portal="vip", so an internal Loan Officer
-    clicking "Create Content" from their own sidebar got silently swapped
-    into looking like a different account -- the Partner Workspace
-    sidebar -- even though _template_studio_portal_home() above already
-    knew to send their own Back button to loan_officer.dashboard. Mirrors
-    that same is_internal_loan_officer check so the sidebar and the Back
-    button finally agree on who's actually looking at the page."""
-    is_internal_loan_officer = (
-        (getattr(current_user, "role", "") or "").strip().lower() == "loan_officer"
-        and not has_full_loan_officer_access(current_user)
-    )
-    if is_internal_loan_officer:
+    call here used to hardcode portal="vip", so a Loan Officer clicking
+    "Create Content" from their own Lending OS sidebar got silently
+    swapped into looking like a different account -- the Partner
+    Workspace sidebar -- even though _template_studio_portal_home() above
+    already knew to send their own Back button to loan_officer.dashboard.
+
+    This is keyed on the account's actual User.role, not
+    has_full_loan_officer_access() -- that flag grants one specific staff
+    account extra VIP-side capabilities elsewhere (see vip.py), but it
+    doesn't change which sidebar they clicked "Create Content" from, and
+    swapping their chrome out from under them here read as leaving
+    Lending OS entirely."""
+    is_loan_officer = (getattr(current_user, "role", "") or "").strip().lower() == "loan_officer"
+    if is_loan_officer:
         return "layouts/ravlo_employee_base.html", {}
     return "layouts/ravlo_base.html", {"portal": "vip", "portal_name": "VIP Workspace"}
 
