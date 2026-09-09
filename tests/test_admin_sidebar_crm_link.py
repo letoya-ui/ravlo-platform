@@ -35,6 +35,20 @@ def test_company_admin_sees_crm_link_on_dashboard(db_session, client):
     assert "/crm/dashboard" in body
 
 
+def test_company_admin_sees_a_direct_leads_link_on_dashboard(db_session, client):
+    """The CRM link alone was still two clicks away from the leads list
+    (CRM dashboard -> its own "Leads" quick action) -- reported as "leads
+    can only be connected through the admin" but the admin sidebar
+    itself had no direct way to reach the leads that connection feeds."""
+    user, company = _make_company_admin(db_session, email="admin3@somelendingco.com")
+    login_as(client, user)
+
+    resp = client.get(f"/admin/company/{company.id}/dashboard")
+
+    assert resp.status_code == 200
+    assert "/crm/leads" in resp.get_data(as_text=True)
+
+
 def test_company_admin_can_load_crm_dashboard(db_session, client):
     user, company = _make_company_admin(db_session, email="admin2@somelendingco.com")
     login_as(client, user)
