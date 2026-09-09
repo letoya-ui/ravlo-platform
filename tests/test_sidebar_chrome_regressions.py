@@ -192,6 +192,23 @@ def test_template_studio_shows_loan_officer_sidebar_for_internal_loan_officer(db
     assert "Partner Workspace" not in body
 
 
+def test_template_studio_shows_loan_officer_sidebar_even_for_full_access_email(db_session, client):
+    """officer@caughmanmason.com (FULL_LOAN_OFFICER_ACCESS_EMAILS) gets
+    extra VIP-side capabilities elsewhere in the app, but that flag isn't
+    which sidebar they clicked "Create Content" from -- it must not swap
+    their chrome to Partner Workspace when they're on their own Lending
+    OS sidebar."""
+    officer = _make_loan_officer(db_session, email="officer@caughmanmason.com")
+    login_as(client, officer)
+
+    resp = client.get("/elena/template-studio")
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert '<div class="re-user-role">Loan Officer</div>' in body
+    assert "Partner Workspace" not in body
+    assert "/loan_officer/dashboard" in body
+
+
 def test_template_studio_still_shows_partner_sidebar_for_real_vip(db_session, client):
     partner = _make_partner(db_session, email="content-partner@example.com")
     login_as(client, partner)
