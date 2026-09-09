@@ -169,6 +169,36 @@ def test_connect_start_creates_stripe_account_and_redirects(db_session, client, 
     assert created["kwargs"]["email"] == "onboard@example.com"
 
 
+def test_connect_start_surfaces_stripe_error_instead_of_crashing(db_session, client, monkeypatch):
+    """A Stripe rejection during onboarding (e.g. Express not enabled on
+    the platform's Connect settings) used to bubble up as an unhandled
+    exception -- a generic 500 page with no clue what went wrong. It
+    should instead redirect back to the dashboard with the real Stripe
+    message flashed."""
+    import stripe as stripe_sdk
+
+    user, profile = _make_stylist(db_session, email="broken-onboard@example.com")
+    login_as(client, user)
+    client.application.config["STRIPE_SECRET_KEY"] = "sk_test_fake"
+
+    def fake_account_create(**kwargs):
+        raise stripe_sdk.error.InvalidRequestError(
+            "Express accounts are not enabled for your platform.", param=None,
+        )
+
+    import LoanMVP.services.payments_service as svc
+    monkeypatch.setattr(svc.stripe.Account, "create", fake_account_create)
+
+    resp = client.get("/payments/connect/start", follow_redirects=True)
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Express accounts are not enabled" in body
+
+    account = PaymentAccount.query.filter_by(owner_type="stylist_profile", owner_id=profile.id).first()
+    assert account.stripe_connect_account_id is None
+
+
 def test_connect_start_reuses_existing_stripe_account(db_session, client, monkeypatch):
     user, profile = _make_stylist(db_session, email="reuse@example.com")
     account = get_or_create_payment_account("stylist_profile", profile.id)
