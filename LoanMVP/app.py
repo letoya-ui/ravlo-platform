@@ -746,6 +746,9 @@ def create_app():
     def check_trial_expiry():
         if not current_user.is_authenticated:
             return None
+        from LoanMVP.utils.decorators import is_investor_comped
+        if is_investor_comped(current_user):
+            return None
         sub = (getattr(current_user, "subscription", "") or "").strip().lower()
         if sub != "preview":
             return None

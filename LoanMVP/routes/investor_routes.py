@@ -47,7 +47,7 @@ from flask import (
 from flask_login import current_user, login_required
 
 from LoanMVP.extensions import db, stripe, csrf
-from LoanMVP.utils.decorators import role_required
+from LoanMVP.utils.decorators import role_required, is_investor_comped
 from LoanMVP.forms.investor_forms import (
     InvestorSettingsForm,
     InvestorProfileForm,
@@ -1150,6 +1150,13 @@ def _investor_grandfather_cutoff():
 
 
 def _is_investor_grandfathered(user):
+    """True if this investor gets full (Enterprise-equivalent) access at
+    no charge -- either their account predates INVESTOR_GRANDFATHERED_CUTOFF,
+    or their email is on the small manual comp list (INVESTOR_COMPED_EMAILS)
+    in utils/decorators.py."""
+    if is_investor_comped(user):
+        return True
+
     created_at = getattr(user, "created_at", None)
     if not created_at:
         return False
