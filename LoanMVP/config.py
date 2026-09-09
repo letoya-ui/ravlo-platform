@@ -147,6 +147,7 @@ class Config:
 
     # FACEBOOK / INSTAGRAM LEAD ADS (one shared Ravlo Meta App; each
     # company connects its own Page via FacebookPageConnection)
+    FACEBOOK_APP_ID = os.environ.get("FACEBOOK_APP_ID", "")
     FACEBOOK_APP_SECRET = os.environ.get("FACEBOOK_APP_SECRET", "")
     FACEBOOK_WEBHOOK_VERIFY_TOKEN = os.environ.get("FACEBOOK_WEBHOOK_VERIFY_TOKEN", "")
     STRIPE_PRICE_PRO = os.environ.get("STRIPE_PRICE_PRO", "")
