@@ -18,8 +18,15 @@ from flask import current_app
 GRAPH_API_BASE = "https://graph.facebook.com/v19.0"
 FACEBOOK_OAUTH_DIALOG = "https://www.facebook.com/v19.0/dialog/oauth"
 
-# Pages, leads, and the ability to subscribe a Page to this app's webhook.
-OAUTH_SCOPES = "pages_show_list,pages_read_engagement,pages_manage_metadata,leads_retrieval"
+# Pages and leads. pages_manage_metadata (needed to subscribe a Page to
+# this app's leadgen webhook via subscribe_page_to_leadgen()) is
+# deliberately left out -- Meta rejects it as an "Invalid Scope" for an
+# app that hasn't had it added/approved yet under App Review ->
+# Permissions and Features, which blocks the whole OAuth dialog rather
+# than just dropping that one scope. Once it's added there, add it back
+# here and the webhook subscription step will start succeeding instead
+# of falling back to its warning flash in _connect_page().
+OAUTH_SCOPES = "pages_show_list,pages_read_engagement,leads_retrieval"
 
 # How long an admin has to complete the Facebook consent screen and be
 # redirected back before their OAuth state expires.

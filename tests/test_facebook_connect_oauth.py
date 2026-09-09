@@ -14,7 +14,7 @@ from urllib.parse import parse_qs, urlparse
 from LoanMVP.models.admin import Company
 from LoanMVP.models.crm_models import FacebookPageConnection
 from LoanMVP.models.user_model import User
-from LoanMVP.services.facebook_oauth_service import build_oauth_url, decode_oauth_state
+from LoanMVP.services.facebook_oauth_service import OAUTH_SCOPES, build_oauth_url, decode_oauth_state
 
 from tests.conftest import login_as
 
@@ -60,6 +60,17 @@ def test_decode_oauth_state_rejects_tampered_state(app):
     with app.test_request_context():
         assert decode_oauth_state("not-a-real-signed-state") is None
         assert decode_oauth_state(None) is None
+
+
+def test_oauth_scopes_omit_pages_manage_metadata():
+    """Meta rejects pages_manage_metadata as an "Invalid Scope" for an
+    app that hasn't had it added under App Review -> Permissions and
+    Features -- and unlike a single bad scope being silently dropped,
+    this blocks the whole OAuth dialog for anyone testing as an app
+    admin/developer. Leave it out of the request until it's approved;
+    subscribe_page_to_leadgen() already degrades gracefully without it."""
+    assert "pages_manage_metadata" not in OAUTH_SCOPES
+    assert "leads_retrieval" in OAUTH_SCOPES
 
 
 # ─── /integrations/facebook/connect/<company_id> ───────────────────────────
