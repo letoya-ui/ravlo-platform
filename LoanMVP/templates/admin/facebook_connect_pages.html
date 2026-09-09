@@ -1,0 +1,44 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Choose a Facebook Page{% endblock %}
+{% block page_title %}Choose a Page{% endblock %}
+{% block page_subline %}You manage more than one Page -- pick the one this company's Leads should come from.{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">LEAD ADS</div>
+        <h3 style="margin:.35rem 0 .2rem;">{{ company.name }}</h3>
+        <div class="re-card-subtitle">Choose which Facebook Page to connect. Lead Ad submissions on this Page (and its linked Instagram account, if any) will flow into this company's Leads pipeline.</div>
+      </div>
+    </div>
+
+    <div class="mt-16" style="display:flex;flex-direction:column;gap:12px;">
+      {% for page in pages %}
+      <form method="POST" action="{{ url_for('facebook_connect.finish', company_id=company.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="page_id" value="{{ page.id }}">
+        <input type="hidden" name="page_name" value="{{ page.name }}">
+        <input type="hidden" name="page_access_token" value="{{ page.access_token }}">
+        <input type="hidden" name="instagram_username" value="{{ page.instagram_username or '' }}">
+
+        <div class="re-card" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div>
+            <div style="font-weight:600;">{{ page.name }}</div>
+            {% if page.instagram_username %}
+            <div class="re-card-subtitle">Linked Instagram: @{{ page.instagram_username }}</div>
+            {% endif %}
+          </div>
+          <button type="submit" class="re-btn primary sm">Connect</button>
+        </div>
+      </form>
+      {% endfor %}
+    </div>
+
+    <div class="mt-16">
+      <a class="re-btn ghost sm" href="{{ url_for('admin.company_settings', company_id=company.id) }}">Cancel</a>
+    </div>
+  </section>
+</div>
+{% endblock %}
