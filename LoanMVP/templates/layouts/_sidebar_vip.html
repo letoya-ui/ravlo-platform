@@ -314,6 +314,11 @@
       <i class="lucide lucide-users-round"></i><span>Network</span>
     </a>
 
+    <a href="{{ url_for('university.portal') }}"
+       class="ravlo-nav-link {% if ep and ep.startswith('university.') %}active{% endif %}">
+      <i class="lucide lucide-graduation-cap"></i><span>Academy</span>
+    </a>
+
     {# ── Settings ── #}
     <div class="ravlo-nav-section">Settings</div>
 
