@@ -45,7 +45,10 @@
           <h3>{{ prop.address }}</h3>
           <div class="muted">{{ prop.city or "" }}{{ ", " if prop.city and prop.state }}{{ prop.state or "" }} {{ prop.zip or "" }}</div>
         </div>
-        <a href="{{ url_for('property.view', property_id=prop.id) }}" class="ravlo-btn ghost sm">Manage</a>
+        <div style="display:flex;gap:8px;">
+          <a href="{{ url_for('property.view', property_id=prop.id) }}#property-details" class="ravlo-btn ghost sm">Edit</a>
+          <a href="{{ url_for('property.view', property_id=prop.id) }}" class="ravlo-btn ghost sm">Manage</a>
+        </div>
       </div>
       <div class="pm-metrics">
         <span>Units: <strong>{{ summary.unit_count }}</strong></span>

@@ -169,6 +169,57 @@ def test_add_unit_to_property(db_session, client):
     assert unit.is_occupied is False
 
 
+def test_unit_detail_page_has_an_edit_form(db_session, client):
+    """update_unit already existed server-side (see test below), but
+    unit_detail.html had no form pointing at it at all -- reported as
+    "we need to add an edit button to manage properties"."""
+    user, profile = _make_investor(db_session, email="inv-unit-form@example.com")
+    prop = _make_property(db_session, owner_investor_id=profile.id)
+    unit = _make_unit(db_session, prop.id, unit_label="Unit 1A", market_rent="1200.00")
+    login_as(client, user)
+
+    resp = client.get(f"/property/unit/{unit.id}")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert 'value="update_unit"' in body
+    assert 'value="Unit 1A"' in body
+
+
+def test_update_unit_saves_new_details(db_session, client):
+    user, profile = _make_investor(db_session, email="inv-unit-save@example.com")
+    prop = _make_property(db_session, owner_investor_id=profile.id)
+    unit = _make_unit(db_session, prop.id, unit_label="Unit 1A", market_rent="1200.00")
+    login_as(client, user)
+
+    client.post(f"/property/unit/{unit.id}", data={
+        "action_type": "update_unit",
+        "unit_label": "Unit 1A Renovated",
+        "bedrooms": "3",
+        "bathrooms": "2",
+        "sqft": "1100",
+        "market_rent": "1650.00",
+    })
+
+    updated_unit = PropertyUnit.query.get(unit.id)
+    assert updated_unit.unit_label == "Unit 1A Renovated"
+    assert updated_unit.bedrooms == 3
+    assert updated_unit.bathrooms == 2
+    assert updated_unit.sqft == 1100
+    assert updated_unit.market_rent == Decimal("1650.00")
+
+
+def test_dashboard_links_to_property_edit_section(db_session, client):
+    user, profile = _make_investor(db_session, email="inv-dash-edit@example.com")
+    _make_property(db_session, owner_investor_id=profile.id)
+    login_as(client, user)
+
+    resp = client.get("/property/dashboard")
+
+    assert resp.status_code == 200
+    assert "#property-details" in resp.get_data(as_text=True)
+
+
 def test_add_tenant_marks_unit_occupied(db_session, client):
     user, profile = _make_investor(db_session, email="inv-tenant@example.com")
     prop = _make_property(db_session, owner_investor_id=profile.id)
