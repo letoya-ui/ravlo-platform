@@ -19,6 +19,7 @@ from LoanMVP.models.investor_models import InvestorProfile
 from LoanMVP.models.property import Property, PropertyUnit, Tenant, RentPayment, MaintenanceRequest
 from LoanMVP.models.user_model import User
 from LoanMVP.extensions import db
+from LoanMVP.services.payments_service import get_or_create_payment_account
 
 from tests.conftest import login_as
 
@@ -337,6 +338,56 @@ def test_dashboard_cash_flow_rollup(db_session, client):
     body = resp.get_data(as_text=True)
     assert "1500.00" in body
     assert "1300.00" in body  # net cash flow = 1500 - 200
+
+
+def test_dashboard_shows_connect_stripe_banner_when_not_connected(db_session, client):
+    """Reported: "we need to add where the investor or property manager
+    can add stripe" -- there was no entry point anywhere in the
+    investor's own nav or the property dashboard for connecting Stripe,
+    even though the backend already supported an investor_profile owner
+    type."""
+    user, profile = _make_investor(db_session, email="inv-stripe-banner@example.com")
+    login_as(client, user)
+
+    resp = client.get("/property/dashboard")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Connect Stripe" in body
+    assert "/payments/connect/start" in body
+
+
+def test_dashboard_hides_stripe_banner_once_connected(db_session, client):
+    user, profile = _make_investor(db_session, email="inv-stripe-connected@example.com")
+    account = get_or_create_payment_account("investor_profile", profile.id)
+    account.stripe_connect_account_id = "acct_test123"
+    account.stripe_connect_charges_enabled = True
+    db_session.commit()
+    login_as(client, user)
+
+    resp = client.get("/property/dashboard")
+
+    assert resp.status_code == 200
+    assert "Connect Stripe" not in resp.get_data(as_text=True)
+
+
+def test_investor_sidebar_links_to_payments(db_session, client):
+    """Connect Stripe first so the banner (which also links under /payments/)
+    is hidden -- isolates the persistent sidebar nav link from the banner's
+    own CTA link."""
+    user, profile = _make_investor(db_session, email="inv-sidebar-payments@example.com")
+    account = get_or_create_payment_account("investor_profile", profile.id)
+    account.stripe_connect_account_id = "acct_test456"
+    account.stripe_connect_charges_enabled = True
+    db_session.commit()
+    login_as(client, user)
+
+    resp = client.get("/property/dashboard")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Connect Stripe" not in body
+    assert 'href="/payments/"' in body
 
 
 def test_legacy_manage_route_redirects_to_dashboard(db_session, client):

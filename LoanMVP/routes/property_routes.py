@@ -14,6 +14,7 @@ from LoanMVP.services.unified_property_resolver import resolve_property_unified
 from LoanMVP.services.property_dto import to_property_card_dto
 from LoanMVP.services.resolver_metrics import get_metrics_snapshot
 from LoanMVP.services.renter_invite_service import build_invite_token
+from LoanMVP.services.payments_service import get_or_create_payment_account
 import requests
 from LoanMVP.utils.safe_http import safe_call
 
@@ -180,12 +181,20 @@ def dashboard():
         "open_maintenance": open_maintenance,
     }
 
+    investor_profile = _current_investor_profile()
+    stripe_connected = False
+    if investor_profile:
+        account = get_or_create_payment_account("investor_profile", investor_profile.id)
+        stripe_connected = account.is_ready_for_payments
+
     return render_template(
         "property/dashboard.html",
         property_rows=property_rows,
         stats=stats,
         title="Property Management",
         active_tab="properties",
+        stripe_connected=stripe_connected,
+        show_stripe_banner=bool(investor_profile),
     )
 
 
