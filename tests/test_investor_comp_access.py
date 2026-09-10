@@ -3,10 +3,17 @@ letoya.mason@gmail.com, see INVESTOR_COMPED_EMAILS in
 LoanMVP/utils/decorators.py) to full access at no charge, independent
 of INVESTOR_GRANDFATHERED_CUTOFF.
 
-Two separate gates both had to learn about this: the effective-plan
-helper in investor_routes.py, and the global check_trial_expiry()
-before_request hook in app.py that actually redirects an expired trial
-to the paywall.
+Three separate gates all had to learn about this:
+1. The effective-plan helper in investor_routes.py.
+2. check_trial_expiry() in app.py, the before_request hook that
+   redirects an expired PREVIEW trial to /trial-expired.
+3. inject_trial_popup_data() in app.py, a context processor that shows
+   a "Your free trial is over" popup on any ravlo_base.html page
+   whenever trial_ends_at has passed and subscription isn't a paid
+   plan -- this one fires regardless of subscription == "preview", so
+   it caught an account gate #2 didn't (e.g. subscription == "free"
+   with a past trial_ends_at), which is exactly how the comped account
+   still saw the popup on /partners/register after gate #2 was fixed.
 """
 from datetime import datetime, timedelta
 
@@ -81,3 +88,37 @@ def test_non_comped_account_with_expired_trial_still_gets_the_paywall(db_session
 
     assert resp.status_code == 302
     assert "trial-expired" in resp.headers["Location"]
+
+
+def test_comped_account_does_not_see_the_trial_ended_popup(db_session, client):
+    """subscription='free' (not 'preview') with a past trial_ends_at is
+    exactly the state that slips past check_trial_expiry() (which only
+    checks subscription == 'preview') but still trips the "Your free
+    trial is over" popup in inject_trial_popup_data() -- which fires for
+    any subscription not in its own paid-plans set."""
+    expired_trial = datetime.utcnow() - timedelta(days=1)
+    user = _make_investor(
+        db_session, "letoya.mason@gmail.com",
+        subscription="free", trial_ends_at=expired_trial,
+    )
+    login_as(client, user)
+
+    resp = client.get("/investor/dashboard")
+
+    assert resp.status_code == 200
+    assert "Your free trial is over" not in resp.get_data(as_text=True)
+
+
+def test_non_comped_account_in_the_same_state_still_sees_the_popup(db_session, client):
+    """Confirms the test setup actually reproduces the popup gate."""
+    expired_trial = datetime.utcnow() - timedelta(days=1)
+    user = _make_investor(
+        db_session, "another-free-account@example.com",
+        subscription="free", trial_ends_at=expired_trial,
+    )
+    login_as(client, user)
+
+    resp = client.get("/investor/dashboard")
+
+    assert resp.status_code == 200
+    assert "Your free trial is over" in resp.get_data(as_text=True)
