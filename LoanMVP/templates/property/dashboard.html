@@ -23,6 +23,18 @@
   .pm-metrics span strong{color:#fff;}
 </style>
 
+{% if show_stripe_banner and not stripe_connected %}
+<div class="ravlo-card pad" style="background:rgba(24,119,242,0.08);border-color:rgba(24,119,242,0.25);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+  <div>
+    <strong><i class="lucide lucide-hand-coins"></i> Collect rent online -- connect Stripe</strong>
+    <div class="muted" style="margin-top:2px;">Renters can pay rent straight from their portal once you're connected. Ravlo never touches the money -- it goes directly into your own Stripe account.</div>
+  </div>
+  <a href="{{ url_for('payments.connect_start') }}" class="ravlo-btn primary sm" style="white-space:nowrap;">
+    <i class="lucide lucide-link"></i> Connect Stripe
+  </a>
+</div>
+{% endif %}
+
 <div class="pm-stats">
   <div class="pm-stat"><div class="label">Properties</div><div class="value">{{ stats.total_properties }}</div></div>
   <div class="pm-stat"><div class="label">Units</div><div class="value">{{ stats.total_units }}</div></div>

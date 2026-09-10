@@ -118,6 +118,12 @@
       <span>Property Management</span>
     </a>
 
+    <a href="{{ url_for('payments.dashboard') }}"
+       class="ravlo-nav-link {% if bp == 'payments' %}active{% endif %}">
+      <i class="lucide lucide-hand-coins"></i>
+      <span>Payments</span>
+    </a>
+
     <div class="ravlo-nav-section">Capital</div>
 
     <a href="{{ url_for('investor.loans') }}"

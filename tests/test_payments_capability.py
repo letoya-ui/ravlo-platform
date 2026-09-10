@@ -7,6 +7,7 @@ not just the one it was first wired up for.
 """
 from LoanMVP.extensions import db
 from LoanMVP.models.admin import Company
+from LoanMVP.models.investor_models import InvestorProfile
 from LoanMVP.models.payment_models import PaymentAccount, PaymentRequest
 from LoanMVP.models.salon_models import StylistProfile
 from LoanMVP.models.user_model import User
@@ -60,6 +61,17 @@ def _make_stylist(db_session, email="stylist@example.com"):
     profile = StylistProfile(
         user_id=user.id, company_id=company.id, full_name="Aisha Stylist", brand_color="#B3122A",
     )
+    db_session.add(profile)
+    db_session.commit()
+    return user, profile
+
+
+def _make_investor(db_session, email="investor@example.com"):
+    company = _make_company(db_session, "Investor Co")
+    user = User(email=email, role="investor", is_active=True, company_id=company.id)
+    db_session.add(user)
+    db_session.commit()
+    profile = InvestorProfile(user_id=user.id, full_name="Ivy Investor", email=email)
     db_session.add(profile)
     db_session.commit()
     return user, profile
@@ -135,6 +147,23 @@ def test_dashboard_shows_connected_state(db_session, client):
 
     assert resp.status_code == 200
     assert "Stripe connected" in resp.get_data(as_text=True)
+
+
+def test_dashboard_shows_investor_sidebar_not_partner_workspace_for_investor(db_session, client):
+    """resolve_current_owner() learned about investor_profile owners
+    (landlords connecting Stripe to collect rent), but _dashboard_chrome()
+    still hardcoded portal="vip" for anyone who wasn't a stylist -- so an
+    investor visiting their own Payments page got the Partner Workspace
+    sidebar instead of their own Investor Portal sidebar."""
+    user, _ = _make_investor(db_session, email="investor-chrome@example.com")
+    login_as(client, user)
+
+    resp = client.get("/payments/")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Investor Portal" in body
+    assert "Partner Workspace" not in body
 
 
 # ─── Connect onboarding ─────────────────────────────────────────────────────

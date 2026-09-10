@@ -34,16 +34,19 @@ from LoanMVP.services.payments_service import (
 payments_bp = Blueprint("payments", __name__, url_prefix="/payments")
 
 
-def _dashboard_chrome():
-    """resolve_current_owner() only ever resolves a stylist_profile or a
-    vip_profile owner here -- nothing else reaches this dashboard. Neither
-    this route nor booking_routes.py's availability() used to pass a
-    portal/base_template, so both silently fell through ravlo_base.html's
-    blueprint-based default (whose only special cases are 'vip'/'elena'/
-    'partners' blueprints) and rendered every visitor -- stylist or
-    partner alike -- with the wrong Investor sidebar."""
+def _dashboard_chrome(owner_type=None):
+    """Which sidebar chrome wraps the Payments pages. Originally only
+    stylist_profile/vip_profile owners ever reached this dashboard, so
+    everything that wasn't a stylist got hardcoded to portal="vip". Once
+    resolve_current_owner() learned about investor_profile (landlords
+    connecting Stripe to collect rent), that hardcoding silently gave
+    every investor the Partner Workspace sidebar instead of their own --
+    branch on the actual resolved owner_type instead of guessing from
+    role."""
     if (getattr(current_user, "role", "") or "").strip().lower() == "stylist":
         return "layouts/ravlo_employee_base.html", {}
+    if owner_type == "investor_profile":
+        return "layouts/ravlo_base.html", {}
     return "layouts/ravlo_base.html", {"portal": "vip"}
 
 
@@ -63,7 +66,7 @@ def dashboard():
         .all()
     )
 
-    base_template, chrome_kwargs = _dashboard_chrome()
+    base_template, chrome_kwargs = _dashboard_chrome(owner_type)
     return render_template(
         "payments/dashboard.html",
         account=account,
