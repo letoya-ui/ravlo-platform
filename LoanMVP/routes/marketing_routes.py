@@ -685,6 +685,11 @@ def academy():
     return render_template("marketing/academy.html")
 
 
+@marketing_bp.route("/realtors")
+def realtors():
+    return render_template("marketing/realtors.html")
+
+
 @marketing_bp.route("/university")
 def university_redirect():
     return redirect(url_for("marketing.academy"), code=301)
