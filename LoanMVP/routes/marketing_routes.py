@@ -690,6 +690,64 @@ def realtors():
     return render_template("marketing/realtors.html")
 
 
+@marketing_bp.route("/realtors/request-showing", methods=["POST"])
+@limiter.limit("5 per minute")
+def realtors_showing_lead():
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+    phone = (data.get("phone") or "").strip()
+    preferred_date = (data.get("date") or "").strip()
+
+    if not name or not email:
+        return {"ok": False, "error": "Name and email are required."}, 400
+
+    notes = "Requested a showing via the /realtors sample listing page."
+    if preferred_date:
+        notes += f" Preferred date: {preferred_date}."
+
+    row = BusinessInquiry(
+        inquiry_type="realtor_partner_lead",
+        company_name="—",
+        contact_name=name,
+        email=email,
+        phone=phone or None,
+        business_type="realtor_partner_lead",
+        notes=notes,
+        status="new",
+    )
+    db.session.add(row)
+    db.session.commit()
+    _notify_admin_realtor_lead(name, email, phone, preferred_date)
+    return {"ok": True}
+
+
+def _notify_admin_realtor_lead(name: str, email: str, phone: str, preferred_date: str) -> None:
+    try:
+        from LoanMVP.app import mail
+        from flask_mail import Message as MailMessage
+
+        admin_email = _owner_admin_email()
+        if not admin_email:
+            return
+
+        msg = MailMessage(
+            subject=f"[Ravlo] Realtor page lead — {email}",
+            recipients=[admin_email],
+        )
+        msg.body = (
+            f"New lead from the /realtors sample listing page:\n\n"
+            f"Name:  {name}\n"
+            f"Email: {email}\n"
+            f"Phone: {phone or '(not given)'}\n"
+            f"Preferred date: {preferred_date or '(not given)'}\n\n"
+            f"Follow up to talk through the Realtor Partner Network."
+        )
+        mail.send(msg)
+    except Exception as e:
+        current_app.logger.warning("[realtors] lead notification failed: %s", e)
+
+
 @marketing_bp.route("/university")
 def university_redirect():
     return redirect(url_for("marketing.academy"), code=301)
