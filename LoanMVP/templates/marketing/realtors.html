@@ -88,39 +88,40 @@
   .btn.outline{background:transparent;border:1px solid var(--line);color:var(--ink);}
   .btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
 
-  /* ---- hero (photo card + a normal-flow showing card, side by side) ---- */
+  /* ---- hero (showing card floats on the photo; stacks below on mobile) ---- */
   .hero{padding-block:28px 6px;}
-  .hero-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:24px;align-items:stretch;}
-  @media (max-width:1100px){ .hero-grid{grid-template-columns:1fr;} }
-  .hero-photo-frame{position:relative;border-radius:16px;overflow:hidden;background:var(--navy);min-height:320px;}
-  .hero-img{display:block;width:100%;height:100%;object-fit:cover;object-position:left bottom;}
+  .hero-photo-frame{position:relative;border-radius:16px;overflow:hidden;background:var(--navy);}
+  .hero-img{display:block;width:100%;height:auto;}
 
   .showing-card-wrap{
-    background:var(--navy);border-radius:16px;padding:22px;color:#fff;
-    display:flex;flex-direction:column;
+    position:absolute;right:4%;top:5%;width:30%;max-width:320px;min-width:220px;
+    background:rgba(8,18,22,.94);backdrop-filter:blur(4px);
+    border:1px solid rgba(255,255,255,.14);border-radius:14px;
+    padding:20px;color:#fff;
   }
-  .showing-card-wrap h3{color:#fff;font-size:1.15rem;margin:0 0 4px;}
-  .showing-card-wrap .sub{color:rgba(255,255,255,.7);font-size:.82rem;margin:0 0 16px;}
+  .showing-card-wrap h3{color:#fff;font-size:1.1rem;margin:0 0 4px;}
+  .showing-card-wrap .sub{color:rgba(255,255,255,.7);font-size:.8rem;margin:0 0 14px;}
   .ov-field{margin-bottom:10px;position:relative;}
   .ov-field input{
-    width:100%;height:42px;border:none;border-radius:8px;box-sizing:border-box;
-    font:500 .9rem/1 var(--font-body);color:var(--ink);
-    padding:0 12px 0 36px;background:#fff;
+    width:100%;height:40px;border:none;border-radius:8px;box-sizing:border-box;
+    font:500 .88rem/1 var(--font-body);color:var(--ink);
+    padding:0 12px 0 35px;background:#fff;
   }
   .ov-field .ic{
     position:absolute;left:11px;top:50%;transform:translateY(-50%);
     width:15px;height:15px;color:#8992a0;pointer-events:none;
   }
   .ov-btn{border:none;cursor:pointer;font:inherit;border-radius:8px;}
-  .ov-btn.solid{width:100%;height:44px;margin-top:4px;background:var(--blue);color:#fff;font-weight:700;font-size:.92rem;}
+  .ov-btn.solid{width:100%;height:42px;margin-top:4px;background:var(--blue);color:#fff;font-weight:700;font-size:.9rem;}
   .ov-btn.solid:hover{background:var(--blue-strong);}
-  .ghost-pair{display:flex;gap:10px;margin-top:12px;}
-  .ov-btn.ghost{flex:1;height:38px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.3);color:#fff;font-weight:600;font-size:.8rem;}
+  .ghost-pair{display:flex;gap:8px;margin-top:10px;}
+  .ov-btn.ghost{flex:1;height:37px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.3);color:#fff;font-weight:600;font-size:.78rem;}
   .ov-btn.ghost:hover{background:rgba(255,255,255,.18);}
   .ov-btn:focus-visible, .ov-field input:focus-visible{outline:2px solid #fff;outline-offset:2px;}
-  .fine-note{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:12px;text-align:center;}
+  .fine-note{font-size:.68rem;color:rgba(255,255,255,.55);margin-top:10px;text-align:center;}
   #showingConfirmWrap{
-    display:none;background:var(--navy);border-radius:16px;color:#fff;
+    display:none;position:absolute;right:4%;top:5%;width:30%;max-width:320px;min-width:220px;
+    background:rgba(8,18,22,.94);border-radius:14px;color:#fff;
     align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px 18px;
   }
   #showingConfirmWrap .check{
@@ -129,6 +130,12 @@
   }
   #showingConfirmWrap p{color:rgba(255,255,255,.75);font-size:.86rem;margin:6px 0 0;max-width:32ch;}
   .form-error{display:none;margin-top:8px;color:#ffb4b4;font-size:.74rem;text-align:center;}
+  @media (max-width:820px){
+    .showing-card-wrap, #showingConfirmWrap{
+      position:static !important;width:100% !important;max-width:none !important;min-width:0 !important;
+      border-radius:0;backdrop-filter:none;
+    }
+  }
 
   /* ---- gallery ---- */
   .gallery-wrap{margin-top:14px;}
@@ -259,10 +266,9 @@
 </nav>
 
 <section class="hero" id="showing">
-<div class="wrap hero-grid">
-  <div class="hero-photo-frame">
-    <img class="hero-img" src="{{ url_for('static', filename='images/marketing/realtors/hero.jpg') }}" alt="1247 Sycamore Ridge Lane at dusk">
-  </div>
+<div class="wrap">
+<div class="hero-photo-frame">
+  <img class="hero-img" src="{{ url_for('static', filename='images/marketing/realtors/hero.jpg') }}" alt="1247 Sycamore Ridge Lane at dusk">
   <div class="showing-card-wrap" id="showingCard">
     <h3>See It in Person</h3>
     <div class="sub">Schedule a private showing or ask a question. All inquiries go directly to the listing agent.</div>
@@ -295,6 +301,7 @@
     <div style="font-weight:700;">Request sent</div>
     <p>Maya gets this instantly in her Ravlo CRM — most buyers hear back within the hour.</p>
   </div>
+</div>
 </div>
 </section>
 
