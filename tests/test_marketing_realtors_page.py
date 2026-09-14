@@ -35,6 +35,16 @@ def test_realtors_page_does_not_hide_showing_form_on_mobile(client):
     assert "showFormError" in body
 
 
+def test_realtors_page_links_home_to_the_main_ravlo_site(client):
+    """Visitors are scrolling a sample listing, not the real site -- the
+    logo and "Home" nav link should take them to the actual Ravlo
+    marketing homepage, not just scroll them back up this page."""
+    resp = client.get("/realtors")
+
+    body = resp.get_data(as_text=True)
+    assert body.count('href="/"') >= 2
+
+
 def test_realtors_showing_request_saves_a_lead(db_session, client):
     resp = client.post(
         "/realtors/request-showing",

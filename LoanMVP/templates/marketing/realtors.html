@@ -252,9 +252,9 @@
 
 <nav class="topnav" id="top">
   <div class="nav-inner">
-    <div class="logo">RAVLO<small>REAL ESTATE, FURTHER.</small></div>
+    <a href="{{ url_for('marketing.homepage') }}" class="logo" style="text-decoration:none;display:inline-block;color:inherit;">RAVLO<small>REAL ESTATE, FURTHER.</small></a>
     <div class="nav-links">
-      <a href="#top">Home</a>
+      <a href="{{ url_for('marketing.homepage') }}">Home</a>
       <a href="#features">Features</a>
       <a href="#gallery">Gallery</a>
       <a href="#neighborhood">Neighborhood</a>
