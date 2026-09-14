@@ -84,108 +84,11 @@
   .role-tab.active{background:var(--app-bg);color:#fff;border-color:var(--app-line);}
   .role-tab:not(.active):hover{background:rgba(255,255,255,.09);color:#fff;}
 
-  /* ---------------- app mockup shell (admin / lo / processor / underwriter) ---------------- */
-  .app-shell{display:flex;min-height:720px;background:var(--app-bg);}
-
-  .app-sidebar{
-    width:236px;flex:0 0 236px;background:var(--app-sidebar);
-    display:flex;flex-direction:column;padding:22px 16px;border-right:1px solid var(--app-line);
-  }
-  .app-brand{padding:2px 8px 20px;}
-  .app-brand .name{font-weight:800;font-size:1.02rem;letter-spacing:.03em;color:#fff;line-height:1.2;}
-  .app-brand .sub{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.16em;color:var(--app-gold);margin-top:3px;}
-  .app-brand .tag{font-size:.68rem;color:var(--app-muted);margin-top:8px;font-style:italic;}
-
-  .app-nav{display:flex;flex-direction:column;gap:2px;margin-top:6px;flex:1;overflow:hidden;}
-  .app-nav a{
-    display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:9px;
-    color:var(--app-muted);text-decoration:none;font-size:.86rem;font-weight:500;
-  }
-  .app-nav a svg{width:16px;height:16px;flex-shrink:0;}
-  .app-nav a.active{background:var(--app-teal);color:#fff;font-weight:600;}
-  .app-nav a:not(.active):hover{background:rgba(255,255,255,.05);color:#fff;}
-
-  .app-support{
-    margin-top:14px;background:var(--app-card-soft);border:1px solid var(--app-line);
-    border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--app-muted);
-  }
-  .app-support svg{width:16px;height:16px;flex-shrink:0;color:var(--app-gold);}
-
-  .app-user{display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 8px 2px;border-top:1px solid var(--app-line);}
-  .app-user .avatar{width:32px;height:32px;border-radius:50%;background:var(--app-teal);color:#fff;font-weight:700;font-size:.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-  .app-user .who b{display:block;font-size:.82rem;color:#fff;}
-  .app-user .who small{font-size:.72rem;color:var(--app-muted);}
-
-  /* ---------------- app main column ---------------- */
-  .app-main{flex:1;min-width:0;padding:20px 26px 34px;}
-
-  .app-topbar{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
-  .app-search{
-    flex:1;min-width:200px;display:flex;align-items:center;gap:10px;background:var(--app-card);
-    border:1px solid var(--app-line);border-radius:11px;padding:10px 14px;color:var(--app-muted);font-size:.86rem;
-  }
-  .app-search svg{width:16px;height:16px;flex-shrink:0;}
-  .app-addbtn{
-    display:inline-flex;align-items:center;gap:7px;background:var(--app-blue);color:#08172c;
-    font-weight:700;font-size:.86rem;border-radius:10px;padding:10px 16px;white-space:nowrap;border:none;cursor:default;
-  }
-  .app-bell{
-    position:relative;width:38px;height:38px;border-radius:10px;background:var(--app-card);
-    border:1px solid var(--app-line);display:flex;align-items:center;justify-content:center;color:var(--app-muted);flex-shrink:0;
-  }
-  .app-bell svg{width:17px;height:17px;}
-  .app-bell .dot{position:absolute;top:-4px;right:-4px;background:var(--app-red);color:#fff;font-size:.62rem;font-weight:700;border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;}
-  .app-idbadge{display:flex;align-items:center;gap:10px;flex-shrink:0;}
-  .app-idbadge .mark{width:36px;height:36px;border-radius:50%;background:var(--app-navy);border:1px solid var(--app-gold);color:var(--app-gold);font-weight:800;font-size:.78rem;display:flex;align-items:center;justify-content:center;}
-  .app-idbadge .co b{display:block;font-size:.86rem;color:#fff;}
-  .app-idbadge .co small{font-size:.64rem;letter-spacing:.05em;color:var(--app-muted);}
-
-  /* hero banner */
-  .app-hero{
-    background:linear-gradient(120deg,var(--app-navy) 0%,#123a63 60%,var(--app-teal) 130%);
-    border-radius:16px;padding:26px 28px;margin-bottom:20px;
-    display:flex;justify-content:space-between;gap:24px;align-items:center;flex-wrap:wrap;
-    border:1px solid var(--app-line);position:relative;overflow:hidden;
-  }
-  .app-hero::after{
-    content:'';position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;
-    background:radial-gradient(circle,rgba(216,178,60,.16),transparent 70%);
-  }
-  .app-hero-left h1{font-size:1.5rem;margin:0 0 4px;color:#fff;}
-  .app-hero-left p{margin:0 0 16px;color:rgba(255,255,255,.78);font-size:.92rem;}
-  .app-hero-icons{display:flex;gap:22px;flex-wrap:wrap;}
-  .app-hero-icons .hi{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.72rem;color:rgba(255,255,255,.85);}
-  .app-hero-icons .hi .box{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;}
-  .app-hero-icons .hi .box svg{width:18px;height:18px;color:#fff;}
-  .app-hero-quote{
-    max-width:230px;background:rgba(8,20,36,.4);border:1px solid rgba(255,255,255,.18);
-    border-radius:12px;padding:16px 18px;color:#fff;flex-shrink:0;
-  }
-  .app-hero-quote p{margin:0;font-size:.92rem;font-style:italic;line-height:1.4;}
-  .app-hero-quote .sig{margin-top:10px;font-size:.7rem;letter-spacing:.14em;color:var(--app-gold);font-weight:700;}
-  @media (max-width:760px){ .app-hero-quote{display:none;} }
-
-  /* stat cards */
-  .stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px;}
-  .stat-row.cols-4{grid-template-columns:repeat(4,1fr);}
-  @media (max-width:1100px){ .stat-row{grid-template-columns:repeat(3,1fr);} }
-  @media (max-width:700px){ .stat-row{grid-template-columns:repeat(2,1fr);} }
-  .stat-card{background:var(--app-card);border:1px solid var(--app-line);border-radius:14px;padding:16px;}
-  .stat-card .ic{width:32px;height:32px;border-radius:9px;background:rgba(111,168,255,.15);display:flex;align-items:center;justify-content:center;margin-bottom:10px;color:var(--app-blue);}
-  .stat-card .ic svg{width:16px;height:16px;}
-  .stat-card .lbl{font-size:.76rem;color:var(--app-muted);margin-bottom:4px;}
-  .stat-card .val{font-size:1.4rem;font-weight:800;color:#fff;}
-  .stat-card .delta{font-size:.72rem;margin-top:6px;color:var(--app-teal);font-weight:600;}
-  .stat-card .delta small{color:var(--app-muted);font-weight:400;}
-
-  /* middle grid: pipeline / loan types / leads by source */
-  .mid-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:14px;margin-bottom:20px;}
-  @media (max-width:980px){ .mid-grid{grid-template-columns:1fr;} }
+  /* ---------------- shared inner-content components (reused across every role's rc-shell / the borrower portal) ---------------- */
   .panel{background:var(--app-card);border:1px solid var(--app-line);border-radius:14px;padding:18px;min-width:0;}
   .panel + .panel{margin-top:14px;}
   .panel h3{margin:0 0 14px;font-size:.96rem;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
   .panel h3 .tag{font-size:.68rem;font-weight:500;color:var(--app-muted);background:rgba(255,255,255,.06);padding:4px 9px;border-radius:99px;}
-  .file-sub{color:var(--app-muted);font-size:.8rem;margin:-6px 0 14px;}
 
   .bars{display:flex;align-items:flex-end;gap:14px;height:110px;padding-top:10px;}
   .bars .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;}
@@ -211,25 +114,6 @@
   .src-row .track{flex:1;height:7px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;}
   .src-row .fill{height:100%;border-radius:99px;background:var(--app-blue);}
   .src-row .n{width:20px;text-align:right;color:#fff;font-weight:700;font-size:.78rem;}
-
-  /* bottom grid: borrower table + tasks */
-  .bottom-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:20px;}
-  @media (max-width:980px){ .bottom-grid{grid-template-columns:1fr;} }
-
-  .table-scroll{overflow-x:auto;}
-  table.bt{width:100%;min-width:480px;border-collapse:collapse;font-size:.82rem;}
-  table.bt th{text-align:left;color:var(--app-muted);font-weight:600;font-size:.72rem;padding:0 8px 10px;border-bottom:1px solid var(--app-line);white-space:nowrap;}
-  table.bt td{padding:11px 8px;border-bottom:1px solid var(--app-line);color:var(--app-text);vertical-align:middle;}
-  table.bt tr:last-child td{border-bottom:none;}
-  .bt-name{display:flex;align-items:center;gap:9px;font-weight:600;white-space:nowrap;}
-  .bt-name .av{width:28px;height:28px;border-radius:50%;background:var(--app-navy);border:1px solid var(--app-line);color:var(--app-gold);font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-  .bt-addr small{display:block;color:var(--app-muted);font-size:.72rem;}
-  .pill{display:inline-block;padding:4px 11px;border-radius:99px;font-size:.72rem;font-weight:700;white-space:nowrap;}
-  .pill-blue{background:rgba(111,168,255,.16);color:var(--app-blue);}
-  .pill-teal{background:rgba(18,181,146,.16);color:var(--app-teal);}
-  .pill-purple{background:rgba(183,156,255,.16);color:var(--app-purple);}
-  .pill-amber{background:rgba(232,184,75,.16);color:var(--app-amber);}
-  .pill-outline{background:transparent;border:1px solid var(--app-line);color:var(--app-muted);}
 
   .task-list{display:flex;flex-direction:column;gap:2px;}
   .task-row{display:flex;align-items:flex-start;gap:10px;padding:10px 4px;border-bottom:1px solid var(--app-line);}
@@ -268,23 +152,8 @@
   .dec-btn.suspend{background:rgba(232,184,75,.16);color:var(--app-amber);border:1px solid rgba(232,184,75,.35);}
   .dec-btn.decline{background:rgba(239,106,106,.14);color:var(--app-red);border:1px solid rgba(239,106,106,.32);}
 
-  .quick-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
-  @media (max-width:760px){ .quick-row{grid-template-columns:1fr;} }
-  .quick-card{
-    background:var(--app-card);border:1px solid var(--app-line);border-radius:14px;padding:16px 18px;
-    display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;color:inherit;
-  }
-  .quick-card .qt b{display:block;font-size:.88rem;color:#fff;margin-bottom:3px;}
-  .quick-card .qt small{font-size:.76rem;color:var(--app-muted);}
-  .quick-card svg{width:16px;height:16px;color:var(--app-muted);flex-shrink:0;}
-
   .app-footer{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 0;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.08em;color:var(--app-muted);}
   .app-footer strong{color:var(--app-gold);}
-
-  @media (max-width:900px){
-    .app-sidebar{display:none;}
-    .app-shell{min-height:0;}
-  }
 
   /* ---------------- borrower portal shell (distinct from the internal app) ---------------- */
   .borrower-shell{min-height:720px;background:var(--app-bg);padding-bottom:10px;}
@@ -491,363 +360,420 @@
   </div>
 </div>
 
-<div class="app-shell" id="appShell" hidden>
-  <aside class="app-sidebar">
-    <div class="app-brand">
-      <div class="name">MERIDIAN CAPITAL</div>
-      <div class="sub">LENDING OS</div>
-      <div class="tag">"Guiding Capital. Building Futures."</div>
+<!-- ============ LOAN OFFICER (Chris Nakamura) -- mirrors _sidebar_loan_officer.html ============ -->
+<div class="rc-shell" id="loShell" hidden>
+  <aside class="rc-sidebar">
+    <div class="rc-brand">
+      <div class="rc-brand-mark">MC</div>
+      <div>
+        <div class="rc-brand-title">Meridian Capital</div>
+        <div class="rc-brand-sub">Guiding Capital. Building Futures.</div>
+      </div>
     </div>
-    <nav class="app-nav">
-      <a href="#" id="navDashboard" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
-      <a href="#" id="navLeads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15 14.3c2.4.3 4 1.9 4 5"/></svg>Leads</a>
-      <a href="#" id="navBorrowers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Borrowers</a>
-      <a href="#" id="navPipeline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9l8-5 8 5v10"/><path d="M9 21v-6h6v6"/></svg>Pipeline</a>
-      <a href="#" id="navPricing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>Pricing Engine</a>
-      <a href="#" id="navPreapprovals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>Pre-Approvals</a>
-      <a href="#" id="navProcessing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>Processing</a>
-      <a href="#" id="navConditions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg>Conditions</a>
-      <a href="#" id="navDocuments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><line x1="10" y1="13" x2="15" y2="13"/><line x1="10" y1="17" x2="15" y2="17"/></svg>Documents</a>
-      <a href="#" id="navCalendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>Calendar</a>
-      <a href="#" id="navTasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h11l5 5v7a1 1 0 0 1-1 1H4z"/><path d="M9 10l2 2 4-4"/></svg>Tasks</a>
-      <a href="#" id="navReports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="21" x2="5" y2="10"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="14"/></svg>Reports</a>
-      <a href="#" id="navIntegrations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 15l6-6"/><path d="M8 12l-2 2a3 3 0 0 0 4 4l2-2"/><path d="M16 12l2-2a3 3 0 0 0-4-4l-2 2"/></svg>Integrations</a>
-      <a href="#" id="navSettings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Settings</a>
+    <nav class="rc-nav">
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Command</div>
+        <a href="#" class="rc-nav-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Pipeline</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c0-1-1-2-1-3 2 1 3 3 3 5a5 5 0 0 1-10 0c0-4 3-6 5-10z"/></svg>Leads</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Borrowers</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9l8-5 8 5v10"/><path d="M9 21v-6h6v6"/></svg>Loans</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>Credit Check</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><line x1="10" y1="13" x2="15" y2="13"/><line x1="10" y1="17" x2="15" y2="17"/></svg>Loan Application</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Workflow</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h11l5 5v7a1 1 0 0 1-1 1H4z"/><path d="M9 10l2 2 4-4"/></svg>Tasks</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/><path d="M5 20l7-7"/></svg>Tools</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Resources</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5c3-1.5 6-1.5 8 0v14c-2-1.5-5-1.5-8 0z"/><path d="M20 5c-3-1.5-6-1.5-8 0v14c2-1.5 5-1.5 8 0z"/></svg>Resource Center</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/><path d="M5 20l7-7"/></svg>Create Content</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11v2a2 2 0 0 0 2 2h1l8 4V5L6 9H5a2 2 0 0 0-2 2z"/><path d="M13 8a3 3 0 0 1 0 8"/></svg>Campaigns</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Settings</a>
+      </div>
     </nav>
-    <div class="app-support">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3z"/><path d="M3 19a2 2 0 0 0 2 2h1v-6H3z"/></svg>
-      <span>Support — We're here to help.</span>
-    </div>
-    <div class="app-user">
-      <div class="avatar" id="sidebarAvatar">RC</div>
-      <div class="who"><b id="sidebarName">Renata Castillo</b><small id="sidebarRole">Owner / Admin</small></div>
+    <div class="rc-sidebar-foot">
+      <div class="rc-user-chip">
+        <div class="rc-user-avatar">CN</div>
+        <div><div class="rc-user-name">Chris Nakamura</div><div class="rc-user-role">Loan Officer</div></div>
+      </div>
     </div>
   </aside>
 
-  <main class="app-main">
-    <div class="app-topbar">
-      <div class="app-search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
-        Search borrowers, leads, or loans…
+  <main class="rc-main">
+    <header class="rc-topbar">
+      <div>
+        <div class="rc-page-title">Loan Officer Workspace</div>
+        <div class="rc-page-subline">Your pipeline, quotes, and follow-ups at Meridian Capital</div>
       </div>
-      <button class="app-addbtn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Borrower
-      </button>
-      <div class="app-bell">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 6.5H4.5C4.5 13.5 6 12 6 8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
-        <span class="dot">3</span>
+      <div class="rc-topbar-right">
+        <div class="rc-bell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 6.5H4.5C4.5 13.5 6 12 6 8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><span class="dot">1</span></div>
       </div>
-      <div class="app-idbadge">
-        <div class="mark">MC</div>
-        <div class="co"><b>Meridian Capital</b><small>HOME LOANS, GUIDED WELL</small></div>
+    </header>
+
+    <div class="rc-kpi-primary">
+      <div class="rc-kpi-card rc-kpi--blue">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">My Active Files</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span></div>
+        <div class="rc-kpi-val">2</div>
+        <div class="rc-kpi-sub">↑ 1 vs. last month</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--teal">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">New Leads Assigned</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c0-1-1-2-1-3 2 1 3 3 3 5a5 5 0 0 1-10 0c0-4 3-6 5-10z"/></svg></span></div>
+        <div class="rc-kpi-val">2</div>
+        <div class="rc-kpi-sub">↑ 100% vs. last week</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--amber">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Quotes Sent This Week</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span></div>
+        <div class="rc-kpi-val">3</div>
+        <div class="rc-kpi-sub">↑ 50% vs. last week</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--purple">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Avg. Response Time</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span></div>
+        <div class="rc-kpi-val">18 min</div>
+        <div class="rc-kpi-sub">↓ 22% vs. last 30 days</div>
       </div>
     </div>
 
-    <!-- ============ LOAN OFFICER (Chris Nakamura) ============ -->
-    <div data-role-content="lo" hidden>
-      <div class="app-hero">
-        <div class="app-hero-left">
-          <h1>Welcome back, Chris</h1>
-          <p>You're carrying 2 active files and 1 new lead this week.</p>
-          <div class="app-hero-icons">
-            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></span>Leads</div>
-            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>Quotes</div>
-            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></span>Pre-Approvals</div>
+    <div class="rc-layout">
+      <div class="rc-main-col">
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">QUOTE ENGINE</div><h3>Danielle Carter</h3><p class="rc-card-sub">Conventional · $460,750</p></div>
+          </div>
+          <div class="quote-grid">
+            <div class="quote-card">
+              <div class="lender">Harbor Trust</div>
+              <div class="rate">6.375%</div>
+              <div class="pmt">~$2,876 /mo est.</div>
+            </div>
+            <div class="quote-card best">
+              <div class="badge">Best APR</div>
+              <div class="lender">Palmetto Federal</div>
+              <div class="rate">6.25%</div>
+              <div class="pmt">~$2,838 /mo est.</div>
+              <div class="selected">✓ Selected by Chris</div>
+            </div>
+            <div class="quote-card">
+              <div class="lender">Coastline Mortgage</div>
+              <div class="rate">6.5%</div>
+              <div class="pmt">~$2,912 /mo est.</div>
+            </div>
           </div>
         </div>
-        <div class="app-hero-quote">
-          <p>"Every borrower gets side-by-side lender quotes before they ever sign."</p>
-          <div class="sig">— CHRIS NAKAMURA, LOAN OFFICER</div>
-        </div>
-      </div>
 
-      <div class="stat-row cols-4">
-        <div class="stat-card">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
-          <div class="lbl">My Active Files</div>
-          <div class="val">2</div>
-          <div class="delta">↑ 1 <small>vs. last month</small></div>
-        </div>
-        <div class="stat-card">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></div>
-          <div class="lbl">New Leads Assigned</div>
-          <div class="val">2</div>
-          <div class="delta">↑ 100% <small>vs. last week</small></div>
-        </div>
-        <div class="stat-card">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>
-          <div class="lbl">Quotes Sent This Week</div>
-          <div class="val">3</div>
-          <div class="delta">↑ 50% <small>vs. last week</small></div>
-        </div>
-        <div class="stat-card">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></div>
-          <div class="lbl">Avg. Response Time</div>
-          <div class="val">18 min</div>
-          <div class="delta">↓ 22% <small>vs. last 30 days</small></div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h3>Quote Engine — Danielle Carter <span class="tag">Conventional • $460,750</span></h3>
-        <div class="quote-grid">
-          <div class="quote-card">
-            <div class="lender">Harbor Trust</div>
-            <div class="rate">6.375%</div>
-            <div class="pmt">~$2,876 /mo est.</div>
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">PIPELINE</div><h3>My Pipeline</h3><p class="rc-card-sub">2 active files</p></div>
           </div>
-          <div class="quote-card best">
-            <div class="badge">Best APR</div>
-            <div class="lender">Palmetto Federal</div>
-            <div class="rate">6.25%</div>
-            <div class="pmt">~$2,838 /mo est.</div>
-            <div class="selected">✓ Selected by Chris</div>
-          </div>
-          <div class="quote-card">
-            <div class="lender">Coastline Mortgage</div>
-            <div class="rate">6.5%</div>
-            <div class="pmt">~$2,912 /mo est.</div>
+          <div class="rc-table-wrap">
+            <table class="rc-table">
+              <tr><th>Name</th><th>Property Address</th><th>Loan Type</th><th>Amount</th><th>Status</th></tr>
+              <tr>
+                <td><b>Danielle Carter</b></td>
+                <td>4128 Bayshore Vista Dr<br><span style="color:var(--rc-muted);font-size:.72rem;">Tampa, FL</span></td>
+                <td>Conventional</td><td>$460,750</td>
+                <td><span class="rc-badge rc-badge-info">Pre-Approval</span></td>
+              </tr>
+              <tr>
+                <td><b>Ade &amp; Lisa Okafor</b></td>
+                <td>88 Harborview Ln<br><span style="color:var(--rc-muted);font-size:.72rem;">Sarasota, FL</span></td>
+                <td>Conventional</td><td>$489,600</td>
+                <td><span class="rc-badge rc-badge-neutral">Underwriting</span></td>
+              </tr>
+            </table>
           </div>
         </div>
       </div>
 
-      <div class="bottom-grid">
-        <div class="panel">
-          <h3>My Pipeline <span class="tag">2 files</span></h3>
-          <div class="table-scroll">
-          <table class="bt">
-            <tr><th>Name</th><th>Property Address</th><th>Loan Type</th><th>Loan Amount</th><th>Status</th></tr>
-            <tr>
-              <td><div class="bt-name"><span class="av">DC</span>Danielle Carter</div></td>
-              <td>4128 Bayshore Vista Dr<br><small>Tampa, FL</small></td>
-              <td>Conventional</td>
-              <td class="num">$460,750</td>
-              <td><span class="pill pill-teal">Pre-Approval</span></td>
-            </tr>
-            <tr>
-              <td><div class="bt-name"><span class="av">AO</span>Ade &amp; Lisa Okafor</div></td>
-              <td>88 Harborview Ln<br><small>Sarasota, FL</small></td>
-              <td>Conventional</td>
-              <td class="num">$489,600</td>
-              <td><span class="pill pill-purple">Underwriting</span></td>
-            </tr>
-          </table>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h3>Tasks &amp; Follow-Ups</h3>
+      <aside class="rc-side-col">
+        <div class="rc-card">
+          <div class="rc-eyebrow" style="margin-bottom:2px;">TASKS</div>
+          <h3 style="margin-bottom:12px;">Tasks &amp; Follow-Ups</h3>
           <div class="task-list">
             <div class="task-row"><span class="cb"></span><div class="tx"><b>Call Danielle Carter</b><small>Confirm inspection date</small></div><span class="when">Today 10:00 AM</span></div>
             <div class="task-row"><span class="cb"></span><div class="tx"><b>New lead — Jordan Blake</b><small>Instagram — first-time buyer</small></div><span class="when">Today 4:00 PM</span></div>
             <div class="task-row"><span class="cb"></span><div class="tx"><b>Check in — Okafors</b><small>Underwriting is asking for a large-deposit letter</small></div><span class="when">Tomorrow</span></div>
           </div>
         </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<!-- ============ PROCESSOR (Jamie Ortiz) -- mirrors _sidebar_processor.html ============ -->
+<div class="rc-shell" id="processorShell" hidden>
+  <aside class="rc-sidebar">
+    <div class="rc-brand">
+      <div class="rc-brand-mark">MC</div>
+      <div>
+        <div class="rc-brand-title">Meridian Capital</div>
+        <div class="rc-brand-sub">Guiding Capital. Building Futures.</div>
+      </div>
+    </div>
+    <nav class="rc-nav">
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Command</div>
+        <a href="#" class="rc-nav-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Command Center</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="6" height="6"/><rect x="3" y="15" width="6" height="6"/><line x1="13" y1="8" x2="21" y2="8"/><line x1="13" y1="18" x2="21" y2="18"/></svg>Loan Queue</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Documents</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>Verify Docs</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Workflow</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="21" x2="5" y2="10"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="14"/></svg>Reports</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="8" width="14" height="10" rx="2"/><line x1="12" y1="4" x2="12" y2="8"/><circle cx="9" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1" fill="currentColor" stroke="none"/></svg>AI Assistant</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Settings</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Readiness</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Contracts Hub</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 12l2 2 4-4"/></svg>Onboarding</a>
+      </div>
+    </nav>
+    <div class="rc-sidebar-foot">
+      <div class="rc-user-chip">
+        <div class="rc-user-avatar">JO</div>
+        <div><div class="rc-user-name">Jamie Ortiz</div><div class="rc-user-role">Processor</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="rc-main">
+    <header class="rc-topbar">
+      <div>
+        <div class="rc-page-title">Processor Workspace</div>
+        <div class="rc-page-subline">Documents, conditions, and your queue at Meridian Capital</div>
+      </div>
+      <div class="rc-topbar-right">
+        <div class="rc-bell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 6.5H4.5C4.5 13.5 6 12 6 8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><span class="dot">2</span></div>
+      </div>
+    </header>
+
+    <div class="rc-kpi-primary">
+      <div class="rc-kpi-card rc-kpi--blue">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Files in Queue</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span></div>
+        <div class="rc-kpi-val">4</div>
+        <div class="rc-kpi-sub">↑ 1 vs. last week</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--teal">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Conditions Cleared</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></span></div>
+        <div class="rc-kpi-val">6</div>
+        <div class="rc-kpi-sub">↑ 20% this week</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--amber">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Docs Requested Today</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></span></div>
+        <div class="rc-kpi-val">2</div>
+        <div class="rc-kpi-sub">Steady</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--purple">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Avg. Turn Time</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span></div>
+        <div class="rc-kpi-val">1.8 days</div>
+        <div class="rc-kpi-sub">↓ 9% vs. last 30 days</div>
       </div>
     </div>
 
-    <!-- ============ PROCESSOR (Jamie Ortiz) ============ -->
-    <div data-role-content="processor" hidden>
-      <div class="app-hero">
-        <div class="app-hero-left">
-          <h1>Welcome back, Jamie</h1>
-          <p>1 file needs your attention today — 2 conditions are still outstanding.</p>
-          <div class="app-hero-icons">
-            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg></span>Documents</div>
-            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg></span>Conditions</div>
-            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span>Processing</div>
+    <div class="rc-layout">
+      <div class="rc-main-col">
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">ACTIVE FILE</div><h3>Marcus Reyes</h3><p class="rc-card-sub">FHA Refinance · $310,000 · 210 Willow Bend Ct, Orlando, FL — Processing</p></div>
           </div>
+          <div class="cond-list">
+            <div class="cond-row cleared">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span>
+              <div class="tx"><b>Signed loan application</b><small>Application</small></div>
+              <span class="rc-badge rc-badge-success">Cleared</span>
+            </div>
+            <div class="cond-row cleared">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span>
+              <div class="tx"><b>Two years of W-2s</b><small>Income</small></div>
+              <span class="rc-badge rc-badge-success">Cleared</span>
+            </div>
+            <div class="cond-row pending">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
+              <div class="tx"><b>Updated bank statement (last 30 days)</b><small>Assets</small></div>
+              <span class="rc-badge rc-badge-warning">Pending</span>
+            </div>
+            <div class="cond-row pending">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
+              <div class="tx"><b>Proof of homeowners insurance</b><small>Insurance</small></div>
+              <span class="rc-badge rc-badge-warning">Pending</span>
+            </div>
+          </div>
+          <button class="rc-btn primary" type="button" style="margin-top:14px;">Request Missing Documents</button>
         </div>
-        <div class="app-hero-quote">
-          <p>"Two conditions cleared, two to go — Marcus is close to underwriting."</p>
-          <div class="sig">— JAMIE ORTIZ, PROCESSOR</div>
+
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">QUEUE</div><h3>Up Next in Queue</h3></div>
+          </div>
+          <div class="rc-table-wrap">
+            <table class="rc-table">
+              <tr><th>Name</th><th>Loan Type</th><th>Amount</th><th>Status</th></tr>
+              <tr><td><b>Grace Liu</b></td><td>Conventional</td><td>$328,000</td><td><span class="rc-badge rc-badge-neutral">Awaiting Appraisal</span></td></tr>
+              <tr><td><b>Owen Park</b></td><td>FHA</td><td>$274,500</td><td><span class="rc-badge rc-badge-neutral">Doc Review</span></td></tr>
+            </table>
+          </div>
         </div>
       </div>
 
-      <div class="stat-row cols-4">
-        <div class="stat-card">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg></div>
-          <div class="lbl">Files in Queue</div>
-          <div class="val">4</div>
-          <div class="delta">↑ 1 <small>vs. last week</small></div>
-        </div>
-        <div class="stat-card">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></div>
-          <div class="lbl">Conditions Cleared</div>
-          <div class="val">6</div>
-          <div class="delta">↑ 20% <small>this week</small></div>
-        </div>
-        <div class="stat-card">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></div>
-          <div class="lbl">Docs Requested Today</div>
-          <div class="val">2</div>
-          <div class="delta">— <small>steady</small></div>
-        </div>
-        <div class="stat-card">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></div>
-          <div class="lbl">Avg. Turn Time</div>
-          <div class="val">1.8 days</div>
-          <div class="delta">↓ 9% <small>vs. last 30 days</small></div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h3>Marcus Reyes <span class="tag">FHA Refinance • $310,000</span></h3>
-        <div class="file-sub">210 Willow Bend Ct, Orlando, FL — Processing</div>
-        <div class="cond-list">
-          <div class="cond-row cleared">
-            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span>
-            <div class="tx"><b>Signed loan application</b><small>Application</small></div>
-            <span class="pill pill-teal">Cleared</span>
-          </div>
-          <div class="cond-row cleared">
-            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span>
-            <div class="tx"><b>Two years of W-2s</b><small>Income</small></div>
-            <span class="pill pill-teal">Cleared</span>
-          </div>
-          <div class="cond-row pending">
-            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
-            <div class="tx"><b>Updated bank statement (last 30 days)</b><small>Assets</small></div>
-            <span class="pill pill-amber">Pending</span>
-          </div>
-          <div class="cond-row pending">
-            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
-            <div class="tx"><b>Proof of homeowners insurance</b><small>Insurance</small></div>
-            <span class="pill pill-amber">Pending</span>
-          </div>
-        </div>
-        <button class="app-addbtn" type="button" style="margin-top:16px;">Request Missing Documents</button>
-      </div>
-
-      <div class="bottom-grid">
-        <div class="panel">
-          <h3>Up Next in Queue</h3>
-          <div class="table-scroll">
-          <table class="bt">
-            <tr><th>Name</th><th>Loan Type</th><th>Amount</th><th>Status</th></tr>
-            <tr><td><div class="bt-name"><span class="av">GL</span>Grace Liu</div></td><td>Conventional</td><td class="num">$328,000</td><td><span class="pill pill-outline">Awaiting Appraisal</span></td></tr>
-            <tr><td><div class="bt-name"><span class="av">OP</span>Owen Park</div></td><td>FHA</td><td class="num">$274,500</td><td><span class="pill pill-outline">Doc Review</span></td></tr>
-          </table>
-          </div>
-        </div>
-        <div class="panel">
-          <h3>Tasks &amp; Follow-Ups</h3>
+      <aside class="rc-side-col">
+        <div class="rc-card">
+          <div class="rc-eyebrow" style="margin-bottom:2px;">TASKS</div>
+          <h3 style="margin-bottom:12px;">Tasks &amp; Follow-Ups</h3>
           <div class="task-list">
             <div class="task-row"><span class="cb"></span><div class="tx"><b>Request bank statement</b><small>Marcus Reyes</small></div><span class="when">Today 1:00 PM</span></div>
             <div class="task-row"><span class="cb"></span><div class="tx"><b>Confirm insurance binder</b><small>Marcus Reyes</small></div><span class="when">Today 3:00 PM</span></div>
             <div class="task-row"><span class="cb"></span><div class="tx"><b>Open new file</b><small>Grace Liu — intake review</small></div><span class="when">Tomorrow</span></div>
           </div>
         </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<!-- ============ UNDERWRITER (Devon Marsh) -- mirrors _sidebar_underwriter.html ============ -->
+<div class="rc-shell" id="underwriterShell" hidden>
+  <aside class="rc-sidebar">
+    <div class="rc-brand">
+      <div class="rc-brand-mark">MC</div>
+      <div>
+        <div class="rc-brand-title">Meridian Capital</div>
+        <div class="rc-brand-sub">Guiding Capital. Building Futures.</div>
+      </div>
+    </div>
+    <nav class="rc-nav">
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Command</div>
+        <a href="#" class="rc-nav-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Command Center</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h11l5 5v7a1 1 0 0 1-1 1H4z"/><path d="M9 10l2 2 4-4"/></svg>Decision Queue</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>Pipeline</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Risk</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>Review Loans</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-8 10-8 10s-8-5-8-10V6z"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg>Risk Reports</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h11l5 5v7a1 1 0 0 1-1 1H4z"/><path d="M9 10l2 2 4-4"/></svg>Tasks</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Communication</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Readiness</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Contracts Hub</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 12l2 2 4-4"/></svg>Onboarding</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Settings</a>
+      </div>
+    </nav>
+    <div class="rc-sidebar-foot">
+      <div class="rc-user-chip">
+        <div class="rc-user-avatar">DM</div>
+        <div><div class="rc-user-name">Devon Marsh</div><div class="rc-user-role">Underwriter</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="rc-main">
+    <header class="rc-topbar">
+      <div>
+        <div class="rc-page-title">Underwriter Workspace</div>
+        <div class="rc-page-subline">Conditions, decisions, and risk review at Meridian Capital</div>
+      </div>
+      <div class="rc-topbar-right">
+        <div class="rc-bell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 6.5H4.5C4.5 13.5 6 12 6 8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><span class="dot">1</span></div>
+      </div>
+    </header>
+
+    <div class="rc-kpi-primary">
+      <div class="rc-kpi-card rc-kpi--blue">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Files Under Review</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg></span></div>
+        <div class="rc-kpi-val">3</div>
+        <div class="rc-kpi-sub">↑ 1 vs. last week</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--teal">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Conditions Cleared</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></span></div>
+        <div class="rc-kpi-val">9</div>
+        <div class="rc-kpi-sub">↑ 12% this week</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--amber">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Avg. Decision Time</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span></div>
+        <div class="rc-kpi-val">1.2 days</div>
+        <div class="rc-kpi-sub">↓ 6% vs. last 30 days</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--purple">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Approval Rate</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></span></div>
+        <div class="rc-kpi-val">96%</div>
+        <div class="rc-kpi-sub">↑ 2% vs. last quarter</div>
       </div>
     </div>
 
-    <!-- ============ UNDERWRITER (Devon Marsh) ============ -->
-    <div data-role-content="underwriter" hidden>
-      <div class="app-hero">
-        <div class="app-hero-left">
-          <h1>Welcome back, Devon</h1>
-          <p>1 file is awaiting a decision on 2 open conditions.</p>
-          <div class="app-hero-icons">
-            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg></span>Conditions</div>
-            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></span>Decisions</div>
-            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg></span>Documents</div>
+    <div class="rc-layout">
+      <div class="rc-main-col">
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">ACTIVE FILE</div><h3>Ade &amp; Lisa Okafor</h3><p class="rc-card-sub">Conventional Purchase · $489,600 · 88 Harborview Ln, Sarasota, FL — Underwriting</p></div>
+          </div>
+          <div class="cond-list">
+            <div class="cond-row cleared">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span>
+              <div class="tx"><b>Most recent pay stub (last 30 days)</b><small>Income</small></div>
+              <span class="rc-badge rc-badge-success">Cleared</span>
+            </div>
+            <div class="cond-row pending">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
+              <div class="tx"><b>Explanation letter for large deposit</b><small>Assets</small></div>
+              <span class="rc-badge rc-badge-warning">Open</span>
+            </div>
+            <div class="cond-row pending">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
+              <div class="tx"><b>Updated homeowner's insurance binder</b><small>Insurance — new purchase price</small></div>
+              <span class="rc-badge rc-badge-warning">Open</span>
+            </div>
+          </div>
+          <div class="decision-row">
+            <button class="dec-btn approve" type="button">Approve with Conditions</button>
+            <button class="dec-btn suspend" type="button">Suspend</button>
+            <button class="dec-btn decline" type="button">Decline</button>
           </div>
         </div>
-        <div class="app-hero-quote">
-          <p>"Strong file — one letter and one binder away from clear."</p>
-          <div class="sig">— DEVON MARSH, UNDERWRITER</div>
+
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">QUEUE</div><h3>Underwriting Queue</h3></div>
+          </div>
+          <div class="rc-table-wrap">
+            <table class="rc-table">
+              <tr><th>Name</th><th>Loan Type</th><th>Amount</th><th>Status</th></tr>
+              <tr><td><b>Grace Liu</b></td><td>Conventional</td><td>$328,000</td><td><span class="rc-badge rc-badge-neutral">Awaiting Processor</span></td></tr>
+              <tr><td><b>Tariq Whitfield</b></td><td>DSCR</td><td>$245,000</td><td><span class="rc-badge rc-badge-neutral">Intake Review</span></td></tr>
+            </table>
+          </div>
         </div>
       </div>
 
-      <div class="stat-row cols-4">
-        <div class="stat-card">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg></div>
-          <div class="lbl">Files Under Review</div>
-          <div class="val">3</div>
-          <div class="delta">↑ 1 <small>vs. last week</small></div>
-        </div>
-        <div class="stat-card">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></div>
-          <div class="lbl">Conditions Cleared</div>
-          <div class="val">9</div>
-          <div class="delta">↑ 12% <small>this week</small></div>
-        </div>
-        <div class="stat-card">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></div>
-          <div class="lbl">Avg. Decision Time</div>
-          <div class="val">1.2 days</div>
-          <div class="delta">↓ 6% <small>vs. last 30 days</small></div>
-        </div>
-        <div class="stat-card">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></div>
-          <div class="lbl">Approval Rate</div>
-          <div class="val">96%</div>
-          <div class="delta">↑ 2% <small>vs. last quarter</small></div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h3>Ade &amp; Lisa Okafor <span class="tag">Conventional Purchase • $489,600</span></h3>
-        <div class="file-sub">88 Harborview Ln, Sarasota, FL — Underwriting</div>
-        <div class="cond-list">
-          <div class="cond-row cleared">
-            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span>
-            <div class="tx"><b>Most recent pay stub (last 30 days)</b><small>Income</small></div>
-            <span class="pill pill-teal">Cleared</span>
-          </div>
-          <div class="cond-row pending">
-            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
-            <div class="tx"><b>Explanation letter for large deposit</b><small>Assets</small></div>
-            <span class="pill pill-amber">Open</span>
-          </div>
-          <div class="cond-row pending">
-            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
-            <div class="tx"><b>Updated homeowner's insurance binder</b><small>Insurance — new purchase price</small></div>
-            <span class="pill pill-amber">Open</span>
-          </div>
-        </div>
-        <div class="decision-row">
-          <button class="dec-btn approve" type="button">Approve with Conditions</button>
-          <button class="dec-btn suspend" type="button">Suspend</button>
-          <button class="dec-btn decline" type="button">Decline</button>
-        </div>
-      </div>
-
-      <div class="bottom-grid">
-        <div class="panel">
-          <h3>Underwriting Queue</h3>
-          <div class="table-scroll">
-          <table class="bt">
-            <tr><th>Name</th><th>Loan Type</th><th>Amount</th><th>Status</th></tr>
-            <tr><td><div class="bt-name"><span class="av">GL</span>Grace Liu</div></td><td>Conventional</td><td class="num">$328,000</td><td><span class="pill pill-outline">Awaiting Processor</span></td></tr>
-            <tr><td><div class="bt-name"><span class="av">TW</span>Tariq Whitfield</div></td><td>DSCR</td><td class="num">$245,000</td><td><span class="pill pill-outline">Intake Review</span></td></tr>
-          </table>
-          </div>
-        </div>
-        <div class="panel">
-          <h3>Tasks &amp; Follow-Ups</h3>
+      <aside class="rc-side-col">
+        <div class="rc-card">
+          <div class="rc-eyebrow" style="margin-bottom:2px;">TASKS</div>
+          <h3 style="margin-bottom:12px;">Tasks &amp; Follow-Ups</h3>
           <div class="task-list">
             <div class="task-row"><span class="cb"></span><div class="tx"><b>Review deposit letter</b><small>Ade &amp; Lisa Okafor</small></div><span class="when">Today 2:00 PM</span></div>
             <div class="task-row"><span class="cb"></span><div class="tx"><b>Confirm insurance binder</b><small>Ade &amp; Lisa Okafor</small></div><span class="when">Today 4:00 PM</span></div>
             <div class="task-row"><span class="cb"></span><div class="tx"><b>New file incoming</b><small>Grace Liu — pending processor sign-off</small></div><span class="when">Tomorrow</span></div>
           </div>
         </div>
-      </div>
-    </div>
-
-    <div class="quick-row" style="margin-top:6px;">
-      <a href="#" class="quick-card"><div class="qt"><b>Run Smart Quotes</b><small>Compare rates from multiple lenders in seconds.</small></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-12"/></svg></a>
-      <a href="#" class="quick-card"><div class="qt"><b>Send a Pre-Approval</b><small>Turn qualified leads into confident buyers.</small></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-12"/></svg></a>
-      <a href="#" class="quick-card"><div class="qt"><b>Track to Closing</b><small>Keep every file, task, and deadline in one place.</small></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-12"/></svg></a>
-    </div>
-
-    <div class="app-footer">
-      <span><strong>DEMO ENVIRONMENT</strong> — SAMPLE DATA ONLY</span>
-      <span>RAVLO | LENDING OS</span>
+      </aside>
     </div>
   </main>
 </div>
+
 
 <!-- ============ BROKER-OWNER (Renata Castillo) -- mirrors the real admin/company_dashboard.html ============ -->
 <div class="rc-shell" id="adminShell">
@@ -1214,20 +1140,15 @@
 <script>
 (function(){
   var tabs = Array.prototype.slice.call(document.querySelectorAll('.role-tab'));
-  var adminShell = document.getElementById('adminShell');
-  var appShell = document.getElementById('appShell');
-  var borrowerShell = document.getElementById('borrowerShell');
-  var roleMains = Array.prototype.slice.call(document.querySelectorAll('[data-role-content]'));
 
-  var navMap = {
-    lo: 'navPipeline',
-    processor: 'navProcessing',
-    underwriter: 'navConditions'
-  };
-  var userMap = {
-    lo: { av: 'CN', name: 'Chris Nakamura', role: 'Loan Officer' },
-    processor: { av: 'JO', name: 'Jamie Ortiz', role: 'Processor' },
-    underwriter: { av: 'DM', name: 'Devon Marsh', role: 'Underwriter' }
+  // Every role now has its own independent shell (each with its own real
+  // sidebar nav), so switching roles is just show-this-one-hide-the-rest.
+  var shells = {
+    admin: document.getElementById('adminShell'),
+    lo: document.getElementById('loShell'),
+    processor: document.getElementById('processorShell'),
+    underwriter: document.getElementById('underwriterShell'),
+    borrower: document.getElementById('borrowerShell')
   };
 
   // Each tab is a real link (#admin, #loan-officer, ...) so it can be
@@ -1248,25 +1169,7 @@
 
   function setRole(role){
     tabs.forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-role') === role); });
-
-    adminShell.hidden = role !== 'admin';
-    borrowerShell.hidden = role !== 'borrower';
-    appShell.hidden = (role === 'admin' || role === 'borrower');
-
-    if (role === 'admin' || role === 'borrower') return;
-
-    roleMains.forEach(function(el){ el.hidden = el.getAttribute('data-role-content') !== role; });
-
-    document.querySelectorAll('.app-nav a').forEach(function(a){ a.classList.remove('active'); });
-    var navEl = document.getElementById(navMap[role]);
-    if (navEl) navEl.classList.add('active');
-
-    var u = userMap[role];
-    if (u) {
-      document.getElementById('sidebarAvatar').textContent = u.av;
-      document.getElementById('sidebarName').textContent = u.name;
-      document.getElementById('sidebarRole').textContent = u.role;
-    }
+    Object.keys(shells).forEach(function(key){ shells[key].hidden = key !== role; });
   }
 
   window.addEventListener('hashchange', function(){ setRole(roleFromHash()); });
