@@ -5,11 +5,15 @@ for why this exists instead of leaning on Canva's Autofill API.
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from datetime import date
+
 from LoanMVP.services.flyer_pdf import (
     _business_body_text,
+    _event_line,
     _hex_to_rgb01,
     build_business_flyer_pdf,
     build_listing_flyer_pdf,
+    build_open_house_flyer_pdf,
 )
 
 
@@ -96,4 +100,41 @@ def test_business_body_text_falls_back_to_generic_cta_when_profile_is_bare():
 def test_logo_download_failure_falls_back_to_business_name_text():
     with patch("LoanMVP.services.flyer_pdf.download_image_bytes", return_value=None):
         buffer = build_business_flyer_pdf(_profile(logo_url="https://example.com/logo.png"))
+    assert buffer.getvalue().startswith(b"%PDF")
+
+
+# ─── open house flyer ─────────────────────────────────────────────────
+
+def test_event_line_combines_date_and_time():
+    assert _event_line(date(2026, 9, 19), "12:00 PM", "2:00 PM") == "SAT, SEP 19  •  12:00 PM – 2:00 PM"
+
+
+def test_event_line_handles_time_only():
+    assert _event_line(None, "12:00 PM", None) == "12:00 PM"
+
+
+def test_event_line_is_none_when_nothing_given():
+    assert _event_line(None, None, None) is None
+
+
+def test_open_house_flyer_with_full_details_produces_a_real_pdf():
+    details = {
+        "address": "123 Main St", "city": "Irvine", "state": "CA", "zip": "92602",
+        "price": 725000, "beds": 4, "baths": 3, "sqft": 2400,
+        "description": "Stunning updated home with a large backyard.",
+        "event_date": date(2026, 9, 19), "event_time": "12:00 PM", "event_time_end": "2:00 PM",
+    }
+    buffer = build_open_house_flyer_pdf(_profile(), details, photos=[])
+    assert buffer.getvalue().startswith(b"%PDF")
+
+
+def test_open_house_flyer_with_only_an_address_and_time_does_not_crash():
+    """An address that isn't a saved listing yet -- no price, beds,
+    baths, sqft, description, or photo -- must still produce a flyer."""
+    details = {
+        "address": "123 Main St", "city": None, "state": None, "zip": None,
+        "price": None, "beds": None, "baths": None, "sqft": None, "description": None,
+        "event_date": date(2026, 9, 19), "event_time": "12:00 PM", "event_time_end": None,
+    }
+    buffer = build_open_house_flyer_pdf(_profile(), details, photos=[])
     assert buffer.getvalue().startswith(b"%PDF")

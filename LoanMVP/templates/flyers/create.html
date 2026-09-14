@@ -20,6 +20,75 @@ Generated instantly from your Ravlo brand -- no Canva account needed.
   {% endif %}
 
   <section class="ravlo-card pad">
+    <h3 class="text-base font-semibold mb-2">Tell Ravlo what you need</h3>
+    <p style="font-size:0.85rem;color:#64748b;margin-bottom:0.75rem;">
+      e.g. "open house flyer for 123 Main St, Saturday at 12" -- Ravlo will fill in the details below for you to check before it generates the PDF.
+    </p>
+    <form method="post" action="{{ url_for('flyers.ai_create') }}" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input
+        type="text"
+        name="prompt"
+        placeholder="open house flyer for 123 Main St, Saturday at 12"
+        style="flex:1;min-width:240px;padding:0.6rem 0.75rem;border:1px solid #e2e8f0;border-radius:8px;font-size:0.9rem;"
+        required
+      >
+      <button type="submit" class="ravlo-btn primary sm">Create with AI</button>
+    </form>
+  </section>
+
+  {% if open_house_preview %}
+  <section class="ravlo-card pad" style="border-left:4px solid {{ profile.brand_color or '#4f6bed' }};">
+    <h3 class="text-base font-semibold mb-2">Review your open house flyer</h3>
+    <p style="font-size:0.85rem;color:#64748b;margin-bottom:0.9rem;">
+      {% if listing %}Matched this to your saved listing, so price/beds/baths/photos are already filled in.{% else %}No saved listing matched this address, so this flyer will just show the address and event time.{% endif %}
+      Fix anything below, then generate.
+    </p>
+    <form method="get" action="{{ url_for('flyers.download_open_house') }}" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <input type="hidden" name="listing_id" value="{{ open_house_preview.listing_id }}">
+      <label style="grid-column:1 / -1;font-size:0.8rem;color:#475569;">
+        Address
+        <input type="text" name="address" value="{{ open_house_preview.address }}" required
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <label style="font-size:0.8rem;color:#475569;">
+        City
+        <input type="text" name="city" value="{{ open_house_preview.city }}"
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <label style="font-size:0.8rem;color:#475569;">
+        State
+        <input type="text" name="state" value="{{ open_house_preview.state }}"
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <label style="font-size:0.8rem;color:#475569;">
+        Zip
+        <input type="text" name="zip" value="{{ open_house_preview.zip }}"
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <label style="font-size:0.8rem;color:#475569;">
+        Event date
+        <input type="date" name="event_date" value="{{ open_house_preview.event_date }}"
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <label style="font-size:0.8rem;color:#475569;">
+        Start time
+        <input type="text" name="event_time" value="{{ open_house_preview.event_time }}" placeholder="12:00 PM"
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <label style="font-size:0.8rem;color:#475569;">
+        End time (optional)
+        <input type="text" name="event_time_end" value="{{ open_house_preview.event_time_end }}" placeholder="2:00 PM"
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <div style="grid-column:1 / -1;">
+        <button type="submit" class="ravlo-btn primary">Generate Open House Flyer</button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+
+  <section class="ravlo-card pad">
     <div class="flyer-preview" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
       <div style="background:{{ profile.brand_color or '#4f6bed' }};padding:1.25rem 1.5rem;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:1rem;">
         <div style="display:flex;align-items:center;gap:0.75rem;">
