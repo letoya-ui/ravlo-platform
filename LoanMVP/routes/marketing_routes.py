@@ -577,6 +577,17 @@ def lending_os_preview_thanks():
     return render_template("marketing/lending_os_preview_thanks.html")
 
 
+@marketing_bp.route("/lending-os/preview")
+def lending_os_preview():
+    """A shareable, static mockup of the Lending OS dashboard -- built so
+    an AE can send a single link to a prospect and let them see what the
+    product looks like without a login. Uses the same fictional Meridian
+    Capital pipeline (Danielle Carter, Marcus Reyes, the Okafors, Priya
+    Nair) already seeded into the real white_label demo environment, so
+    the story is consistent everywhere it's told."""
+    return render_template("marketing/lending_os_preview.html")
+
+
 def _send_lending_os_lead_confirmation(first_name: str, email: str) -> None:
     try:
         from LoanMVP.app import mail
