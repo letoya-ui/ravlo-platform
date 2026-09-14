@@ -128,6 +128,29 @@ def test_lending_os_preview_internal_roles_share_one_visual_language(client):
     assert 'class="app-hero"' not in body
 
 
+def test_lending_os_preview_borrower_tab_mirrors_the_real_borrower_dashboard(client):
+    """The borrower tab used a custom-invented layout (a stepper, a "Your
+    Team" contact card) with no real counterpart. Rebuilt it to mirror the
+    real borrower/dashboard.html + ravlo_borrower_base.html: the same
+    topbar + horizontal nav tabs, hero, 4-stat row, and two-column main
+    grid (Application Progress / Active Loan / Recent Documents on the
+    left, Actions / Checklist / Open Conditions / Subscription on the
+    right), populated with Danielle Carter's file."""
+    resp = client.get("/lending-os/preview")
+
+    body = resp.get_data(as_text=True)
+    assert "Borrower Dashboard" in body
+    assert "Application Progress" in body
+    assert "Active Loan" in body
+    assert "Recent Documents" in body
+    assert "Your Next Items" in body
+    assert "Open Conditions" in body
+    assert "Your Plan" in body
+    # The real horizontal nav tabs, not a custom stepper.
+    assert ">Loans</a>" in body
+    assert ">Subscription</a>" in body
+
+
 def test_lending_os_marketing_page_still_renders(client):
     resp = client.get("/lending-os")
 
