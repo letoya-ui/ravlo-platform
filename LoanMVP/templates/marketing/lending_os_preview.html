@@ -78,6 +78,7 @@
     background:rgba(255,255,255,.05);border:1px solid var(--wrap-line);border-bottom:none;
     color:var(--wrap-muted);border-radius:10px 10px 0 0;padding:10px 16px;
     font-size:.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;
+    text-decoration:none;
   }
   .role-tab .who{font-size:.68rem;font-weight:500;opacity:.75;}
   .role-tab.active{background:var(--app-bg);color:#fff;border-color:var(--app-line);}
@@ -346,13 +347,13 @@
 <div class="disclosure"><strong>DEMO PREVIEW — SAMPLE DATA ONLY.</strong> Meridian Capital Lending is a fictional company Ravlo built to show what Lending OS looks like running a real pipeline. The people, loans, and figures shown are not real.</div>
 
 <div class="role-bar">
-  <p class="role-caption">Same Meridian Capital pipeline, <strong>five different seats</strong> — click a role to see how the same files connect.</p>
+  <p class="role-caption">Same Meridian Capital pipeline, <strong>five different seats</strong> — each tab is its own link, so you can open one in a new tab or send it straight to someone.</p>
   <div class="role-tabs" id="roleTabs">
-    <button class="role-tab active" data-role="admin" type="button">Broker-Owner <span class="who">Renata</span></button>
-    <button class="role-tab" data-role="lo" type="button">Loan Officer <span class="who">Chris</span></button>
-    <button class="role-tab" data-role="processor" type="button">Processor <span class="who">Jamie</span></button>
-    <button class="role-tab" data-role="underwriter" type="button">Underwriter <span class="who">Devon</span></button>
-    <button class="role-tab" data-role="borrower" type="button">Borrower <span class="who">Danielle</span></button>
+    <a class="role-tab active" data-role="admin" href="#admin">Broker-Owner <span class="who">Renata</span></a>
+    <a class="role-tab" data-role="lo" href="#loan-officer">Loan Officer <span class="who">Chris</span></a>
+    <a class="role-tab" data-role="processor" href="#processor">Processor <span class="who">Jamie</span></a>
+    <a class="role-tab" data-role="underwriter" href="#underwriter">Underwriter <span class="who">Devon</span></a>
+    <a class="role-tab" data-role="borrower" href="#borrower">Borrower <span class="who">Danielle</span></a>
   </div>
 </div>
 
@@ -959,6 +960,22 @@
     underwriter: { av: 'DM', name: 'Devon Marsh', role: 'Underwriter' }
   };
 
+  // Each tab is a real link (#admin, #loan-officer, ...) so it can be
+  // opened in its own browser tab, bookmarked, or sent directly to
+  // someone -- they land straight on that role.
+  var hashToRole = {
+    admin: 'admin',
+    'loan-officer': 'lo',
+    processor: 'processor',
+    underwriter: 'underwriter',
+    borrower: 'borrower'
+  };
+
+  function roleFromHash(){
+    var h = (window.location.hash || '').replace('#', '');
+    return hashToRole[h] || 'admin';
+  }
+
   function setRole(role){
     tabs.forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-role') === role); });
 
@@ -984,9 +1001,8 @@
     }
   }
 
-  tabs.forEach(function(t){
-    t.addEventListener('click', function(){ setRole(t.getAttribute('data-role')); });
-  });
+  window.addEventListener('hashchange', function(){ setRole(roleFromHash()); });
+  setRole(roleFromHash());
 })();
 </script>
 

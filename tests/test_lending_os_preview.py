@@ -72,6 +72,21 @@ def test_lending_os_preview_shows_the_same_file_from_different_seats(client):
     assert "Schedule your home inspection" in body
 
 
+def test_lending_os_preview_role_tabs_are_real_shareable_links(client):
+    """Each role tab is an anchor with its own #hash (not a JS-only button
+    with no href), so it can be opened in a new browser tab, bookmarked,
+    or copied and sent directly to someone -- they land on that role on
+    first load instead of always seeing the broker-owner default."""
+    resp = client.get("/lending-os/preview")
+
+    body = resp.get_data(as_text=True)
+    assert 'href="#admin"' in body
+    assert 'href="#loan-officer"' in body
+    assert 'href="#processor"' in body
+    assert 'href="#underwriter"' in body
+    assert 'href="#borrower"' in body
+
+
 def test_lending_os_marketing_page_still_renders(client):
     resp = client.get("/lending-os")
 
