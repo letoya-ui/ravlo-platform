@@ -87,6 +87,23 @@ def test_lending_os_preview_role_tabs_are_real_shareable_links(client):
     assert 'href="#borrower"' in body
 
 
+def test_lending_os_preview_admin_tab_mirrors_the_real_company_dashboard(client):
+    """The broker-owner tab was rebuilt to mirror the real internal admin
+    page (admin/company_dashboard.html) instead of an invented layout --
+    same sidebar sections, same KPI cards, same Applicant Assignments /
+    Team / Workspace Controls panels, populated with the Meridian
+    Capital sample data."""
+    resp = client.get("/lending-os/preview")
+
+    body = resp.get_data(as_text=True)
+    assert "Meridian Capital Lending Command Center" in body
+    assert "APPLICANT ASSIGNMENTS" in body
+    assert "WORKSPACE CONTROLS" in body
+    assert "Team Members" in body
+    assert "Renata Castillo" in body
+    assert "Company Admin" in body
+
+
 def test_lending_os_marketing_page_still_renders(client):
     resp = client.get("/lending-os")
 
