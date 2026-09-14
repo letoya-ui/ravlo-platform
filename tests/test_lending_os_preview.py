@@ -44,6 +44,49 @@ def test_lending_os_preview_links_back_to_the_marketing_site(client):
     assert "/lending-os" in body
 
 
+def test_lending_os_preview_includes_all_five_role_views(client):
+    resp = client.get("/lending-os/preview")
+
+    body = resp.get_data(as_text=True)
+    assert 'data-role="admin"' in body
+    assert 'data-role="lo"' in body
+    assert 'data-role="processor"' in body
+    assert 'data-role="underwriter"' in body
+    assert 'data-role="borrower"' in body
+
+
+def test_lending_os_preview_shows_the_same_file_from_different_seats(client):
+    """The loan officer, processor, underwriter, and borrower views should
+    all reference the same underlying Meridian Capital files -- Danielle
+    Carter's file connects the loan officer and borrower views, and
+    Marcus Reyes / the Okafors connect the processor and underwriter
+    views to the broker-owner's company-wide table."""
+    resp = client.get("/lending-os/preview")
+
+    body = resp.get_data(as_text=True)
+    assert "Chris Nakamura" in body
+    assert "Jamie Ortiz" in body
+    assert "Devon Marsh" in body
+    assert "Quote Engine" in body
+    assert "Approve with Conditions" in body
+    assert "Schedule your home inspection" in body
+
+
+def test_lending_os_preview_role_tabs_are_real_shareable_links(client):
+    """Each role tab is an anchor with its own #hash (not a JS-only button
+    with no href), so it can be opened in a new browser tab, bookmarked,
+    or copied and sent directly to someone -- they land on that role on
+    first load instead of always seeing the broker-owner default."""
+    resp = client.get("/lending-os/preview")
+
+    body = resp.get_data(as_text=True)
+    assert 'href="#admin"' in body
+    assert 'href="#loan-officer"' in body
+    assert 'href="#processor"' in body
+    assert 'href="#underwriter"' in body
+    assert 'href="#borrower"' in body
+
+
 def test_lending_os_marketing_page_still_renders(client):
     resp = client.get("/lending-os")
 

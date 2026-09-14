@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lending OS Preview | Ravlo</title>
-<meta name="description" content="See what Lending OS looks like running a real mortgage company's day-to-day: leads, quotes, pre-approvals, processing, and closings in one pipeline.">
+<meta name="description" content="See what Lending OS looks like running a real mortgage company's day-to-day: leads, quotes, pre-approvals, processing, and closings in one pipeline — from every seat, on the same file.">
 <link rel="canonical" href="https://ravlohq.com/lending-os/preview">
 <meta property="og:title" content="Lending OS Preview | Ravlo">
-<meta property="og:description" content="A sample look at Lending OS running for a mortgage company — leads, quotes, pre-approvals, processing, and closings in one pipeline.">
+<meta property="og:description" content="A sample look at Lending OS running for a mortgage company — the same pipeline seen from the broker-owner, loan officer, processor, underwriter, and borrower.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
@@ -34,6 +34,7 @@
     --app-blue:#6FA8FF;
     --app-purple:#B79CFF;
     --app-amber:#E8B84B;
+    --app-red:#ef6a6a;
 
     --font-body:'Inter', -apple-system, Segoe UI, sans-serif;
     --font-mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
@@ -42,7 +43,9 @@
   html{scroll-behavior:smooth;}
   body{margin:0;background:var(--wrap-bg);color:var(--wrap-text);font-family:var(--font-body);line-height:1.5;overflow-x:hidden;}
   a{color:inherit;}
+  button{font-family:inherit;}
   .num{font-variant-numeric:tabular-nums;}
+  [hidden]{display:none!important;}
 
   /* ---------------- wrapper chrome ---------------- */
   .wrap-topbar{
@@ -54,7 +57,7 @@
   .wrap-note{font-size:.84rem;color:var(--wrap-muted);}
   .wrap-btn{
     display:inline-flex;align-items:center;gap:6px;border-radius:10px;padding:9px 16px;
-    font-size:.86rem;font-weight:600;text-decoration:none;white-space:nowrap;
+    font-size:.86rem;font-weight:600;text-decoration:none;white-space:nowrap;border:none;cursor:pointer;
   }
   .wrap-btn.gold{background:var(--wrap-gold);color:#1a1206;}
   .wrap-btn.ghost{background:rgba(255,255,255,.08);border:1px solid var(--wrap-line);color:var(--wrap-text);}
@@ -66,7 +69,22 @@
   }
   .disclosure strong{color:var(--wrap-gold);}
 
-  /* ---------------- app mockup shell ---------------- */
+  /* ---------------- role switcher ---------------- */
+  .role-bar{padding:16px 24px 0;}
+  .role-caption{color:var(--wrap-muted);font-size:.8rem;margin:0 0 10px;}
+  .role-caption strong{color:var(--wrap-text);}
+  .role-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+  .role-tab{
+    background:rgba(255,255,255,.05);border:1px solid var(--wrap-line);border-bottom:none;
+    color:var(--wrap-muted);border-radius:10px 10px 0 0;padding:10px 16px;
+    font-size:.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;
+    text-decoration:none;
+  }
+  .role-tab .who{font-size:.68rem;font-weight:500;opacity:.75;}
+  .role-tab.active{background:var(--app-bg);color:#fff;border-color:var(--app-line);}
+  .role-tab:not(.active):hover{background:rgba(255,255,255,.09);color:#fff;}
+
+  /* ---------------- app mockup shell (admin / lo / processor / underwriter) ---------------- */
   .app-shell{display:flex;min-height:720px;background:var(--app-bg);}
 
   .app-sidebar{
@@ -109,14 +127,14 @@
   .app-search svg{width:16px;height:16px;flex-shrink:0;}
   .app-addbtn{
     display:inline-flex;align-items:center;gap:7px;background:var(--app-blue);color:#08172c;
-    font-weight:700;font-size:.86rem;border-radius:10px;padding:10px 16px;white-space:nowrap;border:none;
+    font-weight:700;font-size:.86rem;border-radius:10px;padding:10px 16px;white-space:nowrap;border:none;cursor:default;
   }
   .app-bell{
     position:relative;width:38px;height:38px;border-radius:10px;background:var(--app-card);
     border:1px solid var(--app-line);display:flex;align-items:center;justify-content:center;color:var(--app-muted);flex-shrink:0;
   }
   .app-bell svg{width:17px;height:17px;}
-  .app-bell .dot{position:absolute;top:-4px;right:-4px;background:#ef6a6a;color:#fff;font-size:.62rem;font-weight:700;border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;}
+  .app-bell .dot{position:absolute;top:-4px;right:-4px;background:var(--app-red);color:#fff;font-size:.62rem;font-weight:700;border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;}
   .app-idbadge{display:flex;align-items:center;gap:10px;flex-shrink:0;}
   .app-idbadge .mark{width:36px;height:36px;border-radius:50%;background:var(--app-navy);border:1px solid var(--app-gold);color:var(--app-gold);font-weight:800;font-size:.78rem;display:flex;align-items:center;justify-content:center;}
   .app-idbadge .co b{display:block;font-size:.86rem;color:#fff;}
@@ -149,6 +167,7 @@
 
   /* stat cards */
   .stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px;}
+  .stat-row.cols-4{grid-template-columns:repeat(4,1fr);}
   @media (max-width:1100px){ .stat-row{grid-template-columns:repeat(3,1fr);} }
   @media (max-width:700px){ .stat-row{grid-template-columns:repeat(2,1fr);} }
   .stat-card{background:var(--app-card);border:1px solid var(--app-line);border-radius:14px;padding:16px;}
@@ -163,8 +182,10 @@
   .mid-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:14px;margin-bottom:20px;}
   @media (max-width:980px){ .mid-grid{grid-template-columns:1fr;} }
   .panel{background:var(--app-card);border:1px solid var(--app-line);border-radius:14px;padding:18px;min-width:0;}
-  .panel h3{margin:0 0 14px;font-size:.96rem;color:#fff;display:flex;justify-content:space-between;align-items:center;}
+  .panel + .panel{margin-top:14px;}
+  .panel h3{margin:0 0 14px;font-size:.96rem;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
   .panel h3 .tag{font-size:.68rem;font-weight:500;color:var(--app-muted);background:rgba(255,255,255,.06);padding:4px 9px;border-radius:99px;}
+  .file-sub{color:var(--app-muted);font-size:.8rem;margin:-6px 0 14px;}
 
   .bars{display:flex;align-items:flex-end;gap:14px;height:110px;padding-top:10px;}
   .bars .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;}
@@ -196,7 +217,7 @@
   @media (max-width:980px){ .bottom-grid{grid-template-columns:1fr;} }
 
   .table-scroll{overflow-x:auto;}
-  table.bt{width:100%;min-width:520px;border-collapse:collapse;font-size:.82rem;}
+  table.bt{width:100%;min-width:480px;border-collapse:collapse;font-size:.82rem;}
   table.bt th{text-align:left;color:var(--app-muted);font-weight:600;font-size:.72rem;padding:0 8px 10px;border-bottom:1px solid var(--app-line);white-space:nowrap;}
   table.bt td{padding:11px 8px;border-bottom:1px solid var(--app-line);color:var(--app-text);vertical-align:middle;}
   table.bt tr:last-child td{border-bottom:none;}
@@ -218,6 +239,35 @@
   .task-row .tx small{font-size:.74rem;color:var(--app-muted);}
   .task-row .when{margin-left:auto;font-size:.72rem;color:var(--app-gold);font-weight:600;white-space:nowrap;padding-top:1px;}
 
+  /* quote comparison (loan officer) */
+  .quote-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px;}
+  @media (max-width:700px){ .quote-grid{grid-template-columns:1fr;} }
+  .quote-card{background:var(--app-card-soft);border:1px solid var(--app-line);border-radius:12px;padding:16px 14px;text-align:center;position:relative;}
+  .quote-card.best{border-color:var(--app-gold);background:rgba(216,178,60,.08);}
+  .quote-card .badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--app-gold);color:#1a1206;font-size:.62rem;font-weight:800;padding:3px 10px;border-radius:99px;white-space:nowrap;}
+  .quote-card .lender{font-size:.82rem;color:var(--app-muted);margin-bottom:6px;}
+  .quote-card .rate{font-size:1.35rem;font-weight:800;color:#fff;}
+  .quote-card .pmt{font-size:.74rem;color:var(--app-muted);margin-top:4px;}
+  .quote-card .selected{margin-top:8px;font-size:.7rem;color:var(--app-teal);font-weight:700;}
+
+  /* condition checklist (processor / underwriter) */
+  .cond-list{display:flex;flex-direction:column;gap:2px;}
+  .cond-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--app-line);}
+  .cond-row:last-child{border-bottom:none;}
+  .cond-row .ic{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .cond-row .ic svg{width:13px;height:13px;}
+  .cond-row.cleared .ic{background:rgba(18,181,146,.16);color:var(--app-teal);}
+  .cond-row.pending .ic{background:rgba(232,184,75,.16);color:var(--app-amber);}
+  .cond-row .tx{flex:1;min-width:0;}
+  .cond-row .tx b{display:block;font-size:.84rem;color:#fff;font-weight:600;}
+  .cond-row .tx small{font-size:.72rem;color:var(--app-muted);}
+
+  .decision-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  .dec-btn{flex:1;min-width:140px;border:none;border-radius:10px;padding:10px 14px;font-weight:700;font-size:.82rem;cursor:default;}
+  .dec-btn.approve{background:var(--app-teal);color:#06231c;}
+  .dec-btn.suspend{background:rgba(232,184,75,.16);color:var(--app-amber);border:1px solid rgba(232,184,75,.35);}
+  .dec-btn.decline{background:rgba(239,106,106,.14);color:var(--app-red);border:1px solid rgba(239,106,106,.32);}
+
   .quick-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
   @media (max-width:760px){ .quick-row{grid-template-columns:1fr;} }
   .quick-card{
@@ -231,14 +281,57 @@
   .app-footer{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 0;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.08em;color:var(--app-muted);}
   .app-footer strong{color:var(--app-gold);}
 
-  footer.wrap-footer{padding:40px 24px 50px;text-align:center;}
-  footer.wrap-footer p{color:var(--wrap-muted);font-size:.86rem;max-width:560px;margin:0 auto 18px;}
-  footer.wrap-footer .btn-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;}
-
   @media (max-width:900px){
     .app-sidebar{display:none;}
     .app-shell{min-height:0;}
   }
+
+  /* ---------------- borrower portal shell (distinct from the internal app) ---------------- */
+  .borrower-shell{min-height:720px;background:var(--app-bg);padding-bottom:10px;}
+  .b-top{display:flex;align-items:center;justify-content:space-between;padding:18px 26px;border-bottom:1px solid var(--app-line);flex-wrap:wrap;gap:10px;}
+  .b-top .brand{font-weight:800;color:#fff;font-size:1rem;}
+  .b-top .brand small{display:block;font-family:var(--font-mono);font-size:.6rem;letter-spacing:.14em;color:var(--app-gold);margin-top:2px;}
+  .b-top .who{display:flex;align-items:center;gap:9px;}
+  .b-top .who .avatar{width:32px;height:32px;border-radius:50%;background:var(--app-teal);color:#fff;font-weight:700;font-size:.78rem;display:flex;align-items:center;justify-content:center;}
+  .b-wrap{max-width:760px;margin:0 auto;padding:30px 20px 10px;}
+  .b-hero h1{color:#fff;font-size:1.5rem;margin:0 0 4px;}
+  .b-hero p{color:var(--app-muted);margin:0 0 22px;font-size:.92rem;}
+
+  .b-loan-card{background:var(--app-card);border:1px solid var(--app-line);border-radius:16px;padding:20px 22px;margin-bottom:22px;}
+  .b-loan-card .addr{font-weight:700;color:#fff;font-size:1.08rem;margin-bottom:2px;}
+  .b-loan-card .sub{color:var(--app-muted);font-size:.8rem;margin-bottom:16px;}
+  .b-loan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  @media (max-width:560px){ .b-loan-grid{grid-template-columns:repeat(2,1fr);} }
+  .b-loan-grid div small{display:block;color:var(--app-muted);font-size:.68rem;margin-bottom:3px;}
+  .b-loan-grid div b{color:#fff;font-size:1rem;}
+
+  .b-stepper{display:flex;justify-content:space-between;margin-bottom:26px;position:relative;}
+  .b-stepper::before{content:'';position:absolute;top:13px;left:24px;right:24px;height:2px;background:var(--app-line);z-index:0;}
+  .b-step{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;}
+  .b-step .dot{width:26px;height:26px;border-radius:50%;background:var(--app-card);border:2px solid var(--app-line);display:flex;align-items:center;justify-content:center;color:var(--app-muted);font-size:.7rem;font-weight:700;flex-shrink:0;}
+  .b-step.done .dot{background:var(--app-teal);border-color:var(--app-teal);color:#fff;}
+  .b-step.current .dot{background:var(--app-gold);border-color:var(--app-gold);color:#1a1206;box-shadow:0 0 0 4px rgba(216,178,60,.22);}
+  .b-step span.lbl{font-size:.66rem;color:var(--app-muted);text-align:center;line-height:1.3;}
+  .b-step.current span.lbl{color:#fff;font-weight:700;}
+  @media (max-width:560px){ .b-step span.lbl{font-size:.58rem;} }
+
+  .b-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  @media (max-width:620px){ .b-two-col{grid-template-columns:1fr;} }
+  .b-team-card{background:var(--app-card);border:1px solid var(--app-line);border-radius:14px;padding:18px;}
+  .b-team-card .avatar{width:44px;height:44px;border-radius:50%;background:var(--app-teal);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:.9rem;}
+  .b-team-card b{display:block;color:#fff;font-size:.94rem;}
+  .b-team-card small{color:var(--app-muted);font-size:.76rem;display:block;margin-bottom:12px;}
+  .b-msg-btn{display:inline-flex;align-items:center;gap:6px;background:var(--app-blue);color:#08172c;border:none;border-radius:9px;padding:8px 14px;font-weight:700;font-size:.8rem;cursor:default;}
+
+  .doc-row{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--app-line);gap:10px;}
+  .doc-row:last-child{border-bottom:none;}
+  .doc-row .df{display:flex;align-items:center;gap:10px;font-size:.84rem;color:#fff;min-width:0;}
+  .doc-row .df svg{width:16px;height:16px;color:var(--app-muted);flex-shrink:0;}
+  .doc-row .dl{font-size:.76rem;color:var(--app-blue);font-weight:700;white-space:nowrap;}
+
+  footer.wrap-footer{padding:40px 24px 50px;text-align:center;}
+  footer.wrap-footer p{color:var(--wrap-muted);font-size:.86rem;max-width:560px;margin:0 auto 18px;}
+  footer.wrap-footer .btn-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;}
 </style>
 </head>
 <body>
@@ -253,7 +346,18 @@
 </div>
 <div class="disclosure"><strong>DEMO PREVIEW — SAMPLE DATA ONLY.</strong> Meridian Capital Lending is a fictional company Ravlo built to show what Lending OS looks like running a real pipeline. The people, loans, and figures shown are not real.</div>
 
-<div class="app-shell">
+<div class="role-bar">
+  <p class="role-caption">Same Meridian Capital pipeline, <strong>five different seats</strong> — each tab is its own link, so you can open one in a new tab or send it straight to someone.</p>
+  <div class="role-tabs" id="roleTabs">
+    <a class="role-tab active" data-role="admin" href="#admin">Broker-Owner <span class="who">Renata</span></a>
+    <a class="role-tab" data-role="lo" href="#loan-officer">Loan Officer <span class="who">Chris</span></a>
+    <a class="role-tab" data-role="processor" href="#processor">Processor <span class="who">Jamie</span></a>
+    <a class="role-tab" data-role="underwriter" href="#underwriter">Underwriter <span class="who">Devon</span></a>
+    <a class="role-tab" data-role="borrower" href="#borrower">Borrower <span class="who">Danielle</span></a>
+  </div>
+</div>
+
+<div class="app-shell" id="appShell">
   <aside class="app-sidebar">
     <div class="app-brand">
       <div class="name">MERIDIAN CAPITAL</div>
@@ -261,28 +365,28 @@
       <div class="tag">"Guiding Capital. Building Futures."</div>
     </div>
     <nav class="app-nav">
-      <a href="#" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15 14.3c2.4.3 4 1.9 4 5"/></svg>Leads</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Borrowers</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9l8-5 8 5v10"/><path d="M9 21v-6h6v6"/></svg>Pipeline</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>Pricing Engine</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>Pre-Approvals</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>Processing</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg>Conditions</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><line x1="10" y1="13" x2="15" y2="13"/><line x1="10" y1="17" x2="15" y2="17"/></svg>Documents</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>Calendar</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h11l5 5v7a1 1 0 0 1-1 1H4z"/><path d="M9 10l2 2 4-4"/></svg>Tasks</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="21" x2="5" y2="10"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="14"/></svg>Reports</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 15l6-6"/><path d="M8 12l-2 2a3 3 0 0 0 4 4l2-2"/><path d="M16 12l2-2a3 3 0 0 0-4-4l-2 2"/></svg>Integrations</a>
-      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Settings</a>
+      <a href="#" id="navDashboard" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+      <a href="#" id="navLeads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15 14.3c2.4.3 4 1.9 4 5"/></svg>Leads</a>
+      <a href="#" id="navBorrowers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Borrowers</a>
+      <a href="#" id="navPipeline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9l8-5 8 5v10"/><path d="M9 21v-6h6v6"/></svg>Pipeline</a>
+      <a href="#" id="navPricing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>Pricing Engine</a>
+      <a href="#" id="navPreapprovals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>Pre-Approvals</a>
+      <a href="#" id="navProcessing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>Processing</a>
+      <a href="#" id="navConditions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg>Conditions</a>
+      <a href="#" id="navDocuments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><line x1="10" y1="13" x2="15" y2="13"/><line x1="10" y1="17" x2="15" y2="17"/></svg>Documents</a>
+      <a href="#" id="navCalendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>Calendar</a>
+      <a href="#" id="navTasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h11l5 5v7a1 1 0 0 1-1 1H4z"/><path d="M9 10l2 2 4-4"/></svg>Tasks</a>
+      <a href="#" id="navReports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="21" x2="5" y2="10"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="14"/></svg>Reports</a>
+      <a href="#" id="navIntegrations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 15l6-6"/><path d="M8 12l-2 2a3 3 0 0 0 4 4l2-2"/><path d="M16 12l2-2a3 3 0 0 0-4-4l-2 2"/></svg>Integrations</a>
+      <a href="#" id="navSettings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Settings</a>
     </nav>
     <div class="app-support">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3z"/><path d="M3 19a2 2 0 0 0 2 2h1v-6H3z"/></svg>
       <span>Support — We're here to help.</span>
     </div>
     <div class="app-user">
-      <div class="avatar">RC</div>
-      <div class="who"><b>Renata Castillo</b><small>Owner / Admin</small></div>
+      <div class="avatar" id="sidebarAvatar">RC</div>
+      <div class="who"><b id="sidebarName">Renata Castillo</b><small id="sidebarRole">Owner / Admin</small></div>
     </div>
   </aside>
 
@@ -306,153 +410,448 @@
       </div>
     </div>
 
-    <div class="app-hero">
-      <div class="app-hero-left">
-        <h1>Welcome to Lending OS</h1>
-        <p>Everything you need to turn opportunities into closings.</p>
-        <div class="app-hero-icons">
-          <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></span>Leads</div>
-          <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>Quotes</div>
-          <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></span>Pre-Approvals</div>
-          <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span>Processing</div>
-          <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 15l6-6"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg></span>Closings</div>
+    <!-- ============ BROKER-OWNER (Renata Castillo) ============ -->
+    <div data-role-content="admin">
+      <div class="app-hero">
+        <div class="app-hero-left">
+          <h1>Welcome to Lending OS</h1>
+          <p>Everything you need to turn opportunities into closings.</p>
+          <div class="app-hero-icons">
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></span>Leads</div>
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>Quotes</div>
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></span>Pre-Approvals</div>
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span>Processing</div>
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 15l6-6"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg></span>Closings</div>
+          </div>
         </div>
-      </div>
-      <div class="app-hero-quote">
-        <p>"More opportunities. Fewer roadblocks. A smoother path home."</p>
-        <div class="sig">— RAVLO LENDING OS</div>
-      </div>
-    </div>
-
-    <div class="stat-row">
-      <div class="stat-card">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></div>
-        <div class="lbl">New Leads</div>
-        <div class="val">18</div>
-        <div class="delta">↑ 24% <small>vs. last 30 days</small></div>
-      </div>
-      <div class="stat-card">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
-        <div class="lbl">Active Borrowers</div>
-        <div class="val">34</div>
-        <div class="delta">↑ 11% <small>vs. last 30 days</small></div>
-      </div>
-      <div class="stat-card">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-        <div class="lbl">In Pipeline</div>
-        <div class="val">$9,845,000</div>
-        <div class="delta">↑ 16% <small>vs. last 30 days</small></div>
-      </div>
-      <div class="stat-card">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></div>
-        <div class="lbl">Closed This Month</div>
-        <div class="val">5</div>
-        <div class="delta">↑ 25% <small>vs. last month</small></div>
-      </div>
-      <div class="stat-card">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></div>
-        <div class="lbl">Avg. Time to Close</div>
-        <div class="val">24 days</div>
-        <div class="delta">↓ 14% <small>vs. last 30 days</small></div>
-      </div>
-    </div>
-
-    <div class="mid-grid">
-      <div class="panel">
-        <h3>Pipeline Overview <span class="tag">This Month</span></h3>
-        <div class="bars">
-          <div class="bar-col"><span class="n">18</span><div class="b" style="height:80%;background:var(--app-blue);"></div><span class="cap">New App</span></div>
-          <div class="bar-col"><span class="n">14</span><div class="b" style="height:64%;background:var(--app-blue);"></div><span class="cap">Processing</span></div>
-          <div class="bar-col"><span class="n">9</span><div class="b" style="height:42%;background:var(--app-purple);"></div><span class="cap">Underwriting</span></div>
-          <div class="bar-col"><span class="n">6</span><div class="b" style="height:28%;background:var(--app-teal);"></div><span class="cap">Clear to Close</span></div>
-          <div class="bar-col"><span class="n">5</span><div class="b" style="height:22%;background:var(--app-gold);"></div><span class="cap">Closed</span></div>
+        <div class="app-hero-quote">
+          <p>"More opportunities. Fewer roadblocks. A smoother path home."</p>
+          <div class="sig">— RAVLO LENDING OS</div>
         </div>
       </div>
 
-      <div class="panel">
-        <h3>Loan Types</h3>
-        <div class="donut-wrap">
-          <div class="donut"><div class="mid"><b>34</b><small>Active Loans</small></div></div>
-          <div class="legend">
-            <div class="row"><span class="dot" style="background:var(--app-blue);"></span>Conventional<b>46%</b></div>
-            <div class="row"><span class="dot" style="background:var(--app-teal);"></span>FHA<b>24%</b></div>
-            <div class="row"><span class="dot" style="background:var(--app-gold);"></span>DSCR<b>18%</b></div>
-            <div class="row"><span class="dot" style="background:var(--app-purple);"></span>VA<b>8%</b></div>
-            <div class="row"><span class="dot" style="background:var(--app-muted);"></span>Other<b>4%</b></div>
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></div>
+          <div class="lbl">New Leads</div>
+          <div class="val">18</div>
+          <div class="delta">↑ 24% <small>vs. last 30 days</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+          <div class="lbl">Active Borrowers</div>
+          <div class="val">34</div>
+          <div class="delta">↑ 11% <small>vs. last 30 days</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="lbl">In Pipeline</div>
+          <div class="val">$9,845,000</div>
+          <div class="delta">↑ 16% <small>vs. last 30 days</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></div>
+          <div class="lbl">Closed This Month</div>
+          <div class="val">5</div>
+          <div class="delta">↑ 25% <small>vs. last month</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></div>
+          <div class="lbl">Avg. Time to Close</div>
+          <div class="val">24 days</div>
+          <div class="delta">↓ 14% <small>vs. last 30 days</small></div>
+        </div>
+      </div>
+
+      <div class="mid-grid">
+        <div class="panel">
+          <h3>Pipeline Overview <span class="tag">This Month</span></h3>
+          <div class="bars">
+            <div class="bar-col"><span class="n">18</span><div class="b" style="height:80%;background:var(--app-blue);"></div><span class="cap">New App</span></div>
+            <div class="bar-col"><span class="n">14</span><div class="b" style="height:64%;background:var(--app-blue);"></div><span class="cap">Processing</span></div>
+            <div class="bar-col"><span class="n">9</span><div class="b" style="height:42%;background:var(--app-purple);"></div><span class="cap">Underwriting</span></div>
+            <div class="bar-col"><span class="n">6</span><div class="b" style="height:28%;background:var(--app-teal);"></div><span class="cap">Clear to Close</span></div>
+            <div class="bar-col"><span class="n">5</span><div class="b" style="height:22%;background:var(--app-gold);"></div><span class="cap">Closed</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Loan Types</h3>
+          <div class="donut-wrap">
+            <div class="donut"><div class="mid"><b>34</b><small>Active Loans</small></div></div>
+            <div class="legend">
+              <div class="row"><span class="dot" style="background:var(--app-blue);"></span>Conventional<b>46%</b></div>
+              <div class="row"><span class="dot" style="background:var(--app-teal);"></span>FHA<b>24%</b></div>
+              <div class="row"><span class="dot" style="background:var(--app-gold);"></span>DSCR<b>18%</b></div>
+              <div class="row"><span class="dot" style="background:var(--app-purple);"></span>VA<b>8%</b></div>
+              <div class="row"><span class="dot" style="background:var(--app-muted);"></span>Other<b>4%</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Leads by Source</h3>
+          <div class="src-list">
+            <div class="src-row">Website<div class="track"><div class="fill" style="width:78%;"></div></div><span class="n">9</span></div>
+            <div class="src-row">Meta (Facebook/IG)<div class="track"><div class="fill" style="width:60%;background:var(--app-teal);"></div></div><span class="n">7</span></div>
+            <div class="src-row">Realtor Partners<div class="track"><div class="fill" style="width:38%;background:var(--app-gold);"></div></div><span class="n">4</span></div>
+            <div class="src-row">Referral<div class="track"><div class="fill" style="width:26%;background:var(--app-purple);"></div></div><span class="n">3</span></div>
+            <div class="src-row">Other<div class="track"><div class="fill" style="width:13%;background:var(--app-muted);"></div></div><span class="n">2</span></div>
           </div>
         </div>
       </div>
 
-      <div class="panel">
-        <h3>Leads by Source</h3>
-        <div class="src-list">
-          <div class="src-row">Website<div class="track"><div class="fill" style="width:78%;"></div></div><span class="n">9</span></div>
-          <div class="src-row">Meta (Facebook/IG)<div class="track"><div class="fill" style="width:60%;background:var(--app-teal);"></div></div><span class="n">7</span></div>
-          <div class="src-row">Realtor Partners<div class="track"><div class="fill" style="width:38%;background:var(--app-gold);"></div></div><span class="n">4</span></div>
-          <div class="src-row">Referral<div class="track"><div class="fill" style="width:26%;background:var(--app-purple);"></div></div><span class="n">3</span></div>
-          <div class="src-row">Other<div class="track"><div class="fill" style="width:13%;background:var(--app-muted);"></div></div><span class="n">2</span></div>
+      <div class="bottom-grid">
+        <div class="panel">
+          <h3>Recent Borrowers <span class="tag">Whole Company</span></h3>
+          <div class="table-scroll">
+          <table class="bt">
+            <tr><th>Name</th><th>Property Address</th><th>Loan Officer</th><th>Loan Amount</th><th>Status</th></tr>
+            <tr>
+              <td><div class="bt-name"><span class="av">DC</span>Danielle Carter</div></td>
+              <td>4128 Bayshore Vista Dr<br><small>Tampa, FL</small></td>
+              <td>Chris Nakamura</td>
+              <td class="num">$460,750</td>
+              <td><span class="pill pill-teal">Pre-Approval</span></td>
+            </tr>
+            <tr>
+              <td><div class="bt-name"><span class="av">MR</span>Marcus Reyes</div></td>
+              <td>210 Willow Bend Ct<br><small>Orlando, FL</small></td>
+              <td>Priya Shah</td>
+              <td class="num">$310,000</td>
+              <td><span class="pill pill-blue">Processing</span></td>
+            </tr>
+            <tr>
+              <td><div class="bt-name"><span class="av">AO</span>Ade &amp; Lisa Okafor</div></td>
+              <td>88 Harborview Ln<br><small>Sarasota, FL</small></td>
+              <td>Chris Nakamura</td>
+              <td class="num">$489,600</td>
+              <td><span class="pill pill-purple">Underwriting</span></td>
+            </tr>
+            <tr>
+              <td><div class="bt-name"><span class="av">PN</span>Priya Nair</div></td>
+              <td>55 Palmetto Row<br><small>St. Petersburg, FL</small></td>
+              <td>Sam Torres</td>
+              <td class="num">$201,000</td>
+              <td><span class="pill pill-amber">Clear to Close</span></td>
+            </tr>
+            <tr>
+              <td><div class="bt-name"><span class="av">MF</span>Monica Fields</div></td>
+              <td>Website inquiry<br><small>St. Petersburg, FL</small></td>
+              <td>Priya Shah</td>
+              <td class="num">$256,000</td>
+              <td><span class="pill pill-outline">New Application</span></td>
+            </tr>
+          </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Tasks &amp; Follow-Ups <span class="tag">Whole Team</span></h3>
+          <div class="task-list">
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Call Danielle Carter</b><small>Confirm inspection date — Chris</small></div><span class="when">Today 10:00 AM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Follow up — Marcus Reyes</b><small>Updated bank statement — Jamie</small></div><span class="when">Today 1:00 PM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Insurance binder — Okafors</b><small>New purchase price — Devon</small></div><span class="when">Today 3:00 PM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Confirm closing date</b><small>Priya Nair — Sam</small></div><span class="when">Tomorrow</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Reach out — Monica Fields</b><small>Website refinance inquiry — Priya S.</small></div><span class="when">Tomorrow</span></div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="bottom-grid">
-      <div class="panel">
-        <h3>Recent Borrowers <span class="tag">View All →</span></h3>
-        <div class="table-scroll">
-        <table class="bt">
-          <tr><th>Name</th><th>Property Address</th><th>Loan Type</th><th>Loan Amount</th><th>Status</th></tr>
-          <tr>
-            <td><div class="bt-name"><span class="av">DC</span>Danielle Carter</div></td>
-            <td>4128 Bayshore Vista Dr<br><small>Tampa, FL</small></td>
-            <td>Conventional</td>
-            <td class="num">$460,750</td>
-            <td><span class="pill pill-teal">Pre-Approval</span></td>
-          </tr>
-          <tr>
-            <td><div class="bt-name"><span class="av">MR</span>Marcus Reyes</div></td>
-            <td>210 Willow Bend Ct<br><small>Orlando, FL</small></td>
-            <td>FHA</td>
-            <td class="num">$310,000</td>
-            <td><span class="pill pill-blue">Processing</span></td>
-          </tr>
-          <tr>
-            <td><div class="bt-name"><span class="av">AO</span>Ade &amp; Lisa Okafor</div></td>
-            <td>88 Harborview Ln<br><small>Sarasota, FL</small></td>
-            <td>Conventional</td>
-            <td class="num">$489,600</td>
-            <td><span class="pill pill-purple">Underwriting</span></td>
-          </tr>
-          <tr>
-            <td><div class="bt-name"><span class="av">PN</span>Priya Nair</div></td>
-            <td>55 Palmetto Row<br><small>St. Petersburg, FL</small></td>
-            <td>DSCR</td>
-            <td class="num">$201,000</td>
-            <td><span class="pill pill-amber">Clear to Close</span></td>
-          </tr>
-          <tr>
-            <td><div class="bt-name"><span class="av">MF</span>Monica Fields</div></td>
-            <td>Website inquiry<br><small>St. Petersburg, FL</small></td>
-            <td>Refinance</td>
-            <td class="num">$256,000</td>
-            <td><span class="pill pill-outline">New Application</span></td>
-          </tr>
-        </table>
+    <!-- ============ LOAN OFFICER (Chris Nakamura) ============ -->
+    <div data-role-content="lo" hidden>
+      <div class="app-hero">
+        <div class="app-hero-left">
+          <h1>Welcome back, Chris</h1>
+          <p>You're carrying 2 active files and 1 new lead this week.</p>
+          <div class="app-hero-icons">
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></span>Leads</div>
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>Quotes</div>
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></span>Pre-Approvals</div>
+          </div>
+        </div>
+        <div class="app-hero-quote">
+          <p>"Every borrower gets side-by-side lender quotes before they ever sign."</p>
+          <div class="sig">— CHRIS NAKAMURA, LOAN OFFICER</div>
+        </div>
+      </div>
+
+      <div class="stat-row cols-4">
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+          <div class="lbl">My Active Files</div>
+          <div class="val">2</div>
+          <div class="delta">↑ 1 <small>vs. last month</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></div>
+          <div class="lbl">New Leads Assigned</div>
+          <div class="val">2</div>
+          <div class="delta">↑ 100% <small>vs. last week</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>
+          <div class="lbl">Quotes Sent This Week</div>
+          <div class="val">3</div>
+          <div class="delta">↑ 50% <small>vs. last week</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></div>
+          <div class="lbl">Avg. Response Time</div>
+          <div class="val">18 min</div>
+          <div class="delta">↓ 22% <small>vs. last 30 days</small></div>
         </div>
       </div>
 
       <div class="panel">
-        <h3>Tasks &amp; Follow-Ups <span class="tag">View All →</span></h3>
-        <div class="task-list">
-          <div class="task-row"><span class="cb"></span><div class="tx"><b>Call Danielle Carter</b><small>Confirm inspection date</small></div><span class="when">Today 10:00 AM</span></div>
-          <div class="task-row"><span class="cb"></span><div class="tx"><b>Follow up — Marcus Reyes</b><small>Updated bank statement still needed</small></div><span class="when">Today 1:00 PM</span></div>
-          <div class="task-row"><span class="cb"></span><div class="tx"><b>Insurance binder — Okafors</b><small>Homeowner's insurance for new purchase price</small></div><span class="when">Today 3:00 PM</span></div>
-          <div class="task-row"><span class="cb"></span><div class="tx"><b>Confirm closing date</b><small>Priya Nair — funding scheduled</small></div><span class="when">Tomorrow</span></div>
-          <div class="task-row"><span class="cb"></span><div class="tx"><b>Reach out — Monica Fields</b><small>Website refinance inquiry</small></div><span class="when">Tomorrow</span></div>
+        <h3>Quote Engine — Danielle Carter <span class="tag">Conventional • $460,750</span></h3>
+        <div class="quote-grid">
+          <div class="quote-card">
+            <div class="lender">Harbor Trust</div>
+            <div class="rate">6.375%</div>
+            <div class="pmt">~$2,876 /mo est.</div>
+          </div>
+          <div class="quote-card best">
+            <div class="badge">Best APR</div>
+            <div class="lender">Palmetto Federal</div>
+            <div class="rate">6.25%</div>
+            <div class="pmt">~$2,838 /mo est.</div>
+            <div class="selected">✓ Selected by Chris</div>
+          </div>
+          <div class="quote-card">
+            <div class="lender">Coastline Mortgage</div>
+            <div class="rate">6.5%</div>
+            <div class="pmt">~$2,912 /mo est.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-grid">
+        <div class="panel">
+          <h3>My Pipeline <span class="tag">2 files</span></h3>
+          <div class="table-scroll">
+          <table class="bt">
+            <tr><th>Name</th><th>Property Address</th><th>Loan Type</th><th>Loan Amount</th><th>Status</th></tr>
+            <tr>
+              <td><div class="bt-name"><span class="av">DC</span>Danielle Carter</div></td>
+              <td>4128 Bayshore Vista Dr<br><small>Tampa, FL</small></td>
+              <td>Conventional</td>
+              <td class="num">$460,750</td>
+              <td><span class="pill pill-teal">Pre-Approval</span></td>
+            </tr>
+            <tr>
+              <td><div class="bt-name"><span class="av">AO</span>Ade &amp; Lisa Okafor</div></td>
+              <td>88 Harborview Ln<br><small>Sarasota, FL</small></td>
+              <td>Conventional</td>
+              <td class="num">$489,600</td>
+              <td><span class="pill pill-purple">Underwriting</span></td>
+            </tr>
+          </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Tasks &amp; Follow-Ups</h3>
+          <div class="task-list">
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Call Danielle Carter</b><small>Confirm inspection date</small></div><span class="when">Today 10:00 AM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>New lead — Jordan Blake</b><small>Instagram — first-time buyer</small></div><span class="when">Today 4:00 PM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Check in — Okafors</b><small>Underwriting is asking for a large-deposit letter</small></div><span class="when">Tomorrow</span></div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="quick-row">
+    <!-- ============ PROCESSOR (Jamie Ortiz) ============ -->
+    <div data-role-content="processor" hidden>
+      <div class="app-hero">
+        <div class="app-hero-left">
+          <h1>Welcome back, Jamie</h1>
+          <p>1 file needs your attention today — 2 conditions are still outstanding.</p>
+          <div class="app-hero-icons">
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg></span>Documents</div>
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg></span>Conditions</div>
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span>Processing</div>
+          </div>
+        </div>
+        <div class="app-hero-quote">
+          <p>"Two conditions cleared, two to go — Marcus is close to underwriting."</p>
+          <div class="sig">— JAMIE ORTIZ, PROCESSOR</div>
+        </div>
+      </div>
+
+      <div class="stat-row cols-4">
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg></div>
+          <div class="lbl">Files in Queue</div>
+          <div class="val">4</div>
+          <div class="delta">↑ 1 <small>vs. last week</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></div>
+          <div class="lbl">Conditions Cleared</div>
+          <div class="val">6</div>
+          <div class="delta">↑ 20% <small>this week</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></div>
+          <div class="lbl">Docs Requested Today</div>
+          <div class="val">2</div>
+          <div class="delta">— <small>steady</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></div>
+          <div class="lbl">Avg. Turn Time</div>
+          <div class="val">1.8 days</div>
+          <div class="delta">↓ 9% <small>vs. last 30 days</small></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Marcus Reyes <span class="tag">FHA Refinance • $310,000</span></h3>
+        <div class="file-sub">210 Willow Bend Ct, Orlando, FL — Processing</div>
+        <div class="cond-list">
+          <div class="cond-row cleared">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span>
+            <div class="tx"><b>Signed loan application</b><small>Application</small></div>
+            <span class="pill pill-teal">Cleared</span>
+          </div>
+          <div class="cond-row cleared">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span>
+            <div class="tx"><b>Two years of W-2s</b><small>Income</small></div>
+            <span class="pill pill-teal">Cleared</span>
+          </div>
+          <div class="cond-row pending">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
+            <div class="tx"><b>Updated bank statement (last 30 days)</b><small>Assets</small></div>
+            <span class="pill pill-amber">Pending</span>
+          </div>
+          <div class="cond-row pending">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
+            <div class="tx"><b>Proof of homeowners insurance</b><small>Insurance</small></div>
+            <span class="pill pill-amber">Pending</span>
+          </div>
+        </div>
+        <button class="app-addbtn" type="button" style="margin-top:16px;">Request Missing Documents</button>
+      </div>
+
+      <div class="bottom-grid">
+        <div class="panel">
+          <h3>Up Next in Queue</h3>
+          <div class="table-scroll">
+          <table class="bt">
+            <tr><th>Name</th><th>Loan Type</th><th>Amount</th><th>Status</th></tr>
+            <tr><td><div class="bt-name"><span class="av">GL</span>Grace Liu</div></td><td>Conventional</td><td class="num">$328,000</td><td><span class="pill pill-outline">Awaiting Appraisal</span></td></tr>
+            <tr><td><div class="bt-name"><span class="av">OP</span>Owen Park</div></td><td>FHA</td><td class="num">$274,500</td><td><span class="pill pill-outline">Doc Review</span></td></tr>
+          </table>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Tasks &amp; Follow-Ups</h3>
+          <div class="task-list">
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Request bank statement</b><small>Marcus Reyes</small></div><span class="when">Today 1:00 PM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Confirm insurance binder</b><small>Marcus Reyes</small></div><span class="when">Today 3:00 PM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Open new file</b><small>Grace Liu — intake review</small></div><span class="when">Tomorrow</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ UNDERWRITER (Devon Marsh) ============ -->
+    <div data-role-content="underwriter" hidden>
+      <div class="app-hero">
+        <div class="app-hero-left">
+          <h1>Welcome back, Devon</h1>
+          <p>1 file is awaiting a decision on 2 open conditions.</p>
+          <div class="app-hero-icons">
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg></span>Conditions</div>
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></span>Decisions</div>
+            <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg></span>Documents</div>
+          </div>
+        </div>
+        <div class="app-hero-quote">
+          <p>"Strong file — one letter and one binder away from clear."</p>
+          <div class="sig">— DEVON MARSH, UNDERWRITER</div>
+        </div>
+      </div>
+
+      <div class="stat-row cols-4">
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg></div>
+          <div class="lbl">Files Under Review</div>
+          <div class="val">3</div>
+          <div class="delta">↑ 1 <small>vs. last week</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></div>
+          <div class="lbl">Conditions Cleared</div>
+          <div class="val">9</div>
+          <div class="delta">↑ 12% <small>this week</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></div>
+          <div class="lbl">Avg. Decision Time</div>
+          <div class="val">1.2 days</div>
+          <div class="delta">↓ 6% <small>vs. last 30 days</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></div>
+          <div class="lbl">Approval Rate</div>
+          <div class="val">96%</div>
+          <div class="delta">↑ 2% <small>vs. last quarter</small></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Ade &amp; Lisa Okafor <span class="tag">Conventional Purchase • $489,600</span></h3>
+        <div class="file-sub">88 Harborview Ln, Sarasota, FL — Underwriting</div>
+        <div class="cond-list">
+          <div class="cond-row cleared">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span>
+            <div class="tx"><b>Most recent pay stub (last 30 days)</b><small>Income</small></div>
+            <span class="pill pill-teal">Cleared</span>
+          </div>
+          <div class="cond-row pending">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
+            <div class="tx"><b>Explanation letter for large deposit</b><small>Assets</small></div>
+            <span class="pill pill-amber">Open</span>
+          </div>
+          <div class="cond-row pending">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
+            <div class="tx"><b>Updated homeowner's insurance binder</b><small>Insurance — new purchase price</small></div>
+            <span class="pill pill-amber">Open</span>
+          </div>
+        </div>
+        <div class="decision-row">
+          <button class="dec-btn approve" type="button">Approve with Conditions</button>
+          <button class="dec-btn suspend" type="button">Suspend</button>
+          <button class="dec-btn decline" type="button">Decline</button>
+        </div>
+      </div>
+
+      <div class="bottom-grid">
+        <div class="panel">
+          <h3>Underwriting Queue</h3>
+          <div class="table-scroll">
+          <table class="bt">
+            <tr><th>Name</th><th>Loan Type</th><th>Amount</th><th>Status</th></tr>
+            <tr><td><div class="bt-name"><span class="av">GL</span>Grace Liu</div></td><td>Conventional</td><td class="num">$328,000</td><td><span class="pill pill-outline">Awaiting Processor</span></td></tr>
+            <tr><td><div class="bt-name"><span class="av">TW</span>Tariq Whitfield</div></td><td>DSCR</td><td class="num">$245,000</td><td><span class="pill pill-outline">Intake Review</span></td></tr>
+          </table>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Tasks &amp; Follow-Ups</h3>
+          <div class="task-list">
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Review deposit letter</b><small>Ade &amp; Lisa Okafor</small></div><span class="when">Today 2:00 PM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Confirm insurance binder</b><small>Ade &amp; Lisa Okafor</small></div><span class="when">Today 4:00 PM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>New file incoming</b><small>Grace Liu — pending processor sign-off</small></div><span class="when">Tomorrow</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-row" style="margin-top:6px;">
       <a href="#" class="quick-card"><div class="qt"><b>Run Smart Quotes</b><small>Compare rates from multiple lenders in seconds.</small></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-12"/></svg></a>
       <a href="#" class="quick-card"><div class="qt"><b>Send a Pre-Approval</b><small>Turn qualified leads into confident buyers.</small></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-12"/></svg></a>
       <a href="#" class="quick-card"><div class="qt"><b>Track to Closing</b><small>Keep every file, task, and deadline in one place.</small></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-12"/></svg></a>
@@ -465,6 +864,74 @@
   </main>
 </div>
 
+<!-- ============ BORROWER PORTAL (Danielle Carter) ============ -->
+<div class="borrower-shell" id="borrowerShell" hidden>
+  <div class="b-top">
+    <div class="brand">MERIDIAN CAPITAL<small>MY LOAN</small></div>
+    <div class="who"><div class="avatar">DC</div><span>Danielle Carter</span></div>
+  </div>
+  <div class="b-wrap">
+    <div class="b-hero">
+      <h1>Welcome back, Danielle</h1>
+      <p>Here's where your home loan stands today.</p>
+    </div>
+
+    <div class="b-loan-card">
+      <div class="addr">4128 Bayshore Vista Dr, Tampa, FL 33611</div>
+      <div class="sub">Conventional Purchase — Chris Nakamura, Loan Officer</div>
+      <div class="b-loan-grid">
+        <div><small>Purchase Price</small><b>$485,000</b></div>
+        <div><small>Loan Amount</small><b>$460,750</b></div>
+        <div><small>Rate</small><b>6.25%</b></div>
+        <div><small>Program</small><b>Palmetto Federal</b></div>
+      </div>
+    </div>
+
+    <div class="b-stepper">
+      <div class="b-step done"><span class="dot">✓</span><span class="lbl">Application</span></div>
+      <div class="b-step current"><span class="dot">●</span><span class="lbl">Pre-Approval</span></div>
+      <div class="b-step"><span class="dot">3</span><span class="lbl">Processing</span></div>
+      <div class="b-step"><span class="dot">4</span><span class="lbl">Underwriting</span></div>
+      <div class="b-step"><span class="dot">5</span><span class="lbl">Clear to Close</span></div>
+      <div class="b-step"><span class="dot">6</span><span class="lbl">Funded</span></div>
+    </div>
+
+    <div class="b-two-col">
+      <div class="b-team-card">
+        <div class="avatar">CN</div>
+        <b>Chris Nakamura</b>
+        <small>Your Loan Officer — Meridian Capital</small>
+        <button class="b-msg-btn" type="button">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Message Chris
+        </button>
+      </div>
+      <div class="panel">
+        <h3>To-Do</h3>
+        <div class="task-list">
+          <div class="task-row"><span class="cb"></span><div class="tx"><b>Schedule your home inspection</b><small>Chris is following up today</small></div><span class="when">This week</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Documents</h3>
+      <div class="doc-row">
+        <div class="df">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg>
+          Preapproval Letter.pdf
+        </div>
+        <span class="dl">Ready ↓</span>
+      </div>
+    </div>
+
+    <div class="app-footer" style="padding:20px 4px 4px;">
+      <span><strong>DEMO ENVIRONMENT</strong> — SAMPLE DATA ONLY</span>
+      <span>RAVLO | LENDING OS</span>
+    </div>
+  </div>
+</div>
+
 <footer class="wrap-footer">
   <p>This is a sample preview built by Ravlo to show what Lending OS looks like running a mortgage company's day-to-day pipeline. "Meridian Capital Lending," every borrower, loan officer, and figure shown is fictional.</p>
   <div class="btn-row">
@@ -472,6 +939,72 @@
     <a href="{{ url_for('marketing.contact') }}" class="wrap-btn gold">Talk to Us →</a>
   </div>
 </footer>
+
+<script>
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.role-tab'));
+  var appShell = document.getElementById('appShell');
+  var borrowerShell = document.getElementById('borrowerShell');
+  var roleMains = Array.prototype.slice.call(document.querySelectorAll('[data-role-content]'));
+
+  var navMap = {
+    admin: 'navDashboard',
+    lo: 'navPipeline',
+    processor: 'navProcessing',
+    underwriter: 'navConditions'
+  };
+  var userMap = {
+    admin: { av: 'RC', name: 'Renata Castillo', role: 'Owner / Admin' },
+    lo: { av: 'CN', name: 'Chris Nakamura', role: 'Loan Officer' },
+    processor: { av: 'JO', name: 'Jamie Ortiz', role: 'Processor' },
+    underwriter: { av: 'DM', name: 'Devon Marsh', role: 'Underwriter' }
+  };
+
+  // Each tab is a real link (#admin, #loan-officer, ...) so it can be
+  // opened in its own browser tab, bookmarked, or sent directly to
+  // someone -- they land straight on that role.
+  var hashToRole = {
+    admin: 'admin',
+    'loan-officer': 'lo',
+    processor: 'processor',
+    underwriter: 'underwriter',
+    borrower: 'borrower'
+  };
+
+  function roleFromHash(){
+    var h = (window.location.hash || '').replace('#', '');
+    return hashToRole[h] || 'admin';
+  }
+
+  function setRole(role){
+    tabs.forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-role') === role); });
+
+    if (role === 'borrower') {
+      appShell.hidden = true;
+      borrowerShell.hidden = false;
+      return;
+    }
+
+    appShell.hidden = false;
+    borrowerShell.hidden = true;
+    roleMains.forEach(function(el){ el.hidden = el.getAttribute('data-role-content') !== role; });
+
+    document.querySelectorAll('.app-nav a').forEach(function(a){ a.classList.remove('active'); });
+    var navEl = document.getElementById(navMap[role]);
+    if (navEl) navEl.classList.add('active');
+
+    var u = userMap[role];
+    if (u) {
+      document.getElementById('sidebarAvatar').textContent = u.av;
+      document.getElementById('sidebarName').textContent = u.name;
+      document.getElementById('sidebarRole').textContent = u.role;
+    }
+  }
+
+  window.addEventListener('hashchange', function(){ setRole(roleFromHash()); });
+  setRole(roleFromHash());
+})();
+</script>
 
 </body>
 </html>
