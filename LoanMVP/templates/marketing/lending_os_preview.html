@@ -155,48 +155,84 @@
   .app-footer{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 0;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.08em;color:var(--app-muted);}
   .app-footer strong{color:var(--app-gold);}
 
-  /* ---------------- borrower portal shell (distinct from the internal app) ---------------- */
-  .borrower-shell{min-height:720px;background:var(--app-bg);padding-bottom:10px;}
-  .b-top{display:flex;align-items:center;justify-content:space-between;padding:18px 26px;border-bottom:1px solid var(--app-line);flex-wrap:wrap;gap:10px;}
-  .b-top .brand{font-weight:800;color:#fff;font-size:1rem;}
-  .b-top .brand small{display:block;font-family:var(--font-mono);font-size:.6rem;letter-spacing:.14em;color:var(--app-gold);margin-top:2px;}
-  .b-top .who{display:flex;align-items:center;gap:9px;}
-  .b-top .who .avatar{width:32px;height:32px;border-radius:50%;background:var(--app-teal);color:#fff;font-weight:700;font-size:.78rem;display:flex;align-items:center;justify-content:center;}
-  .b-wrap{max-width:760px;margin:0 auto;padding:30px 20px 10px;}
-  .b-hero h1{color:#fff;font-size:1.5rem;margin:0 0 4px;}
-  .b-hero p{color:var(--app-muted);margin:0 0 22px;font-size:.92rem;}
+  /* ---------------- BORROWER PORTAL (mirrors ravlo_borrower_base.html / borrower/dashboard.html) ---------------- */
+  .borrower-shell{min-height:720px;background:var(--rc-bg);color:var(--rc-text);}
+  .rb-topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 22px;border-bottom:1px solid var(--rc-line);flex-wrap:wrap;}
+  .rb-topbar-left{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .rb-brand{display:flex;align-items:center;gap:10px;}
+  .rb-mark{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:.78rem;color:#fff;background:linear-gradient(180deg,#0F2D52,#C9A227);border:1px solid rgba(201,162,39,.5);}
+  .rb-name{font-weight:800;font-size:.84rem;letter-spacing:.06em;color:#fff;}
+  .rb-sub-brand{font-size:.6rem;color:#C9A227;text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+  .rb-page-title{font-weight:700;font-size:.94rem;color:#fff;}
+  .rb-page-subline{font-size:.74rem;color:var(--rc-muted);margin-top:2px;}
+  .rb-topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .rb-user-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--rc-line);border-radius:99px;padding:5px 12px 5px 5px;font-size:.8rem;font-weight:600;color:#fff;}
+  .rb-avatar{width:26px;height:26px;border-radius:50%;background:var(--rc-teal);display:flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:800;color:#06231c;flex-shrink:0;}
 
-  .b-loan-card{background:var(--app-card);border:1px solid var(--app-line);border-radius:16px;padding:20px 22px;margin-bottom:22px;}
-  .b-loan-card .addr{font-weight:700;color:#fff;font-size:1.08rem;margin-bottom:2px;}
-  .b-loan-card .sub{color:var(--app-muted);font-size:.8rem;margin-bottom:16px;}
-  .b-loan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
-  @media (max-width:560px){ .b-loan-grid{grid-template-columns:repeat(2,1fr);} }
-  .b-loan-grid div small{display:block;color:var(--app-muted);font-size:.68rem;margin-bottom:3px;}
-  .b-loan-grid div b{color:#fff;font-size:1rem;}
+  .rb-nav{display:flex;gap:2px;padding:0 22px;border-bottom:1px solid var(--rc-line);overflow-x:auto;}
+  .rb-nav-link{padding:12px 13px;font-size:.82rem;font-weight:600;color:var(--rc-muted);text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;}
+  .rb-nav-link.active{color:#fff;border-bottom-color:var(--rc-accent-2);}
+  .rb-nav-link:hover{color:#fff;}
 
-  .b-stepper{display:flex;justify-content:space-between;margin-bottom:26px;position:relative;}
-  .b-stepper::before{content:'';position:absolute;top:13px;left:24px;right:24px;height:2px;background:var(--app-line);z-index:0;}
-  .b-step{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;}
-  .b-step .dot{width:26px;height:26px;border-radius:50%;background:var(--app-card);border:2px solid var(--app-line);display:flex;align-items:center;justify-content:center;color:var(--app-muted);font-size:.7rem;font-weight:700;flex-shrink:0;}
-  .b-step.done .dot{background:var(--app-teal);border-color:var(--app-teal);color:#fff;}
-  .b-step.current .dot{background:var(--app-gold);border-color:var(--app-gold);color:#1a1206;box-shadow:0 0 0 4px rgba(216,178,60,.22);}
-  .b-step span.lbl{font-size:.66rem;color:var(--app-muted);text-align:center;line-height:1.3;}
-  .b-step.current span.lbl{color:#fff;font-weight:700;}
-  @media (max-width:560px){ .b-step span.lbl{font-size:.58rem;} }
+  .rb-content{max-width:1080px;margin:0 auto;padding:22px 22px 6px;display:grid;gap:18px;}
 
-  .b-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
-  @media (max-width:620px){ .b-two-col{grid-template-columns:1fr;} }
-  .b-team-card{background:var(--app-card);border:1px solid var(--app-line);border-radius:14px;padding:18px;}
-  .b-team-card .avatar{width:44px;height:44px;border-radius:50%;background:var(--app-teal);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:.9rem;}
-  .b-team-card b{display:block;color:#fff;font-size:.94rem;}
-  .b-team-card small{color:var(--app-muted);font-size:.76rem;display:block;margin-bottom:12px;}
-  .b-msg-btn{display:inline-flex;align-items:center;gap:6px;background:var(--app-blue);color:#08172c;border:none;border-radius:9px;padding:8px 14px;font-weight:700;font-size:.8rem;cursor:default;}
+  .rb-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;padding:22px;border-radius:20px;border:1px solid var(--rc-line);background:radial-gradient(800px 420px at 10% 0%, rgba(122,184,255,.14), transparent 50%), rgba(255,255,255,.03);}
+  .rb-eyebrow{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;opacity:.8;color:var(--rc-muted);}
+  .rb-hero h1{margin:8px 0;font-size:1.55rem;color:#fff;}
+  .rb-hero p{margin:0;max-width:480px;color:var(--rc-muted);line-height:1.6;font-size:.88rem;}
+  .rb-hero-actions{display:flex;gap:10px;flex-wrap:wrap;}
 
-  .doc-row{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--app-line);gap:10px;}
-  .doc-row:last-child{border-bottom:none;}
-  .doc-row .df{display:flex;align-items:center;gap:10px;font-size:.84rem;color:#fff;min-width:0;}
-  .doc-row .df svg{width:16px;height:16px;color:var(--app-muted);flex-shrink:0;}
-  .doc-row .dl{font-size:.76rem;color:var(--app-blue);font-weight:700;white-space:nowrap;}
+  .rb-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+  @media (max-width:780px){ .rb-stat-grid{grid-template-columns:repeat(2,1fr);} }
+  .rb-stat-card{background:rgba(255,255,255,.03);border:1px solid var(--rc-line);border-radius:16px;padding:15px;}
+  .rb-stat-label{font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;opacity:.75;margin-bottom:6px;color:var(--rc-muted);}
+  .rb-stat-value{font-size:1rem;font-weight:700;color:#fff;}
+
+  .rb-main-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start;}
+  @media (max-width:1000px){ .rb-main-grid{grid-template-columns:1fr;} }
+  .rb-col{display:grid;gap:16px;min-width:0;}
+  .rb-card{background:rgba(255,255,255,.03);border:1px solid var(--rc-line);border-radius:16px;padding:18px;min-width:0;}
+  .rb-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .rb-card-head h3{margin:2px 0 0;font-size:.9rem;color:#fff;}
+
+  .rb-progress-row{display:flex;justify-content:space-between;color:var(--rc-muted);font-size:.78rem;margin-bottom:6px;}
+  .rb-progress{height:9px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;}
+  .rb-progress-bar{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--rc-accent),var(--rc-accent-2));}
+  .rb-card-note{margin-top:8px;font-size:.76rem;color:var(--rc-muted);}
+
+  .rb-mini-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  @media (max-width:560px){ .rb-mini-grid{grid-template-columns:repeat(2,1fr);} }
+  .rb-card-mini{padding:13px;}
+  .rb-stat-big{font-size:1.3rem;font-weight:800;color:#fff;}
+
+  .rb-info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  @media (max-width:480px){ .rb-info-grid{grid-template-columns:1fr;} }
+  .rb-info-block{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:11px;}
+  .rb-info-value{font-size:.88rem;font-weight:700;color:#fff;margin-top:2px;}
+
+  .rb-card-actions{margin-top:14px;}
+
+  .rb-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:0 14px;border-radius:10px;font-weight:700;font-size:.8rem;border:1px solid transparent;text-decoration:none;cursor:default;}
+  .rb-btn-sm{min-height:32px;padding:0 11px;font-size:.76rem;}
+  .rb-btn-primary{color:#fff;background:linear-gradient(180deg,#607487,#45586B);border-color:rgba(255,255,255,.08);}
+  .rb-btn-ghost{color:#EAF2FA;background:rgba(255,255,255,.04);border-color:var(--rc-line);}
+
+  .rb-action-list{display:grid;gap:8px;}
+  .rb-action-link{display:block;padding:10px 13px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);font-size:.82rem;color:#EAF2FA;text-decoration:none;}
+  .rb-checklist{display:grid;gap:10px;}
+  .rb-check-item{display:flex;gap:9px;align-items:flex-start;font-size:.82rem;color:#fff;}
+  .rb-check-dot{width:11px;height:11px;border-radius:99px;margin-top:3px;background:rgba(255,255,255,.18);flex:0 0 11px;}
+  .rb-check-dot.done{background:var(--rc-accent-2);}
+  .rb-check-item small{display:block;color:var(--rc-muted);font-size:.72rem;margin-top:2px;font-weight:400;}
+
+  .rb-empty{padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.12);color:var(--rc-muted);font-size:.8rem;}
+
+  .rb-table-wrap{overflow-x:auto;}
+  .rb-table{width:100%;min-width:420px;border-collapse:collapse;font-size:.8rem;}
+  .rb-table th,.rb-table td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--rc-line);color:#fff;}
+  .rb-table th{color:var(--rc-muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;}
+
+  .rb-plan-copy{color:var(--rc-muted);font-size:.82rem;}
 
   /* ---------------- REAL ADMIN DASHBOARD shell (mirrors company_dashboard.html / ravlo_employee.css) ---------------- */
   :root{
@@ -1062,67 +1098,143 @@
 </div>
 
 <!-- ============ BORROWER PORTAL (Danielle Carter) ============ -->
+<!-- ============ BORROWER (Danielle Carter) -- mirrors ravlo_borrower_base.html / borrower/dashboard.html ============ -->
 <div class="borrower-shell" id="borrowerShell" hidden>
-  <div class="b-top">
-    <div class="brand">MERIDIAN CAPITAL<small>MY LOAN</small></div>
-    <div class="who"><div class="avatar">DC</div><span>Danielle Carter</span></div>
-  </div>
-  <div class="b-wrap">
-    <div class="b-hero">
-      <h1>Welcome back, Danielle</h1>
-      <p>Here's where your home loan stands today.</p>
-    </div>
-
-    <div class="b-loan-card">
-      <div class="addr">4128 Bayshore Vista Dr, Tampa, FL 33611</div>
-      <div class="sub">Conventional Purchase — Chris Nakamura, Loan Officer</div>
-      <div class="b-loan-grid">
-        <div><small>Purchase Price</small><b>$485,000</b></div>
-        <div><small>Loan Amount</small><b>$460,750</b></div>
-        <div><small>Rate</small><b>6.25%</b></div>
-        <div><small>Program</small><b>Palmetto Federal</b></div>
-      </div>
-    </div>
-
-    <div class="b-stepper">
-      <div class="b-step done"><span class="dot">✓</span><span class="lbl">Application</span></div>
-      <div class="b-step current"><span class="dot">●</span><span class="lbl">Pre-Approval</span></div>
-      <div class="b-step"><span class="dot">3</span><span class="lbl">Processing</span></div>
-      <div class="b-step"><span class="dot">4</span><span class="lbl">Underwriting</span></div>
-      <div class="b-step"><span class="dot">5</span><span class="lbl">Clear to Close</span></div>
-      <div class="b-step"><span class="dot">6</span><span class="lbl">Funded</span></div>
-    </div>
-
-    <div class="b-two-col">
-      <div class="b-team-card">
-        <div class="avatar">CN</div>
-        <b>Chris Nakamura</b>
-        <small>Your Loan Officer — Meridian Capital</small>
-        <button class="b-msg-btn" type="button">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          Message Chris
-        </button>
-      </div>
-      <div class="panel">
-        <h3>To-Do</h3>
-        <div class="task-list">
-          <div class="task-row"><span class="cb"></span><div class="tx"><b>Schedule your home inspection</b><small>Chris is following up today</small></div><span class="when">This week</span></div>
+  <header class="rb-topbar">
+    <div class="rb-topbar-left">
+      <div class="rb-brand">
+        <div class="rb-mark">MC</div>
+        <div>
+          <div class="rb-name">MERIDIAN CAPITAL</div>
+          <div class="rb-sub-brand">Guiding Capital. Building Futures.</div>
         </div>
       </div>
-    </div>
-
-    <div class="panel">
-      <h3>Documents</h3>
-      <div class="doc-row">
-        <div class="df">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg>
-          Preapproval Letter.pdf
-        </div>
-        <span class="dl">Ready ↓</span>
+      <div class="rb-page-copy">
+        <div class="rb-page-title">Borrower Dashboard</div>
+        <div class="rb-page-subline">Track your loan, documents, and next steps</div>
       </div>
     </div>
+    <div class="rb-topbar-right">
+      <div class="rc-bell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 6.5H4.5C4.5 13.5 6 12 6 8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><span class="dot">1</span></div>
+      <div class="rb-user-chip"><div class="rb-avatar">DC</div><span>Danielle</span></div>
+    </div>
+  </header>
 
-    <div class="app-footer" style="padding:20px 4px 4px;">
+  <nav class="rb-nav">
+    <a href="#" class="rb-nav-link active">Dashboard</a>
+    <a href="#" class="rb-nav-link">Apply</a>
+    <a href="#" class="rb-nav-link">Loans</a>
+    <a href="#" class="rb-nav-link">Documents</a>
+    <a href="#" class="rb-nav-link">Conditions</a>
+    <a href="#" class="rb-nav-link">Messages</a>
+    <a href="#" class="rb-nav-link">Subscription</a>
+    <a href="#" class="rb-nav-link">Network</a>
+  </nav>
+
+  <div class="rb-content">
+    <section class="rb-hero">
+      <div>
+        <div class="rb-eyebrow">Borrower OS</div>
+        <h1>Welcome back, Danielle</h1>
+        <p>Your active file is in progress. Review your loan details, upload missing documents, and stay on top of conditions.</p>
+      </div>
+      <div class="rb-hero-actions">
+        <button class="rb-btn rb-btn-primary" type="button">Apply for Funding</button>
+        <button class="rb-btn rb-btn-ghost" type="button">Upload Document</button>
+      </div>
+    </section>
+
+    <section class="rb-stat-grid">
+      <div class="rb-stat-card"><div class="rb-stat-label">Active Status</div><div class="rb-stat-value">Pre-Approval</div></div>
+      <div class="rb-stat-card"><div class="rb-stat-label">Loan Type</div><div class="rb-stat-value">Conventional</div></div>
+      <div class="rb-stat-card"><div class="rb-stat-label">Loan Amount</div><div class="rb-stat-value">$460,750</div></div>
+      <div class="rb-stat-card"><div class="rb-stat-label">Progress</div><div class="rb-stat-value">20%</div></div>
+    </section>
+
+    <section class="rb-main-grid">
+      <div class="rb-col">
+
+        <section class="rb-card">
+          <div class="rb-card-head"><div><div class="rb-eyebrow">Progress</div><h3>Application Progress</h3></div></div>
+          <div class="rb-progress-row"><span>Your file progress</span><span>20%</span></div>
+          <div class="rb-progress"><div class="rb-progress-bar" style="width:20%;"></div></div>
+          <div class="rb-card-note">Property: 4128 Bayshore Vista Dr, Tampa, FL 33611</div>
+        </section>
+
+        <section class="rb-mini-grid">
+          <div class="rb-card rb-card-mini"><div class="rb-stat-label">Loans</div><div class="rb-stat-big">1</div></div>
+          <div class="rb-card rb-card-mini"><div class="rb-stat-label">Documents</div><div class="rb-stat-big">1</div></div>
+          <div class="rb-card rb-card-mini"><div class="rb-stat-label">Conditions</div><div class="rb-stat-big">0</div></div>
+          <div class="rb-card rb-card-mini"><div class="rb-stat-label">Open Conditions</div><div class="rb-stat-big">0</div></div>
+        </section>
+
+        <section class="rb-card">
+          <div class="rb-card-head">
+            <div><div class="rb-eyebrow">Loan File</div><h3>Active Loan</h3></div>
+            <button class="rb-btn rb-btn-ghost rb-btn-sm" type="button">View All Loans</button>
+          </div>
+          <div class="rb-info-grid">
+            <div class="rb-info-block"><div class="rb-stat-label">Loan ID</div><div class="rb-info-value">#4821</div></div>
+            <div class="rb-info-block"><div class="rb-stat-label">Status</div><div class="rb-info-value">Pending</div></div>
+            <div class="rb-info-block"><div class="rb-stat-label">Property Address</div><div class="rb-info-value">4128 Bayshore Vista Dr</div></div>
+            <div class="rb-info-block"><div class="rb-stat-label">Property Value</div><div class="rb-info-value">$485,000</div></div>
+          </div>
+          <div class="rb-card-actions"><button class="rb-btn rb-btn-primary rb-btn-sm" type="button">Open Loan File</button></div>
+        </section>
+
+        <section class="rb-card">
+          <div class="rb-card-head">
+            <div><div class="rb-eyebrow">Documents</div><h3>Recent Documents</h3></div>
+            <button class="rb-btn rb-btn-ghost rb-btn-sm" type="button">View Documents</button>
+          </div>
+          <div class="rb-table-wrap">
+            <table class="rb-table">
+              <tr><th>Document</th><th>Type</th><th>Status</th><th>Uploaded</th></tr>
+              <tr><td>Preapproval Letter.pdf</td><td>Preapproval</td><td>Ready</td><td>Sep 11, 2026</td></tr>
+            </table>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="rb-col">
+
+        <section class="rb-card">
+          <div class="rb-card-head"><div><div class="rb-eyebrow">Next Steps</div><h3>Actions</h3></div></div>
+          <div class="rb-action-list">
+            <a href="#" class="rb-action-link">Start or update application</a>
+            <a href="#" class="rb-action-link">Upload supporting documents</a>
+            <a href="#" class="rb-action-link">Review conditions</a>
+            <a href="#" class="rb-action-link">Message your team</a>
+            <a href="#" class="rb-action-link">Manage subscription</a>
+          </div>
+        </section>
+
+        <section class="rb-card">
+          <div class="rb-card-head"><div><div class="rb-eyebrow">Checklist</div><h3>Your Next Items</h3></div></div>
+          <div class="rb-checklist">
+            <div class="rb-check-item"><div class="rb-check-dot"></div><div><b>Schedule your home inspection</b><small>Confirm a date before the file moves to processing</small></div></div>
+          </div>
+        </section>
+
+        <section class="rb-card">
+          <div class="rb-card-head">
+            <div><div class="rb-eyebrow">Conditions</div><h3>Open Conditions</h3></div>
+            <button class="rb-btn rb-btn-ghost rb-btn-sm" type="button">View All</button>
+          </div>
+          <div class="rb-empty">No open conditions right now.</div>
+        </section>
+
+        <section class="rb-card">
+          <div class="rb-card-head"><div><div class="rb-eyebrow">Subscription</div><h3>Your Plan</h3></div></div>
+          <div class="rb-plan-copy">Current plan: <strong>Free</strong></div>
+          <div class="rb-card-actions"><button class="rb-btn rb-btn-primary rb-btn-sm" type="button">Manage Plan</button></div>
+        </section>
+
+      </div>
+    </section>
+
+    <div class="app-footer" style="padding:6px 0 20px;">
       <span><strong>DEMO ENVIRONMENT</strong> — SAMPLE DATA ONLY</span>
       <span>RAVLO | LENDING OS</span>
     </div>
