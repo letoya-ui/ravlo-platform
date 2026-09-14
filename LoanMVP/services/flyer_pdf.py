@@ -234,3 +234,91 @@ def build_business_flyer_pdf(profile, contact_email=None, contact_phone=None) ->
     c.save()
     buffer.seek(0)
     return buffer
+
+
+def _event_line(event_date, event_time, event_time_end):
+    parts = []
+    if event_date is not None:
+        parts.append(event_date.strftime("%a, %b %d").upper())
+    if event_time and event_time_end:
+        parts.append(f"{event_time} – {event_time_end}")
+    elif event_time:
+        parts.append(event_time)
+    return "  •  ".join(parts) if parts else None
+
+
+def build_open_house_flyer_pdf(profile, details, photos, contact_email=None, contact_phone=None) -> io.BytesIO:
+    """A single-page 'Open House' flyer built from a plain dict of
+    details rather than a saved ElenaListing -- a partner can ask Ravlo
+    for one for an address that isn't in their portfolio yet, so price/
+    beds/baths/photos may simply be missing. `details` keys: address,
+    city, state, zip, price, beds, baths, sqft, description, event_date
+    (a date or None), event_time, event_time_end."""
+    accent_rgb = _hex_to_rgb01(getattr(profile, "brand_color", None))
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=LETTER)
+
+    header_h = 1.35 * 72
+    c.setFillColorRGB(*accent_rgb)
+    c.rect(0, PAGE_H - header_h, PAGE_W, header_h, fill=1, stroke=0)
+    _draw_logo_or_business_name(
+        c, getattr(profile, "logo_url", None), profile.business_name or profile.display_name,
+        MARGIN, PAGE_H - 0.3 * 72,
+    )
+    c.setFillColorRGB(1, 1, 1)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawRightString(PAGE_W - MARGIN, PAGE_H - 0.42 * 72, "OPEN HOUSE")
+
+    event_line = _event_line(details.get("event_date"), details.get("event_time"), details.get("event_time_end"))
+    if event_line:
+        c.setFont("Helvetica-Bold", 12)
+        c.drawRightString(PAGE_W - MARGIN, PAGE_H - 0.68 * 72, event_line)
+
+    photo_top = PAGE_H - header_h - 0.25 * 72
+    photo_h = 3.3 * 72
+    photo_w = PAGE_W - 2 * MARGIN
+    _draw_photo_or_placeholder(c, photos[0] if photos else None, MARGIN, photo_top, photo_w, photo_h, accent_rgb)
+
+    y = photo_top - photo_h - 0.35 * 72
+    price = details.get("price")
+    price_text = f"${price:,.0f}" if isinstance(price, (int, float)) else "Price upon request"
+    c.setFillColorRGB(*accent_rgb)
+    c.setFont("Helvetica-Bold", 24)
+    c.drawString(MARGIN, y, price_text)
+
+    y -= 0.32 * 72
+    c.setFillColorRGB(0.1, 0.1, 0.1)
+    c.setFont("Helvetica-Bold", 13)
+    c.drawString(MARGIN, y, details.get("address") or "")
+
+    y -= 0.24 * 72
+    c.setFont("Helvetica", 11)
+    city_line = ", ".join(p for p in (details.get("city"), details.get("state"), details.get("zip")) if p)
+    c.drawString(MARGIN, y, city_line)
+
+    stats = []
+    if details.get("beds") is not None:
+        stats.append(f"{details['beds']} bd")
+    if details.get("baths") is not None:
+        stats.append(f"{details['baths']} ba")
+    if details.get("sqft") is not None:
+        stats.append(f"{details['sqft']:,} sqft")
+    if stats:
+        y -= 0.35 * 72
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(MARGIN, y, "   |   ".join(stats))
+
+    if details.get("description"):
+        y -= 0.35 * 72
+        _draw_wrapped_text(
+            c, details["description"], MARGIN, y, PAGE_W - 2 * MARGIN,
+            font="Helvetica", size=10, leading=13, max_lines=6,
+        )
+
+    _draw_footer(c, profile, contact_email, contact_phone, accent_rgb)
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer
