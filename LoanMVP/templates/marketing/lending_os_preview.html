@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lending OS Preview | Ravlo</title>
+<meta name="description" content="See what Lending OS looks like running a real mortgage company's day-to-day: leads, quotes, pre-approvals, processing, and closings in one pipeline.">
+<link rel="canonical" href="https://ravlohq.com/lending-os/preview">
+<meta property="og:title" content="Lending OS Preview | Ravlo">
+<meta property="og:description" content="A sample look at Lending OS running for a mortgage company — leads, quotes, pre-approvals, processing, and closings in one pipeline.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root{
+    /* -- Ravlo wrapper chrome -- */
+    --wrap-bg:#07111f;
+    --wrap-text:#ecf3ff;
+    --wrap-muted:#a9bbd5;
+    --wrap-line:rgba(255,255,255,.10);
+    --wrap-blue:#7ab8ff;
+    --wrap-gold:#d7b369;
+
+    /* -- Meridian Capital "app" palette (the white-label brand this preview simulates) -- */
+    --app-sidebar:#0A2140;
+    --app-bg:#0E2A4C;
+    --app-card:#123457;
+    --app-card-soft:rgba(255,255,255,.04);
+    --app-line:rgba(255,255,255,.10);
+    --app-text:#F2F6FC;
+    --app-muted:#9FB6D9;
+    --app-navy:#0F2D52;
+    --app-teal:#12B592;
+    --app-gold:#D8B23C;
+    --app-blue:#6FA8FF;
+    --app-purple:#B79CFF;
+    --app-amber:#E8B84B;
+
+    --font-body:'Inter', -apple-system, Segoe UI, sans-serif;
+    --font-mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--wrap-bg);color:var(--wrap-text);font-family:var(--font-body);line-height:1.5;overflow-x:hidden;}
+  a{color:inherit;}
+  .num{font-variant-numeric:tabular-nums;}
+
+  /* ---------------- wrapper chrome ---------------- */
+  .wrap-topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:14px 24px;border-bottom:1px solid var(--wrap-line);flex-wrap:wrap;
+  }
+  .wrap-logo{font-weight:800;font-size:1.05rem;letter-spacing:.02em;text-decoration:none;color:var(--wrap-text);display:inline-flex;align-items:center;gap:8px;}
+  .wrap-cta-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .wrap-note{font-size:.84rem;color:var(--wrap-muted);}
+  .wrap-btn{
+    display:inline-flex;align-items:center;gap:6px;border-radius:10px;padding:9px 16px;
+    font-size:.86rem;font-weight:600;text-decoration:none;white-space:nowrap;
+  }
+  .wrap-btn.gold{background:var(--wrap-gold);color:#1a1206;}
+  .wrap-btn.ghost{background:rgba(255,255,255,.08);border:1px solid var(--wrap-line);color:var(--wrap-text);}
+
+  .disclosure{
+    background:rgba(255,255,255,.04);color:var(--wrap-muted);text-align:center;
+    font-size:.72rem;padding:8px 20px;font-family:var(--font-mono);letter-spacing:.02em;
+    border-bottom:1px solid var(--wrap-line);
+  }
+  .disclosure strong{color:var(--wrap-gold);}
+
+  /* ---------------- app mockup shell ---------------- */
+  .app-shell{display:flex;min-height:720px;background:var(--app-bg);}
+
+  .app-sidebar{
+    width:236px;flex:0 0 236px;background:var(--app-sidebar);
+    display:flex;flex-direction:column;padding:22px 16px;border-right:1px solid var(--app-line);
+  }
+  .app-brand{padding:2px 8px 20px;}
+  .app-brand .name{font-weight:800;font-size:1.02rem;letter-spacing:.03em;color:#fff;line-height:1.2;}
+  .app-brand .sub{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.16em;color:var(--app-gold);margin-top:3px;}
+  .app-brand .tag{font-size:.68rem;color:var(--app-muted);margin-top:8px;font-style:italic;}
+
+  .app-nav{display:flex;flex-direction:column;gap:2px;margin-top:6px;flex:1;overflow:hidden;}
+  .app-nav a{
+    display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:9px;
+    color:var(--app-muted);text-decoration:none;font-size:.86rem;font-weight:500;
+  }
+  .app-nav a svg{width:16px;height:16px;flex-shrink:0;}
+  .app-nav a.active{background:var(--app-teal);color:#fff;font-weight:600;}
+  .app-nav a:not(.active):hover{background:rgba(255,255,255,.05);color:#fff;}
+
+  .app-support{
+    margin-top:14px;background:var(--app-card-soft);border:1px solid var(--app-line);
+    border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--app-muted);
+  }
+  .app-support svg{width:16px;height:16px;flex-shrink:0;color:var(--app-gold);}
+
+  .app-user{display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 8px 2px;border-top:1px solid var(--app-line);}
+  .app-user .avatar{width:32px;height:32px;border-radius:50%;background:var(--app-teal);color:#fff;font-weight:700;font-size:.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .app-user .who b{display:block;font-size:.82rem;color:#fff;}
+  .app-user .who small{font-size:.72rem;color:var(--app-muted);}
+
+  /* ---------------- app main column ---------------- */
+  .app-main{flex:1;min-width:0;padding:20px 26px 34px;}
+
+  .app-topbar{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
+  .app-search{
+    flex:1;min-width:200px;display:flex;align-items:center;gap:10px;background:var(--app-card);
+    border:1px solid var(--app-line);border-radius:11px;padding:10px 14px;color:var(--app-muted);font-size:.86rem;
+  }
+  .app-search svg{width:16px;height:16px;flex-shrink:0;}
+  .app-addbtn{
+    display:inline-flex;align-items:center;gap:7px;background:var(--app-blue);color:#08172c;
+    font-weight:700;font-size:.86rem;border-radius:10px;padding:10px 16px;white-space:nowrap;border:none;
+  }
+  .app-bell{
+    position:relative;width:38px;height:38px;border-radius:10px;background:var(--app-card);
+    border:1px solid var(--app-line);display:flex;align-items:center;justify-content:center;color:var(--app-muted);flex-shrink:0;
+  }
+  .app-bell svg{width:17px;height:17px;}
+  .app-bell .dot{position:absolute;top:-4px;right:-4px;background:#ef6a6a;color:#fff;font-size:.62rem;font-weight:700;border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;}
+  .app-idbadge{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .app-idbadge .mark{width:36px;height:36px;border-radius:50%;background:var(--app-navy);border:1px solid var(--app-gold);color:var(--app-gold);font-weight:800;font-size:.78rem;display:flex;align-items:center;justify-content:center;}
+  .app-idbadge .co b{display:block;font-size:.86rem;color:#fff;}
+  .app-idbadge .co small{font-size:.64rem;letter-spacing:.05em;color:var(--app-muted);}
+
+  /* hero banner */
+  .app-hero{
+    background:linear-gradient(120deg,var(--app-navy) 0%,#123a63 60%,var(--app-teal) 130%);
+    border-radius:16px;padding:26px 28px;margin-bottom:20px;
+    display:flex;justify-content:space-between;gap:24px;align-items:center;flex-wrap:wrap;
+    border:1px solid var(--app-line);position:relative;overflow:hidden;
+  }
+  .app-hero::after{
+    content:'';position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;
+    background:radial-gradient(circle,rgba(216,178,60,.16),transparent 70%);
+  }
+  .app-hero-left h1{font-size:1.5rem;margin:0 0 4px;color:#fff;}
+  .app-hero-left p{margin:0 0 16px;color:rgba(255,255,255,.78);font-size:.92rem;}
+  .app-hero-icons{display:flex;gap:22px;flex-wrap:wrap;}
+  .app-hero-icons .hi{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.72rem;color:rgba(255,255,255,.85);}
+  .app-hero-icons .hi .box{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;}
+  .app-hero-icons .hi .box svg{width:18px;height:18px;color:#fff;}
+  .app-hero-quote{
+    max-width:230px;background:rgba(8,20,36,.4);border:1px solid rgba(255,255,255,.18);
+    border-radius:12px;padding:16px 18px;color:#fff;flex-shrink:0;
+  }
+  .app-hero-quote p{margin:0;font-size:.92rem;font-style:italic;line-height:1.4;}
+  .app-hero-quote .sig{margin-top:10px;font-size:.7rem;letter-spacing:.14em;color:var(--app-gold);font-weight:700;}
+  @media (max-width:760px){ .app-hero-quote{display:none;} }
+
+  /* stat cards */
+  .stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px;}
+  @media (max-width:1100px){ .stat-row{grid-template-columns:repeat(3,1fr);} }
+  @media (max-width:700px){ .stat-row{grid-template-columns:repeat(2,1fr);} }
+  .stat-card{background:var(--app-card);border:1px solid var(--app-line);border-radius:14px;padding:16px;}
+  .stat-card .ic{width:32px;height:32px;border-radius:9px;background:rgba(111,168,255,.15);display:flex;align-items:center;justify-content:center;margin-bottom:10px;color:var(--app-blue);}
+  .stat-card .ic svg{width:16px;height:16px;}
+  .stat-card .lbl{font-size:.76rem;color:var(--app-muted);margin-bottom:4px;}
+  .stat-card .val{font-size:1.4rem;font-weight:800;color:#fff;}
+  .stat-card .delta{font-size:.72rem;margin-top:6px;color:var(--app-teal);font-weight:600;}
+  .stat-card .delta small{color:var(--app-muted);font-weight:400;}
+
+  /* middle grid: pipeline / loan types / leads by source */
+  .mid-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:14px;margin-bottom:20px;}
+  @media (max-width:980px){ .mid-grid{grid-template-columns:1fr;} }
+  .panel{background:var(--app-card);border:1px solid var(--app-line);border-radius:14px;padding:18px;min-width:0;}
+  .panel h3{margin:0 0 14px;font-size:.96rem;color:#fff;display:flex;justify-content:space-between;align-items:center;}
+  .panel h3 .tag{font-size:.68rem;font-weight:500;color:var(--app-muted);background:rgba(255,255,255,.06);padding:4px 9px;border-radius:99px;}
+
+  .bars{display:flex;align-items:flex-end;gap:14px;height:110px;padding-top:10px;}
+  .bars .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;}
+  .bars .bar-col .n{font-size:.78rem;font-weight:700;color:#fff;}
+  .bars .bar-col .b{width:100%;border-radius:6px 6px 0 0;}
+  .bars .bar-col .cap{font-size:.64rem;color:var(--app-muted);margin-top:4px;text-align:center;}
+
+  .donut-wrap{display:flex;align-items:center;gap:16px;}
+  .donut{width:96px;height:96px;border-radius:50%;flex-shrink:0;
+    background:conic-gradient(var(--app-blue) 0 46%, var(--app-teal) 46% 70%, var(--app-gold) 70% 88%, var(--app-purple) 88% 96%, var(--app-muted) 96% 100%);
+    display:flex;align-items:center;justify-content:center;position:relative;}
+  .donut::after{content:'';position:absolute;inset:15px;border-radius:50%;background:var(--app-card);}
+  .donut .mid{position:relative;text-align:center;z-index:1;}
+  .donut .mid b{display:block;font-size:1.05rem;color:#fff;}
+  .donut .mid small{font-size:.6rem;color:var(--app-muted);}
+  .legend{display:flex;flex-direction:column;gap:7px;font-size:.76rem;}
+  .legend .row{display:flex;align-items:center;gap:7px;color:var(--app-muted);}
+  .legend .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .legend b{color:#fff;margin-left:auto;padding-left:10px;}
+
+  .src-list{display:flex;flex-direction:column;gap:10px;}
+  .src-row{display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--app-muted);}
+  .src-row .track{flex:1;height:7px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;}
+  .src-row .fill{height:100%;border-radius:99px;background:var(--app-blue);}
+  .src-row .n{width:20px;text-align:right;color:#fff;font-weight:700;font-size:.78rem;}
+
+  /* bottom grid: borrower table + tasks */
+  .bottom-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:20px;}
+  @media (max-width:980px){ .bottom-grid{grid-template-columns:1fr;} }
+
+  .table-scroll{overflow-x:auto;}
+  table.bt{width:100%;min-width:520px;border-collapse:collapse;font-size:.82rem;}
+  table.bt th{text-align:left;color:var(--app-muted);font-weight:600;font-size:.72rem;padding:0 8px 10px;border-bottom:1px solid var(--app-line);white-space:nowrap;}
+  table.bt td{padding:11px 8px;border-bottom:1px solid var(--app-line);color:var(--app-text);vertical-align:middle;}
+  table.bt tr:last-child td{border-bottom:none;}
+  .bt-name{display:flex;align-items:center;gap:9px;font-weight:600;white-space:nowrap;}
+  .bt-name .av{width:28px;height:28px;border-radius:50%;background:var(--app-navy);border:1px solid var(--app-line);color:var(--app-gold);font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .bt-addr small{display:block;color:var(--app-muted);font-size:.72rem;}
+  .pill{display:inline-block;padding:4px 11px;border-radius:99px;font-size:.72rem;font-weight:700;white-space:nowrap;}
+  .pill-blue{background:rgba(111,168,255,.16);color:var(--app-blue);}
+  .pill-teal{background:rgba(18,181,146,.16);color:var(--app-teal);}
+  .pill-purple{background:rgba(183,156,255,.16);color:var(--app-purple);}
+  .pill-amber{background:rgba(232,184,75,.16);color:var(--app-amber);}
+  .pill-outline{background:transparent;border:1px solid var(--app-line);color:var(--app-muted);}
+
+  .task-list{display:flex;flex-direction:column;gap:2px;}
+  .task-row{display:flex;align-items:flex-start;gap:10px;padding:10px 4px;border-bottom:1px solid var(--app-line);}
+  .task-row:last-child{border-bottom:none;}
+  .task-row .cb{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--app-muted);flex-shrink:0;margin-top:2px;}
+  .task-row .tx b{display:block;font-size:.82rem;color:#fff;font-weight:600;}
+  .task-row .tx small{font-size:.74rem;color:var(--app-muted);}
+  .task-row .when{margin-left:auto;font-size:.72rem;color:var(--app-gold);font-weight:600;white-space:nowrap;padding-top:1px;}
+
+  .quick-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media (max-width:760px){ .quick-row{grid-template-columns:1fr;} }
+  .quick-card{
+    background:var(--app-card);border:1px solid var(--app-line);border-radius:14px;padding:16px 18px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;color:inherit;
+  }
+  .quick-card .qt b{display:block;font-size:.88rem;color:#fff;margin-bottom:3px;}
+  .quick-card .qt small{font-size:.76rem;color:var(--app-muted);}
+  .quick-card svg{width:16px;height:16px;color:var(--app-muted);flex-shrink:0;}
+
+  .app-footer{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 0;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.08em;color:var(--app-muted);}
+  .app-footer strong{color:var(--app-gold);}
+
+  footer.wrap-footer{padding:40px 24px 50px;text-align:center;}
+  footer.wrap-footer p{color:var(--wrap-muted);font-size:.86rem;max-width:560px;margin:0 auto 18px;}
+  footer.wrap-footer .btn-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;}
+
+  @media (max-width:900px){
+    .app-sidebar{display:none;}
+    .app-shell{min-height:0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap-topbar">
+  <a href="{{ url_for('marketing.homepage') }}" class="wrap-logo">RAVLO</a>
+  <div class="wrap-cta-row">
+    <span class="wrap-note">This is a preview of Lending OS — not a live account.</span>
+    <a href="{{ url_for('marketing.lending_os') }}" class="wrap-btn ghost">Learn More</a>
+    <a href="{{ url_for('marketing.contact') }}" class="wrap-btn gold">Talk to Us →</a>
+  </div>
+</div>
+<div class="disclosure"><strong>DEMO PREVIEW — SAMPLE DATA ONLY.</strong> Meridian Capital Lending is a fictional company Ravlo built to show what Lending OS looks like running a real pipeline. The people, loans, and figures shown are not real.</div>
+
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <div class="app-brand">
+      <div class="name">MERIDIAN CAPITAL</div>
+      <div class="sub">LENDING OS</div>
+      <div class="tag">"Guiding Capital. Building Futures."</div>
+    </div>
+    <nav class="app-nav">
+      <a href="#" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15 14.3c2.4.3 4 1.9 4 5"/></svg>Leads</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Borrowers</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9l8-5 8 5v10"/><path d="M9 21v-6h6v6"/></svg>Pipeline</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>Pricing Engine</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>Pre-Approvals</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>Processing</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg>Conditions</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><line x1="10" y1="13" x2="15" y2="13"/><line x1="10" y1="17" x2="15" y2="17"/></svg>Documents</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>Calendar</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h11l5 5v7a1 1 0 0 1-1 1H4z"/><path d="M9 10l2 2 4-4"/></svg>Tasks</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="21" x2="5" y2="10"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="14"/></svg>Reports</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 15l6-6"/><path d="M8 12l-2 2a3 3 0 0 0 4 4l2-2"/><path d="M16 12l2-2a3 3 0 0 0-4-4l-2 2"/></svg>Integrations</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Settings</a>
+    </nav>
+    <div class="app-support">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3z"/><path d="M3 19a2 2 0 0 0 2 2h1v-6H3z"/></svg>
+      <span>Support — We're here to help.</span>
+    </div>
+    <div class="app-user">
+      <div class="avatar">RC</div>
+      <div class="who"><b>Renata Castillo</b><small>Owner / Admin</small></div>
+    </div>
+  </aside>
+
+  <main class="app-main">
+    <div class="app-topbar">
+      <div class="app-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
+        Search borrowers, leads, or loans…
+      </div>
+      <button class="app-addbtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Borrower
+      </button>
+      <div class="app-bell">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 6.5H4.5C4.5 13.5 6 12 6 8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+        <span class="dot">3</span>
+      </div>
+      <div class="app-idbadge">
+        <div class="mark">MC</div>
+        <div class="co"><b>Meridian Capital</b><small>HOME LOANS, GUIDED WELL</small></div>
+      </div>
+    </div>
+
+    <div class="app-hero">
+      <div class="app-hero-left">
+        <h1>Welcome to Lending OS</h1>
+        <p>Everything you need to turn opportunities into closings.</p>
+        <div class="app-hero-icons">
+          <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></span>Leads</div>
+          <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>Quotes</div>
+          <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></span>Pre-Approvals</div>
+          <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span>Processing</div>
+          <div class="hi"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 15l6-6"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg></span>Closings</div>
+        </div>
+      </div>
+      <div class="app-hero-quote">
+        <p>"More opportunities. Fewer roadblocks. A smoother path home."</p>
+        <div class="sig">— RAVLO LENDING OS</div>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></div>
+        <div class="lbl">New Leads</div>
+        <div class="val">18</div>
+        <div class="delta">↑ 24% <small>vs. last 30 days</small></div>
+      </div>
+      <div class="stat-card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+        <div class="lbl">Active Borrowers</div>
+        <div class="val">34</div>
+        <div class="delta">↑ 11% <small>vs. last 30 days</small></div>
+      </div>
+      <div class="stat-card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+        <div class="lbl">In Pipeline</div>
+        <div class="val">$9,845,000</div>
+        <div class="delta">↑ 16% <small>vs. last 30 days</small></div>
+      </div>
+      <div class="stat-card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></div>
+        <div class="lbl">Closed This Month</div>
+        <div class="val">5</div>
+        <div class="delta">↑ 25% <small>vs. last month</small></div>
+      </div>
+      <div class="stat-card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></div>
+        <div class="lbl">Avg. Time to Close</div>
+        <div class="val">24 days</div>
+        <div class="delta">↓ 14% <small>vs. last 30 days</small></div>
+      </div>
+    </div>
+
+    <div class="mid-grid">
+      <div class="panel">
+        <h3>Pipeline Overview <span class="tag">This Month</span></h3>
+        <div class="bars">
+          <div class="bar-col"><span class="n">18</span><div class="b" style="height:80%;background:var(--app-blue);"></div><span class="cap">New App</span></div>
+          <div class="bar-col"><span class="n">14</span><div class="b" style="height:64%;background:var(--app-blue);"></div><span class="cap">Processing</span></div>
+          <div class="bar-col"><span class="n">9</span><div class="b" style="height:42%;background:var(--app-purple);"></div><span class="cap">Underwriting</span></div>
+          <div class="bar-col"><span class="n">6</span><div class="b" style="height:28%;background:var(--app-teal);"></div><span class="cap">Clear to Close</span></div>
+          <div class="bar-col"><span class="n">5</span><div class="b" style="height:22%;background:var(--app-gold);"></div><span class="cap">Closed</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Loan Types</h3>
+        <div class="donut-wrap">
+          <div class="donut"><div class="mid"><b>34</b><small>Active Loans</small></div></div>
+          <div class="legend">
+            <div class="row"><span class="dot" style="background:var(--app-blue);"></span>Conventional<b>46%</b></div>
+            <div class="row"><span class="dot" style="background:var(--app-teal);"></span>FHA<b>24%</b></div>
+            <div class="row"><span class="dot" style="background:var(--app-gold);"></span>DSCR<b>18%</b></div>
+            <div class="row"><span class="dot" style="background:var(--app-purple);"></span>VA<b>8%</b></div>
+            <div class="row"><span class="dot" style="background:var(--app-muted);"></span>Other<b>4%</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Leads by Source</h3>
+        <div class="src-list">
+          <div class="src-row">Website<div class="track"><div class="fill" style="width:78%;"></div></div><span class="n">9</span></div>
+          <div class="src-row">Meta (Facebook/IG)<div class="track"><div class="fill" style="width:60%;background:var(--app-teal);"></div></div><span class="n">7</span></div>
+          <div class="src-row">Realtor Partners<div class="track"><div class="fill" style="width:38%;background:var(--app-gold);"></div></div><span class="n">4</span></div>
+          <div class="src-row">Referral<div class="track"><div class="fill" style="width:26%;background:var(--app-purple);"></div></div><span class="n">3</span></div>
+          <div class="src-row">Other<div class="track"><div class="fill" style="width:13%;background:var(--app-muted);"></div></div><span class="n">2</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-grid">
+      <div class="panel">
+        <h3>Recent Borrowers <span class="tag">View All →</span></h3>
+        <div class="table-scroll">
+        <table class="bt">
+          <tr><th>Name</th><th>Property Address</th><th>Loan Type</th><th>Loan Amount</th><th>Status</th></tr>
+          <tr>
+            <td><div class="bt-name"><span class="av">DC</span>Danielle Carter</div></td>
+            <td>4128 Bayshore Vista Dr<br><small>Tampa, FL</small></td>
+            <td>Conventional</td>
+            <td class="num">$460,750</td>
+            <td><span class="pill pill-teal">Pre-Approval</span></td>
+          </tr>
+          <tr>
+            <td><div class="bt-name"><span class="av">MR</span>Marcus Reyes</div></td>
+            <td>210 Willow Bend Ct<br><small>Orlando, FL</small></td>
+            <td>FHA</td>
+            <td class="num">$310,000</td>
+            <td><span class="pill pill-blue">Processing</span></td>
+          </tr>
+          <tr>
+            <td><div class="bt-name"><span class="av">AO</span>Ade &amp; Lisa Okafor</div></td>
+            <td>88 Harborview Ln<br><small>Sarasota, FL</small></td>
+            <td>Conventional</td>
+            <td class="num">$489,600</td>
+            <td><span class="pill pill-purple">Underwriting</span></td>
+          </tr>
+          <tr>
+            <td><div class="bt-name"><span class="av">PN</span>Priya Nair</div></td>
+            <td>55 Palmetto Row<br><small>St. Petersburg, FL</small></td>
+            <td>DSCR</td>
+            <td class="num">$201,000</td>
+            <td><span class="pill pill-amber">Clear to Close</span></td>
+          </tr>
+          <tr>
+            <td><div class="bt-name"><span class="av">MF</span>Monica Fields</div></td>
+            <td>Website inquiry<br><small>St. Petersburg, FL</small></td>
+            <td>Refinance</td>
+            <td class="num">$256,000</td>
+            <td><span class="pill pill-outline">New Application</span></td>
+          </tr>
+        </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Tasks &amp; Follow-Ups <span class="tag">View All →</span></h3>
+        <div class="task-list">
+          <div class="task-row"><span class="cb"></span><div class="tx"><b>Call Danielle Carter</b><small>Confirm inspection date</small></div><span class="when">Today 10:00 AM</span></div>
+          <div class="task-row"><span class="cb"></span><div class="tx"><b>Follow up — Marcus Reyes</b><small>Updated bank statement still needed</small></div><span class="when">Today 1:00 PM</span></div>
+          <div class="task-row"><span class="cb"></span><div class="tx"><b>Insurance binder — Okafors</b><small>Homeowner's insurance for new purchase price</small></div><span class="when">Today 3:00 PM</span></div>
+          <div class="task-row"><span class="cb"></span><div class="tx"><b>Confirm closing date</b><small>Priya Nair — funding scheduled</small></div><span class="when">Tomorrow</span></div>
+          <div class="task-row"><span class="cb"></span><div class="tx"><b>Reach out — Monica Fields</b><small>Website refinance inquiry</small></div><span class="when">Tomorrow</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-row">
+      <a href="#" class="quick-card"><div class="qt"><b>Run Smart Quotes</b><small>Compare rates from multiple lenders in seconds.</small></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-12"/></svg></a>
+      <a href="#" class="quick-card"><div class="qt"><b>Send a Pre-Approval</b><small>Turn qualified leads into confident buyers.</small></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-12"/></svg></a>
+      <a href="#" class="quick-card"><div class="qt"><b>Track to Closing</b><small>Keep every file, task, and deadline in one place.</small></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-12"/></svg></a>
+    </div>
+
+    <div class="app-footer">
+      <span><strong>DEMO ENVIRONMENT</strong> — SAMPLE DATA ONLY</span>
+      <span>RAVLO | LENDING OS</span>
+    </div>
+  </main>
+</div>
+
+<footer class="wrap-footer">
+  <p>This is a sample preview built by Ravlo to show what Lending OS looks like running a mortgage company's day-to-day pipeline. "Meridian Capital Lending," every borrower, loan officer, and figure shown is fictional.</p>
+  <div class="btn-row">
+    <a href="{{ url_for('marketing.lending_os') }}" class="wrap-btn ghost">See Lending OS</a>
+    <a href="{{ url_for('marketing.contact') }}" class="wrap-btn gold">Talk to Us →</a>
+  </div>
+</footer>
+
+</body>
+</html>
