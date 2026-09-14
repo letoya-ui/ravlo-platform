@@ -67,7 +67,7 @@ def test_lending_os_preview_shows_the_same_file_from_different_seats(client):
     assert "Chris Nakamura" in body
     assert "Jamie Ortiz" in body
     assert "Devon Marsh" in body
-    assert "Quote Engine" in body
+    assert "QUOTE ENGINE" in body
     assert "Approve with Conditions" in body
     assert "Schedule your home inspection" in body
 
@@ -102,6 +102,30 @@ def test_lending_os_preview_admin_tab_mirrors_the_real_company_dashboard(client)
     assert "Team Members" in body
     assert "Renata Castillo" in body
     assert "Company Admin" in body
+
+
+def test_lending_os_preview_internal_roles_share_one_visual_language(client):
+    """The Loan Officer, Processor, and Underwriter tabs used to look like
+    a different product (a warm navy/gold "Meridian" shell) next to the
+    Broker-Owner tab's real admin look (Ravlo's dark blue rc- theme).
+    They were rebuilt on the same rc-shell components and each role's
+    real sidebar structure so switching tabs doesn't feel jarring."""
+    resp = client.get("/lending-os/preview")
+
+    body = resp.get_data(as_text=True)
+    assert 'id="loShell"' in body
+    assert 'id="processorShell"' in body
+    assert 'id="underwriterShell"' in body
+    assert 'id="adminShell"' in body
+    # Real per-role sidebar sections/labels, not the old invented nav.
+    assert "Loan Officer Workspace" in body
+    assert "Processor Workspace" in body
+    assert "Underwriter Workspace" in body
+    assert "Loan Queue" in body
+    assert "Decision Queue" in body
+    # The old Meridian-branded shell chrome is gone.
+    assert "app-shell" not in body
+    assert 'class="app-hero"' not in body
 
 
 def test_lending_os_marketing_page_still_renders(client):
