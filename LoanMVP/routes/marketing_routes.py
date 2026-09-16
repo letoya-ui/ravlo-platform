@@ -1,3 +1,4 @@
+import random
 from datetime import datetime
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, session
@@ -29,6 +30,26 @@ def _is_spam(email: str, subject: str, message: str) -> bool:
         return True
     combined = (subject + " " + message).lower()
     return any(kw in combined for kw in _SPAM_KEYWORDS)
+
+
+# A visible "what is X + Y?" challenge -- stops the bots that skip
+# hidden honeypot fields but don't execute JS or solve simple arithmetic.
+# The answer lives in the server-side session, keyed off nothing the
+# client controls, so it can't be read or replayed from the form markup.
+def _new_math_challenge():
+    a, b = random.randint(1, 9), random.randint(1, 9)
+    session["contact_math_answer"] = a + b
+    return a, b
+
+
+def _math_challenge_passed(submitted_answer: str) -> bool:
+    expected = session.pop("contact_math_answer", None)
+    if expected is None:
+        return False
+    try:
+        return int(str(submitted_answer).strip()) == expected
+    except (TypeError, ValueError):
+        return False
 
 
 # ---------------------------------------------------------
@@ -326,9 +347,14 @@ def contact():
         email = (request.form.get("email") or "").strip().lower()
         subject = (request.form.get("subject") or "").strip()
         message = (request.form.get("message") or "").strip()
+        math_answer = request.form.get("math_answer") or ""
 
         if not name or not email or not message:
             flash("Name, email, and message are required.", "warning")
+            return redirect(url_for("marketing.contact"))
+
+        if not _math_challenge_passed(math_answer):
+            flash("That answer didn't look right — please try the question again.", "warning")
             return redirect(url_for("marketing.contact"))
 
         # Silently drop spam — don't notify sender they were blocked
@@ -353,7 +379,8 @@ def contact():
         flash("Message sent — we'll be in touch shortly.", "success")
         return redirect(url_for("marketing.contact"))
 
-    return render_marketing_page("contact")
+    math_a, math_b = _new_math_challenge()
+    return render_marketing_page("contact", math_a=math_a, math_b=math_b)
 
 
 def _notify_admin_contact(name: str, email: str, subject: str, message: str) -> None:
