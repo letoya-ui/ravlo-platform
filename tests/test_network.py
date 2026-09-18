@@ -7,6 +7,7 @@ Payments had to handle, to make sure post/comment bylines correctly
 label who's actually posting.
 """
 import io
+import re
 import shutil
 from pathlib import Path
 
@@ -457,3 +458,36 @@ def test_feed_links_author_name_to_their_profile_page(db_session, client):
     resp = client.get("/network/real-estate")
 
     assert f"/network/real-estate/professionals/{author.id}" in resp.get_data(as_text=True)
+
+
+# ─── "Post an Offering" modal CSS ──────────────────────────────────────────
+# Two bugs made the modal render both its steps stacked on top of each
+# other, with the step-2 form fields showing raw unstyled browser inputs:
+# (1) nothing gave a bare .nw-hidden{display:none}, so toggling that class
+# on #nw-modal-step1/#nw-modal-step2/#nw-listing-only-fields did nothing;
+# (2) the field-styling rules targeted a nonexistent class ".nw-modal-step2"
+# (the element's *id* is nw-modal-step2, but its *class* is nw-modal-step).
+
+def test_post_modal_hidden_elements_actually_get_hidden(db_session, client):
+    user = _make_user(db_session, "modalcss@example.com")
+    login_as(client, user)
+
+    resp = client.get("/network/real-estate")
+
+    body = resp.get_data(as_text=True)
+    assert ".nw-modal-step.nw-hidden" in body or "#nw-listing-only-fields.nw-hidden" in body
+    assert re.search(r"\.nw-modal-step\.nw-hidden[^}]*display:\s*none", body)
+
+
+def test_post_modal_step2_field_styling_targets_a_selector_that_exists(db_session, client):
+    user = _make_user(db_session, "modalcss2@example.com")
+    login_as(client, user)
+
+    resp = client.get("/network/real-estate")
+
+    body = resp.get_data(as_text=True)
+    # The old, never-matching selector must be gone...
+    assert ".nw-modal-step2" not in body
+    # ...replaced by one that actually matches the div's real id.
+    assert "#nw-modal-step2 textarea" in body
+    assert "#nw-modal-step2 form" in body

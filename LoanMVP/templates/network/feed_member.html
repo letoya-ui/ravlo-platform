@@ -434,6 +434,10 @@
   }
   .nw-modal-close:hover { color: #f4f7fb; }
   .nw-modal-step h2 { font-size: 1.15rem; font-weight: 800; margin-bottom: 18px; }
+  .nw-modal-step.nw-hidden,
+  #nw-listing-only-fields.nw-hidden {
+    display: none;
+  }
   .nw-type-choices { display: flex; flex-direction: column; gap: 10px; }
   .nw-type-choice {
     text-align: left; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
@@ -448,8 +452,8 @@
     font-family: inherit;
   }
   .nw-modal-back:hover { color: #f4f7fb; }
-  .nw-modal-step2 form { display: flex; flex-direction: column; gap: 10px; }
-  .nw-modal-step2 textarea, .nw-modal-step2 input[type="text"], .nw-modal-step2 select {
+  #nw-modal-step2 form { display: flex; flex-direction: column; gap: 10px; }
+  #nw-modal-step2 textarea, #nw-modal-step2 input[type="text"], #nw-modal-step2 select {
     width: 100%; background: rgba(255,255,255,0.05); color: inherit;
     border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 12px 14px;
     font-size: 0.92rem; font-family: inherit; resize: vertical;
