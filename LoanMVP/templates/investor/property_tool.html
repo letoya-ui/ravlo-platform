@@ -19,6 +19,13 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
 {% endblock %}
 
 {% block content %}
+<div id="dfv4SearchOverlay" class="dfv4-search-overlay" style="display:none">
+  <div class="dfv4-search-overlay-card">
+    <div class="dfv4-search-overlay-spinner"></div>
+    <div class="dfv4-search-overlay-title">Searching for deals…</div>
+    <div class="dfv4-search-overlay-sub">Scanning listings, running comps, and scoring opportunities.</div>
+  </div>
+</div>
 <div class="dfv4-shell">
   <aside class="ravlo-card pad dfv4-search-panel">
     <div class="eyebrow">DEAL FINDER</div>
@@ -1139,13 +1146,15 @@ async function runSearch(){
   const longitude = document.getElementById("longitude")?.value || "";
 
   const status = document.getElementById("searchStatus");
+  const overlay = document.getElementById("dfv4SearchOverlay");
 
   if (!zip && !(city && state) && !(latitude && longitude) && !address) {
     status.innerText = "Enter a ZIP code, city/state, address, or use your location.";
     return;
   }
 
-  status.innerHTML = '<span class="dfv4-searching-dot"></span>Searching…';
+  status.innerText = "";
+  if (overlay) overlay.style.display = "flex";
 
   const payload = {
     address,
@@ -1197,6 +1206,8 @@ async function runSearch(){
     console.error(err);
     status.innerText = "Search error. Try ZIP code or city/state.";
     renderEmpty("Search failed", "Try another ZIP code, city/state, or use your location.");
+  } finally {
+    if (overlay) overlay.style.display = "none";
   }
 }
 
@@ -1312,6 +1323,12 @@ async function runAIMarketRead(topResult, market) {
 .dfv4-status{color:var(--muted);margin-top:.75rem;min-height:20px;font-size:.82rem;display:flex;align-items:center;gap:6px}
 .dfv4-searching-dot{width:7px;height:7px;border-radius:50%;background:var(--ravlo-accent,#5FA8FF);flex-shrink:0;animation:dfv4-pulse 1.2s ease-in-out infinite}
 @keyframes dfv4-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
+.dfv4-search-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(8,12,20,0.62);backdrop-filter:blur(2px)}
+.dfv4-search-overlay-card{display:flex;flex-direction:column;align-items:center;gap:14px;padding:32px 40px;border-radius:18px;background:rgba(20,26,38,0.96);border:1px solid rgba(255,255,255,.10);box-shadow:0 24px 60px rgba(0,0,0,.45);text-align:center;max-width:320px}
+.dfv4-search-overlay-spinner{width:34px;height:34px;border-radius:50%;border:3px solid rgba(95,168,255,.22);border-top-color:var(--ravlo-accent,#5FA8FF);animation:dfv4-spin-ring .8s linear infinite}
+@keyframes dfv4-spin-ring{to{transform:rotate(360deg)}}
+.dfv4-search-overlay-title{color:#fff;font-size:1rem;font-weight:800}
+.dfv4-search-overlay-sub{color:var(--muted);font-size:.85rem;line-height:1.5}
 .dfv4-panel-note{margin-top:1rem;padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .dfv4-panel-note ul{margin:.55rem 0 0 1rem;padding:0;color:var(--muted)}
 .dfv4-results-wrap{display:grid;gap:1rem}
