@@ -7358,6 +7358,11 @@ def design_studio(deal_id=None):
     if deal_id is not None:
         deal = _get_owned_deal_or_404(deal_id)
 
+    project = None
+    project_id = request.args.get("project_id", type=int)
+    if project_id is not None:
+        project = BuildProject.query.filter_by(id=project_id, user_id=current_user.id).first()
+
     results = (deal.results_json or {}) if deal else {}
     rehab_project = results.get("rehab_project", {}) or {}
     rehab_scope = results.get("rehab_scope") or (getattr(deal, "rehab_scope_json", None) if deal else None) or {}
@@ -7426,6 +7431,21 @@ def design_studio(deal_id=None):
         }
 
     build_project = results.get("build_project", {}) or {}
+    if not build_project and project is not None:
+        build_project = _seed_build_project_from_saved_project(project)
+
+    if not rehab_before.get("image_url"):
+        seeded_image = (
+            build_project.get("exterior", {}).get("image_url")
+            or build_project.get("blueprint", {}).get("image_url")
+        )
+        if seeded_image:
+            rehab_before = {
+                **rehab_before,
+                "image_url": seeded_image,
+                "source": "build_project",
+            }
+
     blueprint_result = build_project.get("blueprint", {}) or {}
     siteplan_result = build_project.get("siteplan", {}) or build_project.get("site_plan", {}) or {}
     exterior_result = _build_project_exterior_result(build_project)
@@ -7459,6 +7479,7 @@ def design_studio(deal_id=None):
     return render_template(
         "investor/design_studio.html",
         deal=deal,
+        project=project,
         rehab_project=rehab_project,
         rehab_scope=rehab_scope,
         rehab_before=rehab_before,

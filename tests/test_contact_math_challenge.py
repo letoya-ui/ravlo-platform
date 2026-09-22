@@ -99,9 +99,15 @@ def test_contact_challenge_answer_cannot_be_reused(db_session, client):
             "message": "Tell me more about Lending OS.",
             "math_answer": str(a + b),
         },
-        follow_redirects=True,
+        # Not following the redirect here is deliberate: contact()'s GET
+        # branch calls _new_math_challenge() and overwrites the session's
+        # stored answer with a fresh random one. Following it would
+        # occasionally (when the new sum happens to equal a + b) make the
+        # replay below pass by coincidence instead of by the bug it's
+        # meant to catch.
+        follow_redirects=False,
     )
-    assert first.status_code == 200
+    assert first.status_code == 302
     assert BusinessInquiry.query.filter_by(email="jamie.prospect4@example.com").first() is not None
 
     replay = client.post(
