@@ -18,6 +18,14 @@ def test_lending_os_preview_renders(client):
     assert "Lending OS" in body
 
 
+def test_lending_os_preview_shows_the_branded_dashboard_banner(client):
+    resp = client.get("/lending-os/preview")
+
+    body = resp.get_data(as_text=True)
+    assert "images/demo/meridian_capital_banner.jpg" in body
+    assert "powered by Ravlo" in body
+
+
 def test_lending_os_preview_shows_the_meridian_pipeline(client):
     resp = client.get("/lending-os/preview")
 

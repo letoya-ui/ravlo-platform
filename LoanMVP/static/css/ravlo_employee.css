@@ -1239,3 +1239,177 @@ tbody tr:hover td,
 .onboarding-dashboard .partner-hero-card::before {
   background: radial-gradient(circle, rgba(96, 170, 255, 0.22), transparent 70%);
 }
+
+/* ===========================================================
+   Shared role-dashboard widgets: hero banner, stat-tile trend
+   badges, analytics grid (donut / bar chart / source list),
+   activity grid (activity feed / tasks / promo card). Used by
+   loan_officer, processor, underwriter, and admin company
+   dashboards -- each template supplies its own hero photo via
+   an inline background-image style (Jinja url_for can't run
+   inside a static .css file).
+   =========================================================== */
+
+.dash-hero{
+  position:relative;
+  border-radius:20px;
+  overflow:hidden;
+  padding:28px;
+  min-height:160px;
+  display:flex;
+  align-items:center;
+  background-size:cover;
+  background-position:center;
+}
+
+.dash-hero-copy{ max-width:520px; }
+.dash-hero-date{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.08em;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+.dash-hero-copy h2{
+  margin:0;
+  font-size:1.7rem;
+  font-weight:800;
+  color:#fff;
+}
+.dash-hero-copy p{
+  margin:6px 0 0;
+  color:rgba(255,255,255,.75);
+  font-size:.92rem;
+}
+
+.stat-card-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  margin-bottom:10px;
+}
+
+.stat-icon{
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.stat-icon i{ width:16px; height:16px; }
+.stat-icon--accent{ background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); }
+.stat-icon--accent-2{ background:color-mix(in srgb, var(--accent-2) 18%, transparent); color:var(--accent-2); }
+.stat-icon--info{ background:color-mix(in srgb, var(--info) 18%, transparent); color:var(--info); }
+.stat-icon--warning{ background:color-mix(in srgb, var(--warning) 18%, transparent); color:var(--warning); }
+.stat-icon--success{ background:color-mix(in srgb, var(--success) 18%, transparent); color:var(--success); }
+.stat-icon--danger{ background:color-mix(in srgb, var(--danger) 18%, transparent); color:var(--danger); }
+
+.stat-trend{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  font-size:11px;
+  font-weight:700;
+}
+.stat-trend i{ width:12px; height:12px; }
+.stat-trend.up{ color:var(--success); }
+.stat-trend.down{ color:var(--danger); }
+
+.analytics-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:20px;
+}
+
+.donut-wrap{ display:flex; align-items:center; gap:18px; }
+.donut{
+  width:110px;
+  height:110px;
+  border-radius:50%;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+}
+.donut::after{
+  content:"";
+  position:absolute;
+  inset:16px;
+  border-radius:50%;
+  background:var(--panel-3, var(--bg-soft, #0d1621));
+}
+.donut-mid{ position:relative; z-index:1; text-align:center; }
+.donut-mid b{ display:block; font-size:1.2rem; color:var(--text); }
+.donut-mid small{ font-size:10px; color:var(--muted); }
+
+.legend{ display:flex; flex-direction:column; gap:8px; font-size:.8rem; }
+.legend-row{ display:flex; align-items:center; gap:7px; color:var(--muted); }
+.legend-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.legend-row b{ color:var(--text); margin-left:auto; padding-left:10px; }
+
+.bars{ display:flex; align-items:flex-end; gap:8px; height:140px; }
+.bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+.bar-col .n{ font-size:10px; font-weight:700; color:var(--text); margin-bottom:4px; }
+.bar-col .b{ width:100%; min-height:3px; border-radius:5px 5px 0 0; background:var(--accent); }
+.bar-col .cap{ font-size:10px; color:var(--muted); margin-top:6px; }
+
+.src-list{ display:flex; flex-direction:column; gap:12px; }
+.src-row{ display:flex; align-items:center; gap:10px; font-size:.8rem; }
+.src-label{ width:88px; flex-shrink:0; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.src-row .track{ flex:1; height:7px; border-radius:99px; background:rgba(255,255,255,.07); overflow:hidden; }
+.src-row .fill{ height:100%; border-radius:99px; background:var(--accent); }
+.src-row .n{ width:34px; text-align:right; font-weight:700; color:var(--text); }
+
+.activity-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:20px;
+}
+
+.activity-list{ display:flex; flex-direction:column; gap:10px; }
+.activity-row{ display:flex; align-items:flex-start; gap:10px; }
+.activity-icon{
+  width:30px; height:30px; border-radius:9px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.06); color:var(--muted);
+}
+.activity-icon i{ width:14px; height:14px; }
+.activity-body{ flex:1; min-width:0; }
+.activity-title{ font-size:.85rem; font-weight:600; color:var(--text); }
+.activity-sub{ font-size:.78rem; color:var(--muted); margin-top:2px; }
+.activity-when{ font-size:.72rem; color:var(--muted); white-space:nowrap; padding-top:2px; }
+
+.task-list{ display:flex; flex-direction:column; gap:2px; }
+.task-row{ display:flex; align-items:flex-start; gap:10px; padding:10px 2px; border-bottom:1px solid rgba(255,255,255,.07); }
+.task-row:last-child{ border-bottom:none; }
+.task-row .cb{ width:16px; height:16px; border-radius:5px; border:1.5px solid var(--muted); flex-shrink:0; margin-top:2px; }
+.task-row .tx{ flex:1; min-width:0; }
+.task-row .tx b{ display:block; font-size:.82rem; color:var(--text); font-weight:600; }
+.task-row .tx small{ font-size:.74rem; color:var(--muted); }
+.task-row .when{ margin-left:auto; font-size:.72rem; color:var(--warning); font-weight:600; white-space:nowrap; padding-top:1px; }
+
+.promo-card{
+  display:flex;
+  flex-direction:column;
+  background:linear-gradient(160deg, var(--accent), var(--accent-deep, var(--accent-2)));
+  color:#fff;
+  border:none;
+}
+.promo-logo{ max-width:140px; height:auto; margin-bottom:10px; }
+.promo-brand{ font-weight:800; font-size:1rem; margin-bottom:6px; }
+.promo-tagline{ font-size:10px; letter-spacing:.06em; opacity:.85; margin-bottom:14px; }
+.promo-card h3{ margin:0 0 8px; font-size:1.15rem; }
+.promo-card p{ margin:0 0 18px; font-size:.85rem; opacity:.9; line-height:1.5; }
+.promo-card .ravlo-btn{
+  margin-top:auto;
+  align-self:flex-start;
+  background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.3);
+  color:#fff;
+}
+
+@media (max-width: 1100px){
+  .analytics-grid, .activity-grid{ grid-template-columns:1fr; }
+}
