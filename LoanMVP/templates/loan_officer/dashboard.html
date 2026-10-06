@@ -10,37 +10,41 @@ Manage leads, capital applications, active loans, and pipeline performance.
 
 <div class="dashboard-shell">
 
+  <!-- HERO -->
+  <section class="lo-hero">
+    <div class="lo-hero-copy">
+      <div class="lo-hero-date">{{ current_date_label }}</div>
+      <h2>Welcome back, {{ current_user.first_name or "there" }}.</h2>
+      <p>Let's move more deals forward.</p>
+    </div>
+  </section>
+
   <!-- STATS -->
   <div class="stats-grid">
+    {% set stat_defs = [
+      ("total_leads", "Total Leads", "users", "accent"),
+      ("active_loans", "Active Loans", "file-text", "accent-2"),
+      ("capital_requests", "Capital Requests", "badge-dollar-sign", "info"),
+      ("pending_intakes", "Pending Intakes", "clock", "warning"),
+      ("approved", "Approved", "check", "success"),
+      ("declined", "Declined", "x", "danger"),
+    ] %}
+    {% for key, label, icon, color in stat_defs %}
+    {% set trend = stat_trends.get(key, 0) if stat_trends else 0 %}
     <div class="stat-card">
-      <div class="stat-value">{{ stats.total_leads or 0 }}</div>
-      <div class="stat-label">Total Leads</div>
+      <div class="stat-card-top">
+        <div class="stat-icon stat-icon--{{ color }}"><i class="lucide lucide-{{ icon }}"></i></div>
+        {% if trend != 0 %}
+        <div class="stat-trend {{ 'up' if trend > 0 else 'down' }}">
+          <i class="lucide lucide-{{ 'trending-up' if trend > 0 else 'trending-down' }}"></i>
+          {{ trend|abs }}%
+        </div>
+        {% endif %}
+      </div>
+      <div class="stat-value">{{ stats[key] or 0 }}</div>
+      <div class="stat-label">{{ label }}</div>
     </div>
-
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.active_loans or 0 }}</div>
-      <div class="stat-label">Active Loans</div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.capital_requests or 0 }}</div>
-      <div class="stat-label">Capital Requests</div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.pending_intakes or 0 }}</div>
-      <div class="stat-label">Pending Intakes</div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.approved or 0 }}</div>
-      <div class="stat-label">Approved</div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.declined or 0 }}</div>
-      <div class="stat-label">Declined</div>
-    </div>
+    {% endfor %}
   </div>
 
   <!-- QUICK ACTIONS -->
@@ -81,6 +85,156 @@ Manage leads, capital applications, active loans, and pipeline performance.
       {% endif %}
     </div>
   </section>
+
+  <!-- ANALYTICS ROW -->
+  <div class="analytics-grid">
+
+    <section class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">PIPELINE OVERVIEW</div>
+          <h3>Loan Status</h3>
+        </div>
+      </div>
+      {% if loan_status_breakdown %}
+      <div class="donut-wrap">
+        {% set cum = namespace(pct=0) %}
+        <div class="donut" style="background:conic-gradient({% for row in loan_status_breakdown %}var(--{{ row.color }}) {{ cum.pct }}% {{ cum.pct + row.pct }}%{% if not loop.last %}, {% endif %}{% set cum.pct = cum.pct + row.pct %}{% endfor %});">
+          <div class="donut-mid">
+            <b>{{ total_loans_count }}</b>
+            <small>Total Loans</small>
+          </div>
+        </div>
+        <div class="legend">
+          {% for row in loan_status_breakdown %}
+          <div class="legend-row">
+            <span class="legend-dot" style="background:var(--{{ row.color }});"></span>
+            {{ row.label }}
+            <b>{{ row.count }}</b>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state-inline">No loans yet.</div>
+      {% endif %}
+    </section>
+
+    <section class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">LOAN VOLUME</div>
+          <h3>${{ "{:,.0f}".format(total_volume_this_month) }}</h3>
+        </div>
+      </div>
+      {% if max_monthly_volume %}
+      <div class="bars">
+        {% for m in monthly_volume %}
+        <div class="bar-col">
+          <span class="n">{{ "{:,.0f}".format(m.total) if m.total else "" }}</span>
+          <div class="b" style="height:{{ ((m.total / max_monthly_volume) * 100)|round|int if max_monthly_volume else 0 }}%;"></div>
+          <span class="cap">{{ m.label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state-inline">No funded volume yet this period.</div>
+      {% endif %}
+    </section>
+
+    <section class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">LEAD SOURCE</div>
+          <h3>Where leads come from</h3>
+        </div>
+      </div>
+      {% if lead_sources %}
+      <div class="src-list">
+        {% for src in lead_sources %}
+        <div class="src-row">
+          <span class="src-label">{{ src.label }}</span>
+          <div class="track"><div class="fill" style="width:{{ src.pct }}%;"></div></div>
+          <span class="n">{{ src.pct }}%</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state-inline">No leads yet.</div>
+      {% endif %}
+    </section>
+
+  </div>
+
+  <!-- ACTIVITY / TASKS / PROMO ROW -->
+  <div class="activity-grid">
+
+    <section class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">RECENT ACTIVITY</div>
+          <h3>What's happened lately</h3>
+        </div>
+      </div>
+      {% if recent_activity %}
+      <div class="activity-list">
+        {% for event in recent_activity %}
+        <div class="activity-row">
+          <div class="activity-icon"><i class="lucide lucide-file-text"></i></div>
+          <div class="activity-body">
+            <div class="activity-title">{{ event.event_name or "Loan update" }}</div>
+            {% if event.description %}<div class="activity-sub">{{ event.description }}</div>{% endif %}
+          </div>
+          <div class="activity-when">{{ event.timestamp.strftime('%b %-d') if event.timestamp else "" }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state-inline">No activity yet.</div>
+      {% endif %}
+    </section>
+
+    <section class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">TASKS</div>
+          <h3>Upcoming</h3>
+        </div>
+      </div>
+      {% if upcoming_tasks %}
+      <div class="task-list">
+        {% for task in upcoming_tasks %}
+        <div class="task-row">
+          <div class="cb"></div>
+          <div class="tx">
+            <b>{{ task.title }}</b>
+            {% if task.description %}<small>{{ task.description }}</small>{% endif %}
+          </div>
+          <div class="when">{{ task.due_date.strftime('%b %-d') if task.due_date else "No due date" }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state-inline">Nothing on your plate right now.</div>
+      {% endif %}
+    </section>
+
+    {% set brand = effective_brand(current_user.company) %}
+    <section class="dashboard-card promo-card">
+      {% if brand.logo_url %}
+      <img src="{{ url_for('static', filename=brand.logo_url) }}" class="promo-logo" alt="{{ brand.name }}">
+      {% else %}
+      <div class="promo-brand">{{ brand.name }}</div>
+      {% endif %}
+      {% if brand.tagline %}<div class="promo-tagline">{{ brand.tagline|upper }}</div>{% endif %}
+      <h3>More Capital. More Opportunities.</h3>
+      <p>We provide flexible financing for investors who build, flip, and grow.</p>
+      <a href="{{ url_for('loan_officer.loan_application') }}" class="ravlo-btn primary">
+        Submit a New Deal <i class="lucide lucide-arrow-right"></i>
+      </a>
+    </section>
+
+  </div>
 
   <!-- AI SUMMARY -->
   <section class="dashboard-card">
@@ -231,7 +385,7 @@ Manage leads, capital applications, active loans, and pipeline performance.
             <tr>
               <td>{{ lead.full_name or lead.name or "Unknown" }}</td>
               <td>{{ lead.status or "—" }}</td>
-              <td>{{ lead.source or "—" }}</td>
+              <td>{{ lead.source.source_name if lead.source else "—" }}</td>
               <td>{{ lead.created_at.strftime('%b %d, %Y') if lead.created_at else "—" }}</td>
             </tr>
             {% endfor %}
@@ -277,6 +431,171 @@ Manage leads, capital applications, active loans, and pipeline performance.
 .dashboard-shell{
   display:grid;
   gap:20px;
+}
+
+.lo-hero{
+  position:relative;
+  border-radius:20px;
+  overflow:hidden;
+  padding:28px;
+  min-height:160px;
+  display:flex;
+  align-items:center;
+  background:
+    linear-gradient(90deg, rgba(8,16,24,.92) 0%, rgba(8,16,24,.55) 55%, rgba(8,16,24,.25) 100%),
+    url("{{ url_for('static', filename='images/marketing/luxury_property.jpg') }}") center/cover;
+}
+
+.lo-hero-copy{ max-width:520px; }
+.lo-hero-date{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.08em;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+.lo-hero-copy h2{
+  margin:0;
+  font-size:1.7rem;
+  font-weight:800;
+  color:#fff;
+}
+.lo-hero-copy p{
+  margin:6px 0 0;
+  color:rgba(255,255,255,.75);
+  font-size:.92rem;
+}
+
+.stat-card-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  margin-bottom:10px;
+}
+
+.stat-icon{
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.stat-icon i{ width:16px; height:16px; }
+.stat-icon--accent{ background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); }
+.stat-icon--accent-2{ background:color-mix(in srgb, var(--accent-2) 18%, transparent); color:var(--accent-2); }
+.stat-icon--info{ background:color-mix(in srgb, var(--info) 18%, transparent); color:var(--info); }
+.stat-icon--warning{ background:color-mix(in srgb, var(--warning) 18%, transparent); color:var(--warning); }
+.stat-icon--success{ background:color-mix(in srgb, var(--success) 18%, transparent); color:var(--success); }
+.stat-icon--danger{ background:color-mix(in srgb, var(--danger) 18%, transparent); color:var(--danger); }
+
+.stat-trend{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  font-size:11px;
+  font-weight:700;
+}
+.stat-trend i{ width:12px; height:12px; }
+.stat-trend.up{ color:var(--success); }
+.stat-trend.down{ color:var(--danger); }
+
+.analytics-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:20px;
+}
+
+.donut-wrap{ display:flex; align-items:center; gap:18px; }
+.donut{
+  width:110px;
+  height:110px;
+  border-radius:50%;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+}
+.donut::after{
+  content:"";
+  position:absolute;
+  inset:16px;
+  border-radius:50%;
+  background:var(--panel-3, var(--bg-soft, #0d1621));
+}
+.donut-mid{ position:relative; z-index:1; text-align:center; }
+.donut-mid b{ display:block; font-size:1.2rem; color:var(--text); }
+.donut-mid small{ font-size:10px; color:var(--muted); }
+
+.legend{ display:flex; flex-direction:column; gap:8px; font-size:.8rem; }
+.legend-row{ display:flex; align-items:center; gap:7px; color:var(--muted); }
+.legend-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.legend-row b{ color:var(--text); margin-left:auto; padding-left:10px; }
+
+.bars{ display:flex; align-items:flex-end; gap:8px; height:140px; }
+.bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+.bar-col .n{ font-size:10px; font-weight:700; color:var(--text); margin-bottom:4px; }
+.bar-col .b{ width:100%; min-height:3px; border-radius:5px 5px 0 0; background:var(--accent); }
+.bar-col .cap{ font-size:10px; color:var(--muted); margin-top:6px; }
+
+.src-list{ display:flex; flex-direction:column; gap:12px; }
+.src-row{ display:flex; align-items:center; gap:10px; font-size:.8rem; }
+.src-label{ width:88px; flex-shrink:0; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.src-row .track{ flex:1; height:7px; border-radius:99px; background:rgba(255,255,255,.07); overflow:hidden; }
+.src-row .fill{ height:100%; border-radius:99px; background:var(--accent); }
+.src-row .n{ width:34px; text-align:right; font-weight:700; color:var(--text); }
+
+.activity-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:20px;
+}
+
+.activity-list{ display:flex; flex-direction:column; gap:10px; }
+.activity-row{ display:flex; align-items:flex-start; gap:10px; }
+.activity-icon{
+  width:30px; height:30px; border-radius:9px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.06); color:var(--muted);
+}
+.activity-icon i{ width:14px; height:14px; }
+.activity-body{ flex:1; min-width:0; }
+.activity-title{ font-size:.85rem; font-weight:600; color:var(--text); }
+.activity-sub{ font-size:.78rem; color:var(--muted); margin-top:2px; }
+.activity-when{ font-size:.72rem; color:var(--muted); white-space:nowrap; padding-top:2px; }
+
+.task-list{ display:flex; flex-direction:column; gap:2px; }
+.task-row{ display:flex; align-items:flex-start; gap:10px; padding:10px 2px; border-bottom:1px solid rgba(255,255,255,.07); }
+.task-row:last-child{ border-bottom:none; }
+.task-row .cb{ width:16px; height:16px; border-radius:5px; border:1.5px solid var(--muted); flex-shrink:0; margin-top:2px; }
+.task-row .tx{ flex:1; min-width:0; }
+.task-row .tx b{ display:block; font-size:.82rem; color:var(--text); font-weight:600; }
+.task-row .tx small{ font-size:.74rem; color:var(--muted); }
+.task-row .when{ margin-left:auto; font-size:.72rem; color:var(--warning); font-weight:600; white-space:nowrap; padding-top:1px; }
+
+.promo-card{
+  display:flex;
+  flex-direction:column;
+  background:linear-gradient(160deg, var(--accent), var(--accent-deep, var(--accent-2)));
+  color:#fff;
+  border:none;
+}
+.promo-logo{ max-width:140px; height:auto; margin-bottom:10px; }
+.promo-brand{ font-weight:800; font-size:1rem; margin-bottom:6px; }
+.promo-tagline{ font-size:10px; letter-spacing:.06em; opacity:.85; margin-bottom:14px; }
+.promo-card h3{ margin:0 0 8px; font-size:1.15rem; }
+.promo-card p{ margin:0 0 18px; font-size:.85rem; opacity:.9; line-height:1.5; }
+.promo-card .ravlo-btn{
+  margin-top:auto;
+  align-self:flex-start;
+  background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.3);
+  color:#fff;
+}
+
+@media (max-width: 1100px){
+  .analytics-grid, .activity-grid{ grid-template-columns:1fr; }
 }
 
 .stats-grid{
