@@ -2986,6 +2986,7 @@ def company_dashboard(company_id):
         workspace_health=workspace_health,
         workspace_summary=workspace_summary,
         dashboard_preferences=dashboard_preferences,
+        current_date_label=datetime.utcnow().strftime("%A, %b %-d, %Y").upper(),
         title=f"{company.name} Dashboard",
         active_tab="companies",
     )

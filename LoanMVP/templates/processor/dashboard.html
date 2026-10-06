@@ -10,32 +10,180 @@ Review submissions, verify documents, clear conditions, and move files toward un
 
 <div class="dashboard-shell">
 
+  <!-- HERO -->
+  <section class="dash-hero" style="background-image: linear-gradient(90deg, rgba(8,16,24,.92) 0%, rgba(8,16,24,.55) 55%, rgba(8,16,24,.25) 100%), url('{{ url_for('static', filename='images/marketing/architect.jpg') }}');">
+    <div class="dash-hero-copy">
+      <div class="dash-hero-date">{{ current_date_label }}</div>
+      <h2>Welcome back, {{ current_user.first_name or "there" }}.</h2>
+      <p>Let's keep files moving toward underwriting.</p>
+    </div>
+  </section>
+
   <!-- STATS -->
+  {% set stat_defs = [
+    ("total_loans", "Pipeline Loans", "list-checks", "accent"),
+    ("capital_requests", "Capital Requests", "banknote", "accent-2"),
+    ("submitted", "Submitted", "send", "info"),
+    ("in_review", "In Review", "search", "warning"),
+    ("pending_conditions", "Conditions Pending", "alert-triangle", "danger"),
+    ("pending_docs", "Pending Docs", "folder-open", "success"),
+  ] %}
   <div class="stats-grid">
+    {% for key, label, icon, color in stat_defs %}
     <div class="stat-card">
-      <div class="stat-value">{{ stats.total_loans or 0 }}</div>
-      <div class="stat-label">Pipeline Loans</div>
+      <div class="stat-card-top">
+        <span class="stat-icon stat-icon--{{ color }}"><i class="lucide lucide-{{ icon }}"></i></span>
+        {% set trend = stat_trends[key] if stat_trends and key in stat_trends else 0 %}
+        <span class="stat-trend {{ 'up' if trend >= 0 else 'down' }}">
+          <i class="lucide lucide-trending-{{ 'up' if trend >= 0 else 'down' }}"></i>{{ trend|abs }}%
+        </span>
+      </div>
+      <div class="stat-value">{{ stats[key] or 0 }}</div>
+      <div class="stat-label">{{ label }}</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.capital_requests or 0 }}</div>
-      <div class="stat-label">Capital Requests</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.submitted or 0 }}</div>
-      <div class="stat-label">Submitted</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.in_review or 0 }}</div>
-      <div class="stat-label">In Review</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.pending_conditions or 0 }}</div>
-      <div class="stat-label">Conditions Pending</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.pending_docs or 0 }}</div>
-      <div class="stat-label">Pending Docs</div>
-    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ANALYTICS -->
+  <div class="analytics-grid">
+
+    <section class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">PIPELINE</div>
+          <h3>Status Breakdown</h3>
+        </div>
+      </div>
+      {% if loan_status_breakdown %}
+        {% set ns = namespace(pct=0) %}
+        <div class="donut-wrap">
+          <div class="donut" style="background:conic-gradient(
+            {% for row in loan_status_breakdown %}var(--{{ row.color }}) {{ ns.pct }}% {{ ns.pct + row.pct }}%{% if not loop.last %}, {% endif %}{% set ns.pct = ns.pct + row.pct %}{% endfor %}
+          );">
+            <div class="donut-mid"><b>{{ total_loans_count }}</b><small>FILES</small></div>
+          </div>
+          <div class="legend">
+            {% for row in loan_status_breakdown %}
+            <div class="legend-row"><span class="legend-dot" style="background:var(--{{ row.color }});"></span>{{ row.label }}<b>{{ row.count }}</b></div>
+            {% endfor %}
+          </div>
+        </div>
+      {% else %}
+        <div class="empty-state-inline">No loans yet.</div>
+      {% endif %}
+    </section>
+
+    <section class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">VOLUME</div>
+          <h3>Files Processed (6mo)</h3>
+        </div>
+      </div>
+      {% if monthly_volume %}
+        <div class="bars">
+          {% for m in monthly_volume %}
+          <div class="bar-col">
+            <span class="n">${{ "{:,.0f}".format(m.total) }}</span>
+            <div class="b" style="height:{{ ((m.total / max_monthly_volume * 100) if max_monthly_volume else 0)|round }}%;"></div>
+            <span class="cap">{{ m.label }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state-inline">No volume yet.</div>
+      {% endif %}
+    </section>
+
+    <section class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">DOCUMENTS</div>
+          <h3>By Type</h3>
+        </div>
+      </div>
+      {% if doc_type_breakdown %}
+        <div class="src-list">
+          {% for row in doc_type_breakdown %}
+          <div class="src-row">
+            <span class="src-label">{{ row.label }}</span>
+            <div class="track"><div class="fill" style="width:{{ row.pct }}%;"></div></div>
+            <span class="n">{{ row.count }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state-inline">No documents yet.</div>
+      {% endif %}
+    </section>
+
+  </div>
+
+  <!-- ACTIVITY / TASKS / PROMO -->
+  <div class="activity-grid">
+
+    <section class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">ACTIVITY</div>
+          <h3>Recent Activity</h3>
+        </div>
+      </div>
+      {% if recent_activity %}
+        <div class="activity-list">
+          {% for event in recent_activity %}
+          <div class="activity-row">
+            <span class="activity-icon"><i class="lucide lucide-activity"></i></span>
+            <div class="activity-body">
+              <div class="activity-title">{{ event.event_name or "Status Update" }}</div>
+              <div class="activity-sub">{{ event.description or "" }}</div>
+            </div>
+            <span class="activity-when">{{ event.timestamp.strftime('%b %d') if event.timestamp else "" }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state-inline">No recent activity.</div>
+      {% endif %}
+    </section>
+
+    <section class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">TASKS</div>
+          <h3>Upcoming Tasks</h3>
+        </div>
+      </div>
+      {% if upcoming_tasks %}
+        <div class="task-list">
+          {% for task in upcoming_tasks %}
+          <div class="task-row">
+            <span class="cb"></span>
+            <div class="tx">
+              <b>{{ task.title }}</b>
+            </div>
+            <span class="when">{{ task.due_date.strftime('%b %d') if task.due_date else "" }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state-inline">Nothing on your plate right now.</div>
+      {% endif %}
+    </section>
+
+    <section class="dashboard-card promo-card">
+      {% set brand = effective_brand(current_user.company) %}
+      {% if brand.logo_url %}
+        <img class="promo-logo" src="{{ brand.logo_url if brand.logo_url.startswith('http') else url_for('static', filename=brand.logo_url) }}" alt="{{ brand.name }}">
+      {% else %}
+        <div class="promo-brand">{{ brand.name }}</div>
+      {% endif %}
+      {% if brand.tagline %}<div class="promo-tagline">{{ brand.tagline|upper }}</div>{% endif %}
+      <h3>Keep Files Moving.</h3>
+      <p>Clear conditions and verify documents faster so underwriting never waits on you.</p>
+      <a href="{{ url_for('processor.loan_queue') }}" class="ravlo-btn">Open Loan Queue</a>
+    </section>
+
   </div>
 
   <!-- QUICK ACTIONS -->
@@ -242,17 +390,17 @@ Review submissions, verify documents, clear conditions, and move files toward un
 
 .quick-action-btn:hover{
   background:rgba(255,255,255,.08);
-  border-color:rgba(120,160,255,.3);
+  border-color:color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .quick-action-btn.primary{
-  background:rgba(122,184,255,.12);
-  border-color:rgba(122,184,255,.28);
-  color:#bfe0ff;
+  background:color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color:color-mix(in srgb, var(--accent) 28%, transparent);
+  color:color-mix(in srgb, var(--accent) 30%, white);
 }
 
 .quick-action-btn.primary:hover{
-  background:rgba(122,184,255,.2);
+  background:color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .ai-summary{

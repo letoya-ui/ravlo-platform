@@ -28,10 +28,10 @@ Review risk, analyze loan quality, manage conditions, and drive final credit dec
 <div class="uw-shell">
 
   <!-- HERO -->
-  <section class="uw-hero">
+  <section class="uw-hero" style="background-image: linear-gradient(100deg, rgba(8,16,24,.93) 0%, rgba(8,16,24,.74) 45%, rgba(8,16,24,.3) 100%), url('{{ url_for('static', filename='images/marketing/city_skyline.jpg') }}');">
     <div class="uw-hero-copy">
       <div class="uw-eyebrow">RISK & DECISION</div>
-      <h2>Welcome, {{ current_user.username or 'Underwriter' }}</h2>
+      <h2>Welcome, {{ current_user.first_name or current_user.username or 'Underwriter' }}</h2>
       <p>
         Analyze borrower strength, validate loan structure, review open conditions, and move files toward final disposition.
       </p>
@@ -100,7 +100,7 @@ Review risk, analyze loan quality, manage conditions, and drive final credit dec
       <div class="uw-card-head">
         <div>
           <div class="uw-eyebrow">PORTFOLIO MIX</div>
-          <h3>Risk Mix</h3>
+          <h3>Pipeline Mix</h3>
         </div>
       </div>
       <div id="chart_risk" class="uw-chart"></div>
@@ -222,11 +222,11 @@ Review risk, analyze loan quality, manage conditions, and drive final credit dec
         <div class="uw-card-head">
           <div>
             <div class="uw-eyebrow">QUALITY INDEX</div>
-            <h3>Portfolio Summary</h3>
+            <h3>Condition Clear Rate</h3>
           </div>
         </div>
         <div id="chart_summary" class="uw-chart uw-chart-sm"></div>
-        <div class="uw-footnote">Updated from current underwriting dashboard metrics.</div>
+        <div class="uw-footnote">Share of this underwriter's conditions marked Cleared.</div>
       </div>
 
       <div class="re-card pad">
@@ -251,6 +251,71 @@ Review risk, analyze loan quality, manage conditions, and drive final credit dec
         {% endif %}
       </div>
     </div>
+  </section>
+
+  <!-- ACTIVITY / TASKS / PROMO -->
+  <section class="activity-grid">
+
+    <section class="dashboard-card">
+      <div class="uw-card-head">
+        <div>
+          <div class="uw-eyebrow">ACTIVITY</div>
+          <h3>Recent Activity</h3>
+        </div>
+      </div>
+      {% if recent_activity %}
+        <div class="activity-list">
+          {% for event in recent_activity %}
+          <div class="activity-row">
+            <span class="activity-icon"><i class="lucide lucide-activity"></i></span>
+            <div class="activity-body">
+              <div class="activity-title">{{ event.event_name or "Status Update" }}</div>
+              <div class="activity-sub">{{ event.description or "" }}</div>
+            </div>
+            <span class="activity-when">{{ event.timestamp.strftime('%b %d') if event.timestamp else "" }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="re-empty">No recent activity.</div>
+      {% endif %}
+    </section>
+
+    <section class="dashboard-card">
+      <div class="uw-card-head">
+        <div>
+          <div class="uw-eyebrow">TASKS</div>
+          <h3>Upcoming Tasks</h3>
+        </div>
+      </div>
+      {% if upcoming_tasks %}
+        <div class="task-list">
+          {% for task in upcoming_tasks %}
+          <div class="task-row">
+            <span class="cb"></span>
+            <div class="tx"><b>{{ task.title }}</b></div>
+            <span class="when">{{ task.due_date.strftime('%b %d') if task.due_date else "" }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="re-empty">Nothing on your plate right now.</div>
+      {% endif %}
+    </section>
+
+    <section class="dashboard-card promo-card">
+      {% set brand = effective_brand(current_user.company) %}
+      {% if brand.logo_url %}
+        <img class="promo-logo" src="{{ brand.logo_url if brand.logo_url.startswith('http') else url_for('static', filename=brand.logo_url) }}" alt="{{ brand.name }}">
+      {% else %}
+        <div class="promo-brand">{{ brand.name }}</div>
+      {% endif %}
+      {% if brand.tagline %}<div class="promo-tagline">{{ brand.tagline|upper }}</div>{% endif %}
+      <h3>Decide With Confidence.</h3>
+      <p>Clear conditions, track risk, and move files to a final decision faster.</p>
+      <a href="{{ url_for('underwriter.queue') }}" class="ravlo-btn">Open Decision Queue</a>
+    </section>
+
   </section>
 
 </div>
@@ -297,9 +362,8 @@ Review risk, analyze loan quality, manage conditions, and drive final credit dec
   padding:24px;
   border-radius:24px;
   border:1px solid rgba(255,255,255,.08);
-  background:
-    radial-gradient(900px 440px at 10% 0%, rgba(122,184,255,.12), transparent 50%),
-    rgba(255,255,255,.03);
+  background-size:cover;
+  background-position:center;
 }
 
 .uw-eyebrow{
@@ -606,25 +670,28 @@ new ApexCharts(document.querySelector("#chart_approval"), {
   ...baseOpt,
   chart: { ...baseOpt.chart, type: 'line', height: 260 },
   stroke: { curve: 'smooth', width: 2 },
-  series: [{ name: 'Approvals', data: [10,14,20,18,25,29,31] }],
-  xaxis: { categories: ['Jan','Feb','Mar','Apr','May','Jun','Jul'] },
-  colors: ['#43d19e']
+  series: [
+    { name: 'Approved', data: {{ approval_trend_approved|tojson }} },
+    { name: 'Declined', data: {{ approval_trend_declined|tojson }} }
+  ],
+  xaxis: { categories: {{ approval_trend_labels|tojson }} },
+  colors: ['#43d19e', '#ff9d9d']
 }).render();
 
 new ApexCharts(document.querySelector("#chart_risk"), {
   ...baseOpt,
   chart: { ...baseOpt.chart, type: 'donut', height: 260 },
-  series: [55, 30, 15],
-  labels: ['Low', 'Moderate', 'High'],
-  colors: ['#43d19e', '#ffdf6e', '#ff9d9d'],
+  series: {{ pipeline_mix_values|tojson }},
+  labels: {{ pipeline_mix_labels|tojson }},
+  colors: ['#ffdf6e', '#43d19e', '#ff9d9d', '#7ab8ff', '#c4a7ff'],
   legend: { position: 'bottom' }
 }).render();
 
 new ApexCharts(document.querySelector("#chart_summary"), {
   ...baseOpt,
   chart: { ...baseOpt.chart, type: 'radialBar', height: 240 },
-  series: [78],
-  labels: ['Portfolio Quality'],
+  series: [{{ condition_clear_rate }}],
+  labels: ['Conditions Cleared'],
   colors: ['#7ab8ff'],
   plotOptions: {
     radialBar: {

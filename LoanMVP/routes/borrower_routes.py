@@ -258,6 +258,7 @@ def dashboard():
         progress_percent=progress_percent,
         ai_message=ai_message,
         checklist_items=checklist_items,
+        current_date_label=datetime.utcnow().strftime("%A, %b %-d, %Y").upper(),
         active_tab="dashboard",
         title="Borrower Dashboard",
     )

@@ -3,12 +3,13 @@
 # =========================================================
 import json
 import os
+from collections import defaultdict
 from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, jsonify, current_app, send_from_directory, abort
 )
 from flask_login import login_required, current_user
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from sqlalchemy import or_
 
@@ -18,7 +19,7 @@ from LoanMVP.extensions import db, csrf
 # ✅ Safe model imports (no circular dependencies)
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile, LoanStatusEvent
 from LoanMVP.models.document_models import LoanDocument, DocumentRequest
-from LoanMVP.models.crm_models import Message
+from LoanMVP.models.crm_models import Message, Task
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.processor_model import ProcessorProfile
 from LoanMVP.models.underwriter_model import ConditionRequest, UnderwritingCondition
@@ -228,6 +229,100 @@ def dashboard():
         print("AI summary failed:", e)
         ai_summary = "⚠️ AI summary unavailable."
 
+    now = datetime.utcnow()
+    this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_month_end = this_month_start
+    last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
+
+    def _month_counts(items, date_attr="created_at"):
+        this_count = sum(1 for i in items if getattr(i, date_attr, None) and getattr(i, date_attr) >= this_month_start)
+        last_count = sum(1 for i in items if getattr(i, date_attr, None) and last_month_start <= getattr(i, date_attr) < last_month_end)
+        return this_count, last_count
+
+    def _trend_pct(this_count, last_count):
+        if last_count > 0:
+            return round((this_count - last_count) / last_count * 100)
+        return 100 if this_count > 0 else 0
+
+    try:
+        pending_docs_list = LoanDocument.query.filter_by(company_id=company_id, status="pending").all()
+    except Exception:
+        pending_docs_list = []
+
+    conditions_pending_list = [l for l in loans if _norm_status(l.status) == "conditions pending"]
+
+    stat_trends = {}
+    for key, items in [
+        ("total_loans", loans),
+        ("capital_requests", capital_loans),
+        ("submitted", [l for l in loans if _norm_status(l.status) in ["submitted", "capital submitted"]]),
+        ("in_review", [l for l in loans if _norm_status(l.status) in ["in_review", "under_review", "in review", "under review", "processing"]]),
+        ("pending_conditions", conditions_pending_list),
+        ("pending_docs", pending_docs_list),
+    ]:
+        this_count, last_count = _month_counts(items)
+        stat_trends[key] = _trend_pct(this_count, last_count)
+
+    _STATUS_DISPLAY = {
+        "submitted": ("Submitted", "info"), "capital submitted": ("Submitted", "info"),
+        "in_review": ("In Review", "accent"), "in review": ("In Review", "accent"),
+        "processing": ("In Review", "accent"), "under review": ("In Review", "accent"),
+        "conditions pending": ("Conditions Pending", "warning"),
+        "cleared": ("Cleared", "success"), "approved": ("Cleared", "success"),
+        "declined": ("Declined", "danger"), "closed": ("Closed", "muted"),
+    }
+    status_counts = defaultdict(int)
+    for l in loans:
+        norm = _norm_status(l.status)
+        label, color = _STATUS_DISPLAY.get(norm, (l.status or "Other", "muted"))
+        status_counts[(label, color)] += 1
+    total_loans_count = len(loans)
+    loan_status_breakdown = [
+        {"label": label, "color": color, "count": count, "pct": round(count / total_loans_count * 100) if total_loans_count else 0}
+        for (label, color), count in sorted(status_counts.items(), key=lambda kv: -kv[1])
+    ]
+
+    monthly_volume = []
+    month_start = this_month_start
+    for _ in range(6):
+        next_month_start = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+        month_total = sum((l.amount or 0) for l in loans if l.created_at and month_start <= l.created_at < next_month_start)
+        monthly_volume.append({"label": month_start.strftime("%b"), "total": month_total})
+        month_start = (month_start - timedelta(days=1)).replace(day=1)
+    monthly_volume.reverse()
+    max_monthly_volume = max((m["total"] for m in monthly_volume), default=0)
+    total_volume_this_month = monthly_volume[-1]["total"] if monthly_volume else 0
+
+    try:
+        company_docs = LoanDocument.query.filter_by(company_id=company_id).all() if hasattr(LoanDocument, "company_id") else []
+    except Exception:
+        company_docs = []
+    doc_type_counts = defaultdict(int)
+    for doc in company_docs:
+        doc_type = (getattr(doc, "document_type", None) or "Unlabeled").strip() or "Unlabeled"
+        doc_type_counts[doc_type] += 1
+    total_docs_count = len(company_docs)
+    doc_type_breakdown = sorted(
+        ({"label": label, "count": count, "pct": round(count / total_docs_count * 100) if total_docs_count else 0} for label, count in doc_type_counts.items()),
+        key=lambda s: -s["count"],
+    )[:5]
+
+    loan_ids = [l.id for l in loans]
+    recent_activity = []
+    if loan_ids:
+        recent_activity = (
+            LoanStatusEvent.query
+            .filter(LoanStatusEvent.loan_id.in_(loan_ids))
+            .order_by(LoanStatusEvent.timestamp.desc())
+            .limit(5)
+            .all()
+        )
+
+    upcoming_tasks = (
+        Task.query.filter(Task.assigned_to == current_user.id, Task.completed.is_(False))
+        .order_by(Task.due_date.asc().nullslast()).limit(5).all()
+    )
+
     return render_template(
         "processor/dashboard.html",
         loans=loans,
@@ -239,6 +334,16 @@ def dashboard():
         pending_docs=pending_docs,
         stats=stats,
         ai_summary=ai_summary,
+        stat_trends=stat_trends,
+        loan_status_breakdown=loan_status_breakdown,
+        total_loans_count=total_loans_count,
+        monthly_volume=monthly_volume,
+        max_monthly_volume=max_monthly_volume,
+        total_volume_this_month=total_volume_this_month,
+        doc_type_breakdown=doc_type_breakdown,
+        recent_activity=recent_activity,
+        upcoming_tasks=upcoming_tasks,
+        current_date_label=now.strftime("%A, %b %-d, %Y").upper(),
         title="Processor Command Center",
         active_tab="dashboard",
     )

@@ -3,7 +3,7 @@
 # ===============================================================
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, abort
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import or_
 import io
 from flask_login import current_user, login_required
@@ -11,7 +11,7 @@ from LoanMVP.utils.decorators import role_required
 from LoanMVP.extensions import db, csrf
 
 from LoanMVP.models.user_model import User
-from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
+from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile, LoanStatusEvent
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.underwriter_model import UnderwritingCondition, UnderwriterTask, UnderwriterProfile
 from LoanMVP.models.crm_models import Message
@@ -134,15 +134,87 @@ def dashboard():
         if loan_ids else []
     )
 
+    all_conditions = (
+        UnderwritingCondition.query
+        .filter(UnderwritingCondition.loan_id.in_(loan_ids))
+        .all()
+        if loan_ids else []
+    )
+    cleared_conditions_count = len([c for c in all_conditions if (c.status or "").strip().lower() == "cleared"])
+    condition_clear_rate = round(cleared_conditions_count / len(all_conditions) * 100) if all_conditions else 0
+
+    # Approval/decline trend over the last 6 months, based on decision_date
+    # (falling back to created_at when no decision has been recorded yet).
+    now = datetime.utcnow()
+    this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_starts = []
+    cursor = this_month_start
+    for _ in range(6):
+        month_starts.append(cursor)
+        cursor = (cursor - timedelta(days=1)).replace(day=1)
+    month_starts.reverse()
+
+    all_my_loans = my_loans.all()
+    approval_trend_labels = [m.strftime("%b") for m in month_starts]
+    approval_trend_approved = []
+    approval_trend_declined = []
+    for i, month_start in enumerate(month_starts):
+        next_month_start = month_starts[i + 1] if i + 1 < len(month_starts) else (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+        approved_in_month = 0
+        declined_in_month = 0
+        for loan in all_my_loans:
+            decided_at = loan.decision_date or loan.created_at
+            if not decided_at or not (month_start <= decided_at < next_month_start):
+                continue
+            status = (loan.status or "").strip().lower()
+            if status == "approved":
+                approved_in_month += 1
+            elif status == "declined":
+                declined_in_month += 1
+        approval_trend_approved.append(approved_in_month)
+        approval_trend_declined.append(declined_in_month)
+
+    pipeline_mix_labels = ["Pending", "Approved", "Declined", "Clear to Close", "Conditional"]
+    pipeline_mix_values = [pending, approved, declined, clear_to_close, conditional]
+
+    upcoming_tasks = []
+    profile = _underwriter_profile()
+    if profile:
+        upcoming_tasks = (
+            UnderwriterTask.query
+            .filter(UnderwriterTask.assigned_to == profile.id, UnderwriterTask.status != "Completed")
+            .order_by(UnderwriterTask.due_date.asc().nullslast())
+            .limit(5)
+            .all()
+        )
+
+    recent_activity = []
+    if loan_ids:
+        recent_activity = (
+            LoanStatusEvent.query
+            .filter(LoanStatusEvent.loan_id.in_(loan_ids))
+            .order_by(LoanStatusEvent.timestamp.desc())
+            .limit(5)
+            .all()
+        )
+
     return render_template(
         "underwriter/dashboard.html",
         loans=loans,
         open_conditions=open_conditions,
+        condition_clear_rate=condition_clear_rate,
         pending=pending,
         approved=approved,
         declined=declined,
         clear_to_close=clear_to_close,
         conditional=conditional,
+        approval_trend_labels=approval_trend_labels,
+        approval_trend_approved=approval_trend_approved,
+        approval_trend_declined=approval_trend_declined,
+        pipeline_mix_labels=pipeline_mix_labels,
+        pipeline_mix_values=pipeline_mix_values,
+        upcoming_tasks=upcoming_tasks,
+        recent_activity=recent_activity,
         title="Underwriter Command Center",
         active_tab="dashboard",
     )

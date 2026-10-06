@@ -7,9 +7,9 @@
 <div class="rb-dashboard">
 
   <!-- HERO -->
-  <section class="rb-hero">
+  <section class="rb-hero" style="background-image: linear-gradient(100deg, rgba(8,16,24,.92) 0%, rgba(8,16,24,.68) 50%, rgba(8,16,24,.25) 100%), url('{{ url_for('static', filename='images/marketing/interior_luxury.jpg') }}');">
     <div class="rb-hero-copy">
-      <div class="rb-eyebrow">Borrower OS</div>
+      <div class="rb-eyebrow">{{ current_date_label }}</div>
       <h1>
         Welcome back{% if borrower and borrower.full_name %}, {{ borrower.full_name.split(' ')[0] }}{% endif %}
       </h1>
@@ -203,6 +203,19 @@
     <!-- RIGHT -->
     <div class="rb-col">
 
+      {% set brand = effective_brand(current_user.company) %}
+      {% if brand.name != "Ravlo" %}
+      <section class="rb-card rb-promo-card">
+        {% if brand.logo_url %}
+          <img class="rb-promo-logo" src="{{ brand.logo_url if brand.logo_url.startswith('http') else url_for('static', filename=brand.logo_url) }}" alt="{{ brand.name }}">
+        {% else %}
+          <div class="rb-promo-brand">{{ brand.name }}</div>
+        {% endif %}
+        {% if brand.tagline %}<div class="rb-promo-tagline">{{ brand.tagline|upper }}</div>{% endif %}
+        <p>Your {{ brand.name }} team is with you from application to close.</p>
+      </section>
+      {% endif %}
+
       <section class="rb-card">
         <div class="rb-card-head">
           <div>
@@ -303,9 +316,8 @@
   padding:24px;
   border-radius:24px;
   border:1px solid rgba(255,255,255,.08);
-  background:
-    radial-gradient(800px 420px at 10% 0%, rgba(95,168,255,.14), transparent 50%),
-    rgba(255,255,255,.03);
+  background-size:cover;
+  background-position:center;
 }
 
 .rb-eyebrow{
@@ -417,7 +429,7 @@
 .rb-progress-bar{
   height:100%;
   border-radius:999px;
-  background:linear-gradient(90deg,#6B7F93,#8DA7C2);
+  background:linear-gradient(90deg, var(--accent), var(--accent-2));
 }
 
 .rb-card-note{
@@ -512,7 +524,7 @@
 }
 
 .rb-check-dot.done{
-  background:#8DA7C2;
+  background:var(--accent-2);
 }
 
 .rb-condition-item{
@@ -542,6 +554,16 @@
   color:#9fb3c8;
 }
 
+.rb-promo-card{
+  background:linear-gradient(160deg, var(--accent), var(--accent-2));
+  color:#fff;
+  border:none;
+}
+.rb-promo-logo{ max-width:140px; height:auto; margin-bottom:10px; }
+.rb-promo-brand{ font-weight:800; font-size:1rem; margin-bottom:6px; }
+.rb-promo-tagline{ font-size:10px; letter-spacing:.06em; opacity:.85; margin-bottom:12px; }
+.rb-promo-card p{ margin:0; font-size:.88rem; opacity:.92; line-height:1.5; }
+
 .rb-empty{
   padding:14px 16px;
   border-radius:16px;
@@ -570,7 +592,7 @@
 
 .rb-btn-primary{
   color:#fff;
-  background:linear-gradient(180deg, #607487 0%, #45586B 100%);
+  background:linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%);
   border-color:rgba(255,255,255,.08);
 }
 
