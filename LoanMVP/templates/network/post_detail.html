@@ -91,6 +91,26 @@
 {% endblock %}
 
 {% block head %}
+{% if post.listing_type in ('product', 'service') and post.title %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "{{ post.title | e }}",
+  "description": "{{ meta_description | e }}",
+  "url": "https://ravlohq.com{{ request.path }}"
+  {% if post.image_url %},"image": "{{ post.image_url | e }}"{% endif %}
+  {% if listing_price_numeric is not none %}
+  ,"offers": {
+    "@type": "Offer",
+    "price": "{{ listing_price_numeric }}",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  }
+  {% endif %}
+}
+</script>
+{% endif %}
 <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 <style>
   .nw-wrap { padding: 120px 24px 80px; position: relative; z-index: 2; }
