@@ -16,6 +16,21 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_employee.css') }}">
 
+  {% set brand = effective_brand(current_user.company if current_user.is_authenticated else None) %}
+  {% if brand.name != "Ravlo" %}
+  <style>
+    /* White-label override: buttons, charts, badges, and highlights
+       across this whole portal key off these three variables -- without
+       this, a paying white-label company only gets a swapped sidebar
+       logo while everything else stays Ravlo-blue. */
+    :root{
+      --accent: {{ brand.primary }};
+      --accent-2: {{ brand.secondary }};
+      --accent-deep: {{ brand.accent }};
+    }
+  </style>
+  {% endif %}
+
   {% block head %}{% endblock %}
 </head>
 <body class="re-body role-{{ current_user.role if current_user.is_authenticated else 'guest' }}">

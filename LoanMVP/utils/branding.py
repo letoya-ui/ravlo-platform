@@ -10,14 +10,16 @@ from collections import namedtuple
 RAVLO_BRAND_NAME = "Ravlo"
 RAVLO_BRAND_MARK = "RV"
 RAVLO_BRAND_PRIMARY = "#7ab8ff"
+RAVLO_BRAND_SECONDARY = "#8da7c2"
 RAVLO_BRAND_ACCENT = "#3e5a75"
 
-Brand = namedtuple("Brand", ["name", "mark", "primary", "accent", "tagline", "logo_url"])
+Brand = namedtuple("Brand", ["name", "mark", "primary", "secondary", "accent", "tagline", "logo_url"])
 
 _RAVLO_BRAND = Brand(
     name=RAVLO_BRAND_NAME,
     mark=RAVLO_BRAND_MARK,
     primary=RAVLO_BRAND_PRIMARY,
+    secondary=RAVLO_BRAND_SECONDARY,
     accent=RAVLO_BRAND_ACCENT,
     tagline=None,
     logo_url=None,
@@ -25,13 +27,21 @@ _RAVLO_BRAND = Brand(
 
 
 def effective_brand(company):
-    """Returns a Brand(name, mark, primary, accent, tagline, logo_url) for
-    the sidebar.
+    """Returns a Brand(name, mark, primary, secondary, accent, tagline,
+    logo_url) for the sidebar AND the page's --accent/--accent-2 CSS
+    variables (see ravlo_employee_base.html / ravlo_borrower_base.html).
 
     Only a company on the white_label subscription tier with a brand_name
     actually set gets its own branding; every other case (no company,
     wrong tier, tier set but never configured) falls back to Ravlo's own
     branding, including its default color palette.
+
+    Swapping just the sidebar logo for a paying white-label customer
+    isn't a real visual difference -- it's the colors driving buttons,
+    charts, and highlights throughout the actual product that make it
+    feel like a different, licensed product rather than Ravlo with a
+    smaller logo. Both base layouts override --accent/--accent-2 from
+    primary/secondary for exactly that reason.
 
     logo_url, when set, is a static-relative path (e.g.
     "images/demo/meridian_capital_logo.png") to a full logo lockup image
@@ -44,6 +54,7 @@ def effective_brand(company):
             name=name,
             mark=mark.upper()[:3],
             primary=company.brand_primary_color or RAVLO_BRAND_PRIMARY,
+            secondary=company.brand_secondary_color or company.brand_accent_color or RAVLO_BRAND_SECONDARY,
             accent=company.brand_accent_color or RAVLO_BRAND_ACCENT,
             tagline=company.brand_tagline,
             logo_url=company.brand_logo_url,
