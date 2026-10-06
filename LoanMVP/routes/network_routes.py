@@ -8,9 +8,11 @@ LoanMVP/models/network_models.py for the narrow-scope rationale.
 
 Auto-registered by LoanMVP/app.py blueprint scanner.
 """
+import re
+from datetime import datetime
 from pathlib import Path
 
-from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
@@ -64,6 +66,62 @@ def _post_meta(post):
         "author_profile_url": resolve_profile_url(post.author),
         "comment_count": len(post.comments),
     }
+
+
+_LISTING_CATEGORY_LABELS = dict(LISTING_CATEGORIES)
+
+
+def _post_seo_meta(post, group):
+    """Per-listing <title>/meta description, distinct from the group feed's
+    own page_title -- otherwise every post under a group shares one
+    generic title and Google can't tell listings apart in search results."""
+    category_label = _LISTING_CATEGORY_LABELS.get(post.category or "")
+    body_preview = " ".join((post.body or "").split())
+
+    if post.listing_type in ("product", "service") and post.title:
+        kind = "Product" if post.listing_type == "product" else "Service"
+        title_bits = [post.title]
+        if post.price_label:
+            title_bits.append(post.price_label)
+        title_bits.append(f"{kind} Listing")
+        title_bits.append(f"{group.name} Network")
+        page_title = " | ".join(title_bits) + " - Ravlo"
+
+        desc_bits = [post.title]
+        if category_label:
+            desc_bits.append(category_label)
+        if post.price_label:
+            desc_bits.append(post.price_label)
+        meta_description = " · ".join(desc_bits)
+        if body_preview:
+            meta_description += f" — {body_preview}"
+    else:
+        page_title = f"{(post.title or body_preview or 'Post')[:70]} | {group.name} Network - Ravlo"
+        meta_description = body_preview or f"A post in the {group.name} Network on Ravlo."
+
+    meta_description = meta_description[:157].rstrip() + "..." if len(meta_description) > 160 else meta_description
+
+    return page_title, meta_description
+
+
+_PRICE_NUMBER_RE = re.compile(r"[\d,]+(?:\.\d+)?")
+
+
+def _parse_price_label(price_label):
+    """Best-effort numeric price out of a free-text label like "$320,000"
+    or "$45/hr", for JSON-LD's Offer.price -- schema.org wants a plain
+    number, not a formatted string. Returns it as a clean string ("320000",
+    "45.5") with no trailing ".0", or None if nothing parses."""
+    if not price_label:
+        return None
+    match = _PRICE_NUMBER_RE.search(price_label)
+    if not match:
+        return None
+    try:
+        value = float(match.group(0).replace(",", ""))
+    except ValueError:
+        return None
+    return str(int(value)) if value.is_integer() else str(value)
 
 
 def _save_post_image(post_id, file_storage):
@@ -178,6 +236,8 @@ def post_detail(slug, post_id):
         for comment in post.comments
     ]
 
+    page_title, meta_description = _post_seo_meta(post, group)
+
     return render_template(
         "network/post_detail.html",
         group=group,
@@ -185,7 +245,8 @@ def post_detail(slug, post_id):
         author_label=resolve_professional_label(post.author),
         author_profile_url=resolve_profile_url(post.author),
         comments_with_meta=comments_with_meta,
-        page_title=f"{group.name} Network | Ravlo", page_key="network",
+        page_title=page_title, meta_description=meta_description, page_key="network",
+        listing_price_numeric=_parse_price_label(post.price_label),
     )
 
 
@@ -233,3 +294,45 @@ def professional_profile(slug, user_id):
         page_title=f"{member.full_name or member.email} | {group.name} Network",
         page_key="network",
     )
+
+
+@network_bp.get("/sitemap.xml")
+def sitemap():
+    """Lists every public Network feed and listing/post page so Google can
+    discover them -- without this, the only way in is Google happening to
+    follow an internal link, since nothing else references these URLs."""
+    base = request.url_root.rstrip("/")
+    urls = []
+
+    for slug in _SEEDED_GROUPS:
+        group = _ensure_seeded_group(slug)
+        urls.append(
+            f"""  <url>
+    <loc>{base}{url_for('network.feed', slug=slug)}</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>"""
+        )
+
+        posts = (
+            NetworkPost.query.filter_by(group_id=group.id)
+            .order_by(NetworkPost.created_at.desc())
+            .all()
+        )
+        for post in posts:
+            lastmod = (post.created_at or datetime.utcnow()).strftime("%Y-%m-%d")
+            urls.append(
+                f"""  <url>
+    <loc>{base}{url_for('network.post_detail', slug=slug, post_id=post.id)}</loc>
+    <lastmod>{lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>"""
+            )
+
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    xml += "\n".join(urls) + "\n"
+    xml += "</urlset>"
+
+    return Response(xml, mimetype="application/xml")

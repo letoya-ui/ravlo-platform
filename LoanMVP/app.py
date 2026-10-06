@@ -520,6 +520,7 @@ def create_app():
             "Disallow: /property/\n"
             "\n"
             f"Sitemap: {site_url}/sitemap.xml\n"
+            f"Sitemap: {site_url}/network/sitemap.xml\n"
         )
         return Response(body, mimetype="text/plain")
 
