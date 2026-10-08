@@ -143,6 +143,21 @@ SLUG_STATIC_CONTEXT: dict[str, dict] = {
 }
 
 
+def _ensure_listing_public_tokens(listings) -> None:
+    """Generate a public_token for any listing missing one, so every
+    active listing is linkable/crawlable as soon as it's fetched here --
+    not only after a realtor happens to open it from their own dashboard
+    (vip.py's realtor_listing_detail(), which generated tokens the same
+    way but only on that one path)."""
+    needs_token = [listing for listing in listings if not listing.public_token]
+    if not needs_token:
+        return
+    from LoanMVP.models.elena_models import _new_listing_public_token
+    for listing in needs_token:
+        listing.public_token = _new_listing_public_token()
+    db.session.commit()
+
+
 def _load_realtor_context(slug):
     """Look up a VIP profile by public_slug and build page context.
 
@@ -180,6 +195,7 @@ def _load_realtor_context(slug):
         .limit(6)
         .all()
     )
+    _ensure_listing_public_tokens(active_listings)
 
     testimonials = VIPTestimonial.query.filter_by(
         vip_profile_id=profile.id,
@@ -436,6 +452,22 @@ def _build_sitemap_xml(profile: VIPProfile) -> Response:
   </url>"""
         )
 
+    # Active listings each get their own indexable landing page
+    # (/p/listing/<token>) -- without a sitemap entry, a page nothing
+    # else links to by URL is effectively invisible to search engines.
+    active_listings = ElenaListing.query.filter_by(status="active", vip_profile_id=profile.id).all()
+    _ensure_listing_public_tokens(active_listings)
+    for listing in active_listings:
+        listing_date = (listing.updated_at or listing.created_at or datetime.utcnow()).strftime("%Y-%m-%d")
+        urls.append(
+            f"""  <url>
+    <loc>{base}/p/listing/{listing.public_token}</loc>
+    <lastmod>{listing_date}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>"""
+        )
+
     xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
     xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     xml += "\n".join(urls) + "\n"
@@ -508,6 +540,34 @@ def realtor_sitemap(slug):
     if not profile:
         abort(404)
     return _build_sitemap_xml(profile)
+
+
+@public_pages_bp.route("/sitemap_index.xml", methods=["GET"])
+def sitemap_index():
+    """Index of every public-pages (/p/<slug>) sitemap -- without this,
+    each realtor's own sitemap.xml (and the listing pages inside it) is
+    only reachable if you already know that realtor's slug. robots.txt
+    points here so Google actually discovers all of them."""
+    base = request.url_root.rstrip("/")
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+
+    profiles = VIPProfile.query.filter(
+        VIPProfile.role_type.in_(["realtor", "contractor", "contractor_realtor", "insurance_realtor"]),
+        VIPProfile.marketplace_enabled == "yes",
+        VIPProfile.public_slug.isnot(None),
+    ).all()
+
+    rows = "\n".join(
+        f"  <sitemap>\n    <loc>{base}/p/{profile.public_slug}/sitemap.xml</loc>\n    <lastmod>{today}</lastmod>\n  </sitemap>"
+        for profile in profiles
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{rows}\n"
+        "</sitemapindex>"
+    )
+    return Response(xml, mimetype="application/xml")
 
 
 @public_pages_bp.route("/<slug>/blog", methods=["GET"])
@@ -672,6 +732,35 @@ def _parse_listing_photos(listing) -> list:
     return [p for p in parsed if isinstance(p, str) and p]
 
 
+def _listing_seo_meta(listing) -> tuple[str, str]:
+    """Per-listing <title>/meta description -- mirrors
+    network_routes.py's _post_seo_meta() so "3 bed, 2 bath in Austin"
+    style searches can actually land on the right page instead of every
+    listing sharing one generic title."""
+    location = ", ".join(part for part in [listing.city, listing.state] if part)
+    page_title = f"{listing.address}" + (f", {location}" if location else "") + " | Ravlo"
+
+    desc_bits = []
+    if listing.beds:
+        desc_bits.append(f"{listing.beds} bed")
+    if listing.baths:
+        desc_bits.append(f"{listing.baths} bath")
+    if listing.sqft:
+        desc_bits.append(f"{listing.sqft:,} sqft")
+    if listing.price:
+        desc_bits.append(f"${listing.price:,.0f}")
+    meta_description = f"{listing.address}, {location}" if location else listing.address
+    if desc_bits:
+        meta_description += " — " + " · ".join(desc_bits)
+    body_preview = " ".join((listing.description or "").split())
+    if body_preview:
+        meta_description += f". {body_preview}"
+    if len(meta_description) > 160:
+        meta_description = meta_description[:157].rstrip() + "..."
+
+    return page_title, meta_description
+
+
 @public_pages_bp.route("/listing/<token>", methods=["GET"])
 def listing_landing(token):
     listing = ElenaListing.query.filter_by(public_token=token).first_or_404()
@@ -679,10 +768,14 @@ def listing_landing(token):
     if not profile:
         abort(404)
 
+    page_title, meta_description = _listing_seo_meta(listing)
+
     return render_template(
         "public/listing_landing.html",
         listing=listing,
         photos=_parse_listing_photos(listing),
+        page_title=page_title,
+        meta_description=meta_description,
         **_listing_branding_context(profile),
     )
 
@@ -703,8 +796,10 @@ def listing_landing_inquire(token):
     message = (request.form.get("message") or "").strip()
 
     if not client_name:
+        page_title, meta_description = _listing_seo_meta(listing)
         return render_template(
             "public/listing_landing.html", listing=listing, photos=photos,
+            page_title=page_title, meta_description=meta_description,
             form_error="Name is required.", **ctx,
         )
 
