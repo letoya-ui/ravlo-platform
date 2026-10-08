@@ -224,6 +224,17 @@ function money(x){
   return "$" + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
+// Unlike money(), a value <= 0 is real data here, not "missing" -- a
+// losing flip's -$526,000 projected profit must render as that, not
+// collapse to the same blank dash as "no data".
+function signedMoney(x){
+  if (x === null || x === undefined || x === "") return "—";
+  const n = Number(String(x).replace(/[$,]/g, "").trim());
+  if (Number.isNaN(n)) return "—";
+  const sign = n < 0 ? "-" : "";
+  return sign + "$" + Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
 function safeText(v){
   return (v === null || v === undefined || v === "") ? "—" : String(v);
 }
@@ -704,17 +715,18 @@ function renderExitStrategySection(r){
         const isBest = bestKey === cardKey;
 
         const label = card.headline_label || "Signal";
+        const isSignedField = label.toLowerCase().includes("profit") || label.toLowerCase().includes("flow") || label.toLowerCase().includes("upside");
+        const rawValue = numOrNull(card.headline_value);
         const value =
           card.headline_value !== null && card.headline_value !== undefined
-            ? (label.toLowerCase().includes("profit") || label.toLowerCase().includes("flow") || label.toLowerCase().includes("upside")
-                ? money(card.headline_value)
-                : prettyNumber(card.headline_value))
+            ? (isSignedField ? signedMoney(card.headline_value) : prettyNumber(card.headline_value))
             : "—";
+        const isNegative = isSignedField && rawValue !== null && rawValue < 0;
 
         return `
           <div class="dfv4-exit-card ${isBest ? "best" : ""}">
             <div class="dfv4-exit-title">${escapeHtml(card.label || "Strategy")}</div>
-            <div class="dfv4-exit-value">${escapeHtml(value)}</div>
+            <div class="dfv4-exit-value${isNegative ? " negative" : ""}">${escapeHtml(value)}</div>
             <div class="dfv4-exit-label">${escapeHtml(label)}</div>
             <div class="dfv4-exit-summary">${escapeHtml(card.summary || "")}</div>
           </div>
@@ -766,6 +778,7 @@ function renderCards(results){
     const description = shortText(r.description, 160);
     const lastSaleDate = compactDate(r.last_sale_date);
     const strategyTag = safeText(r.strategy_tag || r.recommended_strategy || signalLabel(signal));
+    const bestExitLabel = r.best_exit_strategy || r.recommended_strategy || "";
     const bestUse = safeText(r.estimated_best_use || r.best_use || "Review the highest and best use in Deal Workspace.");
     const roughUpside = safeText(r.rough_upside || "Upside depends on deeper review.");
     const classification = classificationLabel(r.property_classification);
@@ -810,7 +823,7 @@ function renderCards(results){
         <div class="dfv4-thumb">
           <img src="${escapeHtml(resolveCardImageSrc(r))}" alt="Property photo" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
           <div class="dfv4-thumb-top">
-            <div class="dfv4-score-badge ${scoreClass(score)}">${Number.isFinite(score) ? `${score}/99` : escapeHtml(valueSourceBadge)}</div>
+            <div class="dfv4-score-badge ${scoreClass(score)}">${Number.isFinite(score) ? `${score}/99${bestExitLabel ? ` · ${escapeHtml(bestExitLabel)}` : ""}` : escapeHtml(valueSourceBadge)}</div>
             <div class="dfv4-tier-badge ${tierClass(tier)}">${escapeHtml(tier)}</div>
           </div>
           ${galleryPhotos.length ? `
@@ -1394,6 +1407,7 @@ async function runAIMarketRead(topResult, market) {
 .dfv4-exit-card.best{background:rgba(37,99,235,.15);border-color:rgba(96,165,250,.35);box-shadow:0 0 0 1px rgba(96,165,250,.2) inset}
 .dfv4-exit-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:800}
 .dfv4-exit-value{font-size:1.05rem;font-weight:900;color:var(--text)}
+.dfv4-exit-value.negative{color:#f87171}
 .dfv4-exit-label{font-size:.7rem;color:#a9c4ff;font-weight:700}
 .dfv4-exit-summary{font-size:.72rem;color:var(--muted);line-height:1.35}
 .dfv4-best-exit{margin-top:.2rem;font-size:.78rem;color:#dbeafe}
