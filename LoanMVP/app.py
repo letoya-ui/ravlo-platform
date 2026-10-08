@@ -521,6 +521,7 @@ def create_app():
             "\n"
             f"Sitemap: {site_url}/sitemap.xml\n"
             f"Sitemap: {site_url}/network/sitemap.xml\n"
+            f"Sitemap: {site_url}/p/sitemap_index.xml\n"
         )
         return Response(body, mimetype="text/plain")
 
