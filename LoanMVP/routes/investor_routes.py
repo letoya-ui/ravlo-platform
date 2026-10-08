@@ -14677,7 +14677,7 @@ def analysis():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
 
     loans = LoanApplication.query.filter_by(**_profile_id_filter(LoanApplication, ip.id)).all() if ip else []
-    total_loan_amount = sum([getattr(loan, "loan_amount", 0) or 0 for loan in loans])
+    total_loan_amount = sum([getattr(loan, "amount", 0) or 0 for loan in loans])
 
     # NOTE: your statuses are inconsistent elsewhere ("Verified"/"Pending" vs "verified"/"pending")
     verified_docs = LoanDocument.query.filter_by(**_profile_id_filter(LoanDocument, ip.id), status="Verified").count() if ip else 0
