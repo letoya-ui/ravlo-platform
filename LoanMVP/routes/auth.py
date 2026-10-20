@@ -71,7 +71,6 @@ def _can_bypass_single_admin_lock(user) -> bool:
 # of their stored role.  Keep addresses lower-cased.
 _EXECUTIVE_DASHBOARD_EMAILS: set[str] = {
     "letoya@ravlohq.com",
-    "jamaine.caughman@ravlohq.com",
 }
 
 _PARTNER_DASHBOARD_PRESETS: dict[str, dict[str, str | bool]] = {
@@ -374,6 +373,7 @@ def _dashboard_for_role(role: str) -> str:
         "ai": "ai.dashboard",
         "intelligence": "intelligence.dashboard",
         "borrower": "borrower.create_profile",
+        "renter": "renter.dashboard",
         "account_executive": "account_executive.dashboard",
         "stylist": "stylist.dashboard",
         **{r: "partners.dashboard" for r in PARTNER_ROLES},
@@ -837,7 +837,7 @@ def post_login_redirect():
         _ensure_partner_dashboard_profile(current_user)
         db.session.commit()
 
-    _skip_onboarding = {"admin", "platform_admin", "master_admin", "lending_admin", "executive", "borrower"}
+    _skip_onboarding = {"admin", "platform_admin", "master_admin", "lending_admin", "executive", "borrower", "renter"}
     if not current_user.onboarding_complete and role not in _skip_onboarding:
         return redirect(url_for("auth.complete_profile"))
 

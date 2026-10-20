@@ -8,6 +8,7 @@ makes that possible.
 Auto-registered by LoanMVP/app.py blueprint scanner.
 """
 from datetime import datetime
+from decimal import Decimal
 
 import stripe
 from flask import (
@@ -33,16 +34,19 @@ from LoanMVP.services.payments_service import (
 payments_bp = Blueprint("payments", __name__, url_prefix="/payments")
 
 
-def _dashboard_chrome():
-    """resolve_current_owner() only ever resolves a stylist_profile or a
-    vip_profile owner here -- nothing else reaches this dashboard. Neither
-    this route nor booking_routes.py's availability() used to pass a
-    portal/base_template, so both silently fell through ravlo_base.html's
-    blueprint-based default (whose only special cases are 'vip'/'elena'/
-    'partners' blueprints) and rendered every visitor -- stylist or
-    partner alike -- with the wrong Investor sidebar."""
+def _dashboard_chrome(owner_type=None):
+    """Which sidebar chrome wraps the Payments pages. Originally only
+    stylist_profile/vip_profile owners ever reached this dashboard, so
+    everything that wasn't a stylist got hardcoded to portal="vip". Once
+    resolve_current_owner() learned about investor_profile (landlords
+    connecting Stripe to collect rent), that hardcoding silently gave
+    every investor the Partner Workspace sidebar instead of their own --
+    branch on the actual resolved owner_type instead of guessing from
+    role."""
     if (getattr(current_user, "role", "") or "").strip().lower() == "stylist":
         return "layouts/ravlo_employee_base.html", {}
+    if owner_type == "investor_profile":
+        return "layouts/ravlo_base.html", {}
     return "layouts/ravlo_base.html", {"portal": "vip"}
 
 
@@ -62,7 +66,7 @@ def dashboard():
         .all()
     )
 
-    base_template, chrome_kwargs = _dashboard_chrome()
+    base_template, chrome_kwargs = _dashboard_chrome(owner_type)
     return render_template(
         "payments/dashboard.html",
         account=account,
@@ -256,6 +260,7 @@ def _handle_checkout_completed(session):
 
     mark_payment_request_paid(payment_request, payment_intent_id=session.get("payment_intent") or "")
     _confirm_salon_deposit_appointment(payment_request)
+    _confirm_rent_payment(payment_request)
 
 
 def _confirm_salon_deposit_appointment(payment_request):
@@ -275,6 +280,26 @@ def _confirm_salon_deposit_appointment(payment_request):
     appointment.status = "scheduled"
     db.session.commit()
     _send_booking_confirmation_emails(appointment.stylist, appointment)
+
+
+def _confirm_rent_payment(payment_request):
+    """If this PaymentRequest was a renter paying rent online (see
+    renter_routes.py's pay_rent), mark the RentPayment period paid and
+    record the amount actually collected. Lazily imported to avoid a
+    module-load cycle between payments_routes.py and property_routes.py."""
+    from datetime import date
+
+    from LoanMVP.extensions import db
+    from LoanMVP.models.property import RentPayment
+
+    rent_payment = RentPayment.query.filter_by(payment_request_id=payment_request.id).first()
+    if not rent_payment or rent_payment.status == "paid":
+        return
+
+    rent_payment.amount_paid = payment_request.amount_cents / Decimal("100")
+    rent_payment.paid_date = date.today()
+    rent_payment.status = "paid"
+    db.session.commit()
 
 
 def _handle_account_updated(stripe_account):

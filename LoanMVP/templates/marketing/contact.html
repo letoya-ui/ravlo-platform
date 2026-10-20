@@ -66,6 +66,14 @@
           </div>
 
           <div>
+            <label for="math_answer" style="display:block; margin-bottom:8px; color:var(--soft); font-weight:600;">
+              Quick check: what is {{ math_a }} + {{ math_b }}?
+            </label>
+            <input id="math_answer" name="math_answer" type="text" inputmode="numeric" autocomplete="off" placeholder="Your answer"
+                   style="width:100%; min-height:52px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#fff; padding:0 16px;">
+          </div>
+
+          <div>
             <button type="submit" class="mk-btn mk-btn-primary">Send Message</button>
           </div>
 

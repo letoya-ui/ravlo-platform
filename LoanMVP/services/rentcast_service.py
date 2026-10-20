@@ -96,6 +96,33 @@ def get_rentcast_value_estimate(
     return _safe_get(url, params)
 
 
+def get_rentcast_market_stats(zip_code: str) -> Dict[str, Any]:
+    """Zip-level market aggregates (median price/rent, days on market,
+    active/new listing counts) -- RentCast's /markets endpoint, as opposed
+    to the per-address AVM endpoints above."""
+    url = f"{RENTCAST_BASE_URL}/markets"
+    params = {"zipCode": zip_code}
+    return _safe_get(url, params)
+
+
+def normalize_rentcast_market_stats(payload: Dict[str, Any], zip_code: str = "") -> Dict[str, Any]:
+    payload = payload or {}
+    sale = payload.get("saleData") or {}
+    rental = payload.get("rentalData") or {}
+
+    return {
+        "zip_code": payload.get("zipCode") or zip_code,
+        "median_sale_price": sale.get("medianPrice"),
+        "median_days_on_market": sale.get("medianDaysOnMarket") or sale.get("averageDaysOnMarket"),
+        "active_sale_listings": sale.get("totalListings"),
+        "new_sale_listings": sale.get("newListings"),
+        "median_rent": rental.get("medianRent"),
+        "median_rent_days_on_market": rental.get("medianDaysOnMarket") or rental.get("averageDaysOnMarket"),
+        "active_rental_listings": rental.get("totalListings"),
+        "new_rental_listings": rental.get("newListings"),
+    }
+
+
 def get_rentcast_sale_listings(
     city: str = "",
     state: str = "",

@@ -19,6 +19,15 @@
 
 <div class="cd-wrap" id="companyDashboardRoot" data-dashboard-company="{{ company.id }}">
 
+  {# ── HERO ── #}
+  <section class="dash-hero" style="background-image: linear-gradient(100deg, rgba(8,16,24,.92) 0%, rgba(8,16,24,.68) 50%, rgba(8,16,24,.25) 100%), url('{{ url_for('static', filename='images/marketing/city_skyline.jpg') }}');">
+    <div class="dash-hero-copy">
+      <div class="dash-hero-date">{{ current_date_label }}</div>
+      <h2>Welcome back, {{ current_user.first_name or "there" }}.</h2>
+      <p>{{ workspace_summary }}</p>
+    </div>
+  </section>
+
   {# ── KPI Stats ── #}
   <div class="cd-kpi-primary" data-widget-key="overview">
 
@@ -450,6 +459,20 @@
 
     {# ════ SIDE COLUMN ════ #}
     <aside class="cd-side">
+
+      {% set brand = effective_brand(company) %}
+      {% if brand.name != "Ravlo" %}
+      <div class="re-card cd-card promo-card">
+        {% if brand.logo_url %}
+          <img class="promo-logo" src="{{ brand.logo_url if brand.logo_url.startswith('http') else url_for('static', filename=brand.logo_url) }}" alt="{{ brand.name }}">
+        {% else %}
+          <div class="promo-brand">{{ brand.name }}</div>
+        {% endif %}
+        {% if brand.tagline %}<div class="promo-tagline">{{ brand.tagline|upper }}</div>{% endif %}
+        <h3>Your Brand. Your Platform.</h3>
+        <p>This workspace runs on Ravlo's lending engine, fully branded as {{ brand.name }} for your team and borrowers.</p>
+      </div>
+      {% endif %}
 
       {# Workspace Controls — compact action grid #}
       <div class="re-card cd-card" data-widget-key="tools">

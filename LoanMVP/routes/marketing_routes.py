@@ -1,3 +1,4 @@
+import random
 from datetime import datetime
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, session
@@ -29,6 +30,26 @@ def _is_spam(email: str, subject: str, message: str) -> bool:
         return True
     combined = (subject + " " + message).lower()
     return any(kw in combined for kw in _SPAM_KEYWORDS)
+
+
+# A visible "what is X + Y?" challenge -- stops the bots that skip
+# hidden honeypot fields but don't execute JS or solve simple arithmetic.
+# The answer lives in the server-side session, keyed off nothing the
+# client controls, so it can't be read or replayed from the form markup.
+def _new_math_challenge():
+    a, b = random.randint(1, 9), random.randint(1, 9)
+    session["contact_math_answer"] = a + b
+    return a, b
+
+
+def _math_challenge_passed(submitted_answer: str) -> bool:
+    expected = session.pop("contact_math_answer", None)
+    if expected is None:
+        return False
+    try:
+        return int(str(submitted_answer).strip()) == expected
+    except (TypeError, ValueError):
+        return False
 
 
 # ---------------------------------------------------------
@@ -326,9 +347,14 @@ def contact():
         email = (request.form.get("email") or "").strip().lower()
         subject = (request.form.get("subject") or "").strip()
         message = (request.form.get("message") or "").strip()
+        math_answer = request.form.get("math_answer") or ""
 
         if not name or not email or not message:
             flash("Name, email, and message are required.", "warning")
+            return redirect(url_for("marketing.contact"))
+
+        if not _math_challenge_passed(math_answer):
+            flash("That answer didn't look right — please try the question again.", "warning")
             return redirect(url_for("marketing.contact"))
 
         # Silently drop spam — don't notify sender they were blocked
@@ -353,7 +379,8 @@ def contact():
         flash("Message sent — we'll be in touch shortly.", "success")
         return redirect(url_for("marketing.contact"))
 
-    return render_marketing_page("contact")
+    math_a, math_b = _new_math_challenge()
+    return render_marketing_page("contact", math_a=math_a, math_b=math_b)
 
 
 def _notify_admin_contact(name: str, email: str, subject: str, message: str) -> None:
@@ -516,7 +543,11 @@ def story():
 
 @marketing_bp.route("/partners/plans")
 def partner_plans():
-    return render_marketing_page("partner_plans")
+    from LoanMVP.routes.partners import PARTNER_PLANS
+
+    paid_plan_keys = ("featured", "premium", "enterprise")
+    plans = [PARTNER_PLANS[key] for key in paid_plan_keys]
+    return render_marketing_page("partner_plans", plans=plans)
 
 
 # ---------------------------------------------------------
@@ -571,6 +602,17 @@ def lending_os_request_preview():
 @marketing_bp.route("/lending-os/preview-requested")
 def lending_os_preview_thanks():
     return render_template("marketing/lending_os_preview_thanks.html")
+
+
+@marketing_bp.route("/lending-os/preview")
+def lending_os_preview():
+    """A shareable, static mockup of the Lending OS dashboard -- built so
+    an AE can send a single link to a prospect and let them see what the
+    product looks like without a login. Uses the same fictional Meridian
+    Capital pipeline (Danielle Carter, Marcus Reyes, the Okafors, Priya
+    Nair) already seeded into the real white_label demo environment, so
+    the story is consistent everywhere it's told."""
+    return render_template("marketing/lending_os_preview.html")
 
 
 def _send_lending_os_lead_confirmation(first_name: str, email: str) -> None:
@@ -794,6 +836,69 @@ def apply_success():
 @marketing_bp.route("/academy")
 def academy():
     return render_template("marketing/academy.html")
+
+
+@marketing_bp.route("/realtors")
+def realtors():
+    return render_template("marketing/realtors.html")
+
+
+@marketing_bp.route("/realtors/request-showing", methods=["POST"])
+@limiter.limit("5 per minute")
+def realtors_showing_lead():
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+    phone = (data.get("phone") or "").strip()
+    preferred_date = (data.get("date") or "").strip()
+
+    if not name or not email:
+        return {"ok": False, "error": "Name and email are required."}, 400
+
+    notes = "Requested a showing via the /realtors sample listing page."
+    if preferred_date:
+        notes += f" Preferred date: {preferred_date}."
+
+    row = BusinessInquiry(
+        inquiry_type="realtor_partner_lead",
+        company_name="—",
+        contact_name=name,
+        email=email,
+        phone=phone or None,
+        business_type="realtor_partner_lead",
+        notes=notes,
+        status="new",
+    )
+    db.session.add(row)
+    db.session.commit()
+    _notify_admin_realtor_lead(name, email, phone, preferred_date)
+    return {"ok": True}
+
+
+def _notify_admin_realtor_lead(name: str, email: str, phone: str, preferred_date: str) -> None:
+    try:
+        from LoanMVP.app import mail
+        from flask_mail import Message as MailMessage
+
+        admin_email = _owner_admin_email()
+        if not admin_email:
+            return
+
+        msg = MailMessage(
+            subject=f"[Ravlo] Realtor page lead — {email}",
+            recipients=[admin_email],
+        )
+        msg.body = (
+            f"New lead from the /realtors sample listing page:\n\n"
+            f"Name:  {name}\n"
+            f"Email: {email}\n"
+            f"Phone: {phone or '(not given)'}\n"
+            f"Preferred date: {preferred_date or '(not given)'}\n\n"
+            f"Follow up to talk through the Realtor Partner Network."
+        )
+        mail.send(msg)
+    except Exception as e:
+        current_app.logger.warning("[realtors] lead notification failed: %s", e)
 
 
 @marketing_bp.route("/university")

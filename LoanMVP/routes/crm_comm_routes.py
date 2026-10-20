@@ -16,7 +16,7 @@ from io import StringIO
 from LoanMVP.app import socketio
 from LoanMVP.extensions import db, csrf
 from LoanMVP.ai.base_ai import AIAssistant
-from LoanMVP.models.crm_models import Lead, Task, Message, Partner, LeadSource, CRMNote, PartnerNote
+from LoanMVP.models.crm_models import Lead, Task, Message, Partner, LeadSource, CRMNote, PartnerNote, FacebookPageConnection
 from LoanMVP.models.call_model import CallLog
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.campaign_model import Campaign
@@ -300,8 +300,8 @@ def dialer():
                 "noanswer": len([c for c in calls if c.outcome == "No Answer"]),
                 "failed": len([c for c in calls if c.outcome not in ["Success", "Voicemail", "No Answer"]]),
             },
-            agent_labels=["Letoya", "Jamaine", "Jonathan"],
-            agent_data=[4, 3, 2],
+            agent_labels=["Letoya", "Jonathan"],
+            agent_data=[4, 2],
             title="Dialer Results"
         )
 
@@ -1065,11 +1065,29 @@ def lead_engine():
 # ==========================================================
 # 📋 View All Leads
 # ==========================================================
+_COMPANY_ADMIN_ROLES = {"admin", "platform_admin", "master_admin", "lending_admin"}
+
+
 @crm_bp.route("/leads")
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def leads():
     leads = _company_scoped_leads_query().order_by(Lead.created_at.desc()).all()
-    return render_template("crm/leads.html", leads=leads, title="All Leads")
+
+    company_id = getattr(current_user, "company_id", None)
+    fb_connected = bool(
+        company_id
+        and FacebookPageConnection.query.filter_by(company_id=company_id, is_active=True).first()
+    )
+    can_manage_fb = (getattr(current_user, "role", "") or "").strip().lower() in _COMPANY_ADMIN_ROLES
+
+    return render_template(
+        "crm/leads.html",
+        leads=leads,
+        title="All Leads",
+        fb_connected=fb_connected,
+        can_manage_fb=can_manage_fb,
+        company_id=company_id,
+    )
 
 @crm_bp.route("/lead_capture", methods=["POST"])
 @csrf.exempt

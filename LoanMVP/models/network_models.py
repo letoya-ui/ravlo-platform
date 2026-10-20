@@ -37,6 +37,15 @@ class NetworkPost(db.Model):
     body = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Optional structured-listing fields for product/service cards. All
+    # nullable -- plain free-text updates leave them unset and render as
+    # before. listing_type is "update" (default), "product", or "service".
+    listing_type = db.Column(db.String(20), nullable=False, default="update")
+    title = db.Column(db.String(150), nullable=True)
+    category = db.Column(db.String(50), nullable=True)
+    price_label = db.Column(db.String(50), nullable=True)
+    image_url = db.Column(db.String(500), nullable=True)
+
     group = db.relationship("NetworkGroup", back_populates="posts")
     author = db.relationship("User", backref=db.backref("network_posts", lazy=True))
     comments = db.relationship(

@@ -3,8 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ listing.address }} — {{ display_name }}</title>
-  <meta name="robots" content="noindex, follow">
+  <title>{{ page_title or (listing.address ~ " — " ~ display_name) }}</title>
+  <meta name="robots" content="index, follow">
+  {% if meta_description %}<meta name="description" content="{{ meta_description }}">{% endif %}
+  <link rel="canonical" href="https://ravlohq.com/p/listing/{{ listing.public_token }}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ page_title or listing.address }}">
+  {% if meta_description %}<meta property="og:description" content="{{ meta_description }}">{% endif %}
+  <meta property="og:url" content="https://ravlohq.com/p/listing/{{ listing.public_token }}">
+  {% if photos %}<meta property="og:image" content="{{ photos[0] }}">{% endif %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "{{ listing.address | e }}",
+    "description": "{{ meta_description | e }}",
+    "url": "https://ravlohq.com/p/listing/{{ listing.public_token }}"
+    {% if photos %},"image": "{{ photos[0] | e }}"{% endif %}
+    {% if listing.price %}
+    ,"offers": {
+      "@type": "Offer",
+      "price": "{{ listing.price }}",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock"
+    }
+    {% endif %}
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>

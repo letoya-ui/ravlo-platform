@@ -1,0 +1,37 @@
+{% extends "layouts/ravlo_renter_base.html" %}
+{% block title %}Request Maintenance{% endblock %}
+
+{% block page_title %}Request Maintenance{% endblock %}
+{% block page_subline %}{{ unit.property_ref.address }} — {{ unit.unit_label }}{% endblock %}
+
+{% block content %}
+<style>
+  .field{margin-bottom:14px;}
+  .field label{display:block;margin-bottom:4px;font-size:.85rem;color:rgba(255,255,255,.7);}
+  .field input,.field select,.field textarea{width:100%;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:.6rem .8rem;color:#fff;}
+  .rb-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:20px;}
+</style>
+
+<div class="rb-card">
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label for="title">What's the issue?</label>
+      <input id="title" name="title" type="text" required>
+    </div>
+    <div class="field">
+      <label for="priority">Priority</label>
+      <select id="priority" name="priority">
+        {% for p in priorities %}
+        <option value="{{ p }}" {% if p == "medium" %}selected{% endif %}>{{ p|title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="description">Details (optional)</label>
+      <textarea id="description" name="description" rows="4"></textarea>
+    </div>
+    <button type="submit" class="rb-btn rb-btn-primary">Submit Request</button>
+  </form>
+</div>
+{% endblock %}

@@ -6,7 +6,7 @@
 
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 
 from flask import (
@@ -301,6 +301,129 @@ def build_loan_officer_dashboard_context(include_ai_summary=True):
         except Exception:
             ai_summary = "AI summary unavailable."
 
+    # ---- Month-over-month trend badges on the stat tiles ------------
+    # Approximates "this month vs last month" off created_at, the only
+    # timestamp every one of these records reliably has -- not a true
+    # state-transition date (e.g. "approved" here means "created and
+    # currently approved", not "became approved this month"), but a
+    # real, defensible signal rather than a fabricated number.
+    now = datetime.utcnow()
+    this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_month_end = this_month_start
+    last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
+
+    def _month_counts(items, date_attr="created_at"):
+        this_count = sum(1 for i in items if getattr(i, date_attr, None) and getattr(i, date_attr) >= this_month_start)
+        last_count = sum(
+            1 for i in items
+            if getattr(i, date_attr, None) and last_month_start <= getattr(i, date_attr) < last_month_end
+        )
+        return this_count, last_count
+
+    def _trend_pct(this_count, last_count):
+        if last_count > 0:
+            return round((this_count - last_count) / last_count * 100)
+        return 100 if this_count > 0 else 0
+
+    active_loans_list = [l for l in loans if _norm_status(l.status) not in ["declined", "closed"]]
+    approved_loans_list = [l for l in loans if _norm_status(l.status) == "approved"]
+    declined_loans_list = [l for l in loans if _norm_status(l.status) == "declined"]
+
+    stat_trends = {}
+    for key, items in [
+        ("total_leads", leads),
+        ("active_loans", active_loans_list),
+        ("capital_requests", capital_loans),
+        ("pending_intakes", pending_intakes),
+        ("approved", approved_loans_list),
+        ("declined", declined_loans_list),
+    ]:
+        this_count, last_count = _month_counts(items)
+        stat_trends[key] = _trend_pct(this_count, last_count)
+
+    # ---- Loan status breakdown (donut) -------------------------------
+    # Built from whatever statuses are actually on these loans, not a
+    # fixed fictional list -- a status that doesn't occur just doesn't
+    # show up, rather than rendering a fake zero-value "Conditions" or
+    # "Funded" bucket that isn't a real status this system tracks yet.
+    _STATUS_DISPLAY = {
+        "submitted": ("Submitted", "info"),
+        "capital submitted": ("Submitted", "info"),
+        "in_review": ("In Review", "accent"),
+        "in review": ("In Review", "accent"),
+        "processing": ("In Review", "accent"),
+        "under review": ("In Review", "accent"),
+        "approved": ("Approved", "success"),
+        "declined": ("Declined", "danger"),
+        "closed": ("Closed", "muted"),
+        "funded": ("Funded", "muted"),
+    }
+    status_counts = defaultdict(int)
+    for l in loans:
+        norm = _norm_status(l.status)
+        label, color = _STATUS_DISPLAY.get(norm, (l.status or "Other", "muted"))
+        status_counts[(label, color)] += 1
+    total_loans_count = len(loans)
+    loan_status_breakdown = [
+        {
+            "label": label,
+            "color": color,
+            "count": count,
+            "pct": round(count / total_loans_count * 100) if total_loans_count else 0,
+        }
+        for (label, color), count in sorted(status_counts.items(), key=lambda kv: -kv[1])
+    ]
+
+    # ---- Monthly loan volume (bar chart), last 6 months (current month
+    # included) -----------------------------------------------------
+    monthly_volume = []
+    month_start = this_month_start
+    for _ in range(6):
+        next_month_start = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+        month_total = sum(
+            (l.amount or 0) for l in loans
+            if l.created_at and month_start <= l.created_at < next_month_start
+        )
+        monthly_volume.append({"label": month_start.strftime("%b"), "total": month_total})
+        month_start = (month_start - timedelta(days=1)).replace(day=1)
+    monthly_volume.reverse()
+    max_monthly_volume = max((m["total"] for m in monthly_volume), default=0)
+    total_volume_this_month = monthly_volume[-1]["total"] if monthly_volume else 0
+
+    # ---- Lead source breakdown ----------------------------------------
+    # Lead.source is a relationship to LeadSource, not a plain string.
+    source_counts = defaultdict(int)
+    for lead in leads:
+        source_name = (lead.source.source_name if lead.source else "") or "Unknown"
+        source_counts[source_name.strip() or "Unknown"] += 1
+    total_leads_count = len(leads)
+    lead_sources = sorted(
+        (
+            {"label": source, "count": count, "pct": round(count / total_leads_count * 100) if total_leads_count else 0}
+            for source, count in source_counts.items()
+        ),
+        key=lambda s: -s["count"],
+    )[:5]
+
+    # ---- Recent activity (status-change log on this officer's loans) --
+    recent_activity = (
+        LoanStatusEvent.query
+        .join(LoanApplication, LoanStatusEvent.loan_id == LoanApplication.id)
+        .filter(LoanApplication.loan_officer_id == officer.id)
+        .order_by(LoanStatusEvent.timestamp.desc())
+        .limit(5)
+        .all()
+    )
+
+    # ---- Upcoming tasks assigned to this loan officer ------------------
+    upcoming_tasks = (
+        Task.query
+        .filter(Task.assigned_to == current_user.id, Task.completed.is_(False))
+        .order_by(Task.due_date.asc().nullslast())
+        .limit(5)
+        .all()
+    )
+
     return {
         "officer": officer,
         "leads": leads,
@@ -309,6 +432,16 @@ def build_loan_officer_dashboard_context(include_ai_summary=True):
         "pending_intakes": pending_intakes,
         "pipeline": pipeline,
         "stats": stats,
+        "stat_trends": stat_trends,
+        "loan_status_breakdown": loan_status_breakdown,
+        "total_loans_count": total_loans_count,
+        "monthly_volume": monthly_volume,
+        "max_monthly_volume": max_monthly_volume,
+        "total_volume_this_month": total_volume_this_month,
+        "lead_sources": lead_sources,
+        "recent_activity": recent_activity,
+        "upcoming_tasks": upcoming_tasks,
+        "current_date_label": now.strftime("%A, %b %-d, %Y").upper(),
         "ai_summary": ai_summary,
         "active_tab": "dashboard",
         "title": "Loan Officer Dashboard",

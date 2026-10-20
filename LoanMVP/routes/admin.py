@@ -9,6 +9,7 @@ from sqlalchemy import func, desc, inspect, text
 from sqlalchemy.orm import aliased
 from datetime import datetime, timedelta
 import json
+import re
 from LoanMVP.extensions import db, csrf
 from werkzeug.security import generate_password_hash
 
@@ -1202,7 +1203,6 @@ def demo_center():
 # identity, so it's scoped to the specific people who actually give demos.
 _DEMO_LOGIN_ALLOWED_EMAILS = {
     "letoya@ravlohq.com",
-    "jamaine.caughman@ravlohq.com",
     "sandra@ravlohq.com",
     "aishagelahun@gmail.com",
 }
@@ -2986,6 +2986,7 @@ def company_dashboard(company_id):
         workspace_health=workspace_health,
         workspace_summary=workspace_summary,
         dashboard_preferences=dashboard_preferences,
+        current_date_label=datetime.utcnow().strftime("%A, %b %-d, %Y").upper(),
         title=f"{company.name} Dashboard",
         active_tab="companies",
     )
@@ -3841,6 +3842,47 @@ def ai_send_email():
 # UNIVERSAL AI CHAT  (login_required only — all roles may use this)
 # ─────────────────────────────────────────────────────────────────────────────
 
+_ZIP_CODE_RE = re.compile(r"\b(\d{5})\b")
+
+
+def _zip_market_context(message: str) -> str:
+    """When the user's message mentions a 5-digit ZIP, pull real RentCast
+    market stats for it (median price/rent, days on market) and hand them
+    to the model as grounding -- otherwise a "is 33607 a fast-moving
+    market" question just gets an ungrounded guess. Never raises: a
+    RentCast outage should degrade to an ungrounded answer, not a 500."""
+    match = _ZIP_CODE_RE.search(message)
+    if not match:
+        return ""
+
+    zip_code = match.group(1)
+    try:
+        from LoanMVP.services.market_service import get_market_snapshot
+        snapshot = get_market_snapshot(zipcode=zip_code)
+    except Exception:
+        return ""
+
+    parts = []
+    if snapshot.get("median_price") is not None:
+        parts.append(f"median sale price ${snapshot['median_price']:,.0f}")
+    if snapshot.get("median_rent") is not None:
+        parts.append(f"median rent ${snapshot['median_rent']:,.0f}/mo")
+    if snapshot.get("dom") is not None:
+        trend = snapshot.get("trend") or "n/a"
+        parts.append(f"median days on market {snapshot['dom']:.0f} ({trend})")
+    if snapshot.get("inventory") is not None:
+        parts.append(f"{snapshot['inventory']} active listings")
+
+    if not parts:
+        return ""
+
+    return (
+        f"\n\nLive RentCast market data for ZIP {zip_code}: " + "; ".join(parts) + ". "
+        "Ground your answer in these real numbers -- don't invent different ones. "
+        "If the user didn't ask about this ZIP specifically, ignore this data."
+    )
+
+
 @admin_bp.route("/ai/chat", methods=["POST"])
 @login_required
 def ai_chat():
@@ -3894,6 +3936,8 @@ def ai_chat():
             f"Help the user with any platform questions, workflow guidance, or real estate topics. "
             f"Be concise and helpful. You are speaking with {name}."
         )
+
+    system += _zip_market_context(message)
 
     # Build messages with last 12 turns of history (cap each turn at 2000 chars)
     messages = [{"role": "system", "content": system}]

@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lending OS Preview | Ravlo</title>
+<meta name="description" content="See what Lending OS looks like running a real mortgage company's day-to-day: leads, quotes, pre-approvals, processing, and closings in one pipeline — from every seat, on the same file.">
+<link rel="canonical" href="https://ravlohq.com/lending-os/preview">
+<meta property="og:title" content="Lending OS Preview | Ravlo">
+<meta property="og:description" content="A sample look at Lending OS running for a mortgage company — the same pipeline seen from the broker-owner, loan officer, processor, underwriter, and borrower.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root{
+    /* -- Ravlo wrapper chrome -- */
+    --wrap-bg:#07111f;
+    --wrap-text:#ecf3ff;
+    --wrap-muted:#a9bbd5;
+    --wrap-line:rgba(255,255,255,.10);
+    --wrap-blue:#7ab8ff;
+    --wrap-gold:#d7b369;
+
+    /* -- Meridian Capital "app" palette (the white-label brand this preview simulates) -- */
+    --app-sidebar:#0A2140;
+    --app-bg:#0E2A4C;
+    --app-card:#123457;
+    --app-card-soft:rgba(255,255,255,.04);
+    --app-line:rgba(255,255,255,.10);
+    --app-text:#F2F6FC;
+    --app-muted:#9FB6D9;
+    --app-navy:#0F2D52;
+    --app-teal:#12B592;
+    --app-gold:#D8B23C;
+    --app-blue:#6FA8FF;
+    --app-purple:#B79CFF;
+    --app-amber:#E8B84B;
+    --app-red:#ef6a6a;
+
+    --font-body:'Inter', -apple-system, Segoe UI, sans-serif;
+    --font-mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--wrap-bg);color:var(--wrap-text);font-family:var(--font-body);line-height:1.5;overflow-x:hidden;}
+  a{color:inherit;}
+  button{font-family:inherit;}
+  .num{font-variant-numeric:tabular-nums;}
+  [hidden]{display:none!important;}
+
+  /* ---------------- wrapper chrome ---------------- */
+  .wrap-topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:14px 24px;border-bottom:1px solid var(--wrap-line);flex-wrap:wrap;
+  }
+  .wrap-logo{font-weight:800;font-size:1.05rem;letter-spacing:.02em;text-decoration:none;color:var(--wrap-text);display:inline-flex;align-items:center;gap:8px;}
+  .wrap-cta-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .wrap-note{font-size:.84rem;color:var(--wrap-muted);}
+  .wrap-btn{
+    display:inline-flex;align-items:center;gap:6px;border-radius:10px;padding:9px 16px;
+    font-size:.86rem;font-weight:600;text-decoration:none;white-space:nowrap;border:none;cursor:pointer;
+  }
+  .wrap-btn.gold{background:var(--wrap-gold);color:#1a1206;}
+  .wrap-btn.ghost{background:rgba(255,255,255,.08);border:1px solid var(--wrap-line);color:var(--wrap-text);}
+
+  .disclosure{
+    background:rgba(255,255,255,.04);color:var(--wrap-muted);text-align:center;
+    font-size:.72rem;padding:8px 20px;font-family:var(--font-mono);letter-spacing:.02em;
+    border-bottom:1px solid var(--wrap-line);
+  }
+  .disclosure strong{color:var(--wrap-gold);}
+
+  /* ---------------- role switcher ---------------- */
+  .role-bar{padding:16px 24px 0;}
+  .role-caption{color:var(--wrap-muted);font-size:.8rem;margin:0 0 10px;}
+  .role-caption strong{color:var(--wrap-text);}
+  .role-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+  .role-tab{
+    background:rgba(255,255,255,.05);border:1px solid var(--wrap-line);border-bottom:none;
+    color:var(--wrap-muted);border-radius:10px 10px 0 0;padding:10px 16px;
+    font-size:.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;
+    text-decoration:none;
+  }
+  .role-tab .who{font-size:.68rem;font-weight:500;opacity:.75;}
+  .role-tab.active{background:var(--app-bg);color:#fff;border-color:var(--app-line);}
+  .role-tab:not(.active):hover{background:rgba(255,255,255,.09);color:#fff;}
+
+  /* ---------------- shared inner-content components (reused across every role's rc-shell / the borrower portal) ---------------- */
+  .panel{background:var(--app-card);border:1px solid var(--app-line);border-radius:14px;padding:18px;min-width:0;}
+  .panel + .panel{margin-top:14px;}
+  .panel h3{margin:0 0 14px;font-size:.96rem;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  .panel h3 .tag{font-size:.68rem;font-weight:500;color:var(--app-muted);background:rgba(255,255,255,.06);padding:4px 9px;border-radius:99px;}
+
+  .bars{display:flex;align-items:flex-end;gap:14px;height:110px;padding-top:10px;}
+  .bars .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;}
+  .bars .bar-col .n{font-size:.78rem;font-weight:700;color:#fff;}
+  .bars .bar-col .b{width:100%;border-radius:6px 6px 0 0;}
+  .bars .bar-col .cap{font-size:.64rem;color:var(--app-muted);margin-top:4px;text-align:center;}
+
+  .donut-wrap{display:flex;align-items:center;gap:16px;}
+  .donut{width:96px;height:96px;border-radius:50%;flex-shrink:0;
+    background:conic-gradient(var(--app-blue) 0 46%, var(--app-teal) 46% 70%, var(--app-gold) 70% 88%, var(--app-purple) 88% 96%, var(--app-muted) 96% 100%);
+    display:flex;align-items:center;justify-content:center;position:relative;}
+  .donut::after{content:'';position:absolute;inset:15px;border-radius:50%;background:var(--app-card);}
+  .donut .mid{position:relative;text-align:center;z-index:1;}
+  .donut .mid b{display:block;font-size:1.05rem;color:#fff;}
+  .donut .mid small{font-size:.6rem;color:var(--app-muted);}
+  .legend{display:flex;flex-direction:column;gap:7px;font-size:.76rem;}
+  .legend .row{display:flex;align-items:center;gap:7px;color:var(--app-muted);}
+  .legend .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .legend b{color:#fff;margin-left:auto;padding-left:10px;}
+
+  .src-list{display:flex;flex-direction:column;gap:10px;}
+  .src-row{display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--app-muted);}
+  .src-row .track{flex:1;height:7px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;}
+  .src-row .fill{height:100%;border-radius:99px;background:var(--app-blue);}
+  .src-row .n{width:20px;text-align:right;color:#fff;font-weight:700;font-size:.78rem;}
+
+  .task-list{display:flex;flex-direction:column;gap:2px;}
+  .task-row{display:flex;align-items:flex-start;gap:10px;padding:10px 4px;border-bottom:1px solid var(--app-line);}
+  .task-row:last-child{border-bottom:none;}
+  .task-row .cb{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--app-muted);flex-shrink:0;margin-top:2px;}
+  .task-row .tx b{display:block;font-size:.82rem;color:#fff;font-weight:600;}
+  .task-row .tx small{font-size:.74rem;color:var(--app-muted);}
+  .task-row .when{margin-left:auto;font-size:.72rem;color:var(--app-gold);font-weight:600;white-space:nowrap;padding-top:1px;}
+
+  /* quote comparison (loan officer) */
+  .quote-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px;}
+  @media (max-width:700px){ .quote-grid{grid-template-columns:1fr;} }
+  .quote-card{background:var(--app-card-soft);border:1px solid var(--app-line);border-radius:12px;padding:16px 14px;text-align:center;position:relative;}
+  .quote-card.best{border-color:var(--app-gold);background:rgba(216,178,60,.08);}
+  .quote-card .badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--app-gold);color:#1a1206;font-size:.62rem;font-weight:800;padding:3px 10px;border-radius:99px;white-space:nowrap;}
+  .quote-card .lender{font-size:.82rem;color:var(--app-muted);margin-bottom:6px;}
+  .quote-card .rate{font-size:1.35rem;font-weight:800;color:#fff;}
+  .quote-card .pmt{font-size:.74rem;color:var(--app-muted);margin-top:4px;}
+  .quote-card .selected{margin-top:8px;font-size:.7rem;color:var(--app-teal);font-weight:700;}
+
+  /* condition checklist (processor / underwriter) */
+  .cond-list{display:flex;flex-direction:column;gap:2px;}
+  .cond-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--app-line);}
+  .cond-row:last-child{border-bottom:none;}
+  .cond-row .ic{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .cond-row .ic svg{width:13px;height:13px;}
+  .cond-row.cleared .ic{background:rgba(18,181,146,.16);color:var(--app-teal);}
+  .cond-row.pending .ic{background:rgba(232,184,75,.16);color:var(--app-amber);}
+  .cond-row .tx{flex:1;min-width:0;}
+  .cond-row .tx b{display:block;font-size:.84rem;color:#fff;font-weight:600;}
+  .cond-row .tx small{font-size:.72rem;color:var(--app-muted);}
+
+  .decision-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  .dec-btn{flex:1;min-width:140px;border:none;border-radius:10px;padding:10px 14px;font-weight:700;font-size:.82rem;cursor:default;}
+  .dec-btn.approve{background:var(--app-teal);color:#06231c;}
+  .dec-btn.suspend{background:rgba(232,184,75,.16);color:var(--app-amber);border:1px solid rgba(232,184,75,.35);}
+  .dec-btn.decline{background:rgba(239,106,106,.14);color:var(--app-red);border:1px solid rgba(239,106,106,.32);}
+
+  .app-footer{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 0;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.08em;color:var(--app-muted);}
+  .app-footer strong{color:var(--app-gold);}
+
+  /* ---------------- BORROWER PORTAL (mirrors ravlo_borrower_base.html / borrower/dashboard.html) ---------------- */
+  .borrower-shell{min-height:720px;background:var(--rc-bg);color:var(--rc-text);}
+  .rb-topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 22px;border-bottom:1px solid var(--rc-line);flex-wrap:wrap;}
+  .rb-topbar-left{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .rb-brand{display:flex;align-items:center;gap:10px;}
+  .rb-mark{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:.78rem;color:#fff;background:linear-gradient(180deg,#0F2D52,#C9A227);border:1px solid rgba(201,162,39,.5);}
+  .rb-name{font-weight:800;font-size:.84rem;letter-spacing:.06em;color:#fff;}
+  .rb-sub-brand{font-size:.6rem;color:#C9A227;text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+  .rb-page-title{font-weight:700;font-size:.94rem;color:#fff;}
+  .rb-page-subline{font-size:.74rem;color:var(--rc-muted);margin-top:2px;}
+  .rb-topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .rb-user-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--rc-line);border-radius:99px;padding:5px 12px 5px 5px;font-size:.8rem;font-weight:600;color:#fff;}
+  .rb-avatar{width:26px;height:26px;border-radius:50%;background:var(--rc-teal);display:flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:800;color:#06231c;flex-shrink:0;}
+
+  .rb-nav{display:flex;gap:2px;padding:0 22px;border-bottom:1px solid var(--rc-line);overflow-x:auto;}
+  .rb-nav-link{padding:12px 13px;font-size:.82rem;font-weight:600;color:var(--rc-muted);text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;}
+  .rb-nav-link.active{color:#fff;border-bottom-color:var(--rc-accent-2);}
+  .rb-nav-link:hover{color:#fff;}
+
+  .rb-content{max-width:1080px;margin:0 auto;padding:22px 22px 6px;display:grid;gap:18px;}
+
+  .rb-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;padding:22px;border-radius:20px;border:1px solid var(--rc-line);background:radial-gradient(800px 420px at 10% 0%, rgba(62,111,168,.18), transparent 50%), rgba(255,255,255,.03);}
+  .rb-eyebrow{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;opacity:.8;color:var(--rc-muted);}
+  .rb-hero h1{margin:8px 0;font-size:1.55rem;color:#fff;}
+  .rb-hero p{margin:0;max-width:480px;color:var(--rc-muted);line-height:1.6;font-size:.88rem;}
+  .rb-hero-actions{display:flex;gap:10px;flex-wrap:wrap;}
+
+  .rb-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+  @media (max-width:780px){ .rb-stat-grid{grid-template-columns:repeat(2,1fr);} }
+  .rb-stat-card{background:rgba(255,255,255,.03);border:1px solid var(--rc-line);border-radius:16px;padding:15px;}
+  .rb-stat-label{font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;opacity:.75;margin-bottom:6px;color:var(--rc-muted);}
+  .rb-stat-value{font-size:1rem;font-weight:700;color:#fff;}
+
+  .rb-main-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start;}
+  @media (max-width:1000px){ .rb-main-grid{grid-template-columns:1fr;} }
+  .rb-col{display:grid;gap:16px;min-width:0;}
+  .rb-card{background:rgba(255,255,255,.03);border:1px solid var(--rc-line);border-radius:16px;padding:18px;min-width:0;}
+  .rb-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .rb-card-head h3{margin:2px 0 0;font-size:.9rem;color:#fff;}
+
+  .rb-progress-row{display:flex;justify-content:space-between;color:var(--rc-muted);font-size:.78rem;margin-bottom:6px;}
+  .rb-progress{height:9px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;}
+  .rb-progress-bar{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--rc-accent),var(--rc-accent-2));}
+  .rb-card-note{margin-top:8px;font-size:.76rem;color:var(--rc-muted);}
+
+  .rb-mini-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  @media (max-width:560px){ .rb-mini-grid{grid-template-columns:repeat(2,1fr);} }
+  .rb-card-mini{padding:13px;}
+  .rb-stat-big{font-size:1.3rem;font-weight:800;color:#fff;}
+
+  .rb-info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  @media (max-width:480px){ .rb-info-grid{grid-template-columns:1fr;} }
+  .rb-info-block{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:11px;}
+  .rb-info-value{font-size:.88rem;font-weight:700;color:#fff;margin-top:2px;}
+
+  .rb-card-actions{margin-top:14px;}
+
+  .rb-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:0 14px;border-radius:10px;font-weight:700;font-size:.8rem;border:1px solid transparent;text-decoration:none;cursor:default;}
+  .rb-btn-sm{min-height:32px;padding:0 11px;font-size:.76rem;}
+  .rb-btn-primary{color:#fff;background:linear-gradient(180deg,#607487,#45586B);border-color:rgba(255,255,255,.08);}
+  .rb-btn-ghost{color:#EAF2FA;background:rgba(255,255,255,.04);border-color:var(--rc-line);}
+
+  .rb-action-list{display:grid;gap:8px;}
+  .rb-action-link{display:block;padding:10px 13px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);font-size:.82rem;color:#EAF2FA;text-decoration:none;}
+  .rb-checklist{display:grid;gap:10px;}
+  .rb-check-item{display:flex;gap:9px;align-items:flex-start;font-size:.82rem;color:#fff;}
+  .rb-check-dot{width:11px;height:11px;border-radius:99px;margin-top:3px;background:rgba(255,255,255,.18);flex:0 0 11px;}
+  .rb-check-dot.done{background:var(--rc-accent-2);}
+  .rb-check-item small{display:block;color:var(--rc-muted);font-size:.72rem;margin-top:2px;font-weight:400;}
+
+  .rb-empty{padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.12);color:var(--rc-muted);font-size:.8rem;}
+
+  .rb-table-wrap{overflow-x:auto;}
+  .rb-table{width:100%;min-width:420px;border-collapse:collapse;font-size:.8rem;}
+  .rb-table th,.rb-table td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--rc-line);color:#fff;}
+  .rb-table th{color:var(--rc-muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;}
+
+  .rb-plan-copy{color:var(--rc-muted);font-size:.82rem;}
+
+  /* ---------------- REAL ADMIN DASHBOARD shell (mirrors company_dashboard.html / ravlo_employee.css) ---------------- */
+  :root{
+    --rc-bg:#0b0f14;
+    --rc-line:rgba(255,255,255,.07);
+    --rc-text:#f4f8fc;
+    --rc-text-soft:rgba(255,255,255,.82);
+    --rc-muted:rgba(255,255,255,.58);
+    --rc-accent:#3A5C7A;
+    --rc-accent-2:#8EA7C0;
+    --rc-card-grad:linear-gradient(180deg, rgba(16,24,34,.96), rgba(10,16,23,.98));
+    --rc-sidebar-grad:linear-gradient(180deg, rgba(10,16,24,.98), rgba(7,12,18,.98));
+    --rc-blue:#3E6FA8;
+    --rc-teal:#34d399;
+    --rc-amber:#fbbf24;
+    --rc-purple:#a78bfa;
+    --rc-green:#4ade80;
+    --rc-slate:#94a3b8;
+    --rc-rose:#fb7185;
+    --rc-indigo:#818cf8;
+    --rc-red:#f87171;
+  }
+  .rc-shell{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:720px;background:var(--rc-bg);color:var(--rc-text);}
+  .rc-sidebar{padding:18px 16px;background:var(--rc-sidebar-grad);border-right:1px solid var(--rc-line);}
+  .rc-brand{display:flex;align-items:center;gap:12px;padding:8px 8px 18px;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,.06);}
+  .rc-brand-mark{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;letter-spacing:.06em;font-size:.8rem;color:#fff;background:linear-gradient(180deg,#0F2D52,#C9A227);border:1px solid rgba(201,162,39,.5);}
+  .rc-brand-title{font-weight:800;font-size:.92rem;letter-spacing:.1em;line-height:1.2;}
+  .rc-brand-sub{margin-top:4px;font-size:.68rem;color:#C9A227;text-transform:uppercase;letter-spacing:.1em;}
+  .rc-nav{display:grid;gap:14px;}
+  .rc-nav-group{display:grid;gap:3px;}
+  .rc-nav-label{padding:0 10px;font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rc-muted);margin-bottom:2px;}
+  .rc-nav-link{position:relative;display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:12px;color:var(--rc-text-soft);text-decoration:none;font-size:.83rem;border:1px solid transparent;}
+  .rc-nav-link svg{width:15px;height:15px;flex-shrink:0;opacity:.9;}
+  .rc-nav-link:hover{background:rgba(255,255,255,.04);color:#fff;}
+  .rc-nav-link.active{color:#fff;background:linear-gradient(180deg, rgba(62,111,168,.16), rgba(62,90,117,.10));border-color:rgba(62,111,168,.22);}
+  .rc-nav-link.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:99px;background:linear-gradient(180deg,var(--rc-accent),var(--rc-accent-2));}
+  .rc-sidebar-foot{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06);}
+  .rc-user-chip{display:flex;align-items:center;gap:11px;padding:10px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);}
+  .rc-user-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.76rem;color:#fff;background:linear-gradient(180deg, rgba(62,111,168,.28), rgba(62,90,117,.18));border:1px solid rgba(62,111,168,.26);flex-shrink:0;}
+  .rc-user-name{font-weight:700;font-size:.84rem;color:#fff;}
+  .rc-user-role{margin-top:2px;font-size:.68rem;color:var(--rc-muted);text-transform:uppercase;letter-spacing:.08em;}
+
+  .rc-main{min-width:0;padding:18px 22px 28px;display:grid;gap:14px;align-content:start;}
+  .rc-topbar{min-height:74px;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border-radius:20px;border:1px solid var(--rc-line);background:linear-gradient(180deg, rgba(14,20,29,.92), rgba(10,15,22,.9));flex-wrap:wrap;}
+  .rc-page-title{font-size:1.2rem;font-weight:800;letter-spacing:-.02em;color:#fff;}
+  .rc-page-subline{margin-top:4px;color:var(--rc-muted);font-size:.8rem;}
+  .rc-topbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .rc-bell{position:relative;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--rc-line);display:flex;align-items:center;justify-content:center;color:var(--rc-muted);flex-shrink:0;}
+  .rc-bell svg{width:16px;height:16px;}
+  .rc-bell .dot{position:absolute;top:-4px;right:-4px;background:var(--rc-red);color:#fff;font-size:.6rem;font-weight:700;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;}
+  .rc-btn{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 13px;border-radius:10px;font-weight:700;font-size:.8rem;white-space:nowrap;border:none;text-decoration:none;cursor:default;}
+  .rc-btn svg{width:14px;height:14px;}
+  .rc-btn.primary{color:#fff;background:linear-gradient(180deg,#6e879f,#4f6478);border:1px solid rgba(255,255,255,.08);}
+  .rc-btn.ghost{color:var(--rc-text-soft);background:rgba(255,255,255,.04);border:1px solid var(--rc-line);}
+
+  .rc-kpi-primary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+  @media (max-width:900px){ .rc-kpi-primary{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  .rc-kpi-card{position:relative;overflow:hidden;padding:16px 18px 14px;border-radius:16px;border:1px solid var(--rc-line);background:rgba(255,255,255,.03);}
+  .rc-kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0;}
+  .rc-kpi--blue::before{background:linear-gradient(90deg,#2C5680,var(--rc-blue));}
+  .rc-kpi--blue .rc-kpi-icon{background:rgba(62,111,168,.16);color:var(--rc-blue);}
+  .rc-kpi--blue .rc-kpi-val{color:#e8f4ff;}
+  .rc-kpi--teal::before{background:linear-gradient(90deg,#059669,#34d399);}
+  .rc-kpi--teal .rc-kpi-icon{background:rgba(52,211,153,.12);color:var(--rc-teal);}
+  .rc-kpi--teal .rc-kpi-val{color:#d1faf0;}
+  .rc-kpi--amber::before{background:linear-gradient(90deg,#d97706,#fbbf24);}
+  .rc-kpi--amber .rc-kpi-icon{background:rgba(251,191,36,.12);color:var(--rc-amber);}
+  .rc-kpi--amber .rc-kpi-val{color:#fef9e7;}
+  .rc-kpi--purple::before{background:linear-gradient(90deg,#7c3aed,#a78bfa);}
+  .rc-kpi--purple .rc-kpi-icon{background:rgba(167,139,250,.14);color:var(--rc-purple);}
+  .rc-kpi--purple .rc-kpi-val{color:#ede9fe;}
+  .rc-kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .rc-kpi-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--rc-muted);}
+  .rc-kpi-icon{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .rc-kpi-icon svg{width:14px;height:14px;}
+  .rc-kpi-val{font-size:1.9rem;font-weight:800;line-height:1;letter-spacing:-.03em;margin-bottom:4px;}
+  .rc-kpi-sub{font-size:.72rem;color:var(--rc-muted);}
+
+  .rc-kpi-strip{display:flex;align-items:center;padding:12px 18px;border-radius:14px;border:1px solid var(--rc-line);background:rgba(255,255,255,.02);flex-wrap:wrap;gap:10px;}
+  .rc-strip-div{width:1px;height:24px;background:rgba(255,255,255,.08);flex-shrink:0;}
+  @media (max-width:700px){ .rc-strip-div{display:none;} }
+  .rc-strip-stat{display:flex;align-items:center;gap:9px;flex:1;min-width:110px;}
+  .rc-strip-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .rc-strip-val{font-size:1.05rem;font-weight:800;line-height:1;}
+  .rc-strip-label{font-size:.68rem;color:var(--rc-muted);margin-top:2px;}
+
+  .rc-layout{display:grid;grid-template-columns:minmax(0,2.1fr) 280px;gap:14px;align-items:start;}
+  @media (max-width:1000px){ .rc-layout{grid-template-columns:1fr;} }
+  .rc-main-col,.rc-side-col{display:grid;gap:14px;min-width:0;}
+  .rc-card{padding:18px 20px;border-radius:18px;border:1px solid var(--rc-line);background:var(--rc-card-grad);min-width:0;}
+  .rc-eyebrow{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--rc-muted);}
+  .rc-card h3{margin:3px 0 2px;font-size:.92rem;font-weight:700;color:#fff;}
+  .rc-card-sub{margin:0 0 12px;font-size:.78rem;color:var(--rc-muted);}
+  .rc-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+
+  .rc-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--rc-line);border-radius:14px;background:rgba(255,255,255,.015);margin-top:12px;}
+  .rc-table{width:100%;min-width:560px;border-collapse:collapse;font-size:.8rem;}
+  .rc-table th{padding:10px 12px;text-align:left;color:var(--rc-muted);background:rgba(255,255,255,.02);text-transform:uppercase;letter-spacing:.08em;font-size:.66rem;font-weight:700;border-bottom:1px solid var(--rc-line);white-space:nowrap;}
+  .rc-table td{padding:11px 12px;border-bottom:1px solid var(--rc-line);vertical-align:middle;color:var(--rc-text);}
+  .rc-table tr:last-child td{border-bottom:none;}
+  .rc-badge{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:0 9px;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;border:1px solid transparent;white-space:nowrap;}
+  .rc-badge-info{color:#d5eaff;background:rgba(111,182,255,.12);border-color:rgba(111,182,255,.26);}
+  .rc-badge-success{color:#c7f1df;background:rgba(65,199,138,.12);border-color:rgba(65,199,138,.26);}
+  .rc-badge-warning{color:#f4e3bc;background:rgba(216,171,77,.12);border-color:rgba(216,171,77,.26);}
+  .rc-badge-neutral{color:#dce5ee;background:rgba(107,127,147,.14);border-color:rgba(107,127,147,.24);}
+
+  .rc-mini-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;}
+  .rc-mini-stat{flex:1;min-width:100px;padding:11px 13px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);}
+  .rc-mini-val{font-size:1.25rem;font-weight:800;line-height:1;}
+  .rc-mini-label{font-size:.68rem;color:var(--rc-muted);margin-top:4px;}
+
+  .rc-action-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+  .rc-action-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 6px;border-radius:12px;text-align:center;border:1px solid var(--rc-line);background:rgba(255,255,255,.03);font-size:.72rem;font-weight:600;color:var(--rc-text);text-decoration:none;}
+  .rc-action-tile svg{width:16px;height:16px;color:var(--rc-muted);}
+  .rc-action-tile--primary{background:rgba(59,130,246,.14);border-color:rgba(59,130,246,.28);}
+  .rc-action-tile--primary svg{color:var(--rc-blue);}
+
+  .rc-list-row{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);}
+  .rc-list-row .rc-list-av{width:30px;height:30px;border-radius:50%;background:rgba(62,111,168,.16);color:var(--rc-blue);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.76rem;flex-shrink:0;}
+  .rc-list-row .rc-list-tx{flex:1;min-width:0;}
+  .rc-list-row .rc-list-tx b{display:block;font-size:.8rem;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rc-list-row .rc-list-tx small{display:block;font-size:.7rem;color:var(--rc-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rc-msg-row{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);}
+  .rc-msg-meta{font-size:.72rem;color:var(--rc-muted);margin-bottom:4px;}
+  .rc-msg-body{font-size:.82rem;line-height:1.45;color:var(--rc-text);}
+
+  .rc-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px;}
+  @media (max-width:700px){ .rc-chart-grid{grid-template-columns:1fr;} }
+  .rc-chart-label{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--rc-muted);margin-bottom:6px;}
+
+  .donut.rc-donut{width:80px;height:80px;}
+  .donut.rc-donut::after{background:#0d1620;inset:13px;}
+
+  @media (max-width:900px){ .rc-shell{grid-template-columns:1fr;} .rc-sidebar{display:none;} }
+
+  footer.wrap-footer{padding:40px 24px 50px;text-align:center;}
+  footer.wrap-footer p{color:var(--wrap-muted);font-size:.86rem;max-width:560px;margin:0 auto 18px;}
+  footer.wrap-footer .btn-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;}
+
+  .brand-showcase{position:relative;max-width:1100px;margin:0 auto;padding:0 24px;}
+  .brand-showcase-img{width:100%;height:auto;display:block;border-radius:20px;border:1px solid var(--wrap-line);box-shadow:var(--rav-shadow-lg, 0 26px 60px rgba(0,0,0,.34));}
+  .brand-showcase-caption{text-align:center;max-width:640px;margin:16px auto 0;color:var(--wrap-muted);font-size:.92rem;line-height:1.5;}
+  .brand-showcase-caption strong{color:var(--wrap-text);}
+</style>
+</head>
+<body>
+
+<div class="wrap-topbar">
+  <a href="{{ url_for('marketing.homepage') }}" class="wrap-logo">RAVLO</a>
+  <div class="wrap-cta-row">
+    <span class="wrap-note">This is a preview of Lending OS — not a live account.</span>
+    <a href="{{ url_for('marketing.lending_os') }}" class="wrap-btn ghost">Learn More</a>
+    <a href="{{ url_for('marketing.contact') }}" class="wrap-btn gold">Talk to Us →</a>
+  </div>
+</div>
+<div class="disclosure"><strong>DEMO PREVIEW — SAMPLE DATA ONLY.</strong> Meridian Capital Lending is a fictional company Ravlo built to show what Lending OS looks like running a real pipeline. The people, loans, and figures shown are not real.</div>
+
+<div class="brand-showcase">
+  <img
+    src="{{ url_for('static', filename='images/demo/meridian_capital_banner.jpg') }}"
+    alt="Meridian Capital — Capital for Real Estate Investors"
+    class="brand-showcase-img"
+    loading="lazy"
+  >
+  <p class="brand-showcase-caption">
+    This is <strong>Meridian Capital's own branded dashboard</strong> — their name, their colors, their logo.
+    Every White Label company gets this, powered by Ravlo underneath.
+  </p>
+</div>
+
+<div class="role-bar">
+  <p class="role-caption">Same Meridian Capital pipeline, <strong>five different seats</strong> — each tab is its own link, so you can open one in a new tab or send it straight to someone.</p>
+  <div class="role-tabs" id="roleTabs">
+    <a class="role-tab active" data-role="admin" href="#admin">Broker-Owner <span class="who">Renata</span></a>
+    <a class="role-tab" data-role="lo" href="#loan-officer">Loan Officer <span class="who">Chris</span></a>
+    <a class="role-tab" data-role="processor" href="#processor">Processor <span class="who">Jamie</span></a>
+    <a class="role-tab" data-role="underwriter" href="#underwriter">Underwriter <span class="who">Devon</span></a>
+    <a class="role-tab" data-role="borrower" href="#borrower">Borrower <span class="who">Danielle</span></a>
+  </div>
+</div>
+
+<!-- ============ LOAN OFFICER (Chris Nakamura) -- mirrors _sidebar_loan_officer.html ============ -->
+<div class="rc-shell" id="loShell" hidden>
+  <aside class="rc-sidebar">
+    <div class="rc-brand">
+      <div class="rc-brand-mark">MC</div>
+      <div>
+        <div class="rc-brand-title">Meridian Capital</div>
+        <div class="rc-brand-sub">Guiding Capital. Building Futures.</div>
+      </div>
+    </div>
+    <nav class="rc-nav">
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Command</div>
+        <a href="#" class="rc-nav-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Pipeline</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c0-1-1-2-1-3 2 1 3 3 3 5a5 5 0 0 1-10 0c0-4 3-6 5-10z"/></svg>Leads</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Borrowers</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9l8-5 8 5v10"/><path d="M9 21v-6h6v6"/></svg>Loans</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>Credit Check</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><line x1="10" y1="13" x2="15" y2="13"/><line x1="10" y1="17" x2="15" y2="17"/></svg>Loan Application</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Workflow</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h11l5 5v7a1 1 0 0 1-1 1H4z"/><path d="M9 10l2 2 4-4"/></svg>Tasks</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/><path d="M5 20l7-7"/></svg>Tools</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Resources</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5c3-1.5 6-1.5 8 0v14c-2-1.5-5-1.5-8 0z"/><path d="M20 5c-3-1.5-6-1.5-8 0v14c2-1.5 5-1.5 8 0z"/></svg>Resource Center</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/><path d="M5 20l7-7"/></svg>Create Content</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11v2a2 2 0 0 0 2 2h1l8 4V5L6 9H5a2 2 0 0 0-2 2z"/><path d="M13 8a3 3 0 0 1 0 8"/></svg>Campaigns</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Settings</a>
+      </div>
+    </nav>
+    <div class="rc-sidebar-foot">
+      <div class="rc-user-chip">
+        <div class="rc-user-avatar">CN</div>
+        <div><div class="rc-user-name">Chris Nakamura</div><div class="rc-user-role">Loan Officer</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="rc-main">
+    <header class="rc-topbar">
+      <div>
+        <div class="rc-page-title">Loan Officer Workspace</div>
+        <div class="rc-page-subline">Your pipeline, quotes, and follow-ups at Meridian Capital</div>
+      </div>
+      <div class="rc-topbar-right">
+        <div class="rc-bell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 6.5H4.5C4.5 13.5 6 12 6 8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><span class="dot">1</span></div>
+      </div>
+    </header>
+
+    <div class="rc-kpi-primary">
+      <div class="rc-kpi-card rc-kpi--blue">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">My Active Files</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span></div>
+        <div class="rc-kpi-val">2</div>
+        <div class="rc-kpi-sub">↑ 1 vs. last month</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--teal">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">New Leads Assigned</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c0-1-1-2-1-3 2 1 3 3 3 5a5 5 0 0 1-10 0c0-4 3-6 5-10z"/></svg></span></div>
+        <div class="rc-kpi-val">2</div>
+        <div class="rc-kpi-sub">↑ 100% vs. last week</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--amber">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Quotes Sent This Week</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span></div>
+        <div class="rc-kpi-val">3</div>
+        <div class="rc-kpi-sub">↑ 50% vs. last week</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--purple">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Avg. Response Time</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span></div>
+        <div class="rc-kpi-val">18 min</div>
+        <div class="rc-kpi-sub">↓ 22% vs. last 30 days</div>
+      </div>
+    </div>
+
+    <div class="rc-layout">
+      <div class="rc-main-col">
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">QUOTE ENGINE</div><h3>Danielle Carter</h3><p class="rc-card-sub">Conventional · $460,750</p></div>
+          </div>
+          <div class="quote-grid">
+            <div class="quote-card">
+              <div class="lender">Harbor Trust</div>
+              <div class="rate">6.375%</div>
+              <div class="pmt">~$2,876 /mo est.</div>
+            </div>
+            <div class="quote-card best">
+              <div class="badge">Best APR</div>
+              <div class="lender">Palmetto Federal</div>
+              <div class="rate">6.25%</div>
+              <div class="pmt">~$2,838 /mo est.</div>
+              <div class="selected">✓ Selected by Chris</div>
+            </div>
+            <div class="quote-card">
+              <div class="lender">Coastline Mortgage</div>
+              <div class="rate">6.5%</div>
+              <div class="pmt">~$2,912 /mo est.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">PIPELINE</div><h3>My Pipeline</h3><p class="rc-card-sub">2 active files</p></div>
+          </div>
+          <div class="rc-table-wrap">
+            <table class="rc-table">
+              <tr><th>Name</th><th>Property Address</th><th>Loan Type</th><th>Amount</th><th>Status</th></tr>
+              <tr>
+                <td><b>Danielle Carter</b></td>
+                <td>4128 Bayshore Vista Dr<br><span style="color:var(--rc-muted);font-size:.72rem;">Tampa, FL</span></td>
+                <td>Conventional</td><td>$460,750</td>
+                <td><span class="rc-badge rc-badge-info">Pre-Approval</span></td>
+              </tr>
+              <tr>
+                <td><b>Ade &amp; Lisa Okafor</b></td>
+                <td>88 Harborview Ln<br><span style="color:var(--rc-muted);font-size:.72rem;">Sarasota, FL</span></td>
+                <td>Conventional</td><td>$489,600</td>
+                <td><span class="rc-badge rc-badge-neutral">Underwriting</span></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <aside class="rc-side-col">
+        <div class="rc-card">
+          <div class="rc-eyebrow" style="margin-bottom:2px;">TASKS</div>
+          <h3 style="margin-bottom:12px;">Tasks &amp; Follow-Ups</h3>
+          <div class="task-list">
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Call Danielle Carter</b><small>Confirm inspection date</small></div><span class="when">Today 10:00 AM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>New lead — Jordan Blake</b><small>Instagram — first-time buyer</small></div><span class="when">Today 4:00 PM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Check in — Okafors</b><small>Underwriting is asking for a large-deposit letter</small></div><span class="when">Tomorrow</span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<!-- ============ PROCESSOR (Jamie Ortiz) -- mirrors _sidebar_processor.html ============ -->
+<div class="rc-shell" id="processorShell" hidden>
+  <aside class="rc-sidebar">
+    <div class="rc-brand">
+      <div class="rc-brand-mark">MC</div>
+      <div>
+        <div class="rc-brand-title">Meridian Capital</div>
+        <div class="rc-brand-sub">Guiding Capital. Building Futures.</div>
+      </div>
+    </div>
+    <nav class="rc-nav">
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Command</div>
+        <a href="#" class="rc-nav-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Command Center</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="6" height="6"/><rect x="3" y="15" width="6" height="6"/><line x1="13" y1="8" x2="21" y2="8"/><line x1="13" y1="18" x2="21" y2="18"/></svg>Loan Queue</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Documents</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>Verify Docs</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Workflow</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="21" x2="5" y2="10"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="14"/></svg>Reports</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="8" width="14" height="10" rx="2"/><line x1="12" y1="4" x2="12" y2="8"/><circle cx="9" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1" fill="currentColor" stroke="none"/></svg>AI Assistant</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Settings</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Readiness</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Contracts Hub</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 12l2 2 4-4"/></svg>Onboarding</a>
+      </div>
+    </nav>
+    <div class="rc-sidebar-foot">
+      <div class="rc-user-chip">
+        <div class="rc-user-avatar">JO</div>
+        <div><div class="rc-user-name">Jamie Ortiz</div><div class="rc-user-role">Processor</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="rc-main">
+    <header class="rc-topbar">
+      <div>
+        <div class="rc-page-title">Processor Workspace</div>
+        <div class="rc-page-subline">Documents, conditions, and your queue at Meridian Capital</div>
+      </div>
+      <div class="rc-topbar-right">
+        <div class="rc-bell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 6.5H4.5C4.5 13.5 6 12 6 8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><span class="dot">2</span></div>
+      </div>
+    </header>
+
+    <div class="rc-kpi-primary">
+      <div class="rc-kpi-card rc-kpi--blue">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Files in Queue</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span></div>
+        <div class="rc-kpi-val">4</div>
+        <div class="rc-kpi-sub">↑ 1 vs. last week</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--teal">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Conditions Cleared</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></span></div>
+        <div class="rc-kpi-val">6</div>
+        <div class="rc-kpi-sub">↑ 20% this week</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--amber">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Docs Requested Today</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></span></div>
+        <div class="rc-kpi-val">2</div>
+        <div class="rc-kpi-sub">Steady</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--purple">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Avg. Turn Time</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span></div>
+        <div class="rc-kpi-val">1.8 days</div>
+        <div class="rc-kpi-sub">↓ 9% vs. last 30 days</div>
+      </div>
+    </div>
+
+    <div class="rc-layout">
+      <div class="rc-main-col">
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">ACTIVE FILE</div><h3>Marcus Reyes</h3><p class="rc-card-sub">FHA Refinance · $310,000 · 210 Willow Bend Ct, Orlando, FL — Processing</p></div>
+          </div>
+          <div class="cond-list">
+            <div class="cond-row cleared">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span>
+              <div class="tx"><b>Signed loan application</b><small>Application</small></div>
+              <span class="rc-badge rc-badge-success">Cleared</span>
+            </div>
+            <div class="cond-row cleared">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span>
+              <div class="tx"><b>Two years of W-2s</b><small>Income</small></div>
+              <span class="rc-badge rc-badge-success">Cleared</span>
+            </div>
+            <div class="cond-row pending">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
+              <div class="tx"><b>Updated bank statement (last 30 days)</b><small>Assets</small></div>
+              <span class="rc-badge rc-badge-warning">Pending</span>
+            </div>
+            <div class="cond-row pending">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
+              <div class="tx"><b>Proof of homeowners insurance</b><small>Insurance</small></div>
+              <span class="rc-badge rc-badge-warning">Pending</span>
+            </div>
+          </div>
+          <button class="rc-btn primary" type="button" style="margin-top:14px;">Request Missing Documents</button>
+        </div>
+
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">QUEUE</div><h3>Up Next in Queue</h3></div>
+          </div>
+          <div class="rc-table-wrap">
+            <table class="rc-table">
+              <tr><th>Name</th><th>Loan Type</th><th>Amount</th><th>Status</th></tr>
+              <tr><td><b>Grace Liu</b></td><td>Conventional</td><td>$328,000</td><td><span class="rc-badge rc-badge-neutral">Awaiting Appraisal</span></td></tr>
+              <tr><td><b>Owen Park</b></td><td>FHA</td><td>$274,500</td><td><span class="rc-badge rc-badge-neutral">Doc Review</span></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <aside class="rc-side-col">
+        <div class="rc-card">
+          <div class="rc-eyebrow" style="margin-bottom:2px;">TASKS</div>
+          <h3 style="margin-bottom:12px;">Tasks &amp; Follow-Ups</h3>
+          <div class="task-list">
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Request bank statement</b><small>Marcus Reyes</small></div><span class="when">Today 1:00 PM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Confirm insurance binder</b><small>Marcus Reyes</small></div><span class="when">Today 3:00 PM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Open new file</b><small>Grace Liu — intake review</small></div><span class="when">Tomorrow</span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<!-- ============ UNDERWRITER (Devon Marsh) -- mirrors _sidebar_underwriter.html ============ -->
+<div class="rc-shell" id="underwriterShell" hidden>
+  <aside class="rc-sidebar">
+    <div class="rc-brand">
+      <div class="rc-brand-mark">MC</div>
+      <div>
+        <div class="rc-brand-title">Meridian Capital</div>
+        <div class="rc-brand-sub">Guiding Capital. Building Futures.</div>
+      </div>
+    </div>
+    <nav class="rc-nav">
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Command</div>
+        <a href="#" class="rc-nav-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Command Center</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h11l5 5v7a1 1 0 0 1-1 1H4z"/><path d="M9 10l2 2 4-4"/></svg>Decision Queue</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>Pipeline</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Risk</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>Review Loans</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-8 10-8 10s-8-5-8-10V6z"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg>Risk Reports</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h11l5 5v7a1 1 0 0 1-1 1H4z"/><path d="M9 10l2 2 4-4"/></svg>Tasks</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Communication</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Readiness</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Contracts Hub</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 12l2 2 4-4"/></svg>Onboarding</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Settings</a>
+      </div>
+    </nav>
+    <div class="rc-sidebar-foot">
+      <div class="rc-user-chip">
+        <div class="rc-user-avatar">DM</div>
+        <div><div class="rc-user-name">Devon Marsh</div><div class="rc-user-role">Underwriter</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="rc-main">
+    <header class="rc-topbar">
+      <div>
+        <div class="rc-page-title">Underwriter Workspace</div>
+        <div class="rc-page-subline">Conditions, decisions, and risk review at Meridian Capital</div>
+      </div>
+      <div class="rc-topbar-right">
+        <div class="rc-bell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 6.5H4.5C4.5 13.5 6 12 6 8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><span class="dot">1</span></div>
+      </div>
+    </header>
+
+    <div class="rc-kpi-primary">
+      <div class="rc-kpi-card rc-kpi--blue">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Files Under Review</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".4" fill="currentColor" stroke="none"/></svg></span></div>
+        <div class="rc-kpi-val">3</div>
+        <div class="rc-kpi-sub">↑ 1 vs. last week</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--teal">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Conditions Cleared</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg></span></div>
+        <div class="rc-kpi-val">9</div>
+        <div class="rc-kpi-sub">↑ 12% this week</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--amber">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Avg. Decision Time</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span></div>
+        <div class="rc-kpi-val">1.2 days</div>
+        <div class="rc-kpi-sub">↓ 6% vs. last 30 days</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--purple">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Approval Rate</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg></span></div>
+        <div class="rc-kpi-val">96%</div>
+        <div class="rc-kpi-sub">↑ 2% vs. last quarter</div>
+      </div>
+    </div>
+
+    <div class="rc-layout">
+      <div class="rc-main-col">
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">ACTIVE FILE</div><h3>Ade &amp; Lisa Okafor</h3><p class="rc-card-sub">Conventional Purchase · $489,600 · 88 Harborview Ln, Sarasota, FL — Underwriting</p></div>
+          </div>
+          <div class="cond-list">
+            <div class="cond-row cleared">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span>
+              <div class="tx"><b>Most recent pay stub (last 30 days)</b><small>Income</small></div>
+              <span class="rc-badge rc-badge-success">Cleared</span>
+            </div>
+            <div class="cond-row pending">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
+              <div class="tx"><b>Explanation letter for large deposit</b><small>Assets</small></div>
+              <span class="rc-badge rc-badge-warning">Open</span>
+            </div>
+            <div class="cond-row pending">
+              <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="13"/></svg></span>
+              <div class="tx"><b>Updated homeowner's insurance binder</b><small>Insurance — new purchase price</small></div>
+              <span class="rc-badge rc-badge-warning">Open</span>
+            </div>
+          </div>
+          <div class="decision-row">
+            <button class="dec-btn approve" type="button">Approve with Conditions</button>
+            <button class="dec-btn suspend" type="button">Suspend</button>
+            <button class="dec-btn decline" type="button">Decline</button>
+          </div>
+        </div>
+
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">QUEUE</div><h3>Underwriting Queue</h3></div>
+          </div>
+          <div class="rc-table-wrap">
+            <table class="rc-table">
+              <tr><th>Name</th><th>Loan Type</th><th>Amount</th><th>Status</th></tr>
+              <tr><td><b>Grace Liu</b></td><td>Conventional</td><td>$328,000</td><td><span class="rc-badge rc-badge-neutral">Awaiting Processor</span></td></tr>
+              <tr><td><b>Tariq Whitfield</b></td><td>DSCR</td><td>$245,000</td><td><span class="rc-badge rc-badge-neutral">Intake Review</span></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <aside class="rc-side-col">
+        <div class="rc-card">
+          <div class="rc-eyebrow" style="margin-bottom:2px;">TASKS</div>
+          <h3 style="margin-bottom:12px;">Tasks &amp; Follow-Ups</h3>
+          <div class="task-list">
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Review deposit letter</b><small>Ade &amp; Lisa Okafor</small></div><span class="when">Today 2:00 PM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>Confirm insurance binder</b><small>Ade &amp; Lisa Okafor</small></div><span class="when">Today 4:00 PM</span></div>
+            <div class="task-row"><span class="cb"></span><div class="tx"><b>New file incoming</b><small>Grace Liu — pending processor sign-off</small></div><span class="when">Tomorrow</span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+
+<!-- ============ BROKER-OWNER (Renata Castillo) -- mirrors the real admin/company_dashboard.html ============ -->
+<div class="rc-shell" id="adminShell">
+  <aside class="rc-sidebar">
+    <div class="rc-brand">
+      <div class="rc-brand-mark">MC</div>
+      <div>
+        <div class="rc-brand-title">Meridian Capital</div>
+        <div class="rc-brand-sub">Guiding Capital. Building Futures.</div>
+      </div>
+    </div>
+    <nav class="rc-nav">
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Overview</div>
+        <a href="#" class="rc-nav-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="21" x2="5" y2="10"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="14"/></svg>Analytics</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Onboarding</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15 14.3c2.4.3 4 1.9 4 5"/></svg>Team</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Operations</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Settings</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 6.5H4.5C4.5 13.5 6 12 6 8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>Send Notification</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><line x1="10" y1="13" x2="15" y2="13"/><line x1="10" y1="17" x2="15" y2="17"/></svg>Reports</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Growth</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M6 10.5v4.5c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-4.5"/></svg>Academy</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/><path d="M5 20l7-7"/></svg>Content Studio</a>
+      </div>
+      <div class="rc-nav-group">
+        <div class="rc-nav-label">Linked Systems</div>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15 14.3c2.4.3 4 1.9 4 5"/></svg>CRM</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c0-1-1-2-1-3 2 1 3 3 3 5a5 5 0 0 1-10 0c0-4 3-6 5-10z"/></svg>Leads</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Users</a>
+        <a href="#" class="rc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Workspace Settings</a>
+      </div>
+    </nav>
+    <div class="rc-sidebar-foot">
+      <div class="rc-user-chip">
+        <div class="rc-user-avatar">RC</div>
+        <div><div class="rc-user-name">Renata Castillo</div><div class="rc-user-role">Company Admin</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="rc-main">
+    <header class="rc-topbar">
+      <div>
+        <div class="rc-page-title">Meridian Capital Lending Command Center</div>
+        <div class="rc-page-subline">Company-scoped controls for team, requests, reporting, analytics, and workspace operations</div>
+      </div>
+      <div class="rc-topbar-right">
+        <div class="rc-bell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 6.5H4.5C4.5 13.5 6 12 6 8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><span class="dot">2</span></div>
+        <button class="rc-btn primary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="4"/><path d="M2 20c0-4 3-6 7-6"/><line x1="17" y1="8" x2="23" y2="8"/><line x1="20" y1="5" x2="20" y2="11"/></svg>Invite</button>
+        <button class="rc-btn ghost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64 1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Settings</button>
+      </div>
+    </header>
+
+    <div class="rc-kpi-primary">
+      <div class="rc-kpi-card rc-kpi--blue">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Team Members</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15 14.3c2.4.3 4 1.9 4 5"/></svg></span></div>
+        <div class="rc-kpi-val">6</div>
+        <div class="rc-kpi-sub">Assigned to Meridian Capital</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--teal">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Loan Files</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9l8-5 8 5v10"/><path d="M9 21v-6h6v6"/></svg></span></div>
+        <div class="rc-kpi-val">5</div>
+        <div class="rc-kpi-sub">Applications in workspace</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--amber">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Pending Invites</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 6l8 6 8-6"/></svg></span></div>
+        <div class="rc-kpi-val">2</div>
+        <div class="rc-kpi-sub">Not yet accepted</div>
+      </div>
+      <div class="rc-kpi-card rc-kpi--purple">
+        <div class="rc-kpi-top"><span class="rc-kpi-label">Requests</span><span class="rc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="12" height="16" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/></svg></span></div>
+        <div class="rc-kpi-val">1</div>
+        <div class="rc-kpi-sub">Pending review</div>
+      </div>
+    </div>
+
+    <div class="rc-kpi-strip">
+      <div class="rc-strip-stat"><span class="rc-strip-dot" style="background:var(--rc-green);"></span><div><div class="rc-strip-val" style="color:var(--rc-green);">5</div><div class="rc-strip-label">Borrowers</div></div></div>
+      <div class="rc-strip-div"></div>
+      <div class="rc-strip-stat"><span class="rc-strip-dot" style="background:var(--rc-slate);"></span><div><div class="rc-strip-val" style="color:var(--rc-slate);">14</div><div class="rc-strip-label">Documents</div></div></div>
+      <div class="rc-strip-div"></div>
+      <div class="rc-strip-stat"><span class="rc-strip-dot" style="background:var(--rc-rose);"></span><div><div class="rc-strip-val" style="color:var(--rc-rose);">White Label</div><div class="rc-strip-label">Plan</div></div></div>
+      <div class="rc-strip-div"></div>
+      <div class="rc-strip-stat"><span class="rc-strip-dot" style="background:var(--rc-indigo);"></span><div><div class="rc-strip-val" style="color:var(--rc-indigo);">Healthy</div><div class="rc-strip-label">Health</div></div></div>
+    </div>
+
+    <div class="rc-layout">
+      <div class="rc-main-col">
+
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">ANALYTICS</div><h3>Workspace Trends</h3><p class="rc-card-sub">Company-level activity scoped to your team</p></div>
+            <button class="rc-btn ghost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="21" x2="5" y2="10"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="14"/></svg>Full Analytics</button>
+          </div>
+          <div class="rc-chart-grid">
+            <div>
+              <div class="rc-chart-label">Team Growth</div>
+              <div class="bars" style="height:80px;">
+                <div class="bar-col"><span class="n">2</span><div class="b" style="height:30%;background:var(--rc-blue);"></div><span class="cap">Apr</span></div>
+                <div class="bar-col"><span class="n">3</span><div class="b" style="height:45%;background:var(--rc-blue);"></div><span class="cap">May</span></div>
+                <div class="bar-col"><span class="n">3</span><div class="b" style="height:45%;background:var(--rc-blue);"></div><span class="cap">Jun</span></div>
+                <div class="bar-col"><span class="n">4</span><div class="b" style="height:60%;background:var(--rc-blue);"></div><span class="cap">Jul</span></div>
+                <div class="bar-col"><span class="n">5</span><div class="b" style="height:78%;background:var(--rc-blue);"></div><span class="cap">Aug</span></div>
+                <div class="bar-col"><span class="n">6</span><div class="b" style="height:100%;background:var(--rc-blue);"></div><span class="cap">Sep</span></div>
+              </div>
+            </div>
+            <div>
+              <div class="rc-chart-label">Invite Activity</div>
+              <div class="bars" style="height:80px;">
+                <div class="bar-col"><span class="n">1</span><div class="b" style="height:22%;background:var(--rc-teal);"></div><span class="cap">Apr</span></div>
+                <div class="bar-col"><span class="n">0</span><div class="b" style="height:6%;background:var(--rc-teal);"></div><span class="cap">May</span></div>
+                <div class="bar-col"><span class="n">2</span><div class="b" style="height:45%;background:var(--rc-teal);"></div><span class="cap">Jun</span></div>
+                <div class="bar-col"><span class="n">1</span><div class="b" style="height:22%;background:var(--rc-teal);"></div><span class="cap">Jul</span></div>
+                <div class="bar-col"><span class="n">1</span><div class="b" style="height:22%;background:var(--rc-teal);"></div><span class="cap">Aug</span></div>
+                <div class="bar-col"><span class="n">3</span><div class="b" style="height:66%;background:var(--rc-teal);"></div><span class="cap">Sep</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="rc-chart-grid" style="margin-top:14px;">
+            <div>
+              <div class="rc-chart-label">Role Mix</div>
+              <div class="donut-wrap">
+                <div class="donut rc-donut" style="background:conic-gradient(var(--rc-blue) 0 50%, var(--rc-teal) 50% 67%, var(--rc-purple) 67% 84%, var(--rc-amber) 84% 100%);"></div>
+                <div class="legend">
+                  <div class="row"><span class="dot" style="background:var(--rc-blue);"></span>Loan Officer<b>3</b></div>
+                  <div class="row"><span class="dot" style="background:var(--rc-teal);"></span>Processor<b>1</b></div>
+                  <div class="row"><span class="dot" style="background:var(--rc-purple);"></span>Underwriter<b>1</b></div>
+                  <div class="row"><span class="dot" style="background:var(--rc-amber);"></span>Admin<b>1</b></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="rc-chart-label">Invite Status</div>
+              <div class="donut-wrap">
+                <div class="donut rc-donut" style="background:conic-gradient(var(--rc-amber) 0 67%, var(--rc-teal) 67% 100%);"></div>
+                <div class="legend">
+                  <div class="row"><span class="dot" style="background:var(--rc-amber);"></span>Pending<b>2</b></div>
+                  <div class="row"><span class="dot" style="background:var(--rc-teal);"></span>Accepted<b>1</b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">APPLICANT ASSIGNMENTS</div><h3>Assign Loan Officer &amp; Processor</h3><p class="rc-card-sub">Route each applicant to the right origination and processing team members.</p></div>
+            <button class="rc-btn ghost" type="button">Manage Team</button>
+          </div>
+          <div class="rc-mini-row">
+            <div class="rc-mini-stat"><div class="rc-mini-val">5</div><div class="rc-mini-label">Applicants in View</div></div>
+            <div class="rc-mini-stat"><div class="rc-mini-val" style="color:var(--rc-blue);">4</div><div class="rc-mini-label">Officer Assigned</div></div>
+            <div class="rc-mini-stat"><div class="rc-mini-val" style="color:var(--rc-teal);">1</div><div class="rc-mini-label">Processor Assigned</div></div>
+            <div class="rc-mini-stat"><div class="rc-mini-val" style="color:var(--rc-amber);">1</div><div class="rc-mini-label">Fully Unassigned</div></div>
+          </div>
+          <div class="rc-table-wrap">
+            <table class="rc-table">
+              <tr><th>Applicant</th><th>Loan Type</th><th>Amount</th><th>Status</th><th>Loan Officer</th><th>Processor</th><th>Underwriter</th></tr>
+              <tr>
+                <td><b>Danielle Carter</b><br><span style="color:var(--rc-muted);font-size:.72rem;">4128 Bayshore Vista Dr, Tampa, FL</span></td>
+                <td>Conventional</td><td>$460,750</td>
+                <td><span class="rc-badge rc-badge-info">Pre-Approval</span></td>
+                <td>Chris Nakamura</td><td>—</td><td>—</td>
+              </tr>
+              <tr>
+                <td><b>Marcus Reyes</b><br><span style="color:var(--rc-muted);font-size:.72rem;">210 Willow Bend Ct, Orlando, FL</span></td>
+                <td>FHA</td><td>$310,000</td>
+                <td><span class="rc-badge rc-badge-warning">Processing</span></td>
+                <td>Priya Shah</td><td>Jamie Ortiz</td><td>—</td>
+              </tr>
+              <tr>
+                <td><b>Ade &amp; Lisa Okafor</b><br><span style="color:var(--rc-muted);font-size:.72rem;">88 Harborview Ln, Sarasota, FL</span></td>
+                <td>Conventional</td><td>$489,600</td>
+                <td><span class="rc-badge rc-badge-neutral">Underwriting</span></td>
+                <td>Chris Nakamura</td><td>—</td><td>Devon Marsh</td>
+              </tr>
+              <tr>
+                <td><b>Priya Nair</b><br><span style="color:var(--rc-muted);font-size:.72rem;">55 Palmetto Row, St. Petersburg, FL</span></td>
+                <td>DSCR</td><td>$201,000</td>
+                <td><span class="rc-badge rc-badge-success">Clear to Close</span></td>
+                <td>Sam Torres</td><td>—</td><td>—</td>
+              </tr>
+              <tr>
+                <td><b>Monica Fields</b><br><span style="color:var(--rc-muted);font-size:.72rem;">Website inquiry, St. Petersburg, FL</span></td>
+                <td>Refinance</td><td>$256,000</td>
+                <td><span class="rc-badge rc-badge-neutral">New Application</span></td>
+                <td>Priya Shah</td><td>—</td><td>—</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="rc-card">
+          <div class="rc-section-head">
+            <div><div class="rc-eyebrow">TEAM</div><h3>Team Members</h3><p class="rc-card-sub">People assigned to Meridian Capital</p></div>
+            <button class="rc-btn ghost" type="button">Manage Team</button>
+          </div>
+          <div class="rc-table-wrap">
+            <table class="rc-table">
+              <tr><th>Name</th><th>Email</th><th>Role</th></tr>
+              <tr><td>Renata Castillo</td><td>renata.castillo@meridiancapital.com</td><td><span class="rc-badge rc-badge-info">Company Admin</span></td></tr>
+              <tr><td>Chris Nakamura</td><td>chris.nakamura@meridiancapital.com</td><td><span class="rc-badge rc-badge-info">Loan Officer</span></td></tr>
+              <tr><td>Priya Shah</td><td>priya.shah@meridiancapital.com</td><td><span class="rc-badge rc-badge-info">Loan Officer</span></td></tr>
+              <tr><td>Sam Torres</td><td>sam.torres@meridiancapital.com</td><td><span class="rc-badge rc-badge-info">Loan Officer</span></td></tr>
+              <tr><td>Jamie Ortiz</td><td>jamie.ortiz@meridiancapital.com</td><td><span class="rc-badge rc-badge-info">Processor</span></td></tr>
+              <tr><td>Devon Marsh</td><td>devon.marsh@meridiancapital.com</td><td><span class="rc-badge rc-badge-info">Underwriter</span></td></tr>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <aside class="rc-side-col">
+
+        <div class="rc-card">
+          <div class="rc-eyebrow" style="margin-bottom:10px;">WORKSPACE CONTROLS</div>
+          <div class="rc-action-grid">
+            <a href="#" class="rc-action-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20c0-3.5 2.7-5.5 5.5-5.5s5.5 2 5.5 5.5"/></svg><span>Team</span></a>
+            <a href="#" class="rc-action-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span>Users</span></a>
+            <a href="#" class="rc-action-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Messages</span></a>
+            <a href="#" class="rc-action-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg><span>Reports</span></a>
+            <a href="#" class="rc-action-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="12" height="16" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/></svg><span>Requests</span></a>
+            <a href="#" class="rc-action-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="21" x2="5" y2="10"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="14"/></svg><span>Analytics</span></a>
+            <a href="#" class="rc-action-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87"/></svg><span>Settings</span></a>
+            <a href="#" class="rc-action-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><span>Billing</span></a>
+            <a href="#" class="rc-action-tile rc-action-tile--primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="4"/><path d="M2 20c0-4 3-6 7-6"/><line x1="17" y1="8" x2="23" y2="8"/><line x1="20" y1="5" x2="20" y2="11"/></svg><span>Invite</span></a>
+          </div>
+        </div>
+
+        <div class="rc-card">
+          <div class="rc-section-head" style="margin-bottom:12px;">
+            <div><div class="rc-eyebrow">INVITES</div><h3>Recent Invites</h3></div>
+            <span class="rc-badge rc-badge-warning">2 pending</span>
+          </div>
+          <div style="display:grid;gap:8px;">
+            <div class="rc-list-row">
+              <div class="rc-list-av">O</div>
+              <div class="rc-list-tx"><b>owen.park@meridiancapital.com</b><small>Processor · 09/12/26</small></div>
+              <span class="rc-badge rc-badge-warning">Pending</span>
+            </div>
+            <div class="rc-list-row">
+              <div class="rc-list-av">G</div>
+              <div class="rc-list-tx"><b>grace.liu@meridiancapital.com</b><small>Loan Officer · 09/10/26</small></div>
+              <span class="rc-badge rc-badge-warning">Pending</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rc-card">
+          <div class="rc-section-head" style="margin-bottom:12px;">
+            <div><div class="rc-eyebrow">ACCESS REQUESTS</div><h3>Requests</h3></div>
+            <span class="rc-badge rc-badge-warning">1 pending</span>
+          </div>
+          <div style="display:grid;gap:8px;">
+            <div class="rc-list-row">
+              <div class="rc-list-tx"><b>Tariq Whitfield</b><small>tariq.whitfield@example.com</small></div>
+              <span class="rc-badge rc-badge-warning">Pending</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rc-card">
+          <div class="rc-section-head" style="margin-bottom:12px;">
+            <div><div class="rc-eyebrow">MESSAGES</div><h3>Recent Messages</h3></div>
+          </div>
+          <div style="display:grid;gap:10px;">
+            <div class="rc-msg-row">
+              <div class="rc-msg-meta">Today · 9:40 AM · Chris Nakamura</div>
+              <div class="rc-msg-body">Danielle's inspection is set for Thursday — moving her file to processing after.</div>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+  </main>
+</div>
+
+<!-- ============ BORROWER PORTAL (Danielle Carter) ============ -->
+<!-- ============ BORROWER (Danielle Carter) -- mirrors ravlo_borrower_base.html / borrower/dashboard.html ============ -->
+<div class="borrower-shell" id="borrowerShell" hidden>
+  <header class="rb-topbar">
+    <div class="rb-topbar-left">
+      <div class="rb-brand">
+        <div class="rb-mark">MC</div>
+        <div>
+          <div class="rb-name">MERIDIAN CAPITAL</div>
+          <div class="rb-sub-brand">Guiding Capital. Building Futures.</div>
+        </div>
+      </div>
+      <div class="rb-page-copy">
+        <div class="rb-page-title">Borrower Dashboard</div>
+        <div class="rb-page-subline">Track your loan, documents, and next steps</div>
+      </div>
+    </div>
+    <div class="rb-topbar-right">
+      <div class="rc-bell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 6.5H4.5C4.5 13.5 6 12 6 8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><span class="dot">1</span></div>
+      <div class="rb-user-chip"><div class="rb-avatar">DC</div><span>Danielle</span></div>
+    </div>
+  </header>
+
+  <nav class="rb-nav">
+    <a href="#" class="rb-nav-link active">Dashboard</a>
+    <a href="#" class="rb-nav-link">Apply</a>
+    <a href="#" class="rb-nav-link">Loans</a>
+    <a href="#" class="rb-nav-link">Documents</a>
+    <a href="#" class="rb-nav-link">Conditions</a>
+    <a href="#" class="rb-nav-link">Messages</a>
+    <a href="#" class="rb-nav-link">Subscription</a>
+    <a href="#" class="rb-nav-link">Network</a>
+  </nav>
+
+  <div class="rb-content">
+    <section class="rb-hero">
+      <div>
+        <div class="rb-eyebrow">Borrower OS</div>
+        <h1>Welcome back, Danielle</h1>
+        <p>Your active file is in progress. Review your loan details, upload missing documents, and stay on top of conditions.</p>
+      </div>
+      <div class="rb-hero-actions">
+        <button class="rb-btn rb-btn-primary" type="button">Apply for Funding</button>
+        <button class="rb-btn rb-btn-ghost" type="button">Upload Document</button>
+      </div>
+    </section>
+
+    <section class="rb-stat-grid">
+      <div class="rb-stat-card"><div class="rb-stat-label">Active Status</div><div class="rb-stat-value">Pre-Approval</div></div>
+      <div class="rb-stat-card"><div class="rb-stat-label">Loan Type</div><div class="rb-stat-value">Conventional</div></div>
+      <div class="rb-stat-card"><div class="rb-stat-label">Loan Amount</div><div class="rb-stat-value">$460,750</div></div>
+      <div class="rb-stat-card"><div class="rb-stat-label">Progress</div><div class="rb-stat-value">20%</div></div>
+    </section>
+
+    <section class="rb-main-grid">
+      <div class="rb-col">
+
+        <section class="rb-card">
+          <div class="rb-card-head"><div><div class="rb-eyebrow">Progress</div><h3>Application Progress</h3></div></div>
+          <div class="rb-progress-row"><span>Your file progress</span><span>20%</span></div>
+          <div class="rb-progress"><div class="rb-progress-bar" style="width:20%;"></div></div>
+          <div class="rb-card-note">Property: 4128 Bayshore Vista Dr, Tampa, FL 33611</div>
+        </section>
+
+        <section class="rb-mini-grid">
+          <div class="rb-card rb-card-mini"><div class="rb-stat-label">Loans</div><div class="rb-stat-big">1</div></div>
+          <div class="rb-card rb-card-mini"><div class="rb-stat-label">Documents</div><div class="rb-stat-big">1</div></div>
+          <div class="rb-card rb-card-mini"><div class="rb-stat-label">Conditions</div><div class="rb-stat-big">0</div></div>
+          <div class="rb-card rb-card-mini"><div class="rb-stat-label">Open Conditions</div><div class="rb-stat-big">0</div></div>
+        </section>
+
+        <section class="rb-card">
+          <div class="rb-card-head">
+            <div><div class="rb-eyebrow">Loan File</div><h3>Active Loan</h3></div>
+            <button class="rb-btn rb-btn-ghost rb-btn-sm" type="button">View All Loans</button>
+          </div>
+          <div class="rb-info-grid">
+            <div class="rb-info-block"><div class="rb-stat-label">Loan ID</div><div class="rb-info-value">#4821</div></div>
+            <div class="rb-info-block"><div class="rb-stat-label">Status</div><div class="rb-info-value">Pending</div></div>
+            <div class="rb-info-block"><div class="rb-stat-label">Property Address</div><div class="rb-info-value">4128 Bayshore Vista Dr</div></div>
+            <div class="rb-info-block"><div class="rb-stat-label">Property Value</div><div class="rb-info-value">$485,000</div></div>
+          </div>
+          <div class="rb-card-actions"><button class="rb-btn rb-btn-primary rb-btn-sm" type="button">Open Loan File</button></div>
+        </section>
+
+        <section class="rb-card">
+          <div class="rb-card-head">
+            <div><div class="rb-eyebrow">Documents</div><h3>Recent Documents</h3></div>
+            <button class="rb-btn rb-btn-ghost rb-btn-sm" type="button">View Documents</button>
+          </div>
+          <div class="rb-table-wrap">
+            <table class="rb-table">
+              <tr><th>Document</th><th>Type</th><th>Status</th><th>Uploaded</th></tr>
+              <tr><td>Preapproval Letter.pdf</td><td>Preapproval</td><td>Ready</td><td>Sep 11, 2026</td></tr>
+            </table>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="rb-col">
+
+        <section class="rb-card">
+          <div class="rb-card-head"><div><div class="rb-eyebrow">Next Steps</div><h3>Actions</h3></div></div>
+          <div class="rb-action-list">
+            <a href="#" class="rb-action-link">Start or update application</a>
+            <a href="#" class="rb-action-link">Upload supporting documents</a>
+            <a href="#" class="rb-action-link">Review conditions</a>
+            <a href="#" class="rb-action-link">Message your team</a>
+            <a href="#" class="rb-action-link">Manage subscription</a>
+          </div>
+        </section>
+
+        <section class="rb-card">
+          <div class="rb-card-head"><div><div class="rb-eyebrow">Checklist</div><h3>Your Next Items</h3></div></div>
+          <div class="rb-checklist">
+            <div class="rb-check-item"><div class="rb-check-dot"></div><div><b>Schedule your home inspection</b><small>Confirm a date before the file moves to processing</small></div></div>
+          </div>
+        </section>
+
+        <section class="rb-card">
+          <div class="rb-card-head">
+            <div><div class="rb-eyebrow">Conditions</div><h3>Open Conditions</h3></div>
+            <button class="rb-btn rb-btn-ghost rb-btn-sm" type="button">View All</button>
+          </div>
+          <div class="rb-empty">No open conditions right now.</div>
+        </section>
+
+        <section class="rb-card">
+          <div class="rb-card-head"><div><div class="rb-eyebrow">Subscription</div><h3>Your Plan</h3></div></div>
+          <div class="rb-plan-copy">Current plan: <strong>Free</strong></div>
+          <div class="rb-card-actions"><button class="rb-btn rb-btn-primary rb-btn-sm" type="button">Manage Plan</button></div>
+        </section>
+
+      </div>
+    </section>
+
+    <div class="app-footer" style="padding:6px 0 20px;">
+      <span><strong>DEMO ENVIRONMENT</strong> — SAMPLE DATA ONLY</span>
+      <span>RAVLO | LENDING OS</span>
+    </div>
+  </div>
+</div>
+
+<footer class="wrap-footer">
+  <p>This is a sample preview built by Ravlo to show what Lending OS looks like running a mortgage company's day-to-day pipeline. "Meridian Capital Lending," every borrower, loan officer, and figure shown is fictional.</p>
+  <div class="btn-row">
+    <a href="{{ url_for('marketing.lending_os') }}" class="wrap-btn ghost">See Lending OS</a>
+    <a href="{{ url_for('marketing.contact') }}" class="wrap-btn gold">Talk to Us →</a>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.role-tab'));
+
+  // Every role now has its own independent shell (each with its own real
+  // sidebar nav), so switching roles is just show-this-one-hide-the-rest.
+  var shells = {
+    admin: document.getElementById('adminShell'),
+    lo: document.getElementById('loShell'),
+    processor: document.getElementById('processorShell'),
+    underwriter: document.getElementById('underwriterShell'),
+    borrower: document.getElementById('borrowerShell')
+  };
+
+  // Each tab is a real link (#admin, #loan-officer, ...) so it can be
+  // opened in its own browser tab, bookmarked, or sent directly to
+  // someone -- they land straight on that role.
+  var hashToRole = {
+    admin: 'admin',
+    'loan-officer': 'lo',
+    processor: 'processor',
+    underwriter: 'underwriter',
+    borrower: 'borrower'
+  };
+
+  function roleFromHash(){
+    var h = (window.location.hash || '').replace('#', '');
+    return hashToRole[h] || 'admin';
+  }
+
+  function setRole(role){
+    tabs.forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-role') === role); });
+    Object.keys(shells).forEach(function(key){ shells[key].hidden = key !== role; });
+  }
+
+  window.addEventListener('hashchange', function(){ setRole(roleFromHash()); });
+  setRole(roleFromHash());
+})();
+</script>
+
+</body>
+</html>

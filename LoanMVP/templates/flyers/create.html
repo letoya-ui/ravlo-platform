@@ -1,0 +1,146 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Create a Flyer{% endblock %}
+{% block page_title %}Create a Flyer{% endblock %}
+{% block page_subline %}
+Generated instantly from your Ravlo brand -- no Canva account needed.
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  {% if not brand_ready %}
+  <section class="ravlo-card pad" style="border-left:4px solid #f59e0b;">
+    <h3 class="text-base font-semibold mb-2">Set up your brand first</h3>
+    <p style="font-size:0.9rem;color:#64748b;margin-bottom:0.75rem;">
+      Add your logo and brand color so your flyers look like they came from you, not a template.
+    </p>
+    <a href="{{ url_for('vip.onboarding') }}#brand" class="ravlo-btn primary sm">Set Up My Brand →</a>
+  </section>
+  {% endif %}
+
+  <section class="ravlo-card pad">
+    <h3 class="text-base font-semibold mb-2">Tell Ravlo what you need</h3>
+    <p style="font-size:0.85rem;color:#64748b;margin-bottom:0.75rem;">
+      e.g. "open house flyer for 123 Main St, Saturday at 12" -- Ravlo will fill in the details below for you to check before it generates the PDF.
+    </p>
+    <form method="post" action="{{ url_for('flyers.ai_create') }}" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input
+        type="text"
+        name="prompt"
+        placeholder="open house flyer for 123 Main St, Saturday at 12"
+        style="flex:1;min-width:240px;padding:0.6rem 0.75rem;border:1px solid #e2e8f0;border-radius:8px;font-size:0.9rem;"
+        required
+      >
+      <button type="submit" class="ravlo-btn primary sm">Create with AI</button>
+    </form>
+  </section>
+
+  {% if open_house_preview %}
+  <section class="ravlo-card pad" style="border-left:4px solid {{ profile.brand_color or '#4f6bed' }};">
+    <h3 class="text-base font-semibold mb-2">Review your open house flyer</h3>
+    <p style="font-size:0.85rem;color:#64748b;margin-bottom:0.9rem;">
+      {% if listing %}Matched this to your saved listing, so price/beds/baths/photos are already filled in.{% else %}No saved listing matched this address, so this flyer will just show the address and event time.{% endif %}
+      Fix anything below, then generate.
+    </p>
+    <form method="get" action="{{ url_for('flyers.download_open_house') }}" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <input type="hidden" name="listing_id" value="{{ open_house_preview.listing_id }}">
+      <label style="grid-column:1 / -1;font-size:0.8rem;color:#475569;">
+        Address
+        <input type="text" name="address" value="{{ open_house_preview.address }}" required
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <label style="font-size:0.8rem;color:#475569;">
+        City
+        <input type="text" name="city" value="{{ open_house_preview.city }}"
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <label style="font-size:0.8rem;color:#475569;">
+        State
+        <input type="text" name="state" value="{{ open_house_preview.state }}"
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <label style="font-size:0.8rem;color:#475569;">
+        Zip
+        <input type="text" name="zip" value="{{ open_house_preview.zip }}"
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <label style="font-size:0.8rem;color:#475569;">
+        Event date
+        <input type="date" name="event_date" value="{{ open_house_preview.event_date }}"
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <label style="font-size:0.8rem;color:#475569;">
+        Start time
+        <input type="text" name="event_time" value="{{ open_house_preview.event_time }}" placeholder="12:00 PM"
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <label style="font-size:0.8rem;color:#475569;">
+        End time (optional)
+        <input type="text" name="event_time_end" value="{{ open_house_preview.event_time_end }}" placeholder="2:00 PM"
+               style="width:100%;margin-top:0.25rem;padding:0.5rem 0.6rem;border:1px solid #e2e8f0;border-radius:8px;">
+      </label>
+      <div style="grid-column:1 / -1;">
+        <button type="submit" class="ravlo-btn primary">Generate Open House Flyer</button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+
+  <section class="ravlo-card pad">
+    <div class="flyer-preview" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+      <div style="background:{{ profile.brand_color or '#4f6bed' }};padding:1.25rem 1.5rem;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          {% if profile.logo_url %}
+          <img src="{{ profile.logo_url }}" alt="Logo" style="height:42px;max-width:160px;object-fit:contain;">
+          {% else %}
+          <span style="font-weight:700;font-size:1.1rem;">{{ profile.business_name or profile.display_name }}</span>
+          {% endif %}
+        </div>
+        {% if listing %}
+        <span style="font-weight:700;font-size:0.85rem;letter-spacing:0.05em;">JUST LISTED</span>
+        {% endif %}
+      </div>
+
+      <div style="padding:1.5rem;">
+        {% if listing %}
+          {% if photos %}
+          <img src="{{ photos[0] }}" alt="Listing photo" style="width:100%;max-height:260px;object-fit:cover;border-radius:8px;margin-bottom:1rem;">
+          {% endif %}
+          <div style="font-size:1.6rem;font-weight:800;color:{{ profile.brand_color or '#4f6bed' }};">
+            {% if listing.price %}${{ "{:,.0f}".format(listing.price) }}{% else %}Price upon request{% endif %}
+          </div>
+          <div style="font-weight:700;font-size:1rem;margin-top:0.25rem;">{{ listing.address }}</div>
+          <div style="color:#64748b;font-size:0.9rem;">{{ [listing.city, listing.state, listing.zip_code]|select|join(', ') }}</div>
+          <div style="margin-top:0.75rem;font-weight:600;font-size:0.9rem;">
+            {{ [(listing.beds ~ ' bd' if listing.beds is not none else None), (listing.baths ~ ' ba' if listing.baths is not none else None), (listing.sqft and '{:,} sqft'.format(listing.sqft))]|select|join('   |   ') }}
+          </div>
+          {% if listing.description %}
+          <p style="margin-top:0.75rem;font-size:0.85rem;color:#334155;">{{ listing.description[:280] }}{% if listing.description|length > 280 %}…{% endif %}</p>
+          {% endif %}
+        {% else %}
+          {% if profile.headline %}<p style="font-size:1rem;color:#334155;margin-bottom:0.75rem;">{{ profile.headline }}</p>{% endif %}
+          {% if profile.bio %}<p style="font-size:0.9rem;color:#64748b;">{{ profile.bio[:400] }}{% if profile.bio|length > 400 %}…{% endif %}</p>{% endif %}
+        {% endif %}
+      </div>
+
+      <div style="background:{{ profile.brand_color or '#4f6bed' }};padding:0.6rem 1.5rem;color:#fff;font-size:0.8rem;">
+        {{ profile.business_name or profile.display_name }}
+      </div>
+    </div>
+
+    <div style="margin-top:1.25rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
+      <a href="{{ url_for('flyers.download', listing_id=listing.id if listing else none) }}" class="ravlo-btn primary">
+        Download PDF
+      </a>
+      {% if not listing %}
+      <span style="font-size:0.8rem;color:#64748b;align-self:center;">
+        Have a specific listing? Open it and click "Create Flyer" there instead.
+      </span>
+      {% endif %}
+    </div>
+  </section>
+
+</div>
+{% endblock %}

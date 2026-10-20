@@ -1095,7 +1095,7 @@ PARTNER_PLANS = {
         "features": [
             "Everything in Free", "Deal visibility", "Portfolio showcase",
             "Smart notifications", "Priority placement",
-            "Full back office", "Unlimited landing pages",
+            "Full back office", "Unlimited Listing Lead Pages",
             "Ravlo Investor Leads included free",
         ],
     },

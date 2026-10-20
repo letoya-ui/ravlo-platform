@@ -88,14 +88,6 @@
           <div class="ravlo-topbar-actions-slot">
             {% include "layouts/_notification_bell.html" %}
             {% block topbar_actions %}{% endblock %}
-
-            <form method="POST" action="{{ url_for('auth.logout') }}" style="margin:0;">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="ravlo-btn ghost sm">
-                <i class="lucide lucide-log-out"></i>
-                <span>Logout</span>
-              </button>
-            </form>
           </div>
         </div>
       </header>

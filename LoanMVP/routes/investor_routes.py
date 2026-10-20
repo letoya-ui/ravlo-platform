@@ -47,7 +47,7 @@ from flask import (
 from flask_login import current_user, login_required
 
 from LoanMVP.extensions import db, stripe, csrf
-from LoanMVP.utils.decorators import role_required
+from LoanMVP.utils.decorators import role_required, is_investor_comped
 from LoanMVP.forms.investor_forms import (
     InvestorSettingsForm,
     InvestorProfileForm,
@@ -1150,6 +1150,13 @@ def _investor_grandfather_cutoff():
 
 
 def _is_investor_grandfathered(user):
+    """True if this investor gets full (Enterprise-equivalent) access at
+    no charge -- either their account predates INVESTOR_GRANDFATHERED_CUTOFF,
+    or their email is on the small manual comp list (INVESTOR_COMPED_EMAILS)
+    in utils/decorators.py."""
+    if is_investor_comped(user):
+        return True
+
     created_at = getattr(user, "created_at", None)
     if not created_at:
         return False
@@ -7351,6 +7358,11 @@ def design_studio(deal_id=None):
     if deal_id is not None:
         deal = _get_owned_deal_or_404(deal_id)
 
+    project = None
+    project_id = request.args.get("project_id", type=int)
+    if project_id is not None:
+        project = BuildProject.query.filter_by(id=project_id, user_id=current_user.id).first()
+
     results = (deal.results_json or {}) if deal else {}
     rehab_project = results.get("rehab_project", {}) or {}
     rehab_scope = results.get("rehab_scope") or (getattr(deal, "rehab_scope_json", None) if deal else None) or {}
@@ -7419,6 +7431,21 @@ def design_studio(deal_id=None):
         }
 
     build_project = results.get("build_project", {}) or {}
+    if not build_project and project is not None:
+        build_project = _seed_build_project_from_saved_project(project)
+
+    if not rehab_before.get("image_url"):
+        seeded_image = (
+            build_project.get("exterior", {}).get("image_url")
+            or build_project.get("blueprint", {}).get("image_url")
+        )
+        if seeded_image:
+            rehab_before = {
+                **rehab_before,
+                "image_url": seeded_image,
+                "source": "build_project",
+            }
+
     blueprint_result = build_project.get("blueprint", {}) or {}
     siteplan_result = build_project.get("siteplan", {}) or build_project.get("site_plan", {}) or {}
     exterior_result = _build_project_exterior_result(build_project)
@@ -7452,6 +7479,7 @@ def design_studio(deal_id=None):
     return render_template(
         "investor/design_studio.html",
         deal=deal,
+        project=project,
         rehab_project=rehab_project,
         rehab_scope=rehab_scope,
         rehab_before=rehab_before,
@@ -14649,7 +14677,7 @@ def analysis():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
 
     loans = LoanApplication.query.filter_by(**_profile_id_filter(LoanApplication, ip.id)).all() if ip else []
-    total_loan_amount = sum([getattr(loan, "loan_amount", 0) or 0 for loan in loans])
+    total_loan_amount = sum([getattr(loan, "amount", 0) or 0 for loan in loans])
 
     # NOTE: your statuses are inconsistent elsewhere ("Verified"/"Pending" vs "verified"/"pending")
     verified_docs = LoanDocument.query.filter_by(**_profile_id_filter(LoanDocument, ip.id), status="Verified").count() if ip else 0

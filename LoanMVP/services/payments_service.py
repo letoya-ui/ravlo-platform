@@ -44,6 +44,22 @@ def resolve_current_owner(user) -> Tuple[Optional[str], Optional[int], Optional[
             stylist.logo_url,
         )
 
+    # Checked before the VIP fallback below: get_or_create_vip_profile()
+    # auto-creates a VIPProfile for *any* authenticated user regardless of
+    # role, so an investor/landlord would never reach this branch if it
+    # came after that call.
+    from LoanMVP.models.investor_models import InvestorProfile
+
+    investor_profile = InvestorProfile.query.filter_by(user_id=user.id).first()
+    if investor_profile:
+        return (
+            "investor_profile",
+            investor_profile.id,
+            investor_profile.full_name or "Landlord",
+            None,
+            None,
+        )
+
     from LoanMVP.routes.vip import get_or_create_vip_profile
 
     vip_profile = get_or_create_vip_profile()
@@ -79,6 +95,14 @@ def owner_branding(owner_type: str, owner_id: int) -> Tuple[Optional[str], Optio
             return None, None, None
         return (profile.business_name or profile.display_name), profile.brand_color, profile.logo_url
 
+    if owner_type == "investor_profile":
+        from LoanMVP.models.investor_models import InvestorProfile
+
+        profile = InvestorProfile.query.get(owner_id)
+        if not profile:
+            return None, None, None
+        return (profile.full_name or "Landlord"), None, None
+
     return None, None, None
 
 
@@ -105,27 +129,38 @@ def start_connect_onboarding(account: PaymentAccount, email: str, refresh_url: s
     """Creates the Stripe Express account (if this workspace hasn't
     started one yet) and returns a fresh AccountLink URL to send the user
     to. AccountLinks expire quickly, so this is safe -- and necessary --
-    to call again on every "Connect Stripe" click."""
+    to call again on every "Connect Stripe" click.
+
+    Stripe errors here (e.g. Express isn't enabled on the platform's
+    Connect settings, or a request param Stripe rejects) are re-raised as
+    PaymentsServiceError so the caller's existing flash-and-redirect
+    handles them -- otherwise they were bubbling up as an unhandled
+    exception and showing whoever clicked "Connect Stripe" a generic 500
+    page with no indication of what actually went wrong."""
     _stripe_configured()
 
-    if not account.stripe_connect_account_id:
-        stripe_account = stripe.Account.create(
-            type="express",
-            email=email or None,
-            capabilities={
-                "card_payments": {"requested": True},
-                "transfers": {"requested": True},
-            },
-        )
-        account.stripe_connect_account_id = stripe_account.id
-        db.session.commit()
+    try:
+        if not account.stripe_connect_account_id:
+            stripe_account = stripe.Account.create(
+                type="express",
+                email=email or None,
+                capabilities={
+                    "card_payments": {"requested": True},
+                    "transfers": {"requested": True},
+                },
+            )
+            account.stripe_connect_account_id = stripe_account.id
+            db.session.commit()
 
-    account_link = stripe.AccountLink.create(
-        account=account.stripe_connect_account_id,
-        refresh_url=refresh_url,
-        return_url=return_url,
-        type="account_onboarding",
-    )
+        account_link = stripe.AccountLink.create(
+            account=account.stripe_connect_account_id,
+            refresh_url=refresh_url,
+            return_url=return_url,
+            type="account_onboarding",
+        )
+    except stripe.error.StripeError as exc:
+        raise PaymentsServiceError(f"Stripe couldn't start onboarding: {exc.user_message or str(exc)}") from exc
+
     return account_link.url
 
 
@@ -138,7 +173,10 @@ def sync_connect_status(account: PaymentAccount) -> PaymentAccount:
         return account
 
     _stripe_configured()
-    stripe_account = stripe.Account.retrieve(account.stripe_connect_account_id)
+    try:
+        stripe_account = stripe.Account.retrieve(account.stripe_connect_account_id)
+    except stripe.error.StripeError as exc:
+        raise PaymentsServiceError(f"Couldn't check your Stripe status: {exc.user_message or str(exc)}") from exc
 
     account.stripe_connect_charges_enabled = bool(stripe_account.get("charges_enabled"))
     account.stripe_connect_payouts_enabled = bool(stripe_account.get("payouts_enabled"))
@@ -193,30 +231,33 @@ def create_checkout_session_for_request(
 
     _stripe_configured()
 
-    session = stripe.checkout.Session.create(
-        mode="payment",
-        line_items=[
-            {
-                "price_data": {
-                    "currency": "usd",
-                    "product_data": {
-                        "name": payment_request.title,
-                        "description": payment_request.description or None,
+    try:
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "product_data": {
+                            "name": payment_request.title,
+                            "description": payment_request.description or None,
+                        },
+                        "unit_amount": payment_request.amount_cents,
                     },
-                    "unit_amount": payment_request.amount_cents,
-                },
-                "quantity": 1,
-            }
-        ],
-        payment_intent_data={
-            "transfer_data": {"destination": account.stripe_connect_account_id},
-        },
-        customer_email=payment_request.client_email or None,
-        success_url=success_url,
-        cancel_url=cancel_url,
-        metadata={"payment_request_id": str(payment_request.id)},
-        **({"expires_at": expires_at} if expires_at else {}),
-    )
+                    "quantity": 1,
+                }
+            ],
+            payment_intent_data={
+                "transfer_data": {"destination": account.stripe_connect_account_id},
+            },
+            customer_email=payment_request.client_email or None,
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={"payment_request_id": str(payment_request.id)},
+            **({"expires_at": expires_at} if expires_at else {}),
+        )
+    except stripe.error.StripeError as exc:
+        raise PaymentsServiceError(f"Stripe couldn't start checkout: {exc.user_message or str(exc)}") from exc
 
     payment_request.stripe_checkout_session_id = session.id
     db.session.commit()

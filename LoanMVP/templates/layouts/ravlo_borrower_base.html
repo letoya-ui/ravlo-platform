@@ -16,6 +16,18 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_borrower.css') }}">
 
+  {% set brand = effective_brand(current_user.company if current_user.is_authenticated else None) %}
+  {% if brand.name != "Ravlo" %}
+  <style>
+    /* White-label override -- see ravlo_employee_base.html for why this
+       can't just be the sidebar logo. */
+    :root{
+      --accent: {{ brand.primary }};
+      --accent-2: {{ brand.secondary }};
+    }
+  </style>
+  {% endif %}
+
   {% block head %}{% endblock %}
 </head>
 
@@ -104,6 +116,9 @@
     </a>
     <a href="{{ url_for('borrower.subscription') }}" class="rb-nav-link {% if active_tab == 'subscription' %}active{% endif %}">
       Subscription
+    </a>
+    <a href="{{ url_for('network.feed', slug='real-estate') }}" class="rb-nav-link {% if ep.startswith('network.') %}active{% endif %}">
+      Network
     </a>
   </nav>
 

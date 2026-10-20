@@ -153,7 +153,14 @@ class Tenant(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Set once the tenant accepts their portal invite and creates a login.
+    # Nullable/unique: most Tenant rows have no portal account (never
+    # invited, or invite not yet accepted), and a User can only ever be
+    # linked to one Tenant record.
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, unique=True, index=True)
+
     unit = db.relationship("PropertyUnit", backref=db.backref("tenants", cascade="all, delete-orphan", lazy=True))
+    user = db.relationship("User", backref=db.backref("tenant_profile", uselist=False))
 
 
 class RentPayment(db.Model):
@@ -171,8 +178,13 @@ class RentPayment(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Set once the tenant starts an online payment for this period, via the
+    # generic Stripe Connect PaymentRequest flow (payments_service.py).
+    payment_request_id = db.Column(db.Integer, db.ForeignKey("payment_requests.id"), nullable=True, index=True)
+
     unit = db.relationship("PropertyUnit", backref=db.backref("rent_payments", cascade="all, delete-orphan", lazy=True))
     tenant = db.relationship("Tenant", backref="rent_payments")
+    payment_request = db.relationship("PaymentRequest")
 
 
 class MaintenanceRequest(db.Model):

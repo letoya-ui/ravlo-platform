@@ -7,6 +7,7 @@ not just the one it was first wired up for.
 """
 from LoanMVP.extensions import db
 from LoanMVP.models.admin import Company
+from LoanMVP.models.investor_models import InvestorProfile
 from LoanMVP.models.payment_models import PaymentAccount, PaymentRequest
 from LoanMVP.models.salon_models import StylistProfile
 from LoanMVP.models.user_model import User
@@ -60,6 +61,17 @@ def _make_stylist(db_session, email="stylist@example.com"):
     profile = StylistProfile(
         user_id=user.id, company_id=company.id, full_name="Aisha Stylist", brand_color="#B3122A",
     )
+    db_session.add(profile)
+    db_session.commit()
+    return user, profile
+
+
+def _make_investor(db_session, email="investor@example.com"):
+    company = _make_company(db_session, "Investor Co")
+    user = User(email=email, role="investor", is_active=True, company_id=company.id)
+    db_session.add(user)
+    db_session.commit()
+    profile = InvestorProfile(user_id=user.id, full_name="Ivy Investor", email=email)
     db_session.add(profile)
     db_session.commit()
     return user, profile
@@ -137,6 +149,23 @@ def test_dashboard_shows_connected_state(db_session, client):
     assert "Stripe connected" in resp.get_data(as_text=True)
 
 
+def test_dashboard_shows_investor_sidebar_not_partner_workspace_for_investor(db_session, client):
+    """resolve_current_owner() learned about investor_profile owners
+    (landlords connecting Stripe to collect rent), but _dashboard_chrome()
+    still hardcoded portal="vip" for anyone who wasn't a stylist -- so an
+    investor visiting their own Payments page got the Partner Workspace
+    sidebar instead of their own Investor Portal sidebar."""
+    user, _ = _make_investor(db_session, email="investor-chrome@example.com")
+    login_as(client, user)
+
+    resp = client.get("/payments/")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Investor Portal" in body
+    assert "Partner Workspace" not in body
+
+
 # ─── Connect onboarding ─────────────────────────────────────────────────────
 
 def test_connect_start_creates_stripe_account_and_redirects(db_session, client, monkeypatch):
@@ -167,6 +196,36 @@ def test_connect_start_creates_stripe_account_and_redirects(db_session, client, 
     assert account is not None
     assert account.stripe_connect_account_id == "acct_new123"
     assert created["kwargs"]["email"] == "onboard@example.com"
+
+
+def test_connect_start_surfaces_stripe_error_instead_of_crashing(db_session, client, monkeypatch):
+    """A Stripe rejection during onboarding (e.g. Express not enabled on
+    the platform's Connect settings) used to bubble up as an unhandled
+    exception -- a generic 500 page with no clue what went wrong. It
+    should instead redirect back to the dashboard with the real Stripe
+    message flashed."""
+    import stripe as stripe_sdk
+
+    user, profile = _make_stylist(db_session, email="broken-onboard@example.com")
+    login_as(client, user)
+    client.application.config["STRIPE_SECRET_KEY"] = "sk_test_fake"
+
+    def fake_account_create(**kwargs):
+        raise stripe_sdk.error.InvalidRequestError(
+            "Express accounts are not enabled for your platform.", param=None,
+        )
+
+    import LoanMVP.services.payments_service as svc
+    monkeypatch.setattr(svc.stripe.Account, "create", fake_account_create)
+
+    resp = client.get("/payments/connect/start", follow_redirects=True)
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Express accounts are not enabled" in body
+
+    account = PaymentAccount.query.filter_by(owner_type="stylist_profile", owner_id=profile.id).first()
+    assert account.stripe_connect_account_id is None
 
 
 def test_connect_start_reuses_existing_stripe_account(db_session, client, monkeypatch):

@@ -19,6 +19,7 @@ from LoanMVP.models.investor_models import InvestorProfile
 from LoanMVP.models.property import Property, PropertyUnit, Tenant, RentPayment, MaintenanceRequest
 from LoanMVP.models.user_model import User
 from LoanMVP.extensions import db
+from LoanMVP.services.payments_service import get_or_create_payment_account
 
 from tests.conftest import login_as
 
@@ -169,6 +170,57 @@ def test_add_unit_to_property(db_session, client):
     assert unit.is_occupied is False
 
 
+def test_unit_detail_page_has_an_edit_form(db_session, client):
+    """update_unit already existed server-side (see test below), but
+    unit_detail.html had no form pointing at it at all -- reported as
+    "we need to add an edit button to manage properties"."""
+    user, profile = _make_investor(db_session, email="inv-unit-form@example.com")
+    prop = _make_property(db_session, owner_investor_id=profile.id)
+    unit = _make_unit(db_session, prop.id, unit_label="Unit 1A", market_rent="1200.00")
+    login_as(client, user)
+
+    resp = client.get(f"/property/unit/{unit.id}")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert 'value="update_unit"' in body
+    assert 'value="Unit 1A"' in body
+
+
+def test_update_unit_saves_new_details(db_session, client):
+    user, profile = _make_investor(db_session, email="inv-unit-save@example.com")
+    prop = _make_property(db_session, owner_investor_id=profile.id)
+    unit = _make_unit(db_session, prop.id, unit_label="Unit 1A", market_rent="1200.00")
+    login_as(client, user)
+
+    client.post(f"/property/unit/{unit.id}", data={
+        "action_type": "update_unit",
+        "unit_label": "Unit 1A Renovated",
+        "bedrooms": "3",
+        "bathrooms": "2",
+        "sqft": "1100",
+        "market_rent": "1650.00",
+    })
+
+    updated_unit = PropertyUnit.query.get(unit.id)
+    assert updated_unit.unit_label == "Unit 1A Renovated"
+    assert updated_unit.bedrooms == 3
+    assert updated_unit.bathrooms == 2
+    assert updated_unit.sqft == 1100
+    assert updated_unit.market_rent == Decimal("1650.00")
+
+
+def test_dashboard_links_to_property_edit_section(db_session, client):
+    user, profile = _make_investor(db_session, email="inv-dash-edit@example.com")
+    _make_property(db_session, owner_investor_id=profile.id)
+    login_as(client, user)
+
+    resp = client.get("/property/dashboard")
+
+    assert resp.status_code == 200
+    assert "#property-details" in resp.get_data(as_text=True)
+
+
 def test_add_tenant_marks_unit_occupied(db_session, client):
     user, profile = _make_investor(db_session, email="inv-tenant@example.com")
     prop = _make_property(db_session, owner_investor_id=profile.id)
@@ -286,6 +338,56 @@ def test_dashboard_cash_flow_rollup(db_session, client):
     body = resp.get_data(as_text=True)
     assert "1500.00" in body
     assert "1300.00" in body  # net cash flow = 1500 - 200
+
+
+def test_dashboard_shows_connect_stripe_banner_when_not_connected(db_session, client):
+    """Reported: "we need to add where the investor or property manager
+    can add stripe" -- there was no entry point anywhere in the
+    investor's own nav or the property dashboard for connecting Stripe,
+    even though the backend already supported an investor_profile owner
+    type."""
+    user, profile = _make_investor(db_session, email="inv-stripe-banner@example.com")
+    login_as(client, user)
+
+    resp = client.get("/property/dashboard")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Connect Stripe" in body
+    assert "/payments/connect/start" in body
+
+
+def test_dashboard_hides_stripe_banner_once_connected(db_session, client):
+    user, profile = _make_investor(db_session, email="inv-stripe-connected@example.com")
+    account = get_or_create_payment_account("investor_profile", profile.id)
+    account.stripe_connect_account_id = "acct_test123"
+    account.stripe_connect_charges_enabled = True
+    db_session.commit()
+    login_as(client, user)
+
+    resp = client.get("/property/dashboard")
+
+    assert resp.status_code == 200
+    assert "Connect Stripe" not in resp.get_data(as_text=True)
+
+
+def test_investor_sidebar_links_to_payments(db_session, client):
+    """Connect Stripe first so the banner (which also links under /payments/)
+    is hidden -- isolates the persistent sidebar nav link from the banner's
+    own CTA link."""
+    user, profile = _make_investor(db_session, email="inv-sidebar-payments@example.com")
+    account = get_or_create_payment_account("investor_profile", profile.id)
+    account.stripe_connect_account_id = "acct_test456"
+    account.stripe_connect_charges_enabled = True
+    db_session.commit()
+    login_as(client, user)
+
+    resp = client.get("/property/dashboard")
+
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Connect Stripe" not in body
+    assert 'href="/payments/"' in body
 
 
 def test_legacy_manage_route_redirects_to_dashboard(db_session, client):

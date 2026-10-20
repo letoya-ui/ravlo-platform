@@ -17,12 +17,35 @@
     {% endif %}
   {% endwith %}
 
-  <article class="nw-post nw-post-main">
+  <article class="nw-post nw-post-main {{ 'nw-listing-card' if post.listing_type in ('product', 'service') else '' }}">
     <div class="nw-post-head">
-      <span class="nw-author">{{ post.author.full_name or post.author.email }}</span>
+      {% if author_profile_url %}
+      <a href="{{ author_profile_url }}" class="nw-author" target="_blank" rel="noopener">{{ post.author.full_name or post.author.email }}</a>
+      {% else %}
+      <a href="{{ url_for('network.professional_profile', slug=group.slug, user_id=post.author.id) }}" class="nw-author">{{ post.author.full_name or post.author.email }}</a>
+      {% endif %}
       <span class="nw-badge">{{ author_label }}</span>
+      {% if post.listing_type in ('product', 'service') %}
+      <span class="nw-badge nw-badge-listing">{{ 'Product' if post.listing_type == 'product' else 'Service' }}</span>
+      {% endif %}
       <span class="nw-time">{{ post.created_at.strftime('%b %-d, %Y') if post.created_at else "" }}</span>
     </div>
+
+    {% if post.image_url %}
+    <img src="{{ post.image_url }}" alt="{{ post.title or 'Listing photo' }}" class="nw-post-image">
+    {% endif %}
+
+    {% if post.title %}
+    <h1 class="nw-post-title">{{ post.title }}</h1>
+    {% endif %}
+
+    {% if post.category or post.price_label %}
+    <div class="nw-listing-meta">
+      {% if post.category %}<span class="nw-chip">{{ post.category.replace('_', ' ')|title }}</span>{% endif %}
+      {% if post.price_label %}<span class="nw-chip nw-chip-price">{{ post.price_label }}</span>{% endif %}
+    </div>
+    {% endif %}
+
     <p class="nw-body">{{ post.body }}</p>
   </article>
 
@@ -30,7 +53,11 @@
     {% for item in comments_with_meta %}
     <div class="nw-comment">
       <div class="nw-post-head">
-        <span class="nw-author">{{ item.comment.author.full_name or item.comment.author.email }}</span>
+        {% if item.author_profile_url %}
+        <a href="{{ item.author_profile_url }}" class="nw-author" target="_blank" rel="noopener">{{ item.comment.author.full_name or item.comment.author.email }}</a>
+        {% else %}
+        <a href="{{ url_for('network.professional_profile', slug=group.slug, user_id=item.comment.author.id) }}" class="nw-author">{{ item.comment.author.full_name or item.comment.author.email }}</a>
+        {% endif %}
         <span class="nw-badge">{{ item.author_label }}</span>
         <span class="nw-time">{{ item.comment.created_at.strftime('%b %-d, %Y') if item.comment.created_at else "" }}</span>
       </div>
@@ -64,6 +91,26 @@
 {% endblock %}
 
 {% block head %}
+{% if post.listing_type in ('product', 'service') and post.title %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "{{ post.title | e }}",
+  "description": "{{ meta_description | e }}",
+  "url": "https://ravlohq.com{{ request.path }}"
+  {% if post.image_url %},"image": "{{ post.image_url | e }}"{% endif %}
+  {% if listing_price_numeric is not none %}
+  ,"offers": {
+    "@type": "Offer",
+    "price": "{{ listing_price_numeric }}",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  }
+  {% endif %}
+}
+</script>
+{% endif %}
 <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 <style>
   .nw-wrap { padding: 120px 24px 80px; position: relative; z-index: 2; }
@@ -83,15 +130,26 @@
     color: #f4f7fb;
   }
   .nw-post-main { border-color: rgba(255,255,255,0.15); }
+  .nw-listing-card { border-color: rgba(79,107,237,0.35); }
 
   .nw-post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-  .nw-author { font-weight: 600; font-size: 0.92rem; }
+  .nw-author { font-weight: 600; font-size: 0.92rem; color: inherit; text-decoration: none; }
+  .nw-author:hover { text-decoration: underline; }
   .nw-badge {
     font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
     color: #93c5fd; background: rgba(59,130,246,0.15); border-radius: 6px; padding: 2px 8px;
   }
+  .nw-badge-listing { color: #86efac; background: rgba(34,197,94,0.15); }
   .nw-time { font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-left: auto; }
   .nw-body { font-size: 0.92rem; line-height: 1.55; white-space: pre-wrap; }
+  .nw-post-title { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
+  .nw-post-image { width: 100%; max-height: 420px; object-fit: cover; border-radius: 10px; margin-bottom: 14px; }
+  .nw-listing-meta { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .nw-chip {
+    font-size: 0.75rem; font-weight: 600; color: rgba(244,247,251,0.75);
+    background: rgba(255,255,255,0.06); border-radius: 999px; padding: 3px 10px;
+  }
+  .nw-chip-price { color: #86efac; background: rgba(34,197,94,0.12); }
 
   .nw-comments { display: flex; flex-direction: column; gap: 10px; }
   .nw-empty { color: rgba(255,255,255,0.5); font-size: 0.9rem; }

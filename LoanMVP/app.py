@@ -520,6 +520,8 @@ def create_app():
             "Disallow: /property/\n"
             "\n"
             f"Sitemap: {site_url}/sitemap.xml\n"
+            f"Sitemap: {site_url}/network/sitemap.xml\n"
+            f"Sitemap: {site_url}/p/sitemap_index.xml\n"
         )
         return Response(body, mimetype="text/plain")
 
@@ -584,13 +586,23 @@ def create_app():
 
     @app.errorhandler(CSRFError)
     def handle_csrf_error(error):
+        from flask import flash
+
         if request.blueprint == "auth":
-            flash_message = "Your session expired. Please try signing in again."
-            from flask import flash
-            flash(flash_message, "warning")
+            flash("Your session expired. Please try signing in again.", "warning")
             next_page = request.args.get("next") or request.form.get("next")
             return redirect(url_for("auth.login", next=next_page) if next_page else url_for("auth.login"))
-        return render_template("errors/500.html"), 400
+
+        # Any other CSRF failure almost always just means the page sat open
+        # long enough for the session to time out -- not a real error. Send
+        # the user back where they were (re-triggering login if the session
+        # is truly gone) instead of the alarming, 500-styled error page this
+        # used to show with a 400 status for every non-auth form in the app.
+        flash("Your session timed out -- please try that again.", "warning")
+        referrer = request.referrer
+        if referrer and referrer.startswith(request.host_url):
+            return redirect(referrer)
+        return redirect(url_for("auth.login"))
 
     @app.after_request
     def add_auth_cache_headers(response):
@@ -648,6 +660,9 @@ def create_app():
     def inject_trial_popup_data():
         try:
             if not current_user.is_authenticated:
+                return dict(trial_popup_day=None, trial_days_remaining=None, trial_activity={})
+            from LoanMVP.utils.decorators import is_investor_comped
+            if is_investor_comped(current_user):
                 return dict(trial_popup_day=None, trial_days_remaining=None, trial_activity={})
             if not getattr(current_user, 'trial_ends_at', None):
                 return dict(trial_popup_day=None, trial_days_remaining=None, trial_activity={})
@@ -735,6 +750,9 @@ def create_app():
     @app.before_request
     def check_trial_expiry():
         if not current_user.is_authenticated:
+            return None
+        from LoanMVP.utils.decorators import is_investor_comped
+        if is_investor_comped(current_user):
             return None
         sub = (getattr(current_user, "subscription", "") or "").strip().lower()
         if sub != "preview":

@@ -1,0 +1,479 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block content %}
+<div class="mk-container nw-wrap">
+<div class="nw-page">
+
+  <!-- Cinematic Hero -->
+  <section class="nw-hero">
+    <h1>{{ group.name }} Network</h1>
+    <p>Showcase your products. Connect with investors. Power real estate deals inside Ravlo OS.</p>
+    <button type="button" class="nw-btn nw-btn-primary nw-post-trigger">
+      <i class="lucide lucide-plus"></i><span>Post an Offering</span>
+    </button>
+  </section>
+
+  <!-- Search -->
+  <form method="GET" action="{{ url_for('network.feed', slug=group.slug) }}" class="nw-search">
+    {% if active_category %}<input type="hidden" name="category" value="{{ active_category }}">{% endif %}
+    <input type="text" name="q" value="{{ search_query }}" placeholder="Search {{ group.name.lower() }} listings and posts..." class="nw-search-input">
+    <button type="submit" class="nw-btn nw-btn-primary">
+      <i class="lucide lucide-search"></i><span>Search</span>
+    </button>
+    {% if search_query or active_category %}
+    <a href="{{ url_for('network.feed', slug=group.slug) }}" class="nw-search-clear">Clear</a>
+    {% endif %}
+  </form>
+
+  <!-- Category Grid -->
+  <section class="nw-categories">
+    <a href="{{ url_for('network.feed', slug=group.slug, q=search_query or None) }}" class="nw-cat {{ 'active' if not active_category else '' }}">All</a>
+    {% for cat_key, cat_label in categories %}
+    <a href="{{ url_for('network.feed', slug=group.slug, category=cat_key, q=search_query or None) }}" class="nw-cat {{ 'active' if active_category == cat_key else '' }}">{{ cat_label }}</a>
+    {% endfor %}
+  </section>
+
+  <!-- Demo Placeholder Cards (only show on a truly empty group, never mid-search) -->
+  {% if not group_has_any_posts %}
+  <section class="nw-demo-grid">
+    <button type="button" class="nw-demo-card nw-post-trigger">
+      <div class="nw-demo-img"></div>
+      <h4>Interior Design Mood Board</h4>
+      <p>Example of how designers can showcase their work.</p>
+    </button>
+    <button type="button" class="nw-demo-card nw-post-trigger">
+      <div class="nw-demo-img"></div>
+      <h4>Contractor Renovation Package</h4>
+      <p>Professionals can highlight services and pricing.</p>
+    </button>
+  </section>
+  {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="nw-alert">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- Feed -->
+  {% if posts_with_meta %}
+  <section class="nw-feed">
+    {% for item in posts_with_meta %}
+    {% set post = item.post %}
+    <article
+      class="nw-post {{ 'nw-listing-card' if post.listing_type in ('product', 'service') else '' }}"
+      data-title="{{ post.title or '' }}"
+      data-desc="{{ post.body }}"
+      data-image="{{ post.image_url or '' }}"
+      data-category-label="{{ dict(categories).get(post.category, '') }}"
+      data-price="{{ post.price_label or '' }}"
+      data-listing-type="{{ post.listing_type }}"
+      data-author="{{ post.author.full_name or post.author.email }}"
+      data-author-label="{{ item.author_label }}"
+      data-detail-url="{{ url_for('network.post_detail', slug=group.slug, post_id=post.id) }}"
+      data-comment-count="{{ item.comment_count }}"
+    >
+      <div class="nw-post-head">
+        {% if item.author_profile_url %}
+        <a href="{{ item.author_profile_url }}" class="nw-author" target="_blank" rel="noopener">{{ post.author.full_name or post.author.email }}</a>
+        {% else %}
+        <a href="{{ url_for('network.professional_profile', slug=group.slug, user_id=post.author.id) }}" class="nw-author">{{ post.author.full_name or post.author.email }}</a>
+        {% endif %}
+        <span class="nw-badge">{{ item.author_label }}</span>
+        {% if post.listing_type in ('product', 'service') %}
+        <span class="nw-badge nw-badge-listing">{{ 'Product' if post.listing_type == 'product' else 'Service' }}</span>
+        {% endif %}
+        <span class="nw-time">{{ post.created_at.strftime('%b %-d, %Y') if post.created_at else "" }}</span>
+      </div>
+
+      {% if post.image_url %}
+      <img src="{{ post.image_url }}" alt="{{ post.title or 'Listing photo' }}" class="nw-post-image">
+      {% endif %}
+
+      {% if post.title %}
+      <h3 class="nw-post-title">{{ post.title }}</h3>
+      {% endif %}
+
+      {% if post.category or post.price_label %}
+      <div class="nw-listing-meta">
+        {% if post.category %}<span class="nw-chip">{{ dict(categories).get(post.category, post.category) }}</span>{% endif %}
+        {% if post.price_label %}<span class="nw-chip nw-chip-price">{{ post.price_label }}</span>{% endif %}
+      </div>
+      {% endif %}
+
+      <p class="nw-body">{{ post.body }}</p>
+
+      <div class="nw-post-footer">
+        <a href="{{ url_for('network.post_detail', slug=group.slug, post_id=post.id) }}" class="nw-comment-link">
+          <i class="lucide lucide-message-square"></i>
+          {{ item.comment_count }} comment{{ 's' if item.comment_count != 1 else '' }}
+        </a>
+        <button type="button" class="nw-view-btn">View</button>
+      </div>
+    </article>
+    {% endfor %}
+  </section>
+  {% elif group_has_any_posts %}
+  <p class="nw-empty">No listings match that search.</p>
+  {% else %}
+  <p class="nw-empty">No posts yet — be the first to share something.</p>
+  {% endif %}
+
+</div>
+</div>
+
+<!-- ===== Post an Offering modal ===== -->
+<div id="nw-post-modal" class="nw-modal-overlay nw-hidden">
+  <div class="nw-modal-panel">
+    <button type="button" id="nw-modal-close" class="nw-modal-close" aria-label="Close">
+      <i class="lucide lucide-x"></i>
+    </button>
+
+    <!-- Step 1: what are you posting -->
+    <div id="nw-modal-step1" class="nw-modal-step">
+      <h2>What are you posting?</h2>
+      <div class="nw-type-choices">
+        <button type="button" class="nw-type-choice" data-listing-type="update">
+          <strong>Just an Update</strong>
+          <span>A question, referral, or general post</span>
+        </button>
+        <button type="button" class="nw-type-choice" data-listing-type="product">
+          <strong>Product</strong>
+          <span>Digital or physical goods</span>
+        </button>
+        <button type="button" class="nw-type-choice" data-listing-type="service">
+          <strong>Service</strong>
+          <span>Offer your expertise</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: the actual form -->
+    <div id="nw-modal-step2" class="nw-modal-step nw-hidden">
+      <button type="button" id="nw-modal-back" class="nw-modal-back">
+        <i class="lucide lucide-arrow-left"></i> Back
+      </button>
+      <h2 id="nw-modal-step2-title">Post an Update</h2>
+      <form method="POST" action="{{ url_for('network.create_post', slug=group.slug) }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="listing_type" id="nw-listing-type-input" value="update">
+
+        <div id="nw-listing-only-fields" class="nw-hidden">
+          <input type="text" name="title" placeholder="Title (e.g. Duplex needs a property manager)">
+          <select name="category">
+            <option value="">Category (optional)</option>
+            {% for cat_key, cat_label in categories %}
+            <option value="{{ cat_key }}">{{ cat_label }}</option>
+            {% endfor %}
+          </select>
+          <input type="text" name="price_label" placeholder="Price (optional, e.g. $150 or Negotiable)">
+          <label class="nw-file-label">Photo (optional)
+            <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp">
+          </label>
+        </div>
+
+        <textarea name="body" rows="4" placeholder="Describe what you're offering or looking for..." required></textarea>
+
+        <div class="nw-form-actions">
+          <button type="submit" class="nw-btn nw-btn-primary">
+            <i class="lucide lucide-send"></i><span>Post</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Listing detail panel ===== -->
+<div id="nw-detail-overlay" class="nw-detail-overlay nw-hidden"></div>
+<div id="nw-detail-panel" class="nw-detail-panel nw-closed">
+  <button type="button" id="nw-detail-close" class="nw-modal-close" aria-label="Close">
+    <i class="lucide lucide-x"></i>
+  </button>
+  <div id="nw-detail-content"></div>
+</div>
+
+<script>
+(function () {
+  var postModal = document.getElementById('nw-post-modal');
+  var step1 = document.getElementById('nw-modal-step1');
+  var step2 = document.getElementById('nw-modal-step2');
+  var step2Title = document.getElementById('nw-modal-step2-title');
+  var listingTypeInput = document.getElementById('nw-listing-type-input');
+  var listingOnlyFields = document.getElementById('nw-listing-only-fields');
+
+  var TYPE_LABELS = { update: 'Post an Update', product: 'Post a Product', service: 'Post a Service' };
+
+  function openPostModal() {
+    postModal.classList.remove('nw-hidden');
+    document.body.style.overflow = 'hidden';
+    goToStep1();
+  }
+  function closePostModal() {
+    postModal.classList.add('nw-hidden');
+    document.body.style.overflow = '';
+  }
+  function goToStep1() {
+    step1.classList.remove('nw-hidden');
+    step2.classList.add('nw-hidden');
+  }
+  function goToStep2(listingType) {
+    listingTypeInput.value = listingType;
+    step2Title.textContent = TYPE_LABELS[listingType] || 'Post an Update';
+    listingOnlyFields.classList.toggle('nw-hidden', listingType === 'update');
+    step1.classList.add('nw-hidden');
+    step2.classList.remove('nw-hidden');
+  }
+
+  document.querySelectorAll('.nw-post-trigger').forEach(function (el) {
+    el.addEventListener('click', openPostModal);
+  });
+  document.getElementById('nw-modal-close').addEventListener('click', closePostModal);
+  document.getElementById('nw-modal-back').addEventListener('click', goToStep1);
+  postModal.addEventListener('click', function (e) { if (e.target === postModal) closePostModal(); });
+
+  document.querySelectorAll('.nw-type-choice').forEach(function (btn) {
+    btn.addEventListener('click', function () { goToStep2(btn.dataset.listingType); });
+  });
+
+  // ===== Detail panel =====
+  var detailOverlay = document.getElementById('nw-detail-overlay');
+  var detailPanel = document.getElementById('nw-detail-panel');
+  var detailContent = document.getElementById('nw-detail-content');
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function openDetail(article) {
+    var d = article.dataset;
+    var html = '';
+    if (d.image) {
+      html += '<img src="' + escapeHtml(d.image) + '" alt="">';
+    }
+    html += '<div class="nw-post-head">';
+    html += '<span class="nw-author">' + escapeHtml(d.author) + '</span>';
+    html += '<span class="nw-badge">' + escapeHtml(d.authorLabel) + '</span>';
+    if (d.listingType === 'product' || d.listingType === 'service') {
+      html += '<span class="nw-badge nw-badge-listing">' + (d.listingType === 'product' ? 'Product' : 'Service') + '</span>';
+    }
+    html += '</div>';
+    if (d.title) { html += '<h3>' + escapeHtml(d.title) + '</h3>'; }
+    if (d.categoryLabel || d.price) {
+      html += '<div class="nw-listing-meta">';
+      if (d.categoryLabel) { html += '<span class="nw-chip">' + escapeHtml(d.categoryLabel) + '</span>'; }
+      if (d.price) { html += '<span class="nw-chip nw-chip-price">' + escapeHtml(d.price) + '</span>'; }
+      html += '</div>';
+    }
+    html += '<p class="nw-body">' + escapeHtml(d.desc) + '</p>';
+    html += '<a class="nw-btn nw-btn-primary" style="width:100%; justify-content:center; margin-top:10px;" href="' + d.detailUrl + '">';
+    html += '<i class="lucide lucide-message-square"></i><span>View &amp; Comment (' + escapeHtml(d.commentCount) + ')</span></a>';
+    detailContent.innerHTML = html;
+
+    detailOverlay.classList.remove('nw-hidden');
+    requestAnimationFrame(function () { detailPanel.classList.remove('nw-closed'); });
+    document.body.style.overflow = 'hidden';
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
+  }
+  function closeDetail() {
+    detailPanel.classList.add('nw-closed');
+    setTimeout(function () { detailOverlay.classList.add('nw-hidden'); document.body.style.overflow = ''; }, 300);
+  }
+
+  document.querySelectorAll('.nw-view-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { openDetail(btn.closest('.nw-post')); });
+  });
+  document.getElementById('nw-detail-close').addEventListener('click', closeDetail);
+  detailOverlay.addEventListener('click', closeDetail);
+})();
+</script>
+
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+<style>
+  .nw-wrap { padding: 120px 24px 80px; position: relative; z-index: 2; }
+  .nw-page { display: flex; flex-direction: column; gap: 28px; max-width: 820px; margin: 0 auto; }
+
+  /* Hero */
+  .nw-hero h1 { font-size: 2.2rem; font-weight: 800; color: #f4f7fb; }
+  .nw-hero p { color: rgba(244,247,251,0.7); font-size: 1rem; margin-top: 6px; margin-bottom: 16px; }
+
+  /* Search */
+  .nw-search { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .nw-search-input {
+    flex: 1; min-width: 220px; background: rgba(255,255,255,0.05); color: #f4f7fb;
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 12px 14px;
+    font-size: 0.92rem; font-family: inherit;
+  }
+  .nw-search-clear { color: rgba(244,247,251,0.55); font-size: 0.82rem; text-decoration: underline; }
+
+  /* Categories */
+  .nw-categories {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .nw-cat {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+    color: #f4f7fb;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  .nw-cat:hover { border-color: rgba(79,107,237,0.5); }
+  .nw-cat.active { background: #4f6bed; border-color: #4f6bed; }
+
+  /* Demo Cards */
+  .nw-demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+  }
+  .nw-demo-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px;
+    color: #f4f7fb;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    width: 100%;
+  }
+  .nw-demo-card:hover { border-color: rgba(79,107,237,0.45); }
+  .nw-demo-img {
+    height: 140px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+
+  /* Existing Styles */
+  .nw-card, .nw-post {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px;
+    color: #f4f7fb;
+  }
+  .nw-listing-card { border-color: rgba(79,107,237,0.35); }
+
+  .nw-form-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+
+  .nw-alert {
+    background: rgba(220,38,38,0.12); border: 1px solid rgba(220,38,38,0.35); color: #fecaca;
+    padding: 10px 14px; border-radius: 8px; font-size: 0.88rem;
+  }
+
+  .nw-btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 9px;
+    font-size: 0.88rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.16);
+    background: transparent; color: #f4f7fb; cursor: pointer; font-family: inherit;
+  }
+  .nw-btn-primary { background: #4f6bed; border-color: #4f6bed; }
+  .nw-btn-primary:hover { opacity: 0.9; }
+
+  .nw-feed { display: flex; flex-direction: column; gap: 12px; }
+  .nw-post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .nw-author { font-weight: 600; font-size: 0.92rem; color: inherit; text-decoration: none; }
+  .nw-author:hover { text-decoration: underline; }
+  .nw-badge {
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+    color: #93c5fd; background: rgba(59,130,246,0.15); border-radius: 6px; padding: 2px 8px;
+  }
+  .nw-badge-listing { color: #86efac; background: rgba(34,197,94,0.15); }
+  .nw-time { font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-left: auto; }
+  .nw-body { font-size: 0.92rem; line-height: 1.55; white-space: pre-wrap; margin-bottom: 10px; }
+  .nw-post-title { font-size: 1.02rem; font-weight: 700; margin-bottom: 6px; }
+  .nw-post-image { width: 100%; max-height: 320px; object-fit: cover; border-radius: 10px; margin-bottom: 12px; }
+  .nw-listing-meta { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .nw-chip {
+    font-size: 0.75rem; font-weight: 600; color: rgba(244,247,251,0.75);
+    background: rgba(255,255,255,0.06); border-radius: 999px; padding: 3px 10px;
+  }
+  .nw-chip-price { color: #86efac; background: rgba(34,197,94,0.12); }
+  .nw-post-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .nw-comment-link {
+    font-size: 0.82rem; color: rgba(255,255,255,0.55); display: inline-flex; align-items: center; gap: 6px;
+  }
+  .nw-comment-link:hover { color: rgba(255,255,255,0.85); }
+  .nw-view-btn {
+    font-size: 0.78rem; font-weight: 600; color: #93c5fd; background: transparent;
+    border: 1px solid rgba(79,107,237,0.4); border-radius: 999px; padding: 5px 14px;
+    cursor: pointer; font-family: inherit;
+  }
+  .nw-view-btn:hover { background: rgba(79,107,237,0.12); }
+  .nw-empty { color: rgba(255,255,255,0.5); font-size: 0.9rem; }
+
+  /* ===== Modal ===== */
+  .nw-modal-overlay {
+    position: fixed; inset: 0; background: rgba(3,10,20,0.7); z-index: 1000;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    transition: opacity 0.25s ease;
+  }
+  .nw-modal-overlay.nw-hidden { opacity: 0; pointer-events: none; }
+  .nw-modal-panel {
+    background: #0c1b2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
+    padding: 28px; width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto;
+    position: relative; color: #f4f7fb;
+  }
+  .nw-modal-close {
+    position: absolute; top: 14px; right: 14px; background: transparent; border: none;
+    color: rgba(244,247,251,0.6); cursor: pointer; padding: 6px;
+  }
+  .nw-modal-close:hover { color: #f4f7fb; }
+  .nw-modal-step h2 { font-size: 1.15rem; font-weight: 800; margin-bottom: 18px; }
+  .nw-modal-step.nw-hidden,
+  #nw-listing-only-fields.nw-hidden {
+    display: none;
+  }
+  .nw-type-choices { display: flex; flex-direction: column; gap: 10px; }
+  .nw-type-choice {
+    text-align: left; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 14px 16px; color: #f4f7fb; cursor: pointer; font-family: inherit;
+  }
+  .nw-type-choice:hover { border-color: rgba(79,107,237,0.5); }
+  .nw-type-choice strong { display: block; font-size: 0.95rem; margin-bottom: 3px; }
+  .nw-type-choice span { font-size: 0.8rem; color: rgba(244,247,251,0.6); }
+  .nw-modal-back {
+    background: transparent; border: none; color: rgba(244,247,251,0.6); font-size: 0.82rem;
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 12px; padding: 0;
+    font-family: inherit;
+  }
+  .nw-modal-back:hover { color: #f4f7fb; }
+  #nw-modal-step2 form { display: flex; flex-direction: column; gap: 10px; }
+  #nw-modal-step2 textarea, #nw-modal-step2 input[type="text"], #nw-modal-step2 select {
+    width: 100%; background: rgba(255,255,255,0.05); color: inherit;
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 12px 14px;
+    font-size: 0.92rem; font-family: inherit; resize: vertical;
+  }
+  .nw-file-label { font-size: 0.8rem; color: rgba(244,247,251,0.65); display: flex; flex-direction: column; gap: 6px; }
+
+  /* ===== Detail slide panel ===== */
+  .nw-detail-overlay {
+    position: fixed; inset: 0; background: rgba(3,10,20,0.55); z-index: 1000; transition: opacity 0.25s ease;
+  }
+  .nw-detail-overlay.nw-hidden { opacity: 0; pointer-events: none; }
+  .nw-detail-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 420px;
+    background: #0c1b2e; border-left: 1px solid rgba(255,255,255,0.1); z-index: 1001;
+    padding: 28px; overflow-y: auto; color: #f4f7fb;
+    transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
+  }
+  .nw-detail-panel.nw-closed { transform: translateX(100%); }
+  .nw-detail-content h3 { font-size: 1.2rem; font-weight: 800; margin: 14px 0 8px; }
+  .nw-detail-content img { width: 100%; border-radius: 10px; margin-bottom: 14px; }
+  .nw-detail-content .nw-body { white-space: pre-wrap; }
+</style>
+{% endblock %}

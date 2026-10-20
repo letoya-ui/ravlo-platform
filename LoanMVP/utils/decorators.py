@@ -36,6 +36,13 @@ FULL_LOAN_OFFICER_ACCESS_EMAILS = {
     "officer@caughmanmason.com",
 }
 
+# Investor accounts comped to full (Enterprise-equivalent) access at no
+# charge, regardless of INVESTOR_GRANDFATHERED_CUTOFF -- see
+# investor_routes._is_investor_grandfathered(), which checks this too.
+INVESTOR_COMPED_EMAILS = {
+    "letoya.mason@gmail.com",
+}
+
 
 def normalize_role(role):
     return (role or "").strip().lower()
@@ -49,6 +56,12 @@ def has_full_loan_officer_access(user) -> bool:
     if not user or not getattr(user, "is_authenticated", False):
         return False
     return normalize_email(getattr(user, "email", None)) in FULL_LOAN_OFFICER_ACCESS_EMAILS
+
+
+def is_investor_comped(user) -> bool:
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    return normalize_email(getattr(user, "email", None)) in INVESTOR_COMPED_EMAILS
 
 
 def partner_offers_property_management(user) -> bool:
