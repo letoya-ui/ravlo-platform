@@ -145,6 +145,26 @@ def extract_core_fields(raw: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _find_lookup_value(content: Dict[str, Any], *keys: str):
+    """Look for any of `keys` on `content` directly, then one level deep
+    inside its values -- the Lookup response groups results by bed/bath
+    configuration (content -> {"2bed2bath": {...}, "studio": {...}, ...}),
+    so a field like median_rental_income often isn't top-level at all."""
+    for key in keys:
+        value = content.get(key)
+        if value not in (None, ""):
+            return value
+
+    for sub in content.values():
+        if not isinstance(sub, dict):
+            continue
+        for key in keys:
+            value = sub.get(key)
+            if value not in (None, ""):
+                return value
+    return None
+
+
 def normalize_mashvisor_validation(result: Dict[str, Any]) -> Dict[str, Any]:
     prop = result.get("property") or {}
     lookup = result.get("lookup") or {}
@@ -171,31 +191,26 @@ def normalize_mashvisor_validation(result: Dict[str, Any]) -> Dict[str, Any]:
 
     return {
         "property_id": property_id,
-        "airbnb_revenue": (
-            lookup_content.get("rental_income")
-            or lookup_content.get("airbnb_rental_income")
-            or lookup_content.get("monthly_revenue")
+        "airbnb_revenue": _find_lookup_value(
+            lookup_content,
+            "median_rental_income", "rental_income", "airbnb_rental_income", "monthly_revenue",
         ),
-        "occupancy_rate": (
-            lookup_content.get("occupancy_rate")
-            or lookup_content.get("airbnb_occupancy_rate")
+        "occupancy_rate": _find_lookup_value(
+            lookup_content,
+            "median_occupancy", "occupancy_rate", "airbnb_occupancy_rate",
         ),
-        "adr": (
-            lookup_content.get("daily_rate")
-            or lookup_content.get("adr")
-            or lookup_content.get("average_daily_rate")
+        "adr": _find_lookup_value(
+            lookup_content,
+            "median_night_rate", "daily_rate", "adr", "average_daily_rate",
         ),
-        "revpar": lookup_content.get("revpar"),
-        "cash_flow": lookup_content.get("cash_flow"),
-        "noi": lookup_content.get("noi"),
-        "cash_on_cash_return": (
-            lookup_content.get("cash_on_cash_return")
-            or lookup_content.get("coc")
+        "revpar": _find_lookup_value(lookup_content, "revpar"),
+        "cash_flow": _find_lookup_value(lookup_content, "cash_flow"),
+        "noi": _find_lookup_value(lookup_content, "noi"),
+        "cash_on_cash_return": _find_lookup_value(
+            lookup_content, "cash_on_cash_return", "coc",
         ),
-        "confidence": (
-            lookup_content.get("data_quality")
-            or lookup_content.get("confidence")
-            or lookup_content.get("sample_size")
+        "confidence": _find_lookup_value(
+            lookup_content, "data_quality", "confidence", "sample_size",
         ),
         "comps": (
             comps_content.get("list")

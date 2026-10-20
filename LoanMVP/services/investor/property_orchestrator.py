@@ -289,7 +289,8 @@ class PropertyIntelligenceOrchestrator:
             if not isinstance(comp, dict):
                 continue
             revenue = PropertyIntelligenceOrchestrator._as_float(
-                comp.get("rental_income")
+                comp.get("median_rental_income")
+                or comp.get("rental_income")
                 or comp.get("airbnb_rental_income")
                 or comp.get("monthly_revenue")
                 or comp.get("revenue")
@@ -299,13 +300,20 @@ class PropertyIntelligenceOrchestrator:
                 revenues.append(revenue)
 
             occupancy = PropertyIntelligenceOrchestrator._as_float(
-                comp.get("occupancy_rate") or comp.get("airbnb_occupancy_rate") or comp.get("occupancy")
+                comp.get("median_occupancy")
+                or comp.get("occupancy_rate")
+                or comp.get("airbnb_occupancy_rate")
+                or comp.get("occupancy")
             )
             if occupancy:
                 occupancies.append(occupancy)
 
             adr = PropertyIntelligenceOrchestrator._as_float(
-                comp.get("daily_rate") or comp.get("adr") or comp.get("average_daily_rate") or comp.get("night_price")
+                comp.get("median_night_rate")
+                or comp.get("daily_rate")
+                or comp.get("adr")
+                or comp.get("average_daily_rate")
+                or comp.get("night_price")
             )
             if adr:
                 adrs.append(adr)
