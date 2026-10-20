@@ -92,3 +92,85 @@ def test_enrich_with_mashvisor_requests_comps():
     orchestrator._enrich_with_mashvisor(prop)
 
     assert captured.get("include_comps") is True
+
+
+# ── Nearby Airbnb listings (browsable list, not just an averaged number) ──
+
+def test_extract_mashvisor_listings_returns_individual_comps():
+    comps = [
+        {"address": "123 Main St", "median_rental_income": 3600, "median_occupancy": 75, "beds": 2, "baths": 2},
+        {"address": "456 Oak Ave", "median_rental_income": 2900, "median_occupancy": 68, "beds": 1, "baths": 1},
+    ]
+
+    listings = PropertyIntelligenceOrchestrator._extract_mashvisor_listings(comps)
+
+    assert len(listings) == 2
+    assert listings[0]["address"] == "123 Main St"
+    assert listings[0]["revenue"] == 3600
+    assert listings[0]["beds"] == 2
+
+
+def test_extract_mashvisor_listings_sorts_by_revenue_descending():
+    comps = [
+        {"address": "Low Revenue St", "median_rental_income": 1500},
+        {"address": "High Revenue St", "median_rental_income": 5000},
+    ]
+
+    listings = PropertyIntelligenceOrchestrator._extract_mashvisor_listings(comps)
+
+    assert listings[0]["address"] == "High Revenue St"
+    assert listings[1]["address"] == "Low Revenue St"
+
+
+def test_extract_mashvisor_listings_skips_comps_with_no_usable_signal():
+    comps = [
+        {"address": "No Data St"},
+        {"address": "Has Data St", "median_rental_income": 3000},
+    ]
+
+    listings = PropertyIntelligenceOrchestrator._extract_mashvisor_listings(comps)
+
+    assert len(listings) == 1
+    assert listings[0]["address"] == "Has Data St"
+
+
+def test_extract_mashvisor_listings_handles_empty_or_missing_comps():
+    assert PropertyIntelligenceOrchestrator._extract_mashvisor_listings([]) == []
+    assert PropertyIntelligenceOrchestrator._extract_mashvisor_listings(None) == []
+
+
+def test_enrich_with_mashvisor_populates_nearby_listings_on_property():
+    class FakeMashvisorClient:
+        def validate_property_with_mashvisor(self, **kwargs):
+            return {
+                "property": {},
+                "lookup": {},
+                "comps": {"list": [
+                    {"address": "789 Elm St", "median_rental_income": 4200, "median_occupancy": 80},
+                ]},
+                "errors": [],
+            }
+
+    class FixedClientOrchestrator(PropertyIntelligenceOrchestrator):
+        def _init_mashvisor(self):
+            return FakeMashvisorClient()
+
+    orchestrator = FixedClientOrchestrator(
+        strategy="airbnb",
+        asset_type="any",
+        budget=ProviderBudget(
+            rentcast_search=0, attom_detail=0, rentcast_detail=0,
+            mashvisor_detail=1, realtor_detail=0, rapidapi_real_estate_detail=0,
+            deal_architect=0,
+        ),
+    )
+
+    from LoanMVP.services.investor.property_orchestrator import CanonicalProperty
+    prop = CanonicalProperty(address="1 Comp St", city="Austin", state="TX", zip_code="78704")
+    orchestrator._enrich_with_mashvisor(prop)
+
+    assert len(prop.airbnb_nearby_listings) == 1
+    assert prop.airbnb_nearby_listings[0]["address"] == "789 Elm St"
+
+    result_dict = prop.to_result_dict()
+    assert result_dict["airbnb_nearby_listings"] == prop.airbnb_nearby_listings

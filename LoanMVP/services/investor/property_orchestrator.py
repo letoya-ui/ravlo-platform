@@ -138,6 +138,7 @@ class CanonicalProperty:
     airbnb_nightly_rate: Optional[float] = None
     airbnb_cash_flow: Optional[float] = None
     occupancy_rate: Optional[float] = None
+    airbnb_nearby_listings: List[Dict[str, Any]] = field(default_factory=list)
 
     property_classification: Optional[str] = None
     best_exit_strategy: Optional[str] = None
@@ -214,6 +215,7 @@ class CanonicalProperty:
             "airbnb_cash_flow": self.airbnb_cash_flow,
             "cash_flow": self.airbnb_cash_flow,
             "occupancy_rate": self.occupancy_rate,
+            "airbnb_nearby_listings": self.airbnb_nearby_listings,
             "property_classification": self.property_classification,
             "best_exit_strategy": self.best_exit_strategy,
             "best_exit_reason": self.best_exit_reason,
@@ -330,6 +332,69 @@ class PropertyIntelligenceOrchestrator:
             "avg_occupancy_rate": (sum(occupancies) / len(occupancies)) if occupancies else None,
             "avg_adr": (sum(adrs) / len(adrs)) if adrs else None,
         }
+
+    @staticmethod
+    def _extract_mashvisor_listings(comps, limit: int = 10) -> List[Dict[str, Any]]:
+        """Turn Mashvisor's raw comps list into real, individually browsable
+        nearby Airbnb listings (address/photo/revenue/occupancy/ADR) instead
+        of only the averaged summary from _summarize_mashvisor_comps().
+
+        Same caveat as that method: the exact per-comp field names for
+        identity fields (address, photo, listing url) aren't confirmed
+        against live Mashvisor docs, so this tries several plausible keys
+        and simply omits a field it can't find rather than guessing wrong.
+        A listing with no revenue/ADR/occupancy signal at all is skipped --
+        it wouldn't be useful to show.
+        """
+        if not isinstance(comps, list) or not comps:
+            return []
+
+        listings = []
+        for comp in comps:
+            if not isinstance(comp, dict):
+                continue
+
+            revenue = PropertyIntelligenceOrchestrator._as_float(
+                comp.get("median_rental_income") or comp.get("rental_income")
+                or comp.get("airbnb_rental_income") or comp.get("monthly_revenue")
+                or comp.get("revenue") or comp.get("income")
+            )
+            occupancy = PropertyIntelligenceOrchestrator._as_float(
+                comp.get("median_occupancy") or comp.get("occupancy_rate")
+                or comp.get("airbnb_occupancy_rate") or comp.get("occupancy")
+            )
+            adr = PropertyIntelligenceOrchestrator._as_float(
+                comp.get("median_night_rate") or comp.get("daily_rate")
+                or comp.get("adr") or comp.get("average_daily_rate") or comp.get("night_price")
+            )
+            if not (revenue or occupancy or adr):
+                continue
+
+            address = (
+                comp.get("address") or comp.get("full_address") or comp.get("street_address")
+                or comp.get("title") or comp.get("name")
+            )
+            photo = (
+                comp.get("image") or comp.get("photo") or comp.get("thumbnail")
+                or comp.get("picture_url") or comp.get("cover_photo")
+            )
+            beds = PropertyIntelligenceOrchestrator._as_int(comp.get("beds") or comp.get("bedrooms"))
+            baths = PropertyIntelligenceOrchestrator._as_float(comp.get("baths") or comp.get("bathrooms"))
+            listing_url = comp.get("airbnb_url") or comp.get("url") or comp.get("listing_url") or comp.get("link")
+
+            listings.append({
+                "address": address,
+                "photo": photo,
+                "beds": beds,
+                "baths": baths,
+                "revenue": revenue,
+                "occupancy_rate": occupancy,
+                "adr": adr,
+                "url": listing_url,
+            })
+
+        listings.sort(key=lambda item: item["revenue"] or 0, reverse=True)
+        return listings[:limit]
 
     @staticmethod
     def _normalize_photo_candidates(*sources):
@@ -1332,6 +1397,7 @@ class PropertyIntelligenceOrchestrator:
         comps_summary = self._summarize_mashvisor_comps(normalized.get("comps"))
         if comps_summary:
             _log.info("[mashvisor] comps summary: %s", comps_summary)
+        cp.airbnb_nearby_listings = self._extract_mashvisor_listings(normalized.get("comps"))
 
         cp.airbnb_rent_estimate = self._first_truthy(
             comps_summary and comps_summary.get("avg_revenue"),

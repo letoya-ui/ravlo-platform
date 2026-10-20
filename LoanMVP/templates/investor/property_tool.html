@@ -742,6 +742,38 @@ function renderExitStrategySection(r){
   `;
 }
 
+function renderNearbyAirbnbListings(r){
+  const listings = Array.isArray(r.airbnb_nearby_listings) ? r.airbnb_nearby_listings : [];
+  if (!listings.length) return "";
+
+  return `
+    <div class="dfv4-section-head">
+      <h4>Nearby Airbnb Listings</h4>
+      <span class="muted">${listings.length} comparable listing${listings.length !== 1 ? "s" : ""}</span>
+    </div>
+    <div class="dfv4-airbnb-listings">
+      ${listings.map(listing => `
+        <div class="dfv4-airbnb-listing">
+          ${listing.photo ? `<img src="${escapeHtml(listing.photo)}" alt="" loading="lazy" onerror="this.style.display='none'">` : `<div class="dfv4-airbnb-listing-noimg"><i class="lucide lucide-home"></i></div>`}
+          <div class="dfv4-airbnb-listing-body">
+            <div class="dfv4-airbnb-listing-title">${escapeHtml(listing.address || "Nearby comparable listing")}</div>
+            <div class="dfv4-airbnb-listing-meta">
+              ${listing.beds ? `<span>${escapeHtml(listing.beds)} bd</span>` : ""}
+              ${listing.baths ? `<span>${escapeHtml(listing.baths)} ba</span>` : ""}
+            </div>
+            <div class="dfv4-airbnb-listing-stats">
+              ${listing.revenue ? `<span><strong>${money(listing.revenue)}</strong>/mo</span>` : ""}
+              ${listing.occupancy_rate ? `<span>${formatPercent(listing.occupancy_rate)} occ.</span>` : ""}
+              ${listing.adr ? `<span>${money(listing.adr)}/night</span>` : ""}
+            </div>
+          </div>
+          ${listing.url ? `<a href="${escapeHtml(listing.url)}" target="_blank" rel="noopener" class="dfv4-airbnb-listing-link"><i class="lucide lucide-external-link"></i></a>` : ""}
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderCards(results){
   const root = document.getElementById("results");
 
@@ -883,6 +915,7 @@ function renderCards(results){
           </div>
 
           ${renderExitStrategySection(r)}
+          ${renderNearbyAirbnbListings(r)}
 
           <div class="dfv4-engine-grid">
             <div><span>Opportunity Tier</span><strong>${escapeHtml(tier)}</strong></div>
@@ -1411,6 +1444,19 @@ async function runAIMarketRead(topResult, market) {
 .dfv4-exit-label{font-size:.7rem;color:#a9c4ff;font-weight:700}
 .dfv4-exit-summary{font-size:.72rem;color:var(--muted);line-height:1.35}
 .dfv4-best-exit{margin-top:.2rem;font-size:.78rem;color:#dbeafe}
+.dfv4-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:.6rem;margin-top:.3rem}
+.dfv4-section-head h4{margin:0;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:800}
+.dfv4-airbnb-listings{display:flex;flex-direction:column;gap:.5rem}
+.dfv4-airbnb-listing{display:flex;align-items:center;gap:.65rem;padding:.6rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.dfv4-airbnb-listing img{width:56px;height:56px;border-radius:10px;object-fit:cover;flex-shrink:0}
+.dfv4-airbnb-listing-noimg{width:56px;height:56px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04);color:var(--muted)}
+.dfv4-airbnb-listing-noimg i{width:20px;height:20px}
+.dfv4-airbnb-listing-body{flex:1;min-width:0}
+.dfv4-airbnb-listing-title{font-size:.82rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dfv4-airbnb-listing-meta{display:flex;gap:.5rem;font-size:.7rem;color:var(--muted);margin-top:.1rem}
+.dfv4-airbnb-listing-stats{display:flex;gap:.6rem;font-size:.74rem;color:#dbeafe;margin-top:.25rem}
+.dfv4-airbnb-listing-link{flex-shrink:0;color:var(--muted);display:flex;align-items:center}
+.dfv4-airbnb-listing-link i{width:16px;height:16px}
 .dfv4-engine-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
 .dfv4-engine-grid div{padding:.7rem .75rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .dfv4-engine-grid span{display:block;color:var(--muted);margin-bottom:.2rem;font-size:.78rem}
