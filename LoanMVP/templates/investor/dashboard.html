@@ -240,8 +240,22 @@ Your deal pipeline, project planning, and capital readiness in one operating vie
           </button>
         </div>
 
-        <div class="next-step-card" id="portfolioAiResult" hidden></div>
-        <div class="empty-panel compact" id="portfolioAiEmpty" {% if total_deals %}hidden{% endif %}>
+        <div class="next-step-card" id="portfolioAiResult" {% if not last_portfolio_summary %}hidden{% endif %}>
+          {% if last_portfolio_summary %}
+            {% if last_portfolio_summary.summary %}<p>{{ last_portfolio_summary.summary }}</p>{% endif %}
+            {% if last_portfolio_summary.highlight %}<p><strong>{{ last_portfolio_summary.highlight }}</strong></p>{% endif %}
+            {% if last_portfolio_summary.next_steps %}
+              <h4>Next steps</h4>
+              <ul>{% for step in last_portfolio_summary.next_steps %}<li>{{ step }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% if last_portfolio_summary.flags %}
+              <h4>Flags</h4>
+              <ul>{% for flag in last_portfolio_summary.flags %}<li>{{ flag }}</li>{% endfor %}</ul>
+            {% endif %}
+            <div class="portfolio-ai-stamp">Last analyzed {{ last_portfolio_summary_at }}</div>
+          {% endif %}
+        </div>
+        <div class="empty-panel compact" id="portfolioAiEmpty" {% if total_deals or last_portfolio_summary %}hidden{% endif %}>
           <strong>Nothing to analyze yet</strong>
           <p>Once you have at least one tracked deal, Ravlo can summarize your whole portfolio here.</p>
         </div>
@@ -265,6 +279,11 @@ Your deal pipeline, project planning, and capital readiness in one operating vie
           background: rgba(255, 107, 139, 0.1);
           border-color: rgba(255, 107, 139, 0.24);
           color: #ffd2dc;
+        }
+        .portfolio-ai-stamp {
+          margin-top: 10px;
+          font-size: 0.74rem;
+          color: rgba(226, 236, 247, 0.5);
         }
       </style>
 

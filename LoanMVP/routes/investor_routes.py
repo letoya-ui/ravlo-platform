@@ -1482,9 +1482,34 @@ def command_center():
 
     now_str = datetime.now().strftime("%b %d, %Y • %I:%M %p")
 
+    # The "Your Ravlo AI portfolio summary is ready" notification links back
+    # here, but the analysis itself only ever lived in the DOM from the
+    # moment someone clicked "Analyze My Portfolio" -- nothing persisted it,
+    # so "Open" just landed back on a blank panel with no trace of what the
+    # notification promised. Pull the last logged exchange for this user so
+    # the panel can show it again instead of looking broken.
+    last_portfolio_summary = None
+    last_portfolio_summary_at = None
+    try:
+        from LoanMVP.models.training_models import RavloAIMemoryLog
+
+        last_log = (
+            RavloAIMemoryLog.query
+            .filter_by(user_id=current_user.id, module="investor_os", feature="portfolio_ai_summary")
+            .order_by(RavloAIMemoryLog.created_at.desc())
+            .first()
+        )
+        if last_log and last_log.response:
+            last_portfolio_summary = json.loads(last_log.response)
+            last_portfolio_summary_at = last_log.created_at.strftime("%b %d, %Y • %I:%M %p")
+    except Exception:
+        current_app.logger.warning("Failed to load last portfolio AI summary", exc_info=True)
+
     return render_template(
         "investor/dashboard.html",
         investor=ip,
+        last_portfolio_summary=last_portfolio_summary,
+        last_portfolio_summary_at=last_portfolio_summary_at,
         capital_requests=capital_requests,
         active_request=active_request,
         conditions=conditions,
