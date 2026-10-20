@@ -38,19 +38,6 @@ class EquifaxSoftPull:
         }
 
         # SSN and PII must never be logged
-      
-        # Extract monthly debts from tradelines (if present)
-        monthly_debts = 0
-        tradelines = credit_json.get("tradelines", [])
-
-       for t in tradelines:
-           payment = t.get("monthlyPayment", 0)
-           if payment:
-               monthly_debts += float(payment)
-
-       report.monthly_debt_total = monthly_debts
-
-
         response = requests.post(url, headers=headers, json=payload)
 
         if response.status_code != 200:
