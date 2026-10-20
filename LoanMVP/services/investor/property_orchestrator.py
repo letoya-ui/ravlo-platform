@@ -58,6 +58,10 @@ class ProviderBudget:
     # data instead of the ~60-70% that used to silently fall back to a flat
     # traditional_rent * 1.55 guess once the old cap of 8 ran out.
     mashvisor_detail: int = 25
+    # Nearby VRBO listings are fetched once per unique city (cached across
+    # every property in that city), not once per property, so this rarely
+    # gets close to exhausted even on a full 25-result search.
+    mashvisor_vrbo: int = 25
     realtor_detail: int = 8
     rapidapi_real_estate_detail: int = 8
     deal_architect: int = 8
@@ -139,6 +143,7 @@ class CanonicalProperty:
     airbnb_cash_flow: Optional[float] = None
     occupancy_rate: Optional[float] = None
     airbnb_nearby_listings: List[Dict[str, Any]] = field(default_factory=list)
+    vrbo_nearby_listings: List[Dict[str, Any]] = field(default_factory=list)
 
     property_classification: Optional[str] = None
     best_exit_strategy: Optional[str] = None
@@ -216,6 +221,7 @@ class CanonicalProperty:
             "cash_flow": self.airbnb_cash_flow,
             "occupancy_rate": self.occupancy_rate,
             "airbnb_nearby_listings": self.airbnb_nearby_listings,
+            "vrbo_nearby_listings": self.vrbo_nearby_listings,
             "property_classification": self.property_classification,
             "best_exit_strategy": self.best_exit_strategy,
             "best_exit_reason": self.best_exit_reason,
@@ -233,6 +239,7 @@ class PropertyIntelligenceOrchestrator:
         self.budget = budget or ProviderBudget()
         self._mashvisor = self._init_mashvisor()
         self._search_errors: List[str] = []
+        self._vrbo_cache: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
 
     def _init_mashvisor(self):
         try:
@@ -394,6 +401,65 @@ class PropertyIntelligenceOrchestrator:
             })
 
         listings.sort(key=lambda item: item["revenue"] or 0, reverse=True)
+        return listings[:limit]
+
+    @staticmethod
+    def _extract_vrbo_listings(items, limit: int = 10) -> List[Dict[str, Any]]:
+        """Turn Mashvisor's real `airbnb-property/newly-listed-vrbo` response
+        (a list of full VRBO listing objects, confirmed against live API
+        responses) into the same browsable-listing shape used for nearby
+        Airbnb comps, so the frontend can render both with one component.
+        """
+        if not isinstance(items, list) or not items:
+            return []
+
+        listings = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+
+            address_obj = item.get("address") if isinstance(item.get("address"), dict) else {}
+            address = (
+                address_obj.get("full")
+                or ", ".join(
+                    part for part in [
+                        address_obj.get("city"),
+                        address_obj.get("stateProvince"),
+                        address_obj.get("postalCode"),
+                    ] if part
+                )
+                or item.get("headline")
+            )
+
+            price_summary = item.get("priceSummary") if isinstance(item.get("priceSummary"), dict) else {}
+            nightly_rate = PropertyIntelligenceOrchestrator._as_float(price_summary.get("amount"))
+
+            bathrooms = item.get("bathrooms") if isinstance(item.get("bathrooms"), dict) else {}
+            geo = item.get("geoCode") if isinstance(item.get("geoCode"), dict) else {}
+
+            if not (address or nightly_rate):
+                continue
+
+            listings.append({
+                "address": address,
+                "photo": item.get("thumbnailUrl"),
+                "beds": PropertyIntelligenceOrchestrator._as_int(item.get("bedrooms")),
+                "baths": PropertyIntelligenceOrchestrator._as_float(bathrooms.get("full")),
+                "sleeps": PropertyIntelligenceOrchestrator._as_int(item.get("sleeps")),
+                "nightly_rate": nightly_rate,
+                "nightly_rate_formatted": price_summary.get("formattedAmount"),
+                "rate_period": price_summary.get("pricePeriodDescription"),
+                "rating": PropertyIntelligenceOrchestrator._as_float(item.get("averageRating")),
+                "review_count": PropertyIntelligenceOrchestrator._as_int(item.get("reviewCount")),
+                "property_type": item.get("propertyType"),
+                "headline": item.get("headline"),
+                "listing_number": item.get("listingNumber") or item.get("id") or item.get("propertyId"),
+                "latitude": PropertyIntelligenceOrchestrator._as_float(geo.get("latitude")),
+                "longitude": PropertyIntelligenceOrchestrator._as_float(geo.get("longitude")),
+                "url": item.get("canonicalLink"),
+            })
+
+        listings.sort(key=lambda entry: entry["nightly_rate"] or 0, reverse=True)
         return listings[:limit]
 
     @staticmethod
@@ -1357,6 +1423,35 @@ class PropertyIntelligenceOrchestrator:
 
         return None
 
+    def _get_vrbo_listings_for_market(self, state: Optional[str], city: Optional[str]) -> List[Dict[str, Any]]:
+        """Fetch nearby VRBO listings once per unique (state, city) pair and
+        reuse the result for every property enriched in that same market --
+        the underlying Mashvisor endpoint is a market-wide search, not a
+        per-property lookup, so there's nothing property-specific gained
+        from calling it again for the next address in the same city.
+        """
+        if not self._mashvisor or not state or not city:
+            return []
+
+        cache_key = (state.strip().upper(), city.strip().lower())
+        if cache_key in self._vrbo_cache:
+            return self._vrbo_cache[cache_key]
+
+        if not self.budget.use("mashvisor_vrbo", 1):
+            _log.info("[mashvisor] skipping vrbo lookup -- budget exhausted")
+            return []
+
+        try:
+            result = self._mashvisor.get_newly_listed_vrbo(state=state, city=city)
+            items = (result.get("content") or {}).get("list") or []
+            listings = self._extract_vrbo_listings(items)
+        except Exception as exc:
+            _log.warning("[mashvisor] vrbo lookup failed: %s", exc)
+            listings = []
+
+        self._vrbo_cache[cache_key] = listings
+        return listings
+
     def _enrich_with_mashvisor(self, cp: CanonicalProperty) -> CanonicalProperty:
         if not self._mashvisor:
             _log.warning("[mashvisor] skipping enrichment -- no client")
@@ -1398,6 +1493,7 @@ class PropertyIntelligenceOrchestrator:
         if comps_summary:
             _log.info("[mashvisor] comps summary: %s", comps_summary)
         cp.airbnb_nearby_listings = self._extract_mashvisor_listings(normalized.get("comps"))
+        cp.vrbo_nearby_listings = self._get_vrbo_listings_for_market(cp.state, cp.city)
 
         cp.airbnb_rent_estimate = self._first_truthy(
             comps_summary and comps_summary.get("avg_revenue"),

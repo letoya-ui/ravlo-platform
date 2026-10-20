@@ -774,6 +774,38 @@ function renderNearbyAirbnbListings(r){
   `;
 }
 
+function renderNearbyVrboListings(r){
+  const listings = Array.isArray(r.vrbo_nearby_listings) ? r.vrbo_nearby_listings : [];
+  if (!listings.length) return "";
+
+  return `
+    <div class="dfv4-section-head">
+      <h4>Nearby VRBO Listings</h4>
+      <span class="muted">${listings.length} comparable listing${listings.length !== 1 ? "s" : ""}</span>
+    </div>
+    <div class="dfv4-airbnb-listings">
+      ${listings.map(listing => `
+        <div class="dfv4-airbnb-listing">
+          ${listing.photo ? `<img src="${escapeHtml(listing.photo)}" alt="" loading="lazy" onerror="this.style.display='none'">` : `<div class="dfv4-airbnb-listing-noimg"><i class="lucide lucide-home"></i></div>`}
+          <div class="dfv4-airbnb-listing-body">
+            <div class="dfv4-airbnb-listing-title">${escapeHtml(listing.address || listing.headline || "Nearby VRBO listing")}</div>
+            <div class="dfv4-airbnb-listing-meta">
+              ${listing.beds ? `<span>${escapeHtml(listing.beds)} bd</span>` : ""}
+              ${listing.baths ? `<span>${escapeHtml(listing.baths)} ba</span>` : ""}
+              ${listing.sleeps ? `<span>sleeps ${escapeHtml(listing.sleeps)}</span>` : ""}
+            </div>
+            <div class="dfv4-airbnb-listing-stats">
+              ${listing.nightly_rate ? `<span><strong>${listing.nightly_rate_formatted ? escapeHtml(listing.nightly_rate_formatted) : money(listing.nightly_rate)}</strong>${listing.rate_period ? "/" + escapeHtml(listing.rate_period).replace(/^per\\s*/i, "") : "/night"}</span>` : ""}
+              ${listing.rating ? `<span>${escapeHtml(listing.rating)}★${listing.review_count ? ` (${escapeHtml(listing.review_count)})` : ""}</span>` : ""}
+            </div>
+          </div>
+          ${listing.url ? `<a href="${escapeHtml(listing.url)}" target="_blank" rel="noopener" class="dfv4-airbnb-listing-link"><i class="lucide lucide-external-link"></i></a>` : ""}
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderCards(results){
   const root = document.getElementById("results");
 
@@ -916,6 +948,7 @@ function renderCards(results){
 
           ${renderExitStrategySection(r)}
           ${renderNearbyAirbnbListings(r)}
+          ${renderNearbyVrboListings(r)}
 
           <div class="dfv4-engine-grid">
             <div><span>Opportunity Tier</span><strong>${escapeHtml(tier)}</strong></div>

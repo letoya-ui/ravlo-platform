@@ -258,6 +258,33 @@ class MashvisorClient:
             },
         )
 
+    def get_newly_listed_vrbo(
+        self,
+        *,
+        state: str,
+        city: str,
+    ) -> Dict[str, Any]:
+        return self._get(
+            "airbnb-property/newly-listed-vrbo",
+            params={
+                "state": state,
+                "city": city,
+            },
+        )
+
+    def get_vrbo_property(
+        self,
+        *,
+        listing_number: str,
+        state: str,
+    ) -> Dict[str, Any]:
+        return self._get(
+            f"vrbo-property/{listing_number}",
+            params={
+                "state": state,
+            },
+        )
+
     def validate_property_with_mashvisor(
         self,
         *,
@@ -270,6 +297,7 @@ class MashvisorClient:
         lat: Optional[float] = None,
         lng: Optional[float] = None,
         include_comps: bool = False,
+        include_vrbo: bool = False,
     ) -> Dict[str, Any]:
         """
         Recommended flow:
@@ -281,6 +309,7 @@ class MashvisorClient:
             "property": None,
             "lookup": None,
             "comps": None,
+            "vrbo": None,
             "errors": [],
         }
 
@@ -316,5 +345,14 @@ class MashvisorClient:
                 )
             except MashvisorError as exc:
                 result["errors"].append({"comps": str(exc)})
+
+        if include_vrbo:
+            try:
+                result["vrbo"] = self.get_newly_listed_vrbo(
+                    state=state,
+                    city=city,
+                )
+            except MashvisorError as exc:
+                result["errors"].append({"vrbo": str(exc)})
 
         return result
