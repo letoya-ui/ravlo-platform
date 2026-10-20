@@ -53,7 +53,11 @@ class ProviderBudget:
     rentcast_search: int = 1
     attom_detail: int = 8
     rentcast_detail: int = 8
-    mashvisor_detail: int = 8
+    # Matches the search endpoint's max result limit (api_property_tool_search
+    # caps `limit` at 25) so every card shown to the user gets real Mashvisor
+    # data instead of the ~60-70% that used to silently fall back to a flat
+    # traditional_rent * 1.55 guess once the old cap of 8 ran out.
+    mashvisor_detail: int = 25
     realtor_detail: int = 8
     rapidapi_real_estate_detail: int = 8
     deal_architect: int = 8
@@ -262,6 +266,62 @@ class PropertyIntelligenceOrchestrator:
             if v not in (None, "", [], {}):
                 return v
         return None
+
+    @staticmethod
+    def _summarize_mashvisor_comps(comps) -> Optional[Dict[str, Any]]:
+        """Average revenue/occupancy/ADR across Mashvisor's real nearby-
+        listing comps, when available, instead of relying only on its
+        single black-box lookup estimate.
+
+        Mashvisor's public docs don't spell out the exact per-comp field
+        names for this endpoint, so this tries several plausible keys per
+        metric (mirroring the lookup-response fallback pattern already used
+        in mashvisor_service.normalize_mashvisor_validation) and simply
+        skips a comp/metric it can't parse rather than guessing a number.
+        Verify the real field names against a live response and tighten
+        this once traffic actually exercises it.
+        """
+        if not isinstance(comps, list) or not comps:
+            return None
+
+        revenues, occupancies, adrs = [], [], []
+        for comp in comps:
+            if not isinstance(comp, dict):
+                continue
+            revenue = PropertyIntelligenceOrchestrator._as_float(
+                comp.get("rental_income")
+                or comp.get("airbnb_rental_income")
+                or comp.get("monthly_revenue")
+                or comp.get("revenue")
+                or comp.get("income")
+            )
+            if revenue:
+                revenues.append(revenue)
+
+            occupancy = PropertyIntelligenceOrchestrator._as_float(
+                comp.get("occupancy_rate") or comp.get("airbnb_occupancy_rate") or comp.get("occupancy")
+            )
+            if occupancy:
+                occupancies.append(occupancy)
+
+            adr = PropertyIntelligenceOrchestrator._as_float(
+                comp.get("daily_rate") or comp.get("adr") or comp.get("average_daily_rate") or comp.get("night_price")
+            )
+            if adr:
+                adrs.append(adr)
+
+        if not (revenues or occupancies or adrs):
+            _log.warning(
+                "[mashvisor] got %d comps but none parsed -- field names likely need updating", len(comps)
+            )
+            return None
+
+        return {
+            "comp_count": len(comps),
+            "avg_revenue": (sum(revenues) / len(revenues)) if revenues else None,
+            "avg_occupancy_rate": (sum(occupancies) / len(occupancies)) if occupancies else None,
+            "avg_adr": (sum(adrs) / len(adrs)) if adrs else None,
+        }
 
     @staticmethod
     def _normalize_photo_candidates(*sources):
@@ -1245,7 +1305,10 @@ class PropertyIntelligenceOrchestrator:
                 baths=cp.baths,
                 lat=cp.latitude,
                 lng=cp.longitude,
-                include_comps=False,
+                # Pull real nearby-listing comps instead of relying solely on
+                # Mashvisor's single black-box algorithmic estimate -- we're
+                # not request-constrained on the current plan.
+                include_comps=True,
             )
             _log.info("[mashvisor] validate ok  keys=%s  errors=%s",
                       list(result.keys()) if result else None,
@@ -1258,11 +1321,17 @@ class PropertyIntelligenceOrchestrator:
             _log.warning("[mashvisor] validate exception: %s", exc)
             return cp
 
+        comps_summary = self._summarize_mashvisor_comps(normalized.get("comps"))
+        if comps_summary:
+            _log.info("[mashvisor] comps summary: %s", comps_summary)
+
         cp.airbnb_rent_estimate = self._first_truthy(
+            comps_summary and comps_summary.get("avg_revenue"),
             self._as_float(normalized.get("airbnb_revenue")),
             cp.airbnb_rent_estimate,
         )
         cp.occupancy_rate = self._first_truthy(
+            comps_summary and comps_summary.get("avg_occupancy_rate"),
             self._as_float(normalized.get("occupancy_rate")),
             cp.occupancy_rate,
         )
@@ -1271,6 +1340,7 @@ class PropertyIntelligenceOrchestrator:
             cp.airbnb_cash_on_cash,
         )
         cp.airbnb_nightly_rate = self._first_truthy(
+            comps_summary and comps_summary.get("avg_adr"),
             self._as_float(normalized.get("adr")),
             cp.airbnb_nightly_rate,
         )
@@ -1279,6 +1349,7 @@ class PropertyIntelligenceOrchestrator:
             cp.airbnb_cash_flow,
         )
         cp.comp_confidence = self._first_truthy(
+            comps_summary and f"Based on {comps_summary['comp_count']} nearby Airbnb comps",
             str(normalized.get("confidence")) if normalized.get("confidence") is not None else None,
             cp.comp_confidence,
         )
