@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from typing import Any, Dict, Optional
 
@@ -9,6 +10,14 @@ MASHVISOR_BASE_URL = os.getenv("MASHVISOR_BASE_URL", "https://api.mashvisor.com"
 TIMEOUT = int(os.getenv("DEALFINDER_TIMEOUT", "20"))
 
 _session = requests.Session()
+
+# See the matching comment in mashvisor_client.py -- Mashvisor intermittently
+# returns a 500 wrapping an internal 401, which looks transient on their end
+# rather than a credentials problem. One retry recovers transient cases
+# cheaply without masking a real, persistent outage.
+_RETRYABLE_STATUS_CODES = {500, 502, 503, 504}
+_RETRY_ATTEMPTS = 2
+_RETRY_DELAY_SECONDS = 0.75
 
 
 class MashvisorServiceError(Exception):
@@ -26,19 +35,28 @@ def _headers() -> Dict[str, str]:
 
 def _get(path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     url = f"{MASHVISOR_BASE_URL}{path}"
-    try:
-        res = safe_call(_session.get, url, headers=_headers(), params=params or {}, timeout=TIMEOUT)
-        res.raise_for_status()
-        return res.json()
-    except requests.HTTPError as e:
-        body = ""
+    last_exc: Optional[Exception] = None
+    for attempt in range(1, _RETRY_ATTEMPTS + 1):
         try:
-            body = res.text[:400]
-        except Exception:
-            pass
-        raise MashvisorServiceError(f"Mashvisor HTTP error: {e}. body={body}")
-    except Exception as e:
-        raise MashvisorServiceError(f"Mashvisor request failed: {e}")
+            res = safe_call(_session.get, url, headers=_headers(), params=params or {}, timeout=TIMEOUT)
+            res.raise_for_status()
+            return res.json()
+        except requests.HTTPError as e:
+            body = ""
+            try:
+                body = res.text[:400]
+            except Exception:
+                pass
+            last_exc = MashvisorServiceError(f"Mashvisor HTTP error: {e}. body={body}")
+            status_code = getattr(res, "status_code", None)
+            if status_code in _RETRYABLE_STATUS_CODES and attempt < _RETRY_ATTEMPTS:
+                time.sleep(_RETRY_DELAY_SECONDS)
+                continue
+            raise last_exc
+        except Exception as e:
+            raise MashvisorServiceError(f"Mashvisor request failed: {e}")
+
+    raise last_exc
 
 
 def safe_get(dct: Any, *keys: str, default=None):

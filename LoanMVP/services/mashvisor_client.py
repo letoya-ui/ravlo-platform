@@ -1,10 +1,22 @@
 import os
+import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 import requests
 
 from LoanMVP.utils.safe_http import safe_call
+
+# Mashvisor intermittently returns an HTTP 500 that wraps an internal 401
+# ("Request Failed. Status Code: 401") -- this looks like a transient
+# failure on their end (their backend failing to auth to its own upstream
+# data source) rather than a problem with our credentials, since the same
+# key works most of the time. One retry with a short delay costs little
+# and recovers the transient cases; a persistent outage still surfaces as
+# an error after the retry is exhausted.
+_RETRYABLE_STATUS_CODES = {500, 502, 503, 504}
+_RETRY_ATTEMPTS = 2
+_RETRY_DELAY_SECONDS = 0.75
 
 
 class MashvisorError(Exception):
@@ -52,34 +64,40 @@ class MashvisorClient:
 
         url = self._build_url(endpoint)
 
-        try:
-            response = safe_call(
-                self.session.get,
-                url,
-                params=clean_params,
-                timeout=self.config.timeout_seconds,
-            )
-        except requests.RequestException as exc:
-            raise MashvisorError(f"Network error calling Mashvisor: {exc}") from exc
+        last_exc: Optional[Exception] = None
+        for attempt in range(1, _RETRY_ATTEMPTS + 1):
+            try:
+                response = safe_call(
+                    self.session.get,
+                    url,
+                    params=clean_params,
+                    timeout=self.config.timeout_seconds,
+                )
+            except requests.RequestException as exc:
+                raise MashvisorError(f"Network error calling Mashvisor: {exc}") from exc
 
-        try:
-            data = response.json()
-        except ValueError as exc:
-            raise MashvisorError(
-                f"Mashvisor returned non-JSON response: {response.text[:500]}"
-            ) from exc
+            try:
+                data = response.json()
+            except ValueError as exc:
+                raise MashvisorError(
+                    f"Mashvisor returned non-JSON response: {response.text[:500]}"
+                ) from exc
 
-        # 409 "Property already exist" means Mashvisor knows the property;
-        # return the body so callers can still extract IDs or partial data.
-        if response.status_code == 409:
-            return data
+            # 409 "Property already exist" means Mashvisor knows the property;
+            # return the body so callers can still extract IDs or partial data.
+            if response.status_code == 409:
+                return data
 
-        if not response.ok:
-            raise MashvisorError(
-                f"Mashvisor error {response.status_code}: {data}"
-            )
+            if response.ok:
+                return data
 
-        return data
+            last_exc = MashvisorError(f"Mashvisor error {response.status_code}: {data}")
+            if response.status_code in _RETRYABLE_STATUS_CODES and attempt < _RETRY_ATTEMPTS:
+                time.sleep(_RETRY_DELAY_SECONDS)
+                continue
+            raise last_exc
+
+        raise last_exc
 
     def get_property_by_address(
         self,
