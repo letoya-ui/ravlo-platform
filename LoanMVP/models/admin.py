@@ -4,6 +4,16 @@ import secrets
 
 from LoanMVP.extensions import db
 
+# Every role a company's admin can normally invite/assign (mirrors
+# admin.py's COMPANY_INVITABLE_ROLE_SET -- duplicated here rather than
+# importing a route module into this one, same convention as
+# role_helpers.FULL_RAVLO_STAFF_ROLES). This is the implicit default for
+# every company whose `enabled_roles` column is unset.
+ALL_COMPANY_ROLES = {
+    "admin", "loan_officer", "processor", "underwriter", "borrower",
+    "compliance", "crm", "property", "ai", "intelligence", "stylist",
+}
+
 
 class Company(db.Model):
     __tablename__ = "companies"
@@ -50,6 +60,15 @@ class Company(db.Model):
     # text-based name/mark -- e.g. "images/demo/meridian_capital_logo.png".
     brand_logo_url = db.Column(db.String(255), nullable=True)
 
+    # Which staff roles this company's admin can invite/assign, as a JSON
+    # list of role strings (e.g. ["admin","loan_officer","processor","borrower"]).
+    # Null/empty means every role in ALL_COMPANY_ROLES is available -- this
+    # is the default "full-service" package every existing company already
+    # has; only a company on a restricted package (e.g. a partner whose
+    # processors handle underwriting themselves, with no underwriter seat)
+    # gets a real list here. Set by Ravlo platform staff, not self-serve.
+    enabled_roles = db.Column(db.JSON, nullable=True)
+
     users = db.relationship("User", back_populates="company", foreign_keys="User.company_id", lazy=True)
     invites = db.relationship("UserInvite", back_populates="company", lazy=True)
     access_requests = db.relationship("AccessRequest", backref="company", lazy=True)
@@ -59,6 +78,18 @@ class Company(db.Model):
         back_populates="blocked_companies",
         lazy=True
     )
+
+    def get_enabled_roles(self) -> set:
+        """Role strings this company's admins may invite/assign. An unset
+        (null/empty) `enabled_roles` means every role is available -- this
+        column only ever narrows the set for a company on a restricted
+        Lending OS package."""
+        if not self.enabled_roles:
+            return set(ALL_COMPANY_ROLES)
+        return set(self.enabled_roles)
+
+    def has_role_enabled(self, role: str) -> bool:
+        return (role or "").strip().lower() in self.get_enabled_roles()
 
     def seats_used(self) -> int:
         from LoanMVP.models.user_model import User

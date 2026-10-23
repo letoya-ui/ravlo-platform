@@ -81,6 +81,16 @@ COMPANY_INVITABLE_ROLES = [
 ]
 COMPANY_INVITABLE_ROLE_SET = {role for role, _label in COMPANY_INVITABLE_ROLES}
 
+
+def _invitable_roles_for_company(company):
+    """Narrow COMPANY_INVITABLE_ROLES to the roles this company's Lending OS
+    package actually includes (see Company.get_enabled_roles() -- unset
+    means every role, the default full-service package). Returns
+    (list_of_(role,label)_tuples, set_of_role_strings)."""
+    enabled = company.get_enabled_roles() if company else COMPANY_INVITABLE_ROLE_SET
+    roles = [pair for pair in COMPANY_INVITABLE_ROLES if pair[0] in enabled]
+    return roles, {role for role, _label in roles}
+
 RAVLO_STAFF_ROLES = [
     ("platform_admin", "Platform Admin"),
     ("master_admin", "Master Admin"),
@@ -541,6 +551,52 @@ def _company_recent_applicants(company_id, limit=8):
 
 def _loan_status_key(loan):
     return (getattr(loan, "status", "") or "").strip().lower()
+
+
+# Loans in one of these statuses are done -- no further admin follow-up is
+# useful, so they're excluded from both the "needs follow-up" list and
+# never counted as idle.
+TERMINAL_LOAN_STATUSES = FUNDED_LOAN_STATUSES | {
+    "declined", "denied", "rejected", "withdrawn", "canceled", "cancelled",
+}
+# A loan with no status change in this many days gets auto-flagged for
+# admin follow-up on the company dashboard -- no manual task needed.
+STALE_LOAN_FOLLOWUP_DAYS = 5
+
+
+def _loan_pipeline_breakdown(loans):
+    """Count of this company's loans by status, most common first -- for
+    the "what's actually going on with our loans" admin dashboard view."""
+    counts = defaultdict(int)
+    for loan in loans:
+        label = (getattr(loan, "status", None) or "Pending").strip().title()
+        counts[label] += 1
+    return sorted(counts.items(), key=lambda pair: pair[1], reverse=True)
+
+
+def _stale_loans_for_followup(loans, days: int = STALE_LOAN_FOLLOWUP_DAYS, limit: int = 20):
+    """Loans with no status/field change in `days` days that aren't already
+    done -- auto-flagged so admin doesn't have to manually track who's gone
+    quiet, rather than a task list someone has to remember to create."""
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    stale = []
+    for loan in loans:
+        if _loan_status_key(loan) in TERMINAL_LOAN_STATUSES:
+            continue
+        last_activity = getattr(loan, "updated_at", None) or getattr(loan, "created_at", None)
+        if not last_activity or last_activity >= cutoff:
+            continue
+        borrower = getattr(loan, "borrower_profile", None)
+        stale.append({
+            "loan": loan,
+            "borrower_name": getattr(borrower, "full_name", None) or "Unknown borrower",
+            "status": getattr(loan, "status", None) or "Pending",
+            "milestone_stage": getattr(loan, "milestone_stage", None),
+            "last_activity": last_activity,
+            "days_idle": (datetime.utcnow() - last_activity).days,
+        })
+    stale.sort(key=lambda item: item["days_idle"], reverse=True)
+    return stale[:limit]
 
 
 def _loan_amount_value(loan):
@@ -1776,7 +1832,8 @@ def invite_team_member(company_id):
             flash("Email and role are required.", "danger")
             return redirect(url_for("admin.invite_team_member", company_id=company.id))
 
-        if role not in COMPANY_INVITABLE_ROLE_SET:
+        _invitable_roles, invitable_role_set = _invitable_roles_for_company(company)
+        if role not in invitable_role_set:
             flash("Invalid role selected.", "danger")
             return redirect(url_for("admin.invite_team_member", company_id=company.id))
 
@@ -1812,10 +1869,11 @@ def invite_team_member(company_id):
         flash("Invite created and email sent.", "success")
         return redirect(url_for("admin.company_team", company_id=company.id))
 
+    roles, _role_set = _invitable_roles_for_company(company)
     return render_template(
         "admin/invite_team_member.html",
         company=company,
-        invitable_roles=COMPANY_INVITABLE_ROLES,
+        invitable_roles=roles,
     )
 
 
@@ -2960,12 +3018,18 @@ def company_dashboard(company_id):
         "pending_requests": len(pending_requests),
     }
 
+    loan_pipeline = _loan_pipeline_breakdown(loans)
+    stale_loans = _stale_loans_for_followup(loans)
+
     return render_template(
         "admin/company_dashboard.html",
         company=company,
         team_members=team_members[:5],
         invites=invites[:5],
         loans=loans[:5],
+        loan_pipeline=loan_pipeline,
+        stale_loans=stale_loans,
+        stale_loan_followup_days=STALE_LOAN_FOLLOWUP_DAYS,
         borrowers=borrowers[:5],
         applicant_loans=applicant_loans,
         company_loan_officers=company_loan_officers,
@@ -3119,6 +3183,34 @@ def company_settings(company_id):
             flash("Facebook/Instagram Lead Ads connection saved.", "success")
             return redirect(url_for("admin.company_settings", company_id=company.id))
 
+        if action_type == "roles_package":
+            if not _is_full_admin(current_user):
+                flash("Only Ravlo staff can change this workspace's Lending OS role package.", "danger")
+                return redirect(url_for("admin.company_settings", company_id=company.id))
+
+            selected_roles = [
+                role for role in request.form.getlist("enabled_roles")
+                if role in COMPANY_INVITABLE_ROLE_SET
+            ]
+            if not selected_roles:
+                flash("Select at least one role for this workspace's package.", "warning")
+                return redirect(url_for("admin.company_settings", company_id=company.id))
+
+            company.enabled_roles = sorted(selected_roles)
+            db.session.commit()
+            flash("Lending OS role package updated for this workspace.", "success")
+            return redirect(url_for("admin.company_settings", company_id=company.id))
+
+        if action_type == "roles_package_reset":
+            if not _is_full_admin(current_user):
+                flash("Only Ravlo staff can change this workspace's Lending OS role package.", "danger")
+                return redirect(url_for("admin.company_settings", company_id=company.id))
+
+            company.enabled_roles = None
+            db.session.commit()
+            flash("Lending OS role package reset to full access (every role).", "success")
+            return redirect(url_for("admin.company_settings", company_id=company.id))
+
         company.name = (request.form.get("name") or company.name or "").strip() or company.name
         company.email_domain = ((request.form.get("email_domain") or "").strip().lower() or None)
         company.address = (request.form.get("address") or "").strip() or None
@@ -3152,6 +3244,9 @@ def company_settings(company_id):
         dashboard_preferences=_company_dashboard_settings(company),
         fb_connection=FacebookPageConnection.query.filter_by(company_id=company.id).first(),
         fb_webhook_url=url_for("facebook_leads_webhook.verify_webhook", _external=True),
+        is_full_admin=_is_full_admin(current_user),
+        company_invitable_roles=COMPANY_INVITABLE_ROLES,
+        company_enabled_roles=company.get_enabled_roles(),
     )
 
 

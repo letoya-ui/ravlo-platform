@@ -31,6 +31,7 @@ from LoanMVP.ai.base_ai import AIAssistant
 from LoanMVP.utils.decorators import role_required  # ✅ Added for role control
 from LoanMVP.utils.loan_access import get_loan_or_404
 from LoanMVP.utils.lending_utils import send_notification
+from LoanMVP.services.compliance_service import generate_adverse_action_notice, ADVERSE_ACTION_STATUSES
 
 # ✅ SocketIO imported safely at the bottom
 from flask_socketio import emit, join_room
@@ -965,11 +966,23 @@ def assign_loan(loan_id):
 
     return render_template("processor/assign_loan.html", loan=loan, users=users)
 
+def _processor_handles_underwriting() -> bool:
+    """True when this processor's company has no underwriter role at all
+    in its Lending OS package -- processors make the lending decision
+    themselves instead of handing the file off."""
+    company = getattr(current_user, "company", None)
+    return bool(company) and not company.has_role_enabled("underwriter")
+
+
 @processor_bp.route("/submit-underwriter/<int:loan_id>")
 @login_required
 @role_required("processor")
 def submit_underwriter(loan_id):
     loan = get_loan_or_404(loan_id)
+
+    if _processor_handles_underwriting():
+        flash("This workspace has no underwriter seat -- use Make Decision on the loan file instead.", "warning")
+        return redirect(f"/processor/file/{loan.id}")
 
     loan.status = "Submitted"
     loan.submitted_to_uw = datetime.utcnow()
@@ -978,6 +991,34 @@ def submit_underwriter(loan_id):
 
     send_notification(loan.id, "underwriter", "A new loan file has been submitted for underwriting.")
 
+    return redirect(f"/processor/file/{loan.id}")
+
+
+@processor_bp.route("/decision/<int:loan_id>", methods=["POST"])
+@login_required
+@role_required("processor")
+def decision(loan_id):
+    """Final lending decision for workspaces whose processors handle
+    underwriting themselves (no underwriter seat in their Lending OS
+    package) -- mirrors underwriter.decision()."""
+    loan = get_loan_or_404(loan_id)
+
+    if not _processor_handles_underwriting():
+        flash("This workspace has an underwriter seat -- the lending decision is made there.", "warning")
+        return redirect(f"/processor/file/{loan.id}")
+
+    loan.decision_notes = request.form.get("notes")
+    loan.decision_date = datetime.utcnow()
+    loan.status = request.form.get("decision")
+
+    db.session.commit()
+
+    if (loan.status or "").strip().lower() in ADVERSE_ACTION_STATUSES:
+        generate_adverse_action_notice(loan)
+
+    send_notification(loan.id, "borrower", f"Your loan status updated to: {loan.status}")
+
+    flash(f"Loan decision updated to {loan.status}.", "success")
     return redirect(f"/processor/file/{loan.id}")
 
 @processor_bp.route("/view-file/<path:filename>")
@@ -1731,6 +1772,7 @@ def file_review(loan_id):
         credit=credit,
         ratios=ratios,
         ai_summary=ai_summary,
+        company_can_decide=_processor_handles_underwriting(),
         title=f"Loan File Review — {borrower.full_name or 'Borrower'}"
     )
 

@@ -56,10 +56,12 @@ Review documents, conditions, borrower details, risk signals, and underwriting r
       <span>Assign Loan</span>
     </a>
 
+    {% if not company_can_decide %}
     <a href="{{ url_for('processor.submit_underwriter', loan_id=loan.id) }}" class="ravlo-btn primary">
       <i class="lucide lucide-badge-check"></i>
       <span>Submit to Underwriter</span>
     </a>
+    {% endif %}
 
     <button type="button" class="ravlo-btn ghost" onclick="runAIRisk()">
       <i class="lucide lucide-bot"></i>
@@ -252,6 +254,30 @@ Review documents, conditions, borrower details, risk signals, and underwriting r
           <div class="empty-inline">No cleared conditions yet.</div>
         {% endif %}
       </section>
+
+      {% if company_can_decide %}
+      <section class="review-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">DECISION</div>
+            <h3>Final Lending Decision</h3>
+          </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('processor.decision', loan_id=loan.id) }}" class="decision-form-stack">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <select name="decision">
+            <option value="Approved">Approve</option>
+            <option value="Suspended">Suspend</option>
+            <option value="Declined">Decline</option>
+          </select>
+
+          <textarea name="notes" placeholder="Decision notes" required></textarea>
+
+          <button type="submit" class="ravlo-btn primary">Submit Decision</button>
+        </form>
+      </section>
+      {% endif %}
 
     </div>
 
@@ -511,6 +537,22 @@ Review documents, conditions, borrower details, risk signals, and underwriting r
   border-radius:20px;
   background:rgba(255,255,255,.03);
   border:1px solid rgba(255,255,255,.08);
+}
+
+.decision-form-stack{
+  display:grid;
+  gap:12px;
+  max-width:420px;
+}
+
+.decision-form-stack select,
+.decision-form-stack textarea{
+  padding:10px 12px;
+  border-radius:10px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.12);
+  color:var(--text);
+  font-size:14px;
 }
 
 .section-head{

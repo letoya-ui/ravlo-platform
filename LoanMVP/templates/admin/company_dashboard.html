@@ -268,6 +268,71 @@
         {% endif %}
       </div>
 
+      {# Loan Pipeline #}
+      <div class="re-card cd-card" data-widget-key="pipeline">
+        <div class="cd-section-head">
+          <div>
+            <div class="cd-eyebrow">LOAN PIPELINE</div>
+            <h3>What's Going On With Our Loans</h3>
+            <p class="cd-sub">Every loan file in this workspace, grouped by its current status.</p>
+          </div>
+        </div>
+
+        {% if loan_pipeline %}
+        <div class="cd-stat-row" style="margin-top:14px;gap:10px;flex-wrap:wrap;">
+          {% for status_label, count in loan_pipeline %}
+          <div class="cd-mini-stat" style="flex:1;min-width:120px;">
+            <div class="cd-mini-val">{{ count }}</div>
+            <div class="cd-mini-label">{{ status_label }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="re-empty" style="margin-top:16px;">No loan files yet.</div>
+        {% endif %}
+      </div>
+
+      {# Needs Follow-Up (auto-flagged stale loans) #}
+      <div class="re-card cd-card" data-widget-key="followup">
+        <div class="cd-section-head">
+          <div>
+            <div class="cd-eyebrow">NEEDS FOLLOW-UP</div>
+            <h3>Borrowers Going Quiet</h3>
+            <p class="cd-sub">Loans with no status update in {{ stale_loan_followup_days }}+ days, so staff can check in before a file goes cold.</p>
+          </div>
+          {% if stale_loans %}
+          <span style="padding:2px 8px;border-radius:99px;font-size:.72rem;font-weight:700;background:rgba(239,68,68,.14);color:#f87171;border:1px solid rgba(239,68,68,.25);">{{ stale_loans|length }} flagged</span>
+          {% endif %}
+        </div>
+
+        {% if stale_loans %}
+        <div class="re-table-wrap" style="margin-top:16px;">
+          <table class="re-table">
+            <thead>
+              <tr>
+                <th>Borrower</th>
+                <th>Status</th>
+                <th>Stage</th>
+                <th>Idle</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in stale_loans %}
+              <tr>
+                <td>{{ item.borrower_name }}</td>
+                <td>{{ item.status }}</td>
+                <td>{{ item.milestone_stage or "—" }}</td>
+                <td>{{ item.days_idle }} day{{ "s" if item.days_idle != 1 else "" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <div class="re-empty" style="margin-top:16px;">Nothing stale -- every active loan has had recent activity.</div>
+        {% endif %}
+      </div>
+
       {# Compensation #}
       <div class="re-card cd-card" data-widget-key="compensation">
         {% set comp = compensation_summary or {} %}
